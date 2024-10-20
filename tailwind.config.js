@@ -8,13 +8,33 @@ export default {
         './resources/**/*.blade.php',
         './resources/**/*.js',
         './resources/**/*.vue',
+        './node_modules/flowbite/**/*.js'
     ],
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                'body': [
+                    'Open Sans',
+                    'Inter',
+                    'ui-sans-serif',
+                    'system-ui',
+                    // other fallback fonts
+                ],
+                'sans': [
+                    'Open Sans',
+                    'Inter',
+                    'ui-sans-serif',
+                    'system-ui',
+                    // other fallback fonts
+                ]
             },
         },
     },
-    plugins: [],
+    plugins: [
+        require('flowbite/plugin')({
+            charts: true,
+            forms: true,
+            tooltips: true
+        }),
+    ],
 };
