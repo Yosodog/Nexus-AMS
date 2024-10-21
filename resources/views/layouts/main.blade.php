@@ -14,6 +14,9 @@
 <div class="container mx-auto py-8">
     <div class="flex">
         <main class="w-full">
+            @if (session('alert-message') || $errors->any())
+                <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
+            @endif
             @yield('content')
         </main>
     </div>

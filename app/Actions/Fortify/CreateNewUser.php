@@ -29,12 +29,20 @@ class CreateNewUser implements CreatesNewUsers
                 Rule::unique(User::class),
             ],
             'password' => $this->passwordRules(),
+            'nation_id' => [
+                'required',
+                'integer',
+                Rule::unique(User::class),
+            ]
         ])->validate();
+
+        // TODO add validation that the nation exists and is in the alliance
 
         return User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
+            'nation_id' => $input["nation_id"]
         ]);
     }
 }
