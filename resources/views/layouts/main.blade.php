@@ -13,8 +13,7 @@
 
 <div class="container mx-auto py-8">
     <div class="flex">
-        <main class="w-full md:w-3/4">
-            <p>asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasd fasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfas dfasdfasdfasdfasdfasdfasdfasdfasdfasdfas dfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasd fasdfasdfasdfasdfasdfasdfasdf</p>
+        <main class="w-full">
             @yield('content')
         </main>
     </div>
