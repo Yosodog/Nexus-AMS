@@ -7,34 +7,18 @@ export default {
         './storage/framework/views/*.php',
         './resources/**/*.blade.php',
         './resources/**/*.js',
-        './resources/**/*.vue',
-        './node_modules/flowbite/**/*.js'
+        './resources/**/*.vue'
     ],
     theme: {
         extend: {
-            fontFamily: {
-                'body': [
-                    'Open Sans',
-                    'Inter',
-                    'ui-sans-serif',
-                    'system-ui',
-                    // other fallback fonts
-                ],
-                'sans': [
-                    'Open Sans',
-                    'Inter',
-                    'ui-sans-serif',
-                    'system-ui',
-                    // other fallback fonts
-                ]
-            },
+
         },
     },
     plugins: [
-        require('flowbite/plugin')({
-            charts: true,
-            forms: true,
-            tooltips: true
-        }),
+        require("@tailwindcss/typography"),
+        require("daisyui")
     ],
+    daisyui: {
+        themes: ["light", "night"],
+    },
 };
