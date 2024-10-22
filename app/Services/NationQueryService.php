@@ -6,15 +6,10 @@ use App\GraphQL\Models\Nation;
 
 class NationQueryService
 {
-    public QueryService $client;
-
-    public function __construct()
+    public static function getNationById(int $nID): Nation
     {
-        $this->client = new QueryService();
-    }
+        $client = new QueryService();
 
-    public function getNationById(int $nID): Nation
-    {
         $builder = (new GraphQLQueryBuilder())
             ->setRootField("nations")
             ->addArgument('id', $nID)
@@ -22,7 +17,7 @@ class NationQueryService
                 $builder->addFields(SelectionSetHelper::nationSet());
             });
 
-        $response = $this->client->sendQuery($builder);
+        $response = $client->sendQuery($builder);
 
         $nation = new Nation();
         $nation->buildWithJSON((object)$response['data']['nations']['data'][0]);

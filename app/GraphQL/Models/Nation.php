@@ -148,11 +148,10 @@ class Nation
 //    public array $bulletins; // Array of Bulletin objects
 //    public array $bulletin_replies; // Array of BulletinReply objects
 
-    public function __construct()
-    {
-
-    }
-
+    /**
+     * @param \stdClass $json
+     * @return void
+     */
     public function buildWithJSON(\stdClass $json)
     {
         $this->id = (int) $json->id;

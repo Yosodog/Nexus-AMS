@@ -4,6 +4,9 @@ namespace App\Services;
 
 class SelectionSetHelper
 {
+    /**
+     * @return string[]
+     */
     public static function nationSet(): array
     {
         return [
@@ -153,8 +156,47 @@ class SelectionSetHelper
         ];
     }
 
-    public static function buildQuery(array $properties, string $modelName, array $arguments = []): string
+    /**
+     * @return string[]
+     */
+    public static function allianceSet(): array
     {
-        return "query {";
+        return [
+            'id',
+            'name',
+            'acronym',
+            'score',
+            'color',
+            // 'date',
+            // 'nations',
+            'average_score',
+            // 'treaties',
+            // 'alliance_positions',
+            'accept_members',
+            'flag',
+            'forum_link',
+            'discord_link',
+            'wiki_link',
+            'money',
+            'coal',
+            'oil',
+            'uranium',
+            'iron',
+            'bauxite',
+            'lead',
+            'gasoline',
+            'munitions',
+            'steel',
+            'aluminum',
+            'food',
+            'rank',
+            // 'awards',
+            // 'bulletins',
+            // 'sent_treaties',
+            // 'received_treaties',
+            // 'acceptmem',
+            // 'forumlink',
+            // 'irclink',
+        ];
     }
 }

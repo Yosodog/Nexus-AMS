@@ -37,9 +37,15 @@ class QueryService
 
     /**
      * @return string
+     * @throws \Exception
      */
     protected function getAPIKey(): string
     {
+        $apiKey = env("PW_API_KEY");
+
+        if (is_null($apiKey))
+            throw new \Exception("Env value PW_API_KEY not set");
+
         return env("PW_API_KEY");
     }
 
