@@ -7,11 +7,11 @@
     @vite('resources/css/app.css')
     @vite('resources/js/app.js')
 </head>
-<body>
+<body class="flex flex-col min-h-screen">
 
 <x-header />
 
-<div class="container mx-auto py-8">
+<div class="container mx-auto py-8 flex-grow">
     <div class="flex">
         <main class="w-full">
             @if (session('alert-message') || $errors->any())
