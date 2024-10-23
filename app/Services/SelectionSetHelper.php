@@ -199,4 +199,49 @@ class SelectionSetHelper
             // 'irclink',
         ];
     }
+
+    /**
+     * @return string[]
+     */
+    public static function citySet(): array
+    {
+        return [
+            'id',
+            'nation_id',
+            // 'nation',
+            'name',
+            // 'date',
+            'infrastructure',
+            'land',
+            'powered',
+            'oil_power',
+            'wind_power',
+            'coal_power',
+            'nuclear_power',
+            'coal_mine',
+            'oil_well',
+            'uranium_mine',
+            'barracks',
+            'farm',
+            'police_station',
+            'hospital',
+            'recycling_center',
+            'subway',
+            'supermarket',
+            'bank',
+            'shopping_mall',
+            'stadium',
+            'lead_mine',
+            'iron_mine',
+            'bauxite_mine',
+            'oil_refinery',
+            'aluminum_refinery',
+            'steel_mill',
+            'munitions_factory',
+            'factory',
+            'hangar',
+            'drydock',
+            // 'nuke_date',
+        ];
+    }
 }

@@ -19,7 +19,7 @@ class Nation
     public int $domestic_policy_turns;
     public string $color;
     public int $num_cities;
-//    public array $cities; // Array of City objects
+    public Cities $cities;
     public float $score;
     public float $update_tz;
     public int $population;
@@ -165,6 +165,19 @@ class Nation
         $this->domestic_policy_turns = (int) $json->domestic_policy_turns;
         $this->color = (string) $json->color;
         $this->num_cities = (int) $json->num_cities;
+
+        if (isset($json->cities))
+        {
+            $this->cities = new Cities([]);
+
+            foreach ($json->cities as $city)
+            {
+                $cityModel = new City();
+                $cityModel->buildWithJSON((object)$city);
+                $this->cities->add($cityModel);
+            }
+        }
+
         $this->score = (float) $json->score;
         $this->update_tz = (float) $json->update_tz;
         $this->population = (int) $json->population;

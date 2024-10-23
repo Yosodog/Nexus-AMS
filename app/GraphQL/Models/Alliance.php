@@ -10,7 +10,7 @@ class Alliance
     public float $score;
     public string $color;
     // public DateTimeAuto $date;
-    // public array $nations; // [Nation!]!
+    public Nations $nations;
     public float $average_score;
     // public array $treaties; // [Treaty!]!
     // public array $alliance_positions; // [AlliancePosition!]!
@@ -51,7 +51,17 @@ class Alliance
         $this->color = $json->color;
         // $this->date = $json->date; // Uncomment and modify based on your DateTime handling
         $this->average_score = $json->average_score;
-        // $this->nations = $json->nations; // Uncomment for use
+        if (isset($json->nations))
+        {
+            $this->nations = new Nations([]);
+            foreach ($json->nations as $nation)
+            {
+                $nationModel = new Nation();
+                $nationModel->buildWithJSON((object)$nation);
+                $this->nations->add($nationModel);
+            }
+        }
+
         // $this->treaties = $json->treaties; // Uncomment for use
         // $this->alliance_positions = $json->alliance_positions; // Uncomment for use
         $this->accept_members = $json->accept_members;
