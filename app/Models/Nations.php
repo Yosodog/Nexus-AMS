@@ -126,4 +126,13 @@ class Nations extends Model
 
         return $nation;
     }
+
+    /**
+     * @param int $nation_id
+     * @return Nations
+     */
+    public static function getNationById(int $nation_id): Nations
+    {
+        return self::where("nation_id", $nation_id)->firstOrFail();
+    }
 }

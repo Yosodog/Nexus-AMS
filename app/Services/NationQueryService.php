@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWEntityDoesNotExist;
 use App\GraphQL\Models\Nation;
 use App\GraphQL\Models\Nations;
 
@@ -25,6 +26,9 @@ class NationQueryService
             });
 
         $response = $client->sendQuery($builder);
+
+        if (!isset($response->{0}))
+            throw new PWEntityDoesNotExist();
 
         $nation = new Nation();
         $nation->buildWithJSON((object)$response->{0});

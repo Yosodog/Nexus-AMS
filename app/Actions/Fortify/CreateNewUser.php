@@ -2,7 +2,10 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Nations;
 use App\Models\User;
+use App\Rules\InAllianceAndMember;
+use App\Services\NationQueryService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -15,7 +18,7 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * @param  array<string, string>  $input
+     * @param array<string, string> $input
      */
     public function create(array $input): User
     {
@@ -33,10 +36,9 @@ class CreateNewUser implements CreatesNewUsers
                 'required',
                 'integer',
                 Rule::unique(User::class),
+                new InAllianceAndMember
             ]
         ])->validate();
-
-        // TODO add validation that the nation exists and is in the alliance
 
         return User::create([
             'name' => $input['name'],
