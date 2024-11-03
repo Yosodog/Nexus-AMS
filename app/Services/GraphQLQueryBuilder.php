@@ -7,6 +7,7 @@ class GraphQLQueryBuilder
     protected string $rootField;
     protected array $arguments = [];
     protected array $fields = [];
+    public bool $includePagination = false;
 
     /**
      * Set the root field of the query (e.g., 'nations').
@@ -21,15 +22,32 @@ class GraphQLQueryBuilder
     }
 
     /**
-     * Add an argument to the query.
+     * @return string
+     */
+    public function getRootField(): string
+    {
+        return $this->rootField;
+    }
+
+    /**
+     * Add an argument or multiple arguments to the query.
      *
-     * @param string $key
+     * @param string|array $key
      * @param mixed $value
      * @return self
      */
-    public function addArgument(string $key, mixed $value): self
+    public function addArgument(string|array $key, mixed $value = null): self
     {
-        $this->arguments[$key] = $value;
+        if (is_array($key)) {
+            // If an array is passed, merge each key-value pair into the arguments array
+            foreach ($key as $argKey => $argValue) {
+                $this->arguments[$argKey] = $argValue;
+            }
+        } else {
+            // Otherwise, treat $key as a string and add the single key-value pair
+            $this->arguments[$key] = $value;
+        }
+
         return $this;
     }
 
@@ -65,6 +83,17 @@ class GraphQLQueryBuilder
     }
 
     /**
+     * Enable pagination information in the query.
+     *
+     * @return self
+     */
+    public function withPaginationInfo(): self
+    {
+        $this->includePagination = true;
+        return $this;
+    }
+
+    /**
      * Build the query string without the root field (for nested fields).
      *
      * @return string
@@ -78,7 +107,7 @@ class GraphQLQueryBuilder
     }
 
     /**
-     * Build the complete query string.
+     * Build the complete query string, adding pagination if enabled.
      *
      * @return string
      */
@@ -86,7 +115,6 @@ class GraphQLQueryBuilder
     {
         $query = $this->rootField;
 
-        // Add arguments if any
         if (!empty($this->arguments)) {
             $args = [];
             foreach ($this->arguments as $key => $value) {
@@ -101,7 +129,13 @@ class GraphQLQueryBuilder
             $query .= '(' . implode(', ', $args) . ')';
         }
 
-        // Add fields
+        // Include pagination info if required
+        if ($this->includePagination) {
+            $this->addNestedField('paginatorInfo', function ($builder) {
+                $builder->addFields(['perPage', 'count', 'lastPage']);
+            });
+        }
+
         if (!empty($this->fields)) {
             $query .= ' { ' . implode(' ', $this->fields) . ' }';
         }

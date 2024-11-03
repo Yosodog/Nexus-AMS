@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\GraphQL\Models\Nation;
+use App\GraphQL\Models\Nations;
 
 class NationQueryService
 {
@@ -26,7 +27,7 @@ class NationQueryService
         $response = $client->sendQuery($builder);
 
         $nation = new Nation();
-        $nation->buildWithJSON((object)$response['data']['nations']['data'][0]);
+        $nation->buildWithJSON((object)$response->{0});
 
         return $nation;
     }
@@ -54,8 +55,49 @@ class NationQueryService
         $response = $client->sendQuery($builder);
 
         $nation = new Nation();
-        $nation->buildWithJSON((object)$response['data']['nations']['data'][0]);
+        $nation->buildWithJSON((object)$response->{0});
 
         return $nation;
+    }
+
+    /**
+     * @param array $arguments
+     * @param int $perPage
+     * @param bool $withCities
+     * @return Nations
+     * @throws \App\Exceptions\PWQueryFailedException
+     * @throws \Illuminate\Http\Client\ConnectionException
+     */
+    public static function getMultipleNations(array $arguments, int $perPage = 500, bool $withCities = false): Nations
+    {
+        $client = new QueryService();
+
+        $builder = (new GraphQLQueryBuilder())
+            ->setRootField("nations")
+            ->addArgument('first', $perPage)
+            ->addArgument($arguments)
+            ->addNestedField("data", function (GraphQLQueryBuilder $builder) use ($withCities) {
+                if ($withCities) {
+                    $builder->addFields(SelectionSetHelper::nationSet())
+                        ->addNestedField("cities", function(GraphQLQueryBuilder $cityBuilder) {
+                            $cityBuilder->addFields(SelectionSetHelper::citySet());
+                        });
+                } else {
+                    $builder->addFields(SelectionSetHelper::nationSet());
+                }
+            })
+            ->withPaginationInfo();
+
+        $response = $client->sendQuery($builder);
+        $nations = new Nations();
+
+        foreach ($response as $queryNation)
+        {
+            $nation = new Nation();
+            $nation->buildWithJSON((object)$queryNation);
+            $nations->add($nation);
+        }
+
+        return $nations;
     }
 }

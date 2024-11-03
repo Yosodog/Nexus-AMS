@@ -7,7 +7,7 @@ class Nations implements \Iterator
     private array $nations;  // Array to store Nation objects
     private int $position;    // Current position of the iterator
 
-    public function __construct(array $nations)
+    public function __construct(array $nations = [])
     {
         $this->nations = $nations;
         $this->position = 0;

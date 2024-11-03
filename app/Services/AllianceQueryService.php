@@ -11,8 +11,7 @@ class AllianceQueryService
     /**
      * @param int $aID
      * @return Alliance
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \App\Exceptions\PWRateLimitHitException
+     * @throws \App\Exceptions\PWQueryFailedException|\Illuminate\Http\Client\ConnectionException
      */
     public static function getAllianceById(int $aID): Alliance
     {
@@ -28,7 +27,7 @@ class AllianceQueryService
         $response = $client->sendQuery($builder);
 
         $alliance = new Alliance();
-        $alliance->buildWithJSON((object)$response['data']['alliances']['data'][0]);
+        $alliance->buildWithJSON((object)$response->{0});
 
         return $alliance;
     }
@@ -39,7 +38,7 @@ class AllianceQueryService
      * @param int $aID
      * @return Alliance
      * @throws PWQueryFailedException
-     * @throws PWRateLimitHitExßception
+     * @throws \Illuminate\Http\Client\ConnectionException
      */
     public static function getAllianceWithMembersById(int $aID): Alliance
     {
@@ -58,7 +57,7 @@ class AllianceQueryService
         $response = $client->sendQuery($builder);
 
         $alliance = new Alliance();
-        $alliance->buildWithJSON((object)$response['data']['alliances']['data'][0]);
+        $alliance->buildWithJSON((object)$response->{0});
 
         return $alliance;
     }
