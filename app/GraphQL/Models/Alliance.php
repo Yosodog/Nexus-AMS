@@ -23,18 +23,18 @@ class Alliance
     // public array $taxrecs; // [Bankrec]
     // public array $tax_brackets; // [TaxBracket]
     // public array $wars; // [War!]!
-    public float $money;
-    public float $coal;
-    public float $oil;
-    public float $uranium;
-    public float $iron;
-    public float $bauxite;
-    public float $lead;
-    public float $gasoline;
-    public float $munitions;
-    public float $steel;
-    public float $aluminum;
-    public float $food;
+    public float|null $money;
+    public float|null $coal;
+    public float|null $oil;
+    public float|null $uranium;
+    public float|null $iron;
+    public float|null $bauxite;
+    public float|null $lead;
+    public float|null $gasoline;
+    public float|null $munitions;
+    public float|null $steel;
+    public float|null $aluminum;
+    public float|null $food;
     // public array $awards; // [Award]
     public int $rank;
     // public array $bulletins; // [Bulletin]
