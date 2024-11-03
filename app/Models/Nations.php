@@ -49,6 +49,14 @@ class Nations extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function alliance()
+    {
+        return $this->belongsTo(Alliances::class, "alliance_id", "id");
+    }
+
+    /**
      * Interpret project_bits and return an associative array indicating project ownership.
      *
      * @return array
@@ -71,7 +79,7 @@ class Nations extends Model
      * @param Nation $graphQLNationModel
      * @return self
      */
-    public static function createFromAPI(Nation $graphQLNationModel): self
+    public static function updateFromAPI(Nation $graphQLNationModel): self
     {
         // Extract nation data
         $nationData = collect((array) $graphQLNationModel)->only([

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('color', 20)->index(); // Index for filtering by color
             $table->unsignedSmallInteger('num_cities');
             $table->float('score')->index(); // Index for sorting/filtering by score
-            $table->unsignedTinyInteger('update_tz')->nullable();
+            $table->tinyInteger('update_tz')->nullable();
             $table->unsignedInteger('population');
             $table->string('flag')->nullable();
             $table->unsignedSmallInteger('vacation_mode_turns');
