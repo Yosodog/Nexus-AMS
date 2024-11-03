@@ -4,8 +4,8 @@ namespace App\GraphQL\Models;
 
 class Nations implements \Iterator
 {
-    private array $nations = [];  // Array to store Nation objects
-    private int $position = 0;    // Current position of the iterator
+    private array $nations;  // Array to store Nation objects
+    private int $position;    // Current position of the iterator
 
     public function __construct(array $nations)
     {
