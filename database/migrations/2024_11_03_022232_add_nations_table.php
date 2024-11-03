@@ -13,17 +13,19 @@ return new class extends Migration
     {
         Schema::create('nations', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('alliance_id')->nullable()->index(); // Index for quick joins
-            $table->string('alliance_position', 50)->nullable();
+            $table->unsignedBigInteger('alliance_id')->nullable()->index(); // Alliance relationship
+            $table->enum('alliance_position', ['NOALLIANCE', 'APPLICANT', 'MEMBER', 'OFFICER', 'HEIR', 'LEADER'])->default('NOALLIANCE');
             $table->unsignedInteger('alliance_position_id');
-            $table->string('nation_name')->index(); // Index for search on nation name
-            $table->string('leader_name')->index(); // Index for search on leader name
+            $table->string('nation_name')->index();
+            $table->string('leader_name')->index();
             $table->string('continent', 2);
+            $table->enum('war_policy', ['ATTRITION', 'TURTLE', 'BLITZKRIEG', 'FORTRESS', 'MONEYBAGS', 'PIRATE', 'TACTICIAN', 'GUARDIAN', 'COVERT', 'ARCANE'])->default('ATTRITION');
             $table->unsignedSmallInteger('war_policy_turns');
+            $table->enum('domestic_policy', ['MANIFEST_DESTINY', 'OPEN_MARKETS', 'TECHNOLOGICAL_ADVANCEMENT', 'IMPERIALISM', 'URBANIZATION', 'RAPID_EXPANSION'])->default('MANIFEST_DESTINY');
             $table->unsignedSmallInteger('domestic_policy_turns');
-            $table->string('color', 20)->index(); // Index for filtering by color
+            $table->string('color', 20)->index();
             $table->unsignedSmallInteger('num_cities');
-            $table->float('score')->index(); // Index for sorting/filtering by score
+            $table->float('score')->index();
             $table->tinyInteger('update_tz')->nullable();
             $table->unsignedInteger('population');
             $table->string('flag')->nullable();
@@ -35,7 +37,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('turns_since_last_city');
             $table->unsignedSmallInteger('turns_since_last_project');
             $table->unsignedTinyInteger('projects');
-            $table->string('project_bits'); // Storing project ownership as a bit sequence. Stores as string just in case lol
+            $table->string('project_bits'); // Storing project ownership as a bit sequence
             $table->unsignedInteger('wars_won');
             $table->unsignedInteger('wars_lost');
             $table->unsignedInteger('tax_id')->nullable();
@@ -47,6 +49,9 @@ return new class extends Migration
             $table->unsignedSmallInteger('denouncements');
             $table->unsignedInteger('offensive_wars_count');
             $table->unsignedInteger('defensive_wars_count');
+            $table->float('money_looted');
+            $table->float('total_infrastructure_destroyed');
+            $table->float('total_infrastructure_lost');
             $table->timestamps();
         });
     }

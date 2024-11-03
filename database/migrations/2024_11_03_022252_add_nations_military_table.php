@@ -42,6 +42,7 @@ return new class extends Migration
             $table->unsignedInteger('nuke_kills');
             $table->unsignedInteger('spy_casualties');
             $table->unsignedInteger('spy_kills');
+            $table->unsignedInteger('spy_attacks');
             $table->timestamps();
         });
     }

@@ -89,7 +89,8 @@ class Nations extends Model
             'beige_turns', 'espionage_available', 'discord', 'discord_id', 'turns_since_last_city',
             'turns_since_last_project', 'projects', 'project_bits', 'wars_won', 'wars_lost',
             'tax_id', 'alliance_seniority', 'gross_national_income', 'gross_domestic_product',
-            'vip', 'commendations', 'denouncements', 'offensive_wars_count', 'defensive_wars_count'
+            'vip', 'commendations', 'denouncements', 'offensive_wars_count', 'defensive_wars_count',
+            'money_looted', 'total_infrastructure_destroyed', 'total_infrastructure_lost'
         ])->toArray();
 
         // Check if the nation already exists
@@ -119,7 +120,7 @@ class Nations extends Model
             'spies_today', 'soldier_casualties', 'soldier_kills', 'tank_casualties', 'tank_kills',
             'aircraft_casualties', 'aircraft_kills', 'ship_casualties', 'ship_kills',
             'missile_casualties', 'missile_kills', 'nuke_casualties', 'nuke_kills',
-            'spy_casualties', 'spy_kills'
+            'spy_casualties', 'spy_kills', 'spy_attacks'
         ])->toArray();
         $nation->military()->updateOrCreate(['nation_id' => $nation->id], $militaryData);
 
