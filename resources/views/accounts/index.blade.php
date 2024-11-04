@@ -13,4 +13,8 @@
             @include("accounts.components.delete")
         </div>
     </div>
+
+    <div class="divider"></div>
+
+    @include("accounts.components.transfer")
 @endsection
