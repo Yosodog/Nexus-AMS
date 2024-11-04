@@ -57,6 +57,14 @@ class Nations extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function accounts()
+    {
+        return $this->hasMany(Accounts::class, "nation_id");
+    }
+
+    /**
      * Interpret project_bits and return an associative array indicating project ownership.
      *
      * @return array
