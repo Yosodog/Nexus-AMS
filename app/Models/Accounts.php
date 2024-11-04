@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Accounts extends Model
 {
+    public $table = "accounts";
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
