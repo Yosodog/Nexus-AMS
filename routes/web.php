@@ -14,6 +14,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
         ->name('accounts.transfer');
 
-    Route::get("/accounts/{id}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
+    Route::get("/accounts/create", [AccountsController::class, "createView"])->name("accounts.create");
+    Route::post("/accounts/create", [AccountsController::class, "create"])->name("accounts.create.post");
+
+    Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
 });

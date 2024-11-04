@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Nations::class, "id", "nation_id");
     }
+
+    public function accounts()
+    {
+        return $this->hasMany(Accounts::class, "nation_id", "nation_id");
+    }
 }

@@ -23,18 +23,18 @@ return new class extends Migration
             $table->enum('transaction_type', ['deposit', 'withdrawal', 'transfer']);
 
             // Resource values involved in the transaction
-            $table->decimal('money', 15, 2);
-            $table->decimal('coal', 14, 2);
-            $table->decimal('oil', 14, 2);
-            $table->decimal('uranium', 14, 2);
-            $table->decimal('iron', 14, 2);
-            $table->decimal('bauxite', 14, 2);
-            $table->decimal('lead', 14, 2);
-            $table->decimal('gasoline', 14, 2);
-            $table->decimal('munitions', 14, 2);
-            $table->decimal('steel', 14, 2);
-            $table->decimal('aluminum', 14, 2);
-            $table->decimal('food', 14, 2);
+            $table->decimal('money', 15, 2)->default(0);
+            $table->decimal('coal', 14, 2)->default(0);
+            $table->decimal('oil', 14, 2)->default(0);
+            $table->decimal('uranium', 14, 2)->default(0);
+            $table->decimal('iron', 14, 2)->default(0);
+            $table->decimal('bauxite', 14, 2)->default(0);
+            $table->decimal('lead', 14, 2)->default(0);
+            $table->decimal('gasoline', 14, 2)->default(0);
+            $table->decimal('munitions', 14, 2)->default(0);
+            $table->decimal('steel', 14, 2)->default(0);
+            $table->decimal('aluminum', 14, 2)->default(0);
+            $table->decimal('food', 14, 2)->default(0);
 
             // Timestamps for the transaction
             $table->timestamps();
