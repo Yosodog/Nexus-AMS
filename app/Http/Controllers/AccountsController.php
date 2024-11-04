@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UserErrorException;
 use App\Models\Accounts;
 use App\Services\AccountService;
 use Illuminate\Http\Request;
@@ -46,6 +47,37 @@ class AccountsController extends Controller
 
         return redirect()
             ->route('accounts')
-            ->with('success', 'Account created successfully.');
+            ->with([
+                'alert-message' => 'Account created successfully.',
+                "alert-type" => 'success'
+            ]);
+    }
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function delete(Request $request)
+    {
+        $account = AccountService::getAccountById($request->account_id);
+
+        try {
+            // Ensure we own this account
+            if (Auth::user()->nation_id !== $account->nation_id)
+                throw new UserErrorException("You don't own that account");
+
+            AccountService::deleteAccount($account);
+
+        } catch (UserErrorException $e) {
+            return redirect()
+                ->back()
+                ->withErrors([$e->getMessage()])
+                ->with(["alert-type" => "error"]);
+        }
+
+        return redirect()
+            ->route("accounts")
+            ->with("success", "Account deleted!");
+
     }
 }

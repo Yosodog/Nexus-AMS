@@ -17,6 +17,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get("/accounts/create", [AccountsController::class, "createView"])->name("accounts.create");
     Route::post("/accounts/create", [AccountsController::class, "create"])->name("accounts.create.post");
 
+    Route::post("/accounts/delete", [AccountsController::class, "delete"])->name("accounts.delete.post");
+
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
 });

@@ -35,7 +35,8 @@ return new class extends Migration
             $table->foreign("nation_id")
                 ->references("id")
                 ->on("nations")
-                ->nullOnDelete();
+                ->nullOnDelete()
+                ->noActionOnUpdate();
         });
     }
 
