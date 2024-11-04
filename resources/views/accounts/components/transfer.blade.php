@@ -38,7 +38,7 @@
                 <label for="money" class="label font-semibold">
                     Money <span class="badge badge-info ml-2">$<span id="moneyAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="money" id="money" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="money" id="money" value="0" step="any" min="0">
             </div>
 
             <!-- Coal Field -->
@@ -46,7 +46,7 @@
                 <label for="coal" class="label font-semibold">
                     Coal <span class="badge badge-info ml-2"><span id="coalAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="coal" id="coal" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="coal" id="coal" value="0" step="any" min="0">
             </div>
 
             <!-- Oil Field -->
@@ -54,7 +54,7 @@
                 <label for="oil" class="label font-semibold">
                     Oil <span class="badge badge-info ml-2"><span id="oilAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="oil" id="oil" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="oil" id="oil" value="0" step="any" min="0">
             </div>
 
             <!-- Uranium Field -->
@@ -62,7 +62,7 @@
                 <label for="uranium" class="label font-semibold">
                     Uranium <span class="badge badge-info ml-2"><span id="uraniumAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="uranium" id="uranium" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="uranium" id="uranium" value="0" step="any" min="0">
             </div>
 
             <!-- Lead Field -->
@@ -70,7 +70,7 @@
                 <label for="lead" class="label font-semibold">
                     Lead <span class="badge badge-info ml-2"><span id="leadAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="lead" id="lead" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="lead" id="lead" value="0" step="any" min="0">
             </div>
 
             <!-- Iron Field -->
@@ -78,7 +78,7 @@
                 <label for="iron" class="label font-semibold">
                     Iron <span class="badge badge-info ml-2"><span id="ironAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="iron" id="iron" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="iron" id="iron" value="0" step="any" min="0">
             </div>
 
             <!-- Bauxite Field -->
@@ -86,7 +86,7 @@
                 <label for="bauxite" class="label font-semibold">
                     Bauxite <span class="badge badge-info ml-2"><span id="bauxiteAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="bauxite" id="bauxite" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="bauxite" id="bauxite" value="0" step="any" min="0">
             </div>
 
             <!-- Gas Field -->
@@ -94,7 +94,7 @@
                 <label for="gas" class="label font-semibold">
                     Gas <span class="badge badge-info ml-2"><span id="gasAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="gas" id="gas" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="gas" id="gas" value="0" step="any" min="0">
             </div>
 
             <!-- Munitions Field -->
@@ -102,7 +102,7 @@
                 <label for="munitions" class="label font-semibold">
                     Munitions <span class="badge badge-info ml-2"><span id="munitionsAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="munitions" id="munitions" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="munitions" id="munitions" value="0" step="any" min="0">
             </div>
 
             <!-- Steel Field -->
@@ -110,7 +110,7 @@
                 <label for="steel" class="label font-semibold">
                     Steel <span class="badge badge-info ml-2"><span id="steelAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="steel" id="steel" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="steel" id="steel" value="0" step="any" min="0">
             </div>
 
             <!-- Aluminum Field -->
@@ -118,7 +118,7 @@
                 <label for="aluminum" class="label font-semibold">
                     Aluminum <span class="badge badge-info ml-2"><span id="aluminumAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="aluminum" id="aluminum" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="aluminum" id="aluminum" value="0" step="any" min="0">
             </div>
 
             <!-- Food Field -->
@@ -126,7 +126,7 @@
                 <label for="food" class="label font-semibold">
                     Food <span class="badge badge-info ml-2"><span id="foodAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="food" id="food" value="0" step="any" min="0" max="0.00">
+                <input type="number" class="input input-bordered" name="food" id="food" value="0" step="any" min="0">
             </div>
         </div>
 
