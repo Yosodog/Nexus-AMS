@@ -109,6 +109,15 @@ class AccountService
             $fromAccount->save();
             $toAccount->save();
 
+            TransactionService::createTransaction(
+                $resources,
+                Auth::user()->nation_id,
+                $fromAccountId,
+                "transfer",
+                $toAccountId,
+                false
+            );
+
             DB::commit();
         } catch (Exception $e) {
             // Rollback in case of error
@@ -151,6 +160,13 @@ class AccountService
         // Verify that we own the from account
         if ($fromAccount->nation_id != $nation_id) {
             throw new UserErrorException("You do not own the from account");
+        }
+
+        // Verify that we don't have a pending transaction
+        if (TransactionService::hasPendingTransaction($nation_id)) {
+            throw new UserErrorException(
+                "You are only allowed one pending transaction at a time. Try again later"
+            );
         }
 
         // If the toAccount is set, then verify that we own it too. It will not be set if we are transferring to a nation
@@ -227,10 +243,18 @@ class AccountService
 
             // Save changes
             $fromAccount->save();
-            // Send withdraw
-            $bank->send();
 
-            DB::commit();
+            $transaction = TransactionService::createTransaction(
+                $resources,
+                Auth::user()->nation_id,
+                $fromAccountId,
+                "withdrawal",
+            );
+
+            DB::commit(); // Commit before spawning the job. I'd rather it fail.
+
+            // Send withdraw
+            $bank->send($transaction);
         } catch (Exception $e) {
             // Rollback in case of error
             DB::rollBack();

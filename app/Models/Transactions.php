@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transactions extends Model
 {
+
     public $table = "transactions";
 
     /**
@@ -31,4 +32,14 @@ class Transactions extends Model
     {
         return $this->belongsTo(Nations::class, "nation_id", "id");
     }
+
+    /**
+     * @return void
+     */
+    public function setSent(): void
+    {
+        $this->is_pending = false;
+        $this->save();
+    }
+
 }
