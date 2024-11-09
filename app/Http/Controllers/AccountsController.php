@@ -5,34 +5,44 @@ namespace App\Http\Controllers;
 use App\Exceptions\UserErrorException;
 use App\Models\Accounts;
 use App\Services\AccountService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AccountsController extends Controller
 {
+
     public function index()
     {
         $accounts = AccountService::getAccountsByNid(Auth::user()->nation_id);
 
-        if ($accounts->count() === 0)
+        if ($accounts->count() === 0) {
             return redirect()->route("accounts.create");
+        }
 
         return view("accounts.index", [
-            "accounts" => $accounts
+            "accounts" => $accounts,
         ]);
     }
 
     /**
-     * @param Request $request
+     * @param  Request  $request
+     *
      * @return \Illuminate\Http\RedirectResponse
      */
     public function transfer(Request $request)
     {
-        $request->validate([
-            'from' => 'required|integer|exists:accounts,id',
-            'to' => 'required|integer|exists:accounts,id',
-        ]);
+        if ($request->input("to") == "nation") {
+            $request->validate([
+                'from' => 'required|integer|exists:accounts,id',
+            ]);
+        } else {
+            $request->validate([
+                'from' => 'required|integer|exists:accounts,id',
+                'to' => 'required|integer|exists:accounts,id',
+            ]);
+        }
 
         $transfer = [
             "money" => $request->input("money") ?? 0,
@@ -51,30 +61,39 @@ class AccountsController extends Controller
 
         try {
             if ($request->input("to") == "nation") {
-                // Transfer to nation logic
+                AccountService::transferToNation(
+                    $request->input("from"),
+                    Auth::user()->nation_id,
+                    $transfer
+                );
             } else {
-                AccountService::transferToAccount($request->input("from"), $request->input("to"), $transfer);
+                AccountService::transferToAccount(
+                    $request->input("from"),
+                    $request->input("to"),
+                    $transfer
+                );
             }
 
             return redirect()->back()->with([
                 'alert-message' => 'Transfer successful!',
-                "alert-type" => 'success'
+                "alert-type" => 'success',
             ]);
         } catch (UserErrorException $e) {
             return redirect()->back()->with([
                 'alert-message' => $e->getMessage(),
-                'alert-type' => "error"
+                'alert-type' => "error",
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Error when transferring. ".$e->getMessage());
 
-            return redirect()->back()->withErrors("There was an error with your transfer. Please try again");
+            return redirect()->back()->withErrors(
+                "There was an error with your transfer. Please try again"
+            );
         }
     }
 
     public function viewAccount(Accounts $account)
     {
-
     }
 
     public function createView()
@@ -88,18 +107,22 @@ class AccountsController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        AccountService::createAccount(Auth::user()->nation_id, $request->input("name"));
+        AccountService::createAccount(
+            Auth::user()->nation_id,
+            $request->input("name")
+        );
 
         return redirect()
             ->route('accounts')
             ->with([
                 'alert-message' => 'Account created successfully.',
-                "alert-type" => 'success'
+                "alert-type" => 'success',
             ]);
     }
 
     /**
-     * @param Request $request
+     * @param  Request  $request
+     *
      * @return \Illuminate\Http\RedirectResponse
      */
     public function delete(Request $request)
@@ -108,11 +131,11 @@ class AccountsController extends Controller
 
         try {
             // Ensure we own this account
-            if (Auth::user()->nation_id !== $account->nation_id)
+            if (Auth::user()->nation_id !== $account->nation_id) {
                 throw new UserErrorException("You don't own that account");
+            }
 
             AccountService::deleteAccount($account);
-
         } catch (UserErrorException $e) {
             return redirect()
                 ->back()
@@ -123,6 +146,6 @@ class AccountsController extends Controller
         return redirect()
             ->route("accounts")
             ->with("success", "Account deleted!");
-
     }
+
 }

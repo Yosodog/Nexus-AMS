@@ -169,7 +169,7 @@ class AccountService
                 );
             }
 
-            // Verify that the 'from' account has enough resources
+            // Verify that nothing is a negative resource
             if ($resources[$res] < 0) {
                 throw new UserErrorException(
                     "$res is set to a negative number"
@@ -184,6 +184,57 @@ class AccountService
 
         if ( ! $thereIsSomething) {
             throw new UserErrorException("You can't transfer nothing.");
+        }
+    }
+
+    /**
+     * @param  int  $fromAccountId
+     * @param  int  $nation_id
+     * @param  array  $resources
+     *
+     * @return void
+     * @throws \App\Exceptions\PWQueryFailedException
+     * @throws \App\Exceptions\UserErrorException
+     * @throws \Illuminate\Http\Client\ConnectionException
+     */
+    public static function transferToNation(
+        int $fromAccountId,
+        int $nation_id,
+        array $resources
+    ): void {
+        // Start transaction to ensure data integrity
+        DB::beginTransaction();
+
+        try {
+            $fromAccount = self::getAccountById($fromAccountId);
+
+            // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
+            self::validateTransfer(
+                $resources,
+                Auth::user()->nation_id,
+                $fromAccount
+            );
+
+            $bank = new BankService();
+            $bank->receiver = $nation_id;
+            $bank->note = "Withdraw from ".$fromAccount->name;
+
+            // Perform the transfer
+            foreach (self::$resources as $res) {
+                $fromAccount->$res -= $resources[$res];
+                $bank->$res = $resources[$res];
+            }
+
+            // Save changes
+            $fromAccount->save();
+            // Send withdraw
+            $bank->sendWithdraw();
+
+            DB::commit();
+        } catch (Exception $e) {
+            // Rollback in case of error
+            DB::rollBack();
+            throw $e;
         }
     }
 
