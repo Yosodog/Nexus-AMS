@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\PWRateLimitHitException;
 use App\Exceptions\PWQueryFailedException;
 use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -10,19 +9,11 @@ use GuzzleHttp\Promise\Utils;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\LazyCollection;
 use stdClass;
 
 class QueryService
 {
-    /**
-     * @var string
-     */
-    protected string $apiKey;
-    /**
-     * @var string
-     */
-    protected string $endpoint;
+
     /**
      * @var int
      */
@@ -31,6 +22,14 @@ class QueryService
      * @var int
      */
     public int $maxRetries = 5;
+    /**
+     * @var string
+     */
+    protected string $apiKey;
+    /**
+     * @var string
+     */
+    protected string $endpoint;
     /**
      * @var int
      */
@@ -53,8 +52,9 @@ class QueryService
     {
         $apiKey = env("PW_API_KEY");
 
-        if (is_null($apiKey))
+        if (is_null($apiKey)) {
             throw new Exception("Env value PW_API_KEY not set");
+        }
 
         return env("PW_API_KEY");
     }
@@ -68,15 +68,21 @@ class QueryService
     }
 
     /**
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param int|null $maxConcurrency
-     * @param array $headers
+     * @param  GraphQLQueryBuilder  $builder
+     * @param  array  $variables
+     * @param  int|null  $maxConcurrency
+     * @param  bool  $headers
+     *
      * @return stdClass
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
-    public function sendQuery(GraphQLQueryBuilder $builder, array $variables = [], int $maxConcurrency = null, array $headers = []): \stdClass    {
+    public function sendQuery(
+        GraphQLQueryBuilder $builder,
+        array $variables = [],
+        int $maxConcurrency = null,
+        bool $headers = false
+    ): stdClass {
         $maxConcurrency = $maxConcurrency ?? $this->maxConcurrency;
         $paginationEnabled = $builder->includePagination;
         $page = 1;
@@ -84,74 +90,202 @@ class QueryService
         $allResults = collect();
         $rootField = $builder->getRootField();
 
+        if ($headers) {
+            $headersArray = $this->getHeaders();
+        } else {
+            $headersArray = [];
+        }
+
         // Initial request to detect pagination and retrieve data
-        $firstResponse = $this->executeInitialRequest($builder, $variables, $rootField, $headers);
+        $firstResponse = $this->executeInitialRequest(
+            $builder,
+            $variables,
+            $rootField,
+            $headersArray
+        );
         $paginationEnabled = isset($firstResponse['paginatorInfo']);
         $allResults = $allResults->merge($firstResponse['data']);
 
         if ($paginationEnabled) {
             $lastPage = $firstResponse['paginatorInfo']['lastPage'];
             if ($lastPage === 1) {
-                return (object) $allResults->toArray();
+                return (object)$allResults->toArray();
             }
         } else {
-            return (object) $allResults->toArray();
+            return (object)$allResults->toArray();
         }
 
         // Fetch remaining pages if there are multiple pages
         while ($page <= $lastPage) {
             // Create and execute a batch of requests, starting from the current page
-            $promises = $this->createBatchRequests($builder, $variables, $page, $maxConcurrency, $lastPage);
+            $promises = $this->createBatchRequests(
+                $builder,
+                $variables,
+                $page,
+                $maxConcurrency,
+                $lastPage
+            );
             $responses = Utils::settle($promises)->wait();
 
             // Process responses and increment page for the next batch
-            $this->processBatchResponses($responses, $allResults, $lastPage, $rootField);
+            $this->processBatchResponses(
+                $responses,
+                $allResults,
+                $lastPage,
+                $rootField
+            );
         }
 
-        return (object) $allResults->toArray();
+        return (object)$allResults->toArray();
     }
 
     /**
-     * Sends the first query of a request so that we can check later if there's only one page for this request
+     * Gets headers for mutations that require these.
      *
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param string $rootField
-     * @param array $headers
+     * @return array
+     */
+    protected function getHeaders(): array
+    {
+        return [
+            'X-Bot-Key' => env("PW_API_MUTATION_KEY"),
+            'X-Api-Key' => env("PW_API_KEY"),
+        ];
+    }
+
+    /**
+     * Sends the first query of a request so that we can check later if there's
+     * only one page for this request
+     *
+     * @param  GraphQLQueryBuilder  $builder
+     * @param  array  $variables
+     * @param  string  $rootField
+     * @param  array  $headers
+     *
      * @return array
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
-    protected function executeInitialRequest(GraphQLQueryBuilder $builder, array $variables, string $rootField, array $headers = []): array    {
+    protected function executeInitialRequest(
+        GraphQLQueryBuilder $builder,
+        array $variables,
+        string $rootField,
+        array $headers = []
+    ): array {
         $query = $builder->build();
         $retryCount = 0;
         $delay = $this->initialDelay;
 
-        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers)->wait();
+        $response = $this->sendPageQuery(
+            $query,
+            $variables,
+            $retryCount,
+            $delay,
+            $headers
+        )->wait();
 
         if ($response && isset($response['data'][$rootField])) {
-            return [
-                'data' => $response['data'][$rootField]['data'],
-                'paginatorInfo' => $response['data'][$rootField]['paginatorInfo'] ?? null,
-            ];
+            if (isset($response['data'][$rootField]['data'])) {
+                return [
+                    'data' => $response['data'][$rootField]['data'],
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
+                        ?? null,
+                ];
+            } else {
+                return [
+                    'data' => $response['data'][$rootField],
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
+                        ?? null,
+                ];
+            }
         }
 
-        throw new PWQueryFailedException("Initial query failed: " . json_encode($response));
+        throw new PWQueryFailedException(
+            "Initial query failed: ".json_encode($response)
+        );
+    }
+
+    /**
+     * Sends the query for a request that is not the first page
+     *
+     * @param  string  $query
+     * @param  array  $variables
+     * @param  int  $retryCount
+     * @param  int  $delay
+     * @param  array  $headers
+     *
+     * @return PromiseInterface
+     * @throws ConnectionException
+     */
+    protected function sendPageQuery(
+        string $query,
+        array $variables,
+        int &$retryCount,
+        int &$delay,
+        array $headers = []
+    ): PromiseInterface {
+        return Http::async()->withHeaders($headers)->post($this->endpoint, [
+            'query' => $query,
+            'variables' => $variables,
+        ])->then(
+            function ($response) use (
+                &$retryCount,
+                &$delay,
+                $query,
+                $variables,
+                $headers
+            ) {
+                if ($response->status() === 429) {
+                    Log::warning(
+                        'Rate limit hit, retrying in '.$delay.' seconds.'
+                    );
+                    sleep($delay);
+                    $retryCount++;
+                    $delay *= 2;
+
+                    return $this->sendPageQuery(
+                        $query,
+                        $variables,
+                        $retryCount,
+                        $delay
+                    );
+                }
+
+                if ($response->successful()) {
+                    $retryCount = 0;
+                    $delay = $this->initialDelay;
+
+                    return $response->json();
+                }
+
+                if ($response->failed()) {
+                    Log::error('Query failed: '.$response->body());
+                    throw new PWQueryFailedException(
+                        'Query failed: '.$response->body()
+                    );
+                }
+            }
+        );
     }
 
     /**
      * Sends batch requests when we have multiple pages
      *
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param int $page
-     * @param int $maxConcurrency
-     * @param int $lastPage
+     * @param  GraphQLQueryBuilder  $builder
+     * @param  array  $variables
+     * @param  int  $page
+     * @param  int  $maxConcurrency
+     * @param  int  $lastPage
+     *
      * @return array
      * @throws ConnectionException
      */
-    protected function createBatchRequests(GraphQLQueryBuilder $builder, array $variables, int &$page, int $maxConcurrency, int $lastPage): array
-    {
+    protected function createBatchRequests(
+        GraphQLQueryBuilder $builder,
+        array $variables,
+        int &$page,
+        int $maxConcurrency,
+        int $lastPage
+    ): array {
         $promises = [];
         $page++; // Increment page because we can assume we are already on page 2 if we hit this function
 
@@ -167,7 +301,12 @@ class QueryService
             // Prepare the request with retry settings
             $retryCount = 0;
             $delay = $this->initialDelay;
-            $promises[] = $this->sendPageQuery($currentPageQuery, $variables, $retryCount, $delay);
+            $promises[] = $this->sendPageQuery(
+                $currentPageQuery,
+                $variables,
+                $retryCount,
+                $delay
+            );
 
             // Increment page after setting it for this request
             $page++;
@@ -179,17 +318,24 @@ class QueryService
     /**
      * Processes the batch requests
      *
-     * @param array $responses
+     * @param  array  $responses
      * @param $allResults
      * @param $lastPage
-     * @param string $rootField
+     * @param  string  $rootField
+     *
      * @return void
      * @throws PWQueryFailedException
      */
-    protected function processBatchResponses(array $responses, &$allResults, &$lastPage, string $rootField)
-    {
+    protected function processBatchResponses(
+        array $responses,
+        &$allResults,
+        &$lastPage,
+        string $rootField
+    ) {
         foreach ($responses as $response) {
-            if ($response['state'] === 'fulfilled' && isset($response['value'])) {
+            if ($response['state'] === 'fulfilled'
+                && isset($response['value'])
+            ) {
                 $data = $response['value']['data'][$rootField];
                 $allResults = $allResults->merge($data['data']);
 
@@ -198,47 +344,11 @@ class QueryService
                 }
             } elseif ($response['state'] === 'rejected') {
                 Log::error("Query failed: {$response['reason']}");
-                throw new PWQueryFailedException("Query failed: {$response['reason']}");
+                throw new PWQueryFailedException(
+                    "Query failed: {$response['reason']}"
+                );
             }
         }
     }
 
-    /**
-     * Sends the query for a request that is not the first page
-     *
-     * @param string $query
-     * @param array $variables
-     * @param int $retryCount
-     * @param int $delay
-     * @param array $headers
-     * @return PromiseInterface
-     * @throws ConnectionException
-     */
-    protected function sendPageQuery(string $query, array $variables, int &$retryCount, int &$delay, array $headers = []): PromiseInterface    {
-        return Http::async()->withHeaders($headers)->post($this->endpoint, [
-            'query' => $query,
-            'variables' => $variables,
-        ])->then(
-            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
-                if ($response->status() === 429) {
-                    Log::warning('Rate limit hit, retrying in ' . $delay . ' seconds.');
-                    sleep($delay);
-                    $retryCount++;
-                    $delay *= 2;
-                    return $this->sendPageQuery($query, $variables, $retryCount, $delay);
-                }
-
-                if ($response->successful()) {
-                    $retryCount = 0;
-                    $delay = $this->initialDelay;
-                    return $response->json();
-                }
-
-                if ($response->failed()) {
-                    Log::error('Query failed: ' . $response->body());
-                    throw new PWQueryFailedException('Query failed: ' . $response->body());
-                }
-            }
-        );
-    }
 }

@@ -8,8 +8,9 @@ use Illuminate\Http\Client\ConnectionException;
 
 class BankService
 {
+
     public int $receiver;
-    public int $receiver_type;
+    public int $receiver_type = 1;
     public float $money = 0;
     public float $coal = 0;
     public float $oil = 0;
@@ -22,7 +23,7 @@ class BankService
     public float $steel = 0;
     public float $aluminum = 0;
     public float $food = 0;
-    public ?string $note = null;
+    public string $note = "";
 
     /**ß
      * Send a bank withdraw request.
@@ -31,7 +32,7 @@ class BankService
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public function sendWithdraw()
+    public function sendWithdraw(): BankRecord
     {
         $client = new QueryService();
 
@@ -41,7 +42,7 @@ class BankService
             ->addArgument('receiver', $this->receiver)
             ->addArgument('receiver_type', $this->receiver_type)
             ->addArgument('note', $this->note)
-            ->addFields(['id', 'sender_id']);
+            ->addFields(SelectionSetHelper::bankRecordSet());
 
         // Add optional resource arguments if they are greater than 0
         $optionalFields = [
@@ -65,18 +66,12 @@ class BankService
             }
         }
 
-        // Custom headers for the mutation
-        $headers = [
-            'X-Bot-Key' => env("PW_API_MUTATION_KEY"),
-            'X-Api-Key' => env("PW_API_KEY"),
-        ];
-
-
-        $response = $client->sendQuery($builder, [], null, $headers);
+        $response = $client->sendQuery($builder, [], null, true);
 
         $bankRec = new BankRecord();
-        $bankRec->buildWithJSON((object)$response->{0});
+        $bankRec->buildWithJSON((object)$response);
 
         return $bankRec;
     }
+
 }
