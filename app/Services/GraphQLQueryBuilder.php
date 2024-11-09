@@ -8,6 +8,7 @@ class GraphQLQueryBuilder
     protected array $arguments = [];
     protected array $fields = [];
     public bool $includePagination = false;
+    protected bool $isMutation = false;
 
     /**
      * Set the root field of the query (e.g., 'nations').
@@ -27,6 +28,18 @@ class GraphQLQueryBuilder
     public function getRootField(): string
     {
         return $this->rootField;
+    }
+
+    /**
+     * Set the query as a mutation.
+     *
+     * @param bool $isMutation
+     * @return self
+     */
+    public function setMutation(bool $isMutation = true): self
+    {
+        $this->isMutation = $isMutation;
+        return $this;
     }
 
     /**
@@ -113,6 +126,7 @@ class GraphQLQueryBuilder
      */
     public function build(): string
     {
+        $queryType = $this->isMutation ? 'mutation' : 'query';
         $query = $this->rootField;
 
         if (!empty($this->arguments)) {
@@ -140,6 +154,6 @@ class GraphQLQueryBuilder
             $query .= ' { ' . implode(' ', $this->fields) . ' }';
         }
 
-        return "{ {$query} }";
+        return "{$queryType} { {$query} }";
     }
 }

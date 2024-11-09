@@ -71,11 +71,12 @@ class QueryService
      * @param GraphQLQueryBuilder $builder
      * @param array $variables
      * @param int|null $maxConcurrency
+     * @param array $headers
      * @return stdClass
-     * @throws PWQueryFailedException|ConnectionException
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
      */
-    public function sendQuery(GraphQLQueryBuilder $builder, array $variables = [], int $maxConcurrency = null): \stdClass
-    {
+    public function sendQuery(GraphQLQueryBuilder $builder, array $variables = [], int $maxConcurrency = null, array $headers = []): \stdClass    {
         $maxConcurrency = $maxConcurrency ?? $this->maxConcurrency;
         $paginationEnabled = $builder->includePagination;
         $page = 1;
@@ -84,7 +85,7 @@ class QueryService
         $rootField = $builder->getRootField();
 
         // Initial request to detect pagination and retrieve data
-        $firstResponse = $this->executeInitialRequest($builder, $variables, $rootField);
+        $firstResponse = $this->executeInitialRequest($builder, $variables, $rootField, $headers);
         $paginationEnabled = isset($firstResponse['paginatorInfo']);
         $allResults = $allResults->merge($firstResponse['data']);
 
@@ -116,16 +117,17 @@ class QueryService
      * @param GraphQLQueryBuilder $builder
      * @param array $variables
      * @param string $rootField
+     * @param array $headers
      * @return array
-     * @throws PWQueryFailedException|ConnectionException
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
      */
-    protected function executeInitialRequest(GraphQLQueryBuilder $builder, array $variables, string $rootField): array
-    {
+    protected function executeInitialRequest(GraphQLQueryBuilder $builder, array $variables, string $rootField, array $headers = []): array    {
         $query = $builder->build();
         $retryCount = 0;
         $delay = $this->initialDelay;
 
-        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay)->wait();
+        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers)->wait();
 
         if ($response && isset($response['data'][$rootField])) {
             return [
@@ -208,16 +210,16 @@ class QueryService
      * @param array $variables
      * @param int $retryCount
      * @param int $delay
+     * @param array $headers
      * @return PromiseInterface
      * @throws ConnectionException
      */
-    protected function sendPageQuery(string $query, array $variables, int &$retryCount, int &$delay)
-    {
-        return Http::async()->post($this->endpoint, [
+    protected function sendPageQuery(string $query, array $variables, int &$retryCount, int &$delay, array $headers = []): PromiseInterface    {
+        return Http::async()->withHeaders($headers)->post($this->endpoint, [
             'query' => $query,
             'variables' => $variables,
         ])->then(
-            function ($response) use (&$retryCount, &$delay, $query, $variables) {
+            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
                 if ($response->status() === 429) {
                     Log::warning('Rate limit hit, retrying in ' . $delay . ' seconds.');
                     sleep($delay);

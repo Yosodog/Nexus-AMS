@@ -29,6 +29,8 @@ class BankRecordQueryService
                 $builder->addFields(SelectionSetHelper::bankRecordSet());
             });
 
+        // TODO the withdraw works but it errors out because of the response
+
         $response = $client->sendQuery($builder);
 
         $bankRecs = new BankRecords([]);
