@@ -228,7 +228,7 @@ class AccountService
             // Save changes
             $fromAccount->save();
             // Send withdraw
-            $bank->sendWithdraw();
+            $bank->send();
 
             DB::commit();
         } catch (Exception $e) {

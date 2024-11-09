@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\BankRecord;
+use App\Jobs\SendBank;
 use Illuminate\Http\Client\ConnectionException;
 
 class BankService
@@ -25,8 +26,19 @@ class BankService
     public float $food = 0;
     public string $note = "";
 
-    /**ß
-     * Send a bank withdraw request.
+    /**
+     * Queues a job to send the withdraw.
+     *
+     * @return void
+     */
+    public function send(): void
+    {
+        SendBank::dispatch($this);
+    }
+
+    /**
+     * Send a bank withdraw request. This does not queue the request. You
+     * should use send() instead to queue the withdraw.
      *
      * @return BankRecord
      * @throws PWQueryFailedException
@@ -66,7 +78,7 @@ class BankService
             }
         }
 
-        $response = $client->sendQuery($builder, [], null, true);
+        $response = $client->sendQuery($builder, headers: true);
 
         $bankRec = new BankRecord();
         $bankRec->buildWithJSON((object)$response);
