@@ -134,6 +134,7 @@ class AccountService
     public static function getAccountById(int $id): Accounts
     {
         return Accounts::where("id", $id)
+            ->lockForUpdate()
             ->firstOrFail();
     }
 
