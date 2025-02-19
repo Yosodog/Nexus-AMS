@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Accounts;
+use App\Models\DepositRequest;
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AccountService
 {
@@ -35,6 +38,23 @@ class AccountService
     {
         return Accounts::where("nation_id", $nation_id)
             ->get();
+    }
+
+    /**
+     * @param  int|\App\Models\User  $user
+     *
+     * @return mixed
+     */
+    public static function getAccountsByUser(int|User $user)
+    {
+        // Get the user so we can get their nation ID
+        if ($user instanceof User) {
+            return self::getAccountsByNid($user->nation_id);
+        }
+
+        $user = User::findOrFail($user);
+
+        return self::getAccountsByNid($user->nation_id);
     }
 
     /**
@@ -263,4 +283,20 @@ class AccountService
         }
     }
 
+    /**
+     * @param  \App\Models\Accounts  $account
+     *
+     * @return string
+     */
+    public static function createDepositRequest(Accounts $account): string
+    {
+        $depositCode = strtoupper(Str::random(8));
+
+        $depositRequest = DepositRequest::create([
+            'account_id' => $account->id,
+            'deposit_code' => $depositCode,
+        ]);
+
+        return $depositCode;
+    }
 }

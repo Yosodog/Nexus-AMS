@@ -17,4 +17,5 @@
     <div class="divider"></div>
 
     @include("accounts.components.transfer")
+    @include("accounts.components.deposit_js")
 @endsection
