@@ -61,4 +61,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(Accounts::class, "nation_id", "nation_id");
     }
+
+    /**
+     * @param  int  $nation_id
+     *
+     * @return mixed
+     */
+    public static function getByNationId(int $nation_id)
+    {
+        return self::where("nation_id", $nation_id)
+            ->firstOrFail();
+    }
 }

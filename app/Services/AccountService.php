@@ -8,6 +8,7 @@ use App\Models\Accounts;
 use App\Models\DepositRequest;
 use App\Models\Transactions;
 use App\Models\User;
+use App\Notifications\DepositCreated;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -285,17 +286,20 @@ class AccountService
     }
 
     /**
-     * This just calls another function in another service, but I'm going to keep it here
-     * in case in the future there needs to be more logic surrounding when an account
-     * creates a deposit request. The deposit service should not do any account validation.
-     *
      * @param  \App\Models\Accounts  $account
      *
      * @return \App\Models\DepositRequest
      */
     public static function createDepositRequest(Accounts $account): DepositRequest
     {
-        return DepositService::createRequest($account);
+        $deposit = DepositService::createRequest($account);
+
+        // Send notification to the user that owns this account
+        $user = User::getByNationId($account->nation_id);
+
+        $user->notify(new DepositCreated($user->nation_id, $deposit));
+
+        return $deposit;
     }
 
     /**

@@ -38,8 +38,6 @@ class AccountController extends Controller
 
         $deposit = AccountService::createDepositRequest($account);
 
-        $user->notify(new DepositCreated($user->nation_id, $deposit));
-
         return response()->json([
             'message' => 'Deposit request created successfully.',
             'deposit_code' => $deposit->deposit_code,
