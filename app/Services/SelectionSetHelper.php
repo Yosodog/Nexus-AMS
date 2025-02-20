@@ -244,4 +244,34 @@ class SelectionSetHelper
             // 'nuke_date',
         ];
     }
+
+    /**
+     * @return string[]
+     */
+    public static function bankRecordSet(): array
+    {
+        return [
+            'id',
+            'date',
+            'sender_id',
+            'sender_type',
+            'receiver_id',
+            'receiver_type',
+            'banker_id',
+            'note',
+            'money',
+            'coal',
+            'oil',
+            'uranium',
+            'iron',
+            'bauxite',
+            'lead',
+            'gasoline',
+            'munitions',
+            'steel',
+            'aluminum',
+            'food',
+            'tax_id'
+        ];
+    }
 }

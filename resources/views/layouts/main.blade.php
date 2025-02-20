@@ -18,6 +18,8 @@
                 <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
             @endif
             @yield('content')
+                <!-- Toast Notification -->
+                <div id="toast-container" class="toast toast-end hidden"></div>
         </main>
     </div>
 </div>

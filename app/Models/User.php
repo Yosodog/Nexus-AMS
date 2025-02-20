@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -54,5 +55,10 @@ class User extends Authenticatable
     public function nation()
     {
         return $this->hasOne(Nations::class, "id", "nation_id");
+    }
+
+    public function accounts()
+    {
+        return $this->hasMany(Accounts::class, "nation_id", "nation_id");
     }
 }
