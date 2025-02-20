@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Exceptions\UserErrorException;
+use App\GraphQL\Models\BankRecord;
 use App\Models\Accounts;
 use App\Models\DepositRequest;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class AccountService
 {
@@ -30,17 +30,6 @@ class AccountService
     ];
 
     /**
-     * @param  int  $nation_id
-     *
-     * @return mixed
-     */
-    public static function getAccountsByNid(int $nation_id)
-    {
-        return Accounts::where("nation_id", $nation_id)
-            ->get();
-    }
-
-    /**
      * @param  int|\App\Models\User  $user
      *
      * @return mixed
@@ -55,6 +44,17 @@ class AccountService
         $user = User::findOrFail($user);
 
         return self::getAccountsByNid($user->nation_id);
+    }
+
+    /**
+     * @param  int  $nation_id
+     *
+     * @return mixed
+     */
+    public static function getAccountsByNid(int $nation_id)
+    {
+        return Accounts::where("nation_id", $nation_id)
+            ->get();
     }
 
     /**
@@ -82,7 +82,7 @@ class AccountService
     public static function deleteAccount(Accounts $account): void
     {
         // Check to ensure the account is empty
-        if ( ! $account->isEmpty()) {
+        if (!$account->isEmpty()) {
             throw new UserErrorException("The account is not empty.");
         }
 
@@ -191,7 +191,7 @@ class AccountService
         }
 
         // If the toAccount is set, then verify that we own it too. It will not be set if we are transferring to a nation
-        if ( ! is_null($toAccount)) {
+        if (!is_null($toAccount)) {
             if ($toAccount->nation_id != $nation_id) {
                 throw new UserErrorException("You do not own the to account");
             }
@@ -219,7 +219,7 @@ class AccountService
             }
         }
 
-        if ( ! $thereIsSomething) {
+        if (!$thereIsSomething) {
             throw new UserErrorException("You can't transfer nothing.");
         }
     }
@@ -299,4 +299,22 @@ class AccountService
 
         return $depositCode;
     }
+
+    /**
+     * @param  \App\Models\Accounts  $account
+     * @param  \App\GraphQL\Models\BankRecord  $bankRecord
+     *
+     * @return void
+     */
+    public static function updateAccountBalanceFromBankRec(
+        Accounts $account,
+        BankRecord $bankRecord
+    ) {
+        foreach (self::$resources as $res) {
+            $account->$res += $bankRecord->$res;
+        }
+
+        $account->save();
+    }
+
 }

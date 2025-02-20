@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\GraphQL\Models\BankRecord;
+use App\Models\Accounts;
 use App\Models\Transactions;
 
 class TransactionService
@@ -36,6 +38,34 @@ class TransactionService
         }
 
         $transaction->is_pending = $isPending;
+
+        $transaction->save();
+
+        return $transaction;
+    }
+
+    /**
+     * @param  \App\Models\Accounts  $account
+     * @param  \App\GraphQL\Models\BankRecord  $record
+     *
+     * @return \App\Models\Transactions
+     */
+    public static function createTransactionForDeposit(
+        Accounts $account,
+        BankRecord $record
+    ): Transactions {
+        $transaction = new Transactions();
+
+        $transaction->from_account_id = null;
+        $transaction->to_account_id = $account->id;
+        $transaction->nation_id = $record->sender_id;
+        $transaction->transaction_type = "deposit";
+
+        foreach (AccountService::$resources as $res) {
+            $transaction->$res = $record->$res;
+        }
+
+        $transaction->is_pending = false;
 
         $transaction->save();
 
