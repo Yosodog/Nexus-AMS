@@ -289,16 +289,15 @@ class AccountService
      *
      * @return string
      */
-    public static function createDepositRequest(Accounts $account): string
+    public static function createDepositRequest(Accounts $account): DepositRequest
     {
         $depositCode = DepositService::generate_code();
 
-        $depositRequest = DepositRequest::create([
-            'account_id' => $account->id,
-            'deposit_code' => $depositCode,
-        ]);
+        $deposit = new DepositRequest();
+        $deposit->account_id = $account->id;
+        $deposit->deposit_code = $depositCode;
 
-        return $depositCode;
+        return $deposit;
     }
 
     /**
