@@ -285,19 +285,17 @@ class AccountService
     }
 
     /**
+     * This just calls another function in another service, but I'm going to keep it here
+     * in case in the future there needs to be more logic surrounding when an account
+     * creates a deposit request. The deposit service should not do any account validation.
+     *
      * @param  \App\Models\Accounts  $account
      *
-     * @return string
+     * @return \App\Models\DepositRequest
      */
     public static function createDepositRequest(Accounts $account): DepositRequest
     {
-        $depositCode = DepositService::generate_code();
-
-        $deposit = new DepositRequest();
-        $deposit->account_id = $account->id;
-        $deposit->deposit_code = $depositCode;
-
-        return $deposit;
+        return DepositService::createRequest($account);
     }
 
     /**

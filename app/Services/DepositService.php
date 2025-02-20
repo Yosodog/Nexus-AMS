@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Accounts;
 use App\Models\DepositRequest;
 use Illuminate\Support\Str;
 
@@ -106,6 +107,24 @@ class DepositService
     {
         $request->status = "completed";
         $request->save();
+    }
+
+    /**
+     * Creates a deposit request
+     *
+     * @param  \App\Models\Accounts  $account
+     *
+     * @return \App\Models\DepositRequest
+     */
+    public static function createRequest(Accounts $account): DepositRequest
+    {
+        $depositCode = self::generate_code();
+
+        $deposit = new DepositRequest();
+        $deposit->account_id = $account->id;
+        $deposit->deposit_code = $depositCode;
+
+        return $deposit;
     }
 
 }
