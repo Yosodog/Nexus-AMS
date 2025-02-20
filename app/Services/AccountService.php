@@ -6,6 +6,7 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Accounts;
 use App\Models\DepositRequest;
+use App\Models\Transactions;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -315,6 +316,20 @@ class AccountService
         }
 
         $account->save();
+    }
+
+    /**
+     * @param  \App\Models\Accounts  $account
+     *
+     * @return mixed
+     */
+    public static function getRelatedTransactions(Accounts $account, int $perPage = 50)
+    {
+        return Transactions::where("to_account_id", $account->id)
+            ->orWhere("from_account_id", $account->id)
+            ->with("nation")
+            ->orderBy("created_at", "DESC")
+            ->paginate($perPage);
     }
 
 }

@@ -92,15 +92,41 @@ class AccountsController extends Controller
         }
     }
 
-    public function viewAccount(Accounts $account)
+    /**
+     * @param  \App\Models\Accounts  $accounts
+     *
+     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     */
+    public function viewAccount(Accounts $accounts)
     {
+        if ($accounts->nation_id != Auth::user()->nation_id) {
+            abort("403");
+        }
+
+        $accounts->load("nation");
+
+        // Get related transactions where they are to or from
+        $transactions = AccountService::getRelatedTransactions($accounts);
+
+        return view("accounts.view", [
+            "account" => $accounts,
+            "transactions" => $transactions
+        ]);
     }
 
+    /**
+     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     */
     public function createView()
     {
         return view("accounts.create");
     }
 
+    /**
+     * @param  \Illuminate\Http\Request  $request
+     *
+     * @return mixed
+     */
     public function create(Request $request)
     {
         $request->validate([
