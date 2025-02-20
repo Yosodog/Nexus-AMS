@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Accounts;
+use App\Notifications\DepositCreated;
 use App\Services\AccountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,11 +36,13 @@ class AccountController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $depositCode = AccountService::createDepositRequest($account);
+        $deposit = AccountService::createDepositRequest($account);
+
+        $user->notify(new DepositCreated($user->nation_id, $deposit));
 
         return response()->json([
             'message' => 'Deposit request created successfully.',
-            'deposit_code' => $depositCode,
+            'deposit_code' => $deposit->deposit_code,
         ]);
     }
 }
