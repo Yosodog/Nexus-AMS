@@ -290,7 +290,7 @@ class AccountService
      */
     public static function createDepositRequest(Accounts $account): string
     {
-        $depositCode = strtoupper(Str::random(8));
+        $depositCode = DepositService::generate_code();
 
         $depositRequest = DepositRequest::create([
             'account_id' => $account->id,
