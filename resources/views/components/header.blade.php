@@ -101,6 +101,9 @@
                             </a>
                         </li>
                         <li><a>Settings</a></li>
+                        @if (Auth::user()->is_admin)
+                            <li><a href="{{ route("admin.dashboard") }}">Admin</a></li>
+                        @endif
                         <li><a onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a></li>
                     </ul>
                 </div>
