@@ -23,6 +23,6 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
-Route::middleware(['auth'])->prefix("admin")->group(function() { // TODO add admin middleware
+Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->prefix("admin")->group(function() { // TODO add admin middleware
     Route::get("/", [\App\Http\Controllers\Admin\DashboardController::class, 'dashboard'])->name("admin.dashboard");
 });
