@@ -43,7 +43,7 @@
         </div>
         <div class="navbar-center hidden lg:flex">
             @if (Auth::check())
-                <ul class="menu menu-horizontal px-1">
+                <ul class="menu menu-horizontal px-1 z-50">
                     <li><a href="{{ route("accounts") }}">Accounts</a></li>
                     <li>
                         <details>
