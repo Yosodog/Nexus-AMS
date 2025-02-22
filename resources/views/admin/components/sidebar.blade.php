@@ -14,7 +14,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('admin.account_dashboard') }}" class="nav-link">
+                    <a href="{{ route('admin.accounts.dashboard') }}" class="nav-link">
                         <i class="bi bi-bank"></i>
                         <p>Accounts</p>
                     </a>

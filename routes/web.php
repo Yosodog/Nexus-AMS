@@ -28,5 +28,6 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->prefix
     Route::get("/", [\App\Http\Controllers\Admin\DashboardController::class, 'dashboard'])->name("admin.dashboard");
 
     // Accounts
-    Route::get("/accounts", [\App\Http\Controllers\Admin\AccountController::class, 'dashboard'])->name("admin.account_dashboard");
+    Route::get("/accounts", [\App\Http\Controllers\Admin\AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");
+    Route::get("/accounts/{accounts}", [\App\Http\Controllers\Admin\AccountController::class, 'view'])->name("admin.accounts.view");
 });
