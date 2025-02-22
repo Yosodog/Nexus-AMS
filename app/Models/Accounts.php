@@ -22,6 +22,14 @@ class Accounts extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, "nation_id", "nation_id");
+    }
+
+    /**
      * Checks if the account is completely empty.
      *
      * @return bool

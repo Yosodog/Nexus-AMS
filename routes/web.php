@@ -24,5 +24,9 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->prefix("admin")->group(function() { // TODO add admin middleware
+    // Base routes
     Route::get("/", [\App\Http\Controllers\Admin\DashboardController::class, 'dashboard'])->name("admin.dashboard");
+
+    // Accounts
+    Route::get("/accounts", [\App\Http\Controllers\Admin\AccountController::class, 'dashboard'])->name("admin.account_dashboard");
 });
