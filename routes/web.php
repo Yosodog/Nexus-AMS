@@ -12,6 +12,8 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function() {
     // Verification
     Route::get('/verify/{code}', [\App\Http\Controllers\VerificationController::class, 'verify'])->name('verify');
+    Route::get('/notverified', [\App\Http\Controllers\VerificationController::class, 'notVerified'])->name('not_verified');
+    Route::post('/resend-verification', [\App\Http\Controllers\VerificationController::class, 'resendVerification'])->name('verification.resend');
 });
 
 Route::middleware(['auth',
