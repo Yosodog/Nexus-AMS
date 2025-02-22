@@ -17,7 +17,10 @@ class EnsureUserIsVerified
     public function handle(Request $request, Closure $next)
     {
         if (Auth::check() && !Auth::user()->isVerified()) {
-            return redirect('/')->with('error', 'You must verify your account before proceeding. Please check your in-game messages to verify your account.');
+            return redirect('/')->with([
+                'alert-message' => 'You must verify your account prior to performing any actions. Please check your in-game messages for a verification code.',
+                "alert-type" => 'warning',
+            ]);
         }
 
         return $next($request);
