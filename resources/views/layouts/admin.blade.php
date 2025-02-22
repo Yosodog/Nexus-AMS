@@ -26,6 +26,9 @@
     <main class="app-main">
         <div class="app-content">
             <div class="container-fluid">
+                @if (session('alert-message') || $errors->any())
+                    <x-admin.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
+                @endif
                 @yield('content')
             </div>
         </div>
