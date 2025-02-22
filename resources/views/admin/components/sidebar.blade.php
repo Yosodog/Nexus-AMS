@@ -14,9 +14,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('admin.dashboard') }}" class="nav-link">
-                        <i class="nav-icon bi bi-gear"></i>
-                        <p>Settings</p>
+                    <a href="{{ route('admin.accounts.dashboard') }}" class="nav-link">
+                        <i class="bi bi-bank"></i>
+                        <p>Accounts</p>
                     </a>
                 </li>
             </ul>

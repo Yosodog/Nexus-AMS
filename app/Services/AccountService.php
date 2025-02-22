@@ -6,12 +6,15 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Accounts;
 use App\Models\DepositRequest;
+use App\Models\ManualTransactions;
 use App\Models\Transactions;
 use App\Models\User;
 use App\Notifications\DepositCreated;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AccountService
 {
@@ -331,6 +334,59 @@ class AccountService
             ->with("nation")
             ->orderBy("created_at", "DESC")
             ->paginate($perPage);
+    }
+
+    /**
+     * @param  \App\Models\Accounts  $account
+     * @param  int  $perPage
+     *
+     * @return mixed
+     */
+    public static function getRelatedManualTransactions(Accounts $account, int $perPage)
+    {
+        return ManualTransactions::where("account_id", $account->id)
+            ->orderBy("created_at", "DESC")
+            ->paginate($perPage);
+    }
+
+    /**
+     * @param  \App\Models\Accounts  $account
+     * @param  array  $adjustment
+     * @param  int  $adminId
+     * @param  string  $ipAddress
+     *
+     * @return ManualTransactions
+     */
+    public static function adjustAccountBalance(Accounts $account, array $adjustment, int $adminId, string $ipAddress): ManualTransactions
+    {
+        // Apply changes to account balance
+        foreach (self::$resources as $resource) {
+            if (isset($adjustment[$resource])) {
+                $account->{$resource} += $adjustment[$resource];
+            }
+        }
+
+        $account->save();
+
+        // Log the manual transaction
+        return ManualTransactions::create([
+            'account_id' => $account->id,
+            'admin_id' => $adminId,
+            'money' => $adjustment['money'] ?? 0,
+            'coal' => $adjustment['coal'] ?? 0,
+            'oil' => $adjustment['oil'] ?? 0,
+            'uranium' => $adjustment['uranium'] ?? 0,
+            'lead' => $adjustment['lead'] ?? 0,
+            'iron' => $adjustment['iron'] ?? 0,
+            'bauxite' => $adjustment['bauxite'] ?? 0,
+            'gasoline' => $adjustment['gasoline'] ?? 0,
+            'munitions' => $adjustment['munitions'] ?? 0,
+            'steel' => $adjustment['steel'] ?? 0,
+            'aluminum' => $adjustment['aluminum'] ?? 0,
+            'food' => $adjustment['food'] ?? 0,
+            'note' => $adjustment['note'],
+            'ip_address' => $ipAddress,
+        ]);
     }
 
 }
