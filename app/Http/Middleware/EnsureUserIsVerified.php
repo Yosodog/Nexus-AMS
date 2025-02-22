@@ -5,10 +5,10 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsVerified
 {
+
     /**
      * Handle an incoming request.
      *
@@ -22,4 +22,5 @@ class EnsureUserIsVerified
 
         return $next($request);
     }
+
 }

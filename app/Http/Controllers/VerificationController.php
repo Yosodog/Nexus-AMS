@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Notifications\NationVerification;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class VerificationController extends Controller
@@ -28,7 +27,7 @@ class VerificationController extends Controller
 
         Auth::user()->update([
             'verified_at' => now(),
-            'verification_code' => null
+            'verification_code' => null,
         ]);
 
         return redirect()
@@ -44,6 +43,15 @@ class VerificationController extends Controller
      */
     public function notVerified()
     {
+        if (Auth::user()->isVerified()) {
+            return redirect()
+                ->route("home")
+                ->with([
+                    'alert-message' => 'Your account is already verified!',
+                    'alert-type' => 'info',
+                ]);
+        }
+
         return view("auth.notverified");
     }
 
@@ -54,7 +62,9 @@ class VerificationController extends Controller
     public function resendVerification()
     {
         if (session()->has('last_verification_attempt')) {
-            $secondsSinceLastAttempt = abs(now()->diffInSeconds(session('last_verification_attempt')));
+            $secondsSinceLastAttempt = abs(
+                now()->diffInSeconds(session('last_verification_attempt'))
+            );
 
             echo session()->has('last_verification_attempt');
             echo "hi";
@@ -72,7 +82,7 @@ class VerificationController extends Controller
         // Check if user is already verified
         if ($user->isVerified()) {
             return redirect()
-                ->route("/")
+                ->route("home")
                 ->with([
                     'alert-message' => 'Your account is already verified!',
                     'alert-type' => 'info',
@@ -98,4 +108,5 @@ class VerificationController extends Controller
                 'alert-type' => 'success',
             ]);
     }
+
 }
