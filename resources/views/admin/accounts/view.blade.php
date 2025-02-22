@@ -59,7 +59,30 @@
 
             <hr>
 
-            manual edit
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Manual Adjustment</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('admin.accounts.adjust', $account->id) }}" method="POST">
+                        @csrf
+                        <div class="row">
+                            @foreach (\App\Services\AccountService::$resources as $resource)
+                                <div class="col-md-3">
+                                    <label for="{{ $resource }}">{{ ucfirst($resource) }}</label>
+                                    <input type="number" name="{{ $resource }}" id="{{ $resource }}" class="form-control" step="0.01" placeholder="0">
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-3">
+                            <label for="note">Note (Reason for Adjustment)</label>
+                            <input type="text" name="note" id="note" class="form-control" required>
+                        </div>
+                        <input type="hidden" name="accountId" value="{{ $account->id }}">
+                        <button type="submit" class="btn btn-primary mt-3">Adjust Balance</button>
+                    </form>
+                </div>
+            </div>
 
             <hr>
 
@@ -153,6 +176,70 @@
                 </div>
             </div>
 
+            <hr>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3 class="card-title">Last 500 Manual Adjustments</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="manual_transactions_table">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Admin</th>
+                                <th>Money</th>
+                                <th>Coal</th>
+                                <th>Oil</th>
+                                <th>Uranium</th>
+                                <th>Lead</th>
+                                <th>Iron</th>
+                                <th>Bauxite</th>
+                                <th>Gasoline</th>
+                                <th>Munitions</th>
+                                <th>Steel</th>
+                                <th>Aluminum</th>
+                                <th>Food</th>
+                                <th>Note</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach ($manualTransactions as $transaction)
+                                <tr>
+                                    <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        @if($transaction->admin)
+                                            {{ $transaction->admin->name }}
+                                        @else
+                                            <span class="text-danger">Admin #{{ $transaction->admin_id }} (Deleted)</span>
+                                        @endif
+                                    </td>
+                                    <td>${{ number_format($transaction->money, 2) }}</td>
+                                    <td>{{ number_format($transaction->coal, 2) }}</td>
+                                    <td>{{ number_format($transaction->oil, 2) }}</td>
+                                    <td>{{ number_format($transaction->uranium, 2) }}</td>
+                                    <td>{{ number_format($transaction->lead, 2) }}</td>
+                                    <td>{{ number_format($transaction->iron, 2) }}</td>
+                                    <td>{{ number_format($transaction->bauxite, 2) }}</td>
+                                    <td>{{ number_format($transaction->gasoline, 2) }}</td>
+                                    <td>{{ number_format($transaction->munitions, 2) }}</td>
+                                    <td>{{ number_format($transaction->steel, 2) }}</td>
+                                    <td>{{ number_format($transaction->aluminum, 2) }}</td>
+                                    <td>{{ number_format($transaction->food, 2) }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="popover" data-bs-placement="top" title="Note" data-bs-content="{{ $transaction->note }}">
+                                            View Note
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 @endsection
@@ -163,6 +250,16 @@
             $('#transaction_table').DataTable({
                 "order": [[0, "desc"]]
             });
-        } );
+
+            $('#manual_transactions_table').DataTable({
+                "order": [[0, "desc"]]
+            });
+
+            // Enable Bootstrap Popovers
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+        });
     </script>
 @endsection

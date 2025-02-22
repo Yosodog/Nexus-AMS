@@ -30,4 +30,6 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->prefix
     // Accounts
     Route::get("/accounts", [\App\Http\Controllers\Admin\AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");
     Route::get("/accounts/{accounts}", [\App\Http\Controllers\Admin\AccountController::class, 'view'])->name("admin.accounts.view");
+    Route::post('/accounts/{account}/adjust', [\App\Http\Controllers\Admin\AccountController::class, 'adjustBalance'])->name('admin.accounts.adjust');
+
 });
