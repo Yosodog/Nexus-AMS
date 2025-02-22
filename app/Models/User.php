@@ -23,7 +23,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'nation_id'
+        'nation_id',
+        'verification_code',
+        'verified_at'
     ];
 
     /**
@@ -34,6 +36,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'verification_code'
     ];
 
     /**
@@ -46,6 +49,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -71,5 +75,13 @@ class User extends Authenticatable
     {
         return self::where("nation_id", $nation_id)
             ->firstOrFail();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isVerified(): bool
+    {
+        return !is_null($this->verified_at);
     }
 }

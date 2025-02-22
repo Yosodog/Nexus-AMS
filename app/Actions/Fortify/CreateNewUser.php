@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Models\Nations;
 use App\Models\User;
+use App\Notifications\NationVerification;
 use App\Rules\InAllianceAndMember;
 use App\Services\NationQueryService;
 use Illuminate\Support\Facades\Hash;
@@ -40,11 +41,15 @@ class CreateNewUser implements CreatesNewUsers
             ]
         ])->validate();
 
-        return User::create([
+        $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
             'nation_id' => $input["nation_id"]
         ]);
+
+        $user->notify(new NationVerification($user));
+
+        return $user;
     }
 }

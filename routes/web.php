@@ -1,14 +1,22 @@
 <?php
 
+use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountsController;
+use App\Http\Middleware\EnsureUserIsVerified;
 
 Route::get('/', function () {
     return view('home');
 })->name("home");
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth'])->group(function() {
+    // Verification
+    Route::get('/verify/{code}', [\App\Http\Controllers\VerificationController::class, 'verify'])->name('verify');
+});
 
+Route::middleware(['auth',
+                   EnsureUserIsVerified::class])
+    ->group(function () {
     // Account Routes
     Route::get("/accounts", [AccountsController::class, 'index'])->name("accounts");
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
@@ -23,7 +31,11 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
-Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->prefix("admin")->group(function() { // TODO add admin middleware
+Route::middleware(['auth',
+                   EnsureUserIsVerified::class,
+                   AdminMiddleware::class])
+    ->prefix("admin")
+    ->group(function() {
     // Base routes
     Route::get("/", [\App\Http\Controllers\Admin\DashboardController::class, 'dashboard'])->name("admin.dashboard");
 
