@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GrantController;
 use App\Http\Controllers\CityGrantController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Middleware\AdminMiddleware;
@@ -50,14 +51,22 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::get("/", [DashboardController::class, 'dashboard'])->name("admin.dashboard");
 
         // Accounts
-        Route::get("/accounts", [AccountController::class, 'dashboard'])->name(
-            "admin.accounts.dashboard"
+        Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");
+        Route::get("/accounts/{accounts}", [AccountController::class, 'view'])->name("admin.accounts.view");
+        Route::post('/accounts/{account}/adjust', [AccountController::class, 'adjustBalance'])->name(
+            'admin.accounts.adjust'
         );
-        Route::get("/accounts/{accounts}", [AccountController::class, 'view'])->name(
-            "admin.accounts.view"
+
+        // City Grants
+        Route::get("/grants/city", [GrantController::class, 'cityGrants'])->name(
+            "admin.grants.city"
         );
-        Route::post(
-            '/accounts/{account}/adjust',
-            [AccountController::class, 'adjustBalance']
-        )->name('admin.accounts.adjust');
+
+        Route::post("/grants/city/approve/{CityGrantRequest}", [GrantController::class, 'approveCityGrant'])->name(
+            "admin.grants.city.approve"
+        );
+
+        Route::post("/grants/city/deny/{CityGrantRequest}", [GrantController::class, 'denyCityGrant'])->name(
+            "admin.grants.city.deny"
+        );
     });

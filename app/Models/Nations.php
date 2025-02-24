@@ -4,9 +4,12 @@ namespace App\Models;
 
 use App\GraphQL\Models\Nation;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 
 class Nations extends Model
 {
+    use Notifiable;
+
     protected $guarded = [];
 
     protected $table = "nations";

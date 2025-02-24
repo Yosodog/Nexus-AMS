@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Accounts;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Models\Nations;
+use App\Notifications\CityGrantNotification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
 
 class CityGrantService
 {
@@ -56,6 +60,46 @@ class CityGrantService
         $validator->validateColor($requirements["allowed_colors"]);
         $validator->validateRequiredProjects($requirements["projects"]);
         $validator->validateInfrastructure($requirements["inf_per_city"]);
+    }
+
+    /**
+     * Approve a city grant request and allocate funds.
+     */
+    public static function approveGrant(CityGrantRequest $request): void
+    {
+        // Fetch the recipient account
+        $account = Accounts::findOrFail($request->account_id);
+        $adminId = Auth::id();
+        $ipAddress = Request::ip();
+
+        // Adjust account balance
+        $adjustment = [
+            'money' => $request->grant_amount,
+            'note' => "City Grant Approved for City #{$request->city_number}",
+        ];
+
+        AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress);
+
+        // Update grant request status
+        $request->update([
+            'status' => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'approved'));
+    }
+
+    /**
+     * Deny a city grant request.
+     */
+    public static function denyGrant(CityGrantRequest $request): void
+    {
+        $request->update([
+            'status' => 'denied',
+            'denied_at' => now(),
+        ]);
+
+        $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
     }
 
 }

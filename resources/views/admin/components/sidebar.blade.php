@@ -19,6 +19,12 @@
                         <p>Accounts</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.grants.city') }}" class="nav-link">
+                        <i class="bi bi-houses-fill"></i>
+                        <p>City Grants</p>
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>
