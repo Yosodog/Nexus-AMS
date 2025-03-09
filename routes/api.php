@@ -12,3 +12,5 @@ Route::prefix('v1')->middleware("auth:sanctum")->group(function() {
     Route::get('/accounts', [AccountController::class, 'getUserAccounts']);
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
 });
+
+Route::post('v1/subs/nation/update', [\App\Http\Controllers\API\NationUpdateController::class, 'updateNation']);
