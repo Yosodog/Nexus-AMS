@@ -19,8 +19,7 @@ class NationUpdateController extends Controller
         // Validate Nexus API Token
         $nexusApiToken = config('services.nexus_api_token');
         $providedToken = $request->header('Authorization');
-        Log::debug("Nexus: $nexusApiToken Provided: $providedToken");
-
+ 
         if ($providedToken != "Bearer $nexusApiToken") {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
