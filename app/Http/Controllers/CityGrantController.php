@@ -53,7 +53,7 @@ class CityGrantController
             return redirect()
                 ->route('grants.city')
                 ->with([
-                    'alert-message' => 'You are not eligible for this grant.', // TODO be more specific lol
+                    'alert-message' => 'You are not eligible for this grant. '.$exception->getMessage(), // TODO be more specific lol
                     "alert-type" => 'error',
                 ]);
         } catch (Exception $exception) {

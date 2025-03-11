@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Nations;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class NationEligibilityValidator
@@ -22,13 +23,13 @@ class NationEligibilityValidator
      */
     public function validateAllianceMembership(): void
     {
-        if ($this->nation->alliance_id !== env("PW_ALLIANCE_ID")) {
+        if ($this->nation->alliance_id != env("PW_ALLIANCE_ID")) {
             throw ValidationException::withMessages([
                 'alliance' => 'You are not a member of the required alliance.',
             ]);
         }
 
-        if ($this->nation->alliance_position === 'APPLICANT') {
+        if ($this->nation->alliance_position == 'APPLICANT') {
             throw ValidationException::withMessages([
                 'alliance' => 'Applicants are not eligible for financial aid.',
             ]);
