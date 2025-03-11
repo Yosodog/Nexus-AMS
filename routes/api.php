@@ -18,6 +18,7 @@ Route::prefix('v1')->middleware("auth:sanctum")->group(function () {
 Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function () {
     Route::post('nation/update', [SubUpdateController::class, 'updateNation']);
     Route::post('nation/create', [SubUpdateController::class, 'createNation']);
+    Route::post('nation/delete', [SubUpdateController::class, 'deleteNation']);
 });
 
 
