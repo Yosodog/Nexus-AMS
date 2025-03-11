@@ -3,15 +3,17 @@
 namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
-use App\Exceptions\PWRateLimitHitException;
 use App\GraphQL\Models\Alliance;
+use App\GraphQL\Models\Alliances;
+use App\GraphQL\Models\Nations;
+use Illuminate\Http\Client\ConnectionException;
 
 class AllianceQueryService
 {
     /**
      * @param int $aID
      * @return Alliance
-     * @throws \App\Exceptions\PWQueryFailedException|\Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException|ConnectionException
      */
     public static function getAllianceById(int $aID): Alliance
     {
@@ -38,7 +40,7 @@ class AllianceQueryService
      * @param int $aID
      * @return Alliance
      * @throws PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws ConnectionException
      */
     public static function getAllianceWithMembersById(int $aID): Alliance
     {
@@ -60,5 +62,46 @@ class AllianceQueryService
         $alliance->buildWithJSON((object)$response->{0});
 
         return $alliance;
+    }
+
+    /**
+     * @param array $arguments
+     * @param int $perPage
+     * @param bool $pagination
+     * @param bool $handlePagination
+     * @return Nations
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
+     */
+    public static function getMultipleAlliances(
+        array $arguments,
+        int $perPage = 500,
+        bool $pagination = true,
+        bool $handlePagination = true
+    ): Alliances {
+        $client = new QueryService();
+
+        $builder = (new GraphQLQueryBuilder())
+            ->setRootField("alliances")
+            ->addArgument('first', $perPage)
+            ->addArgument($arguments)
+            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+                $builder->addFields(SelectionSetHelper::allianceSet());
+            });
+
+        if ($pagination) {
+            $builder->withPaginationInfo();
+        }
+
+        $response = $client->sendQuery($builder, handlePagination: $handlePagination);
+        $alliances = new Alliances([]);
+
+        foreach ($response as $queryAlliance) {
+            $alliance = new Alliance();
+            $alliance->buildWithJSON((object)$queryAlliance);
+            $alliances->add($alliance);
+        }
+
+        return $alliances;
     }
 }

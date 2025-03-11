@@ -18,7 +18,7 @@ class Alliance
     public string $flag;
     public string $forum_link;
     public string $discord_link;
-    public string $wiki_link;
+    public ?string $wiki_link;
     // public array $bankrecs; // [Bankrec]
     // public array $taxrecs; // [Bankrec]
     // public array $tax_brackets; // [TaxBracket]
@@ -50,7 +50,7 @@ class Alliance
         $this->score = $json->score;
         $this->color = $json->color;
         // $this->date = $json->date; // Uncomment and modify based on your DateTime handling
-        $this->average_score = $json->average_score;
+        $this->average_score = $json->average_score ?? 0; // Avg score can be null lol
         if (isset($json->nations))
         {
             $this->nations = new Nations([]);
