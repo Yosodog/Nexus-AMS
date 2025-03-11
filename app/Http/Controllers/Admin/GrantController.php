@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\CityGrantService;
+use App\Services\PWHelperService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class GrantController
@@ -39,7 +41,7 @@ class GrantController
     }
 
     /**
-     * @param  \App\Models\CityGrantRequest  $request
+     * @param CityGrantRequest $request
      *
      * @return mixed
      */
@@ -62,7 +64,7 @@ class GrantController
     }
 
     /**
-     * @param  \App\Models\CityGrantRequest  $request
+     * @param CityGrantRequest $request
      *
      * @return mixed
      */
@@ -82,6 +84,87 @@ class GrantController
             'alert-message' => "City Grant for City #{$grantRequest->city_number} has been denied.",
             'alert-type' => 'success',
         ]);
+    }
+
+    /**
+     * @param \Illuminate\Support\Facades\Request $request
+     * @param CityGrant $city_grant
+     * @return RedirectResponse
+     */
+    public function updateCityGrant(Request $request, CityGrant $city_grant)
+    {
+        $validated = $request->validate([
+            'city_number' => 'required|integer|min:1|unique:city_grants,city_number,' . $city_grant->id,
+            'grant_amount' => 'required|integer|min:1',
+            'enabled' => 'required|boolean',
+            'description' => 'nullable|string|max:255',
+            'projects' => 'array',
+            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
+        ]);
+
+        // Convert selected projects to project bits
+        $selectedProjects = $validated['projects'] ?? [];
+        $projectBits = 0;
+        foreach ($selectedProjects as $project) {
+            $projectBits |= PWHelperService::PROJECTS[$project];
+        }
+
+        // Update city grant details
+        $city_grant->update([
+            'city_number' => $validated['city_number'],
+            'grant_amount' => $validated['grant_amount'],
+            'enabled' => $validated['enabled'],
+            'description' => $validated['description'],
+            'requirements' => json_encode([
+                'required_projects' => $selectedProjects,
+                'project_bits' => $projectBits,
+            ]),
+        ]);
+
+        return redirect()->route('admin.grants.city')->with('alert-message', 'City grant updated successfully!')->with(
+            'alert-type',
+            'success'
+        );
+    }
+
+    /**
+     * @param Request $request
+     * @return RedirectResponse
+     */
+    public function createCityGrant(Request $request)
+    {
+        $validated = $request->validate([
+            'city_number' => 'required|integer|min:1|unique:city_grants,city_number',
+            'grant_amount' => 'required|integer|min:1',
+            'enabled' => 'required|boolean',
+            'description' => 'nullable|string|max:255',
+            'projects' => 'array',
+            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
+        ]);
+
+        // Convert selected projects to project bits
+        $selectedProjects = $validated['projects'] ?? [];
+        $projectBits = 0;
+        foreach ($selectedProjects as $project) {
+            $projectBits |= PWHelperService::PROJECTS[$project];
+        }
+
+        // Create new city grant
+        $cityGrant = CityGrant::create([
+            'city_number' => $validated['city_number'],
+            'grant_amount' => $validated['grant_amount'],
+            'enabled' => $validated['enabled'],
+            'description' => $validated['description'],
+            'requirements' => json_encode([
+                'required_projects' => $selectedProjects,
+                'project_bits' => $projectBits,
+            ]),
+        ]);
+
+        return redirect()->route('admin.grants.city')->with('alert-message', 'City grant created successfully!')->with(
+            'alert-type',
+            'success'
+        );
     }
 
 }

@@ -61,6 +61,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::get("/grants/city", [GrantController::class, 'cityGrants'])->name(
             "admin.grants.city"
         );
+        Route::post('/grants/city/{city_grant}/update', [GrantController::class, 'updateCityGrant'])
+            ->name("admin.grants.city.update");
+
+        Route::post('/grants/city/create', [GrantController::class, 'createCityGrant'])->name(
+            "admin.grants.city.create"
+        );
 
         Route::post("/grants/city/approve/{CityGrantRequest}", [GrantController::class, 'approveCityGrant'])->name(
             "admin.grants.city.approve"
