@@ -56,8 +56,7 @@ class CityGrantService
 
         // Make sure they don't have a pending city grant
         $pending = CityGrantRequest::where("nation_id", Auth::user()->nation_id)
-            ->where("approved_at", null)
-            ->where("denied_at", null)
+            ->where("status", "pending")
             ->get();
 
         if ($pending->count() > 0) {
@@ -66,8 +65,7 @@ class CityGrantService
 
         // Check to see if they've gotten this grant before
         $gotten = CityGrantRequest::where("nation_id", Auth::user()->nation_id)
-            ->where("city_number", $grant->city_number)
-            ->where("approved_at", "!=", null)
+            ->where("status", "approved")
             ->get();
 
         if ($gotten->count() > 0) {
