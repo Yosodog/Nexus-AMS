@@ -36,6 +36,7 @@ class SyncNationsJob implements ShouldQueue
             // Fetch all nations
             $nations = NationQueryService::getMultipleNations(["page" => $this->page],
                 $this->perPage,
+                true,
                 handlePagination: false);
 
             foreach ($nations as $nation) {

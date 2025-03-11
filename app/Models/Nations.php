@@ -191,6 +191,12 @@ class Nations extends Model
             $nation->military()->updateOrCreate(['nation_id' => $nation->id], $militaryData);
         }
 
+        if (!is_null($graphQLNationModel->cities)) {
+            foreach ($graphQLNationModel->cities as $city) {
+                Cities::updateFromAPI($city);
+            }
+        }
+
         return $nation;
     }
 

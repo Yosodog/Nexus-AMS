@@ -31,7 +31,7 @@ class SyncNations extends Command
     {
         $this->info('Queuing nation sync jobs...');
 
-        $perPage = 500;
+        $perPage = 100; // With cities, 500 is just too much and it just... doesn't work. Maybe fix it later lol
         $page = 1;
         $lastPage = 1;
 
