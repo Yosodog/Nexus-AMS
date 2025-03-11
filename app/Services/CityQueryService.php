@@ -28,7 +28,7 @@ class CityQueryService
         $response = $client->sendQuery($builder);
 
         $alliance = new City();
-        $alliance->buildWithJSON((object)$response['data']['cities']['data'][0]);
+        $alliance->buildWithJSON((object)$response->{0});
 
         return $alliance;
     }

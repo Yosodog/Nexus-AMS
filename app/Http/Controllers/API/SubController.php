@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\API;
 
 use App\Exceptions\PWQueryFailedException;
+use App\Exceptions\PWRateLimitHitException;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
 use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
 use App\Models\Alliances;
+use App\Models\Cities;
 use App\Models\Nations;
 use App\Services\AllianceQueryService;
+use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -175,9 +178,33 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance deleted successfully']);
     }
 
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     * @throws PWQueryFailedException
+     * @throws PWRateLimitHitException
+     */
     public function createCity(Request $request)
     {
+        // Decode JSON payload
+        $cityCreates = $request->json()->all();
 
+        // Ensure it's always an array
+        if (!is_array($cityCreates)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($cityCreates['id'])) {
+            $cityCreates = [$cityCreates];
+        }
+
+        foreach ($cityCreates as $create) {
+            $city = CityQueryService::getCityById($create['id']);
+
+            Cities::updateFromAPI($city);
+        }
+
+        return response()->json(['message' => 'City created successfully']);
     }
 
     /**
@@ -207,6 +234,5 @@ class SubController extends Controller
 
     public function deleteCity(Request $request)
     {
-
     }
 }
