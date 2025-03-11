@@ -64,6 +64,6 @@ class Alliances implements \Iterator
      */
     public function add(Alliance $alliance): void
     {
-        $this->$alliance[] = $alliance;
+        $this->alliances[] = $alliance;
     }
 }

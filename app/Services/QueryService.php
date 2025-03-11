@@ -374,8 +374,6 @@ class QueryService
 
         $results = $results->merge($firstResponse['paginatorInfo']);
 
-        var_dump($results);
-
         return $results;
     }
 
