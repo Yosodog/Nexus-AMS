@@ -210,7 +210,7 @@ class SelectionSetHelper
             'nation_id',
             // 'nation',
             'name',
-            // 'date',
+            'date',
             'infrastructure',
             'land',
             'powered',
@@ -241,7 +241,8 @@ class SelectionSetHelper
             'factory',
             'hangar',
             'drydock',
-            // 'nuke_date',
+//            'nuke_date',
+//            'cities_discount'
         ];
     }
 

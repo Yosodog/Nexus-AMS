@@ -10,6 +10,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use stdClass;
+use Illuminate\Support\Collection;
 
 class QueryService
 {
@@ -64,14 +65,14 @@ class QueryService
      */
     protected function buildEndpoint(): string
     {
-        return "https://api.politicsandwar.com/graphql?api_key=".$this->apiKey;
+        return "https://api.politicsandwar.com/graphql?api_key=" . $this->apiKey;
     }
 
     /**
-     * @param  GraphQLQueryBuilder  $builder
-     * @param  array  $variables
-     * @param  int|null  $maxConcurrency
-     * @param  bool  $headers
+     * @param GraphQLQueryBuilder $builder
+     * @param array $variables
+     * @param int|null $maxConcurrency
+     * @param bool $headers
      *
      * @return stdClass
      * @throws ConnectionException
@@ -81,7 +82,8 @@ class QueryService
         GraphQLQueryBuilder $builder,
         array $variables = [],
         int $maxConcurrency = null,
-        bool $headers = false
+        bool $headers = false,
+        bool $handlePagination = true
     ): stdClass {
         $maxConcurrency = $maxConcurrency ?? $this->maxConcurrency;
         $paginationEnabled = $builder->includePagination;
@@ -115,9 +117,10 @@ class QueryService
             return (object)$allResults->toArray();
         }
 
-        // Fetch remaining pages if there are multiple pages
-        while ($page <= $lastPage) {
+        // Fetch remaining pages if there are multiple pages, and if we want to
+        while ($page <= $lastPage && $handlePagination == true) {
             // Create and execute a batch of requests, starting from the current page
+            echo "Page: " . $page . "\n";
             $promises = $this->createBatchRequests(
                 $builder,
                 $variables,
@@ -156,10 +159,10 @@ class QueryService
      * Sends the first query of a request so that we can check later if there's
      * only one page for this request
      *
-     * @param  GraphQLQueryBuilder  $builder
-     * @param  array  $variables
-     * @param  string  $rootField
-     * @param  array  $headers
+     * @param GraphQLQueryBuilder $builder
+     * @param array $variables
+     * @param string $rootField
+     * @param array $headers
      *
      * @return array
      * @throws ConnectionException
@@ -175,43 +178,33 @@ class QueryService
         $retryCount = 0;
         $delay = $this->initialDelay;
 
-        $response = $this->sendPageQuery(
-            $query,
-            $variables,
-            $retryCount,
-            $delay,
-            $headers
-        )->wait();
+        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers)->wait();
 
         if ($response && isset($response['data'][$rootField])) {
             if (isset($response['data'][$rootField]['data'])) {
                 return [
                     'data' => $response['data'][$rootField]['data'],
-                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
-                        ?? null,
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo'] ?? null,
                 ];
             } else {
                 return [
                     'data' => $response['data'][$rootField],
-                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
-                        ?? null,
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo'] ?? null,
                 ];
             }
         }
 
-        throw new PWQueryFailedException(
-            "Initial query failed: ".json_encode($response)
-        );
+        throw new PWQueryFailedException("Initial query failed: " . json_encode($response));
     }
 
     /**
      * Sends the query for a request that is not the first page
      *
-     * @param  string  $query
-     * @param  array  $variables
-     * @param  int  $retryCount
-     * @param  int  $delay
-     * @param  array  $headers
+     * @param string $query
+     * @param array $variables
+     * @param int $retryCount
+     * @param int $delay
+     * @param array $headers
      *
      * @return PromiseInterface
      * @throws ConnectionException
@@ -223,20 +216,14 @@ class QueryService
         int &$delay,
         array $headers = []
     ): PromiseInterface {
-        return Http::async()->withHeaders($headers)->post($this->endpoint, [
-            'query' => $query,
-            'variables' => $variables,
-        ])->then(
-            function ($response) use (
-                &$retryCount,
-                &$delay,
-                $query,
-                $variables,
-                $headers
-            ) {
+        return Http::async()->withHeaders($headers)->post(
+            $this->endpoint,
+            ['query' => $query, 'variables' => $variables,]
+        )->then(
+            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
                 if ($response->status() === 429) {
                     Log::warning(
-                        'Rate limit hit, retrying in '.$delay.' seconds.'
+                        'Rate limit hit, retrying in ' . $delay . ' seconds.'
                     );
                     sleep($delay);
                     $retryCount++;
@@ -258,9 +245,9 @@ class QueryService
                 }
 
                 if ($response->failed()) {
-                    Log::error('Query failed: '.$response->body());
+                    Log::error('Query failed: ' . $response->body());
                     throw new PWQueryFailedException(
-                        'Query failed: '.$response->body()
+                        'Query failed: ' . $response->body()
                     );
                 }
             }
@@ -270,11 +257,11 @@ class QueryService
     /**
      * Sends batch requests when we have multiple pages
      *
-     * @param  GraphQLQueryBuilder  $builder
-     * @param  array  $variables
-     * @param  int  $page
-     * @param  int  $maxConcurrency
-     * @param  int  $lastPage
+     * @param GraphQLQueryBuilder $builder
+     * @param array $variables
+     * @param int $page
+     * @param int $maxConcurrency
+     * @param int $lastPage
      *
      * @return array
      * @throws ConnectionException
@@ -318,20 +305,16 @@ class QueryService
     /**
      * Processes the batch requests
      *
-     * @param  array  $responses
+     * @param array $responses
      * @param $allResults
      * @param $lastPage
-     * @param  string  $rootField
+     * @param string $rootField
      *
      * @return void
      * @throws PWQueryFailedException
      */
-    protected function processBatchResponses(
-        array $responses,
-        &$allResults,
-        &$lastPage,
-        string $rootField
-    ) {
+    protected function processBatchResponses(array $responses, &$allResults, &$lastPage, string $rootField)
+    {
         foreach ($responses as $response) {
             if ($response['state'] === 'fulfilled'
                 && isset($response['value'])
@@ -349,6 +332,38 @@ class QueryService
                 );
             }
         }
+    }
+
+    /**
+     * @param GraphQLQueryBuilder $builder
+     * @param array $variables
+     * @param bool $headers
+     * @return Collection
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
+     */
+    public function getPaginationInfo(GraphQLQueryBuilder $builder, array $variables = [], bool $headers = false)
+    {
+        if ($headers) {
+            $headersArray = $this->getHeaders();
+        } else {
+            $headersArray = [];
+        }
+
+        $rootField = $builder->getRootField();
+        $results = collect();
+
+        // Initial request to detect pagination and retrieve data
+        $firstResponse = $this->executeInitialRequest(
+            $builder,
+            $variables,
+            $rootField,
+            $headersArray
+        );
+
+        $results = $results->merge($firstResponse['paginatorInfo']);
+
+        return $results;
     }
 
 }

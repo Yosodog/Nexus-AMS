@@ -10,6 +10,7 @@ class City {
     // public Date $date; // Date
     public float $infrastructure;
     public float $land;
+    public string $date;
     public bool $powered;
     public int $oil_power;
     public int $wind_power;
@@ -49,7 +50,7 @@ class City {
         $this->nation_id = $json->nation_id;
         // $this->nation = $json->nation; // Uncomment for use
         $this->name = $json->name;
-        // $this->date = $json->date; // Uncomment and modify based on your Date handling
+        $this->date = $json->date;
         $this->infrastructure = $json->infrastructure;
         $this->land = $json->land;
         $this->powered = $json->powered;
