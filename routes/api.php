@@ -23,6 +23,10 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
     Route::post('alliance/create', [SubController::class, 'createAlliance']);
     Route::post('alliance/update', [SubController::class, 'updateAlliance']);
     Route::post('alliance/delete', [SubController::class, 'deleteAlliance']);
+
+    Route::post('city/create', [SubController::class, 'createCity']);
+    Route::post('city/update', [SubController::class, 'updateCity']);
+    Route::post('city/delete', [SubController::class, 'deleteCity']);
 });
 
 

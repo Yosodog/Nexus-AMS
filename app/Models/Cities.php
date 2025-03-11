@@ -31,4 +31,13 @@ class Cities extends Model
         // Use `updateOrCreate` to handle both creation and update
         return self::updateOrCreate(['id' => $graphQLCityModel->id], $cityData);
     }
+
+    /**
+     * @param int $id
+     * @return self
+     */
+    public static function getById(int $id): self
+    {
+        return self::where("id", $id)->firstOrFail();
+    }
 }

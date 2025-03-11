@@ -6,6 +6,7 @@ use App\Exceptions\PWQueryFailedException;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
 use App\Jobs\UpdateAllianceJob;
+use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
 use App\Models\Alliances;
 use App\Models\Nations;
@@ -172,5 +173,40 @@ class SubController extends Controller
         }
 
         return response()->json(['message' => 'Alliance deleted successfully']);
+    }
+
+    public function createCity(Request $request)
+    {
+
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateCity(Request $request)
+    {
+        // Decode JSON payload
+        $citiesData = $request->json()->all();
+
+        // Ensure it's always an array
+        if (!is_array($citiesData)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        // If it's a single nation update (not an array of nations), wrap it in an array
+        if (isset($citiesData['id'])) {
+            $citiesData = [$citiesData];
+        }
+
+        // Dispatch the job with an array of nations (single or bulk)
+        UpdateCityJob::dispatch($citiesData);
+
+        return response()->json(['message' => 'Alliance update(s) queued for processing']);
+    }
+
+    public function deleteCity(Request $request)
+    {
+
     }
 }
