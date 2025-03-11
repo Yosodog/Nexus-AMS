@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Broadcasting\PWMessageChannel;
+use App\Models\CityGrantRequest;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,5 +26,7 @@ class AppServiceProvider extends ServiceProvider
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(\App\Services\PWMessageService::class));
         });
+
+        Route::model('CityGrantRequest', CityGrantRequest::class);
     }
 }
