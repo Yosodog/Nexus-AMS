@@ -158,7 +158,7 @@ class Nation
         $this->color = isset($json->color) ? (string)$json->color : null;
         $this->num_cities = isset($json->num_cities) ? (int)$json->num_cities : null;
         $this->alliance_seniority = isset($json->alliance_seniority) ? (int)$json->alliance_seniority : null;
-        $this->vip = isset($json->vip) ? (int)$json->vip : null;
+        $this->vip = isset($json->vip) ? (int)$json->vip : 0;
         $this->commendations = isset($json->commendations) ? (int)$json->commendations : null;
         $this->denouncements = isset($json->denouncements) ? (int)$json->denouncements : null;
         $this->offensive_wars_count = isset($json->offensive_wars_count) ? (int)$json->offensive_wars_count : null;
