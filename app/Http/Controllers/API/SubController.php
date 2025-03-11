@@ -232,7 +232,30 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance update(s) queued for processing']);
     }
 
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function deleteCity(Request $request)
     {
+        // Decode JSON payload
+        $citiesDelete = $request->json()->all();
+
+        // Ensure it's always an array
+        if (!is_array($citiesDelete)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        // If it's a single nation update (not an array of nations), wrap it in an array
+        if (isset($citiesDelete['id'])) {
+            $citiesDelete = [$citiesDelete];
+        }
+
+        foreach ($citiesDelete as $del) {
+            $nation = Cities::getById($del['id']);
+            $nation->delete();
+        }
+
+        return response()->json(['message' => 'Alliance deleted successfully']);
     }
 }
