@@ -45,4 +45,13 @@ class Alliances extends Model
 
         return $alliance;
     }
+
+    /**
+     * @param int $id
+     * @return mixed
+     */
+    public static function getById(int $id)
+    {
+        return self::where("id", $id)->firstOrFail();
+    }
 }

@@ -4,12 +4,13 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
+use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateNationJob;
 use App\Models\Nations;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class SubUpdateController extends Controller
+class SubController extends Controller
 {
     /**
      * @param Request $request
@@ -86,5 +87,40 @@ class SubUpdateController extends Controller
         }
 
         return response()->json(['message' => 'Nation deleted successfully']);
+    }
+
+    public function createAlliance(Request $request)
+    {
+
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateAlliance(Request $request)
+    {
+        // Decode JSON payload
+        $allianceUpdates = $request->json()->all();
+
+        // Ensure it's always an array
+        if (!is_array($allianceUpdates)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        // If it's a single nation update (not an array of nations), wrap it in an array
+        if (isset($allianceUpdates['id'])) {
+            $allianceUpdates = [$allianceUpdates];
+        }
+
+        // Dispatch the job with an array of nations (single or bulk)
+        UpdateAllianceJob::dispatch($allianceUpdates);
+
+        return response()->json(['message' => 'Alliance update(s) queued for processing']);
+    }
+
+    public function deleteAlliance(Request $request)
+    {
+
     }
 }
