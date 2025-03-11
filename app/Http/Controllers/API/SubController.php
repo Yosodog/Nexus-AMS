@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
 use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateNationJob;
+use App\Models\Alliances;
 use App\Models\Nations;
+use App\Services\AllianceQueryService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -41,7 +45,7 @@ class SubController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function createNation(Request $request)
+    public function createNation(Request $request): JsonResponse
     {
         // Decode JSON payload
         $nationCreate = $request->json()->all();
@@ -66,7 +70,7 @@ class SubController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function deleteNation(Request $request)
+    public function deleteNation(Request $request): JsonResponse
     {
         // Decode JSON payload
         $nationDelete = $request->json()->all();
@@ -89,16 +93,40 @@ class SubController extends Controller
         return response()->json(['message' => 'Nation deleted successfully']);
     }
 
-    public function createAlliance(Request $request)
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
+     */
+    public function createAlliance(Request $request): JsonResponse
     {
+        // Decode JSON payload
+        $allianceCreates = $request->json()->all();
 
+        // Ensure it's always an array
+        if (!is_array($allianceCreates)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($allianceCreates['id'])) {
+            $allianceCreates = [$allianceCreates];
+        }
+
+        foreach ($allianceCreates as $create) {
+            $alliance = AllianceQueryService::getAllianceById($create['id']);
+
+            Alliances::updateFromAPI($alliance);
+        }
+
+        return response()->json(['message' => 'Alliance created successfully']);
     }
 
     /**
      * @param Request $request
      * @return JsonResponse
      */
-    public function updateAlliance(Request $request)
+    public function updateAlliance(Request $request): JsonResponse
     {
         // Decode JSON payload
         $allianceUpdates = $request->json()->all();
@@ -119,8 +147,30 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance update(s) queued for processing']);
     }
 
-    public function deleteAlliance(Request $request)
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function deleteAlliance(Request $request): JsonResponse
     {
+        // Decode JSON payload
+        $allianceDeletes = $request->json()->all();
 
+        // Ensure it's always an array
+        if (!is_array($allianceDeletes)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        // If it's a single nation update (not an array of nations), wrap it in an array
+        if (isset($allianceDeletes['id'])) {
+            $allianceDeletes = [$allianceDeletes];
+        }
+
+        foreach ($allianceDeletes as $del) {
+            $nation = Alliances::getById($del['id']);
+            $nation->delete();
+        }
+
+        return response()->json(['message' => 'Alliance deleted successfully']);
     }
 }
