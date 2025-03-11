@@ -10,6 +10,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use stdClass;
+use Illuminate\Support\Collection;
 
 class QueryService
 {
@@ -177,33 +178,23 @@ class QueryService
         $retryCount = 0;
         $delay = $this->initialDelay;
 
-        $response = $this->sendPageQuery(
-            $query,
-            $variables,
-            $retryCount,
-            $delay,
-            $headers
-        )->wait();
+        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers)->wait();
 
         if ($response && isset($response['data'][$rootField])) {
             if (isset($response['data'][$rootField]['data'])) {
                 return [
                     'data' => $response['data'][$rootField]['data'],
-                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
-                        ?? null,
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo'] ?? null,
                 ];
             } else {
                 return [
                     'data' => $response['data'][$rootField],
-                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo']
-                        ?? null,
+                    'paginatorInfo' => $response['data'][$rootField]['paginatorInfo'] ?? null,
                 ];
             }
         }
 
-        throw new PWQueryFailedException(
-            "Initial query failed: " . json_encode($response)
-        );
+        throw new PWQueryFailedException("Initial query failed: " . json_encode($response));
     }
 
     /**
@@ -225,17 +216,11 @@ class QueryService
         int &$delay,
         array $headers = []
     ): PromiseInterface {
-        return Http::async()->withHeaders($headers)->post($this->endpoint, [
-            'query' => $query,
-            'variables' => $variables,
-        ])->then(
-            function ($response) use (
-                &$retryCount,
-                &$delay,
-                $query,
-                $variables,
-                $headers
-            ) {
+        return Http::async()->withHeaders($headers)->post(
+            $this->endpoint,
+            ['query' => $query, 'variables' => $variables,]
+        )->then(
+            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
                 if ($response->status() === 429) {
                     Log::warning(
                         'Rate limit hit, retrying in ' . $delay . ' seconds.'
@@ -328,12 +313,8 @@ class QueryService
      * @return void
      * @throws PWQueryFailedException
      */
-    protected function processBatchResponses(
-        array $responses,
-        &$allResults,
-        &$lastPage,
-        string $rootField
-    ) {
+    protected function processBatchResponses(array $responses, &$allResults, &$lastPage, string $rootField)
+    {
         foreach ($responses as $response) {
             if ($response['state'] === 'fulfilled'
                 && isset($response['value'])
@@ -353,6 +334,14 @@ class QueryService
         }
     }
 
+    /**
+     * @param GraphQLQueryBuilder $builder
+     * @param array $variables
+     * @param bool $headers
+     * @return Collection
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
+     */
     public function getPaginationInfo(GraphQLQueryBuilder $builder, array $variables = [], bool $headers = false)
     {
         if ($headers) {
