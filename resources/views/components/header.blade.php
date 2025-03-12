@@ -22,13 +22,13 @@
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
                         <li>
-                            <a>Parent</a>
+                            <a>Grants</a>
                             <ul class="p-2">
-                                <li><a>Submenu 1</a></li>
+                                <li><a href="{{ route("grants.city") }}">City Grants</a></li>
                                 <li><a>Submenu 2</a></li>
                             </ul>
                         </li>
-                        <li><a>Item 3</a></li>
+                        <li><a href="{{ route("loans.index") }}">Loans</a></li>
                     </ul>
                 @else
                     <ul
@@ -54,7 +54,7 @@
                             </ul>
                         </details>
                     </li>
-                    <li><a>Item 3</a></li>
+                    <li><a href="{{ route("loans.index") }}">Loans</a></li>
                 </ul>
             @else
                 <ul class="menu menu-horizontal px-1">
