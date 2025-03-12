@@ -56,7 +56,8 @@
     <div class="divider"></div>
 
     <div class="tooltip w-full" data-tip="Click to request a deposit">
-        <button class="btn btn-primary flex items-center gap-2 deposit-request-btn relative w-full" data-account-id="{{ $account->id }}">
+        <button class="btn btn-primary flex items-center gap-2 deposit-request-btn relative w-full"
+                data-account-id="{{ $account->id }}">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-5">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -99,14 +100,16 @@
                         <td>
                             @if($transaction->transaction_type === 'deposit' && $transaction->nation_id)
                                 @if($transaction->nation)
-                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" class="link link-primary" target="_blank">
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}"
+                                       class="link link-primary" target="_blank">
                                         {{ $transaction->nation->nation_name }}
                                     </a>
                                 @else
                                     Nation #{{ $transaction->nation_id }}
                                 @endif
                             @elseif($transaction->fromAccount)
-                                <a href="{{ route('accounts.view', $transaction->fromAccount->id) }}" class="link link-primary">
+                                <a href="{{ route('accounts.view', $transaction->fromAccount->id) }}"
+                                   class="link link-primary">
                                     {{ $transaction->fromAccount->name }}
                                 </a>
                             @else
@@ -117,12 +120,14 @@
                         {{-- Handle To Account --}}
                         <td>
                             @if($transaction->toAccount)
-                                <a href="{{ route('accounts.view', $transaction->toAccount->id) }}" class="link link-primary">
+                                <a href="{{ route('accounts.view', $transaction->toAccount->id) }}"
+                                   class="link link-primary">
                                     {{ $transaction->toAccount->name }}
                                 </a>
                             @elseif($transaction->nation_id)
                                 @if($transaction->nation)
-                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" class="link link-primary" target="_blank">
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}"
+                                       class="link link-primary" target="_blank">
                                         {{ $transaction->nation->nation_name }}
                                     </a>
                                 @else

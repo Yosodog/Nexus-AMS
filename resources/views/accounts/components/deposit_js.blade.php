@@ -33,7 +33,9 @@
                     })
                         .then(response => {
                             if (!response.ok) {
-                                return response.text().then(text => { throw new Error(text); });
+                                return response.text().then(text => {
+                                    throw new Error(text);
+                                });
                             }
                             return response.json();
                         })
@@ -87,7 +89,9 @@
         copyButton.addEventListener('click', function () {
             copyToClipboard(depositCode);
             copyButton.innerText = "Copied!";
-            setTimeout(() => { copyButton.innerText = "Copy Code"; }, 2000);
+            setTimeout(() => {
+                copyButton.innerText = "Copy Code";
+            }, 2000);
         });
 
         let closeButton = document.createElement('button');

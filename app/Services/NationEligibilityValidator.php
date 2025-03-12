@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Nations;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class NationEligibilityValidator
@@ -19,7 +18,7 @@ class NationEligibilityValidator
     /**
      * Validate alliance membership.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validateAllianceMembership(): void
     {
@@ -39,7 +38,7 @@ class NationEligibilityValidator
     /**
      * Validate government type.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validateGovernmentType(string $requiredGovernment): void
     {
@@ -53,14 +52,14 @@ class NationEligibilityValidator
     /**
      * Validate nation color.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validateColor(array $allowedColors): void
     {
         if (!in_array($this->nation->color, $allowedColors)) {
             throw ValidationException::withMessages([
                 'color' => 'Your nation must be one of the following colors: '
-                    .implode(', ', $allowedColors),
+                    . implode(', ', $allowedColors),
             ]);
         }
     }
@@ -68,7 +67,7 @@ class NationEligibilityValidator
     /**
      * Validate required projects.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validateRequiredProjects(array $requiredProjects): void
     {
@@ -90,7 +89,7 @@ class NationEligibilityValidator
     /**
      * Validate infrastructure per city.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validateInfrastructure(int $minInfraPerCity): void
     {

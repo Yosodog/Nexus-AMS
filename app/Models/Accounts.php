@@ -3,18 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Accounts extends Model
 {
     public $table = "accounts";
 
     protected array $resources = [
-        "money", "coal", "oil", "uranium", "iron", "bauxite", "lead",
-        "gasoline", "munitions", "steel", "aluminum", "food"
+        "money",
+        "coal",
+        "oil",
+        "uranium",
+        "iron",
+        "bauxite",
+        "lead",
+        "gasoline",
+        "munitions",
+        "steel",
+        "aluminum",
+        "food"
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function nation()
     {
@@ -22,7 +33,7 @@ class Accounts extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function user()
     {
@@ -36,10 +47,10 @@ class Accounts extends Model
      */
     public function isEmpty(): bool
     {
-        foreach ($this->resources as $res)
-        {
-            if ($this->$res != 0)
+        foreach ($this->resources as $res) {
+            if ($this->$res != 0) {
                 return false;
+            }
         }
 
         return true;

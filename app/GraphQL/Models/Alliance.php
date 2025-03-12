@@ -2,6 +2,8 @@
 
 namespace App\GraphQL\Models;
 
+use stdClass;
+
 class Alliance
 {
     public string $id;
@@ -40,10 +42,11 @@ class Alliance
     // public array $bulletins; // [Bulletin]
 
     /**
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void {
+    public function buildWithJSON(stdClass $json): void
+    {
         $this->id = $json->id;
         $this->name = $json->name;
         $this->acronym = $json->acronym;
@@ -51,11 +54,9 @@ class Alliance
         $this->color = $json->color;
         // $this->date = $json->date; // Uncomment and modify based on your DateTime handling
         $this->average_score = $json->average_score ?? 0; // Avg score can be null lol
-        if (isset($json->nations))
-        {
+        if (isset($json->nations)) {
             $this->nations = new Nations([]);
-            foreach ($json->nations as $nation)
-            {
+            foreach ($json->nations as $nation) {
                 $nationModel = new Nation();
                 $nationModel->buildWithJSON((object)$nation);
                 $this->nations->add($nationModel);

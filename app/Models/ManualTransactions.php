@@ -3,19 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ManualTransactions extends Model
 {
     public $table = "manual_transactions";
 
     protected $fillable = [
-        'account_id', 'admin_id', 'money', 'coal', 'oil', 'uranium',
-        'lead', 'iron', 'bauxite', 'gasoline', 'munitions',
-        'steel', 'aluminum', 'food', 'note', 'ip_address'
+        'account_id',
+        'admin_id',
+        'money',
+        'coal',
+        'oil',
+        'uranium',
+        'lead',
+        'iron',
+        'bauxite',
+        'gasoline',
+        'munitions',
+        'steel',
+        'aluminum',
+        'food',
+        'note',
+        'ip_address'
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function account()
     {
@@ -23,7 +37,7 @@ class ManualTransactions extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function admin()
     {

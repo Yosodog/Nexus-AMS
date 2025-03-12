@@ -2,11 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Models\Accounts;
 use App\Models\DepositRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class DepositCreated extends Notification implements ShouldQueue
@@ -37,7 +35,7 @@ class DepositCreated extends Notification implements ShouldQueue
     }
 
     /**
-     * @param  object  $notifiable
+     * @param object $notifiable
      *
      * @return array
      */

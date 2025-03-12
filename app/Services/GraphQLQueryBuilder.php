@@ -4,11 +4,19 @@ namespace App\Services;
 
 class GraphQLQueryBuilder
 {
+    public bool $includePagination = false;
     protected string $rootField;
     protected array $arguments = [];
     protected array $fields = [];
-    public bool $includePagination = false;
     protected bool $isMutation = false;
+
+    /**
+     * @return string
+     */
+    public function getRootField(): string
+    {
+        return $this->rootField;
+    }
 
     /**
      * Set the root field of the query (e.g., 'nations').
@@ -20,14 +28,6 @@ class GraphQLQueryBuilder
     {
         $this->rootField = $rootField;
         return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getRootField(): string
-    {
-        return $this->rootField;
     }
 
     /**
@@ -65,37 +65,6 @@ class GraphQLQueryBuilder
     }
 
     /**
-     * Add a field or set of fields to the query.
-     *
-     * @param array|string $fields
-     * @return self
-     */
-    public function addFields(array|string $fields): self
-    {
-        if (is_array($fields)) {
-            $this->fields = array_merge($this->fields, $fields);
-        } else {
-            $this->fields[] = $fields;
-        }
-        return $this;
-    }
-
-    /**
-     * Add a nested field with its own fields (for sub-objects).
-     *
-     * @param string $field
-     * @param callable $callback
-     * @return self
-     */
-    public function addNestedField(string $field, callable $callback): self
-    {
-        $nestedBuilder = new self();
-        $callback($nestedBuilder);
-        $this->fields[] = "{$field} { " . $nestedBuilder->buildWithoutRoot() . " }";
-        return $this;
-    }
-
-    /**
      * Enable pagination information in the query.
      *
      * @return self
@@ -104,19 +73,6 @@ class GraphQLQueryBuilder
     {
         $this->includePagination = true;
         return $this;
-    }
-
-    /**
-     * Build the query string without the root field (for nested fields).
-     *
-     * @return string
-     */
-    protected function buildWithoutRoot(): string
-    {
-        if (!empty($this->fields)) {
-            return implode(' ', $this->fields);
-        }
-        return '';
     }
 
     /**
@@ -155,5 +111,49 @@ class GraphQLQueryBuilder
         }
 
         return "{$queryType} { {$query} }";
+    }
+
+    /**
+     * Add a nested field with its own fields (for sub-objects).
+     *
+     * @param string $field
+     * @param callable $callback
+     * @return self
+     */
+    public function addNestedField(string $field, callable $callback): self
+    {
+        $nestedBuilder = new self();
+        $callback($nestedBuilder);
+        $this->fields[] = "{$field} { " . $nestedBuilder->buildWithoutRoot() . " }";
+        return $this;
+    }
+
+    /**
+     * Build the query string without the root field (for nested fields).
+     *
+     * @return string
+     */
+    protected function buildWithoutRoot(): string
+    {
+        if (!empty($this->fields)) {
+            return implode(' ', $this->fields);
+        }
+        return '';
+    }
+
+    /**
+     * Add a field or set of fields to the query.
+     *
+     * @param array|string $fields
+     * @return self
+     */
+    public function addFields(array|string $fields): self
+    {
+        if (is_array($fields)) {
+            $this->fields = array_merge($this->fields, $fields);
+        } else {
+            $this->fields[] = $fields;
+        }
+        return $this;
     }
 }

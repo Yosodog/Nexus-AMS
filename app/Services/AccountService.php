@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Accounts;
@@ -11,10 +12,9 @@ use App\Models\Transactions;
 use App\Models\User;
 use App\Notifications\DepositCreated;
 use Exception;
-use Illuminate\Http\Request;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class AccountService
 {
@@ -35,7 +35,7 @@ class AccountService
     ];
 
     /**
-     * @param  int|\App\Models\User  $user
+     * @param int|User $user
      *
      * @return mixed
      */
@@ -52,7 +52,7 @@ class AccountService
     }
 
     /**
-     * @param  int  $nation_id
+     * @param int $nation_id
      *
      * @return mixed
      */
@@ -63,8 +63,8 @@ class AccountService
     }
 
     /**
-     * @param  int  $nation_id
-     * @param  string  $name
+     * @param int $nation_id
+     * @param string $name
      *
      * @return Accounts
      */
@@ -79,7 +79,7 @@ class AccountService
     }
 
     /**
-     * @param  Accounts  $account
+     * @param Accounts $account
      *
      * @return void
      * @throws UserErrorException
@@ -97,9 +97,9 @@ class AccountService
     /**
      * Transfer resources from one account to another.
      *
-     * @param  int  $fromAccountId
-     * @param  int  $toAccountId
-     * @param  array  $resources
+     * @param int $fromAccountId
+     * @param int $toAccountId
+     * @param array $resources
      *
      * @return void
      * @throws UserErrorException
@@ -152,7 +152,7 @@ class AccountService
     }
 
     /**
-     * @param  int  $id
+     * @param int $id
      *
      * @return Accounts
      */
@@ -169,10 +169,10 @@ class AccountService
      * you set the toAccount variable. If it is going to a nation, obviously do
      * not set the toAccount variable.
      *
-     * @param  array  $resources
-     * @param  int  $nation_id
-     * @param  Accounts  $fromAccount
-     * @param  Accounts|null  $toAccount
+     * @param array $resources
+     * @param int $nation_id
+     * @param Accounts $fromAccount
+     * @param Accounts|null $toAccount
      *
      * @return void
      * @throws UserErrorException
@@ -230,14 +230,14 @@ class AccountService
     }
 
     /**
-     * @param  int  $fromAccountId
-     * @param  int  $nation_id
-     * @param  array  $resources
+     * @param int $fromAccountId
+     * @param int $nation_id
+     * @param array $resources
      *
      * @return void
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \App\Exceptions\UserErrorException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws UserErrorException
+     * @throws ConnectionException
      */
     public static function transferToNation(
         int $fromAccountId,
@@ -259,7 +259,7 @@ class AccountService
 
             $bank = new BankService();
             $bank->receiver = $nation_id;
-            $bank->note = "Withdraw from ".$fromAccount->name;
+            $bank->note = "Withdraw from " . $fromAccount->name;
 
             // Perform the transfer
             foreach (self::$resources as $res) {
@@ -289,9 +289,9 @@ class AccountService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
+     * @param Accounts $account
      *
-     * @return \App\Models\DepositRequest
+     * @return DepositRequest
      */
     public static function createDepositRequest(Accounts $account): DepositRequest
     {
@@ -306,8 +306,8 @@ class AccountService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
-     * @param  \App\GraphQL\Models\BankRecord  $bankRecord
+     * @param Accounts $account
+     * @param BankRecord $bankRecord
      *
      * @return void
      */
@@ -323,7 +323,7 @@ class AccountService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
+     * @param Accounts $account
      *
      * @return mixed
      */
@@ -337,8 +337,8 @@ class AccountService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
-     * @param  int  $perPage
+     * @param Accounts $account
+     * @param int $perPage
      *
      * @return mixed
      */
@@ -350,15 +350,19 @@ class AccountService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
-     * @param  array  $adjustment
-     * @param  int  $adminId
-     * @param  string  $ipAddress
+     * @param Accounts $account
+     * @param array $adjustment
+     * @param int $adminId
+     * @param string $ipAddress
      *
      * @return ManualTransactions
      */
-    public static function adjustAccountBalance(Accounts $account, array $adjustment, int $adminId, string $ipAddress): ManualTransactions
-    {
+    public static function adjustAccountBalance(
+        Accounts $account,
+        array $adjustment,
+        int $adminId,
+        string $ipAddress
+    ): ManualTransactions {
         // Apply changes to account balance
         foreach (self::$resources as $resource) {
             if (isset($adjustment[$resource])) {

@@ -25,7 +25,7 @@ class SelectionSetHelper
             'domestic_policy_turns',
             'color',
             'num_cities',
-//            'cities',
+            //            'cities',
             'score',
             'update_tz',
             'population',
@@ -51,12 +51,12 @@ class SelectionSetHelper
             'spies_today',
             'discord',
             'discord_id',
-//            'treasures',
-//            'wars',
-//            'bankrecs',
-//            'trades',
-//            'taxrecs',
-//            'bounties',
+            //            'treasures',
+            //            'wars',
+            //            'bankrecs',
+            //            'trades',
+            //            'taxrecs',
+            //            'bounties',
             'turns_since_last_city',
             'turns_since_last_project',
             'money',
@@ -150,9 +150,9 @@ class SelectionSetHelper
             // 'government_type', // GovernmentType class
             'credits_redeemed_this_month',
             'alliance_join_date',
-//            'awards',
-//            'bulletins',
-//            'bulletin_replies',
+            //            'awards',
+            //            'bulletins',
+            //            'bulletin_replies',
         ];
     }
 
@@ -241,8 +241,8 @@ class SelectionSetHelper
             'factory',
             'hangar',
             'drydock',
-//            'nuke_date',
-//            'cities_discount'
+            //            'nuke_date',
+            //            'cities_discount'
         ];
     }
 

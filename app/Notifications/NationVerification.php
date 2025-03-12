@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class NationVerification extends Notification implements ShouldQueue
@@ -38,7 +37,7 @@ class NationVerification extends Notification implements ShouldQueue
     }
 
     /**
-     * @param  object  $notifiable
+     * @param object $notifiable
      *
      * @return array
      */
@@ -47,7 +46,9 @@ class NationVerification extends Notification implements ShouldQueue
         return [
             'nation_id' => $this->user->nation_id,
             'subject' => "Verify Your Account",
-            'message' => "Welcome to ".env("APP_NAME")."! \n\nPlease verify your account by clicking the link below:\n\n" .
+            'message' => "Welcome to " . env(
+                    "APP_NAME"
+                ) . "! \n\nPlease verify your account by clicking the link below:\n\n" .
                 route('verify.account', ['code' => $this->verification_code]) .
                 "\n\nYour verification code: {$this->verification_code}"
         ];

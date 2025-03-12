@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NationResources extends Model
 {
@@ -14,7 +15,7 @@ class NationResources extends Model
      * Relationship to the Nation model.
      * Each NationResources record belongs to a single Nation.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function nation()
     {

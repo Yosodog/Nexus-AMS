@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
-class BankRecords implements \Iterator
+use Iterator;
+
+class BankRecords implements Iterator
 {
     private array $bankRecs;  // Array to store BankRec objects
     private int $position;    // Current position of the iterator

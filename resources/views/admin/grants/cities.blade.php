@@ -1,3 +1,4 @@
+@php use App\Services\PWHelperService; @endphp
 @extends('layouts.admin')
 
 @section("content")
@@ -14,16 +15,20 @@
     {{-- Info Boxes --}}
     <div class="row">
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved Grants" :value="$totalApproved" />
+            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved Grants"
+                              :value="$totalApproved"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied Grants" :value="$totalDenied" />
+            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied Grants"
+                              :value="$totalDenied"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending Grants" :value="$pendingCount" />
+            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending Grants"
+                              :value="$pendingCount"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Funds Distributed" :value="number_format($totalFundsDistributed)" />
+            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Funds Distributed"
+                              :value="number_format($totalFundsDistributed)"/>
         </div>
     </div>
 
@@ -52,11 +57,13 @@
                             <td>${{ number_format($request->grant_amount) }}</td>
                             <td>{{ $request->created_at->format('M d, Y') }}</td>
                             <td>
-                                <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST"
+                                      class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-success btn-sm">Approve</button>
                                 </form>
-                                <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST"
+                                      class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                                 </form>
@@ -99,13 +106,17 @@
                             @endif
                         </td>
                         <td>
-                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal" onclick="editGrant({{ json_encode($grant) }})">Edit</button>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal"
+                                    onclick="editGrant({{ json_encode($grant) }})">Edit
+                            </button>
                         </td>
                     </tr>
                 @endforeach
                 </tbody>
             </table>
-            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#grantModal" onclick="clearGrantForm()">Create New Grant</button>
+            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#grantModal"
+                    onclick="clearGrantForm()">Create New Grant
+            </button>
         </div>
     </div>
 
@@ -139,7 +150,7 @@
                         <div class="mb-3">
                             <label for="projects" class="form-label">Required Projects</label>
                             <select class="form-control" name="projects[]" id="projects" multiple>
-                                @foreach (array_keys(\App\Services\PWHelperService::PROJECTS) as $project)
+                                @foreach (array_keys(PWHelperService::PROJECTS) as $project)
                                     <option value="{{ $project }}">{{ $project }}</option>
                                 @endforeach
                             </select>

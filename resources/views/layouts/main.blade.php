@@ -9,21 +9,21 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
-<x-header />
+<x-header/>
 
 <div class="container mx-auto py-8 flex-grow">
     <div class="flex">
         <main class="w-full">
             @if (session('alert-message') || $errors->any())
-                <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
+                <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}"/>
             @endif
             @yield('content')
-                <!-- Toast Notification -->
-                <div id="toast-container" class="toast toast-end hidden"></div>
+            <!-- Toast Notification -->
+            <div id="toast-container" class="toast toast-end hidden"></div>
         </main>
     </div>
 </div>
 
-<x-footer />
+<x-footer/>
 </body>
 </html>

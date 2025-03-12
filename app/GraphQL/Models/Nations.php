@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
-class Nations implements \Iterator
+use Iterator;
+
+class Nations implements Iterator
 {
     private array $nations;  // Array to store Nation objects
     private int $position;    // Current position of the iterator

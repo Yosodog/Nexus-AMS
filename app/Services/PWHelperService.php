@@ -52,7 +52,7 @@ class PWHelperService
     ];
 
     /**
-     * @param  int  $projectBits
+     * @param int $projectBits
      *
      * @return array
      */

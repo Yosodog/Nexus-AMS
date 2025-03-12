@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\BankRecord;
 use App\GraphQL\Models\BankRecords;
+use Illuminate\Http\Client\ConnectionException;
 
 class BankRecordQueryService
 {
@@ -13,8 +15,8 @@ class BankRecordQueryService
      * @param int $aID
      * @param int $perQuery
      * @return BankRecords
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public static function getAllianceDeposits(int $aID, int $perQuery = 500): BankRecords
     {

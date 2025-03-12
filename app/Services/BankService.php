@@ -30,7 +30,7 @@ class BankService
     /**
      * Queues a job to send the withdraw.
      *
-     * @param  \App\Models\Transactions  $transaction
+     * @param Transactions $transaction
      *
      * @return void
      */

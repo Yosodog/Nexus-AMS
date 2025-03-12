@@ -2,27 +2,21 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Models\Accounts;
 use App\Models\DepositRequest;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Str;
 
 class DepositService
 {
 
     /**
-     * @return string
-     */
-    public static function generate_code(): string
-    {
-        return strtoupper(Str::random(8));
-    }
-
-    /**
-     * @param  int  $allianceId
+     * @param int $allianceId
      *
      * @return void
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public static function processDeposits(int $allianceId)
     {
@@ -99,7 +93,7 @@ class DepositService
     }
 
     /**
-     * @param  \App\Models\DepositRequest  $request
+     * @param DepositRequest $request
      *
      * @return void
      */
@@ -112,9 +106,9 @@ class DepositService
     /**
      * Creates a deposit request
      *
-     * @param  \App\Models\Accounts  $account
+     * @param Accounts $account
      *
-     * @return \App\Models\DepositRequest
+     * @return DepositRequest
      */
     public static function createRequest(Accounts $account): DepositRequest
     {
@@ -125,6 +119,14 @@ class DepositService
         $deposit->deposit_code = $depositCode;
 
         return $deposit;
+    }
+
+    /**
+     * @return string
+     */
+    public static function generate_code(): string
+    {
+        return strtoupper(Str::random(8));
     }
 
 }

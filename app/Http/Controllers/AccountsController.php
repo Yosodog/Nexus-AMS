@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Exceptions\UserErrorException;
 use App\Models\Accounts;
 use App\Services\AccountService;
+use Closure;
 use Exception;
+use Illuminate\Container\Container;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -27,9 +30,9 @@ class AccountsController extends Controller
     }
 
     /**
-     * @param  Request  $request
+     * @param Request $request
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function transfer(Request $request)
     {
@@ -84,7 +87,7 @@ class AccountsController extends Controller
                 'alert-type' => "error",
             ]);
         } catch (Exception $e) {
-            Log::error("Error when transferring. ".$e->getMessage());
+            Log::error("Error when transferring. " . $e->getMessage());
 
             return redirect()->back()->withErrors(
                 "There was an error with your transfer. Please try again"
@@ -93,9 +96,9 @@ class AccountsController extends Controller
     }
 
     /**
-     * @param  \App\Models\Accounts  $accounts
+     * @param Accounts $accounts
      *
-     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     * @return Closure|Container|mixed|object|null
      */
     public function viewAccount(Accounts $accounts)
     {
@@ -115,7 +118,7 @@ class AccountsController extends Controller
     }
 
     /**
-     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     * @return Closure|Container|mixed|object|null
      */
     public function createView()
     {
@@ -123,7 +126,7 @@ class AccountsController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Http\Request  $request
+     * @param Request $request
      *
      * @return mixed
      */
@@ -147,9 +150,9 @@ class AccountsController extends Controller
     }
 
     /**
-     * @param  Request  $request
+     * @param Request $request
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function delete(Request $request)
     {

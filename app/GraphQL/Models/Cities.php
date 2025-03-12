@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
-class Cities implements \Iterator
+use Iterator;
+
+class Cities implements Iterator
 {
     private array $cities = [];  // Array to store Nation objects
     private int $position = 0;    // Current position of the iterator

@@ -5,7 +5,8 @@
             <label class="block text-gray-700 text-sm font-semibold mb-2" for="account_name_delete">Account Name</label>
             <select class="select select-bordered w-full" id="account_name_delete" name="account_id">
                 @foreach ($accounts as $account)
-                    <option value="{{ $account->id }}">{{ $account->name }} - ${{ number_format($account->money, 2) }}</option>
+                    <option value="{{ $account->id }}">{{ $account->name }} -
+                        ${{ number_format($account->money, 2) }}</option>
                 @endforeach
             </select>
         </div>

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,14 +13,37 @@ return new class extends Migration
         Schema::create('nations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('alliance_id')->nullable()->index(); // Alliance relationship
-            $table->enum('alliance_position', ['NOALLIANCE', 'APPLICANT', 'MEMBER', 'OFFICER', 'HEIR', 'LEADER'])->default('NOALLIANCE');
+            $table->enum('alliance_position', ['NOALLIANCE', 'APPLICANT', 'MEMBER', 'OFFICER', 'HEIR', 'LEADER']
+            )->default('NOALLIANCE');
             $table->unsignedInteger('alliance_position_id');
             $table->string('nation_name')->index();
             $table->string('leader_name')->index();
             $table->string('continent', 2);
-            $table->enum('war_policy', ['ATTRITION', 'TURTLE', 'BLITZKRIEG', 'FORTRESS', 'MONEYBAGS', 'PIRATE', 'TACTICIAN', 'GUARDIAN', 'COVERT', 'ARCANE'])->default('ATTRITION');
+            $table->enum('war_policy',
+                [
+                    'ATTRITION',
+                    'TURTLE',
+                    'BLITZKRIEG',
+                    'FORTRESS',
+                    'MONEYBAGS',
+                    'PIRATE',
+                    'TACTICIAN',
+                    'GUARDIAN',
+                    'COVERT',
+                    'ARCANE'
+                ]
+            )->default('ATTRITION');
             $table->unsignedSmallInteger('war_policy_turns');
-            $table->enum('domestic_policy', ['MANIFEST_DESTINY', 'OPEN_MARKETS', 'TECHNOLOGICAL_ADVANCEMENT', 'IMPERIALISM', 'URBANIZATION', 'RAPID_EXPANSION'])->default('MANIFEST_DESTINY');
+            $table->enum('domestic_policy',
+                [
+                    'MANIFEST_DESTINY',
+                    'OPEN_MARKETS',
+                    'TECHNOLOGICAL_ADVANCEMENT',
+                    'IMPERIALISM',
+                    'URBANIZATION',
+                    'RAPID_EXPANSION'
+                ]
+            )->default('MANIFEST_DESTINY');
             $table->unsignedSmallInteger('domestic_policy_turns');
             $table->string('color', 20)->index();
             $table->unsignedSmallInteger('num_cities');

@@ -26,7 +26,7 @@ class CityGrantController
     }
 
     /**
-     * @param  \Illuminate\Http\Request  $request
+     * @param Request $request
      *
      * @return mixed
      */
@@ -53,7 +53,8 @@ class CityGrantController
             return redirect()
                 ->route('grants.city')
                 ->with([
-                    'alert-message' => 'You are not eligible for this grant. '.$exception->getMessage(), // TODO be more specific lol
+                    'alert-message' => 'You are not eligible for this grant. ' . $exception->getMessage(),
+                    // TODO be more specific lol
                     "alert-type" => 'error',
                 ]);
         } catch (Exception $exception) {
@@ -61,7 +62,7 @@ class CityGrantController
                 ->route('grants.city')
                 ->with([
                     'alert-message' => 'There was some kind of error when requesting your city grant. Please contact someone from the economics team.'
-                        .$exception->getMessage(), // TODO log this error
+                        . $exception->getMessage(), // TODO log this error
                     "alert-type" => 'error',
                 ]);
         }

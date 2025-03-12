@@ -27,7 +27,7 @@ class SettingService
     }
 
     /**
-     * @param  string  $key
+     * @param string $key
      *
      * @return mixed
      */
@@ -40,8 +40,8 @@ class SettingService
      * Use this to set values for settings. It can also create new setting
      * values if necessary.
      *
-     * @param  string  $key
-     * @param  mixed  $value
+     * @param string $key
+     * @param mixed $value
      *
      * @return void
      */
@@ -54,7 +54,7 @@ class SettingService
     }
 
     /**
-     * @param  int  $id
+     * @param int $id
      *
      * @return void
      */

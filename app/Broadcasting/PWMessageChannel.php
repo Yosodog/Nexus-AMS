@@ -2,7 +2,6 @@
 
 namespace App\Broadcasting;
 
-use App\Models\User;
 use App\Services\PWMessageService;
 use Illuminate\Notifications\Notification;
 
@@ -16,8 +15,8 @@ class PWMessageChannel
     }
 
     /**
-     * @param  object  $notifiable
-     * @param  \Illuminate\Notifications\Notification  $notification
+     * @param object $notifiable
+     * @param Notification $notification
      *
      * @return void
      */

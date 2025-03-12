@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
-class Alliances implements \Iterator
+use Iterator;
+
+class Alliances implements Iterator
 {
 
     private array $alliances;  // Array to store Alliance objects

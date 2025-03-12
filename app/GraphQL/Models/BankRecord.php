@@ -2,6 +2,8 @@
 
 namespace App\GraphQL\Models;
 
+use stdClass;
+
 class BankRecord
 {
     public int $id;
@@ -32,10 +34,10 @@ class BankRecord
     /**
      * Populate the Bankrec instance with JSON data.
      *
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void
+    public function buildWithJSON(stdClass $json): void
     {
         $this->id = $json->id;
         $this->date = $json->date;

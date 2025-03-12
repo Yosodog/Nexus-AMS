@@ -17,13 +17,13 @@
 
     <!-- Input field -->
     <input
-        type="{{ $type }}"
-        name="{{ $name }}"
-        id="{{ $name }}"
-        value="{{ old($name, $value) }}"
-        placeholder="{{ $placeholder }}"
-        {{ $required ? 'required' : '' }}
-        {{ $attributes->merge(['class' => 'input input-bordered w-full']) }}
+            type="{{ $type }}"
+            name="{{ $name }}"
+            id="{{ $name }}"
+            value="{{ old($name, $value) }}"
+            placeholder="{{ $placeholder }}"
+            {{ $required ? 'required' : '' }}
+            {{ $attributes->merge(['class' => 'input input-bordered w-full']) }}
     >
 
     <!-- Error handling -->

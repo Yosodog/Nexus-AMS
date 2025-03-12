@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DepositRequest extends Model
 {
@@ -10,7 +11,7 @@ class DepositRequest extends Model
     public $fillable = ["account_id", "deposit_code"];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function account()
     {

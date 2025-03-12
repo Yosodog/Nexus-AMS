@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Fortify\Fortify;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -38,9 +37,10 @@ return new class extends Migration
             $table->dropColumn(array_merge([
                 'two_factor_secret',
                 'two_factor_recovery_codes',
-            ], Fortify::confirmsTwoFactorAuthentication() ? [
-                'two_factor_confirmed_at',
-            ] : []));
+            ],
+                Fortify::confirmsTwoFactorAuthentication() ? [
+                    'two_factor_confirmed_at',
+                ] : []));
         });
     }
 };

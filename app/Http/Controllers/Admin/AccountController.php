@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Accounts;
 use App\Services\AccountService;
+use Closure;
+use Illuminate\Container\Container;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 
 class AccountController extends Controller
 {
@@ -25,9 +26,9 @@ class AccountController extends Controller
     }
 
     /**
-     * @param  \App\Models\Accounts  $accounts
+     * @param Accounts $accounts
      *
-     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     * @return Closure|Container|mixed|object|null
      */
     public function view(Accounts $accounts)
     {
@@ -45,8 +46,8 @@ class AccountController extends Controller
     }
 
     /**
-     * @param  \App\Models\Accounts  $accounts
-     * @param  \Illuminate\Http\Request  $request
+     * @param Accounts $accounts
+     * @param Request $request
      *
      * @return mixed
      */
@@ -86,7 +87,6 @@ class AccountController extends Controller
                 'alert-message' => 'Account modified successfully.',
                 "alert-type" => 'success',
             ]);
-
     }
 
 }

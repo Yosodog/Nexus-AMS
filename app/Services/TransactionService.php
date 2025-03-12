@@ -10,12 +10,12 @@ class TransactionService
 {
 
     /**
-     * @param  array  $resources
-     * @param  int  $nation_id
-     * @param  int  $fromAccountId
-     * @param  string  $transactionType
-     * @param  int|null  $toAccountId
-     * @param  bool  $isPending
+     * @param array $resources
+     * @param int $nation_id
+     * @param int $fromAccountId
+     * @param string $transactionType
+     * @param int|null $toAccountId
+     * @param bool $isPending
      *
      * @return Transactions
      */
@@ -45,10 +45,10 @@ class TransactionService
     }
 
     /**
-     * @param  \App\Models\Accounts  $account
-     * @param  \App\GraphQL\Models\BankRecord  $record
+     * @param Accounts $account
+     * @param BankRecord $record
      *
-     * @return \App\Models\Transactions
+     * @return Transactions
      */
     public static function createTransactionForDeposit(
         Accounts $account,
@@ -73,7 +73,7 @@ class TransactionService
     }
 
     /**
-     * @param  int  $nation_id
+     * @param int $nation_id
      *
      * @return bool
      */

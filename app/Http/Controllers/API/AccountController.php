@@ -4,9 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Accounts;
-use App\Notifications\DepositCreated;
 use App\Services\AccountService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AccountController extends Controller
@@ -19,7 +17,9 @@ class AccountController extends Controller
     public function getUserAccounts()
     {
         $user = Auth::user();
-        $accounts = AccountService::getAccountsByUser($user->id); // Auth::user() doesn't return the user model, so fuck it
+        $accounts = AccountService::getAccountsByUser(
+            $user->id
+        ); // Auth::user() doesn't return the user model, so fuck it
 
         return response()->json($accounts);
     }

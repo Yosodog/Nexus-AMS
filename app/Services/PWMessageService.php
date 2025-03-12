@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -19,9 +20,9 @@ class PWMessageService
     }
 
     /**
-     * @param  int  $nation_id
-     * @param  string  $subject
-     * @param  string  $message
+     * @param int $nation_id
+     * @param string $subject
+     * @param string $message
      *
      * @return bool
      */
@@ -43,7 +44,7 @@ class PWMessageService
                 Log::error("PNW Message Failed", ['response' => $response->body()]);
                 return false;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("PNW Message Exception", ['error' => $e->getMessage()]);
             return false;
         }

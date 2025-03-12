@@ -2,7 +2,10 @@
 
 namespace App\GraphQL\Models;
 
-class City {
+use stdClass;
+
+class City
+{
     public string $id;
     public string $nation_id;
     // public Nation $nation; // Nation
@@ -42,10 +45,11 @@ class City {
     // public Date $nuke_date; // Date
 
     /**
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void {
+    public function buildWithJSON(stdClass $json): void
+    {
         $this->id = $json->id;
         $this->nation_id = $json->nation_id;
         // $this->nation = $json->nation; // Uncomment for use

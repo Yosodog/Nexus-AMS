@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Notifications\NationVerification;
+use Closure;
+use Exception;
+use Illuminate\Container\Container;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class VerificationController extends Controller
 {
 
     /**
-     * @param  \Illuminate\Http\Request  $request
-     * @param  string  $code
+     * @param Request $request
+     * @param string $code
      *
      * @return mixed
      */
@@ -39,7 +43,7 @@ class VerificationController extends Controller
     }
 
     /**
-     * @return \Closure|\Illuminate\Container\Container|mixed|object|null
+     * @return Closure|Container|mixed|object|null
      */
     public function notVerified()
     {
@@ -57,7 +61,7 @@ class VerificationController extends Controller
 
     /**
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function resendVerification()
     {

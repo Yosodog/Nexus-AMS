@@ -9,7 +9,8 @@
                 <select class="select select-bordered w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }} - ${{ number_format($account->money) }}</option>
+                            <option value="{{ $account->id }}">{{ $account->name }} -
+                                ${{ number_format($account->money) }}</option>
                         @endforeach
                     </optgroup>
                 </select>
@@ -24,7 +25,8 @@
                     </optgroup>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }} - ${{ number_format($account->money) }}</option>
+                            <option value="{{ $account->id }}">{{ $account->name }} -
+                                ${{ number_format($account->money) }}</option>
                         @endforeach
                     </optgroup>
                 </select>
@@ -62,7 +64,8 @@
                 <label for="uranium" class="label font-semibold">
                     Uranium <span class="badge badge-info ml-2"><span id="uraniumAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="uranium" id="uranium" value="0" step="any" min="0">
+                <input type="number" class="input input-bordered" name="uranium" id="uranium" value="0" step="any"
+                       min="0">
             </div>
 
             <!-- Lead Field -->
@@ -86,7 +89,8 @@
                 <label for="bauxite" class="label font-semibold">
                     Bauxite <span class="badge badge-info ml-2"><span id="bauxiteAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="bauxite" id="bauxite" value="0" step="any" min="0">
+                <input type="number" class="input input-bordered" name="bauxite" id="bauxite" value="0" step="any"
+                       min="0">
             </div>
 
             <!-- Gas Field -->
@@ -102,7 +106,8 @@
                 <label for="munitions" class="label font-semibold">
                     Munitions <span class="badge badge-info ml-2"><span id="munitionsAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="munitions" id="munitions" value="0" step="any" min="0">
+                <input type="number" class="input input-bordered" name="munitions" id="munitions" value="0" step="any"
+                       min="0">
             </div>
 
             <!-- Steel Field -->
@@ -118,7 +123,8 @@
                 <label for="aluminum" class="label font-semibold">
                     Aluminum <span class="badge badge-info ml-2"><span id="aluminumAvail">0.00</span></span>
                 </label>
-                <input type="number" class="input input-bordered" name="aluminum" id="aluminum" value="0" step="any" min="0">
+                <input type="number" class="input input-bordered" name="aluminum" id="aluminum" value="0" step="any"
+                       min="0">
             </div>
 
             <!-- Food Field -->

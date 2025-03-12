@@ -1,3 +1,4 @@
+@php use App\Services\AccountService; @endphp
 @extends('layouts.admin')
 
 @section("content")
@@ -67,10 +68,11 @@
                     <form action="{{ route('admin.accounts.adjust', $account->id) }}" method="POST">
                         @csrf
                         <div class="row">
-                            @foreach (\App\Services\AccountService::$resources as $resource)
+                            @foreach (AccountService::$resources as $resource)
                                 <div class="col-md-3">
                                     <label for="{{ $resource }}">{{ ucfirst($resource) }}</label>
-                                    <input type="number" name="{{ $resource }}" id="{{ $resource }}" class="form-control" step="0.01" placeholder="0">
+                                    <input type="number" name="{{ $resource }}" id="{{ $resource }}"
+                                           class="form-control" step="0.01" placeholder="0">
                                 </div>
                             @endforeach
                         </div>
@@ -121,14 +123,16 @@
                                     <td>
                                         @if($transaction->transaction_type === 'deposit' && $transaction->nation_id)
                                             @if($transaction->nation)
-                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" class="link link-primary" target="_blank">
+                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}"
+                                                   class="link link-primary" target="_blank">
                                                     {{ $transaction->nation->nation_name }}
                                                 </a>
                                             @else
                                                 Nation #{{ $transaction->nation_id }}
                                             @endif
                                         @elseif($transaction->fromAccount)
-                                            <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}" class="link link-primary">
+                                            <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}"
+                                               class="link link-primary">
                                                 {{ $transaction->fromAccount->name }}
                                             </a>
                                         @else
@@ -139,12 +143,14 @@
                                     {{-- Handle To Account --}}
                                     <td>
                                         @if($transaction->toAccount)
-                                            <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}" class="link link-primary">
+                                            <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}"
+                                               class="link link-primary">
                                                 {{ $transaction->toAccount->name }}
                                             </a>
                                         @elseif($transaction->nation_id)
                                             @if($transaction->nation)
-                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" class="link link-primary" target="_blank">
+                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}"
+                                                   class="link link-primary" target="_blank">
                                                     {{ $transaction->nation->nation_name }}
                                                 </a>
                                             @else
@@ -228,7 +234,9 @@
                                     <td>{{ number_format($transaction->aluminum, 2) }}</td>
                                     <td>{{ number_format($transaction->food, 2) }}</td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="popover" data-bs-placement="top" title="Note" data-bs-content="{{ $transaction->note }}">
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                                data-bs-toggle="popover" data-bs-placement="top" title="Note"
+                                                data-bs-content="{{ $transaction->note }}">
                                             View Note
                                         </button>
                                     </td>
@@ -246,7 +254,7 @@
 
 @section("scripts")
     <script>
-        $(document).ready( function () {
+        $(document).ready(function () {
             $('#transaction_table').DataTable({
                 "order": [[0, "desc"]]
             });

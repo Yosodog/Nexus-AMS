@@ -79,8 +79,8 @@
                 $isEligible = true; // Assume eligibility logic is checked in the controller
             @endphp
             <x-utils.card
-                title="{{ $grant->name }}"
-                extraClasses="shadow-lg border {{ $isEligible ? 'border-primary' : 'border-gray-300' }}">
+                    title="{{ $grant->name }}"
+                    extraClasses="shadow-lg border {{ $isEligible ? 'border-primary' : 'border-gray-300' }}">
 
                 <p>{{ $grant->description }}</p>
                 <p class="text-lg font-bold">💰 {{ number_format($grant->grant_amount) }} Money</p>
