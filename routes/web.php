@@ -85,14 +85,20 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         // Loans
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");
-        Route::post("/loans/approve/{Loans}", [LoansController::class, 'approve'])->name(
+        Route::post("/loans/{Loans}/approve", [LoansController::class, 'approve'])->name(
             "admin.loans.approve"
         );
-        Route::post("/loans/deny/{Loans}", [LoansController::class, 'deny'])->name(
+        Route::post("/loans/{Loans}/deny", [LoansController::class, 'deny'])->name(
             "admin.loans.deny"
         );
+        Route::get("/loans/{Loans}/view", [LoansController::class, 'view'])->name(
+            "admin.loans.view"
+        );
+        Route::post('/loans/{Loans}/update', [LoansController::class, 'update'])->name(
+            'admin.loans.update'
+        );
 
-        Route::post("/loans/edit/{Loans}", [LoansController::class, 'edit'])->name(
-            "admin.loans.edit"
+        Route::post('/loans/{Loans}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
+            'admin.loans.markPaid'
         );
     });

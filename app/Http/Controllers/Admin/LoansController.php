@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Loans;
 use App\Services\LoanService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class LoansController
 {
@@ -75,6 +77,87 @@ class LoansController
         $this->loanService->denyLoan($loan, Auth::user()->nation);
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan denied ❌')->with(
+            'alert-type',
+            'success'
+        );
+    }
+
+    /**
+     * Display the loan view/edit form.
+     */
+    public function view(Loans $loan)
+    {
+        $loan->load('payments'); // Load payments
+        $loanService = app(LoanService::class);
+
+        return view('admin.loans.view', [
+            'loan' => $loan,
+            'nextMinimumPayment' => $loanService->calculateWeeklyPayment($loan), // Calculate next min payment
+        ]);
+    }
+
+    /**
+     * Handle the loan update request.
+     */
+    public function update(Request $request, Loans $loan)
+    {
+        // Define base validation rules
+        $rules = [
+            'interest_rate' => 'required|numeric|min:0|max:100',
+            'term_weeks' => 'required|integer|min:1|max:52',
+            'next_due_date' => 'required|date|after:today',
+            'remaining_balance' => 'required|numeric|min:0|max:' . $loan->amount,
+            // Ensure balance is not higher than loan amount
+        ];
+
+        // Only require amount if no payments exist
+        if (!$loan->payments()->exists()) {
+            $rules['amount'] = 'required|numeric|min:1';
+        }
+
+        $request->validate($rules);
+
+        // Prevent changing loan amount if payments exist
+        if ($loan->payments()->exists() && $request->amount != $loan->amount) {
+            throw ValidationException::withMessages([
+                'amount' => 'Loan amount cannot be changed after payments have been made.',
+            ]);
+        }
+
+        $loan->update([
+            'amount' => $request->amount ?? $loan->amount, // Keep existing amount if not provided
+            'interest_rate' => $request->interest_rate,
+            'term_weeks' => $request->term_weeks,
+            'next_due_date' => $request->next_due_date,
+            'remaining_balance' => $request->remaining_balance,
+        ]);
+
+        return redirect()->route('admin.loans')->with('alert-message', 'Loan updated successfully! ✅')->with(
+            'alert-type',
+            'success'
+        );
+    }
+
+    /**
+     * @param Loans $loan
+     * @return RedirectResponse
+     */
+    public function markAsPaid(Loans $loan)
+    {
+        // Ensure the loan is not already marked as paid
+        if ($loan->status === 'paid') {
+            return redirect()->route('admin.loans')->with(
+                'alert-message',
+                'This loan is already marked as paid.'
+            )->with(
+                'alert-type',
+                'error'
+            );
+        }
+
+        $this->loanService->markLoanAsPaid($loan);
+
+        return redirect()->route('admin.loans')->with('alert-message', 'Loan successfully marked as paid! ✅')->with(
             'alert-type',
             'success'
         );

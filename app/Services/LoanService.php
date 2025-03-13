@@ -117,7 +117,7 @@ class LoanService
     /**
      * @return void
      */
-    public function processWeeklyPayments()
+    public function processWeeklyPayments(): void
     {
         $today = now()->toDateString();
         $loans = Loans::where('next_due_date', $today)->where('status', 'approved')->get();
@@ -186,7 +186,7 @@ class LoanService
     /**
      * Withdraw funds from an account and update the loan balance.
      */
-    private function withdrawFromAccount(Accounts $account, float $amount, Loans $loan)
+    private function withdrawFromAccount(Accounts $account, float $amount, Loans $loan): void
     {
         $interestRate = $loan->interest_rate / 100;
         $interestPaid = round($amount * $interestRate, 2);
@@ -220,9 +220,25 @@ class LoanService
 
             // If the loan is fully paid, mark it as completed
             if ($loan->remaining_balance <= 0) {
-                $loan->update(['status' => 'paid']);
-                $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'paid'));
+                $this->markLoanAsPaid($loan);
             }
+        });
+    }
+
+    /**
+     * @param Loans $loan
+     * @return void
+     */
+    public function markLoanAsPaid(Loans $loan): void
+    {
+        DB::transaction(function () use ($loan) {
+            $loan->update([
+                'status' => 'paid',
+                'remaining_balance' => 0, // Always just ensure it's set to 0
+            ]);
+
+            // Notify the nation that the loan has been marked as paid
+            $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'paid'));
         });
     }
 
@@ -233,7 +249,7 @@ class LoanService
      * @return void
      * @throws ValidationException
      */
-    public function repayLoan(Loans $loan, Accounts $account, float $amount)
+    public function repayLoan(Loans $loan, Accounts $account, float $amount): void
     {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);
@@ -282,13 +298,16 @@ class LoanService
 
             // If the loan is fully paid, mark as completed
             if ($loan->remaining_balance <= 0) {
-                $loan->update(['status' => 'paid']);
-                $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'paid'));
+                $this->markLoanAsPaid($loan);
             }
         });
     }
 
-    public function processLoanPayment(Loans $loan)
+    /**
+     * @param Loans $loan
+     * @return void
+     */
+    public function processLoanPayment(Loans $loan): void
     {
         $weeklyPayment = $this->calculateWeeklyPayment($loan);
         $nation = $loan->nation;

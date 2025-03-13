@@ -104,7 +104,7 @@
                             <td>${{ number_format($loan->remaining_balance) }}</td>
                             <td>{{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}</td>
                             <td>
-                                <a href="{{ route('admin.loans.edit', $loan) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ route('admin.loans.view', $loan) }}" class="btn btn-primary btn-sm">
                                     Edit Loan
                                 </a>
                             </td>
