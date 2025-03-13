@@ -31,6 +31,12 @@
                         <p>Loans</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url("/telescope") }}" class="nav-link">
+                        <i class="bi bi-bug-fill"></i>
+                        <p>Telescope</p>
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>
