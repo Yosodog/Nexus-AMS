@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\GrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\CityGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\EnsureUserIsVerified;
@@ -27,6 +28,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: function () {
+    // User settings
+    Route::get('/user/settings', [UserController::class, 'settings'])->name('user.settings');
+    Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
+        'user.settings.update'
+    );
     // Account Routes
     Route::get("/accounts", [AccountsController::class, 'index'])->name("accounts");
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
