@@ -162,7 +162,7 @@
 @section("scripts")
     <script>
         function setApproveLoanData(loan) {
-            document.getElementById('approveLoanForm').action = `{{ url('admin/loans/approve') }}/${loan.id}`;
+            document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
 
             document.getElementById('loan_id').value = loan.id;
             document.getElementById('approve_amount').value = loan.amount;
