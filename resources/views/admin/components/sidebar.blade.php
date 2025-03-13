@@ -25,6 +25,12 @@
                         <p>City Grants</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.loans') }}" class="nav-link">
+                        <i class="bi bi-piggy-bank-fill"></i>
+                        <p>Loans</p>
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>

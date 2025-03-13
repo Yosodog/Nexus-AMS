@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Broadcasting\PWMessageChannel;
 use App\Models\CityGrantRequest;
+use App\Models\Loans;
 use App\Services\PWMessageService;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
@@ -29,5 +30,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Route::model('CityGrantRequest', CityGrantRequest::class);
+        Route::model('Loans', Loans::class);
     }
 }

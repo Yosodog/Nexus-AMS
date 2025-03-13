@@ -360,8 +360,8 @@ class AccountService
     public static function adjustAccountBalance(
         Accounts $account,
         array $adjustment,
-        int $adminId,
-        string $ipAddress
+        ?int $adminId,
+        ?string $ipAddress
     ): ManualTransactions {
         // Apply changes to account balance
         foreach (self::$resources as $resource) {
