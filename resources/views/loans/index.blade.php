@@ -39,6 +39,78 @@
 
     <hr class="mt-4 mb-4">
 
+    {{-- Loan Information Section --}}
+    <x-utils.card title="How Loans Work">
+        <div class="steps w-full mb-6">
+            <div class="step step-primary">Apply</div>
+            <div class="step step-primary">Approval</div>
+            <div class="step step-primary">Repayment</div>
+            <div class="step step-primary">Completion</div>
+        </div>
+
+        <div class="bg-base-200 p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-bold mb-2">📌 Step 1: Applying for a Loan</h3>
+            <p>To apply for a loan, follow these steps:</p>
+            <ul class="list-disc ml-5">
+                <li>Choose the amount you want to borrow (minimum $100,000).</li>
+                <li>Select the account where the funds will be deposited.</li>
+                <li>Pick a repayment term (between 4 and 52 weeks).</li>
+                <li>Submit your request and wait for admin approval.</li>
+            </ul>
+        </div>
+
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 2: Loan Approval</h3>
+            <p>Once submitted, your loan request will be reviewed by an admin:</p>
+            <ul class="list-disc ml-5">
+                <li>Admins evaluate applications based on eligibility.</li>
+                <li>Approval will specify the final interest rate and terms.</li>
+                <li>If approved, the loan funds will be deposited into your selected account.</li>
+            </ul>
+        </div>
+
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 3: Repayment</h3>
+            <p>Your loan repayments will occur as follows:</p>
+            <ul class="list-disc ml-5">
+                <li>Payments are automatically deducted from your bank account weekly.</li>
+                <li>You can make early payments to reduce interest costs.</li>
+                <li>Missed payments will result in penalties and potential loan restrictions.</li>
+            </ul>
+        </div>
+
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 4: Completion</h3>
+            <p>Once your loan is fully repaid:</p>
+            <ul class="list-disc ml-5">
+                <li>Your status will be updated to **Paid**.</li>
+                <li>You will regain full borrowing privileges.</li>
+                <li>Proper financial management ensures better rates in the future.</li>
+            </ul>
+        </div>
+    </x-utils.card>
+
+    <hr class="mt-4 mb-4">
+
+    <script>
+        function switchTab(tab, element) {
+            // Remove active class from all tabs
+            document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
+            // Hide all content sections
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+
+            // Activate the clicked tab
+            element.classList.add("tab-active");
+            // Show the relevant content
+            document.getElementById(`content-${tab}`).classList.remove("hidden");
+        }
+
+        // Ensure the first tab is active on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelector(".tab-active").click();
+        });
+    </script>
+
     {{-- Loan Repayment Form (Only show if there are active loans) --}}
     @if (!$activeLoans->isEmpty())
         <x-utils.card title="Make an Early Loan Payment">
