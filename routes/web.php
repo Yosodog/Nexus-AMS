@@ -48,6 +48,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     // Loans
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
+    Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
 });
 
 Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,])
