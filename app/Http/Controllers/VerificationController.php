@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Notifications\NationVerification;
 use Closure;
 use Exception;
@@ -70,9 +71,6 @@ class VerificationController extends Controller
                 now()->diffInSeconds(session('last_verification_attempt'))
             );
 
-            echo session()->has('last_verification_attempt');
-            echo "hi";
-
             if ($secondsSinceLastAttempt < 60) { // Allow every 60 seconds
                 return redirect()->route("not_verified")->with([
                     'alert-message' => 'Please wait before requesting another verification message.',
@@ -81,7 +79,9 @@ class VerificationController extends Controller
             }
         }
 
-        $user = Auth::user();
+        $user = User::findOrFail(
+            Auth::user()->id
+        ); // I know this is weird but the notification needs the user model, not what Auth::user() returns.
 
         // Check if user is already verified
         if ($user->isVerified()) {
