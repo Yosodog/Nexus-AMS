@@ -180,6 +180,11 @@ class LoanService
         $P = $loan->amount;
         $n = $loan->term_weeks;
 
+        // If interest rate is 0, return simple division
+        if ($r == 0) {
+            return round($P / $n, 2);
+        }
+
         return round(($r * $P) / (1 - pow(1 + $r, -$n)), 2);
     }
 
