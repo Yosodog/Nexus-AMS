@@ -41,6 +41,22 @@ class Accounts extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function cityGrants()
+    {
+        return $this->hasMany(CityGrantRequest::class, "account_id");
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function loans()
+    {
+        return $this->hasMany(Loans::class, "account_id");
+    }
+
+    /**
      * Checks if the account is completely empty.
      *
      * @return bool

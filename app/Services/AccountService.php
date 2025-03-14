@@ -84,13 +84,32 @@ class AccountService
      * @return void
      * @throws UserErrorException
      */
+    /**
+     * Deletes an account after performing necessary checks.
+     *
+     * @param Accounts $account
+     *
+     * @return void
+     * @throws UserErrorException
+     */
     public static function deleteAccount(Accounts $account): void
     {
+        // Check if the account has pending city grants
+        if ($account->cityGrants()->where('status', 'pending')->exists()) {
+            throw new UserErrorException("The account has pending city grants.");
+        }
+
+        // Check if the account has pending or active loans
+        if ($account->loans()->whereIn('status', ['pending', 'approved'])->exists()) {
+            throw new UserErrorException("The account has pending or active loans.");
+        }
+
         // Check to ensure the account is empty
         if (!$account->isEmpty()) {
             throw new UserErrorException("The account is not empty.");
         }
 
+        // Proceed with deletion
         $account->delete();
     }
 
