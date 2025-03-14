@@ -52,7 +52,7 @@
                 </label>
             </div>
             <div class="card-actions justify-end">
-                <input type="submit" class="btn btn-primary w-full" value="Login">
+                <input type="submit" class="btn btn-primary w-full" value="Register">
             </div>
         </form>
     </x-utils.card>
