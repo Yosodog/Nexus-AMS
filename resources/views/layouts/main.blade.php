@@ -25,5 +25,29 @@
 </div>
 
 <x-footer/>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const themeToggle = document.getElementById("theme-toggle");
+
+        // Load saved theme from local storage
+        if (localStorage.getItem("theme") === "night") {
+            document.documentElement.setAttribute("data-theme", "night");
+            themeToggle.checked = true;
+        }
+
+        // Listen for toggle changes
+        themeToggle.addEventListener("change", function () {
+            if (this.checked) {
+                document.documentElement.setAttribute("data-theme", "night");
+                localStorage.setItem("theme", "night");
+            } else {
+                document.documentElement.removeAttribute("data-theme");
+                localStorage.setItem("theme", "light");
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
