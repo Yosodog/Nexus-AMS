@@ -7,6 +7,7 @@ use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Promise\Utils;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -221,34 +222,30 @@ class QueryService
             ['query' => $query, 'variables' => $variables,]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
-                if ($response->status() === 429) {
-                    Log::warning(
-                        'Rate limit hit, retrying in ' . $delay . ' seconds.'
-                    );
-                    sleep($delay);
-                    $retryCount++;
-                    $delay *= 2;
+                try {
+                    if ($response instanceof Response) {
+                        if ($response->status() === 429) {
+                            Log::warning('Rate limit hit, retrying in ' . $delay . ' seconds.');
+                            sleep($delay);
+                            $retryCount++;
+                            $delay *= 2;
 
-                    return $this->sendPageQuery(
-                        $query,
-                        $variables,
-                        $retryCount,
-                        $delay
-                    );
-                }
+                            return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers);
+                        }
 
-                if ($response->successful()) {
-                    $retryCount = 0;
-                    $delay = $this->initialDelay;
+                        if ($response->successful()) {
+                            $retryCount = 0;
+                            $delay = $this->initialDelay;
 
-                    return $response->json();
-                }
+                            return $response->json();
+                        }
 
-                if ($response->failed()) {
-                    Log::error('Query failed: ' . $response->body());
-                    throw new PWQueryFailedException(
-                        'Query failed: ' . $response->body()
-                    );
+                        Log::error('Query failed: ' . $response->body());
+                        throw new PWQueryFailedException('Query failed: ' . $response->body());
+                    }
+                } catch (ConnectionException $e) {
+                    Log::error('Connection exception: ' . $e->getMessage());
+                    throw new ConnectionException('Failed to connect to the Politics & War API.');
                 }
             }
         );
