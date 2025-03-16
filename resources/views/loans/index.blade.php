@@ -187,6 +187,7 @@
                         <th>Remaining Balance</th>
                         <th>Interest Rate</th>
                         <th>Term (Weeks)</th>
+                        <th>Account</th>
                         <th>Next Payment Due</th>
                         <th>Next Minimum Payment</th>
                     </tr>
@@ -199,6 +200,7 @@
                             <td>${{ number_format($loan->remaining_balance, 2) }}</td>
                             <td>{{ number_format($loan->interest_rate, 2) }}%</td>
                             <td>{{ $loan->term_weeks }}</td>
+                            <td><a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a></td>
                             <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
                             <td>${{ number_format($loan->next_payment_due, 2) }}</td>
                         </tr>
@@ -254,6 +256,7 @@
                         <tr>
                             <th>Amount</th>
                             <th>Term (Weeks)</th>
+                            <th>Account</th>
                             <th>Status</th>
                             <th>Requested At</th>
                         </tr>
@@ -263,6 +266,13 @@
                             <tr>
                                 <td>${{ number_format($loan->amount, 2) }}</td>
                                 <td>{{ $loan->term_weeks }}</td>
+                                <td>
+                                    @if($loan->account)
+                                        <a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($loan->status === 'pending')
                                         <span class="badge badge-warning">Pending</span>
