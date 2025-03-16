@@ -9,8 +9,21 @@
                 <select class="select select-bordered w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }} -
-                                ${{ number_format($account->money) }}</option>
+                            <option value="{{ $account->id }}" 
+                                data-money="{{ $account->money }}"
+                                data-coal="{{ $account->coal }}"
+                                data-oil="{{ $account->oil }}"
+                                data-uranium="{{ $account->uranium }}"
+                                data-lead="{{ $account->lead }}"
+                                data-iron="{{ $account->iron }}"
+                                data-bauxite="{{ $account->bauxite }}"
+                                data-gas="{{ $account->gasoline }}"
+                                data-munitions="{{ $account->munitions }}"
+                                data-steel="{{ $account->steel }}"
+                                data-aluminum="{{ $account->aluminum }}"
+                                data-food="{{ $account->food }}">
+                                {{ $account->name }} - ${{ number_format($account->money) }}
+                            </option>
                         @endforeach
                     </optgroup>
                 </select>
@@ -203,8 +216,30 @@
         }
     }
 
+    function handleFromSelectionChange() {
+        const fromSelect = document.getElementById('tran_from');
+        const selectedOption = fromSelect.options[fromSelect.selectedIndex];
+
+        // Update all the available resource amounts
+        document.getElementById('moneyAvail').textContent = Number(selectedOption.dataset.money).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('coalAvail').textContent = Number(selectedOption.dataset.coal).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('oilAvail').textContent = Number(selectedOption.dataset.oil).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('uraniumAvail').textContent = Number(selectedOption.dataset.uranium).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('leadAvail').textContent = Number(selectedOption.dataset.lead).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('ironAvail').textContent = Number(selectedOption.dataset.iron).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('bauxiteAvail').textContent = Number(selectedOption.dataset.bauxite).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('gasAvail').textContent = Number(selectedOption.dataset.gas).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('munitionsAvail').textContent = Number(selectedOption.dataset.munitions).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('steelAvail').textContent = Number(selectedOption.dataset.steel).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('aluminumAvail').textContent = Number(selectedOption.dataset.aluminum).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('foodAvail').textContent = Number(selectedOption.dataset.food).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
     // Call the function on page load to set initial state
-    document.addEventListener('DOMContentLoaded', handleToSelectionChange);
+    document.addEventListener('DOMContentLoaded', handleFromSelectionChange);
+
+    // Add event listener for when the from account changes
+    document.getElementById('tran_from').addEventListener('change', handleFromSelectionChange);
 
     // Add global input validation for all number inputs
     document.querySelectorAll('input[type="number"]').forEach(input => {
