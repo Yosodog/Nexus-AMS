@@ -19,7 +19,7 @@
             <!-- To Account Selection -->
             <div class="form-control">
                 <label for="tran_to" class="label font-semibold">To</label>
-                <select class="select select-bordered w-full" name="to" id="tran_to" required>
+                <select class="select select-bordered w-full" name="to" id="tran_to" required onchange="handleToSelectionChange()">
                     <optgroup label="Nation">
                         <option value="nation">Nation - {{ Auth()->user()->nation->nation_name }}</option>
                     </optgroup>
@@ -29,12 +29,19 @@
                                 ${{ number_format($account->money) }}</option>
                         @endforeach
                     </optgroup>
+                    @if (!$activeLoans->isEmpty())
+                        <optgroup label="Active Loans">
+                            @foreach ($activeLoans as $loan)
+                                <option value="loan_{{ $loan->id }}">Loan #{{ $loan->id }} - Balance: ${{ number_format($loan->remaining_balance, 2) }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                 </select>
             </div>
         </div>
 
         <!-- Resource Fields -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
             <!-- Money Field -->
             <div class="form-control">
                 <label for="money" class="label font-semibold">
@@ -142,3 +149,31 @@
         </div>
     </form>
 </x-utils.card>
+
+<script>
+    function handleToSelectionChange() {
+        const toSelect = document.getElementById('tran_to');
+        const resourceFields = document.getElementById('resource-fields');
+        const selectedValue = toSelect.value;
+        const moneyInput = document.getElementById('money');
+        const resourceInputs = resourceFields.querySelectorAll('input:not([name="money"])');
+
+        if (selectedValue.startsWith('loan_')) {
+            // If a loan is selected, only allow money transfers and disable all other resources
+            resourceInputs.forEach(input => {
+                input.value = 0;
+                input.disabled = true;
+            });
+            moneyInput.disabled = false;
+        } else {
+            // Re-enable all resource inputs for non-loan transfers
+            resourceInputs.forEach(input => {
+                input.disabled = false;
+            });
+            moneyInput.disabled = false;
+        }
+    }
+
+    // Call the function on page load to set initial state
+    document.addEventListener('DOMContentLoaded', handleToSelectionChange);
+</script>

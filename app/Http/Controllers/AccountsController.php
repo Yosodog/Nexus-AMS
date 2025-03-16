@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Accounts;
+use App\Models\Loans;
 use App\Services\AccountService;
+use App\Services\LoanService;
 use Closure;
 use Exception;
 use Illuminate\Container\Container;
@@ -16,6 +18,12 @@ use Illuminate\Validation\Rule;
 
 class AccountsController extends Controller
 {
+    protected LoanService $loanService;
+
+    public function __construct(LoanService $loanService)
+    {
+        $this->loanService = $loanService;
+    }
 
     public function index()
     {
@@ -25,8 +33,15 @@ class AccountsController extends Controller
             return redirect()->route("accounts.create");
         }
 
+        // Get active loans for the transfer dropdown
+        $activeLoans = Loans::where('nation_id', Auth::user()->nation_id)
+            ->where('status', 'approved')
+            ->where('remaining_balance', '>', 0)
+            ->get();
+
         return view("accounts.index", [
             "accounts" => $accounts,
+            "activeLoans" => $activeLoans,
         ]);
     }
 
@@ -37,6 +52,34 @@ class AccountsController extends Controller
      */
     public function transfer(Request $request)
     {
+        // Check if this is a loan repayment
+        if (str_starts_with($request->input('to'), 'loan_')) {
+            $loanId = (int) substr($request->input('to'), 5);
+            $request->validate([
+                'from' => 'required|integer|exists:accounts,id',
+                'money' => 'required|numeric|min:0.01',
+            ]);
+
+            try {
+                $loan = Loans::findOrFail($loanId);
+                $account = Accounts::findOrFail($request->input('from'));
+
+                // Process the loan repayment
+                $this->loanService->repayLoan($loan, $account, $request->input('money'));
+
+                return redirect()->back()->with([
+                    'alert-message' => 'Loan payment successful!',
+                    'alert-type' => 'success',
+                ]);
+            } catch (Exception $e) {
+                return redirect()->back()->with([
+                    'alert-message' => $e->getMessage(),
+                    'alert-type' => 'error',
+                ]);
+            }
+        }
+
+        // Regular transfer logic
         if ($request->input("to") == "nation") {
             $request->validate([
                 'from' => 'required|integer|exists:accounts,id',
