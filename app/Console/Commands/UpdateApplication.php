@@ -13,7 +13,7 @@ class UpdateApplication extends Command
      *
      * @var string
      */
-    protected $signature = 'app:update {--no-composer : Skip installing composer dependencies}';
+    protected $signature = 'app:update {--no-composer : Skip installing composer dependencies} {--no-node : Skip installing Node.js dependencies}';
     /**
      * @var string
      */
@@ -39,18 +39,33 @@ class UpdateApplication extends Command
             Log::info('Skipping Composer dependencies update.');
         }
 
-        $this->runShellCommand('npm install && npm run build', 'Updating Node.js dependencies and building frontend');
-
+        if (!$this->option('no-node')) {
+            $this->runShellCommand('npm install && npm run build', 'Updating Node.js dependencies and building frontend');
+        } else {
+            $this->info('Skipping Node.js dependencies update.');
+            Log::info('Skipping Node.js dependencies update.');
+        }
+        
         Artisan::call('migrate --force');
         $this->info('Database migrations applied successfully.');
         Log::info('Database migrations applied successfully.');
 
+        // Clear cache
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('route:clear');
         Artisan::call('view:clear');
+
         $this->info('Application cache cleared.');
         Log::info('Application cache cleared.');
+
+        // Then re-cache
+        Artisan::call('config:cache');
+        Artisan::call('route:cache');
+        Artisan::call('view:cache');
+
+        $this->info("Rebuilt cache.");
+        Log::info('Application cache rebuilt.');
 
         $this->info('Restarting queue workers');
         Artisan::call('queue:restart');
