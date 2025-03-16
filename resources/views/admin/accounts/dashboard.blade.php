@@ -47,7 +47,7 @@
                                     <tbody>
                                     @foreach ($accounts as $acc)
                                         <tr>
-                                            <td><a href="https://politicsandwar.com/nation/id={{ $acc->nID }}"
+                                            <td><a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}"
                                                    target="_blank">{{ $acc->nation_id }}</a></td>
                                             <td><a href="#">{{ $acc->user->name ?? "Deleted Account" }}</a></td>
                                             <td><a href="{{ route("admin.accounts.view", $acc->id) }}"
