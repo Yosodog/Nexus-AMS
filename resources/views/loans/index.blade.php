@@ -208,7 +208,7 @@
                         {{-- Loan Payment History --}}
                         @if (!$loan->payments->isEmpty())
                             <tr>
-                                <td colspan="7">
+                                <td colspan="8">
                                     <div class="mt-2">
                                         <strong>Payment History:</strong>
                                         <div class="overflow-x-auto">
