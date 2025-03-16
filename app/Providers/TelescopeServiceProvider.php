@@ -27,7 +27,9 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                 $entry->isFailedRequest() ||
                 $entry->isFailedJob() ||
                 $entry->isScheduledTask() ||
-                $entry->hasMonitoredTag();
+                $entry->hasMonitoredTag() ||
+                $entry->isRequest() ||
+                $entry->isSlowQuery();
         });
 
         Telescope::avatar(function (string $id, string $email) {
@@ -60,7 +62,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewTelescope', function ($user) {
+        Gate::define('viewTelescope', function (User $user) {
             return $user->is_admin;
             // TODO when permissions are implemented, have permissions for this
         });
