@@ -72,7 +72,11 @@ This application is supposed to help you manage your alliance, so expect a fully
    ```sh
    php artisan db:seed
    ```
-7. Start the development server:
+7. Build the frontend assets:
+   ```sh
+   npm run build
+   ```
+8. Start the development server:
    ```sh
    php artisan serve
    ```
