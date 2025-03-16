@@ -42,7 +42,7 @@
                     <!--begin::Menu Footer-->
                     <li class="user-footer">
                         <a href="#" class="btn btn-default btn-flat">Profile</a>
-                        <a href="#" class="btn btn-default btn-flat float-end" onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">Logout</a>
+                        <a class="btn btn-default btn-flat float-end" onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">Logout</a>
                     </li>
                     <!--end::Menu Footer-->
                 </ul>
