@@ -32,7 +32,7 @@
                     @if (!$activeLoans->isEmpty())
                         <optgroup label="Active Loans">
                             @foreach ($activeLoans as $loan)
-                                <option value="loan_{{ $loan->id }}">Loan #{{ $loan->id }} - Balance: ${{ number_format($loan->remaining_balance, 2) }}</option>
+                                <option value="loan_{{ $loan->id }}" data-remaining-balance="{{ $loan->remaining_balance }}">Loan #{{ $loan->id }} - Balance: ${{ number_format($loan->remaining_balance, 2) }}</option>
                             @endforeach
                         </optgroup>
                     @endif
@@ -165,15 +165,53 @@
                 input.disabled = true;
             });
             moneyInput.disabled = false;
+
+            // Get the selected loan's remaining balance
+            const selectedOption = toSelect.options[toSelect.selectedIndex];
+            const remainingBalance = parseFloat(selectedOption.dataset.remainingBalance);
+            
+            // Set the max attribute and title for the money input
+            moneyInput.max = remainingBalance;
+            moneyInput.min = 0.01; // Ensure minimum payment is at least 0.01
+            moneyInput.step = 0.01; // Allow two decimal places
+            moneyInput.title = `Payment amount must be between $0.01 and $${remainingBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            // Add event listener to enforce min/max values and prevent negative numbers
+            moneyInput.addEventListener('input', function() {
+                let value = parseFloat(this.value);
+                if (value < 0.01) {
+                    this.value = 0.01;
+                } else if (value > remainingBalance) {
+                    this.value = remainingBalance;
+                }
+            });
         } else {
             // Re-enable all resource inputs for non-loan transfers
             resourceInputs.forEach(input => {
                 input.disabled = false;
             });
             moneyInput.disabled = false;
+            
+            // Remove the max attribute and title for regular transfers
+            moneyInput.removeAttribute('max');
+            moneyInput.removeAttribute('min');
+            moneyInput.removeAttribute('step');
+            moneyInput.removeAttribute('title');
+            
+            // Remove the input event listener
+            moneyInput.replaceWith(moneyInput.cloneNode(true));
         }
     }
 
     // Call the function on page load to set initial state
     document.addEventListener('DOMContentLoaded', handleToSelectionChange);
+
+    // Add global input validation for all number inputs
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+        });
+    });
 </script>
