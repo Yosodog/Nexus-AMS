@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AccountsController extends Controller
 {
@@ -133,7 +134,15 @@ class AccountsController extends Controller
     public function create(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('accounts')->where(function ($query) {
+                    return $query->where('nation_id', Auth::user()->nation_id)
+                                ->whereNull('deleted_at');
+                })
+            ],
         ]);
 
         AccountService::createAccount(
