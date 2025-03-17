@@ -39,92 +39,6 @@
 
     <hr class="mt-4 mb-4">
 
-    <x-utils.card title="How Loans Work">
-        <div class="steps w-full mb-6">
-            <div class="step step-primary">Apply</div>
-            <div class="step step-primary">Approval</div>
-            <div class="step step-primary">Repayment</div>
-            <div class="step step-primary">Completion</div>
-        </div>
-
-        {{-- Applying for a Loan --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-bold mb-2">📌 Step 1: Applying for a Loan</h3>
-            <p>To apply for a loan, follow these steps:</p>
-            <ul class="list-disc ml-5">
-                <li>Choose the amount you want to borrow.</li>
-                <li>Select the account where the funds will be deposited.</li>
-                <li>Pick a repayment term (between 1 and 52 weeks).</li>
-                <li>Submit your request and wait for admin approval.</li>
-            </ul>
-        </div>
-
-        {{-- Loan Approval --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
-            <h3 class="text-lg font-bold mb-2">📌 Step 2: Loan Approval</h3>
-            <p>Once submitted, your loan request will be reviewed by an admin:</p>
-            <ul class="list-disc ml-5">
-                <li>Admins evaluate applications based on eligibility.</li>
-                <li>Approval will specify the final interest rate and terms.</li>
-                <li>If approved, the loan funds will be deposited into your selected account.</li>
-            </ul>
-        </div>
-
-        {{-- Loan Repayment --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
-            <h3 class="text-lg font-bold mb-2">📌 Step 3: Repayment</h3>
-            <p>Your loan repayments will occur as follows:</p>
-            <ul class="list-disc ml-5">
-                <li>Payments are automatically deducted from your bank account weekly.</li>
-                <li>You can make early payments to reduce interest costs.</li>
-                <li>Missed payments will result in penalties and potential loan restrictions.</li>
-            </ul>
-        </div>
-
-        {{-- Loan Completion --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
-            <h3 class="text-lg font-bold mb-2">📌 Step 4: Completion</h3>
-            <p>Once your loan is fully repaid:</p>
-            <ul class="list-disc ml-5">
-                <li>Your status will be updated to <span class="badge badge-primary">Paid</span></li>
-            </ul>
-        </div>
-
-        {{-- Interest Calculation --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
-            <h3 class="text-lg font-bold mb-2">📊 How Interest is Calculated</h3>
-            <p>Loan interest is applied weekly, based on the principal amount borrowed. The formula used:</p>
-            <div class="mockup-code mt-3">
-                <pre data-prefix="$"><code>Weekly Payment = (Interest Rate × Principal) / (1 - (1 + Interest Rate)⁻ⁿ)</code></pre>
-            </div>
-            <p class="mt-3">
-                Where:
-            </p>
-            <ul class="list-disc ml-5">
-                <li><strong>Principal</strong> = The amount borrowed.</li>
-                <li><strong>Interest Rate</strong> = The admin-approved rate.</li>
-                <li><strong>n</strong> = Loan term in weeks.</li>
-            </ul>
-            <p class="mt-3">
-                Interest is charged weekly, meaning early payments can significantly reduce the total interest paid.
-            </p>
-        </div>
-
-        {{-- Due Dates and Payment Schedule --}}
-        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
-            <h3 class="text-lg font-bold mb-2">📆 How Due Dates Work</h3>
-            <p>Loan payments are scheduled weekly and follow this structure:</p>
-            <ul class="list-disc ml-5">
-                <li><strong>First payment is due 7 days after approval.</strong></li>
-                <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.</li>
-                <li>If an early payment is made, the next minimum payment is reduced.</li>
-                <li>Missed payments may result in late fees and increased interest.</li>
-            </ul>
-        </div>
-    </x-utils.card>
-
-    <hr class="mt-4 mb-4">
-
     <script>
         function switchTab(tab, element) {
             // Remove active class from all tabs
@@ -293,4 +207,90 @@
             @endif
         </x-utils.card>
     </div>
+
+    <hr class="mt-4 mb-4">
+
+    <x-utils.card title="How Loans Work">
+        <div class="steps w-full mb-6">
+            <div class="step step-primary">Apply</div>
+            <div class="step step-primary">Approval</div>
+            <div class="step step-primary">Repayment</div>
+            <div class="step step-primary">Completion</div>
+        </div>
+
+        {{-- Applying for a Loan --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-bold mb-2">📌 Step 1: Applying for a Loan</h3>
+            <p>To apply for a loan, follow these steps:</p>
+            <ul class="list-disc ml-5">
+                <li>Choose the amount you want to borrow.</li>
+                <li>Select the account where the funds will be deposited.</li>
+                <li>Pick a repayment term (between 1 and 52 weeks).</li>
+                <li>Submit your request and wait for admin approval.</li>
+            </ul>
+        </div>
+
+        {{-- Loan Approval --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 2: Loan Approval</h3>
+            <p>Once submitted, your loan request will be reviewed by an admin:</p>
+            <ul class="list-disc ml-5">
+                <li>Admins evaluate applications based on eligibility.</li>
+                <li>Approval will specify the final interest rate and terms.</li>
+                <li>If approved, the loan funds will be deposited into your selected account.</li>
+            </ul>
+        </div>
+
+        {{-- Loan Repayment --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 3: Repayment</h3>
+            <p>Your loan repayments will occur as follows:</p>
+            <ul class="list-disc ml-5">
+                <li>Payments are automatically deducted from your bank account weekly.</li>
+                <li>You can make early payments to reduce interest costs.</li>
+                <li>Missed payments will result in penalties and potential loan restrictions.</li>
+            </ul>
+        </div>
+
+        {{-- Loan Completion --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📌 Step 4: Completion</h3>
+            <p>Once your loan is fully repaid:</p>
+            <ul class="list-disc ml-5">
+                <li>Your status will be updated to <span class="badge badge-primary">Paid</span></li>
+            </ul>
+        </div>
+
+        {{-- Interest Calculation --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📊 How Interest is Calculated</h3>
+            <p>Loan interest is applied weekly, based on the principal amount borrowed. The formula used:</p>
+            <div class="mockup-code mt-3">
+                <pre data-prefix="$"><code>Weekly Payment = (Interest Rate × Principal) / (1 - (1 + Interest Rate)⁻ⁿ)</code></pre>
+            </div>
+            <p class="mt-3">
+                Where:
+            </p>
+            <ul class="list-disc ml-5">
+                <li><strong>Principal</strong> = The amount borrowed.</li>
+                <li><strong>Interest Rate</strong> = The admin-approved rate.</li>
+                <li><strong>n</strong> = Loan term in weeks.</li>
+            </ul>
+            <p class="mt-3">
+                Interest is charged weekly, meaning early payments can significantly reduce the total interest paid.
+            </p>
+        </div>
+
+        {{-- Due Dates and Payment Schedule --}}
+        <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
+            <h3 class="text-lg font-bold mb-2">📆 How Due Dates Work</h3>
+            <p>Loan payments are scheduled weekly and follow this structure:</p>
+            <ul class="list-disc ml-5">
+                <li><strong>First payment is due 7 days after approval.</strong></li>
+                <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.</li>
+                <li>If an early payment is made, the next minimum payment is reduced.</li>
+                <li>Missed payments may result in late fees and increased interest.</li>
+            </ul>
+        </div>
+    </x-utils.card>
 @endsection
