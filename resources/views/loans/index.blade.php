@@ -122,7 +122,7 @@
                         {{-- Loan Payment History --}}
                         @if (!$loan->payments->isEmpty())
                             <tr>
-                                <td colspan="8">
+                                <td colspan="10">
                                     <div class="mt-2">
                                         <strong>Payment History:</strong>
                                         <div class="overflow-x-auto">
@@ -133,6 +133,7 @@
                                                     <th>Principal Paid</th>
                                                     <th>Interest Paid</th>
                                                     <th>Payment Date</th>
+                                                    <th>Account</th>
                                                 </tr>
                                                 </thead>
                                                 <tbody>
@@ -142,6 +143,7 @@
                                                         <td>${{ number_format($payment->principal_paid, 2) }}</td>
                                                         <td>${{ number_format($payment->interest_paid, 2) }}</td>
                                                         <td>{{ \Carbon\Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
+                                                        <td><a href="{{ route('accounts.view', $payment->account->id) }}" class="link link-primary">{{ $payment->account->name }}</a></td>
                                                     </tr>
                                                 @endforeach
                                                 </tbody>
