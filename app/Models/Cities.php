@@ -66,4 +66,53 @@ class Cities extends Model
     {
         return self::where("id", $id)->firstOrFail();
     }
+
+    /**
+     * @param $city
+     * @param int $nationId
+     * @return array
+     */
+    public static function prepareCityData($city, int $nationId): array
+    {
+        return collect((array) $city)
+            ->only([
+                'id',
+                'nation_id',
+                'name',
+                'date',
+                'infrastructure',
+                'land',
+                'powered',
+                'oil_power',
+                'wind_power',
+                'coal_power',
+                'nuclear_power',
+                'coal_mine',
+                'oil_well',
+                'uranium_mine',
+                'barracks',
+                'farm',
+                'police_station',
+                'hospital',
+                'recycling_center',
+                'subway',
+                'supermarket',
+                'bank',
+                'shopping_mall',
+                'stadium',
+                'lead_mine',
+                'iron_mine',
+                'bauxite_mine',
+                'oil_refinery',
+                'aluminum_refinery',
+                'steel_mill',
+                'munitions_factory',
+                'factory',
+                'hangar',
+                'drydock'
+            ])
+            ->put('nation_id', $nationId) // Associate city with nation
+            ->filter(fn($value) => $value !== null) // Remove null values
+            ->toArray();
+    }
 }

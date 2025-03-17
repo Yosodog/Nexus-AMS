@@ -262,4 +262,124 @@ class Nations extends Model
 
         return $projects;
     }
+
+    /**
+     * @param Nation $nation
+     * @return array
+     */
+    public static function prepareNationData(Nation $nation): array
+    {
+        return collect((array) $nation)
+            ->only([
+                'id',
+                'alliance_id',
+                'alliance_position',
+                'alliance_position_id',
+                'nation_name',
+                'leader_name',
+                'continent',
+                'war_policy_turns',
+                'domestic_policy_turns',
+                'color',
+                'num_cities',
+                'score',
+                'update_tz',
+                'population',
+                'flag',
+                'vacation_mode_turns',
+                'beige_turns',
+                'espionage_available',
+                'discord',
+                'discord_id',
+                'turns_since_last_city',
+                'turns_since_last_project',
+                'projects',
+                'project_bits',
+                'wars_won',
+                'wars_lost',
+                'tax_id',
+                'alliance_seniority',
+                'gross_national_income',
+                'gross_domestic_product',
+                'vip',
+                'commendations',
+                'denouncements',
+                'offensive_wars_count',
+                'defensive_wars_count',
+                'money_looted',
+                'total_infrastructure_destroyed',
+                'total_infrastructure_lost'
+            ])
+            ->filter(fn($value) => $value !== null)
+            ->toArray();
+    }
+
+    /**
+     * @param Nation $nation
+     * @return array
+     */
+    public static function prepareResourceData(Nation $nation): array
+    {
+        return collect((array) $nation)
+            ->only([
+                'id as nation_id',
+                'money',
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food',
+                'credits'
+            ])
+            ->filter(fn($value) => $value !== null)
+            ->toArray();
+    }
+
+    /**
+     * Prepares military data for bulk upsert.
+     */
+    public static function prepareMilitaryData(Nation $nation): array
+    {
+        return collect((array) $nation)
+            ->only([
+                'id as nation_id',
+                'soldiers',
+                'tanks',
+                'aircraft',
+                'ships',
+                'missiles',
+                'nukes',
+                'spies',
+                'soldiers_today',
+                'tanks_today',
+                'aircraft_today',
+                'ships_today',
+                'missiles_today',
+                'nukes_today',
+                'spies_today',
+                'soldier_casualties',
+                'soldier_kills',
+                'tank_casualties',
+                'tank_kills',
+                'aircraft_casualties',
+                'aircraft_kills',
+                'ship_casualties',
+                'ship_kills',
+                'missile_casualties',
+                'missile_kills',
+                'nuke_casualties',
+                'nuke_kills',
+                'spy_casualties',
+                'spy_kills',
+                'spy_attacks'
+            ])
+            ->filter(fn($value) => $value !== null)
+            ->toArray();
+    }
 }
