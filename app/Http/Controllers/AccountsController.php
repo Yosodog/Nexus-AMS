@@ -141,16 +141,63 @@ class AccountsController extends Controller
         ];
 
         try {
-            if ($request->input("to") == "nation") {
-                AccountService::transferToNation(
-                    $request->input("from"),
-                    Auth::user()->nation_id,
-                    $transfer
-                );
-            } else {
+            // Validate that at least one resource is being transferred
+            $hasResources = false;
+            foreach ($transfer as $amount) {
+                if ($amount > 0) {
+                    $hasResources = true;
+                    break;
+                }
+            }
+
+            if (!$hasResources) {
+                throw ValidationException::withMessages([
+                    'transfer' => ['You must transfer at least one resource with an amount greater than 0.']
+                ]);
+            }
+
+            // Get the source account and validate ownership
+            $fromAccount = Accounts::findOrFail($request->input("from"));
+            if ($fromAccount->nation_id !== Auth::user()->nation_id) {
+                throw ValidationException::withMessages([
+                    'from' => ['You do not own the source account.']
+                ]);
+            }
+
+            // Validate resource amounts don't exceed available balance
+            foreach ($transfer as $resource => $amount) {
+                if ($amount > $fromAccount->{$resource}) {
+                    throw ValidationException::withMessages([
+                        $resource => ["Insufficient {$resource} in source account. Available: " . number_format($fromAccount->{$resource}, 2)]
+                    ]);
+                }
+            }
+
+            // If transferring to another account, validate ownership
+            if ($request->input("to") !== "nation") {
+                $toAccount = Accounts::findOrFail($request->input("to"));
+                if ($toAccount->nation_id !== Auth::user()->nation_id) {
+                    throw ValidationException::withMessages([
+                        'to' => ['You do not own the destination account.']
+                    ]);
+                }
+
+                // Validate not transferring to the same account
+                if ($fromAccount->id === $toAccount->id) {
+                    throw ValidationException::withMessages([
+                        'to' => ['Cannot transfer resources to the same account.']
+                    ]);
+                }
+
                 AccountService::transferToAccount(
                     $request->input("from"),
                     $request->input("to"),
+                    $transfer
+                );
+            } else {
+                AccountService::transferToNation(
+                    $request->input("from"),
+                    Auth::user()->nation_id,
                     $transfer
                 );
             }
@@ -159,11 +206,8 @@ class AccountsController extends Controller
                 'alert-message' => 'Transfer successful!',
                 "alert-type" => 'success',
             ]);
-        } catch (UserErrorException $e) {
-            return redirect()->back()->with([
-                'alert-message' => $e->getMessage(),
-                'alert-type' => "error",
-            ]);
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->with('alert-type', 'error');
         } catch (Exception $e) {
             Log::error("Error when transferring. " . $e->getMessage());
 
