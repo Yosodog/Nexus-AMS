@@ -48,109 +48,156 @@ class SyncNationsJob implements ShouldQueue
             $militaryData = [];
             $citiesData = [];
 
+            $nationKeys = [
+                'id',
+                'alliance_id',
+                'alliance_position',
+                'alliance_position_id',
+                'nation_name',
+                'leader_name',
+                'continent',
+                'war_policy_turns',
+                'domestic_policy_turns',
+                'color',
+                'num_cities',
+                'score',
+                'update_tz',
+                'population',
+                'flag',
+                'vacation_mode_turns',
+                'beige_turns',
+                'espionage_available',
+                'discord',
+                'discord_id',
+                'turns_since_last_city',
+                'turns_since_last_project',
+                'projects',
+                'project_bits',
+                'wars_won',
+                'wars_lost',
+                'tax_id',
+                'alliance_seniority',
+                'gross_national_income',
+                'gross_domestic_product',
+                'vip',
+                'commendations',
+                'denouncements',
+                'offensive_wars_count',
+                'defensive_wars_count',
+                'money_looted',
+                'total_infrastructure_destroyed',
+                'total_infrastructure_lost'
+            ];
+
+            $resourcesKeys = [
+                'money',
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food',
+                'credits'
+            ];
+
+            $militaryKeys = [
+                'soldiers',
+                'tanks',
+                'aircraft',
+                'ships',
+                'missiles',
+                'nukes',
+                'spies',
+                'soldiers_today',
+                'tanks_today',
+                'aircraft_today',
+                'ships_today',
+                'missiles_today',
+                'nukes_today',
+                'spies_today',
+                'soldier_casualties',
+                'soldier_kills',
+                'tank_casualties',
+                'tank_kills',
+                'aircraft_casualties',
+                'aircraft_kills',
+                'ship_casualties',
+                'ship_kills',
+                'missile_casualties',
+                'missile_kills',
+                'nuke_casualties',
+                'nuke_kills',
+                'spy_casualties',
+                'spy_kills',
+                'spy_attacks'
+            ];
+
+            $cityKeys = [
+                'id',
+                'nation_id',
+                'name',
+                'date',
+                'infrastructure',
+                'land',
+                'powered',
+                'oil_power',
+                'wind_power',
+                'coal_power',
+                'nuclear_power',
+                'coal_mine',
+                'oil_well',
+                'uranium_mine',
+                'barracks',
+                'farm',
+                'police_station',
+                'hospital',
+                'recycling_center',
+                'subway',
+                'supermarket',
+                'bank',
+                'shopping_mall',
+                'stadium',
+                'lead_mine',
+                'iron_mine',
+                'bauxite_mine',
+                'oil_refinery',
+                'aluminum_refinery',
+                'steel_mill',
+                'munitions_factory',
+                'factory',
+                'hangar',
+                'drydock'
+            ];
+
+            // Precompute the flipped arrays to avoid repeated array_flip() calls
+            $nationKeysFlipped = array_flip($nationKeys);
+            $resourcesKeysFlipped = array_flip($resourcesKeys);
+            $militaryKeysFlipped = array_flip($militaryKeys);
+            $cityKeysFlipped = array_flip($cityKeys);
+
             foreach ($nations as $nation) {
-                // Prepare nation data array (adjust keys to match your database columns)
-                $data = collect((array)$nation)
-                    ->only([
-                        'id',
-                        'alliance_id',
-                        'alliance_position',
-                        'alliance_position_id',
-                        'nation_name',
-                        'leader_name',
-                        'continent',
-                        'war_policy_turns',
-                        'domestic_policy_turns',
-                        'color',
-                        'num_cities',
-                        'score',
-                        'update_tz',
-                        'population',
-                        'flag',
-                        'vacation_mode_turns',
-                        'beige_turns',
-                        'espionage_available',
-                        'discord',
-                        'discord_id',
-                        'turns_since_last_city',
-                        'turns_since_last_project',
-                        'projects',
-                        'project_bits',
-                        'wars_won',
-                        'wars_lost',
-                        'tax_id',
-                        'alliance_seniority',
-                        'gross_national_income',
-                        'gross_domestic_product',
-                        'vip',
-                        'commendations',
-                        'denouncements',
-                        'offensive_wars_count',
-                        'defensive_wars_count',
-                        'money_looted',
-                        'total_infrastructure_destroyed',
-                        'total_infrastructure_lost'
-                    ])
-                    ->toArray();
+                // Prepare nation data array using native functions
+                $data = array_intersect_key((array)$nation, $nationKeysFlipped);
                 $nationData[] = $data;
 
                 // Prepare resources data if available
                 if (!is_null($nation->money)) {
-                    $resourcesData[] = collect((array)$nation)
-                        ->only([
-                            'money',
-                            'coal',
-                            'oil',
-                            'uranium',
-                            'iron',
-                            'bauxite',
-                            'lead',
-                            'gasoline',
-                            'munitions',
-                            'steel',
-                            'aluminum',
-                            'food',
-                            'credits'
-                        ])
-                        ->merge(['nation_id' => $nation->id])
-                        ->toArray();
+                    $resourcesData[] = array_merge(
+                        array_intersect_key((array)$nation, $resourcesKeysFlipped),
+                        ['nation_id' => $nation->id]
+                    );
                 }
 
                 // Prepare military data
-                $military = collect((array)$nation)
-                    ->only([
-                        'soldiers',
-                        'tanks',
-                        'aircraft',
-                        'ships',
-                        'missiles',
-                        'nukes',
-                        'spies',
-                        'soldiers_today',
-                        'tanks_today',
-                        'aircraft_today',
-                        'ships_today',
-                        'missiles_today',
-                        'nukes_today',
-                        'spies_today',
-                        'soldier_casualties',
-                        'soldier_kills',
-                        'tank_casualties',
-                        'tank_kills',
-                        'aircraft_casualties',
-                        'aircraft_kills',
-                        'ship_casualties',
-                        'ship_kills',
-                        'missile_casualties',
-                        'missile_kills',
-                        'nuke_casualties',
-                        'nuke_kills',
-                        'spy_casualties',
-                        'spy_kills',
-                        'spy_attacks'
-                    ])
-                    ->merge(['nation_id' => $nation->id])
-                    ->toArray();
+                $military = array_merge(
+                    array_intersect_key((array)$nation, $militaryKeysFlipped),
+                    ['nation_id' => $nation->id]
+                );
                 if (!empty($military)) {
                     $militaryData[] = $military;
                 }
@@ -158,44 +205,7 @@ class SyncNationsJob implements ShouldQueue
                 // Prepare cities data if any
                 if (!empty($nation->cities)) {
                     foreach ($nation->cities as $city) {
-                        $citiesData[] = collect((array)$city)
-                            ->only([
-                                'id',
-                                'nation_id',
-                                'name',
-                                'date',
-                                'infrastructure',
-                                'land',
-                                'powered',
-                                'oil_power',
-                                'wind_power',
-                                'coal_power',
-                                'nuclear_power',
-                                'coal_mine',
-                                'oil_well',
-                                'uranium_mine',
-                                'barracks',
-                                'farm',
-                                'police_station',
-                                'hospital',
-                                'recycling_center',
-                                'subway',
-                                'supermarket',
-                                'bank',
-                                'shopping_mall',
-                                'stadium',
-                                'lead_mine',
-                                'iron_mine',
-                                'bauxite_mine',
-                                'oil_refinery',
-                                'aluminum_refinery',
-                                'steel_mill',
-                                'munitions_factory',
-                                'factory',
-                                'hangar',
-                                'drydock'
-                            ])
-                            ->toArray();
+                        $citiesData[] = array_intersect_key((array)$city, $cityKeysFlipped);
                     }
                 }
             }
