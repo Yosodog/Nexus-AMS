@@ -14,26 +14,290 @@
                 @csrf
 
                 <label class="label" for="amount">Loan Amount:</label>
-                <input type="number" name="amount" id="amount" min="1" required
-                       placeholder="Enter loan amount" class="input input-bordered w-full mb-4">
+                <input type="number" 
+                       name="amount" 
+                       id="amount" 
+                       min="0.01" 
+                       step="0.01"
+                       required
+                       placeholder="Enter loan amount" 
+                       class="input input-bordered w-full mb-4">
 
                 <label class="label" for="account_id">Select Bank Account:</label>
                 <select name="account_id" id="account_id" class="select select-bordered w-full mb-4">
                     @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }} (Balance:
+                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }} (Balance:
                             ${{ number_format($account->money, 2) }})
                         </option>
                     @endforeach
                 </select>
 
                 <label class="label" for="term_weeks">Loan Term (Weeks):</label>
-                <input type="number" id="term_weeks" name="term_weeks" min="1" max="52" required
-                       placeholder="Enter term length" class="input input-bordered w-full mb-4">
+                <input type="number" 
+                       id="term_weeks" 
+                       name="term_weeks" 
+                       min="1" 
+                       max="52" 
+                       step="1"
+                       required
+                       placeholder="Enter term length (1-52 weeks)" 
+                       class="input input-bordered w-full mb-4">
 
                 <button type="submit" class="btn btn-primary w-full">
                     Apply for Loan
                 </button>
             </form>
+        </x-utils.card>
+    </div>
+
+    <hr class="mt-4 mb-4">
+
+    <script>
+        function switchTab(tab, element) {
+            // Remove active class from all tabs
+            document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
+            // Hide all content sections
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+
+            // Activate the clicked tab
+            element.classList.add("tab-active");
+            // Show the relevant content
+            document.getElementById(`content-${tab}`).classList.remove("hidden");
+        }
+
+        // Ensure the first tab is active on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelector(".tab-active").click();
+        });
+
+        // Add event listeners to enforce input validation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Loan amount validation
+            const amountInput = document.getElementById('amount');
+            amountInput.addEventListener('change', function() {
+                let value = parseFloat(this.value);
+                if (!isNaN(value) && value < 0.01) {
+                    this.value = 0.01;
+                }
+            });
+
+            // Term weeks validation
+            const termInput = document.getElementById('term_weeks');
+            termInput.addEventListener('change', function() {
+                if (this.value !== '') {  // Only validate if there's a value
+                    let value = parseInt(this.value);
+                    if (!isNaN(value)) {
+                        value = Math.round(value);  // Round to nearest integer
+                        if (value < 1) value = 1;
+                        if (value > 52) value = 52;
+                        this.value = value;
+                    }
+                }
+            });
+        });
+    </script>
+
+    {{-- Loan Repayment Form (Only show if there are active loans) --}}
+    @if (!$activeLoans->isEmpty())
+        <x-utils.card title="Make an Early Loan Payment">
+            <form method="POST" action="{{ route('loans.repay') }}">
+                @csrf
+                <label class="label">Select Loan:</label>
+                <select name="loan_id" id="repayment_loan_id" class="select select-bordered w-full mb-4">
+                    @foreach ($activeLoans as $loan)
+                        <option value="{{ $loan->id }}" data-balance="{{ $loan->remaining_balance }}">Loan #{{ $loan->id }} - Balance:
+                            ${{ number_format($loan->remaining_balance, 2) }}</option>
+                    @endforeach
+                </select>
+
+                <label class="label" for="repayment_account_id">Select Payment Account:</label>
+                <select name="account_id" id="repayment_account_id" class="select select-bordered w-full mb-4">
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }} (Balance:
+                            ${{ number_format($account->money, 2) }})
+                        </option>
+                    @endforeach
+                </select>
+
+                <label class="label">Payment Amount:</label>
+                <input type="number" 
+                       name="amount" 
+                       id="repayment_amount"
+                       min="0.01" 
+                       step="0.01"
+                       required 
+                       placeholder="Enter amount"
+                       class="input input-bordered w-full mb-4">
+
+                <button type="submit" class="btn btn-primary w-full">Submit Payment</button>
+            </form>
+        </x-utils.card>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const loanSelect = document.getElementById('repayment_loan_id');
+                const accountSelect = document.getElementById('repayment_account_id');
+                const paymentInput = document.getElementById('repayment_amount');
+
+                function getMaxAllowedPayment() {
+                    const selectedLoan = loanSelect.options[loanSelect.selectedIndex];
+                    const selectedAccount = accountSelect.options[accountSelect.selectedIndex];
+                    const loanBalance = parseFloat(selectedLoan.dataset.balance);
+                    const accountBalance = parseFloat(selectedAccount.dataset.balance);
+                    
+                    // Return the smaller of the two balances
+                    return Math.min(loanBalance, accountBalance);
+                }
+
+                function validateAndUpdatePayment() {
+                    const maxAllowed = getMaxAllowedPayment();
+                    let value = parseFloat(paymentInput.value);
+                    
+                    // Update input constraints
+                    paymentInput.max = maxAllowed;
+                    paymentInput.min = 0.01;
+
+                    // Only adjust the value if it's a valid number and outside constraints
+                    if (!isNaN(value)) {
+                        if (value > maxAllowed) {
+                            paymentInput.value = maxAllowed;
+                        } else if (value < 0.01) {
+                            paymentInput.value = 0.01;
+                        }
+                    }
+                }
+
+                // Add event listeners for all relevant events
+                ['change', 'input'].forEach(eventType => {
+                    loanSelect.addEventListener(eventType, validateAndUpdatePayment);
+                    accountSelect.addEventListener(eventType, validateAndUpdatePayment);
+                    paymentInput.addEventListener(eventType, validateAndUpdatePayment);
+                });
+
+                // Initialize validation on page load
+                validateAndUpdatePayment();
+            });
+        </script>
+
+        <hr class="mt-4 mb-4">
+
+        {{-- Active Loans Section --}}
+        <x-utils.card title="Your Active Loans">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Loan Amount</th>
+                        <th>Remaining Balance</th>
+                        <th>Interest Rate</th>
+                        <th>Term (Weeks)</th>
+                        <th>Account</th>
+                        <th>Next Payment Due</th>
+                        <th>Next Minimum Payment</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($activeLoans as $loan)
+                        <tr>
+                            <td>{{ $loan->id }}</td>
+                            <td>${{ number_format($loan->amount, 2) }}</td>
+                            <td>${{ number_format($loan->remaining_balance, 2) }}</td>
+                            <td>{{ number_format($loan->interest_rate, 2) }}%</td>
+                            <td>{{ $loan->term_weeks }}</td>
+                            <td><a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a></td>
+                            <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
+                            <td>${{ number_format($loan->next_payment_due, 2) }}</td>
+                        </tr>
+
+                        {{-- Loan Payment History --}}
+                        @if (!$loan->payments->isEmpty())
+                            <tr>
+                                <td colspan="10">
+                                    <div class="mt-2">
+                                        <strong>Payment History:</strong>
+                                        <div class="overflow-x-auto">
+                                            <table class="table table-sm w-full mt-2">
+                                                <thead>
+                                                <tr>
+                                                    <th>Amount</th>
+                                                    <th>Principal Paid</th>
+                                                    <th>Interest Paid</th>
+                                                    <th>Payment Date</th>
+                                                    <th>Account</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                @foreach ($loan->payments as $payment)
+                                                    <tr>
+                                                        <td>${{ number_format($payment->amount, 2) }}</td>
+                                                        <td>${{ number_format($payment->principal_paid, 2) }}</td>
+                                                        <td>${{ number_format($payment->interest_paid, 2) }}</td>
+                                                        <td>{{ \Carbon\Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
+                                                        <td><a href="{{ route('accounts.view', $payment->account->id) }}" class="link link-primary">{{ $payment->account->name }}</a></td>
+                                                    </tr>
+                                                @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-utils.card>
+    @endif
+
+    {{-- Loan History --}}
+    <div class="mt-4">
+        <x-utils.card title="Your Loan History" extraClasses="shadow-lg">
+            @if ($loanHistory->isEmpty())
+                <p class="text-gray-500">No previous loan applications found.</p>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                        <tr>
+                            <th>Amount</th>
+                            <th>Term (Weeks)</th>
+                            <th>Account</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach ($loanHistory as $loan)
+                            <tr>
+                                <td>${{ number_format($loan->amount, 2) }}</td>
+                                <td>{{ $loan->term_weeks }}</td>
+                                <td>
+                                    @if($loan->account)
+                                        <a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($loan->status === 'pending')
+                                        <span class="badge badge-warning">Pending</span>
+                                    @elseif ($loan->status === 'approved')
+                                        <span class="badge badge-success">Approved</span>
+                                    @elseif ($loan->status === 'paid')
+                                        <span class="badge badge-primary">Paid</span>
+                                    @else
+                                        <span class="badge badge-error">Denied</span>
+                                    @endif
+                                </td>
+                                <td>{{ $loan->created_at->format('M d, Y') }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </x-utils.card>
     </div>
 
@@ -122,175 +386,4 @@
             </ul>
         </div>
     </x-utils.card>
-
-    <hr class="mt-4 mb-4">
-
-    <script>
-        function switchTab(tab, element) {
-            // Remove active class from all tabs
-            document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
-            // Hide all content sections
-            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
-
-            // Activate the clicked tab
-            element.classList.add("tab-active");
-            // Show the relevant content
-            document.getElementById(`content-${tab}`).classList.remove("hidden");
-        }
-
-        // Ensure the first tab is active on page load
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelector(".tab-active").click();
-        });
-    </script>
-
-    {{-- Loan Repayment Form (Only show if there are active loans) --}}
-    @if (!$activeLoans->isEmpty())
-        <x-utils.card title="Make an Early Loan Payment">
-            <form method="POST" action="{{ route('loans.repay') }}">
-                @csrf
-                <label class="label">Select Loan:</label>
-                <select name="loan_id" class="select select-bordered w-full mb-4">
-                    @foreach ($activeLoans as $loan)
-                        <option value="{{ $loan->id }}">Loan #{{ $loan->id }} - Balance:
-                            ${{ number_format($loan->remaining_balance, 2) }}</option>
-                    @endforeach
-                </select>
-
-                <label class="label" for="account_id">Select Payment Account:</label>
-                <select name="account_id" id="account_id" class="select select-bordered w-full mb-4">
-                    @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }} (Balance:
-                            ${{ number_format($account->money, 2) }})
-                        </option>
-                    @endforeach
-                </select>
-
-                <label class="label">Payment Amount:</label>
-                <input type="number" name="amount" min="1" required placeholder="Enter amount"
-                       class="input input-bordered w-full mb-4">
-
-                <button type="submit" class="btn btn-primary w-full">Submit Payment</button>
-            </form>
-        </x-utils.card>
-
-        <hr class="mt-4 mb-4">
-
-        {{-- Active Loans Section --}}
-        <x-utils.card title="Your Active Loans">
-            <div class="overflow-x-auto">
-                <table class="table table-zebra w-full">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Loan Amount</th>
-                        <th>Remaining Balance</th>
-                        <th>Interest Rate</th>
-                        <th>Term (Weeks)</th>
-                        <th>Account</th>
-                        <th>Next Payment Due</th>
-                        <th>Next Minimum Payment</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach ($activeLoans as $loan)
-                        <tr>
-                            <td>{{ $loan->id }}</td>
-                            <td>${{ number_format($loan->amount, 2) }}</td>
-                            <td>${{ number_format($loan->remaining_balance, 2) }}</td>
-                            <td>{{ number_format($loan->interest_rate, 2) }}%</td>
-                            <td>{{ $loan->term_weeks }}</td>
-                            <td><a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a></td>
-                            <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
-                            <td>${{ number_format($loan->next_payment_due, 2) }}</td>
-                        </tr>
-
-                        {{-- Loan Payment History --}}
-                        @if (!$loan->payments->isEmpty())
-                            <tr>
-                                <td colspan="8">
-                                    <div class="mt-2">
-                                        <strong>Payment History:</strong>
-                                        <div class="overflow-x-auto">
-                                            <table class="table table-sm w-full mt-2">
-                                                <thead>
-                                                <tr>
-                                                    <th>Amount</th>
-                                                    <th>Principal Paid</th>
-                                                    <th>Interest Paid</th>
-                                                    <th>Payment Date</th>
-                                                </tr>
-                                                </thead>
-                                                <tbody>
-                                                @foreach ($loan->payments as $payment)
-                                                    <tr>
-                                                        <td>${{ number_format($payment->amount, 2) }}</td>
-                                                        <td>${{ number_format($payment->principal_paid, 2) }}</td>
-                                                        <td>${{ number_format($payment->interest_paid, 2) }}</td>
-                                                        <td>{{ \Carbon\Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
-                                                    </tr>
-                                                @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endif
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </x-utils.card>
-    @endif
-
-    {{-- Loan History --}}
-    <div class="mt-4">
-        <x-utils.card title="Your Loan History" extraClasses="shadow-lg">
-            @if ($loanHistory->isEmpty())
-                <p class="text-gray-500">No previous loan applications found.</p>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full">
-                        <thead>
-                        <tr>
-                            <th>Amount</th>
-                            <th>Term (Weeks)</th>
-                            <th>Account</th>
-                            <th>Status</th>
-                            <th>Requested At</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach ($loanHistory as $loan)
-                            <tr>
-                                <td>${{ number_format($loan->amount, 2) }}</td>
-                                <td>{{ $loan->term_weeks }}</td>
-                                <td>
-                                    @if($loan->account)
-                                        <a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a>
-                                    @else
-                                        N/A
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($loan->status === 'pending')
-                                        <span class="badge badge-warning">Pending</span>
-                                    @elseif ($loan->status === 'approved')
-                                        <span class="badge badge-success">Approved</span>
-                                    @elseif ($loan->status === 'paid')
-                                        <span class="badge badge-primary">Paid</span>
-                                    @else
-                                        <span class="badge badge-error">Denied</span>
-                                    @endif
-                                </td>
-                                <td>{{ $loan->created_at->format('M d, Y') }}</td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </x-utils.card>
-    </div>
 @endsection

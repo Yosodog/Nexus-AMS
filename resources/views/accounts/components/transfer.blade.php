@@ -9,8 +9,21 @@
                 <select class="select select-bordered w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }} -
-                                ${{ number_format($account->money) }}</option>
+                            <option value="{{ $account->id }}" 
+                                data-money="{{ $account->money }}"
+                                data-coal="{{ $account->coal }}"
+                                data-oil="{{ $account->oil }}"
+                                data-uranium="{{ $account->uranium }}"
+                                data-lead="{{ $account->lead }}"
+                                data-iron="{{ $account->iron }}"
+                                data-bauxite="{{ $account->bauxite }}"
+                                data-gas="{{ $account->gasoline }}"
+                                data-munitions="{{ $account->munitions }}"
+                                data-steel="{{ $account->steel }}"
+                                data-aluminum="{{ $account->aluminum }}"
+                                data-food="{{ $account->food }}">
+                                {{ $account->name }} - ${{ number_format($account->money) }}
+                            </option>
                         @endforeach
                     </optgroup>
                 </select>
@@ -192,26 +205,69 @@
             });
             moneyInput.disabled = false;
             
-            // Remove the max attribute and title for regular transfers
-            moneyInput.removeAttribute('max');
+            // Remove the loan-specific attributes
             moneyInput.removeAttribute('min');
             moneyInput.removeAttribute('step');
-            moneyInput.removeAttribute('title');
-            
-            // Remove the input event listener
-            moneyInput.replaceWith(moneyInput.cloneNode(true));
         }
+
+        // Reapply the from account validation after making changes
+        handleFromSelectionChange();
+    }
+
+    function handleFromSelectionChange() {
+        const fromSelect = document.getElementById('tran_from');
+        const selectedOption = fromSelect.options[fromSelect.selectedIndex];
+
+        // Get all resource values from the selected option
+        const resources = {
+            money: Number(selectedOption.dataset.money),
+            coal: Number(selectedOption.dataset.coal),
+            oil: Number(selectedOption.dataset.oil),
+            uranium: Number(selectedOption.dataset.uranium),
+            lead: Number(selectedOption.dataset.lead),
+            iron: Number(selectedOption.dataset.iron),
+            bauxite: Number(selectedOption.dataset.bauxite),
+            gas: Number(selectedOption.dataset.gas),
+            munitions: Number(selectedOption.dataset.munitions),
+            steel: Number(selectedOption.dataset.steel),
+            aluminum: Number(selectedOption.dataset.aluminum),
+            food: Number(selectedOption.dataset.food)
+        };
+
+        // Update all the available resource amounts and set max values
+        Object.entries(resources).forEach(([resource, amount]) => {
+            // Update the display amount
+            const availSpan = document.getElementById(`${resource}Avail`);
+            if (availSpan) {
+                availSpan.textContent = amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+
+            // Update the input max value and add validation
+            const input = document.getElementById(resource);
+            if (input && !input.disabled) { // Only update enabled inputs
+                input.max = amount;
+                input.title = `Maximum available: ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                
+                // Remove existing event listener by cloning and replacing
+                const newInput = input.cloneNode(true);
+                input.parentNode.replaceChild(newInput, input);
+                
+                // Add new event listener for validation
+                newInput.addEventListener('input', function() {
+                    let value = Number(this.value);
+                    if (value < 0) {
+                        this.value = 0;
+                    } else if (value > amount) {
+                        this.value = amount;
+                    }
+                });
+            }
+        });
     }
 
     // Call the function on page load to set initial state
-    document.addEventListener('DOMContentLoaded', handleToSelectionChange);
+    document.addEventListener('DOMContentLoaded', handleFromSelectionChange);
 
-    // Add global input validation for all number inputs
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('input', function() {
-            if (this.value < 0) {
-                this.value = 0;
-            }
-        });
-    });
+    // Add event listener for when the from account changes
+    document.getElementById('tran_from').addEventListener('change', handleFromSelectionChange);
 </script>
