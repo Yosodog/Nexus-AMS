@@ -143,7 +143,7 @@ class TaxService
 
         foreach ($resources as $res) {
             $daily = Taxes::where('date', '>=', $start)
-                ->selectRaw('DATE(date) as day, SUM(' . $res . ') as total')
+                ->selectRaw('DATE(`date`) as day, SUM(`' . $res . '`) as total')
                 ->groupBy('day')
                 ->orderBy('day')
                 ->pluck('total', 'day');
@@ -182,7 +182,7 @@ class TaxService
 
         foreach ($resources as $res) {
             $daily = Taxes::where('date', '>=', $start)
-                ->selectRaw('DATE(date) as day, SUM(' . $res . ') as total')
+                ->selectRaw('DATE(`date`) as day, SUM(`' . $res . '`) as total')
                 ->groupBy('day')
                 ->orderBy('day')
                 ->get();
