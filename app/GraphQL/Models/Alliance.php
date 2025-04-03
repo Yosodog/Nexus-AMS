@@ -22,7 +22,7 @@ class Alliance
     public string $discord_link;
     public ?string $wiki_link;
     // public array $bankrecs; // [Bankrec]
-    // public array $taxrecs; // [Bankrec]
+    public BankRecords $taxrecs;
     // public array $tax_brackets; // [TaxBracket]
     // public array $wars; // [War!]!
     public float|null $money;
@@ -60,6 +60,16 @@ class Alliance
                 $nationModel = new Nation();
                 $nationModel->buildWithJSON((object)$nation);
                 $this->nations->add($nationModel);
+            }
+        }
+
+        if (isset($json->taxrecs)) {
+            $this->taxrecs = new BankRecords();
+
+            foreach ($json->taxrecs as $record) {
+                $bankRec = new BankRecord();
+                $bankRec->buildWithJSON((object)$record);
+                $this->taxrecs->add($bankRec);
             }
         }
 

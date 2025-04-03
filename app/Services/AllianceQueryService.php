@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\Alliance;
 use App\GraphQL\Models\Alliances;
-use App\GraphQL\Models\Nations;
 use Illuminate\Http\Client\ConnectionException;
 
 class AllianceQueryService
@@ -69,7 +68,7 @@ class AllianceQueryService
      * @param int $perPage
      * @param bool $pagination
      * @param bool $handlePagination
-     * @return Nations
+     * @return Alliances
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -103,5 +102,33 @@ class AllianceQueryService
         }
 
         return $alliances;
+    }
+
+    /**
+     * @param int $aID
+     * @return Alliance
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
+     */
+    public static function getAllianceWithTaxes(int $aID): Alliance
+    {
+        $client = new QueryService();
+
+        $builder = (new GraphQLQueryBuilder())
+            ->setRootField("alliances")
+            ->addArgument('id', $aID)
+            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+                $builder->addFields(SelectionSetHelper::allianceSet())
+                    ->addNestedField("taxrecs", function (GraphQLQueryBuilder $nationBuilder) {
+                        $nationBuilder->addFields(SelectionSetHelper::bankRecordSet());
+                    });
+            });
+
+        $response = $client->sendQuery($builder);
+
+        $alliance = new Alliance();
+        $alliance->buildWithJSON((object)$response->{0});
+
+        return $alliance;
     }
 }

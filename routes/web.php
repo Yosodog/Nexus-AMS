@@ -107,4 +107,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/loans/{Loans}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
             'admin.loans.markPaid'
         );
+
+        // Taxes
+        Route::get('/taxes', [\App\Http\Controllers\Admin\TaxesController::class, 'index'])->name('admin.taxes');
     });
