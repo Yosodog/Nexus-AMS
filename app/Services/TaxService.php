@@ -82,4 +82,114 @@ class TaxService
         return $newLastId;
 
     }
+
+    /**
+     * @return array
+     */
+    public static function getSummaryStats(): array
+    {
+        $start = now()->subDays(30);
+        $query = Taxes::where('date', '>=', $start);
+
+        return [
+            'total_money' => $query->sum('money'),
+            'top_resource' => collect([
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food'
+            ])->mapWithKeys(fn($res) => [$res => $query->sum($res)])
+                ->sortDesc()
+                ->keys()
+                ->first(),
+
+            'transaction_count' => $query->count(),
+            'average_daily_money' => $query->select(DB::raw('DATE(date) as d'), DB::raw('SUM(money) as total'))
+                ->groupBy('d')
+                ->get()
+                ->avg('total'),
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public static function getResourceChartData(): array
+    {
+        $start = now()->subDays(30);
+        $resources = [
+            'money',
+            'coal',
+            'oil',
+            'uranium',
+            'iron',
+            'bauxite',
+            'lead',
+            'gasoline',
+            'munitions',
+            'steel',
+            'aluminum',
+            'food'
+        ];
+
+        $data = [];
+
+        foreach ($resources as $res) {
+            $daily = Taxes::where('date', '>=', $start)
+                ->selectRaw('DATE(date) as day, SUM(' . $res . ') as total')
+                ->groupBy('day')
+                ->orderBy('day')
+                ->pluck('total', 'day');
+
+            $data[$res] = [
+                'labels' => $daily->keys()->toArray(),
+                'data' => $daily->values()->toArray(),
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getDailyTotals(): array
+    {
+        $start = now()->subDays(30);
+        $resources = [
+            'money',
+            'coal',
+            'oil',
+            'uranium',
+            'iron',
+            'bauxite',
+            'lead',
+            'gasoline',
+            'munitions',
+            'steel',
+            'aluminum',
+            'food'
+        ];
+
+        $totals = [];
+
+        foreach ($resources as $res) {
+            $daily = Taxes::where('date', '>=', $start)
+                ->selectRaw('DATE(date) as day, SUM(' . $res . ') as total')
+                ->groupBy('day')
+                ->orderBy('day')
+                ->get();
+
+            $totals[$res] = $daily;
+        }
+
+        return $totals;
+    }
 }

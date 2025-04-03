@@ -32,6 +32,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.taxes') }}" class="nav-link">
+                        <i class="bi bi-hand-thumbs-down-fill"></i>
+                        <p>Taxes</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ url("/telescope") }}" class="nav-link">
                         <i class="bi bi-bug-fill"></i>
                         <p>Telescope</p>
