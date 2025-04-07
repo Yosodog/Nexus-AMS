@@ -29,21 +29,30 @@ class GrantController extends Controller
     /**
      * @param Request $request
      * @param Grants $grant
-     * @param GrantService $grantService
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function apply(Request $request, Grants $grant, GrantService $grantService)
+    public function apply(Request $request, Grants $grant)
     {
         $request->validate([
             'account_id' => ['required', 'integer'],
         ]);
 
+        $user = Auth::user();
+        $nation = $user->nation;
+
+        // Ensure the account belongs to the user's nation
+        $accountId = $request->input('account_id');
+        $ownsAccount = $nation->accounts()->where('id', $accountId)->exists();
+
+        if (! $ownsAccount) {
+            return back()->with([
+                'alert-message' => 'You do not own the selected account.',
+                'alert-type' => 'error'
+            ]);
+        }
+
         try {
-            $grantService->applyToGrant(
-                Auth::user()->nation,
-                $grant,
-                $request->input('account_id'),
-            );
+            GrantService::applyToGrant($grant, $nation, $accountId);
         } catch (\Throwable $e) {
             return back()->with([
                 'alert-message' => $e->getMessage(),

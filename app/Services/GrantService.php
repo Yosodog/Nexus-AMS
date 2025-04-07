@@ -17,6 +17,20 @@ class GrantService
     /**
      * @param Grants $grant
      * @param Nations $nation
+     * @param int $accountId
+     * @return GrantApplications
+     * @throws ValidationException
+     */
+    public static function applyToGrant(Grants $grant, Nations $nation, int $accountId): GrantApplications
+    {
+        self::validateEligibility($grant, $nation);
+
+        return self::createApplication($grant, $nation->id, $accountId);
+    }
+
+    /**
+     * @param Grants $grant
+     * @param Nations $nation
      * @return void
      * @throws ValidationException
      */
@@ -123,7 +137,9 @@ class GrantService
             'food' => $grant->food,
         ]);
 
-        $application->nation->notify(new GrantNotification($application->nation_id, $application, 'approved'));
+        $nation = $application->nation;
+
+        $nation->notify(new GrantNotification($application->nation_id, $application->fresh(), 'approved'));
     }
 
     /**
