@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Alliances;
+use App\Services\AllianceQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
@@ -59,6 +61,12 @@ class UpdateAllianceJob implements ShouldQueue
 
                 $allianceModel->save();
             }
+        } catch (ModelNotFoundException $e) {
+            // Model is not in the DB for some reason, so let's just create it
+            // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
+            // So we'll just query and add it as usual lol
+            $alliance = AllianceQueryService::getAllianceById($allianceModel->id);
+            Alliances::updateFromAPI($alliance);
         } catch (Exception $e) {
             Log::error("Failed to update alliances", ['error' => $e->getMessage()]);
         }

@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Cities;
+use App\Services\CityQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
@@ -44,6 +46,12 @@ class UpdateCityJob implements ShouldQueue
 
                 $cityModel->save();
             }
+        } catch (ModelNotFoundException $e) {
+            // Model is not in the DB for some reason, so let's just create it
+            // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
+            // So we'll just query and add it as usual lol The nations job does things differently so this is not needed
+            $city = CityQueryService::getCityById($cityData['id']);
+            Cities::updateFromAPI($city);
         } catch (Exception $e) {
             Log::error("Failed to update cities", ['error' => $e->getMessage()]);
         }
