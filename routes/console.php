@@ -20,3 +20,6 @@ Schedule::command('telescope:prune --hours=72')->dailyAt("23:45");
 
 // Taxes
 Schedule::command('taxes:collect')->hourlyAt("15");
+
+// Military sign in
+Schedule::command("military:sign-in")->dailyAt("12:10");
