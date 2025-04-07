@@ -9,7 +9,7 @@ use App\Services\PWHelperService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-class GrantController
+class CityGrantController
 {
     public function cityGrants()
     {

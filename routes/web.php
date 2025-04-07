@@ -3,9 +3,9 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\GrantController;
+use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\LoansController;
-use App\Http\Controllers\CityGrantController;
+use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\UserController;
@@ -54,8 +54,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     // Grants
     Route::prefix('grants')->middleware(['auth'])->group(function () {
         // City grants
-        Route::get("/city", [CityGrantController::class, 'index'])->name("grants.city");
-        Route::post("/city", [CityGrantController::class, 'request'])->name(
+        Route::get("/city", [UserCityGrantController::class, 'index'])->name("grants.city");
+        Route::post("/city", [UserCityGrantController::class, 'request'])->name(
             "grants.city.request"
         );
 
@@ -78,21 +78,21 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         );
 
         // City Grants
-        Route::get("/grants/city", [GrantController::class, 'cityGrants'])->name(
+        Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
             "admin.grants.city"
         );
-        Route::post('/grants/city/{city_grant}/update', [GrantController::class, 'updateCityGrant'])
+        Route::post('/grants/city/{city_grant}/update', [CityGrantController::class, 'updateCityGrant'])
             ->name("admin.grants.city.update");
 
-        Route::post('/grants/city/create', [GrantController::class, 'createCityGrant'])->name(
+        Route::post('/grants/city/create', [CityGrantController::class, 'createCityGrant'])->name(
             "admin.grants.city.create"
         );
 
-        Route::post("/grants/city/approve/{CityGrantRequest}", [GrantController::class, 'approveCityGrant'])->name(
+        Route::post("/grants/city/approve/{CityGrantRequest}", [CityGrantController::class, 'approveCityGrant'])->name(
             "admin.grants.city.approve"
         );
 
-        Route::post("/grants/city/deny/{CityGrantRequest}", [GrantController::class, 'denyCityGrant'])->name(
+        Route::post("/grants/city/deny/{CityGrantRequest}", [CityGrantController::class, 'denyCityGrant'])->name(
             "admin.grants.city.deny"
         );
 
