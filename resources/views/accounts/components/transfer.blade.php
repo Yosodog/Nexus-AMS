@@ -9,19 +9,19 @@
                 <select class="select select-bordered w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}" 
-                                data-money="{{ $account->money }}"
-                                data-coal="{{ $account->coal }}"
-                                data-oil="{{ $account->oil }}"
-                                data-uranium="{{ $account->uranium }}"
-                                data-lead="{{ $account->lead }}"
-                                data-iron="{{ $account->iron }}"
-                                data-bauxite="{{ $account->bauxite }}"
-                                data-gas="{{ $account->gasoline }}"
-                                data-munitions="{{ $account->munitions }}"
-                                data-steel="{{ $account->steel }}"
-                                data-aluminum="{{ $account->aluminum }}"
-                                data-food="{{ $account->food }}">
+                            <option value="{{ $account->id }}"
+                                    data-money="{{ $account->money }}"
+                                    data-coal="{{ $account->coal }}"
+                                    data-oil="{{ $account->oil }}"
+                                    data-uranium="{{ $account->uranium }}"
+                                    data-lead="{{ $account->lead }}"
+                                    data-iron="{{ $account->iron }}"
+                                    data-bauxite="{{ $account->bauxite }}"
+                                    data-gas="{{ $account->gasoline }}"
+                                    data-munitions="{{ $account->munitions }}"
+                                    data-steel="{{ $account->steel }}"
+                                    data-aluminum="{{ $account->aluminum }}"
+                                    data-food="{{ $account->food }}">
                                 {{ $account->name }} - ${{ number_format($account->money) }}
                             </option>
                         @endforeach
@@ -32,7 +32,8 @@
             <!-- To Account Selection -->
             <div class="form-control">
                 <label for="tran_to" class="label font-semibold">To</label>
-                <select class="select select-bordered w-full" name="to" id="tran_to" required onchange="handleToSelectionChange()">
+                <select class="select select-bordered w-full" name="to" id="tran_to" required
+                        onchange="handleToSelectionChange()">
                     <optgroup label="Nation">
                         <option value="nation">Nation - {{ Auth()->user()->nation->nation_name }}</option>
                     </optgroup>
@@ -45,7 +46,9 @@
                     @if (!$activeLoans->isEmpty())
                         <optgroup label="Active Loans">
                             @foreach ($activeLoans as $loan)
-                                <option value="loan_{{ $loan->id }}" data-remaining-balance="{{ $loan->remaining_balance }}">Loan #{{ $loan->id }} - Balance: ${{ number_format($loan->remaining_balance, 2) }}</option>
+                                <option value="loan_{{ $loan->id }}"
+                                        data-remaining-balance="{{ $loan->remaining_balance }}">Loan #{{ $loan->id }} -
+                                    Balance: ${{ number_format($loan->remaining_balance, 2) }}</option>
                             @endforeach
                         </optgroup>
                     @endif
@@ -182,15 +185,18 @@
             // Get the selected loan's remaining balance
             const selectedOption = toSelect.options[toSelect.selectedIndex];
             const remainingBalance = parseFloat(selectedOption.dataset.remainingBalance);
-            
+
             // Set the max attribute and title for the money input
             moneyInput.max = remainingBalance;
             moneyInput.min = 0.01; // Ensure minimum payment is at least 0.01
             moneyInput.step = 0.01; // Allow two decimal places
-            moneyInput.title = `Payment amount must be between $0.01 and $${remainingBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            
+            moneyInput.title = `Payment amount must be between $0.01 and $${remainingBalance.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+
             // Add event listener to enforce min/max values and prevent negative numbers
-            moneyInput.addEventListener('input', function() {
+            moneyInput.addEventListener('input', function () {
                 let value = parseFloat(this.value);
                 if (value < 0.01) {
                     this.value = 0.01;
@@ -204,7 +210,7 @@
                 input.disabled = false;
             });
             moneyInput.disabled = false;
-            
+
             // Remove the loan-specific attributes
             moneyInput.removeAttribute('min');
             moneyInput.removeAttribute('step');
@@ -239,21 +245,27 @@
             // Update the display amount
             const availSpan = document.getElementById(`${resource}Avail`);
             if (availSpan) {
-                availSpan.textContent = amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                availSpan.textContent = amount.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
             }
 
             // Update the input max value and add validation
             const input = document.getElementById(resource);
             if (input && !input.disabled) { // Only update enabled inputs
                 input.max = amount;
-                input.title = `Maximum available: ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                
+                input.title = `Maximum available: ${amount.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+
                 // Remove existing event listener by cloning and replacing
                 const newInput = input.cloneNode(true);
                 input.parentNode.replaceChild(newInput, input);
-                
+
                 // Add new event listener for validation
-                newInput.addEventListener('input', function() {
+                newInput.addEventListener('input', function () {
                     let value = Number(this.value);
                     if (value < 0) {
                         this.value = 0;

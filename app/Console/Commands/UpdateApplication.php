@@ -33,19 +33,25 @@ class UpdateApplication extends Command
         $this->runShellCommand('git pull origin main', 'Pulling latest code from GitHub');
 
         if (!$this->option('no-composer')) {
-            $this->runShellCommand('composer install --no-interaction --prefer-dist --optimize-autoloader', 'Updating Composer dependencies');
+            $this->runShellCommand(
+                'composer install --no-interaction --prefer-dist --optimize-autoloader',
+                'Updating Composer dependencies'
+            );
         } else {
             $this->info('Skipping Composer dependencies update.');
             Log::info('Skipping Composer dependencies update.');
         }
 
         if (!$this->option('no-node')) {
-            $this->runShellCommand('npm install && npm run build', 'Updating Node.js dependencies and building frontend');
+            $this->runShellCommand(
+                'npm install && npm run build',
+                'Updating Node.js dependencies and building frontend'
+            );
         } else {
             $this->info('Skipping Node.js dependencies update.');
             Log::info('Skipping Node.js dependencies update.');
         }
-        
+
         Artisan::call('migrate --force');
         $this->info('Database migrations applied successfully.');
         Log::info('Database migrations applied successfully.');

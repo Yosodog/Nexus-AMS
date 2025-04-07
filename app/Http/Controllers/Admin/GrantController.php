@@ -2,21 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Accounts;
 use App\Models\GrantApplications;
 use App\Models\Grants;
-use App\Notifications\GrantNotification;
-use App\Services\AccountService;
 use App\Services\GrantService;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Request as RequestAlias;
 use Illuminate\Support\Str;
 
 class GrantController
 {
     /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @return Factory|View|Application|object
      */
     public function grants()
     {
@@ -31,19 +30,22 @@ class GrantController
         $pendingCount = $pendingRequests->count();
         $totalFundsDistributed = GrantApplications::where('status', 'approved')->sum('money');
 
-        return view('admin.grants.grants', compact(
-            'grants',
-            'pendingRequests',
-            'totalApproved',
-            'totalDenied',
-            'pendingCount',
-            'totalFundsDistributed'
-        ));
+        return view(
+            'admin.grants.grants',
+            compact(
+                'grants',
+                'pendingRequests',
+                'totalApproved',
+                'totalDenied',
+                'pendingCount',
+                'totalFundsDistributed'
+            )
+        );
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function createGrant(Request $request)
     {
@@ -61,7 +63,21 @@ class GrantController
         $grant->description = $request->input('description');
         $grant->money = $request->input('money') ?? 0;
 
-        foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource) {
+        foreach (
+            [
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food'
+            ] as $resource
+        ) {
             $grant->$resource = $request->input($resource, 0);
         }
 
@@ -77,7 +93,7 @@ class GrantController
     /**
      * @param Grants $grant
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function updateGrant(Grants $grant, Request $request)
     {
@@ -94,7 +110,21 @@ class GrantController
         $grant->description = $request->input('description');
         $grant->money = $request->input('money') ?? 0;
 
-        foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource) {
+        foreach (
+            [
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food'
+            ] as $resource
+        ) {
             $grant->$resource = $request->input($resource, 0);
         }
 
@@ -109,7 +139,7 @@ class GrantController
 
     /**
      * @param GrantApplications $application
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function approveApplication(GrantApplications $application)
     {
@@ -122,7 +152,7 @@ class GrantController
 
     /**
      * @param GrantApplications $application
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function denyApplication(GrantApplications $application)
     {

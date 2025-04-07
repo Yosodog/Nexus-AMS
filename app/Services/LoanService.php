@@ -161,17 +161,6 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
-     * @return float
-     */
-    private function getEarlyPaymentsSinceLastDue(Loans $loan): float
-    {
-        return $loan->payments()
-            ->where('payment_date', '>=', $loan->next_due_date->subDays(7))
-            ->sum('amount');
-    }
-
-    /**
      * Calculates the weekly loan payment.
      */
     public function calculateWeeklyPayment(Loans $loan): float
@@ -186,6 +175,17 @@ class LoanService
         }
 
         return round(($r * $P) / (1 - pow(1 + $r, -$n)), 2);
+    }
+
+    /**
+     * @param Loans $loan
+     * @return float
+     */
+    private function getEarlyPaymentsSinceLastDue(Loans $loan): float
+    {
+        return $loan->payments()
+            ->where('payment_date', '>=', $loan->next_due_date->subDays(7))
+            ->sum('amount');
     }
 
     /**

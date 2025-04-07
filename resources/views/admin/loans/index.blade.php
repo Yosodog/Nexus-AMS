@@ -132,7 +132,8 @@
 
                         <div class="mb-3">
                             <label for="approve_amount" class="form-label">Loan Amount</label>
-                            <input type="number" step="0.01" class="form-control" name="amount" id="approve_amount" required>
+                            <input type="number" step="0.01" class="form-control" name="amount" id="approve_amount"
+                                   required>
                         </div>
 
                         <div class="mb-3">

@@ -14,16 +14,20 @@
     {{-- Info Boxes --}}
     <div class="row">
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved" :value="$totalApproved"/>
+            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved"
+                              :value="$totalApproved"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied" :value="$totalDenied"/>
+            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied"
+                              :value="$totalDenied"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending" :value="$pendingCount"/>
+            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending"
+                              :value="$pendingCount"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Funds Distributed" :value="number_format($totalFundsDistributed)"/>
+            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Funds Distributed"
+                              :value="number_format($totalFundsDistributed)"/>
         </div>
     </div>
 
@@ -52,11 +56,13 @@
                             <td>{{ $request->account->name }}</td>
                             <td>{{ $request->created_at->format('M d, Y') }}</td>
                             <td>
-                                <form action="{{ route('admin.grants.approve', $request) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.grants.approve', $request) }}" method="POST"
+                                      class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-success btn-sm">Approve</button>
                                 </form>
-                                <form action="{{ route('admin.grants.deny', $request) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.grants.deny', $request) }}" method="POST"
+                                      class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                                 </form>
@@ -102,7 +108,8 @@
                         </td>
                         <td>
                             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal"
-                                    onclick="editGrant({{ json_encode($grant) }})">Edit</button>
+                                    onclick="editGrant({{ json_encode($grant) }})">Edit
+                            </button>
                         </td>
                     </tr>
                     <tr class="collapse" id="resources-{{ $grant->id }}">
@@ -123,7 +130,8 @@
             </table>
 
             <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#grantModal"
-                    onclick="clearGrantForm()">Create New Grant</button>
+                    onclick="clearGrantForm()">Create New Grant
+            </button>
         </div>
     </div>
 
@@ -148,7 +156,8 @@
                         {{-- Description --}}
                         <div class="mb-3">
                             <label class="form-label">Description (Markdown Supported)</label>
-                            <textarea class="form-control" name="description" id="grant_description" rows="3"></textarea>
+                            <textarea class="form-control" name="description" id="grant_description"
+                                      rows="3"></textarea>
                         </div>
 
                         {{-- Money --}}
@@ -162,7 +171,8 @@
                             @foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource)
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-capitalize">{{ $resource }}</label>
-                                    <input type="number" class="form-control" name="{{ $resource }}" id="grant_{{ $resource }}" value="0" min="0">
+                                    <input type="number" class="form-control" name="{{ $resource }}"
+                                           id="grant_{{ $resource }}" value="0" min="0">
                                 </div>
                             @endforeach
                         </div>
@@ -205,7 +215,7 @@
 
             document.getElementById('grant_money').value = grant.money || 0;
 
-            ['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'].forEach(function (resource) {
+            ['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'].forEach(function (resource) {
                 const input = document.getElementById(`grant_${resource}`);
                 if (input) input.value = grant[resource] || 0;
             });
@@ -217,7 +227,7 @@
 
             document.getElementById('grant_money').value = 0;
 
-            ['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'].forEach(function (resource) {
+            ['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'].forEach(function (resource) {
                 const input = document.getElementById(`grant_${resource}`);
                 if (input) input.value = 0;
             });

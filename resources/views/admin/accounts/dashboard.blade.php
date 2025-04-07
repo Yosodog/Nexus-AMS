@@ -51,7 +51,9 @@
                                                 <td><a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}"
                                                        target="_blank">{{ $acc->nation_id }}</a></td>
                                                 <td><a href="#">{{ $acc->user->name ?? "Deleted Account" }}</a></td>
-                                                <td><a href="{{ route("admin.accounts.view", $acc->id) }}">{{ $acc->name }}</a></td>
+                                                <td>
+                                                    <a href="{{ route("admin.accounts.view", $acc->id) }}">{{ $acc->name }}</a>
+                                                </td>
                                                 <td>${{ number_format($acc->money, 2) }}</td>
                                                 <td>{{ number_format($acc->coal, 2) }}</td>
                                                 <td>{{ number_format($acc->oil, 2) }}</td>

@@ -1,3 +1,4 @@
+@php use App\Models\Grants; @endphp
 <div class="container mx-auto">
     <div class="navbar bg-base-100">
         <div class="navbar-start">
@@ -18,7 +19,7 @@
                 </div>
                 @if (Auth::check())
                     @php
-                        $enabledGrants = \App\Models\Grants::where('is_enabled', true)->orderBy('name')->get();
+                        $enabledGrants = Grants::where('is_enabled', true)->orderBy('name')->get();
                     @endphp
                     <ul
                             tabindex="0"
@@ -29,7 +30,9 @@
                             <ul class="p-2">
                                 <li><a href="{{ route("grants.city") }}">City Grants</a></li>
                                 @foreach ($enabledGrants as $grant)
-                                    <li><a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a></li>
+                                    <li>
+                                        <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
+                                    </li>
                                 @endforeach
                             </ul>
                         </li>
@@ -53,13 +56,16 @@
                     <li><a href="{{ route("accounts") }}">Accounts</a></li>
                     <li>
                         <details class="relative">
-                        <summary class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
-                            Grants
-                        </summary>
+                            <summary
+                                    class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                Grants
+                            </summary>
                             <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[1]">
                                 <li><a href="{{ route("grants.city") }}">City Grants</a></li>
                                 @foreach ($enabledGrants as $grant)
-                                    <li><a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a></li>
+                                    <li>
+                                        <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
+                                    </li>
                                 @endforeach
                             </ul>
                         </details>

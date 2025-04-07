@@ -7,28 +7,10 @@ use App\Models\Taxes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class TaxService
 {
-    /**
-     * @param int $alliance_id
-     * @return BankRecords
-     */
-    public static function getAllianceTaxes(int $alliance_id): BankRecords
-    {
-        $alliance = AllianceQueryService::getAllianceWithTaxes($alliance_id);
-
-        return $alliance->taxrecs;
-    }
-
-    /**
-     * @return int
-     */
-    public static function getLastScannedTaxRecordId(): int
-    {
-        return Taxes::max('id') ?? 0;
-    }
-
     /**
      * @param int $alliance_id
      * @return int The last scanned ID is returned
@@ -71,7 +53,7 @@ class TaxService
                 });
 
                 $newLastId = max($newLastId, $record->id);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::error('Failed to insert tax record', [
                     'tax_id' => $record->id,
                     'error' => $e->getMessage()
@@ -80,7 +62,25 @@ class TaxService
         }
 
         return $newLastId;
+    }
 
+    /**
+     * @param int $alliance_id
+     * @return BankRecords
+     */
+    public static function getAllianceTaxes(int $alliance_id): BankRecords
+    {
+        $alliance = AllianceQueryService::getAllianceWithTaxes($alliance_id);
+
+        return $alliance->taxrecs;
+    }
+
+    /**
+     * @return int
+     */
+    public static function getLastScannedTaxRecordId(): int
+    {
+        return Taxes::max('id') ?? 0;
     }
 
     /**
