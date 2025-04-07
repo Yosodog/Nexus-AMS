@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Middleware\AdminMiddleware;
@@ -95,6 +96,15 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post("/grants/city/deny/{CityGrantRequest}", [CityGrantController::class, 'denyCityGrant'])->name(
             "admin.grants.city.deny"
         );
+
+        // Grants
+        Route::get("/grants", [AdminGrantController::class, 'grants'])->name("admin.grants");
+        Route::post("/grants/create", [AdminGrantController::class, 'createGrant'])->name("admin.grants.create");
+        Route::post("/grants/{grant}/update", [AdminGrantController::class, 'updateGrant'])->name("admin.grants.update");
+        Route::post("/grants/{grant}/toggle", [AdminGrantController::class, 'toggleGrant'])->name("admin.grants.toggle");
+
+        Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name("admin.grants.approve");
+        Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name("admin.grants.deny");
 
         // Loans
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");

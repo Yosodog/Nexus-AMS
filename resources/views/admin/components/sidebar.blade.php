@@ -26,6 +26,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.grants') }}" class="nav-link">
+                        <i class="bi bi-houses-fill"></i>
+                        <p>Grants</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.loans') }}" class="nav-link">
                         <i class="bi bi-piggy-bank-fill"></i>
                         <p>Loans</p>

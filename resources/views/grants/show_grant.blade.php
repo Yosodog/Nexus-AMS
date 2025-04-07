@@ -17,16 +17,14 @@
                     @if ($grant->money > 0)
                         <div class="bg-base-200 rounded-lg p-4">
                             <div class="text-sm text-gray-500">💰 Money</div>
-                            <div class="text-xl font-semibold text-success">${{ number_format($grant->money) }}</div>
+                            <div class="text-xl font-semibold @if ($grant->money > 0) text-success" @endif>${{ number_format($grant->money) }}</div>
                         </div>
                     @endif
                     @foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource)
-                        @if ($grant->$resource > 0)
-                            <div class="bg-base-200 rounded-lg p-4">
-                                <div class="text-sm text-gray-500">{{ ucfirst($resource) }}</div>
-                                <div class="text-xl font-semibold">{{ number_format($grant->$resource) }}</div>
-                            </div>
-                        @endif
+                        <div class="bg-base-200 rounded-lg p-4">
+                            <div class="text-sm text-gray-500">{{ ucfirst($resource) }}</div>
+                            <div class="text-xl font-semibold @if ($grant->$resource > 0) text-success" @endif">{{ number_format($grant->$resource) }}</div>
+                        </div>
                     @endforeach
                 </div>
 

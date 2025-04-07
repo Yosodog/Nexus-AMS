@@ -109,6 +109,18 @@ class GrantService
         $application->update([
             'status' => 'approved',
             'approved_at' => now(),
+            'money' => $grant->money,
+            'coal' => $grant->coal,
+            'oil' => $grant->oil,
+            'uranium' => $grant->uranium,
+            'iron' => $grant->iron,
+            'bauxite' => $grant->bauxite,
+            'lead' => $grant->lead,
+            'gasoline' => $grant->gasoline,
+            'munitions' => $grant->munitions,
+            'steel' => $grant->steel,
+            'aluminum' => $grant->aluminum,
+            'food' => $grant->food,
         ]);
 
         $application->nation->notify(new GrantNotification($application->nation_id, $application, 'approved'));

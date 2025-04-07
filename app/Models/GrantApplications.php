@@ -22,6 +22,18 @@ class GrantApplications extends Model
         'status',
         'approved_at',
         'denied_at',
+        'money',
+        'coal',
+        'oil',
+        'uranium',
+        'iron',
+        'bauxite',
+        'lead',
+        'gasoline',
+        'munitions',
+        'steel',
+        'aluminum',
+        'food',
     ];
 
     /**
