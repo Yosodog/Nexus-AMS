@@ -16,19 +16,19 @@
     <div class="row">
         <div class="col-md-3">
             <x-admin.info-box icon="bi bi-people" bgColor="text-bg-primary" title="Total Members"
-                              :value="$totalMembers"/>
+                              :value="number_format($totalMembers)"/>
         </div>
         <div class="col-md-3">
             <x-admin.info-box icon="bi bi-bar-chart-line" bgColor="text-bg-success" title="Total Cities"
-                              :value="$totalCities"/>
+                              :value="number_format($totalCities)"/>
         </div>
         <div class="col-md-3">
             <x-admin.info-box icon="bi bi-award" bgColor="text-bg-info" title="Average Score"
-                              :value="$avgScore"/>
+                              :value="number_format($avgScore, 2)"/>
         </div>
         <div class="col-md-3">
             <x-admin.info-box icon="bi bi-graph-up" bgColor="text-bg-warning" title="30-Day Growth"
-                              :value="array_sum($cityGrowthHistory)"/>
+                              :value="number_format(array_sum($cityGrowthHistory))"/>
         </div>
     </div>
 
