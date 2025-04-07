@@ -124,7 +124,7 @@ class MemberStatsService
 
         // 1. Info Boxes
         $lastSignIn = NationSignIns::where('nation_id', $nationId)->latest()->first();
-        $lastUpdatedAt = optional($lastSignIn)->created_at;
+        $lastUpdatedAt = optional($nation)->updated_at;
         $lastScore = optional($lastSignIn)->score ?? $nation->score;
         $lastCities = optional($lastSignIn)->num_cities ?? $nation->cities;
 
