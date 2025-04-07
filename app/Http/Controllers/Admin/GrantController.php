@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 
 class GrantController
 {
-
     public function cityGrants()
     {
         $pendingRequests = CityGrantRequest::where('status', 'pending')->get();

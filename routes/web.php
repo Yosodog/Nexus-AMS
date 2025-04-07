@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\CityGrantController;
+use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
@@ -45,16 +46,22 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
 
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
-    // City grants
-    Route::get("/grants/city", [CityGrantController::class, 'index'])->name("grants.city");
-    Route::post("/grants/city", [CityGrantController::class, 'request'])->name(
-        "grants.city.request"
-    );
-
     // Loans
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
+
+    // Grants
+    Route::prefix('grants')->middleware(['auth'])->group(function () {
+        // City grants
+        Route::get("/city", [CityGrantController::class, 'index'])->name("grants.city");
+        Route::post("/city", [CityGrantController::class, 'request'])->name(
+            "grants.city.request"
+        );
+
+        Route::get('{grant:slug}', [UserGrantController::class, 'show'])->name('grants.show_grants');
+        Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply');
+    });
 });
 
 Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,])
