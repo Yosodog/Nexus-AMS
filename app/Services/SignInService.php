@@ -13,6 +13,21 @@ class SignInService
      */
     public function snapshotNation(Nation $nation): void
     {
+        $accounts = AccountService::getAccountsByNid($nation->id);
+
+        $resourceFields = [
+            'money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead',
+            'gasoline', 'munitions', 'steel', 'aluminum', 'food'
+        ];
+
+        $combined = [];
+
+        foreach ($resourceFields as $field) {
+            $nationValue = $nation->{$field} ?? 0;
+            $accountValue = $accounts->sum($field);
+            $combined[$field] = $nationValue + $accountValue;
+        }
+
         NationSignIns::create([
             'nation_id' => $nation->id,
             'num_cities' => $nation->num_cities,
@@ -47,20 +62,20 @@ class SignInService
             'spy_kills' => $nation->spy_kills,
             'spy_casualties' => $nation->spy_casualties,
 
-            // Resources
-            'money' => $nation->money,
-            'coal' => $nation->coal,
-            'oil' => $nation->oil,
-            'uranium' => $nation->uranium,
-            'iron' => $nation->iron,
-            'bauxite' => $nation->bauxite,
-            'lead' => $nation->lead,
-            'gasoline' => $nation->gasoline,
-            'munitions' => $nation->munitions,
-            'steel' => $nation->steel,
-            'aluminum' => $nation->aluminum,
-            'food' => $nation->food,
-            'credits' => $nation->credits,
+            // Combined Nation + Accounts
+            'money' => $combined['money'],
+            'coal' => $combined['coal'],
+            'oil' => $combined['oil'],
+            'uranium' => $combined['uranium'],
+            'iron' => $combined['iron'],
+            'bauxite' => $combined['bauxite'],
+            'lead' => $combined['lead'],
+            'gasoline' => $combined['gasoline'],
+            'munitions' => $combined['munitions'],
+            'steel' => $combined['steel'],
+            'aluminum' => $combined['aluminum'],
+            'food' => $combined['food'],
+            'credits' => $nation->credits, // stays as-is
         ]);
     }
 }
