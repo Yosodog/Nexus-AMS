@@ -2,11 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Models\Nations;
 use App\Services\AllianceQueryService;
-use App\Services\NationQueryService;
 use App\Services\SignInService;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
+use Throwable;
 
 class MilitarySignIn extends Command
 {
@@ -29,8 +31,8 @@ class MilitarySignIn extends Command
 
     /**
      * @return int
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public function handle(): int
     {
@@ -55,7 +57,7 @@ class MilitarySignIn extends Command
                 $this->signInService->snapshotNation($nation);
                 Nations::updateFromAPI($nation); // Why not update it while we're here
                 $this->line("✅ {$nation->nation_name}");
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->error("❌ {$nation->nation_name}: " . $e->getMessage());
             }
         }

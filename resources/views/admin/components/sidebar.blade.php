@@ -14,6 +14,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.members') }}" class="nav-link">
+                        <i class="bi bi-people-fill"></i>
+                        <p>Members</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.accounts.dashboard') }}" class="nav-link">
                         <i class="bi bi-bank"></i>
                         <p>Accounts</p>
@@ -27,7 +33,7 @@
                 </li>
                 <li class="nav-item">
                     <a href="{{ route('admin.grants') }}" class="nav-link">
-                        <i class="bi bi-houses-fill"></i>
+                        <i class="bi bi-bandaid-fill"></i>
                         <p>Grants</p>
                     </a>
                 </li>
