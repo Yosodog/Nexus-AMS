@@ -127,4 +127,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         // Taxes
         Route::get('/taxes', [\App\Http\Controllers\Admin\TaxesController::class, 'index'])->name('admin.taxes');
+
+        // Members
+        Route::get('/members', [\App\Http\Controllers\Admin\MembersController::class, 'index'])->name('admin.members');
+        Route::get('/members/{Nations}', [\App\Http\Controllers\Admin\MembersController::class, 'show'])->name('admin.members.show');
     });
