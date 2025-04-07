@@ -1,3 +1,4 @@
+@php use App\Models\Grants; @endphp
 <div class="container mx-auto">
     <div class="navbar bg-base-100">
         <div class="navbar-start">
@@ -17,6 +18,9 @@
                     </svg>
                 </div>
                 @if (Auth::check())
+                    @php
+                        $enabledGrants = Grants::where('is_enabled', true)->orderBy('name')->get();
+                    @endphp
                     <ul
                             tabindex="0"
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
@@ -25,7 +29,11 @@
                             <a>Grants</a>
                             <ul class="p-2">
                                 <li><a href="{{ route("grants.city") }}">City Grants</a></li>
-                                <li><a>Submenu 2</a></li>
+                                @foreach ($enabledGrants as $grant)
+                                    <li>
+                                        <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
+                                    </li>
+                                @endforeach
                             </ul>
                         </li>
                         <li><a href="{{ route("loans.index") }}">Loans</a></li>
@@ -41,16 +49,24 @@
             </div>
             <a class="btn btn-ghost text-xl" href="{{ route("home") }}">Nexus AMS</a>
         </div>
+        {{-- End mobile nav and begin desktop nav --}}
         <div class="navbar-center hidden lg:flex">
             @if (Auth::check())
                 <ul class="menu menu-horizontal px-1 z-50">
                     <li><a href="{{ route("accounts") }}">Accounts</a></li>
                     <li>
-                        <details>
-                            <summary>Grants</summary>
-                            <ul class="p-2">
+                        <details class="relative">
+                            <summary
+                                    class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                Grants
+                            </summary>
+                            <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[1]">
                                 <li><a href="{{ route("grants.city") }}">City Grants</a></li>
-                                <li><a>Submenu 2</a></li>
+                                @foreach ($enabledGrants as $grant)
+                                    <li>
+                                        <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
+                                    </li>
+                                @endforeach
                             </ul>
                         </details>
                     </li>

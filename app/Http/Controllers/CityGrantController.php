@@ -22,7 +22,7 @@ class CityGrantController
         $nextCityNumber = $nation->num_cities + 1;
         $grantRequests = CityGrantRequest::where('nation_id', $nation->id)->orderBy('created_at', 'desc')->get();
 
-        return view('grants.index', compact('grants', 'accounts', 'nextCityNumber', 'grantRequests'));
+        return view('grants.city_grants', compact('grants', 'accounts', 'nextCityNumber', 'grantRequests'));
     }
 
     /**

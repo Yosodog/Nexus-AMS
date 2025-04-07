@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Loans;
 use App\Services\LoanService;
 use Illuminate\Console\Command;
 

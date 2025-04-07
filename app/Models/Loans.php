@@ -49,14 +49,6 @@ class Loans extends Model
     }
 
     /**
-     * @return HasMany
-     */
-    public function payments()
-    {
-        return $this->hasMany(LoanPayments::class, 'loan_id');
-    }
-
-    /**
      * @return bool
      */
     public function isPending(): bool
@@ -87,6 +79,14 @@ class Loans extends Model
 
         // If early payments cover the weekly payment, the next payment is $0
         return max(0, $weeklyPayment - $earlyPayments);
+    }
+
+    /**
+     * @return HasMany
+     */
+    public function payments()
+    {
+        return $this->hasMany(LoanPayments::class, 'loan_id');
     }
 
 }

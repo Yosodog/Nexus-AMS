@@ -2,36 +2,39 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\CityGrant;
-use App\Models\CityGrantRequest;
-use App\Services\CityGrantService;
-use App\Services\PWHelperService;
+use App\Models\GrantApplications;
+use App\Models\Grants;
+use App\Services\GrantService;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class GrantController
 {
-
-    public function cityGrants()
+    /**
+     * @return Factory|View|Application|object
+     */
+    public function grants()
     {
-        $pendingRequests = CityGrantRequest::where('status', 'pending')->get();
-        $previousRequests = CityGrantRequest::whereIn('status', ['approved', 'denied'])
-            ->orderBy('updated_at', 'desc')
+        $grants = Grants::orderBy('created_at', 'desc')->get();
+        $pendingRequests = GrantApplications::with('grant', 'nation', 'account')
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
             ->get();
-        $grants = CityGrant::all();
 
-        // Statistics for info boxes
-        $totalApproved = CityGrantRequest::where('status', 'approved')->count();
-        $totalDenied = CityGrantRequest::where('status', 'denied')->count();
+        $totalApproved = GrantApplications::where('status', 'approved')->count();
+        $totalDenied = GrantApplications::where('status', 'denied')->count();
         $pendingCount = $pendingRequests->count();
-        $totalFundsDistributed = CityGrantRequest::where('status', 'approved')->sum('grant_amount');
+        $totalFundsDistributed = GrantApplications::where('status', 'approved')->sum('money');
 
         return view(
-            'admin.grants.cities',
+            'admin.grants.grants',
             compact(
-                'pendingRequests',
-                'previousRequests',
                 'grants',
+                'pendingRequests',
                 'totalApproved',
                 'totalDenied',
                 'pendingCount',
@@ -41,130 +44,122 @@ class GrantController
     }
 
     /**
-     * @param CityGrantRequest $request
-     *
-     * @return mixed
-     */
-    public function approveCityGrant(CityGrantRequest $grantRequest)
-    {
-        if ($grantRequest->status != 'pending') {
-            return redirect()->back()->with([
-                'alert-message' => 'Grant is not pending.',
-                'alert-type' => 'error',
-            ]);
-        }
-
-        // Call service to approve grant
-        CityGrantService::approveGrant($grantRequest);
-
-        return redirect()->back()->with([
-            'alert-message' => "City Grant for City #{$grantRequest->city_number} approved and funds allocated.",
-            'alert-type' => 'success',
-        ]);
-    }
-
-    /**
-     * @param CityGrantRequest $request
-     *
-     * @return mixed
-     */
-    public function denyCityGrant(CityGrantRequest $grantRequest)
-    {
-        if ($grantRequest->status !== 'pending') {
-            return redirect()->back()->with([
-                'alert-message' => 'Grant is not pending.',
-                'alert-type' => 'error',
-            ]);
-        }
-
-        // Call service to deny grant
-        CityGrantService::denyGrant($grantRequest);
-
-        return redirect()->back()->with([
-            'alert-message' => "City Grant for City #{$grantRequest->city_number} has been denied.",
-            'alert-type' => 'success',
-        ]);
-    }
-
-    /**
-     * @param \Illuminate\Support\Facades\Request $request
-     * @param CityGrant $city_grant
-     * @return RedirectResponse
-     */
-    public function updateCityGrant(Request $request, CityGrant $city_grant)
-    {
-        $validated = $request->validate([
-            'city_number' => 'required|integer|min:1|unique:city_grants,city_number,' . $city_grant->id,
-            'grant_amount' => 'required|integer|min:1',
-            'enabled' => 'required|boolean',
-            'description' => 'nullable|string|max:255',
-            'projects' => 'array',
-            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
-        ]);
-
-        // Convert selected projects to project bits
-        $selectedProjects = $validated['projects'] ?? [];
-        $projectBits = 0;
-        foreach ($selectedProjects as $project) {
-            $projectBits |= PWHelperService::PROJECTS[$project];
-        }
-
-        // Update city grant details
-        $city_grant->update([
-            'city_number' => $validated['city_number'],
-            'grant_amount' => $validated['grant_amount'],
-            'enabled' => $validated['enabled'],
-            'description' => $validated['description'],
-            'requirements' => json_encode([
-                'required_projects' => $selectedProjects,
-                'project_bits' => $projectBits,
-            ]),
-        ]);
-
-        return redirect()->route('admin.grants.city')->with('alert-message', 'City grant updated successfully!')->with(
-            'alert-type',
-            'success'
-        );
-    }
-
-    /**
      * @param Request $request
      * @return RedirectResponse
      */
-    public function createCityGrant(Request $request)
+    public function createGrant(Request $request)
     {
         $validated = $request->validate([
-            'city_number' => 'required|integer|min:1|unique:city_grants,city_number',
-            'grant_amount' => 'required|integer|min:1',
-            'enabled' => 'required|boolean',
-            'description' => 'nullable|string|max:255',
-            'projects' => 'array',
-            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
+            'name' => 'required|string|unique:grants,name',
+            'description' => 'nullable|string',
+            'money' => 'nullable|numeric|min:0',
+            'is_enabled' => 'nullable|in:true,false,1,0,on,off',
+            'is_one_time' => 'nullable|in:true,false,1,0,on,off',
         ]);
 
-        // Convert selected projects to project bits
-        $selectedProjects = $validated['projects'] ?? [];
-        $projectBits = 0;
-        foreach ($selectedProjects as $project) {
-            $projectBits |= PWHelperService::PROJECTS[$project];
+        $grant = new Grants();
+        $grant->name = $request->input('name');
+        $grant->slug = Str::slug($grant->name);
+        $grant->description = $request->input('description');
+        $grant->money = $request->input('money') ?? 0;
+
+        foreach (
+            [
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food'
+            ] as $resource
+        ) {
+            $grant->$resource = $request->input($resource, 0);
         }
 
-        // Create new city grant
-        $cityGrant = CityGrant::create([
-            'city_number' => $validated['city_number'],
-            'grant_amount' => $validated['grant_amount'],
-            'enabled' => $validated['enabled'],
-            'description' => $validated['description'],
-            'requirements' => json_encode([
-                'required_projects' => $selectedProjects,
-                'project_bits' => $projectBits,
-            ]),
-        ]);
+        $grant->is_one_time = filter_var($request->input('is_one_time', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->is_enabled = filter_var($request->input('is_enabled', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->save();
 
-        return redirect()->route('admin.grants.city')->with('alert-message', 'City grant created successfully!')->with(
-            'alert-type',
-            'success'
-        );
+        return redirect()->route('admin.grants')
+            ->with('alert-message', 'Grant created successfully.')
+            ->with('alert-type', 'success');
     }
 
+    /**
+     * @param Grants $grant
+     * @param Request $request
+     * @return RedirectResponse
+     */
+    public function updateGrant(Grants $grant, Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|unique:grants,name,' . $grant->id,
+            'description' => 'nullable|string',
+            'money' => 'nullable|numeric|min:0',
+            'is_enabled' => 'nullable|in:true,false,1,0,on,off',
+            'is_one_time' => 'nullable|in:true,false,1,0,on,off',
+        ]);
+
+        $grant->name = $request->input('name');
+        $grant->slug = Str::slug($grant->name);
+        $grant->description = $request->input('description');
+        $grant->money = $request->input('money') ?? 0;
+
+        foreach (
+            [
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food'
+            ] as $resource
+        ) {
+            $grant->$resource = $request->input($resource, 0);
+        }
+
+        $grant->is_one_time = filter_var($request->input('is_one_time', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->is_enabled = filter_var($request->input('is_enabled', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->save();
+
+        return redirect()->route('admin.grants')
+            ->with('alert-message', 'Grant updated successfully.')
+            ->with('alert-type', 'success');
+    }
+
+    /**
+     * @param GrantApplications $application
+     * @return RedirectResponse
+     */
+    public function approveApplication(GrantApplications $application)
+    {
+        GrantService::approveGrant($application);
+
+        return redirect()->back()
+            ->with('alert-message', 'Grant approved and funds distributed.')
+            ->with('alert-type', 'success');
+    }
+
+    /**
+     * @param GrantApplications $application
+     * @return RedirectResponse
+     */
+    public function denyApplication(GrantApplications $application)
+    {
+        GrantService::denyGrant($application);
+
+        return redirect()->back()
+            ->with('alert-message', 'Grant application denied.')
+            ->with('alert-type', 'success');
+    }
 }

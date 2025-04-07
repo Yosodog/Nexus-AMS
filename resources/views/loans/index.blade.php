@@ -1,3 +1,4 @@
+@php use Carbon\Carbon; @endphp
 @extends('layouts.main')
 
 @section("content")
@@ -14,33 +15,34 @@
                 @csrf
 
                 <label class="label" for="amount">Loan Amount:</label>
-                <input type="number" 
-                       name="amount" 
-                       id="amount" 
-                       min="0.01" 
+                <input type="number"
+                       name="amount"
+                       id="amount"
+                       min="0.01"
                        step="0.01"
                        required
-                       placeholder="Enter loan amount" 
+                       placeholder="Enter loan amount"
                        class="input input-bordered w-full mb-4">
 
                 <label class="label" for="account_id">Select Bank Account:</label>
                 <select name="account_id" id="account_id" class="select select-bordered w-full mb-4">
                     @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }} (Balance:
+                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }}
+                            (Balance:
                             ${{ number_format($account->money, 2) }})
                         </option>
                     @endforeach
                 </select>
 
                 <label class="label" for="term_weeks">Loan Term (Weeks):</label>
-                <input type="number" 
-                       id="term_weeks" 
-                       name="term_weeks" 
-                       min="1" 
-                       max="52" 
+                <input type="number"
+                       id="term_weeks"
+                       name="term_weeks"
+                       min="1"
+                       max="52"
                        step="1"
                        required
-                       placeholder="Enter term length (1-52 weeks)" 
+                       placeholder="Enter term length (1-52 weeks)"
                        class="input input-bordered w-full mb-4">
 
                 <button type="submit" class="btn btn-primary w-full">
@@ -66,15 +68,15 @@
         }
 
         // Ensure the first tab is active on page load
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             document.querySelector(".tab-active").click();
         });
 
         // Add event listeners to enforce input validation
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Loan amount validation
             const amountInput = document.getElementById('amount');
-            amountInput.addEventListener('change', function() {
+            amountInput.addEventListener('change', function () {
                 let value = parseFloat(this.value);
                 if (!isNaN(value) && value < 0.01) {
                     this.value = 0.01;
@@ -83,7 +85,7 @@
 
             // Term weeks validation
             const termInput = document.getElementById('term_weeks');
-            termInput.addEventListener('change', function() {
+            termInput.addEventListener('change', function () {
                 if (this.value !== '') {  // Only validate if there's a value
                     let value = parseInt(this.value);
                     if (!isNaN(value)) {
@@ -105,7 +107,8 @@
                 <label class="label">Select Loan:</label>
                 <select name="loan_id" id="repayment_loan_id" class="select select-bordered w-full mb-4">
                     @foreach ($activeLoans as $loan)
-                        <option value="{{ $loan->id }}" data-balance="{{ $loan->remaining_balance }}">Loan #{{ $loan->id }} - Balance:
+                        <option value="{{ $loan->id }}" data-balance="{{ $loan->remaining_balance }}">Loan
+                            #{{ $loan->id }} - Balance:
                             ${{ number_format($loan->remaining_balance, 2) }}</option>
                     @endforeach
                 </select>
@@ -113,19 +116,20 @@
                 <label class="label" for="repayment_account_id">Select Payment Account:</label>
                 <select name="account_id" id="repayment_account_id" class="select select-bordered w-full mb-4">
                     @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }} (Balance:
+                        <option value="{{ $account->id }}" data-balance="{{ $account->money }}">{{ $account->name }}
+                            (Balance:
                             ${{ number_format($account->money, 2) }})
                         </option>
                     @endforeach
                 </select>
 
                 <label class="label">Payment Amount:</label>
-                <input type="number" 
-                       name="amount" 
+                <input type="number"
+                       name="amount"
                        id="repayment_amount"
-                       min="0.01" 
+                       min="0.01"
                        step="0.01"
-                       required 
+                       required
                        placeholder="Enter amount"
                        class="input input-bordered w-full mb-4">
 
@@ -134,7 +138,7 @@
         </x-utils.card>
 
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 const loanSelect = document.getElementById('repayment_loan_id');
                 const accountSelect = document.getElementById('repayment_account_id');
                 const paymentInput = document.getElementById('repayment_amount');
@@ -144,7 +148,7 @@
                     const selectedAccount = accountSelect.options[accountSelect.selectedIndex];
                     const loanBalance = parseFloat(selectedLoan.dataset.balance);
                     const accountBalance = parseFloat(selectedAccount.dataset.balance);
-                    
+
                     // Return the smaller of the two balances
                     return Math.min(loanBalance, accountBalance);
                 }
@@ -152,7 +156,7 @@
                 function validateAndUpdatePayment() {
                     const maxAllowed = getMaxAllowedPayment();
                     let value = parseFloat(paymentInput.value);
-                    
+
                     // Update input constraints
                     paymentInput.max = maxAllowed;
                     paymentInput.min = 0.01;
@@ -205,7 +209,8 @@
                             <td>${{ number_format($loan->remaining_balance, 2) }}</td>
                             <td>{{ number_format($loan->interest_rate, 2) }}%</td>
                             <td>{{ $loan->term_weeks }}</td>
-                            <td><a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a></td>
+                            <td><a href="{{ route('accounts.view', $loan->account->id) }}"
+                                   class="link link-primary">{{ $loan->account->name }}</a></td>
                             <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
                             <td>${{ number_format($loan->next_payment_due, 2) }}</td>
                         </tr>
@@ -233,8 +238,11 @@
                                                         <td>${{ number_format($payment->amount, 2) }}</td>
                                                         <td>${{ number_format($payment->principal_paid, 2) }}</td>
                                                         <td>${{ number_format($payment->interest_paid, 2) }}</td>
-                                                        <td>{{ \Carbon\Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
-                                                        <td><a href="{{ route('accounts.view', $payment->account->id) }}" class="link link-primary">{{ $payment->account->name }}</a></td>
+                                                        <td>{{ Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
+                                                        <td>
+                                                            <a href="{{ route('accounts.view', $payment->account->id) }}"
+                                                               class="link link-primary">{{ $payment->account->name }}</a>
+                                                        </td>
                                                     </tr>
                                                 @endforeach
                                                 </tbody>
@@ -275,7 +283,8 @@
                                 <td>{{ $loan->term_weeks }}</td>
                                 <td>
                                     @if($loan->account)
-                                        <a href="{{ route('accounts.view', $loan->account->id) }}" class="link link-primary">{{ $loan->account->name }}</a>
+                                        <a href="{{ route('accounts.view', $loan->account->id) }}"
+                                           class="link link-primary">{{ $loan->account->name }}</a>
                                     @else
                                         N/A
                                     @endif
@@ -380,7 +389,8 @@
             <p>Loan payments are scheduled weekly and follow this structure:</p>
             <ul class="list-disc ml-5">
                 <li><strong>First payment is due 7 days after approval.</strong></li>
-                <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.</li>
+                <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.
+                </li>
                 <li>If an early payment is made, the next minimum payment is reduced.</li>
                 <li>Missed payments may result in late fees and increased interest.</li>
             </ul>

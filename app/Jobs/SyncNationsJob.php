@@ -105,6 +105,19 @@ class SyncNationsJob implements ShouldQueue
     }
 
     /**
+     * Extract nation core data from a nation object.
+     *
+     * @param mixed $nation
+     * @return array
+     */
+    private function extractNationData($nation): array
+    {
+        $keys = $this->getNationKeys();
+        $keysFlipped = array_flip($keys);
+        return array_intersect_key((array)$nation, $keysFlipped);
+    }
+
+    /**
      * Get the list of keys for nation data extraction.
      *
      * @return array
@@ -154,6 +167,23 @@ class SyncNationsJob implements ShouldQueue
     }
 
     /**
+     * Extract resource data from a nation object.
+     *
+     * @param mixed $nation
+     * @return array|null Returns null if no monetary data is available.
+     */
+    private function extractResourceData($nation): ?array
+    {
+        if (is_null($nation->money)) {
+            return null;
+        }
+        $keys = $this->getResourceKeys();
+        $keysFlipped = array_flip($keys);
+        $data = array_intersect_key((array)$nation, $keysFlipped);
+        return array_merge($data, ['nation_id' => $nation->id]);
+    }
+
+    /**
      * Get the list of keys for resource data extraction.
      *
      * @return array
@@ -175,6 +205,20 @@ class SyncNationsJob implements ShouldQueue
             'food',
             'credits'
         ];
+    }
+
+    /**
+     * Extract military data from a nation object.
+     *
+     * @param mixed $nation
+     * @return array
+     */
+    private function extractMilitaryData($nation): array
+    {
+        $keys = $this->getMilitaryKeys();
+        $keysFlipped = array_flip($keys);
+        $data = array_intersect_key((array)$nation, $keysFlipped);
+        return array_merge($data, ['nation_id' => $nation->id]);
     }
 
     /**
@@ -215,6 +259,26 @@ class SyncNationsJob implements ShouldQueue
             'spy_kills',
             'spy_attacks'
         ];
+    }
+
+    /**
+     * Extract cities data from a nation object.
+     *
+     * @param mixed $nation
+     * @return array
+     */
+    private function extractCitiesData($nation): array
+    {
+        $cities = [];
+        if (empty($nation->cities)) {
+            return $cities;
+        }
+        $keys = $this->getCityKeys();
+        $keysFlipped = array_flip($keys);
+        foreach ($nation->cities as $city) {
+            $cities[] = array_intersect_key((array)$city, $keysFlipped);
+        }
+        return $cities;
     }
 
     /**
@@ -260,70 +324,6 @@ class SyncNationsJob implements ShouldQueue
             'hangar',
             'drydock'
         ];
-    }
-
-    /**
-     * Extract nation core data from a nation object.
-     *
-     * @param mixed $nation
-     * @return array
-     */
-    private function extractNationData($nation): array
-    {
-        $keys = $this->getNationKeys();
-        $keysFlipped = array_flip($keys);
-        return array_intersect_key((array)$nation, $keysFlipped);
-    }
-
-    /**
-     * Extract resource data from a nation object.
-     *
-     * @param mixed $nation
-     * @return array|null Returns null if no monetary data is available.
-     */
-    private function extractResourceData($nation): ?array
-    {
-        if (is_null($nation->money)) {
-            return null;
-        }
-        $keys = $this->getResourceKeys();
-        $keysFlipped = array_flip($keys);
-        $data = array_intersect_key((array)$nation, $keysFlipped);
-        return array_merge($data, ['nation_id' => $nation->id]);
-    }
-
-    /**
-     * Extract military data from a nation object.
-     *
-     * @param mixed $nation
-     * @return array
-     */
-    private function extractMilitaryData($nation): array
-    {
-        $keys = $this->getMilitaryKeys();
-        $keysFlipped = array_flip($keys);
-        $data = array_intersect_key((array)$nation, $keysFlipped);
-        return array_merge($data, ['nation_id' => $nation->id]);
-    }
-
-    /**
-     * Extract cities data from a nation object.
-     *
-     * @param mixed $nation
-     * @return array
-     */
-    private function extractCitiesData($nation): array
-    {
-        $cities = [];
-        if (empty($nation->cities)) {
-            return $cities;
-        }
-        $keys = $this->getCityKeys();
-        $keysFlipped = array_flip($keys);
-        foreach ($nation->cities as $city) {
-            $cities[] = array_intersect_key((array)$city, $keysFlipped);
-        }
-        return $cities;
     }
 
     /**

@@ -2,13 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Taxes;
-use App\Services\SettingService;
 use App\Services\TaxService;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class CollectTaxes extends Command
 {

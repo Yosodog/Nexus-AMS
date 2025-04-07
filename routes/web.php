@@ -3,10 +3,12 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\GrantController;
+use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\LoansController;
-use App\Http\Controllers\CityGrantController;
+use App\Http\Controllers\CityGrantController as UserCityGrantController;
+use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Middleware\AdminMiddleware;
@@ -45,16 +47,22 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
 
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
-    // City grants
-    Route::get("/grants/city", [CityGrantController::class, 'index'])->name("grants.city");
-    Route::post("/grants/city", [CityGrantController::class, 'request'])->name(
-        "grants.city.request"
-    );
-
     // Loans
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
+
+    // Grants
+    Route::prefix('grants')->middleware(['auth'])->group(function () {
+        // City grants
+        Route::get("/city", [UserCityGrantController::class, 'index'])->name("grants.city");
+        Route::post("/city", [UserCityGrantController::class, 'request'])->name(
+            "grants.city.request"
+        );
+
+        Route::get('{grant:slug}', [UserGrantController::class, 'show'])->name('grants.show_grants');
+        Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply');
+    });
 });
 
 Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,])
@@ -71,23 +79,32 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         );
 
         // City Grants
-        Route::get("/grants/city", [GrantController::class, 'cityGrants'])->name(
+        Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
             "admin.grants.city"
         );
-        Route::post('/grants/city/{city_grant}/update', [GrantController::class, 'updateCityGrant'])
+        Route::post('/grants/city/{city_grant}/update', [CityGrantController::class, 'updateCityGrant'])
             ->name("admin.grants.city.update");
 
-        Route::post('/grants/city/create', [GrantController::class, 'createCityGrant'])->name(
+        Route::post('/grants/city/create', [CityGrantController::class, 'createCityGrant'])->name(
             "admin.grants.city.create"
         );
 
-        Route::post("/grants/city/approve/{CityGrantRequest}", [GrantController::class, 'approveCityGrant'])->name(
+        Route::post("/grants/city/approve/{CityGrantRequest}", [CityGrantController::class, 'approveCityGrant'])->name(
             "admin.grants.city.approve"
         );
 
-        Route::post("/grants/city/deny/{CityGrantRequest}", [GrantController::class, 'denyCityGrant'])->name(
+        Route::post("/grants/city/deny/{CityGrantRequest}", [CityGrantController::class, 'denyCityGrant'])->name(
             "admin.grants.city.deny"
         );
+
+        // Grants
+        Route::get("/grants", [AdminGrantController::class, 'grants'])->name("admin.grants");
+        Route::post("/grants/create", [AdminGrantController::class, 'createGrant'])->name("admin.grants.create");
+        Route::post("/grants/{grant}/update", [AdminGrantController::class, 'updateGrant'])->name("admin.grants.update");
+        Route::post("/grants/{grant}/toggle", [AdminGrantController::class, 'toggleGrant'])->name("admin.grants.toggle");
+
+        Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name("admin.grants.approve");
+        Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name("admin.grants.deny");
 
         // Loans
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");

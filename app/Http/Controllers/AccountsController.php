@@ -55,8 +55,8 @@ class AccountsController extends Controller
     {
         // Check if this is a loan repayment
         if (str_starts_with($request->input('to'), 'loan_')) {
-            $loanId = (int) substr($request->input('to'), 5);
-            
+            $loanId = (int)substr($request->input('to'), 5);
+
             // First validate basic requirements
             $request->validate([
                 'from' => 'required|integer|exists:accounts,id',
@@ -84,7 +84,12 @@ class AccountsController extends Controller
                 // Validate payment amount doesn't exceed remaining balance
                 if ($request->input('money') > $loan->remaining_balance) {
                     throw ValidationException::withMessages([
-                        'money' => ['Payment amount cannot exceed the remaining loan balance of $' . number_format($loan->remaining_balance, 2)]
+                        'money' => [
+                            'Payment amount cannot exceed the remaining loan balance of $' . number_format(
+                                $loan->remaining_balance,
+                                2
+                            )
+                        ]
                     ]);
                 }
 
@@ -168,7 +173,12 @@ class AccountsController extends Controller
             foreach ($transfer as $resource => $amount) {
                 if ($amount > $fromAccount->{$resource}) {
                     throw ValidationException::withMessages([
-                        $resource => ["Insufficient {$resource} in source account. Available: " . number_format($fromAccount->{$resource}, 2)]
+                        $resource => [
+                            "Insufficient {$resource} in source account. Available: " . number_format(
+                                $fromAccount->{$resource},
+                                2
+                            )
+                        ]
                     ]);
                 }
             }
@@ -261,7 +271,7 @@ class AccountsController extends Controller
                 'max:255',
                 Rule::unique('accounts')->where(function ($query) {
                     return $query->where('nation_id', Auth::user()->nation_id)
-                                ->whereNull('deleted_at');
+                        ->whereNull('deleted_at');
                 })
             ],
         ]);

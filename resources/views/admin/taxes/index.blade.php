@@ -1,3 +1,4 @@
+@php use Carbon\Carbon; @endphp
 @extends('layouts.admin')
 
 @section("content")
@@ -69,7 +70,7 @@
                                 <tbody>
                                 @foreach ($daily as $entry)
                                     <tr>
-                                        <td>{{ \Carbon\Carbon::parse($entry->day)->toFormattedDateString() }}</td>
+                                        <td>{{ Carbon::parse($entry->day)->toFormattedDateString() }}</td>
                                         <td>{{ number_format($entry->total, 2) }}</td>
                                     </tr>
                                 @endforeach
