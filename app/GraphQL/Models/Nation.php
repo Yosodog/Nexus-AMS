@@ -295,4 +295,12 @@ class Nation
         $this->total_infrastructure_destroyed = isset($json->total_infrastructure_destroyed) ? (float)$json->total_infrastructure_destroyed : null;
         $this->total_infrastructure_lost = isset($json->total_infrastructure_lost) ? (float)$json->total_infrastructure_lost : null;
     }
+
+    /**
+     * @return bool
+     */
+    public function isApplicant(): bool
+    {
+        return $this->alliance_position == "APPLICANT";
+    }
 }

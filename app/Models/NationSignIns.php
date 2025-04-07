@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class NationSignIns extends Model
 {
     /**
-     * @var string 
+     * @var string
      */
     public $table = "nation_sign_ins";
 
