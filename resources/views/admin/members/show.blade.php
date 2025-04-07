@@ -3,7 +3,9 @@
 @section('content')
     <div class="app-content-header">
         <div class="container-fluid">
-            <h3 class="mb-0">Nation Overview: <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank">{{ $nation->leader_name }}</a> (ID: {{ $nation->id }})</h3>
+            <h3 class="mb-0">Nation Overview: <a href="https://politicsandwar.com/nation/id={{ $nation->id }}"
+                                                 target="_blank">{{ $nation->leader_name }}</a> (ID: {{ $nation->id }})
+            </h3>
             <p class="text-muted">Last updated: {{ $lastUpdatedAt ? $lastUpdatedAt->diffForHumans() : 'Unknown' }}</p>
         </div>
     </div>
@@ -253,7 +255,7 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {beginAtZero: true}
                 }
             }
         });
@@ -278,10 +280,10 @@
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { position: 'bottom' }
+                    legend: {position: 'bottom'}
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {beginAtZero: true}
                 }
             }
         });

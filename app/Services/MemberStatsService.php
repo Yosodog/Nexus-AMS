@@ -8,6 +8,7 @@ use App\Models\Loans;
 use App\Models\Nations;
 use App\Models\NationSignIns;
 use App\Models\Taxes;
+use Carbon\Carbon;
 
 class MemberStatsService
 {
@@ -152,7 +153,7 @@ class MemberStatsService
             ->where('date', '>=', now()->subDays(365))
             ->orderBy('date')
             ->get()
-            ->groupBy(fn ($tax) => \Carbon\Carbon::parse($tax->date)->format('Y-m-d'))
+            ->groupBy(fn($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
             ->map(function ($group, $date) {
                 return [
                     'date' => $date,
@@ -174,7 +175,7 @@ class MemberStatsService
             ->where('date', '>=', now()->subDays(7))
             ->orderBy('date')
             ->get()
-            ->groupBy(fn ($tax) => \Carbon\Carbon::parse($tax->date)->format('Y-m-d'))
+            ->groupBy(fn($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
             ->map(function ($group, $date) {
                 return [
                     'date' => $date,
@@ -189,7 +190,7 @@ class MemberStatsService
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn($row) => [
                 'date' => $row->created_at->format('Y-m-d'),
                 'money' => $row->money,
                 'steel' => $row->steel,

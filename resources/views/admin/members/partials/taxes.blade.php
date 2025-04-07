@@ -1,3 +1,4 @@
+@php use Carbon\Carbon; @endphp
 @if ($taxes->isEmpty())
     <p class="text-muted">No recent taxes paid.</p>
 @else
@@ -14,7 +15,7 @@
         <tbody>
         @foreach ($taxes as $tax)
             <tr>
-                <td>{{ \Carbon\Carbon::parse($tax['date'])->format('M d, Y') }}</td>
+                <td>{{ Carbon::parse($tax['date'])->format('M d, Y') }}</td>
                 <td>${{ number_format($tax['money']) }}</td>
                 <td>{{ number_format($tax['steel']) }}</td>
                 <td>{{ number_format($tax['munitions']) }}</td>
