@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Nations;
+use App\Services\NationMatchService;
+use Illuminate\Http\Request;
+
+class CounterFinderController extends Controller
+{
+    /**
+     * @param Request $request
+     * @param NationMatchService $matchService
+     * @param int|null $nation
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|\Illuminate\Http\RedirectResponse|object
+     */
+    public function index(Request $request, NationMatchService $matchService, ?int $nation = null)
+    {
+        $targetNation = null;
+        $nations = collect();
+
+        if ($nation !== null) {
+            $targetNation = Nations::with('military')->find($nation);
+
+            if (!$targetNation) {
+                return redirect()
+                    ->route('defense.counters')
+                    ->with(['alert-message' => 'Target nation not found.', 'alert-type' => 'error']);
+            }
+
+            $ourNations = Nations::with('military')
+                ->where('alliance_id', env('PW_ALLIANCE_ID'))
+                ->where('alliance_position', '!=', 'APPLICANT')
+                ->where("vacation_mode_turns", 0)
+                ->get();
+
+            $nations = $ourNations->map(function ($nation) use ($matchService, $targetNation) {
+                if ($matchService->canAttack($nation, $targetNation)) {
+                    $nation->match_score = $matchService->score($nation, $targetNation);
+                    $nation->in_range = true;
+                } else {
+                    $nation->match_score = null;
+                    $nation->in_range = false;
+                }
+                return $nation;
+            })->sortBy(fn($n) => !$n->in_range)
+                ->sortByDesc(fn($n) => $n->match_score)
+                ->values();
+        } else {
+            // No target provided, just list all of our nations
+            $nations = Nations::with('military')
+                ->where('alliance_id', env('PW_ALLIANCE_ID'))
+                ->get();
+        }
+
+        return view('defense.counters', [
+            'target' => $targetNation,
+            'nations' => $nations,
+        ]);
+    }
+}

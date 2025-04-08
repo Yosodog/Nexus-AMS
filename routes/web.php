@@ -2,13 +2,13 @@
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CityGrantController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
-use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Middleware\AdminMiddleware;
@@ -51,6 +51,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
+
+    /***** Defense Routes *****/
+    // Counters
+    Route::get('/defense/counters/{nation?}', [\App\Http\Controllers\CounterFinderController::class, 'index'])
+        ->name('defense.counters');
 
     // Grants
     Route::prefix('grants')->middleware(['auth'])->group(function () {
