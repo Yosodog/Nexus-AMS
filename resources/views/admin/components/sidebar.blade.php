@@ -9,7 +9,7 @@
             <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{{ route('admin.dashboard') }}" class="nav-link">
-                        <i class="nav-icon bi bi-speedometer"></i>
+                        <i class="bi bi-speedometer"></i>
                         <p>Dashboard</p>
                     </a>
                 </li>
@@ -19,6 +19,7 @@
                         <p>Members</p>
                     </a>
                 </li>
+                <li class="nav-header">Economics</li>
                 <li class="nav-item">
                     <a href="{{ route('admin.accounts.dashboard') }}" class="nav-link">
                         <i class="bi bi-bank"></i>
@@ -49,10 +50,24 @@
                         <p>Taxes</p>
                     </a>
                 </li>
+                <li class="nav-header">Defense</li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.wars') }}" class="nav-link">
+                        <i class="bi bi-speedometer"></i>
+                        <p>Wars</p>
+                    </a>
+                </li>
+                <li class="nav-header">System</li>
                 <li class="nav-item">
                     <a href="{{ url("/telescope") }}" class="nav-link">
                         <i class="bi bi-bug-fill"></i>
                         <p>Telescope</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url("/pulse") }}" class="nav-link">
+                        <i class="bi bi-activity"></i>
+                        <p>Pulse</p>
                     </a>
                 </li>
             </ul>
