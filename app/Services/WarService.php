@@ -30,6 +30,19 @@ class WarService
     }
 
     /**
+     * @return Collection
+     */
+    public function getWarsLast30Days(): Collection
+    {
+        return Wars::with(['attacker.alliance', 'defender.alliance'])
+            ->where('date', '>=', now()->subDays(30))
+            ->where(function ($query) {
+                $this->whereOurAllianceEngagedProperly($query);
+            })
+            ->get();
+    }
+
+    /**
      * @return array
      */
     public function getStats(): array
@@ -144,5 +157,87 @@ class WarService
             $q->where('def_alliance_id', $this->ourAllianceId)
                 ->where('def_alliance_position', '!=', 'APPLICANT');
         });
+    }
+
+    /**
+     * @return array[]
+     */
+    public function getResourceUsageSummary(): array
+    {
+        $wars = $this->getWarsLast30Days();
+
+        return [
+            'gasoline' => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)],
+            'munitions' => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)],
+            'steel'     => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)],
+            'aluminum'  => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used)],
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function getDamageDealtVsTaken(): array
+    {
+        $wars = $this->getWarsLast30Days();
+
+        $metrics = [
+            'infra_destroyed_value',
+            'soldiers_killed',
+            'tanks_killed',
+            'aircraft_killed',
+            'ships_killed',
+        ];
+
+        $result = [];
+
+        foreach ($metrics as $metric) {
+            [$attKey, $defKey] = ["att_{$metric}", "def_{$metric}"];
+            $result[$metric] = [
+                'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey),
+                'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$defKey : $w->$attKey),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAggressorDefenderSplit(): array
+    {
+        $wars = $this->getWarsLast30Days();
+
+        $aggressor = $wars->filter(fn($w) => $this->isUsAttacker($w))->count();
+        $defender = $wars->count() - $aggressor;
+
+        return [
+            'Aggressor' => $aggressor,
+            'Defender' => $defender,
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function getActiveWarsByNation(): array
+    {
+        $wars = $this->getWarsLast30Days();
+
+        $nationCounts = [];
+
+        foreach ($wars as $war) {
+            $nation = $this->isUsAttacker($war) ? $war->attacker : $war->defender;
+
+            if (!$nation) continue;
+
+            $name = $nation->leader_name ?? 'Unknown';
+            $nationCounts[$name] = ($nationCounts[$name] ?? 0) + 1;
+        }
+
+        arsort($nationCounts);
+
+        return $nationCounts;
     }
 }

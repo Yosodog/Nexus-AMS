@@ -57,6 +57,54 @@
                 </div>
             </div>
         </div>
+
+    </div>
+    <div class="row mt-4">
+        {{-- Resource Usage Breakdown --}}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Resource Usage Breakdown</div>
+                <div class="card-body">
+                    <canvas id="resourceUsageChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {{-- Aggressor vs Defender --}}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Aggressor vs Defender</div>
+                <div class="card-body">
+                    <canvas id="aggroDefenderChart" style="max-height: 335px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Damage Dealt vs Taken --}}
+    <div class="row mt-4">
+        @foreach($damageBreakdown as $type => $data)
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header">{{ ucfirst(str_replace('_', ' ', $type)) }}: Dealt vs Taken</div>
+                    <div class="card-body">
+                        <canvas id="damageChart_{{ $type }}"></canvas>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Active Wars by Member --}}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">Active Wars by Member</div>
+                <div class="card-body">
+                    <canvas id="warsByNationChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- War Table --}}
@@ -161,6 +209,75 @@
                     data: {!! json_encode(array_values($topNations)) !!},
                     borderWidth: 1
                 }]
+            }
+        });
+
+        // Resource Usage Breakdown
+        new Chart(document.getElementById('resourceUsageChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_keys($resourceUsage)) !!},
+                datasets: [{
+                    label: 'Used',
+                    data: {!! json_encode(array_map(fn($r) => $r['used'], $resourceUsage)) !!},
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Aggressor vs Defender
+        new Chart(document.getElementById('aggroDefenderChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: {!! json_encode(array_keys($aggroDefenderSplit)) !!},
+                datasets: [{
+                    data: {!! json_encode(array_values($aggroDefenderSplit)) !!},
+                }]
+            }
+        });
+
+        // Damage Dealt vs Taken
+        @foreach($damageBreakdown as $type => $data)
+        new Chart(document.getElementById('damageChart_{{ $type }}').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Dealt', 'Taken'],
+                datasets: [{
+                    label: '{{ ucfirst(str_replace('_', ' ', $type)) }}',
+                    data: [{{ $data['dealt'] }}, {{ $data['taken'] }}],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+        @endforeach
+
+        // Active Wars by Member
+        new Chart(document.getElementById('warsByNationChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_keys($warsByNation)) !!},
+                datasets: [{
+                    label: 'Active Wars',
+                    data: {!! json_encode(array_values($warsByNation)) !!},
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true }
+                }
             }
         });
     </script>

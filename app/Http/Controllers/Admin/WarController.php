@@ -21,6 +21,10 @@ class WarController extends Controller
             'warTypeDistribution' => $warService->getWarTypeDistribution(),
             'warStartHistory' => $warService->getWarStartHistory(),
             'topNations' => $warService->getTopNationsWithActiveWars(),
+            'resourceUsage' => $warService->getResourceUsageSummary(),
+            'damageBreakdown' => $warService->getDamageDealtVsTaken(),
+            'aggroDefenderSplit' => $warService->getAggressorDefenderSplit(),
+            'warsByNation' => $warService->getActiveWarsByNation(),
         ]);
     }
 }
