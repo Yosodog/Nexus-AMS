@@ -131,4 +131,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         // Members
         Route::get('/members', [\App\Http\Controllers\Admin\MembersController::class, 'index'])->name('admin.members');
         Route::get('/members/{Nations}', [\App\Http\Controllers\Admin\MembersController::class, 'show'])->name('admin.members.show');
+
+        // Wars
+        Route::get('/wars', [\App\Http\Controllers\Admin\WarController::class, 'index'])->name('admin.wars');
     });

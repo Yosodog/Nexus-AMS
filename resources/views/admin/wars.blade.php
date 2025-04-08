@@ -1,0 +1,167 @@
+@extends('layouts.admin')
+
+@section("content")
+    <div class="app-content-header">
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col-sm-6">
+                    <h3 class="mb-0">Ongoing Wars</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Info Boxes --}}
+    <div class="row">
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-fire" bgColor="text-bg-danger" title="Ongoing Wars"
+                              :value="$stats['total_ongoing']"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-calendar-week" bgColor="text-bg-info" title="Wars Last 7 Days"
+                              :value="$stats['wars_last_7_days']"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-clock-history" bgColor="text-bg-warning" title="Avg Duration (days)"
+                              :value="$stats['avg_duration']"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-cash-stack" bgColor="text-bg-success" title="Looted (7 Days)"
+                              :value="'$' . number_format($stats['total_looted'], 2)"/>
+        </div>
+    </div>
+
+    {{-- Charts --}}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Wars Started (Last 30 Days)</div>
+                <div class="card-body">
+                    <canvas id="warsLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">War Type Distribution</div>
+                <div class="card-body">
+                    <canvas id="warTypePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">Top Nations w/ Active Wars</div>
+                <div class="card-body">
+                    <canvas id="topNationsBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- War Table --}}
+    <div class="card mt-4">
+        <div class="card-header">Active Wars</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Attacker</th>
+                    <th>Defender</th>
+                    <th>Att. Points</th>
+                    <th>Def. Points</th>
+                    <th>Att. Resistance</th>
+                    <th>Def. Resistance</th>
+                    <th>Turns Left</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ($wars as $war)
+                    @php
+                        $isUsAttacker = $war->att_alliance_id == env("PW_ALLIANCE_ID");
+                        $isUsDefender = $war->def_alliance_id == env("PW_ALLIANCE_ID");
+                        $ourResistance = $isUsAttacker ? $war->att_resistance : ($isUsDefender ? $war->def_resistance : null);
+                    @endphp
+                    <tr @if($ourResistance !== null && $ourResistance < 20) class="table-danger" @endif>
+                        <td>
+                            <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank">
+                                {{ $war->id }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank">
+                                {{ $war->attacker->leader_name ?? 'Unknown' }}
+                            </a>
+                            @if($war->attacker && $war->attacker->alliance)
+                                (<a href="https://politicsandwar.com/alliance/id={{ $war->attacker->alliance->id }}" target="_blank">
+                                    {{ $war->attacker->alliance->name }}
+                                </a>)
+                            @endif
+                        </td>
+                        <td>
+                            <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank">
+                                {{ $war->defender->leader_name ?? 'Unknown' }}
+                            </a>
+                            @if($war->defender && $war->defender->alliance)
+                                (<a href="https://politicsandwar.com/alliance/id={{ $war->defender->alliance->id }}" target="_blank">
+                                    {{ $war->defender->alliance->name }}
+                                </a>)
+                            @endif
+                        </td>
+                        <td>{{ $war->att_points }}</td>
+                        <td>{{ $war->def_points }}</td>
+                        <td>{{ $war->att_resistance }}</td>
+                        <td>{{ $war->def_resistance }}</td>
+                        <td>{{ $war->turns_left }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+@endsection
+
+@section("scripts")
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const warsLineChartCtx = document.getElementById('warsLineChart').getContext('2d');
+        new Chart(warsLineChartCtx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode(array_keys($warStartHistory)) !!},
+                datasets: [{
+                    label: 'Wars Started',
+                    data: {!! json_encode(array_values($warStartHistory)) !!},
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }]
+            }
+        });
+
+        const warTypePieCtx = document.getElementById('warTypePieChart').getContext('2d');
+        new Chart(warTypePieCtx, {
+            type: 'pie',
+            data: {
+                labels: {!! json_encode(array_keys($warTypeDistribution)) !!},
+                datasets: [{
+                    data: {!! json_encode(array_values($warTypeDistribution)) !!},
+                }]
+            }
+        });
+
+        const topNationsCtx = document.getElementById('topNationsBarChart').getContext('2d');
+        new Chart(topNationsCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_keys($topNations)) !!},
+                datasets: [{
+                    label: 'Active Wars',
+                    data: {!! json_encode(array_values($topNations)) !!},
+                    borderWidth: 1
+                }]
+            }
+        });
+    </script>
+@endsection
