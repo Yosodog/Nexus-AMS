@@ -8,6 +8,8 @@ Schedule::command('sync:nations')->twiceDailyAt(0, 12, 15)->runInBackground()
     ->withoutOverlapping(10);
 Schedule::command('sync:alliances')->twiceDailyAt(0, 12, 15)->runInBackground()
     ->withoutOverlapping(10);
+Schedule::command('sync:wars')->hourlyAt(10)->runInBackground()
+    ->withoutOverlapping(10);
 
 // Deposits
 Schedule::command(ProcessDeposits::class)->everyMinute()->runInBackground();
