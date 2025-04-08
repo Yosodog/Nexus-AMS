@@ -11,18 +11,15 @@ class Wars extends Model
     protected $table = 'wars';
     protected $guarded = [];
 
-    public static function updateFromAPI(War $war): Wars
+    public static function updateFromAPI(War|array|\stdClass $war): Wars
     {
-        $date = isset($war->date) ? Carbon::parse($war->date)->toDateTimeString() : null;
-        $endDate = isset($war->end_date) ? Carbon::parse($war->end_date)->toDateTimeString() : null;
+        if ($war instanceof War || $war instanceof \stdClass) {
+            $war = (array)$war;
+        }
 
-        $data = collect((array) $war)
-            ->except(['date', 'end_date', '__typename'])
-            ->toArray();
+        $war['date'] = isset($war['date']) ? Carbon::parse($war['date'])->toDateTimeString() : null;
+        $war['end_date'] = isset($war['end_date']) ? Carbon::parse($war['end_date'])->toDateTimeString() : null;
 
-        $data['date'] = $date;
-        $data['end_date'] = $endDate;
-
-        return self::updateOrCreate(['id' => $war->id], $data);
+        return self::updateOrCreate(['id' => $war['id']], collect($war)->except(['__typename'])->toArray());
     }
 }

@@ -9,9 +9,11 @@ use App\Jobs\CreateNationJob;
 use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
+use App\Jobs\UpdateWarJob;
 use App\Models\Alliances;
 use App\Models\Cities;
 use App\Models\Nations;
+use App\Models\Wars;
 use App\Services\AllianceQueryService;
 use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
@@ -257,5 +259,80 @@ class SubController extends Controller
         }
 
         return response()->json(['message' => 'Alliance deleted successfully']);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function createWar(Request $request): JsonResponse
+    {
+        $warCreates = $request->json()->all();
+
+        if (!is_array($warCreates)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($warCreates['id'])) {
+            $warCreates = [$warCreates];
+        }
+
+        foreach ($warCreates as $create) {
+            // If it's not a war involving our alliance, then skip
+            if ($create['att_alliance_id'] == env("PW_ALLIANCE_ID") || $create['def_alliance_id'] == env(
+                    "PW_ALLIANCE_ID"
+                )) {
+                Wars::updateFromAPI((object)$create);
+            }
+        }
+
+        return response()->json(['message' => 'War created successfully']);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateWar(Request $request): JsonResponse
+    {
+        $warUpdates = $request->json()->all();
+
+        if (!is_array($warUpdates)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($warUpdates['id'])) {
+            $warUpdates = [$warUpdates];
+        }
+
+        UpdateWarJob::dispatch($warUpdates);
+
+        return response()->json(['message' => 'War update(s) queued for processing']);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function deleteWar(Request $request): JsonResponse
+    {
+        $warDeletes = $request->json()->all();
+
+        if (!is_array($warDeletes)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($warDeletes['id'])) {
+            $warDeletes = [$warDeletes];
+        }
+
+        foreach ($warDeletes as $del) {
+            $war = Wars::find($del['id']);
+            if ($war) {
+                $war->delete();
+            }
+        }
+
+        return response()->json(['message' => 'War(s) deleted successfully']);
     }
 }
