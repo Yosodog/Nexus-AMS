@@ -88,13 +88,7 @@ class GraphQLQueryBuilder
         if (!empty($this->arguments)) {
             $args = [];
             foreach ($this->arguments as $key => $value) {
-                if (is_string($value)) {
-                    $args[] = "{$key}: \"{$value}\"";
-                } elseif (is_array($value)) {
-                    $args[] = "{$key}: " . json_encode($value);
-                } else {
-                    $args[] = "{$key}: {$value}";
-                }
+                $args[] = "{$key}: " . $this->formatGraphQLValue($value);
             }
             $query .= '(' . implode(', ', $args) . ')';
         }
@@ -111,6 +105,21 @@ class GraphQLQueryBuilder
         }
 
         return "{$queryType} { {$query} }";
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    private function formatGraphQLValue(mixed $value): string
+    {
+        return match (true) {
+            is_bool($value) => $value ? 'true' : 'false',
+            is_string($value) => "\"{$value}\"",
+            is_array($value) => '[' . implode(', ', array_map(fn($v) => $this->formatGraphQLValue($v), $value)) . ']',
+            is_null($value) => 'null',
+            default => (string)$value,
+        };
     }
 
     /**
