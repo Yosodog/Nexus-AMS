@@ -37,6 +37,12 @@
                             </ul>
                         </li>
                         <li><a href="{{ route("loans.index") }}">Loans</a></li>
+                        <li>
+                            <a>Defense</a>
+                            <ul class="p-2">
+                                <li><a href="{{ route("defense.counters") }}">Counter Finder</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 @else
                     <ul
@@ -71,6 +77,17 @@
                         </details>
                     </li>
                     <li><a href="{{ route("loans.index") }}">Loans</a></li>
+                    <li>
+                        <details class="relative">
+                            <summary
+                                    class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                Defense
+                            </summary>
+                            <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[1]">
+                                <li><a href="{{ route("defense.counters") }}">Counter Finder</a></li>
+                            </ul>
+                        </details>
+                    </li>
                 </ul>
             @else
                 <ul class="menu menu-horizontal px-1">

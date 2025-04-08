@@ -41,6 +41,13 @@
                 <li class="nav-item d-none d-md-block">
                     <a href="{{ route('loans.index') }}" class="nav-link">Loans</a>
                 </li>
+
+                <li class="nav-item dropdown d-none d-md-block">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Defense</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ route('defense.counters') }}">Counter Finder</a></li>
+                    </ul>
+                </li>
             @endif
         </ul>
 
