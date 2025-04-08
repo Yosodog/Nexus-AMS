@@ -115,7 +115,7 @@
                     <tr class="collapse" id="resources-{{ $grant->id }}">
                         <td colspan="6">
                             <div class="d-flex flex-wrap gap-2">
-                                @foreach (['money','coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $res)
+                                @foreach (\App\Services\PWHelperService::resources() as $res)
                                     @if ($grant->$res > 0)
                                         <span class="badge text-bg-light border">
                             <strong>{{ ucfirst($res) }}:</strong> {{ number_format($grant->$res) }}
@@ -168,7 +168,7 @@
 
                         {{-- Resources --}}
                         <div class="row">
-                            @foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource)
+                            @foreach (\App\Services\PWHelperService::resources(false) as $resource)
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-capitalize">{{ $resource }}</label>
                                     <input type="number" class="form-control" name="{{ $resource }}"

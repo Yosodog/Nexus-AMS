@@ -60,25 +60,8 @@ class BankService
             ->addFields(SelectionSetHelper::bankRecordSet());
 
         // Add optional resource arguments if they are greater than 0
-        $optionalFields = [
-            'money' => $this->money,
-            'coal' => $this->coal,
-            'oil' => $this->oil,
-            'uranium' => $this->uranium,
-            'iron' => $this->iron,
-            'bauxite' => $this->bauxite,
-            'lead' => $this->lead,
-            'gasoline' => $this->gasoline,
-            'munitions' => $this->munitions,
-            'steel' => $this->steel,
-            'aluminum' => $this->aluminum,
-            'food' => $this->food,
-        ];
-
-        foreach ($optionalFields as $key => $value) {
-            if ($value > 0) {
-                $builder->addArgument($key, $value);
-            }
+        foreach (array_filter(PWHelperService::resources(), fn($r) => $this->$r > 0) as $resource) {
+            $builder->addArgument($resource, $this->$resource);
         }
 
         $response = $client->sendQuery($builder, headers: true);

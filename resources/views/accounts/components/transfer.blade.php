@@ -10,18 +10,9 @@
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}"
-                                    data-money="{{ $account->money }}"
-                                    data-coal="{{ $account->coal }}"
-                                    data-oil="{{ $account->oil }}"
-                                    data-uranium="{{ $account->uranium }}"
-                                    data-lead="{{ $account->lead }}"
-                                    data-iron="{{ $account->iron }}"
-                                    data-bauxite="{{ $account->bauxite }}"
-                                    data-gas="{{ $account->gasoline }}"
-                                    data-munitions="{{ $account->munitions }}"
-                                    data-steel="{{ $account->steel }}"
-                                    data-aluminum="{{ $account->aluminum }}"
-                                    data-food="{{ $account->food }}">
+                                    @foreach (\App\Services\PWHelperService::resources() as $resource)
+                                        data-{{ $resource }}="{{ $account->$resource }}"
+                                    @endforeach >
                                 {{ $account->name }} - ${{ number_format($account->money) }}
                             </option>
                         @endforeach
@@ -56,107 +47,29 @@
             </div>
         </div>
 
-        <!-- Resource Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
-            <!-- Money Field -->
-            <div class="form-control">
-                <label for="money" class="label font-semibold">
-                    Money <span class="badge badge-info ml-2">$<span id="moneyAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="money" id="money" value="0" step="any" min="0">
-            </div>
-
-            <!-- Coal Field -->
-            <div class="form-control">
-                <label for="coal" class="label font-semibold">
-                    Coal <span class="badge badge-info ml-2"><span id="coalAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="coal" id="coal" value="0" step="any" min="0">
-            </div>
-
-            <!-- Oil Field -->
-            <div class="form-control">
-                <label for="oil" class="label font-semibold">
-                    Oil <span class="badge badge-info ml-2"><span id="oilAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="oil" id="oil" value="0" step="any" min="0">
-            </div>
-
-            <!-- Uranium Field -->
-            <div class="form-control">
-                <label for="uranium" class="label font-semibold">
-                    Uranium <span class="badge badge-info ml-2"><span id="uraniumAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="uranium" id="uranium" value="0" step="any"
-                       min="0">
-            </div>
-
-            <!-- Lead Field -->
-            <div class="form-control">
-                <label for="lead" class="label font-semibold">
-                    Lead <span class="badge badge-info ml-2"><span id="leadAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="lead" id="lead" value="0" step="any" min="0">
-            </div>
-
-            <!-- Iron Field -->
-            <div class="form-control">
-                <label for="iron" class="label font-semibold">
-                    Iron <span class="badge badge-info ml-2"><span id="ironAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="iron" id="iron" value="0" step="any" min="0">
-            </div>
-
-            <!-- Bauxite Field -->
-            <div class="form-control">
-                <label for="bauxite" class="label font-semibold">
-                    Bauxite <span class="badge badge-info ml-2"><span id="bauxiteAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="bauxite" id="bauxite" value="0" step="any"
-                       min="0">
-            </div>
-
-            <!-- Gas Field -->
-            <div class="form-control">
-                <label for="gas" class="label font-semibold">
-                    Gas <span class="badge badge-info ml-2"><span id="gasAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="gas" id="gas" value="0" step="any" min="0">
-            </div>
-
-            <!-- Munitions Field -->
-            <div class="form-control">
-                <label for="munitions" class="label font-semibold">
-                    Munitions <span class="badge badge-info ml-2"><span id="munitionsAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="munitions" id="munitions" value="0" step="any"
-                       min="0">
-            </div>
-
-            <!-- Steel Field -->
-            <div class="form-control">
-                <label for="steel" class="label font-semibold">
-                    Steel <span class="badge badge-info ml-2"><span id="steelAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="steel" id="steel" value="0" step="any" min="0">
-            </div>
-
-            <!-- Aluminum Field -->
-            <div class="form-control">
-                <label for="aluminum" class="label font-semibold">
-                    Aluminum <span class="badge badge-info ml-2"><span id="aluminumAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="aluminum" id="aluminum" value="0" step="any"
-                       min="0">
-            </div>
-
-            <!-- Food Field -->
-            <div class="form-control">
-                <label for="food" class="label font-semibold">
-                    Food <span class="badge badge-info ml-2"><span id="foodAvail">0.00</span></span>
-                </label>
-                <input type="number" class="input input-bordered" name="food" id="food" value="0" step="any" min="0">
-            </div>
+            @foreach(\App\Services\PWHelperService::resources() as $resource)
+                <div class="form-control">
+                    <label for="{{ $resource }}" class="label font-semibold">
+                        {{ ucfirst($resource) }}
+                        <span class="badge badge-info ml-2">
+                    @if($resource === 'money')
+                                $
+                            @endif
+                    <span id="{{ $resource }}Avail">0.00</span>
+                </span>
+                    </label>
+                    <input
+                            type="number"
+                            class="input input-bordered"
+                            name="{{ $resource }}"
+                            id="{{ $resource }}"
+                            value="0"
+                            step="any"
+                            min="0"
+                    >
+                </div>
+            @endforeach
         </div>
 
         <!-- Submit Button -->

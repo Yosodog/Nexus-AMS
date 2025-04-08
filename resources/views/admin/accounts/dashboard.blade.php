@@ -31,18 +31,9 @@
                                             <th>Nation ID</th>
                                             <th>Owner</th>
                                             <th>Name</th>
-                                            <th>Money</th>
-                                            <th>Coal</th>
-                                            <th>Oil</th>
-                                            <th>Uranium</th>
-                                            <th>Lead</th>
-                                            <th>Iron</th>
-                                            <th>Bauxite</th>
-                                            <th>Gas</th>
-                                            <th>Munitions</th>
-                                            <th>Steel</th>
-                                            <th>Aluminum</th>
-                                            <th>Food</th>
+                                            @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                                <th>{{ ucfirst($resource) }}</th>
+                                            @endforeach
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -55,17 +46,9 @@
                                                     <a href="{{ route("admin.accounts.view", $acc->id) }}">{{ $acc->name }}</a>
                                                 </td>
                                                 <td>${{ number_format($acc->money, 2) }}</td>
-                                                <td>{{ number_format($acc->coal, 2) }}</td>
-                                                <td>{{ number_format($acc->oil, 2) }}</td>
-                                                <td>{{ number_format($acc->uranium, 2) }}</td>
-                                                <td>{{ number_format($acc->lead, 2) }}</td>
-                                                <td>{{ number_format($acc->iron, 2) }}</td>
-                                                <td>{{ number_format($acc->bauxite, 2) }}</td>
-                                                <td>{{ number_format($acc->gas, 2) }}</td>
-                                                <td>{{ number_format($acc->munitions, 2) }}</td>
-                                                <td>{{ number_format($acc->steel, 2) }}</td>
-                                                <td>{{ number_format($acc->aluminum, 2) }}</td>
-                                                <td>{{ number_format($acc->food, 2) }}</td>
+                                                @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                                    <td>{{ number_format($acc->$resource, 2) }}</td>
+                                                @endforeach
                                             </tr>
                                         @endforeach
                                         </tbody>

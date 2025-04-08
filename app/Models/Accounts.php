@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PWHelperService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,20 +14,14 @@ class Accounts extends Model
 
     public $table = "accounts";
 
-    protected array $resources = [
-        "money",
-        "coal",
-        "oil",
-        "uranium",
-        "iron",
-        "bauxite",
-        "lead",
-        "gasoline",
-        "munitions",
-        "steel",
-        "aluminum",
-        "food"
-    ];
+    protected array $resources;
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        $this->resources = PWHelperService::resources();
+    }
 
     /**
      * @return BelongsTo

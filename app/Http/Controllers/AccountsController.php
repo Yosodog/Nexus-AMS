@@ -7,6 +7,7 @@ use App\Models\Accounts;
 use App\Models\Loans;
 use App\Services\AccountService;
 use App\Services\LoanService;
+use App\Services\PWHelperService;
 use Closure;
 use Exception;
 use Illuminate\Container\Container;
@@ -130,20 +131,11 @@ class AccountsController extends Controller
             ]);
         }
 
-        $transfer = [
-            "money" => $request->input("money") ?? 0,
-            "coal" => $request->input("coal") ?? 0,
-            "oil" => $request->input("oil") ?? 0,
-            "uranium" => $request->input("uranium") ?? 0,
-            "iron" => $request->input("iron") ?? 0,
-            "bauxite" => $request->input("bauxite") ?? 0,
-            "lead" => $request->input("lead") ?? 0,
-            "gasoline" => $request->input("gasoline") ?? 0,
-            "munitions" => $request->input("munitions") ?? 0,
-            "steel" => $request->input("steel") ?? 0,
-            "aluminum" => $request->input("aluminum") ?? 0,
-            "food" => $request->input("food") ?? 0,
-        ];
+        $transfer = [];
+
+        foreach (PWHelperService::resources() as $resource) {
+            $transfer[$resource] = $request->input($resource) ?? 0;
+        }
 
         try {
             // Validate that at least one resource is being transferred

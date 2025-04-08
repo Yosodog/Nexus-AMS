@@ -69,4 +69,36 @@ class PWHelperService
         return $ownedProjects;
     }
 
+    /**
+     * @param bool $includeMoney
+     * @param bool $includeCredits
+     * @return string[]
+     */
+    public static function resources(bool $includeMoney = true, bool $includeCredits = false): array
+    {
+        $resources = [
+            'coal',
+            'oil',
+            'uranium',
+            'iron',
+            'bauxite',
+            'lead',
+            'gasoline',
+            'munitions',
+            'steel',
+            'aluminum',
+            'food',
+        ];
+
+        if ($includeMoney) {
+            array_unshift($resources, 'money');
+        }
+
+        if ($includeCredits) {
+            $resources[] = 'credits';
+        }
+
+        return $resources;
+    }
+
 }

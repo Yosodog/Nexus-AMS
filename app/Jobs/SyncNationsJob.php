@@ -15,6 +15,7 @@ use App\Models\NationMilitary;
 use App\Models\NationResources;
 use App\Models\Nations;
 use App\Services\NationQueryService;
+use App\Services\PWHelperService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -190,21 +191,7 @@ class SyncNationsJob implements ShouldQueue
      */
     private function getResourceKeys(): array
     {
-        return [
-            'money',
-            'coal',
-            'oil',
-            'uranium',
-            'iron',
-            'bauxite',
-            'lead',
-            'gasoline',
-            'munitions',
-            'steel',
-            'aluminum',
-            'food',
-            'credits'
-        ];
+        return PWHelperService::resources(includeCredits: true);
     }
 
     /**

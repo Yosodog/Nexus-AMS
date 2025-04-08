@@ -15,10 +15,7 @@ class SignInService
     {
         $accounts = AccountService::getAccountsByNid($nation->id);
 
-        $resourceFields = [
-            'money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead',
-            'gasoline', 'munitions', 'steel', 'aluminum', 'food'
-        ];
+        $resourceFields = PWHelperService::resources();
 
         $combined = [];
 

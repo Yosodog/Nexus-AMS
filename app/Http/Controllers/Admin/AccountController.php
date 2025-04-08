@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Accounts;
 use App\Services\AccountService;
+use App\Services\PWHelperService;
 use Closure;
 use Illuminate\Container\Container;
 use Illuminate\Http\Request;
@@ -73,7 +74,7 @@ class AccountController extends Controller
 
         $data = [];
 
-        foreach (AccountService::$resources as $resource) {
+        foreach (PWHelperService::resources() as $resource) {
             $data[$resource] = $request->input($resource);
         }
 

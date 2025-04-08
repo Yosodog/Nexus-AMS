@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\GrantApplications;
 use App\Models\Grants;
 use App\Services\GrantService;
+use App\Services\PWHelperService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
@@ -63,21 +64,7 @@ class GrantController
         $grant->description = $request->input('description');
         $grant->money = $request->input('money') ?? 0;
 
-        foreach (
-            [
-                'coal',
-                'oil',
-                'uranium',
-                'iron',
-                'bauxite',
-                'lead',
-                'gasoline',
-                'munitions',
-                'steel',
-                'aluminum',
-                'food'
-            ] as $resource
-        ) {
+        foreach (PWHelperService::resources(false) as $resource) {
             $grant->$resource = $request->input($resource, 0);
         }
 
@@ -110,21 +97,7 @@ class GrantController
         $grant->description = $request->input('description');
         $grant->money = $request->input('money') ?? 0;
 
-        foreach (
-            [
-                'coal',
-                'oil',
-                'uranium',
-                'iron',
-                'bauxite',
-                'lead',
-                'gasoline',
-                'munitions',
-                'steel',
-                'aluminum',
-                'food'
-            ] as $resource
-        ) {
+        foreach (PWHelperService::resources(false) as $resource) {
             $grant->$resource = $request->input($resource, 0);
         }
 

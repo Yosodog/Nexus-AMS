@@ -18,22 +18,6 @@ use Illuminate\Support\Facades\DB;
 
 class AccountService
 {
-
-    public static array $resources = [
-        "money",
-        "coal",
-        "oil",
-        "uranium",
-        "iron",
-        "bauxite",
-        "lead",
-        "gasoline",
-        "munitions",
-        "steel",
-        "aluminum",
-        "food",
-    ];
-
     /**
      * @param int|User $user
      *
@@ -144,7 +128,7 @@ class AccountService
             );
 
             // Perform the transfer
-            foreach (self::$resources as $res) {
+            foreach (PWHelperService::resources() as $res) {
                 $fromAccount->$res -= $resources[$res];
                 $toAccount->$res += $resources[$res];
             }
@@ -222,7 +206,7 @@ class AccountService
         }
 
         $thereIsSomething = false;
-        foreach (self::$resources as $res) {
+        foreach (PWHelperService::resources() as $res) {
             // Verify that the 'from' account has enough resources
             if ($fromAccount->$res < $resources[$res]) {
                 throw new UserErrorException(
@@ -281,7 +265,7 @@ class AccountService
             $bank->note = "Withdraw from " . $fromAccount->name;
 
             // Perform the transfer
-            foreach (self::$resources as $res) {
+            foreach (PWHelperService::resources() as $res) {
                 $fromAccount->$res -= $resources[$res];
                 $bank->$res = $resources[$res];
             }
@@ -334,7 +318,7 @@ class AccountService
         Accounts $account,
         BankRecord $bankRecord
     ) {
-        foreach (self::$resources as $res) {
+        foreach (PWHelperService::resources() as $res) {
             $account->$res += $bankRecord->$res;
         }
 
@@ -383,7 +367,7 @@ class AccountService
         ?string $ipAddress
     ): ManualTransactions {
         // Apply changes to account balance
-        foreach (self::$resources as $resource) {
+        foreach (PWHelperService::resources() as $resource) {
             if (isset($adjustment[$resource])) {
                 $account->{$resource} += $adjustment[$resource];
             }

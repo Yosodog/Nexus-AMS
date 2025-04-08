@@ -19,34 +19,17 @@
             <table class="table w-full table-zebra">
                 <thead>
                 <tr>
-                    <th class="text-left">Money</th>
-                    <th class="text-left">Coal</th>
-                    <th class="text-left">Oil</th>
-                    <th class="text-left">Uranium</th>
-                    <th class="text-left">Iron</th>
-                    <th class="text-left">Bauxite</th>
-                    <th class="text-left">Lead</th>
-                    <th class="text-left">Gasoline</th>
-                    <th class="text-left">Munitions</th>
-                    <th class="text-left">Steel</th>
-                    <th class="text-left">Aluminum</th>
-                    <th class="text-left">Food</th>
+                    @foreach(\App\Services\PWHelperService::resources() as $resource)
+                        <th class="text-left">{{ ucfirst($resource) }}</th>
+                    @endforeach
                 </tr>
                 </thead>
                 <tbody>
                 <tr class="hover">
                     <td>${{ number_format($account->money, 2) }}</td>
-                    <td>{{ number_format($account->coal, 2) }}</td>
-                    <td>{{ number_format($account->oil, 2) }}</td>
-                    <td>{{ number_format($account->uranium, 2) }}</td>
-                    <td>{{ number_format($account->iron, 2) }}</td>
-                    <td>{{ number_format($account->bauxite, 2) }}</td>
-                    <td>{{ number_format($account->lead, 2) }}</td>
-                    <td>{{ number_format($account->gasoline, 2) }}</td>
-                    <td>{{ number_format($account->munitions, 2) }}</td>
-                    <td>{{ number_format($account->steel, 2) }}</td>
-                    <td>{{ number_format($account->aluminum, 2) }}</td>
-                    <td>{{ number_format($account->food, 2) }}</td>
+                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                        <td>{{ number_format($account->$resource, 2) }}</td>
+                    @endforeach
                 </tr>
                 </tbody>
             </table>
@@ -140,17 +123,9 @@
 
                         <td>{{ ucfirst($transaction->transaction_type) }}</td>
                         <td>${{ number_format($transaction->money, 2) }}</td>
-                        <td>{{ number_format($transaction->coal, 2) }}</td>
-                        <td>{{ number_format($transaction->oil, 2) }}</td>
-                        <td>{{ number_format($transaction->uranium, 2) }}</td>
-                        <td>{{ number_format($transaction->iron, 2) }}</td>
-                        <td>{{ number_format($transaction->bauxite, 2) }}</td>
-                        <td>{{ number_format($transaction->lead, 2) }}</td>
-                        <td>{{ number_format($transaction->gasoline, 2) }}</td>
-                        <td>{{ number_format($transaction->munitions, 2) }}</td>
-                        <td>{{ number_format($transaction->steel, 2) }}</td>
-                        <td>{{ number_format($transaction->aluminum, 2) }}</td>
-                        <td>{{ number_format($transaction->food, 2) }}</td>
+                        @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                            <td>{{ number_format($transaction->$resource, 2) }}</td>
+                        @endforeach
                     </tr>
                 @endforeach
                 </tbody>

@@ -23,34 +23,17 @@
                         <table class="table table-hover">
                             <thead>
                             <tr>
-                                <th>Money</th>
-                                <th>Coal</th>
-                                <th>Oil</th>
-                                <th>Uranium</th>
-                                <th>Lead</th>
-                                <th>Iron</th>
-                                <th>Bauxite</th>
-                                <th>Gas</th>
-                                <th>Munitions</th>
-                                <th>Steel</th>
-                                <th>Aluminum</th>
-                                <th>Food</th>
+                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                    <th>{{ ucfirst($resource) }}</th>
+                                @endforeach
                             </tr>
                             </thead>
                             <tbody>
                             <tr>
                                 <td>${{ number_format($account->money, 2) }}</td>
-                                <td>{{ number_format($account->coal, 2) }}</td>
-                                <td>{{ number_format($account->oil, 2) }}</td>
-                                <td>{{ number_format($account->uranium, 2) }}</td>
-                                <td>{{ number_format($account->lead, 2) }}</td>
-                                <td>{{ number_format($account->iron, 2) }}</td>
-                                <td>{{ number_format($account->bauxite, 2) }}</td>
-                                <td>{{ number_format($account->gas, 2) }}</td>
-                                <td>{{ number_format($account->munitions, 2) }}</td>
-                                <td>{{ number_format($account->steel, 2) }}</td>
-                                <td>{{ number_format($account->aluminum, 2) }}</td>
-                                <td>{{ number_format($account->food, 2) }}</td>
+                                @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                    <td>{{ number_format($account->$resource, 2) }}</td>
+                                @endforeach
                             </tr>
                             </tbody>
                         </table>
@@ -68,7 +51,7 @@
                     <form action="{{ route('admin.accounts.adjust', $account->id) }}" method="POST">
                         @csrf
                         <div class="row">
-                            @foreach (AccountService::$resources as $resource)
+                            @foreach (\App\Services\PWHelperService::resources() as $resource)
                                 <div class="col-md-3">
                                     <label for="{{ $resource }}">{{ ucfirst($resource) }}</label>
                                     <input type="number" name="{{ $resource }}" id="{{ $resource }}"
@@ -101,18 +84,9 @@
                                 <th>From Account</th>
                                 <th>To Account</th>
                                 <th>Type</th>
-                                <th>Money</th>
-                                <th>Coal</th>
-                                <th>Oil</th>
-                                <th>Uranium</th>
-                                <th>Iron</th>
-                                <th>Bauxite</th>
-                                <th>Lead</th>
-                                <th>Gasoline</th>
-                                <th>Munitions</th>
-                                <th>Steel</th>
-                                <th>Aluminum</th>
-                                <th>Food</th>
+                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                    <th>{{ ucfirst($resource) }}</th>
+                                @endforeach
                             </tr>
                             </thead>
                             <tbody>
@@ -163,17 +137,9 @@
 
                                     <td>{{ ucfirst($transaction->transaction_type) }}</td>
                                     <td>${{ number_format($transaction->money, 2) }}</td>
-                                    <td>{{ number_format($transaction->coal, 2) }}</td>
-                                    <td>{{ number_format($transaction->oil, 2) }}</td>
-                                    <td>{{ number_format($transaction->uranium, 2) }}</td>
-                                    <td>{{ number_format($transaction->iron, 2) }}</td>
-                                    <td>{{ number_format($transaction->bauxite, 2) }}</td>
-                                    <td>{{ number_format($transaction->lead, 2) }}</td>
-                                    <td>{{ number_format($transaction->gasoline, 2) }}</td>
-                                    <td>{{ number_format($transaction->munitions, 2) }}</td>
-                                    <td>{{ number_format($transaction->steel, 2) }}</td>
-                                    <td>{{ number_format($transaction->aluminum, 2) }}</td>
-                                    <td>{{ number_format($transaction->food, 2) }}</td>
+                                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                        <td>{{ number_format($transaction->$resource, 2) }}</td>
+                                    @endforeach
                                 </tr>
                             @endforeach
                             </tbody>
@@ -195,18 +161,9 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Admin</th>
-                                <th>Money</th>
-                                <th>Coal</th>
-                                <th>Oil</th>
-                                <th>Uranium</th>
-                                <th>Lead</th>
-                                <th>Iron</th>
-                                <th>Bauxite</th>
-                                <th>Gasoline</th>
-                                <th>Munitions</th>
-                                <th>Steel</th>
-                                <th>Aluminum</th>
-                                <th>Food</th>
+                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                    <th>{{ ucfirst($resource) }}</th>
+                                @endforeach
                                 <th>Note</th>
                             </tr>
                             </thead>
@@ -222,17 +179,9 @@
                                         @endif
                                     </td>
                                     <td>${{ number_format($transaction->money, 2) }}</td>
-                                    <td>{{ number_format($transaction->coal, 2) }}</td>
-                                    <td>{{ number_format($transaction->oil, 2) }}</td>
-                                    <td>{{ number_format($transaction->uranium, 2) }}</td>
-                                    <td>{{ number_format($transaction->lead, 2) }}</td>
-                                    <td>{{ number_format($transaction->iron, 2) }}</td>
-                                    <td>{{ number_format($transaction->bauxite, 2) }}</td>
-                                    <td>{{ number_format($transaction->gasoline, 2) }}</td>
-                                    <td>{{ number_format($transaction->munitions, 2) }}</td>
-                                    <td>{{ number_format($transaction->steel, 2) }}</td>
-                                    <td>{{ number_format($transaction->aluminum, 2) }}</td>
-                                    <td>{{ number_format($transaction->food, 2) }}</td>
+                                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                        <td>{{ number_format($transaction->$resource, 2) }}</td>
+                                    @endforeach
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-info"
                                                 data-bs-toggle="popover" data-bs-placement="top" title="Note"

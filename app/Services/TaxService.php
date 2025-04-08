@@ -93,19 +93,8 @@ class TaxService
 
         return [
             'total_money' => $query->sum('money'),
-            'top_resource' => collect([
-                'coal',
-                'oil',
-                'uranium',
-                'iron',
-                'bauxite',
-                'lead',
-                'gasoline',
-                'munitions',
-                'steel',
-                'aluminum',
-                'food'
-            ])->mapWithKeys(fn($res) => [$res => $query->sum($res)])
+            'top_resource' => collect(PWHelperService::resources(false))
+                ->mapWithKeys(fn($res) => [$res => $query->sum($res)])
                 ->sortDesc()
                 ->keys()
                 ->first(),
@@ -124,20 +113,7 @@ class TaxService
     public static function getResourceChartData(): array
     {
         $start = now()->subDays(30);
-        $resources = [
-            'money',
-            'coal',
-            'oil',
-            'uranium',
-            'iron',
-            'bauxite',
-            'lead',
-            'gasoline',
-            'munitions',
-            'steel',
-            'aluminum',
-            'food'
-        ];
+        $resources = PWHelperService::resources();
 
         $data = [];
 
@@ -163,20 +139,7 @@ class TaxService
     public static function getDailyTotals(): array
     {
         $start = now()->subDays(30);
-        $resources = [
-            'money',
-            'coal',
-            'oil',
-            'uranium',
-            'iron',
-            'bauxite',
-            'lead',
-            'gasoline',
-            'munitions',
-            'steel',
-            'aluminum',
-            'food'
-        ];
+        $resources = PWHelperService::resources();
 
         $totals = [];
 

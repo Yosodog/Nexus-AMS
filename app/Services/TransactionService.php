@@ -61,7 +61,7 @@ class TransactionService
         $transaction->nation_id = $record->sender_id;
         $transaction->transaction_type = "deposit";
 
-        foreach (AccountService::$resources as $res) {
+        foreach (PWHelperService::resources() as $res) {
             $transaction->$res = $record->$res;
         }
 
