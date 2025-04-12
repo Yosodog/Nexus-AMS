@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\Loans;
 use App\Services\AccountService;
 use App\Services\LoanService;
@@ -66,7 +66,7 @@ class AccountsController extends Controller
 
             try {
                 $loan = Loans::findOrFail($loanId);
-                $account = Accounts::findOrFail($request->input('from'));
+                $account = Account::findOrFail($request->input('from'));
 
                 // Validate loan ownership
                 if ($loan->nation_id !== Auth::user()->nation_id) {
@@ -154,7 +154,7 @@ class AccountsController extends Controller
             }
 
             // Get the source account and validate ownership
-            $fromAccount = Accounts::findOrFail($request->input("from"));
+            $fromAccount = Account::findOrFail($request->input("from"));
             if ($fromAccount->nation_id !== Auth::user()->nation_id) {
                 throw ValidationException::withMessages([
                     'from' => ['You do not own the source account.']
@@ -177,7 +177,7 @@ class AccountsController extends Controller
 
             // If transferring to another account, validate ownership
             if ($request->input("to") !== "nation") {
-                $toAccount = Accounts::findOrFail($request->input("to"));
+                $toAccount = Account::findOrFail($request->input("to"));
                 if ($toAccount->nation_id !== Auth::user()->nation_id) {
                     throw ValidationException::withMessages([
                         'to' => ['You do not own the destination account.']
@@ -220,11 +220,11 @@ class AccountsController extends Controller
     }
 
     /**
-     * @param Accounts $accounts
+     * @param Account $accounts
      *
      * @return Closure|Container|mixed|object|null
      */
-    public function viewAccount(Accounts $accounts)
+    public function viewAccount(Account $accounts)
     {
         if ($accounts->nation_id != Auth::user()->nation_id) {
             abort("403");

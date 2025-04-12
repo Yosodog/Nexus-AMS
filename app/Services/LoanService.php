@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\LoanPayments;
 use App\Models\Loans;
 use App\Models\Nations;
@@ -20,12 +20,12 @@ class LoanService
 
     /**
      * @param Nations $nation
-     * @param Accounts $account
+     * @param Account $account
      * @param float $amount
      * @param int $termLength
      * @return Loans
      */
-    public function applyForLoan(Nations $nation, Accounts $account, float $amount, int $termLength): Loans
+    public function applyForLoan(Nations $nation, Account $account, float $amount, int $termLength): Loans
     {
         // Create the loan record
         return Loans::create([
@@ -40,11 +40,11 @@ class LoanService
 
     /**
      * @param Nations $nation
-     * @param Accounts $account
+     * @param Account $account
      * @return bool
      * @throws ValidationException
      */
-    public function validateLoanEligibility(Nations $nation, Accounts $account): bool
+    public function validateLoanEligibility(Nations $nation, Account $account): bool
     {
         $validator = new NationEligibilityValidator($nation);
         $validator->validateAllianceMembership();
@@ -83,7 +83,7 @@ class LoanService
             ]);
 
             // Fetch the recipient account
-            $account = Accounts::findOrFail($loan->account_id);
+            $account = Account::findOrFail($loan->account_id);
             $adminId = Auth::id();
             $ipAddress = Request::ip();
 
@@ -191,7 +191,7 @@ class LoanService
     /**
      * Withdraw funds from an account and update the loan balance.
      */
-    private function withdrawFromAccount(Accounts $account, float $amount, Loans $loan): void
+    private function withdrawFromAccount(Account $account, float $amount, Loans $loan): void
     {
         $interestRate = $loan->interest_rate / 100;
         $interestPaid = round($amount * $interestRate, 2);
@@ -249,12 +249,12 @@ class LoanService
 
     /**
      * @param Loans $loan
-     * @param Accounts $account
+     * @param Account $account
      * @param float $amount
      * @return void
      * @throws ValidationException
      */
-    public function repayLoan(Loans $loan, Accounts $account, float $amount): void
+    public function repayLoan(Loans $loan, Account $account, float $amount): void
     {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);

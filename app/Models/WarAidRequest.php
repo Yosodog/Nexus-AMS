@@ -50,7 +50,7 @@ class WarAidRequest extends Model
      * @return BelongsTo
      */
     public function account(): BelongsTo {
-        return $this->belongsTo(Accounts::class);
+        return $this->belongsTo(Account::class);
     }
 
     /**

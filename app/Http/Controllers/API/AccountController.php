@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Services\AccountService;
 use Illuminate\Support\Facades\Auth;
 
@@ -27,7 +27,7 @@ class AccountController extends Controller
     /**
      * Create a deposit request for an account.
      */
-    public function createDepositRequest(Accounts $account)
+    public function createDepositRequest(Account $account)
     {
         $user = Auth::user();
 

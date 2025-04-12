@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Models\Nations;
@@ -88,7 +88,7 @@ class CityGrantService
     public static function approveGrant(CityGrantRequest $request): void
     {
         // Fetch the recipient account
-        $account = Accounts::findOrFail($request->account_id);
+        $account = Account::findOrFail($request->account_id);
         $adminId = Auth::id();
         $ipAddress = Request::ip();
 

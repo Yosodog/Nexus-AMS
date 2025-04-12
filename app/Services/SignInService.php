@@ -59,7 +59,7 @@ class SignInService
             'spy_kills' => $nation->spy_kills,
             'spy_casualties' => $nation->spy_casualties,
 
-            // Combined Nation + Accounts
+            // Combined Nation + Account
             'money' => $combined['money'],
             'coal' => $combined['coal'],
             'oil' => $combined['oil'],

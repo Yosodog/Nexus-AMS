@@ -88,7 +88,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         // Base routes
         Route::get("/", [DashboardController::class, 'dashboard'])->name("admin.dashboard");
 
-        // Accounts
+        // Account
         Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");
         Route::get("/accounts/{accounts}", [AccountController::class, 'view'])->name("admin.accounts.view");
         Route::post('/accounts/{account}/adjust', [AccountController::class, 'adjustBalance'])->name(

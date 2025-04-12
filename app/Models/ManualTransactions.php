@@ -33,7 +33,7 @@ class ManualTransactions extends Model
      */
     public function account()
     {
-        return $this->belongsTo(Accounts::class, "account_id", "id");
+        return $this->belongsTo(Account::class, "account_id", "id");
     }
 
     /**

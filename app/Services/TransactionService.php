@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\GraphQL\Models\BankRecord;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\Transactions;
 
 class TransactionService
@@ -45,13 +45,13 @@ class TransactionService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      * @param BankRecord $record
      *
      * @return Transactions
      */
     public static function createTransactionForDeposit(
-        Accounts $account,
+        Account $account,
         BankRecord $record
     ): Transactions {
         $transaction = new Transactions();

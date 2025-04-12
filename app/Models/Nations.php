@@ -241,7 +241,7 @@ class Nations extends Model
      */
     public function accounts()
     {
-        return $this->hasMany(Accounts::class, "nation_id");
+        return $this->hasMany(Account::class, "nation_id");
     }
 
     /**

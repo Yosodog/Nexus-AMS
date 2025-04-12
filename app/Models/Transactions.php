@@ -15,7 +15,7 @@ class Transactions extends Model
      */
     public function toAccount()
     {
-        return $this->belongsTo(Accounts::class, "to_account_id", "id");
+        return $this->belongsTo(Account::class, "to_account_id", "id");
     }
 
     /**
@@ -23,7 +23,7 @@ class Transactions extends Model
      */
     public function fromAccount()
     {
-        return $this->belongsTo(Accounts::class, "from_account_id", "id");
+        return $this->belongsTo(Account::class, "from_account_id", "id");
     }
 
     /**

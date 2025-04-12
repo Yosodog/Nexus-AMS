@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\Loans;
 use App\Services\LoanService;
 use Exception;
@@ -36,7 +36,7 @@ class LoansController extends Controller
         ]);
 
         $nation = Auth::user()->nation;
-        $account = Accounts::findOrFail($request->account_id);
+        $account = Account::findOrFail($request->account_id);
 
         try {
             // Validate nation eligibility
@@ -95,7 +95,7 @@ class LoansController extends Controller
         ]);
 
         $loan = Loans::findOrFail($request->loan_id);
-        $account = Accounts::findOrFail($request->account_id);
+        $account = Account::findOrFail($request->account_id);
         $userNation = Auth::user()->nation;
 
         // Ensure the loan belongs to the nation

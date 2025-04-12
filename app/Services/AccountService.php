@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\ManualTransactions;
 use App\Models\Transactions;
@@ -42,7 +42,7 @@ class AccountService
      */
     public static function getAccountsByNid(int $nation_id)
     {
-        return Accounts::where("nation_id", $nation_id)
+        return Account::where("nation_id", $nation_id)
             ->get();
     }
 
@@ -50,11 +50,11 @@ class AccountService
      * @param int $nation_id
      * @param string $name
      *
-     * @return Accounts
+     * @return Account
      */
-    public static function createAccount(int $nation_id, string $name): Accounts
+    public static function createAccount(int $nation_id, string $name): Account
     {
-        $account = new Accounts();
+        $account = new Account();
         $account->name = $name;
         $account->nation_id = $nation_id;
         $account->save();
@@ -63,7 +63,7 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      *
      * @return void
      * @throws UserErrorException
@@ -71,12 +71,12 @@ class AccountService
     /**
      * Deletes an account after performing necessary checks.
      *
-     * @param Accounts $account
+     * @param Account $account
      *
      * @return void
      * @throws UserErrorException
      */
-    public static function deleteAccount(Accounts $account): void
+    public static function deleteAccount(Account $account): void
     {
         // Check if the account has pending city grants
         if ($account->cityGrants()->where('status', 'pending')->exists()) {
@@ -157,11 +157,11 @@ class AccountService
     /**
      * @param int $id
      *
-     * @return Accounts
+     * @return Account
      */
-    public static function getAccountById(int $id): Accounts
+    public static function getAccountById(int $id): Account
     {
-        return Accounts::where("id", $id)
+        return Account::where("id", $id)
             ->lockForUpdate()
             ->firstOrFail();
     }
@@ -174,8 +174,8 @@ class AccountService
      *
      * @param array $resources
      * @param int $nation_id
-     * @param Accounts $fromAccount
-     * @param Accounts|null $toAccount
+     * @param Account $fromAccount
+     * @param Account|null $toAccount
      *
      * @return void
      * @throws UserErrorException
@@ -183,8 +183,8 @@ class AccountService
     protected static function validateTransfer(
         array $resources,
         int $nation_id,
-        Accounts $fromAccount,
-        Accounts|null $toAccount = null
+        Account $fromAccount,
+        Account|null $toAccount = null
     ): void {
         // Verify that we own the from account
         if ($fromAccount->nation_id != $nation_id) {
@@ -292,11 +292,11 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      *
      * @return DepositRequest
      */
-    public static function createDepositRequest(Accounts $account): DepositRequest
+    public static function createDepositRequest(Account $account): DepositRequest
     {
         $deposit = DepositService::createRequest($account);
 
@@ -309,13 +309,13 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      * @param BankRecord $bankRecord
      *
      * @return void
      */
     public static function updateAccountBalanceFromBankRec(
-        Accounts $account,
+        Account $account,
         BankRecord $bankRecord
     ) {
         foreach (PWHelperService::resources() as $res) {
@@ -326,11 +326,11 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      *
      * @return mixed
      */
-    public static function getRelatedTransactions(Accounts $account, int $perPage = 50)
+    public static function getRelatedTransactions(Account $account, int $perPage = 50)
     {
         return Transactions::where("to_account_id", $account->id)
             ->orWhere("from_account_id", $account->id)
@@ -340,12 +340,12 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      * @param int $perPage
      *
      * @return mixed
      */
-    public static function getRelatedManualTransactions(Accounts $account, int $perPage)
+    public static function getRelatedManualTransactions(Account $account, int $perPage)
     {
         return ManualTransactions::where("account_id", $account->id)
             ->orderBy("created_at", "DESC")
@@ -353,7 +353,7 @@ class AccountService
     }
 
     /**
-     * @param Accounts $account
+     * @param Account $account
      * @param array $adjustment
      * @param int|null $adminId
      * @param string|null $ipAddress
@@ -361,7 +361,7 @@ class AccountService
      * @return ManualTransactions
      */
     public static function adjustAccountBalance(
-        Accounts $account,
+        Account $account,
         array $adjustment,
         ?int $adminId,
         ?string $ipAddress

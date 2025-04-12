@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\GrantApplications;
 use App\Models\Grants;
 use App\Models\Nations;
@@ -97,7 +97,7 @@ class GrantService
     public static function approveGrant(GrantApplications $application): void
     {
         $grant = $application->grant;
-        $account = Accounts::findOrFail($application->account_id);
+        $account = Account::findOrFail($application->account_id);
         $adminId = Auth::id();
         $ipAddress = Request::ip();
 

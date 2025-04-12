@@ -45,7 +45,7 @@ class Loans extends Model
      */
     public function account()
     {
-        return $this->belongsTo(Accounts::class);
+        return $this->belongsTo(Account::class);
     }
 
     /**
