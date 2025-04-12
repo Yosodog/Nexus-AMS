@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\Alliance;
+use App\GraphQL\Models\Alliance as AllianceGraphQL;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,10 +14,11 @@ class Alliance extends Model
     /**
      * Create or update an Alliance model from GraphQL Alliance data.
      *
-     * @param Alliance $graphQLAllianceModel - The GraphQL alliance data
+     * @param AllianceGraphQL $graphQLAllianceModel - The GraphQL alliance data
+     * @param bool $withNations
      * @return Alliance
      */
-    public static function updateFromAPI(Alliance $graphQLAllianceModel, bool $withNations = true): Alliance
+    public static function updateFromAPI(AllianceGraphQL $graphQLAllianceModel, bool $withNations = true): Alliance
     {
         // Extract alliance data
         $allianceData = collect((array)$graphQLAllianceModel)->only([
