@@ -57,6 +57,12 @@
                         <p>Wars</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.war-aid') }}" class="nav-link">
+                        <i class="bi bi-speedometer"></i>
+                        <p>War Aid</p>
+                    </a>
+                </li>
                 <li class="nav-header">System</li>
                 <li class="nav-item">
                     <a href="{{ url("/telescope") }}" class="nav-link">

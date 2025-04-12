@@ -6,6 +6,10 @@ use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
+use App\Http\Controllers\Admin\MembersController as AdminMembersController;
+use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
+use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
+use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
@@ -53,9 +57,17 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
 
     /***** Defense Routes *****/
+    Route::prefix('defense')->middleware(['auth'])->group(function () {
+        // Counters
+        Route::get('/counters/{nation?}', [\App\Http\Controllers\CounterFinderController::class, 'index'])
+            ->name('defense.counters');
+
+        // War aid
+        Route::get('/waraid', [\App\Http\Controllers\WarAidController::class, 'index'])->name('defense.war-aid');
+        Route::post('/waraid', [\App\Http\Controllers\WarAidController::class, 'store'])->name('defense.war-aid.store');
+    });
     // Counters
-    Route::get('/defense/counters/{nation?}', [\App\Http\Controllers\CounterFinderController::class, 'index'])
-        ->name('defense.counters');
+
 
     // Grants
     Route::prefix('grants')->middleware(['auth'])->group(function () {
@@ -131,12 +143,28 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         );
 
         // Taxes
-        Route::get('/taxes', [\App\Http\Controllers\Admin\TaxesController::class, 'index'])->name('admin.taxes');
+        Route::get('/taxes', [AdminTaxesController::class, 'index'])->name('admin.taxes');
 
         // Members
-        Route::get('/members', [\App\Http\Controllers\Admin\MembersController::class, 'index'])->name('admin.members');
-        Route::get('/members/{Nations}', [\App\Http\Controllers\Admin\MembersController::class, 'show'])->name('admin.members.show');
+        Route::get('/members', [AdminMembersController::class, 'index'])->name('admin.members');
+        Route::get('/members/{Nations}', [AdminMembersController::class, 'show'])->name('admin.members.show');
 
         // Wars
-        Route::get('/wars', [\App\Http\Controllers\Admin\WarController::class, 'index'])->name('admin.wars');
+        Route::get('/defense/wars', [AdminWarController::class, 'index'])->name('admin.wars');
+
+        // War Aid
+        Route::get('/defense/waraid', [AdminWarAidControllerAlias::class, 'index'])->name(
+            'admin.war-aid'
+        );
+        Route::patch(
+            '/defense/waraid/{WarAidRequest}/approve',
+            [AdminWarAidControllerAlias::class, 'approve']
+        )->name('admin.war-aid.approve');
+        Route::patch(
+            '/defense/waraid/{WarAidRequest}/deny',
+            [AdminWarAidControllerAlias::class, 'deny']
+        )->name('admin.war-aid.deny');
+        Route::post('/defense/waraid/toggle', [AdminWarAidControllerAlias::class, 'toggle'])->name(
+            'admin.war-aid.toggle'
+        );
     });

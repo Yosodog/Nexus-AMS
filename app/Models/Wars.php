@@ -43,4 +43,13 @@ class Wars extends Model
         return self::updateOrCreate(['id' => $war['id']], $war);
 //        return self::updateOrCreate(['id' => $war['id']], collect($war)->except(['__typename'])->toArray());
     }
+
+    /**
+     * @param $query
+     * @return mixed
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('end_date');
+    }
 }
