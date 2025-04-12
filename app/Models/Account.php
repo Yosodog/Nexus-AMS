@@ -28,7 +28,7 @@ class Account extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nations::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, "nation_id", "id");
     }
 
     /**

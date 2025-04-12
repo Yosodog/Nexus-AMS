@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Account;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Notifications\CityGrantNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
@@ -45,12 +45,12 @@ class CityGrantService
 
     /**
      * @param CityGrant $grant
-     * @param Nations $nation
+     * @param Nation $nation
      *
      * @return void
      * @throws ValidationException
      */
-    public static function validateEligibility(CityGrant $grant, Nations $nation)
+    public static function validateEligibility(CityGrant $grant, Nation $nation)
     {
         $requirements = $grant->requirements ?? [];
 

@@ -3,7 +3,7 @@
 namespace App\Rules;
 
 use App\Exceptions\PWEntityDoesNotExist;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\NationQueryService;
 use Closure;
 use Exception;
@@ -21,7 +21,7 @@ class InAllianceAndMember implements ValidationRule
     {
         // First let's just see if the nation is in our database
         try {
-            $nation = Nations::getNationById($value);
+            $nation = Nation::getNationById($value);
 
             if ($nation->alliance_id == env("PW_ALLIANCE_ID")) {
                 if ($nation->alliance_position == "APPLICANT") {
@@ -42,7 +42,7 @@ class InAllianceAndMember implements ValidationRule
             return;
         }
 
-        Nations::updateFromAPI($nation); // Obviously we're out of date so just go ahead and save/update the data now
+        Nation::updateFromAPI($nation); // Obviously we're out of date so just go ahead and save/update the data now
 
         if ($nation->alliance_id == env("PW_ALLIANCE_ID")) {
             if ($nation->alliance_position == "APPLICANT") {

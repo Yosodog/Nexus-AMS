@@ -81,6 +81,6 @@ class NationSignIns extends Model
      */
     public function nation(): BelongsTo
     {
-        return $this->belongsTo(Nations::class);
+        return $this->belongsTo(Nation::class);
     }
 }

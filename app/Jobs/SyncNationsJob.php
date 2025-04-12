@@ -13,7 +13,7 @@ namespace App\Jobs;
 use App\Models\City;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\NationQueryService;
 use App\Services\PWHelperService;
 use Exception;
@@ -325,7 +325,7 @@ class SyncNationsJob implements ShouldQueue
     {
         DB::transaction(function () use ($nationData, $resourcesData, $militaryData, $citiesData) {
             if (!empty($nationData)) {
-                Nations::upsert(
+                Nation::upsert(
                     $nationData,
                     ['id'],
                     array_keys(reset($nationData))

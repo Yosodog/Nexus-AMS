@@ -56,7 +56,7 @@ class User extends Authenticatable
      */
     public function nation()
     {
-        return $this->hasOne(Nations::class, "id", "nation_id");
+        return $this->hasOne(Nation::class, "id", "nation_id");
     }
 
     public function accounts()

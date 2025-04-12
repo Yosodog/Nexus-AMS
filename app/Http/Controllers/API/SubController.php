@@ -12,7 +12,7 @@ use App\Jobs\UpdateNationJob;
 use App\Jobs\UpdateWarJob;
 use App\Models\Alliance;
 use App\Models\City;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Models\Wars;
 use App\Services\AllianceQueryService;
 use App\Services\CityQueryService;
@@ -92,7 +92,7 @@ class SubController extends Controller
         }
 
         foreach ($nationDelete as $del) {
-            $nation = Nations::getNationById($del['id']);
+            $nation = Nation::getNationById($del['id']);
             $nation->delete();
         }
 

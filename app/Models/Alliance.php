@@ -41,7 +41,7 @@ class Alliance extends Model
         // Check if nations data is included and update/create nations
         if (isset($graphQLAllianceModel->nations) && $withNations) {
             foreach ($graphQLAllianceModel->nations as $nationData) {
-                Nations::updateFromAPI($nationData);
+                Nation::updateFromAPI($nationData);
             }
         }
 
@@ -62,6 +62,6 @@ class Alliance extends Model
      */
     public function nations()
     {
-        return $this->hasMany(Nations::class, "alliance_id");
+        return $this->hasMany(Nation::class, "alliance_id");
     }
 }

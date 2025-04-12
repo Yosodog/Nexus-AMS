@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Account;
 use App\Models\GrantApplication;
 use App\Models\Grants;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Notifications\GrantNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
@@ -15,12 +15,12 @@ class GrantService
 {
     /**
      * @param Grants $grant
-     * @param Nations $nation
+     * @param Nation $nation
      * @param int $accountId
      * @return GrantApplication
      * @throws ValidationException
      */
-    public static function applyToGrant(Grants $grant, Nations $nation, int $accountId): GrantApplication
+    public static function applyToGrant(Grants $grant, Nation $nation, int $accountId): GrantApplication
     {
         self::validateEligibility($grant, $nation);
 
@@ -29,11 +29,11 @@ class GrantService
 
     /**
      * @param Grants $grant
-     * @param Nations $nation
+     * @param Nation $nation
      * @return void
      * @throws ValidationException
      */
-    public static function validateEligibility(Grants $grant, Nations $nation): void
+    public static function validateEligibility(Grants $grant, Nation $nation): void
     {
         // One-time grants: check if they've already been approved
         if ($grant->is_one_time) {

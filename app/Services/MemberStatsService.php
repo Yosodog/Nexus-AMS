@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Loan;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Models\NationSignIns;
 use App\Models\Taxes;
 use Carbon\Carbon;
@@ -17,7 +17,7 @@ class MemberStatsService
      */
     public function getOverviewData(): array
     {
-        $nations = Nations::with(['resources', 'accounts', 'military'])
+        $nations = Nation::with(['resources', 'accounts', 'military'])
             ->where('alliance_id', env("PW_ALLIANCE_ID"))
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
@@ -53,10 +53,10 @@ class MemberStatsService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @return array
      */
-    protected function formatNation(Nations $nation): array
+    protected function formatNation(Nation $nation): array
     {
         $cities = $nation->num_cities;
         $max = [
@@ -115,10 +115,10 @@ class MemberStatsService
     /**
      * Gets stats for the admin/members/{nations} page
      *
-     * @param Nations $nation
+     * @param Nation $nation
      * @return array
      */
-    public function getNationStats(Nations $nation): array
+    public function getNationStats(Nation $nation): array
     {
         $nationId = $nation->id;
 

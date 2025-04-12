@@ -16,7 +16,7 @@ class Wars extends Model
      */
     public function attacker()
     {
-        return $this->belongsTo(Nations::class, 'att_id');
+        return $this->belongsTo(Nation::class, 'att_id');
     }
 
     /**
@@ -24,7 +24,7 @@ class Wars extends Model
      */
     public function defender()
     {
-        return $this->belongsTo(Nations::class, 'def_id');
+        return $this->belongsTo(Nation::class, 'def_id');
     }
 
     /**

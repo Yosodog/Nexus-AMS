@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\Nations;
+use App\Models\Nation;
 use Illuminate\Validation\ValidationException;
 
 class NationEligibilityValidator
 {
 
-    protected Nations $nation;
+    protected Nation $nation;
 
-    public function __construct(Nations $nation)
+    public function __construct(Nation $nation)
     {
         $this->nation = $nation;
     }

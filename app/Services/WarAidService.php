@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Models\WarAidRequest;
 use App\Notifications\WarAidNotification;
 use App\Services\AccountService;
@@ -14,12 +14,12 @@ use Illuminate\Validation\ValidationException;
 class WarAidService
 {
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @param array $data
      * @return WarAidRequest
      * @throws ValidationException
      */
-    public function submitAidRequest(Nations $nation, array $data): WarAidRequest
+    public function submitAidRequest(Nation $nation, array $data): WarAidRequest
     {
         if (WarAidRequest::where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
             throw ValidationException::withMessages([
@@ -90,10 +90,10 @@ class WarAidService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @return array
      */
-    public function getNationAvailableResources(Nations $nation): array
+    public function getNationAvailableResources(Nation $nation): array
     {
         try {
             $live = [];

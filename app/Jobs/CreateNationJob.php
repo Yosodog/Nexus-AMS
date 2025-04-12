@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\NationQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,7 +35,7 @@ class CreateNationJob implements ShouldQueue
                 $nationModel = NationQueryService::getNationById($nationData['id']);
 
                 // Use updateFromAPI() to create the nation
-                Nations::updateFromAPI($nationModel);
+                Nation::updateFromAPI($nationModel);
             }
         } catch (Exception $e) {
             Log::error("Failed to create nations", ['error' => $e->getMessage()]);
