@@ -185,7 +185,7 @@
 
         <hr class="mt-4 mb-4">
 
-        {{-- Active Loans Section --}}
+        {{-- Active Loan Section --}}
         <x-utils.card title="Your Active Loans">
             <div class="overflow-x-auto">
                 <table class="table table-zebra w-full">

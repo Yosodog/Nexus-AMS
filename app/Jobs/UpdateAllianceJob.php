@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Alliances;
+use App\Models\Alliance;
 use App\Services\AllianceQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -49,7 +49,7 @@ class UpdateAllianceJob implements ShouldQueue
         try {
             foreach ($this->alliancesData as $allianceData) {
                 // Get the model from the DB
-                $allianceModel = Alliances::getById($allianceData['id']);
+                $allianceModel = Alliance::getById($allianceData['id']);
 
                 foreach ($allianceData as $key => $data) {
                     if (in_array($key, $this->skips)) { // Skip stuff that we don't store
@@ -66,7 +66,7 @@ class UpdateAllianceJob implements ShouldQueue
             // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
             // So we'll just query and add it as usual lol
             $alliance = AllianceQueryService::getAllianceById($allianceModel->id);
-            Alliances::updateFromAPI($alliance);
+            Alliance::updateFromAPI($alliance);
         } catch (Exception $e) {
             Log::error("Failed to update alliances", ['error' => $e->getMessage()]);
         }

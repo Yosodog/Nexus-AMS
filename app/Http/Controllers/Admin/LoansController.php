@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Loans;
+use App\Models\Loan;
 use App\Services\LoanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,13 +23,13 @@ class LoansController
      */
     public function index()
     {
-        $totalApproved = Loans::where('status', 'approved')->count();
-        $totalDenied = Loans::where('status', 'denied')->count();
-        $pendingCount = Loans::where('status', 'pending')->count();
-        $totalLoanedFunds = Loans::where('status', 'approved')->sum('amount');
+        $totalApproved = Loan::where('status', 'approved')->count();
+        $totalDenied = Loan::where('status', 'denied')->count();
+        $pendingCount = Loan::where('status', 'pending')->count();
+        $totalLoanedFunds = Loan::where('status', 'approved')->sum('amount');
 
-        $pendingLoans = Loans::where('status', 'pending')->with('nation')->get();
-        $activeLoans = Loans::where('status', 'approved')->with('nation')->get();
+        $pendingLoans = Loan::where('status', 'pending')->with('nation')->get();
+        $activeLoans = Loan::where('status', 'approved')->with('nation')->get();
 
         return view(
             'admin.loans.index',
@@ -47,7 +47,7 @@ class LoansController
     /**
      * Approve a loan with modifications (amount, interest rate, term weeks).
      */
-    public function approve(Request $request, Loans $loan)
+    public function approve(Request $request, Loan $loan)
     {
         $request->validate([
             'amount' => 'required|numeric',
@@ -72,7 +72,7 @@ class LoansController
     /**
      * Deny a loan application.
      */
-    public function deny(Loans $loan)
+    public function deny(Loan $loan)
     {
         $this->loanService->denyLoan($loan, Auth::user()->nation);
 
@@ -85,7 +85,7 @@ class LoansController
     /**
      * Display the loan view/edit form.
      */
-    public function view(Loans $loan)
+    public function view(Loan $loan)
     {
         $loan->load('payments'); // Load payments
         $loanService = app(LoanService::class);
@@ -99,7 +99,7 @@ class LoansController
     /**
      * Handle the loan update request.
      */
-    public function update(Request $request, Loans $loan)
+    public function update(Request $request, Loan $loan)
     {
         // Define base validation rules
         $rules = [
@@ -139,10 +139,10 @@ class LoansController
     }
 
     /**
-     * @param Loans $loan
+     * @param Loan $loan
      * @return RedirectResponse
      */
-    public function markAsPaid(Loans $loan)
+    public function markAsPaid(Loan $loan)
     {
         // Ensure the loan is not already marked as paid
         if ($loan->status === 'paid') {

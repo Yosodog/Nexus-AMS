@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Transactions extends Model
+class Transaction extends Model
 {
 
     public $table = "transactions";
@@ -15,7 +15,7 @@ class Transactions extends Model
      */
     public function toAccount()
     {
-        return $this->belongsTo(Accounts::class, "to_account_id", "id");
+        return $this->belongsTo(Account::class, "to_account_id", "id");
     }
 
     /**
@@ -23,7 +23,7 @@ class Transactions extends Model
      */
     public function fromAccount()
     {
-        return $this->belongsTo(Accounts::class, "from_account_id", "id");
+        return $this->belongsTo(Account::class, "from_account_id", "id");
     }
 
     /**
@@ -31,7 +31,7 @@ class Transactions extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nations::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, "nation_id", "id");
     }
 
     /**

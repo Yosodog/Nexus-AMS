@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\War;
+use App\GraphQL\Models\War as WarGraphQL;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
-class Wars extends Model
+class War extends Model
 {
     protected $table = 'wars';
     protected $guarded = [];
@@ -16,7 +16,7 @@ class Wars extends Model
      */
     public function attacker()
     {
-        return $this->belongsTo(Nations::class, 'att_id');
+        return $this->belongsTo(Nation::class, 'att_id');
     }
 
     /**
@@ -24,16 +24,16 @@ class Wars extends Model
      */
     public function defender()
     {
-        return $this->belongsTo(Nations::class, 'def_id');
+        return $this->belongsTo(Nation::class, 'def_id');
     }
 
     /**
-     * @param War|array|\stdClass $war
-     * @return Wars
+     * @param WarGraphQL|array|\stdClass $war
+     * @return War
      */
-    public static function updateFromAPI(War|array|\stdClass $war): Wars
+    public static function updateFromAPI(WarGraphQL|array|\stdClass $war): War
     {
-        if ($war instanceof War || $war instanceof \stdClass) {
+        if ($war instanceof WarGraphQL || $war instanceof \stdClass) {
             $war = (array)$war;
         }
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Accounts extends Model
+class Account extends Model
 {
     use SoftDeletes;
 
@@ -28,7 +28,7 @@ class Accounts extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nations::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, "nation_id", "id");
     }
 
     /**
@@ -52,7 +52,7 @@ class Accounts extends Model
      */
     public function loans()
     {
-        return $this->hasMany(Loans::class, "account_id");
+        return $this->hasMany(Loan::class, "account_id");
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Loans;
+use App\Models\Loan;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -13,13 +13,13 @@ class LoanNotification extends Notification implements ShouldQueue
 
     public int $nation_id;
     public string $status;
-    public Loans $loan;
+    public Loan $loan;
     public ?float $paymentAmount;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(int $nation_id, Loans $loan, string $status, ?float $paymentAmount = null)
+    public function __construct(int $nation_id, Loan $loan, string $status, ?float $paymentAmount = null)
     {
         $this->nation_id = $nation_id;
         $this->loan = $loan;

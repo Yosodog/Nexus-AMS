@@ -19,6 +19,6 @@ class NationMilitary extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nations::class);
+        return $this->belongsTo(Nation::class);
     }
 }

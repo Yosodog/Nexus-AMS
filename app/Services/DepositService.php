@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Models\DepositRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Str;
@@ -106,11 +106,11 @@ class DepositService
     /**
      * Creates a deposit request
      *
-     * @param Accounts $account
+     * @param Account $account
      *
      * @return DepositRequest
      */
-    public static function createRequest(Accounts $account): DepositRequest
+    public static function createRequest(Account $account): DepositRequest
     {
         $depositCode = self::generate_code();
 

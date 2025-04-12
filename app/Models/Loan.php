@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Loans extends Model
+class Loan extends Model
 {
     /**
      * @var string
@@ -37,7 +37,7 @@ class Loans extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nations::class);
+        return $this->belongsTo(Nation::class);
     }
 
     /**
@@ -45,7 +45,7 @@ class Loans extends Model
      */
     public function account()
     {
-        return $this->belongsTo(Accounts::class);
+        return $this->belongsTo(Account::class);
     }
 
     /**
@@ -86,7 +86,7 @@ class Loans extends Model
      */
     public function payments()
     {
-        return $this->hasMany(LoanPayments::class, 'loan_id');
+        return $this->hasMany(LoanPayment::class, 'loan_id');
     }
 
 }

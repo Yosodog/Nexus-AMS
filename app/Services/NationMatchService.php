@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\Nations;
+use App\Models\Nation;
 use Illuminate\Support\Collection;
 
 class NationMatchService
 {
     /**
-     * @param Nations $source
-     * @param Nations $target
+     * @param Nation $source
+     * @param Nation $target
      * @return int
      */
-    public function score(Nations $source, Nations $target): int
+    public function score(Nation $source, Nation $target): int
     {
         if (
             $source->defensive_wars_count >= 3 ||
@@ -39,18 +39,18 @@ class NationMatchService
     }
 
     /**
-     * @param Nations $target
+     * @param Nation $target
      * @param iterable $sourceNations
      * @return Collection
      */
-    public function rankAgainstTarget(Nations $target, iterable $sourceNations): Collection
+    public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
     {
         $minScore = $target->score * 0.75;
         $maxScore = $target->score * 2.5;
 
         return collect($sourceNations)
-            ->filter(fn (Nations $n) => $n->score >= $minScore && $n->score <= $maxScore)
-            ->map(function (Nations $n) use ($target) {
+            ->filter(fn (Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)
+            ->map(function (Nation $n) use ($target) {
                 $n->match_score = $this->score($n, $target);
                 return $n;
             })
@@ -59,10 +59,10 @@ class NationMatchService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @return float
      */
-    protected function militaryPower(Nations $nation): float
+    protected function militaryPower(Nation $nation): float
     {
         $military = $nation->military;
 
@@ -74,7 +74,7 @@ class NationMatchService
         );
     }
 
-    protected function militaryEffectiveness(Nations $source, Nations $target): float
+    protected function militaryEffectiveness(Nation $source, Nation $target): float
     {
         $s = $source->military;
         $t = $target->military;
@@ -93,11 +93,11 @@ class NationMatchService
     }
 
     /**
-     * @param Nations $source
-     * @param Nations $target
+     * @param Nation $source
+     * @param Nation $target
      * @return bool
      */
-    public function canAttack(Nations $source, Nations $target): bool
+    public function canAttack(Nation $source, Nation $target): bool
     {
         $min = $source->score * 0.75;
         $max = $source->score * 2.5;

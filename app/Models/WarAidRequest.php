@@ -43,14 +43,14 @@ class WarAidRequest extends Model
      * @return BelongsTo
      */
     public function nation(): BelongsTo {
-        return $this->belongsTo(Nations::class);
+        return $this->belongsTo(Nation::class);
     }
 
     /**
      * @return BelongsTo
      */
     public function account(): BelongsTo {
-        return $this->belongsTo(Accounts::class);
+        return $this->belongsTo(Account::class);
     }
 
     /**

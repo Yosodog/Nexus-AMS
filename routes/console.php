@@ -14,7 +14,7 @@ Schedule::command('sync:wars')->hourlyAt(10)->runInBackground()
 // Deposits
 Schedule::command(ProcessDeposits::class)->everyMinute()->runInBackground();
 
-// Loans
+// Loan
 Schedule::command('loans:process-payments')->dailyAt('00:15');
 
 // Other system stuff

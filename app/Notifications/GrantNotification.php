@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\GrantApplications;
+use App\Models\GrantApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -12,12 +12,12 @@ class GrantNotification extends Notification
 
     public int $nation_id;
     public string $status;
-    public GrantApplications $application;
+    public GrantApplication $application;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(int $nation_id, GrantApplications $application, string $status)
+    public function __construct(int $nation_id, GrantApplication $application, string $status)
     {
         $this->nation_id = $nation_id;
         $this->application = $application;

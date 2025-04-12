@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\BankRecord;
 use App\Jobs\SendBank;
-use App\Models\Transactions;
+use App\Models\Transaction;
 use Illuminate\Http\Client\ConnectionException;
 
 class BankService
@@ -30,11 +30,11 @@ class BankService
     /**
      * Queues a job to send the withdraw.
      *
-     * @param Transactions $transaction
+     * @param Transaction $transaction
      *
      * @return void
      */
-    public function send(Transactions $transaction): void
+    public function send(Transaction $transaction): void
     {
         SendBank::dispatch($this, $transaction);
     }

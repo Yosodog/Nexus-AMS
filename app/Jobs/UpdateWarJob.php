@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Wars;
+use App\Models\War;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -28,7 +28,7 @@ class UpdateWarJob implements ShouldQueue
                     continue;
                 }
                 // Convert to stdClass and hydrate the model
-                Wars::updateFromAPI((object)$warData);
+                War::updateFromAPI((object)$warData);
             }
         } catch (\Exception $e) {
             Log::error('Failed to update wars', ['error' => $e->getMessage()]);

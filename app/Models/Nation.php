@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\Nation;
+use App\GraphQL\Models\Nation as NationGraphQL;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 
-class Nations extends Model
+class Nation extends Model
 {
     use Notifiable;
 
@@ -65,7 +65,7 @@ class Nations extends Model
         'nuclear_launch_facility'
     ];
 
-    public static function updateFromAPI(Nation $graphQLNationModel): self
+    public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
         // Extract only non-null values
         $nationData = collect((array)$graphQLNationModel)
@@ -196,7 +196,7 @@ class Nations extends Model
 
         if (!is_null($graphQLNationModel->cities)) {
             foreach ($graphQLNationModel->cities as $city) {
-                Cities::updateFromAPI($city);
+                City::updateFromAPI($city);
             }
         }
 
@@ -221,9 +221,9 @@ class Nations extends Model
 
     /**
      * @param int $nation_id
-     * @return Nations
+     * @return Nation
      */
-    public static function getNationById(int $nation_id): Nations
+    public static function getNationById(int $nation_id): Nation
     {
         return self::where("nation_id", $nation_id)->firstOrFail();
     }
@@ -233,7 +233,7 @@ class Nations extends Model
      */
     public function alliance()
     {
-        return $this->belongsTo(Alliances::class, "alliance_id", "id");
+        return $this->belongsTo(Alliance::class, "alliance_id", "id");
     }
 
     /**
@@ -241,7 +241,7 @@ class Nations extends Model
      */
     public function accounts()
     {
-        return $this->hasMany(Accounts::class, "nation_id");
+        return $this->hasMany(Account::class, "nation_id");
     }
 
     /**

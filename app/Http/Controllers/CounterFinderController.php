@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\NationMatchService;
 use Illuminate\Http\Request;
 
@@ -20,7 +20,7 @@ class CounterFinderController extends Controller
         $nations = collect();
 
         if ($nation !== null) {
-            $targetNation = Nations::with('military')->find($nation);
+            $targetNation = Nation::with('military')->find($nation);
 
             if (!$targetNation) {
                 return redirect()
@@ -28,7 +28,7 @@ class CounterFinderController extends Controller
                     ->with(['alert-message' => 'Target nation not found.', 'alert-type' => 'error']);
             }
 
-            $ourNations = Nations::with('military')
+            $ourNations = Nation::with('military')
                 ->where('alliance_id', env('PW_ALLIANCE_ID'))
                 ->where('alliance_position', '!=', 'APPLICANT')
                 ->where("vacation_mode_turns", 0)
@@ -48,7 +48,7 @@ class CounterFinderController extends Controller
                 ->values();
         } else {
             // No target provided, just list all of our nations
-            $nations = Nations::with('military')
+            $nations = Nation::with('military')
                 ->where('alliance_id', env('PW_ALLIANCE_ID'))
                 ->get();
         }

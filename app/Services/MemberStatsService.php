@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\CityGrantRequest;
-use App\Models\GrantApplications;
-use App\Models\Loans;
-use App\Models\Nations;
-use App\Models\NationSignIns;
+use App\Models\GrantApplication;
+use App\Models\Loan;
+use App\Models\Nation;
+use App\Models\NationSignIn;
 use App\Models\Taxes;
 use Carbon\Carbon;
 
@@ -17,7 +17,7 @@ class MemberStatsService
      */
     public function getOverviewData(): array
     {
-        $nations = Nations::with(['resources', 'accounts', 'military'])
+        $nations = Nation::with(['resources', 'accounts', 'military'])
             ->where('alliance_id', env("PW_ALLIANCE_ID"))
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
@@ -44,7 +44,7 @@ class MemberStatsService
      */
     protected function getCityGrowthHistory(): array
     {
-        return NationSignIns::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
+        return NationSignIn::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')
             ->orderBy('date')
@@ -53,10 +53,10 @@ class MemberStatsService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @return array
      */
-    protected function formatNation(Nations $nation): array
+    protected function formatNation(Nation $nation): array
     {
         $cities = $nation->num_cities;
         $max = [
@@ -115,21 +115,21 @@ class MemberStatsService
     /**
      * Gets stats for the admin/members/{nations} page
      *
-     * @param Nations $nation
+     * @param Nation $nation
      * @return array
      */
-    public function getNationStats(Nations $nation): array
+    public function getNationStats(Nation $nation): array
     {
         $nationId = $nation->id;
 
         // 1. Info Boxes
-        $lastSignIn = NationSignIns::where('nation_id', $nationId)->latest()->first();
+        $lastSignIn = NationSignIn::where('nation_id', $nationId)->latest()->first();
         $lastUpdatedAt = optional($nation)->updated_at;
         $lastScore = optional($lastSignIn)->score ?? $nation->score;
         $lastCities = optional($lastSignIn)->num_cities ?? $nation->cities;
 
         // 2. Resource History (30 days)
-        $resourceHistory = NationSignIns::where('nation_id', $nationId)
+        $resourceHistory = NationSignIn::where('nation_id', $nationId)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()
@@ -144,7 +144,7 @@ class MemberStatsService
             });
 
         // 3. Score History (365 days)
-        $scoreHistory = NationSignIns::where('nation_id', $nationId)
+        $scoreHistory = NationSignIn::where('nation_id', $nationId)
             ->where('created_at', '>=', now()->subDays(365))
             ->orderBy('created_at')
             ->get(['created_at', 'score']);
@@ -169,8 +169,8 @@ class MemberStatsService
 
         // 5. Recent Requests
         $recentCityGrants = CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentCustomGrants = GrantApplications::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentLoans = Loans::where('nation_id', $nationId)->latest()->take(5)->get();
+        $recentCustomGrants = GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get();
+        $recentLoans = Loan::where('nation_id', $nationId)->latest()->take(5)->get();
         $recentTaxes = Taxes::where('sender_id', $nationId)
             ->where('date', '>=', now()->subDays(7))
             ->orderBy('date')
@@ -186,7 +186,7 @@ class MemberStatsService
                 ];
             })->values();
 
-        $resourceSignInHistory = NationSignIns::where('nation_id', $nation->id)
+        $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()

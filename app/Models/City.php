@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\City;
+use App\GraphQL\Models\City as CityGraphQL;
 use Illuminate\Database\Eloquent\Model;
 
-class Cities extends Model
+class City extends Model
 {
     public $guarded = [];
     protected $table = "cities";
 
     /**
-     * @param City $graphQLCityModel
+     * @param CityGraphQL $graphQLCityModel
      * @return self
      */
-    public static function updateFromAPI(City $graphQLCityModel): self
+    public static function updateFromAPI(CityGraphQL $graphQLCityModel): self
     {
         // Extract city data
         $cityData = collect((array)$graphQLCityModel)->only([

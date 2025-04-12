@@ -10,10 +10,10 @@ use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
 use App\Jobs\UpdateWarJob;
-use App\Models\Alliances;
-use App\Models\Cities;
-use App\Models\Nations;
-use App\Models\Wars;
+use App\Models\Alliance;
+use App\Models\City;
+use App\Models\Nation;
+use App\Models\War;
 use App\Services\AllianceQueryService;
 use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
@@ -92,7 +92,7 @@ class SubController extends Controller
         }
 
         foreach ($nationDelete as $del) {
-            $nation = Nations::getNationById($del['id']);
+            $nation = Nation::getNationById($del['id']);
             $nation->delete();
         }
 
@@ -122,7 +122,7 @@ class SubController extends Controller
         foreach ($allianceCreates as $create) {
             $alliance = AllianceQueryService::getAllianceById($create['id']);
 
-            Alliances::updateFromAPI($alliance);
+            Alliance::updateFromAPI($alliance);
         }
 
         return response()->json(['message' => 'Alliance created successfully']);
@@ -173,7 +173,7 @@ class SubController extends Controller
         }
 
         foreach ($allianceDeletes as $del) {
-            $nation = Alliances::getById($del['id']);
+            $nation = Alliance::getById($del['id']);
             $nation->delete();
         }
 
@@ -203,7 +203,7 @@ class SubController extends Controller
         foreach ($cityCreates as $create) {
             $city = CityQueryService::getCityById($create['id']);
 
-            Cities::updateFromAPI($city);
+            City::updateFromAPI($city);
         }
 
         return response()->json(['message' => 'City created successfully']);
@@ -254,7 +254,7 @@ class SubController extends Controller
         }
 
         foreach ($citiesDelete as $del) {
-            $nation = Cities::getById($del['id']);
+            $nation = City::getById($del['id']);
             $nation->delete();
         }
 
@@ -282,7 +282,7 @@ class SubController extends Controller
             if ($create['att_alliance_id'] == env("PW_ALLIANCE_ID") || $create['def_alliance_id'] == env(
                     "PW_ALLIANCE_ID"
                 )) {
-                Wars::updateFromAPI((object)$create);
+                War::updateFromAPI((object)$create);
             }
         }
 
@@ -327,7 +327,7 @@ class SubController extends Controller
         }
 
         foreach ($warDeletes as $del) {
-            $war = Wars::find($del['id']);
+            $war = War::find($del['id']);
             if ($war) {
                 $war->delete();
             }

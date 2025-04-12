@@ -56,12 +56,12 @@ class User extends Authenticatable
      */
     public function nation()
     {
-        return $this->hasOne(Nations::class, "id", "nation_id");
+        return $this->hasOne(Nation::class, "id", "nation_id");
     }
 
     public function accounts()
     {
-        return $this->hasMany(Accounts::class, "nation_id", "nation_id");
+        return $this->hasMany(Account::class, "nation_id", "nation_id");
     }
 
     /**

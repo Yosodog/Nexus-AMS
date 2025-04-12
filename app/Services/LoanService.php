@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Accounts;
-use App\Models\LoanPayments;
-use App\Models\Loans;
-use App\Models\Nations;
+use App\Models\Account;
+use App\Models\LoanPayment;
+use App\Models\Loan;
+use App\Models\Nation;
 use App\Notifications\LoanNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,16 +19,16 @@ class LoanService
     }
 
     /**
-     * @param Nations $nation
-     * @param Accounts $account
+     * @param Nation $nation
+     * @param Account $account
      * @param float $amount
      * @param int $termLength
-     * @return Loans
+     * @return Loan
      */
-    public function applyForLoan(Nations $nation, Accounts $account, float $amount, int $termLength): Loans
+    public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
         // Create the loan record
-        return Loans::create([
+        return Loan::create([
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'amount' => $amount,
@@ -39,12 +39,12 @@ class LoanService
     }
 
     /**
-     * @param Nations $nation
-     * @param Accounts $account
+     * @param Nation $nation
+     * @param Account $account
      * @return bool
      * @throws ValidationException
      */
-    public function validateLoanEligibility(Nations $nation, Accounts $account): bool
+    public function validateLoanEligibility(Nation $nation, Account $account): bool
     {
         $validator = new NationEligibilityValidator($nation);
         $validator->validateAllianceMembership();
@@ -62,14 +62,14 @@ class LoanService
     /**
      * Approves a loan, updates the account balance, and notifies the user.
      *
-     * @param Loans $loan
+     * @param Loan $loan
      * @param float $amount
      * @param float $interestRate
      * @param int $termWeeks
-     * @param Nations $nation
-     * @return Loans
+     * @param Nation $nation
+     * @return Loan
      */
-    public function approveLoan(Loans $loan, float $amount, float $interestRate, int $termWeeks, Nations $nation): Loans
+    public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
     {
         return DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
             // Update the loan details
@@ -83,7 +83,7 @@ class LoanService
             ]);
 
             // Fetch the recipient account
-            $account = Accounts::findOrFail($loan->account_id);
+            $account = Account::findOrFail($loan->account_id);
             $adminId = Auth::id();
             $ipAddress = Request::ip();
 
@@ -103,11 +103,11 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
-     * @param Nations $nation
+     * @param Loan $loan
+     * @param Nation $nation
      * @return void
      */
-    public function denyLoan(Loans $loan, Nations $nation): void
+    public function denyLoan(Loan $loan, Nation $nation): void
     {
         $loan->update(['status' => 'denied']);
 
@@ -120,7 +120,7 @@ class LoanService
     public function processWeeklyPayments(): void
     {
         $today = now()->toDateString();
-        $loans = Loans::where('next_due_date', $today)->where('status', 'approved')->get();
+        $loans = Loan::where('next_due_date', $today)->where('status', 'approved')->get();
 
         foreach ($loans as $loan) {
             $weeklyPayment = $this->calculateWeeklyPayment($loan);
@@ -163,7 +163,7 @@ class LoanService
     /**
      * Calculates the weekly loan payment.
      */
-    public function calculateWeeklyPayment(Loans $loan): float
+    public function calculateWeeklyPayment(Loan $loan): float
     {
         $r = $loan->interest_rate / 100; // Convert interest rate to decimal
         $P = $loan->amount;
@@ -178,10 +178,10 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
+     * @param Loan $loan
      * @return float
      */
-    private function getEarlyPaymentsSinceLastDue(Loans $loan): float
+    private function getEarlyPaymentsSinceLastDue(Loan $loan): float
     {
         return $loan->payments()
             ->where('payment_date', '>=', $loan->next_due_date->subDays(7))
@@ -191,7 +191,7 @@ class LoanService
     /**
      * Withdraw funds from an account and update the loan balance.
      */
-    private function withdrawFromAccount(Accounts $account, float $amount, Loans $loan): void
+    private function withdrawFromAccount(Account $account, float $amount, Loan $loan): void
     {
         $interestRate = $loan->interest_rate / 100;
         $interestPaid = round($amount * $interestRate, 2);
@@ -206,7 +206,7 @@ class LoanService
             AccountService::adjustAccountBalance($account, $adjustment, null, null);
 
             // Log the loan payment
-            LoanPayments::create([
+            LoanPayment::create([
                 'loan_id' => $loan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
@@ -231,10 +231,10 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
+     * @param Loan $loan
      * @return void
      */
-    public function markLoanAsPaid(Loans $loan): void
+    public function markLoanAsPaid(Loan $loan): void
     {
         DB::transaction(function () use ($loan) {
             $loan->update([
@@ -248,13 +248,13 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
-     * @param Accounts $account
+     * @param Loan $loan
+     * @param Account $account
      * @param float $amount
      * @return void
      * @throws ValidationException
      */
-    public function repayLoan(Loans $loan, Accounts $account, float $amount): void
+    public function repayLoan(Loan $loan, Account $account, float $amount): void
     {
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);
@@ -284,7 +284,7 @@ class LoanService
             $principalPaid = $amount - $interestPaid;
 
             // Log the loan payment in loan_payments table
-            LoanPayments::create([
+            LoanPayment::create([
                 'loan_id' => $loan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
@@ -309,10 +309,10 @@ class LoanService
     }
 
     /**
-     * @param Loans $loan
+     * @param Loan $loan
      * @return void
      */
-    public function processLoanPayment(Loans $loan): void
+    public function processLoanPayment(Loan $loan): void
     {
         $weeklyPayment = $this->calculateWeeklyPayment($loan);
         $nation = $loan->nation;

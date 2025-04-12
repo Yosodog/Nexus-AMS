@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Wars;
+use App\Models\War;
 use App\Services\WarQueryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -32,7 +32,7 @@ class SyncWarsJob implements ShouldQueue
             ], $this->perPage, pagination: true, handlePagination: false);
 
             foreach ($wars as $war) {
-                Wars::updateFromAPI($war);
+                War::updateFromAPI($war);
             }
 
             unset($wars);

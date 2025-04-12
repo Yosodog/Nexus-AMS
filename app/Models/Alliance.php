@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\Alliance;
+use App\GraphQL\Models\Alliance as AllianceGraphQL;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Alliances extends Model
+class Alliance extends Model
 {
     public $table = "alliances";
     protected $guarded = [];
@@ -14,10 +14,11 @@ class Alliances extends Model
     /**
      * Create or update an Alliance model from GraphQL Alliance data.
      *
-     * @param Alliance $graphQLAllianceModel - The GraphQL alliance data
-     * @return Alliances
+     * @param AllianceGraphQL $graphQLAllianceModel - The GraphQL alliance data
+     * @param bool $withNations
+     * @return Alliance
      */
-    public static function updateFromAPI(Alliance $graphQLAllianceModel, bool $withNations = true): Alliances
+    public static function updateFromAPI(AllianceGraphQL $graphQLAllianceModel, bool $withNations = true): Alliance
     {
         // Extract alliance data
         $allianceData = collect((array)$graphQLAllianceModel)->only([
@@ -41,7 +42,7 @@ class Alliances extends Model
         // Check if nations data is included and update/create nations
         if (isset($graphQLAllianceModel->nations) && $withNations) {
             foreach ($graphQLAllianceModel->nations as $nationData) {
-                Nations::updateFromAPI($nationData);
+                Nation::updateFromAPI($nationData);
             }
         }
 
@@ -62,6 +63,6 @@ class Alliances extends Model
      */
     public function nations()
     {
-        return $this->hasMany(Nations::class, "alliance_id");
+        return $this->hasMany(Nation::class, "alliance_id");
     }
 }

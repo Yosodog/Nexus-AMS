@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\GraphQL\Models\Nation as GraphQLNationModel;
-use App\Models\Nations;
+use App\Models\Nation;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,7 +37,7 @@ class UpdateNationJob implements ShouldQueue
                 $nationModel->buildWithJSON((object)$nationData);
 
                 // Use updateFromAPI() to update or create the nation
-                Nations::updateFromAPI($nationModel);
+                Nation::updateFromAPI($nationModel);
             }
         } catch (Exception $e) {
             Log::error("Failed to update nations", ['error' => $e->getMessage()]);

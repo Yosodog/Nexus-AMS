@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Accounts;
-use App\Models\GrantApplications;
+use App\Models\Account;
+use App\Models\GrantApplication;
 use App\Models\Grants;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Notifications\GrantNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
@@ -15,12 +15,12 @@ class GrantService
 {
     /**
      * @param Grants $grant
-     * @param Nations $nation
+     * @param Nation $nation
      * @param int $accountId
-     * @return GrantApplications
+     * @return GrantApplication
      * @throws ValidationException
      */
-    public static function applyToGrant(Grants $grant, Nations $nation, int $accountId): GrantApplications
+    public static function applyToGrant(Grants $grant, Nation $nation, int $accountId): GrantApplication
     {
         self::validateEligibility($grant, $nation);
 
@@ -29,15 +29,15 @@ class GrantService
 
     /**
      * @param Grants $grant
-     * @param Nations $nation
+     * @param Nation $nation
      * @return void
      * @throws ValidationException
      */
-    public static function validateEligibility(Grants $grant, Nations $nation): void
+    public static function validateEligibility(Grants $grant, Nation $nation): void
     {
         // One-time grants: check if they've already been approved
         if ($grant->is_one_time) {
-            $alreadyApproved = GrantApplications::where('nation_id', $nation->id)
+            $alreadyApproved = GrantApplication::where('nation_id', $nation->id)
                 ->where('grant_id', $grant->id)
                 ->where('status', 'approved')
                 ->exists();
@@ -50,7 +50,7 @@ class GrantService
         }
 
         // Check if there's a pending application
-        $hasPending = GrantApplications::where('nation_id', $nation->id)
+        $hasPending = GrantApplication::where('nation_id', $nation->id)
             ->where('grant_id', $grant->id)
             ->where('status', 'pending')
             ->exists();
@@ -78,11 +78,11 @@ class GrantService
      * @param Grants $grant
      * @param int $nationId
      * @param int $accountId
-     * @return GrantApplications
+     * @return GrantApplication
      */
-    public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplications
+    public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication
     {
-        return GrantApplications::create([
+        return GrantApplication::create([
             'grant_id' => $grant->id,
             'nation_id' => $nationId,
             'account_id' => $accountId,
@@ -91,13 +91,13 @@ class GrantService
     }
 
     /**
-     * @param GrantApplications $application
+     * @param GrantApplication $application
      * @return void
      */
-    public static function approveGrant(GrantApplications $application): void
+    public static function approveGrant(GrantApplication $application): void
     {
         $grant = $application->grant;
-        $account = Accounts::findOrFail($application->account_id);
+        $account = Account::findOrFail($application->account_id);
         $adminId = Auth::id();
         $ipAddress = Request::ip();
 
@@ -120,10 +120,10 @@ class GrantService
     }
 
     /**
-     * @param GrantApplications $application
+     * @param GrantApplication $application
      * @return void
      */
-    public static function denyGrant(GrantApplications $application): void
+    public static function denyGrant(GrantApplication $application): void
     {
         $application->update([
             'status' => 'denied',

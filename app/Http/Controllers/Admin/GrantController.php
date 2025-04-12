@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\GrantApplications;
+use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Services\GrantService;
 use App\Services\PWHelperService;
@@ -21,15 +21,15 @@ class GrantController
     public function grants()
     {
         $grants = Grants::orderBy('created_at', 'desc')->get();
-        $pendingRequests = GrantApplications::with('grant', 'nation', 'account')
+        $pendingRequests = GrantApplication::with('grant', 'nation', 'account')
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $totalApproved = GrantApplications::where('status', 'approved')->count();
-        $totalDenied = GrantApplications::where('status', 'denied')->count();
+        $totalApproved = GrantApplication::where('status', 'approved')->count();
+        $totalDenied = GrantApplication::where('status', 'denied')->count();
         $pendingCount = $pendingRequests->count();
-        $totalFundsDistributed = GrantApplications::where('status', 'approved')->sum('money');
+        $totalFundsDistributed = GrantApplication::where('status', 'approved')->sum('money');
 
         return view(
             'admin.grants.grants',
@@ -111,10 +111,10 @@ class GrantController
     }
 
     /**
-     * @param GrantApplications $application
+     * @param GrantApplication $application
      * @return RedirectResponse
      */
-    public function approveApplication(GrantApplications $application)
+    public function approveApplication(GrantApplication $application)
     {
         GrantService::approveGrant($application);
 
@@ -124,10 +124,10 @@ class GrantController
     }
 
     /**
-     * @param GrantApplications $application
+     * @param GrantApplication $application
      * @return RedirectResponse
      */
-    public function denyApplication(GrantApplications $application)
+    public function denyApplication(GrantApplication $application)
     {
         GrantService::denyGrant($application);
 

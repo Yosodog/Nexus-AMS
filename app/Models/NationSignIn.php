@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class NationSignIns extends Model
+class NationSignIn extends Model
 {
     /**
      * @var string
@@ -81,6 +81,6 @@ class NationSignIns extends Model
      */
     public function nation(): BelongsTo
     {
-        return $this->belongsTo(Nations::class);
+        return $this->belongsTo(Nation::class);
     }
 }

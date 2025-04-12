@@ -44,7 +44,7 @@ class UserController extends Controller
 
         $user->save();
 
-        return redirect()->route('user.settings')->with('alert-message', 'Settings updated successfully!')->with(
+        return redirect()->route('user.settings')->with('alert-message', 'Setting updated successfully!')->with(
             'alert-type',
             'success'
         );

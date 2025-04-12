@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\PWQueryFailedException;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\AllianceQueryService;
 use App\Services\SignInService;
 use Illuminate\Console\Command;
@@ -55,7 +55,7 @@ class MilitarySignIn extends Command
                 // TODO Handle if the nation isn't sharing their resources by spamming them with messages.
 
                 $this->signInService->snapshotNation($nation);
-                Nations::updateFromAPI($nation); // Why not update it while we're here
+                Nation::updateFromAPI($nation); // Why not update it while we're here
                 $this->line("✅ {$nation->nation_name}");
             } catch (Throwable $e) {
                 $this->error("❌ {$nation->nation_name}: " . $e->getMessage());

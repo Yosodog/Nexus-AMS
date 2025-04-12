@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ManualTransactions extends Model
+class ManualTransaction extends Model
 {
     public $table = "manual_transactions";
 
@@ -33,7 +33,7 @@ class ManualTransactions extends Model
      */
     public function account()
     {
-        return $this->belongsTo(Accounts::class, "account_id", "id");
+        return $this->belongsTo(Account::class, "account_id", "id");
     }
 
     /**

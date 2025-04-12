@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Alliances;
+use App\Models\Alliance;
 use App\Services\AllianceQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,7 +34,7 @@ class SyncAlliancesJob implements ShouldQueue
                 handlePagination: false);
 
             foreach ($alliances as $alliance) {
-                Alliances::updateFromAPI($alliance, false);
+                Alliance::updateFromAPI($alliance, false);
             }
 
             // Without this memory cleanup, the queue worker will fail after ~8 jobs.

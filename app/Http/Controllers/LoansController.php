@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Accounts;
-use App\Models\Loans;
+use App\Models\Account;
+use App\Models\Loan;
 use App\Services\LoanService;
 use Exception;
 use Illuminate\Contracts\View\Factory;
@@ -36,7 +36,7 @@ class LoansController extends Controller
         ]);
 
         $nation = Auth::user()->nation;
-        $account = Accounts::findOrFail($request->account_id);
+        $account = Account::findOrFail($request->account_id);
 
         try {
             // Validate nation eligibility
@@ -60,7 +60,7 @@ class LoansController extends Controller
         $nation = Auth::user()->nation;
 
         // Get only active loans (approved and not fully paid)
-        $activeLoans = Loans::where('nation_id', $nation->id)
+        $activeLoans = Loan::where('nation_id', $nation->id)
             ->where('status', 'approved')
             ->where('remaining_balance', '>', 0)
             ->with('payments')
@@ -71,7 +71,7 @@ class LoansController extends Controller
             });
 
         // Fetch all loans for history (pending, denied, and paid)
-        $loanHistory = Loans::where('nation_id', $nation->id)
+        $loanHistory = Loan::where('nation_id', $nation->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -94,8 +94,8 @@ class LoansController extends Controller
             'amount' => 'required|numeric|min:1',
         ]);
 
-        $loan = Loans::findOrFail($request->loan_id);
-        $account = Accounts::findOrFail($request->account_id);
+        $loan = Loan::findOrFail($request->loan_id);
+        $account = Account::findOrFail($request->account_id);
         $userNation = Auth::user()->nation;
 
         // Ensure the loan belongs to the nation

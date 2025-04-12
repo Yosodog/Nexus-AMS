@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class GrantApplications extends Model
+class GrantApplication extends Model
 {
     /**
      * @var string
@@ -57,7 +57,7 @@ class GrantApplications extends Model
      */
     public function nation(): BelongsTo
     {
-        return $this->belongsTo(Nations::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, "nation_id", "id");
     }
 
     /**
@@ -65,6 +65,6 @@ class GrantApplications extends Model
      */
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Accounts::class, "account_id", "id");
+        return $this->belongsTo(Account::class, "account_id", "id");
     }
 }

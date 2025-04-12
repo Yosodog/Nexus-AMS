@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Accounts;
+use App\Models\Account;
 use App\Services\AccountService;
 use App\Services\PWHelperService;
 use Closure;
@@ -16,7 +16,7 @@ class AccountController extends Controller
 
     public function dashboard()
     {
-        $accounts = Accounts::with("user")
+        $accounts = Account::with("user")
             ->orderBy("nation_id")
             ->has("user")
             ->get();
@@ -27,11 +27,11 @@ class AccountController extends Controller
     }
 
     /**
-     * @param Accounts $accounts
+     * @param Account $accounts
      *
      * @return Closure|Container|mixed|object|null
      */
-    public function view(Accounts $accounts)
+    public function view(Account $accounts)
     {
         $accounts->load("nation")
             ->load("user");
@@ -47,7 +47,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @param Accounts $accounts
+     * @param Account $accounts
      * @param Request $request
      *
      * @return mixed
