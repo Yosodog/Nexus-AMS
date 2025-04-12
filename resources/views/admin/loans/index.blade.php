@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    {{-- Pending Loans --}}
+    {{-- Pending Loan --}}
     <div class="card mt-4">
         <div class="card-header">Pending Loan Applications</div>
         <div class="card-body">
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    {{-- Active Loans --}}
+    {{-- Active Loan --}}
     <div class="card mt-4">
         <div class="card-header">Active Loans</div>
         <div class="card-body">

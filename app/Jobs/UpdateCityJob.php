@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Cities;
+use App\Models\City;
 use App\Services\CityQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,7 +34,7 @@ class UpdateCityJob implements ShouldQueue
         try {
             foreach ($this->citiesData as $cityData) {
                 // Get the model from the DB
-                $cityModel = Cities::getById($cityData['id']);
+                $cityModel = City::getById($cityData['id']);
 
                 foreach ($cityData as $key => $data) {
                     if (in_array($key, $this->skips)) { // Skip stuff that we don't store
@@ -51,7 +51,7 @@ class UpdateCityJob implements ShouldQueue
             // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
             // So we'll just query and add it as usual lol The nations job does things differently so this is not needed
             $city = CityQueryService::getCityById($cityData['id']);
-            Cities::updateFromAPI($city);
+            City::updateFromAPI($city);
         } catch (Exception $e) {
             Log::error("Failed to update cities", ['error' => $e->getMessage()]);
         }

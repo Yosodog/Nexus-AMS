@@ -49,7 +49,7 @@ class Grants extends Model
      */
     public function applications(): HasMany
     {
-        return $this->hasMany(GrantApplications::class, "grant_id", "id");
+        return $this->hasMany(GrantApplication::class, "grant_id", "id");
     }
 
 }

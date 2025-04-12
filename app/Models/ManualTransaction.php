@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ManualTransactions extends Model
+class ManualTransaction extends Model
 {
     public $table = "manual_transactions";
 

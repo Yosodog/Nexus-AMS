@@ -196,7 +196,7 @@ class Nations extends Model
 
         if (!is_null($graphQLNationModel->cities)) {
             foreach ($graphQLNationModel->cities as $city) {
-                Cities::updateFromAPI($city);
+                City::updateFromAPI($city);
             }
         }
 

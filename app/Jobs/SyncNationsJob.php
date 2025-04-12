@@ -10,7 +10,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Cities;
+use App\Models\City;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
 use App\Models\Nations;
@@ -347,7 +347,7 @@ class SyncNationsJob implements ShouldQueue
             }
             if (!empty($citiesData)) {
                 foreach (array_chunk($citiesData, 500) as $chunk) {
-                    Cities::upsert(
+                    City::upsert(
                         $chunk,
                         ['id'],
                         array_keys(reset($chunk))

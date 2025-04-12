@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LoanPayments extends Model
+class LoanPayment extends Model
 {
     public $table = "loan_payments";
 
@@ -23,7 +23,7 @@ class LoanPayments extends Model
      */
     public function loan()
     {
-        return $this->belongsTo(Loans::class, 'loan_id');
+        return $this->belongsTo(Loan::class, 'loan_id');
     }
 
     /**

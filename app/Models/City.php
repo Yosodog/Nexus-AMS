@@ -5,7 +5,7 @@ namespace App\Models;
 use App\GraphQL\Models\City;
 use Illuminate\Database\Eloquent\Model;
 
-class Cities extends Model
+class City extends Model
 {
     public $guarded = [];
     protected $table = "cities";

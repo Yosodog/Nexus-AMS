@@ -152,7 +152,7 @@ Ships: {{ number_format($nation['military_current']['ships']) }}">
             data: {
                 labels: {!! json_encode(array_keys($cityGrowthHistory)) !!},
                 datasets: [{
-                    label: 'Total Cities',
+                    label: 'Total City',
                     data: {!! json_encode(array_values($cityGrowthHistory)) !!},
                     fill: false,
                     tension: 0.3

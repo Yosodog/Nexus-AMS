@@ -11,7 +11,7 @@ use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
 use App\Jobs\UpdateWarJob;
 use App\Models\Alliance;
-use App\Models\Cities;
+use App\Models\City;
 use App\Models\Nations;
 use App\Models\Wars;
 use App\Services\AllianceQueryService;
@@ -203,7 +203,7 @@ class SubController extends Controller
         foreach ($cityCreates as $create) {
             $city = CityQueryService::getCityById($create['id']);
 
-            Cities::updateFromAPI($city);
+            City::updateFromAPI($city);
         }
 
         return response()->json(['message' => 'City created successfully']);
@@ -254,7 +254,7 @@ class SubController extends Controller
         }
 
         foreach ($citiesDelete as $del) {
-            $nation = Cities::getById($del['id']);
+            $nation = City::getById($del['id']);
             $nation->delete();
         }
 
