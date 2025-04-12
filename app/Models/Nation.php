@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 
-class Nations extends Model
+class Nation extends Model
 {
     use Notifiable;
 
@@ -221,9 +221,9 @@ class Nations extends Model
 
     /**
      * @param int $nation_id
-     * @return Nations
+     * @return Nation
      */
-    public static function getNationById(int $nation_id): Nations
+    public static function getNationById(int $nation_id): Nation
     {
         return self::where("nation_id", $nation_id)->firstOrFail();
     }

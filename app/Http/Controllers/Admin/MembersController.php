@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Services\MemberStatsService;
 use Illuminate\View\View;
 
@@ -19,11 +19,11 @@ class MembersController extends Controller
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @param MemberStatsService $service
      * @return View
      */
-    public function show(Nations $nation, MemberStatsService $service): View
+    public function show(Nation $nation, MemberStatsService $service): View
     {
         return view('admin.members.show', $service->getNationStats($nation));
     }

@@ -5,7 +5,7 @@ namespace App\Providers;
 use App\Broadcasting\PWMessageChannel;
 use App\Models\CityGrantRequest;
 use App\Models\Loan;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\PWMessageService;
@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
 
         Route::model('CityGrantRequest', CityGrantRequest::class);
         Route::model('Loan', Loan::class);
-        Route::model('Nations', Nations::class);
+        Route::model('Nation', Nation::class);
         Route::model('WarAidRequest', WarAidRequest::class);
 
         Gate::define('viewPulse', function (User $user) {

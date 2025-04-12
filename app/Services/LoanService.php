@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Account;
 use App\Models\LoanPayment;
 use App\Models\Loan;
-use App\Models\Nations;
+use App\Models\Nation;
 use App\Notifications\LoanNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,13 +19,13 @@ class LoanService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @param Account $account
      * @param float $amount
      * @param int $termLength
      * @return Loan
      */
-    public function applyForLoan(Nations $nation, Account $account, float $amount, int $termLength): Loan
+    public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
         // Create the loan record
         return Loan::create([
@@ -39,12 +39,12 @@ class LoanService
     }
 
     /**
-     * @param Nations $nation
+     * @param Nation $nation
      * @param Account $account
      * @return bool
      * @throws ValidationException
      */
-    public function validateLoanEligibility(Nations $nation, Account $account): bool
+    public function validateLoanEligibility(Nation $nation, Account $account): bool
     {
         $validator = new NationEligibilityValidator($nation);
         $validator->validateAllianceMembership();
@@ -66,10 +66,10 @@ class LoanService
      * @param float $amount
      * @param float $interestRate
      * @param int $termWeeks
-     * @param Nations $nation
+     * @param Nation $nation
      * @return Loan
      */
-    public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nations $nation): Loan
+    public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
     {
         return DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
             // Update the loan details
@@ -104,10 +104,10 @@ class LoanService
 
     /**
      * @param Loan $loan
-     * @param Nations $nation
+     * @param Nation $nation
      * @return void
      */
-    public function denyLoan(Loan $loan, Nations $nation): void
+    public function denyLoan(Loan $loan, Nation $nation): void
     {
         $loan->update(['status' => 'denied']);
 
