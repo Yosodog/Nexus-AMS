@@ -6,7 +6,7 @@ use App\GraphQL\Models\Alliance;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Alliances extends Model
+class Alliance extends Model
 {
     public $table = "alliances";
     protected $guarded = [];
@@ -15,9 +15,9 @@ class Alliances extends Model
      * Create or update an Alliance model from GraphQL Alliance data.
      *
      * @param Alliance $graphQLAllianceModel - The GraphQL alliance data
-     * @return Alliances
+     * @return Alliance
      */
-    public static function updateFromAPI(Alliance $graphQLAllianceModel, bool $withNations = true): Alliances
+    public static function updateFromAPI(Alliance $graphQLAllianceModel, bool $withNations = true): Alliance
     {
         // Extract alliance data
         $allianceData = collect((array)$graphQLAllianceModel)->only([

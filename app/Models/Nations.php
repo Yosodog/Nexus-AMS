@@ -233,7 +233,7 @@ class Nations extends Model
      */
     public function alliance()
     {
-        return $this->belongsTo(Alliances::class, "alliance_id", "id");
+        return $this->belongsTo(Alliance::class, "alliance_id", "id");
     }
 
     /**
