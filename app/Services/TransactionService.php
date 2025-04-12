@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
-use App\Models\Transactions;
+use App\Models\Transaction;
 
 class TransactionService
 {
@@ -17,7 +17,7 @@ class TransactionService
      * @param int|null $toAccountId
      * @param bool $isPending
      *
-     * @return Transactions
+     * @return Transaction
      */
     public static function createTransaction(
         array $resources,
@@ -26,8 +26,8 @@ class TransactionService
         string $transactionType,
         int|null $toAccountId = null,
         bool $isPending = true
-    ): Transactions {
-        $transaction = new Transactions();
+    ): Transaction {
+        $transaction = new Transaction();
         $transaction->from_account_id = $fromAccountId;
         $transaction->to_account_id = $toAccountId ?? null;
         $transaction->nation_id = $nation_id;
@@ -48,13 +48,13 @@ class TransactionService
      * @param Account $account
      * @param BankRecord $record
      *
-     * @return Transactions
+     * @return Transaction
      */
     public static function createTransactionForDeposit(
         Account $account,
         BankRecord $record
-    ): Transactions {
-        $transaction = new Transactions();
+    ): Transaction {
+        $transaction = new Transaction();
 
         $transaction->from_account_id = null;
         $transaction->to_account_id = $account->id;
@@ -79,7 +79,7 @@ class TransactionService
      */
     public static function hasPendingTransaction(int $nation_id): bool
     {
-        $transactions = Transactions::where('nation_id', $nation_id)
+        $transactions = Transaction::where('nation_id', $nation_id)
             ->where('is_pending', true)
             ->get();
 

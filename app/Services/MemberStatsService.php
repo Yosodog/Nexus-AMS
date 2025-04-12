@@ -6,7 +6,7 @@ use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Loan;
 use App\Models\Nation;
-use App\Models\NationSignIns;
+use App\Models\NationSignIn;
 use App\Models\Taxes;
 use Carbon\Carbon;
 
@@ -44,7 +44,7 @@ class MemberStatsService
      */
     protected function getCityGrowthHistory(): array
     {
-        return NationSignIns::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
+        return NationSignIn::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')
             ->orderBy('date')
@@ -123,13 +123,13 @@ class MemberStatsService
         $nationId = $nation->id;
 
         // 1. Info Boxes
-        $lastSignIn = NationSignIns::where('nation_id', $nationId)->latest()->first();
+        $lastSignIn = NationSignIn::where('nation_id', $nationId)->latest()->first();
         $lastUpdatedAt = optional($nation)->updated_at;
         $lastScore = optional($lastSignIn)->score ?? $nation->score;
         $lastCities = optional($lastSignIn)->num_cities ?? $nation->cities;
 
         // 2. Resource History (30 days)
-        $resourceHistory = NationSignIns::where('nation_id', $nationId)
+        $resourceHistory = NationSignIn::where('nation_id', $nationId)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()
@@ -144,7 +144,7 @@ class MemberStatsService
             });
 
         // 3. Score History (365 days)
-        $scoreHistory = NationSignIns::where('nation_id', $nationId)
+        $scoreHistory = NationSignIn::where('nation_id', $nationId)
             ->where('created_at', '>=', now()->subDays(365))
             ->orderBy('created_at')
             ->get(['created_at', 'score']);
@@ -186,7 +186,7 @@ class MemberStatsService
                 ];
             })->values();
 
-        $resourceSignInHistory = NationSignIns::where('nation_id', $nation->id)
+        $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()

@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Transactions;
+use App\Models\Transaction;
 use App\Services\BankService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -13,12 +13,12 @@ class SendBank implements ShouldQueue
     use Queueable;
 
     protected BankService $bankService;
-    protected Transactions $transaction;
+    protected Transaction $transaction;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(BankService $bankService, Transactions $transaction)
+    public function __construct(BankService $bankService, Transaction $transaction)
     {
         $this->bankService = $bankService;
         $this->transaction = $transaction;

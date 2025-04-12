@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Settings;
+use App\Models\Setting;
 
 class SettingService
 {
@@ -30,7 +30,7 @@ class SettingService
      */
     public static function getValue(string $key): mixed
     {
-        return Settings::where("key", $key)->value("value");
+        return Setting::where("key", $key)->value("value");
     }
 
     /**
@@ -44,7 +44,7 @@ class SettingService
      */
     public static function setValue(string $key, mixed $value): void
     {
-        Settings::updateOrCreate(
+        Setting::updateOrCreate(
             ["key" => $key],
             ["value" => $value]
         );

@@ -13,7 +13,7 @@ use App\Jobs\UpdateWarJob;
 use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
-use App\Models\Wars;
+use App\Models\War;
 use App\Services\AllianceQueryService;
 use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
@@ -282,7 +282,7 @@ class SubController extends Controller
             if ($create['att_alliance_id'] == env("PW_ALLIANCE_ID") || $create['def_alliance_id'] == env(
                     "PW_ALLIANCE_ID"
                 )) {
-                Wars::updateFromAPI((object)$create);
+                War::updateFromAPI((object)$create);
             }
         }
 
@@ -327,7 +327,7 @@ class SubController extends Controller
         }
 
         foreach ($warDeletes as $del) {
-            $war = Wars::find($del['id']);
+            $war = War::find($del['id']);
             if ($war) {
                 $war->delete();
             }

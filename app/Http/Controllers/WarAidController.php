@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WarAidRequest;
-use App\Models\Wars;
+use App\Models\War;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
@@ -18,7 +18,7 @@ class WarAidController extends Controller
     public function index()
     {
         $nation = Auth::user()->nation;
-        $wars = Wars::where(function ($query) use ($nation) {
+        $wars = War::where(function ($query) use ($nation) {
             $query->where('att_id', $nation->id)
                 ->orWhere('def_id', $nation->id);
         })->active()->get();

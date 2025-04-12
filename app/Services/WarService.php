@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Wars;
+use App\Models\War;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -20,7 +20,7 @@ class WarService
      */
     public function getActiveWars(): Collection
     {
-        return Wars::with(['attacker.alliance', 'defender.alliance'])
+        return War::with(['attacker.alliance', 'defender.alliance'])
             ->whereNull('end_date')
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -34,7 +34,7 @@ class WarService
      */
     public function getWarsLast30Days(): Collection
     {
-        return Wars::with(['attacker.alliance', 'defender.alliance'])
+        return War::with(['attacker.alliance', 'defender.alliance'])
             ->where('date', '>=', now()->subDays(30))
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -49,7 +49,7 @@ class WarService
     {
         $sevenDaysAgo = now()->subDays(7);
 
-        $warsLast7Days = Wars::where('date', '>=', $sevenDaysAgo)
+        $warsLast7Days = War::where('date', '>=', $sevenDaysAgo)
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
             })
@@ -80,7 +80,7 @@ class WarService
      */
     public function getWarTypeDistribution(): array
     {
-        return Wars::whereNull('end_date')
+        return War::whereNull('end_date')
             ->selectRaw('war_type, COUNT(*) as count')
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -95,7 +95,7 @@ class WarService
      */
     public function getWarStartHistory(): array
     {
-        return Wars::whereDate('date', '>=', now()->subDays(30))
+        return War::whereDate('date', '>=', now()->subDays(30))
             ->selectRaw('DATE(date) as date, COUNT(*) as count')
             ->whereNull('end_date')
             ->where(function ($query) {
@@ -113,7 +113,7 @@ class WarService
      */
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
-        return Wars::whereNull('end_date')
+        return War::whereNull('end_date')
             ->selectRaw('att_id as nation_id, COUNT(*) as total')
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -127,19 +127,19 @@ class WarService
     }
 
     /**
-     * @param Wars $war
+     * @param War $war
      * @return bool
      */
-    public function isUsAttacker(Wars $war): bool
+    public function isUsAttacker(War $war): bool
     {
         return $war->att_alliance_id === $this->ourAllianceId;
     }
 
     /**
-     * @param Wars $war
+     * @param War $war
      * @return int
      */
-    public function getOurResistance(Wars $war): int
+    public function getOurResistance(War $war): int
     {
         return $this->isUsAttacker($war) ? $war->att_resistance : $war->def_resistance;
     }

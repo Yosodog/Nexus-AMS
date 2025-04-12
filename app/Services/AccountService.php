@@ -8,7 +8,7 @@ use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\ManualTransaction;
-use App\Models\Transactions;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\DepositCreated;
 use Exception;
@@ -332,7 +332,7 @@ class AccountService
      */
     public static function getRelatedTransactions(Account $account, int $perPage = 50)
     {
-        return Transactions::where("to_account_id", $account->id)
+        return Transaction::where("to_account_id", $account->id)
             ->orWhere("from_account_id", $account->id)
             ->with("nation")
             ->orderBy("created_at", "DESC")

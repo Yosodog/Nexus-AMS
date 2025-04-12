@@ -6,7 +6,7 @@ use App\GraphQL\Models\War;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
-class Wars extends Model
+class War extends Model
 {
     protected $table = 'wars';
     protected $guarded = [];
@@ -29,9 +29,9 @@ class Wars extends Model
 
     /**
      * @param War|array|\stdClass $war
-     * @return Wars
+     * @return War
      */
-    public static function updateFromAPI(War|array|\stdClass $war): Wars
+    public static function updateFromAPI(War|array|\stdClass $war): War
     {
         if ($war instanceof War || $war instanceof \stdClass) {
             $war = (array)$war;

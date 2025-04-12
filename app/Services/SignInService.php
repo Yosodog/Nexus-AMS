@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\GraphQL\Models\Nation;
-use App\Models\NationSignIns;
+use App\Models\NationSignIn;
 
 class SignInService
 {
@@ -25,7 +25,7 @@ class SignInService
             $combined[$field] = $nationValue + $accountValue;
         }
 
-        NationSignIns::create([
+        NationSignIn::create([
             'nation_id' => $nation->id,
             'num_cities' => $nation->num_cities,
             'score' => $nation->score,

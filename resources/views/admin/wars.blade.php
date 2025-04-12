@@ -95,7 +95,7 @@
         @endforeach
     </div>
 
-    {{-- Active Wars by Member --}}
+    {{-- Active War by Member --}}
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="card">
@@ -179,7 +179,7 @@
             data: {
                 labels: {!! json_encode(array_keys($warStartHistory)) !!},
                 datasets: [{
-                    label: 'Wars Started',
+                    label: 'War Started',
                     data: {!! json_encode(array_values($warStartHistory)) !!},
                     borderWidth: 2,
                     fill: false,
@@ -205,7 +205,7 @@
             data: {
                 labels: {!! json_encode(array_keys($topNations)) !!},
                 datasets: [{
-                    label: 'Active Wars',
+                    label: 'Active War',
                     data: {!! json_encode(array_values($topNations)) !!},
                     borderWidth: 1
                 }]
@@ -262,13 +262,13 @@
         });
         @endforeach
 
-        // Active Wars by Member
+        // Active War by Member
         new Chart(document.getElementById('warsByNationChart').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: {!! json_encode(array_keys($warsByNation)) !!},
                 datasets: [{
-                    label: 'Active Wars',
+                    label: 'Active War',
                     data: {!! json_encode(array_values($warsByNation)) !!},
                     borderWidth: 1
                 }]
