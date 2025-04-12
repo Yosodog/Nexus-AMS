@@ -355,8 +355,8 @@ class AccountService
     /**
      * @param Accounts $account
      * @param array $adjustment
-     * @param int $adminId
-     * @param string $ipAddress
+     * @param int|null $adminId
+     * @param string|null $ipAddress
      *
      * @return ManualTransactions
      */

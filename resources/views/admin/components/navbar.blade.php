@@ -46,6 +46,7 @@
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Defense</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('defense.counters') }}">Counter Finder</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.war-aid') }}">War Aid</a></li>
                     </ul>
                 </li>
             @endif
