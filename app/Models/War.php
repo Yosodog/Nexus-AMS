@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\War;
+use App\GraphQL\Models\War as WarGraphQL;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
@@ -28,12 +28,12 @@ class War extends Model
     }
 
     /**
-     * @param War|array|\stdClass $war
+     * @param WarGraphQL|array|\stdClass $war
      * @return War
      */
-    public static function updateFromAPI(War|array|\stdClass $war): War
+    public static function updateFromAPI(WarGraphQL|array|\stdClass $war): War
     {
-        if ($war instanceof War || $war instanceof \stdClass) {
+        if ($war instanceof WarGraphQL || $war instanceof \stdClass) {
             $war = (array)$war;
         }
 

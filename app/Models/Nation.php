@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\GraphQL\Models\Nation;
+use App\GraphQL\Models\Nation as NationGraphQL;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -65,7 +65,7 @@ class Nation extends Model
         'nuclear_launch_facility'
     ];
 
-    public static function updateFromAPI(Nation $graphQLNationModel): self
+    public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
         // Extract only non-null values
         $nationData = collect((array)$graphQLNationModel)
