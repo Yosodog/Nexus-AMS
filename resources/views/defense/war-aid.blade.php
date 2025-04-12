@@ -32,19 +32,19 @@
                     <table class="table w-full">
                         <thead>
                         <tr>
-                            <th>Enemy</th>
+                            <th>Attacker</th>
+                            <th>Defender</th>
                             <th>Type</th>
                             <th>Status</th>
-                            <th>Start</th>
                         </tr>
                         </thead>
                         <tbody>
                         @foreach ($wars as $war)
                             <tr>
-                                <td>{{ $war->opponent_name }}</td>
-                                <td>{{ ucfirst($war->war_type) }}</td>
-                                <td>{{ $war->status }}</td>
-                                <td>{{ $war->start_date->format('M d, Y H:i') }}</td>
+                                <td><a class="link-primary" href="https://politicsandwar.com/nation/id={{ $war->attacker->id }}" target="_blank">{{ $war->attacker->leader_name ?? "N/A" }}</td>
+                                <td><a class="link-primary" href="https://politicsandwar.com/nation/id={{ $war->defender->id }}" target="_blank">{{ $war->defender->leader_name ?? "N/A" }}</td>
+                                <td>{{ $war->war_type }}</td>
+                                <td>{{ $war->date }}</td>
                             </tr>
                         @endforeach
                         </tbody>
