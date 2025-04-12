@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
-use App\Models\Loans;
+use App\Models\Loan;
 use App\Services\AccountService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
@@ -36,7 +36,7 @@ class AccountsController extends Controller
         }
 
         // Get active loans for the transfer dropdown
-        $activeLoans = Loans::where('nation_id', Auth::user()->nation_id)
+        $activeLoans = Loan::where('nation_id', Auth::user()->nation_id)
             ->where('status', 'approved')
             ->where('remaining_balance', '>', 0)
             ->get();
@@ -65,7 +65,7 @@ class AccountsController extends Controller
             ]);
 
             try {
-                $loan = Loans::findOrFail($loanId);
+                $loan = Loan::findOrFail($loanId);
                 $account = Account::findOrFail($request->input('from'));
 
                 // Validate loan ownership

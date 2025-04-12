@@ -51,7 +51,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
 
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
-    // Loans
+    // Loan
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
@@ -123,22 +123,22 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name("admin.grants.approve");
         Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name("admin.grants.deny");
 
-        // Loans
+        // Loan
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");
-        Route::post("/loans/{Loans}/approve", [LoansController::class, 'approve'])->name(
+        Route::post("/loans/{Loan}/approve", [LoansController::class, 'approve'])->name(
             "admin.loans.approve"
         );
-        Route::post("/loans/{Loans}/deny", [LoansController::class, 'deny'])->name(
+        Route::post("/loans/{Loan}/deny", [LoansController::class, 'deny'])->name(
             "admin.loans.deny"
         );
-        Route::get("/loans/{Loans}/view", [LoansController::class, 'view'])->name(
+        Route::get("/loans/{Loan}/view", [LoansController::class, 'view'])->name(
             "admin.loans.view"
         );
-        Route::post('/loans/{Loans}/update', [LoansController::class, 'update'])->name(
+        Route::post('/loans/{Loan}/update', [LoansController::class, 'update'])->name(
             'admin.loans.update'
         );
 
-        Route::post('/loans/{Loans}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
+        Route::post('/loans/{Loan}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
             'admin.loans.markPaid'
         );
 

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\CityGrantRequest;
-use App\Models\GrantApplications;
-use App\Models\Loans;
+use App\Models\GrantApplication;
+use App\Models\Loan;
 use App\Models\Nations;
 use App\Models\NationSignIns;
 use App\Models\Taxes;
@@ -169,8 +169,8 @@ class MemberStatsService
 
         // 5. Recent Requests
         $recentCityGrants = CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentCustomGrants = GrantApplications::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentLoans = Loans::where('nation_id', $nationId)->latest()->take(5)->get();
+        $recentCustomGrants = GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get();
+        $recentLoans = Loan::where('nation_id', $nationId)->latest()->take(5)->get();
         $recentTaxes = Taxes::where('sender_id', $nationId)
             ->where('date', '>=', now()->subDays(7))
             ->orderBy('date')

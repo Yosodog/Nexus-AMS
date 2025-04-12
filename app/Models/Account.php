@@ -52,7 +52,7 @@ class Account extends Model
      */
     public function loans()
     {
-        return $this->hasMany(Loans::class, "account_id");
+        return $this->hasMany(Loan::class, "account_id");
     }
 
     /**

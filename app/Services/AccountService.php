@@ -7,7 +7,7 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
-use App\Models\ManualTransactions;
+use App\Models\ManualTransaction;
 use App\Models\Transactions;
 use App\Models\User;
 use App\Notifications\DepositCreated;
@@ -347,7 +347,7 @@ class AccountService
      */
     public static function getRelatedManualTransactions(Account $account, int $perPage)
     {
-        return ManualTransactions::where("account_id", $account->id)
+        return ManualTransaction::where("account_id", $account->id)
             ->orderBy("created_at", "DESC")
             ->paginate($perPage);
     }
@@ -358,14 +358,14 @@ class AccountService
      * @param int|null $adminId
      * @param string|null $ipAddress
      *
-     * @return ManualTransactions
+     * @return ManualTransaction
      */
     public static function adjustAccountBalance(
         Account $account,
         array $adjustment,
         ?int $adminId,
         ?string $ipAddress
-    ): ManualTransactions {
+    ): ManualTransaction {
         // Apply changes to account balance
         foreach (PWHelperService::resources() as $resource) {
             if (isset($adjustment[$resource])) {
@@ -376,7 +376,7 @@ class AccountService
         $account->save();
 
         // Log the manual transaction
-        return ManualTransactions::create([
+        return ManualTransaction::create([
             'account_id' => $account->id,
             'admin_id' => $adminId,
             'money' => $adjustment['money'] ?? 0,
