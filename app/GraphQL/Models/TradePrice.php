@@ -2,6 +2,8 @@
 
 namespace App\GraphQL\Models;
 
+use stdClass;
+
 class TradePrice
 {
     public string $id;
@@ -21,10 +23,10 @@ class TradePrice
     public float $credits;
 
     /**
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void
+    public function buildWithJSON(stdClass $json): void
     {
         $this->id = $json->id;
         $this->date = $json->date;

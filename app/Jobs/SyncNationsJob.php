@@ -11,9 +11,9 @@
 namespace App\Jobs;
 
 use App\Models\City;
+use App\Models\Nation;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
-use App\Models\Nation;
 use App\Services\NationQueryService;
 use App\Services\PWHelperService;
 use Exception;

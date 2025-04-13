@@ -2,11 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Treaty;
+use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\Treaty as TreatyGraphQL;
+use App\Models\Treaty;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 
 class SyncTreaties extends Command
 {
@@ -15,8 +17,8 @@ class SyncTreaties extends Command
 
     /**
      * @return void
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public function handle(): void
     {
@@ -41,7 +43,7 @@ class SyncTreaties extends Command
             $graphQLTreaty = new TreatyGraphQL();
             $graphQLTreaty->buildWithJSON((object)$treatyJSON);
 
-            if (! $graphQLTreaty->approved) {
+            if (!$graphQLTreaty->approved) {
                 continue;
             }
 

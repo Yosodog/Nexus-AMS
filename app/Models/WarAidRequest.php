@@ -42,21 +42,24 @@ class WarAidRequest extends Model
     /**
      * @return BelongsTo
      */
-    public function nation(): BelongsTo {
+    public function nation(): BelongsTo
+    {
         return $this->belongsTo(Nation::class);
     }
 
     /**
      * @return BelongsTo
      */
-    public function account(): BelongsTo {
+    public function account(): BelongsTo
+    {
         return $this->belongsTo(Account::class);
     }
 
     /**
      * @return bool
      */
-    public function isPending(): bool {
+    public function isPending(): bool
+    {
         return $this->status === 'pending';
     }
 }

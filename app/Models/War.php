@@ -5,6 +5,8 @@ namespace App\Models;
 use App\GraphQL\Models\War as WarGraphQL;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use stdClass;
 
 class War extends Model
 {
@@ -12,28 +14,12 @@ class War extends Model
     protected $guarded = [];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function attacker()
-    {
-        return $this->belongsTo(Nation::class, 'att_id');
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function defender()
-    {
-        return $this->belongsTo(Nation::class, 'def_id');
-    }
-
-    /**
-     * @param WarGraphQL|array|\stdClass $war
+     * @param WarGraphQL|array|stdClass $war
      * @return War
      */
-    public static function updateFromAPI(WarGraphQL|array|\stdClass $war): War
+    public static function updateFromAPI(WarGraphQL|array|stdClass $war): War
     {
-        if ($war instanceof WarGraphQL || $war instanceof \stdClass) {
+        if ($war instanceof WarGraphQL || $war instanceof stdClass) {
             $war = (array)$war;
         }
 
@@ -41,7 +27,23 @@ class War extends Model
         $war['end_date'] = isset($war['end_date']) ? Carbon::parse($war['end_date'])->toDateTimeString() : null;
 
         return self::updateOrCreate(['id' => $war['id']], $war);
-//        return self::updateOrCreate(['id' => $war['id']], collect($war)->except(['__typename'])->toArray());
+        //        return self::updateOrCreate(['id' => $war['id']], collect($war)->except(['__typename'])->toArray());
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function attacker()
+    {
+        return $this->belongsTo(Nation::class, 'att_id');
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function defender()
+    {
+        return $this->belongsTo(Nation::class, 'def_id');
     }
 
     /**

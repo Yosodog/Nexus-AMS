@@ -2,6 +2,8 @@
 
 namespace App\GraphQL\Models;
 
+use stdClass;
+
 class Attack
 {
     public ?int $money_looted = 0;
@@ -19,10 +21,10 @@ class Attack
     public ?int $food_looted = 0;
 
     /**
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void
+    public function buildWithJSON(stdClass $json): void
     {
         foreach ($json as $key => $value) {
             $this->{$key} = $value;

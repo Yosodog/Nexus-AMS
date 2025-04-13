@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Nation;
 use App\Services\NationMatchService;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CounterFinderController extends Controller
@@ -12,7 +16,7 @@ class CounterFinderController extends Controller
      * @param Request $request
      * @param NationMatchService $matchService
      * @param int|null $nation
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|\Illuminate\Http\RedirectResponse|object
+     * @return Factory|View|Application|RedirectResponse|object
      */
     public function index(Request $request, NationMatchService $matchService, ?int $nation = null)
     {

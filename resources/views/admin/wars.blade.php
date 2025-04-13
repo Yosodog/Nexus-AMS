@@ -142,7 +142,8 @@
                                 {{ $war->attacker->leader_name ?? 'Unknown' }}
                             </a>
                             @if($war->attacker && $war->attacker->alliance)
-                                (<a href="https://politicsandwar.com/alliance/id={{ $war->attacker->alliance->id }}" target="_blank">
+                                (<a href="https://politicsandwar.com/alliance/id={{ $war->attacker->alliance->id }}"
+                                    target="_blank">
                                     {{ $war->attacker->alliance->name }}
                                 </a>)
                             @endif
@@ -152,7 +153,8 @@
                                 {{ $war->defender->leader_name ?? 'Unknown' }}
                             </a>
                             @if($war->defender && $war->defender->alliance)
-                                (<a href="https://politicsandwar.com/alliance/id={{ $war->defender->alliance->id }}" target="_blank">
+                                (<a href="https://politicsandwar.com/alliance/id={{ $war->defender->alliance->id }}"
+                                    target="_blank">
                                     {{ $war->defender->alliance->name }}
                                 </a>)
                             @endif
@@ -226,7 +228,7 @@
             options: {
                 responsive: true,
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {beginAtZero: true}
                 }
             }
         });
@@ -256,7 +258,7 @@
             },
             options: {
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {beginAtZero: true}
                 }
             }
         });
@@ -276,7 +278,7 @@
             options: {
                 indexAxis: 'y',
                 scales: {
-                    x: { beginAtZero: true }
+                    x: {beginAtZero: true}
                 }
             }
         });
