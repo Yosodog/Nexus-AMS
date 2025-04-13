@@ -28,4 +28,5 @@ Schedule::command("military:sign-in")->dailyAt("12:10");
 
 // Treaty sync
 Schedule::command("sync:treaties")->hourlyAt("10");
+Schedule::command("trades:update")->hourlyAt("10");
 
