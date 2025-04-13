@@ -1,11 +1,13 @@
 @extends('layouts.main')
 
 @section('content')
+    <div class="prose w-full max-w-none mb-5">
+        <h1 class="text-center flex items-center justify-center gap-2">
+            Raid Finder
+        </h1>
+    </div>
+
     <div class="max-w-7xl mx-auto px-4 py-6" x-data="raidFinder()" x-init="loadRaids()">
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold">Raid Finder</h1>
-            <p class="text-sm text-gray-500">Scanning for juicy targets... 💸</p>
-        </div>
 
         <div class="mb-4">
             <label for="nationId" class="label">Enter Nation ID</label>
