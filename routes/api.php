@@ -13,6 +13,7 @@ Route::prefix('v1')->middleware("auth:sanctum")->group(function () {
 
     Route::get('/accounts', [AccountController::class, 'getUserAccounts']);
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
+    Route::get('/defense/raid-finder/{nation_id?}', [\App\Http\Controllers\API\RaidFinderController::class, 'show']);
 });
 
 Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function () {

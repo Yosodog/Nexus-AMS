@@ -47,6 +47,7 @@
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('defense.counters') }}">Counter Finder</a></li>
                         <li><a class="dropdown-item" href="{{ route('defense.war-aid') }}">War Aid</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.raid-finder') }}">Raid Finder</a></li>
                     </ul>
                 </li>
             @endif

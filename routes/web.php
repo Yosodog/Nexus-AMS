@@ -65,6 +65,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
         // War aid
         Route::get('/waraid', [\App\Http\Controllers\WarAidController::class, 'index'])->name('defense.war-aid');
         Route::post('/waraid', [\App\Http\Controllers\WarAidController::class, 'store'])->name('defense.war-aid.store');
+
+        Route::get('/raid-finder', [\App\Http\Controllers\RaidFinderController::class, 'index'])->name('defense.raid-finder');
+
     });
     // Counters
 

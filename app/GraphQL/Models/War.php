@@ -75,6 +75,19 @@ class War
     public function buildWithJSON(\stdClass $json): void
     {
         foreach ($json as $key => $value) {
+            // Special case: hydrate attacks into real Attack objects
+            if ($key == 'attacks' && is_array($value)) {
+                $this->attacks = [];
+
+                foreach ($value as $attackData) {
+                    $attack = new Attack();
+                    $attack->buildWithJSON((object) $attackData);
+                    $this->attacks[] = $attack;
+                }
+
+                continue;
+            }
+
             $this->{$key} = $value;
         }
     }

@@ -25,3 +25,7 @@ Schedule::command('taxes:collect')->hourlyAt("15");
 
 // Military sign in
 Schedule::command("military:sign-in")->dailyAt("12:10");
+
+// Treaty sync
+Schedule::command("sync:treaties")->hourlyAt("10");
+

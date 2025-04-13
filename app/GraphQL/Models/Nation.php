@@ -18,6 +18,7 @@ class Nation
     public ?string $color = null;
     public ?int $num_cities = null;
     public ?Cities $cities = null;
+    public ?Wars $wars = null;
     public ?float $score = null;
     public ?float $update_tz = null;
     public ?int $population = null;
@@ -170,6 +171,15 @@ class Nation
                 $cityModel = new City();
                 $cityModel->buildWithJSON((object)$city);
                 $this->cities->add($cityModel);
+            }
+        }
+
+        if (isset($json->wars) && is_array($json->wars)) {
+            $this->wars = new Wars([]);
+            foreach ($json->wars as $war) {
+                $warModel = new War();
+                $warModel->buildWithJSON((object)$war);
+                $this->wars->add($warModel);
             }
         }
 
