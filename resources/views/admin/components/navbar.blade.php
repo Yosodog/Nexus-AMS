@@ -55,28 +55,35 @@
         <ul class="navbar-nav ms-auto">
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <img src="{{ Auth::user()->nation->flag }}" class="user-image rounded-circle shadow"
-                         alt="User Image" style="object-fit: cover;">
-                    <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
+                    <img src="{{ Auth::user()->nation->flag }}" class="user-image rounded-circle shadow" alt="Nation Flag" style="object-fit: cover;">
+                    <span class="d-none d-md-inline">{{ Auth::user()->nation->leader_name }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
                     <li class="user-header text-bg-primary">
-                        <img src="{{ Auth::user()->nation->flag }}" class="rounded-circle shadow" alt="User Image"
-                             style="object-fit: cover;">
+                        <img src="{{ Auth::user()->nation->flag }}" class="rounded-circle shadow" alt="Nation Flag" style="object-fit: cover;">
                         <p>
-                            {{ Auth::user()->name }} - Admin
+                            {{ Auth::user()->nation->leader_name }} — {{ Auth::user()->nation->alliance_position ?? 'Member' }}
                             <small>Member since {{ Carbon::now()->subDays(Auth::user()->nation->alliance_seniority)->toFormattedDateString() }}</small>
                         </p>
                     </li>
                     <li class="user-body">
                         <div class="row">
-                            <div class="col-4 text-center"><a href="#">Followers</a></div>
-                            <div class="col-4 text-center"><a href="#">Sales</a></div>
-                            <div class="col-4 text-center"><a href="#">Friends</a></div>
+                            <div class="col-4 text-center">
+                                <span class="d-block text-muted">Cities</span>
+                                <strong>{{ Auth::user()->nation->num_cities }}</strong>
+                            </div>
+                            <div class="col-4 text-center">
+                                <span class="d-block text-muted">Score</span>
+                                <strong>{{ number_format(Auth::user()->nation->score, 2) }}</strong>
+                            </div>
+                            <div class="col-4 text-center">
+                                <span class="d-block text-muted">Nation ID</span>
+                                <strong>{{ Auth::user()->nation_id }}</strong>
+                            </div>
                         </div>
                     </li>
                     <li class="user-footer">
-                        <a href="#" class="btn btn-default btn-flat">Profile</a>
+                        <a href="{{ route('admin.members.show', \Illuminate\Support\Facades\Auth::user()->nation_id) }}" class="btn btn-default btn-flat">Profile</a>
                         <a class="btn btn-default btn-flat float-end"
                            onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">Logout</a>
                     </li>
