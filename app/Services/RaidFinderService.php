@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\GraphQL\Models\Nation as NationModel;
 use App\Models\Alliance;
 use App\Models\Nation;
 use App\Models\NoRaidList;
-use App\Models\Setting;
 use App\Models\Treaty;
 use Illuminate\Support\Collection;
+use Throwable;
 
 class RaidFinderService
 {
@@ -19,7 +18,8 @@ class RaidFinderService
     public function __construct(
         protected TradePriceService $priceService,
         protected LootCalculatorService $lootCalculator,
-    ) {}
+    ) {
+    }
 
     /**
      * @param int $nationId
@@ -56,15 +56,21 @@ class RaidFinderService
             $lastBeigeValue = null;
 
             foreach ($nation->wars as $war) {
-                if ($defensiveWars >= 3) break;
-                if ($war->def_id !== $nation->id) continue;
+                if ($defensiveWars >= 3) {
+                    break;
+                }
+                if ($war->def_id !== $nation->id) {
+                    continue;
+                }
 
                 if ($war->turns_left > 0) {
                     $defensiveWars++;
                     continue;
                 }
 
-                if ($war->winner_id === $nation->id) continue;
+                if ($war->winner_id === $nation->id) {
+                    continue;
+                }
 
                 $loot = $this->lootCalculator->calculateFromGraphQLWar($war);
 
@@ -75,14 +81,16 @@ class RaidFinderService
                 $lootTotal += $loot;
                 $validWarCount++;
 
-                if ($validWarCount > 10) break;
+                if ($validWarCount > 10) {
+                    break;
+                }
             }
 
             if ($defensiveWars >= 3 || $validWarCount === 0) {
                 continue;
             }
 
-            $averageLoot = (int) round($lootTotal / $validWarCount);
+            $averageLoot = (int)round($lootTotal / $validWarCount);
 
             $targets->push(collect([
                 'nation' => $nation,
@@ -111,12 +119,24 @@ class RaidFinderService
             ->addArgument('vmode', false)
             ->addArgument('first', 500)
             ->addArgument('color', [
-                "aqua", "black", "blue", "brown", "green", "lime", "maroon",
-                "olive", "orange", "pink", "purple", "red", "white", "yellow", "gray"
+                "aqua",
+                "black",
+                "blue",
+                "brown",
+                "green",
+                "lime",
+                "maroon",
+                "olive",
+                "orange",
+                "pink",
+                "purple",
+                "red",
+                "white",
+                "yellow",
+                "gray"
             ])
             ->addArgument('alliance_id', $raidableAlliances)
-            ->addNestedField('paginatorInfo', fn($b) =>
-            $b->addFields(['hasMorePages', 'lastPage', 'currentPage'])
+            ->addNestedField('paginatorInfo', fn($b) => $b->addFields(['hasMorePages', 'lastPage', 'currentPage'])
             )
             ->addNestedField('data', function (GraphQLQueryBuilder $b) {
                 $b->addFields([
@@ -130,8 +150,7 @@ class RaidFinderService
                     'num_cities',
                     'war_policy',
                 ])
-                    ->addNestedField('alliance', fn($b) =>
-                    $b->addFields(['id', 'name'])
+                    ->addNestedField('alliance', fn($b) => $b->addFields(['id', 'name'])
                     )
                     ->addNestedField('wars', function (GraphQLQueryBuilder $b) {
                         $b->addArgument('active', false)
@@ -146,13 +165,20 @@ class RaidFinderService
                                 'winner_id',
                                 'turns_left',
                             ])
-                            ->addNestedField('attacks', fn($b) =>
-                            $b->addFields([
-                                'money_looted', 'money_stolen',
-                                'coal_looted', 'oil_looted', 'uranium_looted',
-                                'iron_looted', 'bauxite_looted', 'lead_looted',
-                                'gasoline_looted', 'munitions_looted',
-                                'steel_looted', 'aluminum_looted', 'food_looted',
+                            ->addNestedField('attacks', fn($b) => $b->addFields([
+                                'money_looted',
+                                'money_stolen',
+                                'coal_looted',
+                                'oil_looted',
+                                'uranium_looted',
+                                'iron_looted',
+                                'bauxite_looted',
+                                'lead_looted',
+                                'gasoline_looted',
+                                'munitions_looted',
+                                'steel_looted',
+                                'aluminum_looted',
+                                'food_looted',
                             ])
                             );
                     });
@@ -161,14 +187,14 @@ class RaidFinderService
 
         try {
             $results = (new QueryService())->sendQuery($query);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             abort(503, 'PW API error while querying nations: ' . $e->getMessage());
         }
 
         $nationModels = collect();
         foreach ($results as $json) {
             $nation = new \App\GraphQL\Models\Nation();
-            $nation->buildWithJSON((object) $json);
+            $nation->buildWithJSON((object)$json);
             $nationModels->push($nation);
         }
 
@@ -200,7 +226,7 @@ class RaidFinderService
                 );
             });
 
-            if (! $hasTreatyWithTop) {
+            if (!$hasTreatyWithTop) {
                 $raidable[] = $aid;
             }
         }

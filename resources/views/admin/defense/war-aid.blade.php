@@ -1,3 +1,4 @@
+@php use App\Services\PWHelperService; @endphp
 @extends('layouts.admin')
 
 @section('content')
@@ -55,10 +56,11 @@
                                         </div>
 
                                         <div class="row g-2">
-                                            @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                            @foreach(PWHelperService::resources() as $resource)
                                                 <div class="col-md-3 col-sm-4 col-6">
                                                     <label class="form-label">{{ ucfirst($resource) }}</label>
-                                                    <input type="number" name="{{ $resource }}" class="form-control form-control-sm"
+                                                    <input type="number" name="{{ $resource }}"
+                                                           class="form-control form-control-sm"
                                                            min="0" value="{{ $req->$resource }}">
                                                     <small class="text-muted">
                                                         Has: {{ number_format(($req->nation->resources->$resource ?? 0) + $req->nation->accounts->sum($resource)) }}
@@ -105,7 +107,8 @@
                             @forelse ($history as $req)
                                 <tr>
                                     <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}" target="_blank">
+                                        <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}"
+                                           target="_blank">
                                             {{ $req->nation->leader_name }}
                                         </a>
                                     </td>
@@ -122,7 +125,7 @@
                                     </td>
                                     <td>{{ number_format($req->money) }}</td>
                                     <td>
-                                        @foreach(\App\Services\PWHelperService::resources(false, false, true) as $res)
+                                        @foreach(PWHelperService::resources(false, false, true) as $res)
                                             @if($req->$res > 0)
                                                 <span class="badge bg-secondary">{{ ucfirst($res) }}: {{ $req->$res }}</span>
                                             @endif
@@ -131,7 +134,9 @@
                                     <td>{{ $req->created_at->format('M d, Y H:i') }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted">No previous requests.</td></tr>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No previous requests.</td>
+                                </tr>
                             @endforelse
                             </tbody>
                         </table>

@@ -7,15 +7,22 @@ use App\GraphQL\Models\Wars;
 
 class WarQueryService
 {
-    public static function getMultipleWars(array $arguments, int $perPage = 1000, bool $pagination = true, bool $handlePagination = true): Wars
-    {
+    public static function getMultipleWars(
+        array $arguments,
+        int $perPage = 1000,
+        bool $pagination = true,
+        bool $handlePagination = true
+    ): Wars {
         $client = new QueryService();
 
         $builder = (new GraphQLQueryBuilder())
             ->setRootField("wars")
             ->addArgument('first', $perPage)
             ->addArgument($arguments)
-            ->addNestedField("data", fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet()));
+            ->addNestedField(
+                "data",
+                fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
+            );
 
         if ($pagination) {
             $builder->withPaginationInfo();

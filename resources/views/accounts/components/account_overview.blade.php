@@ -1,10 +1,11 @@
+@php use App\Services\PWHelperService; @endphp
 <x-utils.card title="Accounts" extraClasses="mb-2">
     <div class="overflow-x-auto">
         <table class="table w-full table-zebra">
             <thead>
             <tr>
                 <th class="text-left">Account Name</th>
-                @foreach (\App\Services\PWHelperService::resources() as $resource)
+                @foreach (PWHelperService::resources() as $resource)
                     <th class="text-left">{{ ucfirst($resource) }}</th>
                 @endforeach
             </tr>
@@ -27,7 +28,7 @@
                         </div>
                     </td>
                     <td>${{ number_format($account->money, 2) }}</td>
-                    @foreach (\App\Services\PWHelperService::resources(false) as $resource)
+                    @foreach (PWHelperService::resources(false) as $resource)
                         <td>{{ number_format($account->$resource, 2) }}</td>
                     @endforeach
                 </tr>

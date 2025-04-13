@@ -9,7 +9,7 @@
 
         <div class="mb-4">
             <label for="nationId" class="label">Enter Nation ID</label>
-            <input id="nationId" type="number" class="input input-bordered w-full max-w-xs" x-model="nationId" />
+            <input id="nationId" type="number" class="input input-bordered w-full max-w-xs" x-model="nationId"/>
             <button class="btn btn-primary ml-2" @click="loadRaids()">Refresh</button>
         </div>
 

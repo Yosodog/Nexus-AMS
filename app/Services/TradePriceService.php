@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\TradePrice as TradePriceGraphQL;
 use App\Models\TradePrice;
+use Illuminate\Http\Client\ConnectionException;
 
 class TradePriceService
 {
@@ -24,7 +26,7 @@ class TradePriceService
 
         $avg = new TradePrice();
         foreach (PWHelperService::resources(includeCredits: true) as $resource) {
-            $avg->{$resource} = (int) round($rows->avg($resource));
+            $avg->{$resource} = (int)round($rows->avg($resource));
         }
 
         return $avg;
@@ -32,15 +34,15 @@ class TradePriceService
 
     /**
      * @return TradePriceGraphQL
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public function pullFromGraphQL(): TradePriceGraphQL
     {
         $query = (new GraphQLQueryBuilder())
             ->setRootField('tradeprices')
             ->addArgument('first', 1)
-            ->addNestedField('data', function(GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields([
                     'id',
                     'date',
@@ -62,7 +64,7 @@ class TradePriceService
         $response = (new QueryService())->sendQuery($query);
 
         $model = new TradePriceGraphQL();
-        $model->buildWithJSON((object) $response->{0});
+        $model->buildWithJSON((object)$response->{0});
 
         return $model;
     }

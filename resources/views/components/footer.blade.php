@@ -1,3 +1,4 @@
+@php use Carbon\Carbon; @endphp
 <footer class="bg-neutral text-neutral-content px-6 py-10">
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <!-- Brand / Logo Section -->
@@ -42,7 +43,7 @@
 
         <!-- Right: Time -->
         <div class="text-sm opacity-60 text-right">
-            <p>Server time: {{ \Carbon\Carbon::now()->toDayDateTimeString() }}</p>
+            <p>Server time: {{ Carbon::now()->toDayDateTimeString() }}</p>
         </div>
     </div>
 </footer>

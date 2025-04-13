@@ -47,9 +47,11 @@
             <div class="card bg-base-100 shadow-md border border-base-300">
                 <div class="card-body">
                     <h2 class="card-title items-center gap-3">
-                        <img src="{{ $target->flag }}" alt="Flag of {{ $target->leader_name }}" class="w-8 h-5 rounded border border-base-300" />
+                        <img src="{{ $target->flag }}" alt="Flag of {{ $target->leader_name }}"
+                             class="w-8 h-5 rounded border border-base-300"/>
                         <div>
-                            <a href="https://politicsandwar.com/nation/id={{ $target->id }}" target="_blank" class="link link-hover text-info font-semibold">
+                            <a href="https://politicsandwar.com/nation/id={{ $target->id }}" target="_blank"
+                               class="link link-hover text-info font-semibold">
                                 {{ $target->leader_name }} of {{ $target->nation_name }}
                             </a>
                             <span class="badge badge-outline badge-info text-xs ml-2">ID: {{ $target->id }}</span>
@@ -135,7 +137,8 @@
                     @forelse($nations as $nation)
                         <tr class="{{ $target && !$nation->in_range ? 'opacity-40' : (strtolower($nation->color) === 'beige' ? 'bg-warning/30' : '') }}">
                             <td>
-                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" class="link link-hover text-info font-semibold">
+                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank"
+                                   class="link link-hover text-info font-semibold">
                                     {{ $nation->leader_name }}
                                 </a>
                             </td>
@@ -151,7 +154,8 @@
                                 <td>
                                     @if($nation->in_range)
                                         <div class="flex items-center gap-2">
-                                            <progress class="progress progress-primary w-24" value="{{ $nation->match_score }}" max="100"></progress>
+                                            <progress class="progress progress-primary w-24"
+                                                      value="{{ $nation->match_score }}" max="100"></progress>
                                             <span class="text-sm font-semibold">{{ $nation->match_score }}</span>
                                         </div>
                                     @else
