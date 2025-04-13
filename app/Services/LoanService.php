@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Account;
-use App\Models\LoanPayment;
 use App\Models\Loan;
+use App\Models\LoanPayment;
 use App\Models\Nation;
 use App\Notifications\LoanNotification;
 use Illuminate\Support\Facades\Auth;

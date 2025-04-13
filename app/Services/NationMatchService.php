@@ -8,6 +8,26 @@ use Illuminate\Support\Collection;
 class NationMatchService
 {
     /**
+     * @param Nation $target
+     * @param iterable $sourceNations
+     * @return Collection
+     */
+    public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
+    {
+        $minScore = $target->score * 0.75;
+        $maxScore = $target->score * 2.5;
+
+        return collect($sourceNations)
+            ->filter(fn(Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)
+            ->map(function (Nation $n) use ($target) {
+                $n->match_score = $this->score($n, $target);
+                return $n;
+            })
+            ->sortByDesc('match_score')
+            ->values();
+    }
+
+    /**
      * @param Nation $source
      * @param Nation $target
      * @return int
@@ -38,24 +58,35 @@ class NationMatchService
         return round($score);
     }
 
-    /**
-     * @param Nation $target
-     * @param iterable $sourceNations
-     * @return Collection
-     */
-    public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
+    protected function militaryEffectiveness(Nation $source, Nation $target): float
     {
-        $minScore = $target->score * 0.75;
-        $maxScore = $target->score * 2.5;
+        $s = $source->military;
+        $t = $target->military;
 
-        return collect($sourceNations)
-            ->filter(fn (Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)
-            ->map(function (Nation $n) use ($target) {
-                $n->match_score = $this->score($n, $target);
-                return $n;
-            })
-            ->sortByDesc('match_score')
-            ->values();
+        $aircraftRatio = min($s->aircraft / max($t->aircraft, 1), 2.0);
+        $tanksRatio = min($s->tanks / max($t->tanks, 1), 2.0);
+        $soldiersRatio = min($s->soldiers / max($t->soldiers, 1), 2.0);
+        $shipsRatio = min($s->ships / max($t->ships, 1), 2.0);
+
+        return (
+            $aircraftRatio * 0.45 +
+            $tanksRatio * 0.25 +
+            $soldiersRatio * 0.20 +
+            $shipsRatio * 0.10
+        );
+    }
+
+    /**
+     * @param Nation $source
+     * @param Nation $target
+     * @return bool
+     */
+    public function canAttack(Nation $source, Nation $target): bool
+    {
+        $min = $source->score * 0.75;
+        $max = $source->score * 2.5;
+
+        return $target->score >= $min && $target->score <= $max;
     }
 
     /**
@@ -72,36 +103,5 @@ class NationMatchService
             $military->soldiers * 3 +
             $military->ships * 1
         );
-    }
-
-    protected function militaryEffectiveness(Nation $source, Nation $target): float
-    {
-        $s = $source->military;
-        $t = $target->military;
-
-        $aircraftRatio = min($s->aircraft / max($t->aircraft, 1), 2.0);
-        $tanksRatio    = min($s->tanks / max($t->tanks, 1), 2.0);
-        $soldiersRatio = min($s->soldiers / max($t->soldiers, 1), 2.0);
-        $shipsRatio    = min($s->ships / max($t->ships, 1), 2.0);
-
-        return (
-            $aircraftRatio * 0.45 +
-            $tanksRatio    * 0.25 +
-            $soldiersRatio * 0.20 +
-            $shipsRatio    * 0.10
-        );
-    }
-
-    /**
-     * @param Nation $source
-     * @param Nation $target
-     * @return bool
-     */
-    public function canAttack(Nation $source, Nation $target): bool
-    {
-        $min = $source->score * 0.75;
-        $max = $source->score * 2.5;
-
-        return $target->score >= $min && $target->score <= $max;
     }
 }

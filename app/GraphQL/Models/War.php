@@ -2,6 +2,8 @@
 
 namespace App\GraphQL\Models;
 
+use stdClass;
+
 class War
 {
     public int $id;
@@ -69,12 +71,25 @@ class War
     public ?string $end_date; // Nullable ISO 8601 format string
 
     /**
-     * @param \stdClass $json
+     * @param stdClass $json
      * @return void
      */
-    public function buildWithJSON(\stdClass $json): void
+    public function buildWithJSON(stdClass $json): void
     {
         foreach ($json as $key => $value) {
+            // Special case: hydrate attacks into real Attack objects
+            if ($key == 'attacks' && is_array($value)) {
+                $this->attacks = [];
+
+                foreach ($value as $attackData) {
+                    $attack = new Attack();
+                    $attack->buildWithJSON((object)$attackData);
+                    $this->attacks[] = $attack;
+                }
+
+                continue;
+            }
+
             $this->{$key} = $value;
         }
     }

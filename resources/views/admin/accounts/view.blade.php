@@ -1,4 +1,4 @@
-@php use App\Services\AccountService; @endphp
+@php use App\Services\AccountService;use App\Services\PWHelperService; @endphp
 @extends('layouts.admin')
 
 @section("content")
@@ -23,7 +23,7 @@
                         <table class="table table-hover">
                             <thead>
                             <tr>
-                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                @foreach(PWHelperService::resources() as $resource)
                                     <th>{{ ucfirst($resource) }}</th>
                                 @endforeach
                             </tr>
@@ -31,7 +31,7 @@
                             <tbody>
                             <tr>
                                 <td>${{ number_format($account->money, 2) }}</td>
-                                @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                @foreach(PWHelperService::resources(false) as $resource)
                                     <td>{{ number_format($account->$resource, 2) }}</td>
                                 @endforeach
                             </tr>
@@ -51,7 +51,7 @@
                     <form action="{{ route('admin.accounts.adjust', $account->id) }}" method="POST">
                         @csrf
                         <div class="row">
-                            @foreach (\App\Services\PWHelperService::resources() as $resource)
+                            @foreach (PWHelperService::resources() as $resource)
                                 <div class="col-md-3">
                                     <label for="{{ $resource }}">{{ ucfirst($resource) }}</label>
                                     <input type="number" name="{{ $resource }}" id="{{ $resource }}"
@@ -84,7 +84,7 @@
                                 <th>From Account</th>
                                 <th>To Account</th>
                                 <th>Type</th>
-                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                @foreach(PWHelperService::resources() as $resource)
                                     <th>{{ ucfirst($resource) }}</th>
                                 @endforeach
                             </tr>
@@ -137,7 +137,7 @@
 
                                     <td>{{ ucfirst($transaction->transaction_type) }}</td>
                                     <td>${{ number_format($transaction->money, 2) }}</td>
-                                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                    @foreach(PWHelperService::resources(false) as $resource)
                                         <td>{{ number_format($transaction->$resource, 2) }}</td>
                                     @endforeach
                                 </tr>
@@ -161,7 +161,7 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Admin</th>
-                                @foreach(\App\Services\PWHelperService::resources() as $resource)
+                                @foreach(PWHelperService::resources() as $resource)
                                     <th>{{ ucfirst($resource) }}</th>
                                 @endforeach
                                 <th>Note</th>
@@ -179,7 +179,7 @@
                                         @endif
                                     </td>
                                     <td>${{ number_format($transaction->money, 2) }}</td>
-                                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                    @foreach(PWHelperService::resources(false) as $resource)
                                         <td>{{ number_format($transaction->$resource, 2) }}</td>
                                     @endforeach
                                     <td>

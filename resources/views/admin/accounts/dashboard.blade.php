@@ -99,7 +99,7 @@
                     searchPlaceholder: "Search accounts..."
                 },
                 columnDefs: [
-                    { targets: "_all", className: "align-middle" }
+                    {targets: "_all", className: "align-middle"}
                 ]
             });
         });

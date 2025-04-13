@@ -59,8 +59,14 @@
                 </li>
                 <li class="nav-item">
                     <a href="{{ route('admin.war-aid') }}" class="nav-link">
-                        <i class="bi bi-speedometer"></i>
+                        <i class="bi bi-wallet-fill"></i>
                         <p>War Aid</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.raids.index') }}" class="nav-link">
+                        <i class="bi bi-currency-exchange"></i>
+                        <p>Raids</p>
                     </a>
                 </li>
                 <li class="nav-header">System</li>

@@ -5,11 +5,9 @@ namespace App\Services;
 use App\Models\Nation;
 use App\Models\WarAidRequest;
 use App\Notifications\WarAidNotification;
-use App\Services\AccountService;
-use App\Services\NationEligibilityValidator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class WarAidService
 {
@@ -63,12 +61,25 @@ class WarAidService
                 ipAddress: request()->ip()
             );
 
-            $request->nation->notify(new WarAidNotification(
-                nation_id: $request->nation_id,
-                request: $request,
-                status: 'approved'
-            ));
+            $request->nation->notify(
+                new WarAidNotification(
+                    nation_id: $request->nation_id,
+                    request: $request,
+                    status: 'approved'
+                )
+            );
         });
+    }
+
+    /**
+     * @param array $data
+     * @return array
+     */
+    private function extractResources(array $data): array
+    {
+        return collect(PWHelperService::resources())
+            ->mapWithKeys(fn($res) => [$res => $data[$res] ?? 0])
+            ->all();
     }
 
     /**
@@ -82,11 +93,13 @@ class WarAidService
             'denied_at' => now(),
         ]);
 
-        $request->nation->notify(new WarAidNotification(
-            nation_id: $request->nation_id,
-            request: $request,
-            status: 'denied'
-        ));
+        $request->nation->notify(
+            new WarAidNotification(
+                nation_id: $request->nation_id,
+                request: $request,
+                status: 'denied'
+            )
+        );
     }
 
     /**
@@ -109,19 +122,8 @@ class WarAidService
             }
 
             return $live;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return optional($nation->signIns()->latest()->first())->resources ?? [];
         }
-    }
-
-    /**
-     * @param array $data
-     * @return array
-     */
-    private function extractResources(array $data): array
-    {
-        return collect(PWHelperService::resources())
-        ->mapWithKeys(fn ($res) => [$res => $data[$res] ?? 0])
-            ->all();
     }
 }

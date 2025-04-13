@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\WarAidRequest;
 use App\Models\War;
+use App\Models\WarAidRequest;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class WarAidController extends Controller
 {
     /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @return Factory|View|Application|object
      */
     public function index()
     {
@@ -34,8 +39,8 @@ class WarAidController extends Controller
     /**
      * @param Request $request
      * @param WarAidService $warAidService
-     * @return \Illuminate\Http\RedirectResponse
-     * @throws \Illuminate\Validation\ValidationException
+     * @return RedirectResponse
+     * @throws ValidationException
      */
     public function store(Request $request, WarAidService $warAidService)
     {
@@ -50,7 +55,7 @@ class WarAidController extends Controller
             'account_id' => ['required', 'exists:accounts,id'],
             'note' => ['required', 'string', 'max:255'],
             ...collect(PWHelperService::resources())
-                ->mapWithKeys(fn ($r) => [$r => ['nullable', 'integer', 'min:0']])
+                ->mapWithKeys(fn($r) => [$r => ['nullable', 'integer', 'min:0']])
                 ->toArray()
         ]);
 

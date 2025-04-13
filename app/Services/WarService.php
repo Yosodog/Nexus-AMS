@@ -12,34 +12,7 @@ class WarService
 
     public function __construct()
     {
-        $this->ourAllianceId = (int) env("PW_ALLIANCE_ID");
-    }
-
-    /**
-     * @return Collection
-     */
-    public function getActiveWars(): Collection
-    {
-        return War::with(['attacker.alliance', 'defender.alliance'])
-            ->whereNull('end_date')
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->latest('date')
-            ->get();
-    }
-
-    /**
-     * @return Collection
-     */
-    public function getWarsLast30Days(): Collection
-    {
-        return War::with(['attacker.alliance', 'defender.alliance'])
-            ->where('date', '>=', now()->subDays(30))
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->get();
+        $this->ourAllianceId = (int)env("PW_ALLIANCE_ID");
     }
 
     /**
@@ -73,6 +46,35 @@ class WarService
             'avg_duration' => round($averageDuration, 1),
             'total_looted' => $totalLooted,
         ];
+    }
+
+    /**
+     * @param $query
+     * @return void
+     */
+    private function whereOurAllianceEngagedProperly($query): void
+    {
+        $query->where(function ($q) {
+            $q->where('att_alliance_id', $this->ourAllianceId)
+                ->where('att_alliance_position', '!=', 'APPLICANT');
+        })->orWhere(function ($q) {
+            $q->where('def_alliance_id', $this->ourAllianceId)
+                ->where('def_alliance_position', '!=', 'APPLICANT');
+        });
+    }
+
+    /**
+     * @return Collection
+     */
+    public function getActiveWars(): Collection
+    {
+        return War::with(['attacker.alliance', 'defender.alliance'])
+            ->whereNull('end_date')
+            ->where(function ($query) {
+                $this->whereOurAllianceEngagedProperly($query);
+            })
+            ->latest('date')
+            ->get();
     }
 
     /**
@@ -128,15 +130,6 @@ class WarService
 
     /**
      * @param War $war
-     * @return bool
-     */
-    public function isUsAttacker(War $war): bool
-    {
-        return $war->att_alliance_id === $this->ourAllianceId;
-    }
-
-    /**
-     * @param War $war
      * @return int
      */
     public function getOurResistance(War $war): int
@@ -145,18 +138,12 @@ class WarService
     }
 
     /**
-     * @param $query
-     * @return void
+     * @param War $war
+     * @return bool
      */
-    private function whereOurAllianceEngagedProperly($query): void
+    public function isUsAttacker(War $war): bool
     {
-        $query->where(function ($q) {
-            $q->where('att_alliance_id', $this->ourAllianceId)
-                ->where('att_alliance_position', '!=', 'APPLICANT');
-        })->orWhere(function ($q) {
-            $q->where('def_alliance_id', $this->ourAllianceId)
-                ->where('def_alliance_position', '!=', 'APPLICANT');
-        });
+        return $war->att_alliance_id === $this->ourAllianceId;
     }
 
     /**
@@ -167,11 +154,34 @@ class WarService
         $wars = $this->getWarsLast30Days();
 
         return [
-            'gasoline' => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)],
-            'munitions' => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)],
-            'steel'     => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)],
-            'aluminum'  => ['used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used)],
+            'gasoline' => [
+                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)
+            ],
+            'munitions' => [
+                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)
+            ],
+            'steel' => [
+                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)
+            ],
+            'aluminum' => [
+                'used' => $wars->sum(
+                    fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used
+                )
+            ],
         ];
+    }
+
+    /**
+     * @return Collection
+     */
+    public function getWarsLast30Days(): Collection
+    {
+        return War::with(['attacker.alliance', 'defender.alliance'])
+            ->where('date', '>=', now()->subDays(30))
+            ->where(function ($query) {
+                $this->whereOurAllianceEngagedProperly($query);
+            })
+            ->get();
     }
 
     /**
@@ -230,7 +240,9 @@ class WarService
         foreach ($wars as $war) {
             $nation = $this->isUsAttacker($war) ? $war->attacker : $war->defender;
 
-            if (!$nation) continue;
+            if (!$nation) {
+                continue;
+            }
 
             $name = $nation->leader_name ?? 'Unknown';
             $nationCounts[$name] = ($nationCounts[$name] ?? 0) + 1;

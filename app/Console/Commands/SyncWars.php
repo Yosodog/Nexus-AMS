@@ -2,11 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Jobs\SyncWarsJob;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\SelectionSetHelper;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 
 class SyncWars extends Command
 {
@@ -15,8 +17,8 @@ class SyncWars extends Command
 
     /**
      * @return void
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \Illuminate\Http\Client\ConnectionException
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public function handle(): void
     {
@@ -34,7 +36,10 @@ class SyncWars extends Command
                 'active' => false,
                 'alliance_id' => (int)env("PW_ALLIANCE_ID"),
             ])
-            ->addNestedField("data", fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet()))
+            ->addNestedField(
+                "data",
+                fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
+            )
             ->withPaginationInfo();
 
         $pagination = $client->getPaginationInfo($builder);

@@ -7,14 +7,18 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
+use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
+use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\WarAidController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
@@ -59,12 +63,16 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     /***** Defense Routes *****/
     Route::prefix('defense')->middleware(['auth'])->group(function () {
         // Counters
-        Route::get('/counters/{nation?}', [\App\Http\Controllers\CounterFinderController::class, 'index'])
+        Route::get('/counters/{nation?}', [CounterFinderController::class, 'index'])
             ->name('defense.counters');
 
         // War aid
-        Route::get('/waraid', [\App\Http\Controllers\WarAidController::class, 'index'])->name('defense.war-aid');
-        Route::post('/waraid', [\App\Http\Controllers\WarAidController::class, 'store'])->name('defense.war-aid.store');
+        Route::get('/waraid', [WarAidController::class, 'index'])->name('defense.war-aid');
+        Route::post('/waraid', [WarAidController::class, 'store'])->name('defense.war-aid.store');
+
+        Route::get('/raid-finder', [RaidFinderController::class, 'index'])->name(
+            'defense.raid-finder'
+        );
     });
     // Counters
 
@@ -117,11 +125,19 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         // Grants
         Route::get("/grants", [AdminGrantController::class, 'grants'])->name("admin.grants");
         Route::post("/grants/create", [AdminGrantController::class, 'createGrant'])->name("admin.grants.create");
-        Route::post("/grants/{grant}/update", [AdminGrantController::class, 'updateGrant'])->name("admin.grants.update");
-        Route::post("/grants/{grant}/toggle", [AdminGrantController::class, 'toggleGrant'])->name("admin.grants.toggle");
+        Route::post("/grants/{grant}/update", [AdminGrantController::class, 'updateGrant'])->name(
+            "admin.grants.update"
+        );
+        Route::post("/grants/{grant}/toggle", [AdminGrantController::class, 'toggleGrant'])->name(
+            "admin.grants.toggle"
+        );
 
-        Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name("admin.grants.approve");
-        Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name("admin.grants.deny");
+        Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name(
+            "admin.grants.approve"
+        );
+        Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name(
+            "admin.grants.deny"
+        );
 
         // Loan
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");
@@ -167,4 +183,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/defense/waraid/toggle', [AdminWarAidControllerAlias::class, 'toggle'])->name(
             'admin.war-aid.toggle'
         );
+
+        Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
+        Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name('admin.raids.no-raid.store');
+        Route::delete('/defense/raids/no-raid/{id}', [RaidController::class, 'destroyNoRaid'])->name('admin.raids.no-raid.destroy');
+        Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name('admin.raids.top-cap.update');
+
     });

@@ -1,3 +1,4 @@
+@php use App\Services\PWHelperService; @endphp
 <x-utils.card title="Transfer" extraClasses="mb-2">
     <form method="POST" action="/accounts/transfer">
         @csrf <!-- Include CSRF token if using Laravel -->
@@ -10,7 +11,7 @@
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}"
-                                    @foreach (\App\Services\PWHelperService::resources() as $resource)
+                                    @foreach (PWHelperService::resources() as $resource)
                                         data-{{ $resource }}="{{ $account->$resource }}"
                                     @endforeach >
                                 {{ $account->name }} - ${{ number_format($account->money) }}
@@ -48,7 +49,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
-            @foreach(\App\Services\PWHelperService::resources() as $resource)
+            @foreach(PWHelperService::resources() as $resource)
                 <div class="form-control">
                     <label for="{{ $resource }}" class="label font-semibold">
                         {{ ucfirst($resource) }}

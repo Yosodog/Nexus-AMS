@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
-class Wars implements \Iterator
+use Iterator;
+
+class Wars implements Iterator
 {
     private array $wars;
     private int $position = 0;

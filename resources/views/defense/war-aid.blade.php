@@ -1,3 +1,4 @@
+@php use App\Services\PWHelperService; @endphp
 @extends('layouts.main')
 
 @inject('settings', 'App\Services\SettingService')
@@ -32,19 +33,19 @@
                     <table class="table w-full">
                         <thead>
                         <tr>
-                            <th>Attacker</th>
-                            <th>Defender</th>
+                            <th>Enemy</th>
                             <th>Type</th>
                             <th>Status</th>
+                            <th>Start</th>
                         </tr>
                         </thead>
                         <tbody>
                         @foreach ($wars as $war)
                             <tr>
-                                <td><a class="link-primary" href="https://politicsandwar.com/nation/id={{ $war->attacker->id }}" target="_blank">{{ $war->attacker->leader_name ?? "N/A" }}</td>
-                                <td><a class="link-primary" href="https://politicsandwar.com/nation/id={{ $war->defender->id }}" target="_blank">{{ $war->defender->leader_name ?? "N/A" }}</td>
-                                <td>{{ $war->war_type }}</td>
-                                <td>{{ $war->date }}</td>
+                                <td>{{ $war->opponent_name }}</td>
+                                <td>{{ ucfirst($war->war_type) }}</td>
+                                <td>{{ $war->status }}</td>
+                                <td>{{ $war->start_date->format('M d, Y H:i') }}</td>
                             </tr>
                         @endforeach
                         </tbody>
@@ -76,7 +77,7 @@
                             </td>
                             <td>{{ number_format($req->money) }}</td>
                             <td>
-                                @foreach(\App\Services\PWHelperService::resources(false, false, true) as $resource)
+                                @foreach(PWHelperService::resources(false, false, true) as $resource)
                                     @if($req->$resource > 0)
                                         <span class="badge badge-outline">{{ ucfirst($resource) }}: {{ $req->$resource }}</span>
                                     @endif
@@ -84,7 +85,9 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-gray-500">No previous requests.</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500">No previous requests.</td>
+                        </tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -115,17 +118,20 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 mt-4">
-                        @foreach(\App\Services\PWHelperService::resources() as $resource)
+                        @foreach(PWHelperService::resources() as $resource)
                             <div>
                                 <label class="label">{{ ucfirst($resource) }}</label>
-                                <input type="number" name="{{ $resource }}" class="input input-bordered w-full" min="0" value="0">
+                                <input type="number" name="{{ $resource }}" class="input input-bordered w-full" min="0"
+                                       value="0">
                             </div>
                         @endforeach
                     </div>
 
                     <div class="modal-action">
                         <button type="submit" class="btn btn-primary">Submit</button>
-                        <button type="button" class="btn" onclick="document.getElementById('aid-request-modal').close()">Cancel</button>
+                        <button type="button" class="btn"
+                                onclick="document.getElementById('aid-request-modal').close()">Cancel
+                        </button>
                     </div>
                 </form>
             </div>

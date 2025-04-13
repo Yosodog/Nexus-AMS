@@ -84,4 +84,28 @@ class SettingService
         self::setValue("war_aid_enabled", $enabled ? 1 : 0);
     }
 
+    /**
+     * @return int
+     */
+    public static function getTopRaidable(): int
+    {
+        $value = self::getValue("raid_top_alliance_cap");
+
+        if (is_null($value)) {
+            self::setTopRaidable(40); // Default to 40
+            return true;
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * @param int $topN
+     * @return void
+     */
+    public static function setTopRaidable(int $topN): void
+    {
+        self::setValue("raid_top_alliance_cap", $topN);
+    }
+
 }

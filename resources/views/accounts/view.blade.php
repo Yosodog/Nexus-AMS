@@ -1,3 +1,4 @@
+@php use App\Services\PWHelperService; @endphp
 @extends('layouts.main')
 
 @section("content")
@@ -19,7 +20,7 @@
             <table class="table w-full table-zebra">
                 <thead>
                 <tr>
-                    @foreach(\App\Services\PWHelperService::resources() as $resource)
+                    @foreach(PWHelperService::resources() as $resource)
                         <th class="text-left">{{ ucfirst($resource) }}</th>
                     @endforeach
                 </tr>
@@ -27,7 +28,7 @@
                 <tbody>
                 <tr class="hover">
                     <td>${{ number_format($account->money, 2) }}</td>
-                    @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                    @foreach(PWHelperService::resources(false) as $resource)
                         <td>{{ number_format($account->$resource, 2) }}</td>
                     @endforeach
                 </tr>
@@ -123,7 +124,7 @@
 
                         <td>{{ ucfirst($transaction->transaction_type) }}</td>
                         <td>${{ number_format($transaction->money, 2) }}</td>
-                        @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                        @foreach(PWHelperService::resources(false) as $resource)
                             <td>{{ number_format($transaction->$resource, 2) }}</td>
                         @endforeach
                     </tr>
