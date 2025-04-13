@@ -2,6 +2,7 @@
 
 namespace App\GraphQL\Models;
 
+use Carbon\Carbon;
 use stdClass;
 
 class Nation
@@ -138,6 +139,7 @@ class Nation
     public ?int $offensive_wars_count = null;
     public ?int $defensive_wars_count = null;
     public ?int $credits_redeemed_this_month = null;
+    public ?string $last_active = null;
 
     /**
      * I hate the function. Look away now.
@@ -304,6 +306,10 @@ class Nation
         $this->money_looted = isset($json->money_looted) ? (float)$json->money_looted : null;
         $this->total_infrastructure_destroyed = isset($json->total_infrastructure_destroyed) ? (float)$json->total_infrastructure_destroyed : null;
         $this->total_infrastructure_lost = isset($json->total_infrastructure_lost) ? (float)$json->total_infrastructure_lost : null;
+
+        if (isset($json->last_active)) {
+            $this->last_active = Carbon::create($json->last_active)->toDateTimeString();
+        }
     }
 
     /**

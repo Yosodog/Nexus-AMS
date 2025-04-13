@@ -30,7 +30,6 @@
                         <th>Last Active</th>
                         <th>Score</th>
                         <th>Wars</th>
-                        <th>War Policy</th>
                         <th>Est. Loot</th>
                         <th>Last Beige</th>
                     </tr>
@@ -48,7 +47,6 @@
                             <td x-text="target.nation.last_active"></td>
                             <td x-text="target.nation.score.toFixed(2)"></td>
                             <td x-text="target.defensive_wars"></td>
-                            <td x-text="target.nation.war_policy"></td>
                             <td x-text="formatMoney(target.value)"></td>
                             <td x-text="formatMoney(target.last_beige ?? 0)"></td>
                         </tr>
