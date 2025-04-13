@@ -26,7 +26,11 @@ class WarAidController extends Controller
         $wars = War::where(function ($query) use ($nation) {
             $query->where('att_id', $nation->id)
                 ->orWhere('def_id', $nation->id);
-        })->active()->get();
+        })
+            ->active()
+            ->with("attacker")
+            ->with("defender")
+            ->get();
 
         $requests = WarAidRequest::where('nation_id', $nation->id)
             ->latest()
