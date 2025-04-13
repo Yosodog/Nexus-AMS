@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
+use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
@@ -182,4 +183,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/defense/waraid/toggle', [AdminWarAidControllerAlias::class, 'toggle'])->name(
             'admin.war-aid.toggle'
         );
+
+        Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
+        Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name('admin.raids.no-raid.store');
+        Route::delete('/defense/raids/no-raid/{id}', [RaidController::class, 'destroyNoRaid'])->name('admin.raids.no-raid.destroy');
+        Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name('admin.raids.top-cap.update');
+
     });
