@@ -7,6 +7,7 @@ use App\Models\Nation;
 use App\Services\RaidFinderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class RaidFinderController extends Controller
 {
@@ -17,26 +18,21 @@ class RaidFinderController extends Controller
     {
     }
 
-    /**
-     * @param int|null $nation_id
-     * @return JsonResponse
-     */
     public function show(?int $nation_id = null)
     {
         $nationId = $nation_id ?? Auth::user()->nation_id;
 
-        logger("RaidFinder API called for nation ID: $nationId");
-
         $nation = Nation::findOrFail($nationId);
 
-        if ($nation->alliance_id !== (int)env('PW_ALLIANCE_ID')) {
-            logger("Blocked request for nation not in alliance.");
+        if ($nation->alliance_id !== (int) env('PW_ALLIANCE_ID')) {
             abort(403, 'You can only run this for your alliance.');
         }
 
-        $targets = $this->raidFinderService->findTargets($nationId);
+        $cacheKey = "raid-finder:{$nationId}";
 
-        logger("Found " . count($targets) . " targets");
+        $targets = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($nationId) {
+            return app(\App\Services\RaidFinderService::class)->findTargets($nationId);
+        });
 
         return response()->json($targets);
     }
