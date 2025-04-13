@@ -18,6 +18,10 @@ class Attack
     public ?int $aluminum_looted = 0;
     public ?int $food_looted = 0;
 
+    /**
+     * @param \stdClass $json
+     * @return void
+     */
     public function buildWithJSON(\stdClass $json): void
     {
         foreach ($json as $key => $value) {

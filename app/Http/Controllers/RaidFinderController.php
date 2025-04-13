@@ -11,8 +11,15 @@ use Illuminate\Support\Facades\Cache;
 
 class RaidFinderController extends Controller
 {
+    /**
+     * @param RaidFinderService $raidFinderService
+     */
     public function __construct(protected RaidFinderService $raidFinderService) {}
 
+    /**
+     * @param Request $request
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|\Illuminate\Http\JsonResponse|object
+     */
     public function index(Request $request)
     {
         $nationId = $request->get('nation_id') ?? Auth::user()->nation_id;

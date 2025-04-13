@@ -20,6 +20,10 @@ class TradePrice
     public float $food;
     public float $credits;
 
+    /**
+     * @param \stdClass $json
+     * @return void
+     */
     public function buildWithJSON(\stdClass $json): void
     {
         $this->id = $json->id;

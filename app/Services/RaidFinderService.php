@@ -12,11 +12,19 @@ use Illuminate\Support\Collection;
 
 class RaidFinderService
 {
+    /**
+     * @param TradePriceService $priceService
+     * @param LootCalculatorService $lootCalculator
+     */
     public function __construct(
         protected TradePriceService $priceService,
         protected LootCalculatorService $lootCalculator,
     ) {}
 
+    /**
+     * @param int $nationId
+     * @return Collection
+     */
     public function findTargets(int $nationId): Collection
     {
         $ownNation = Nation::findOrFail($nationId);

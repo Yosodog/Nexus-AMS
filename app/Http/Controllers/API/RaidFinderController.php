@@ -9,8 +9,15 @@ use Illuminate\Support\Facades\Auth;
 
 class RaidFinderController extends Controller
 {
+    /**
+     * @param RaidFinderService $raidFinderService
+     */
     public function __construct(protected RaidFinderService $raidFinderService) {}
 
+    /**
+     * @param int|null $nation_id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show(?int $nation_id = null)
     {
         $nationId = $nation_id ?? Auth::user()->nation_id;

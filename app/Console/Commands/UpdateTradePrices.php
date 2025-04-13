@@ -12,11 +12,17 @@ class UpdateTradePrices extends Command
     protected $signature = 'trades:update';
     protected $description = 'Fetch and save the current trade prices from PW API';
 
+    /**
+     * @param TradePriceService $tradePriceService
+     */
     public function __construct(protected TradePriceService $tradePriceService)
     {
         parent::__construct();
     }
 
+    /**
+     * @return void
+     */
     public function handle(): void
     {
         $this->info('Fetching latest trade prices...');

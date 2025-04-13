@@ -13,6 +13,11 @@ class SyncTreaties extends Command
     protected $signature = 'sync:treaties';
     protected $description = 'Syncs approved treaties from the Politics & War API';
 
+    /**
+     * @return void
+     * @throws \App\Exceptions\PWQueryFailedException
+     * @throws \Illuminate\Http\Client\ConnectionException
+     */
     public function handle(): void
     {
         $query = (new GraphQLQueryBuilder())

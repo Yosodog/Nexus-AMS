@@ -8,7 +8,7 @@ use App\Models\TradePrice;
 class TradePriceService
 {
     /**
-     * Return the most recent row from the database.
+     * @return TradePrice
      */
     public function getLatest(): TradePrice
     {
@@ -16,7 +16,7 @@ class TradePriceService
     }
 
     /**
-     * Calculate the average of each resource across the last 24 rows (i.e., ~24 hours).
+     * @return TradePrice
      */
     public function get24hAverage(): TradePrice
     {
@@ -31,7 +31,9 @@ class TradePriceService
     }
 
     /**
-     * Pull the latest trade prices from the Politics & War GraphQL API.
+     * @return TradePriceGraphQL
+     * @throws \App\Exceptions\PWQueryFailedException
+     * @throws \Illuminate\Http\Client\ConnectionException
      */
     public function pullFromGraphQL(): TradePriceGraphQL
     {
