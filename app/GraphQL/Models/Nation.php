@@ -140,6 +140,7 @@ class Nation
     public ?int $defensive_wars_count = null;
     public ?int $credits_redeemed_this_month = null;
     public ?string $last_active = null;
+    public ?Alliance $alliance = null;
 
     /**
      * I hate the function. Look away now.
@@ -174,6 +175,11 @@ class Nation
                 $cityModel->buildWithJSON((object)$city);
                 $this->cities->add($cityModel);
             }
+        }
+
+        if (isset($json->alliance) && is_array($json->alliance)) {
+            $this->alliance = new Alliance([]);
+            $this->alliance->buildWithJSON((object)$json->alliance);
         }
 
         if (isset($json->wars) && is_array($json->wars)) {

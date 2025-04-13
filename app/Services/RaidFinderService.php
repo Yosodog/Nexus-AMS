@@ -150,7 +150,7 @@ class RaidFinderService
                     'num_cities',
                     'war_policy',
                 ])
-                    ->addNestedField('alliance', fn($b) => $b->addFields(['id', 'name'])
+                    ->addNestedField('alliance', fn($b) => $b->addFields(SelectionSetHelper::allianceSet())
                     )
                     ->addNestedField('wars', function (GraphQLQueryBuilder $b) {
                         $b->addArgument('active', false)
