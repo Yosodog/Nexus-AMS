@@ -329,14 +329,6 @@ class SelectionSetHelper
             'def_nukes_used',
             'att_infra_destroyed_value',
             'def_infra_destroyed_value',
-            'att_soldiers_killed',
-            'def_soldiers_killed',
-            'att_tanks_killed',
-            'def_tanks_killed',
-            'att_aircraft_killed',
-            'def_aircraft_killed',
-            'att_ships_killed',
-            'def_ships_killed',
         ];
     }
 }

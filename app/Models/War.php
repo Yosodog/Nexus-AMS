@@ -23,11 +23,45 @@ class War extends Model
             $war = (array)$war;
         }
 
+        // Normalize if deprecated field is present
+        if (isset($war['att_soldiers_killed'])) {
+            $war = self::normalizeDeprecatedKilledFields($war);
+        }
+
         $war['date'] = isset($war['date']) ? Carbon::parse($war['date'])->toDateTimeString() : null;
         $war['end_date'] = isset($war['end_date']) ? Carbon::parse($war['end_date'])->toDateTimeString() : null;
 
         return self::updateOrCreate(['id' => $war['id']], $war);
-        //        return self::updateOrCreate(['id' => $war['id']], collect($war)->except(['__typename'])->toArray());
+    }
+
+    /**
+     * Normalizes deprecated GraphQL subscription fields by converting *_killed → *_lost.
+     * These deprecated fields are still included in subscriptions so have to do this
+     *
+     * @param array $war
+     * @return array
+     */
+    public static function normalizeDeprecatedKilledFields(array $war): array
+    {
+        $killedToLostMap = [
+            'att_soldiers_killed' => 'att_soldiers_lost',
+            'def_soldiers_killed' => 'def_soldiers_lost',
+            'att_tanks_killed' => 'att_tanks_lost',
+            'def_tanks_killed' => 'def_tanks_lost',
+            'att_aircraft_killed' => 'att_aircraft_lost',
+            'def_aircraft_killed' => 'def_aircraft_lost',
+            'att_ships_killed' => 'att_ships_lost',
+            'def_ships_killed' => 'def_ships_lost',
+        ];
+
+        foreach ($killedToLostMap as $killed => $lost) {
+            if (array_key_exists($killed, $war) && !array_key_exists($lost, $war)) {
+                $war[$lost] = $war[$killed];
+            }
+            unset($war[$killed]);
+        }
+
+        return $war;
     }
 
     /**
