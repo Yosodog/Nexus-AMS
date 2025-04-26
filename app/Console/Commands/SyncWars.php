@@ -9,6 +9,7 @@ use App\Services\QueryService;
 use App\Services\SelectionSetHelper;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
+use function retry;
 
 class SyncWars extends Command
 {
@@ -27,22 +28,28 @@ class SyncWars extends Command
         $perPage = 1000;
 
         // Fetch pagination info up front
-        $client = new QueryService();
+        $pagination = retry(
+            3,
+            function () use ($perPage) {
+                $client = new QueryService();
+                $builder = (new GraphQLQueryBuilder())
+                    ->setRootField("wars")
+                    ->addArgument([
+                        'first' => $perPage,
+                        'active' => false,
+                        'alliance_id' => (int)env("PW_ALLIANCE_ID"),
+                    ])
+                    ->addNestedField(
+                        "data",
+                        fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
+                    )
+                    ->withPaginationInfo();
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("wars")
-            ->addArgument([
-                'first' => $perPage,
-                'active' => false,
-                'alliance_id' => (int)env("PW_ALLIANCE_ID"),
-            ])
-            ->addNestedField(
-                "data",
-                fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
-            )
-            ->withPaginationInfo();
+                return $client->getPaginationInfo($builder);
+            },
+            1000 // milliseconds delay between retries
+        );
 
-        $pagination = $client->getPaginationInfo($builder);
         $lastPage = $pagination['lastPage'] ?? 1;
 
         for ($page = 1; $page <= $lastPage; $page++) {
