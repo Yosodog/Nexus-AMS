@@ -84,9 +84,11 @@ class War extends Model
      * @param $query
      * @return mixed
      */
-    public function scopeActive($query)
+    public function scopeActive($query): mixed
     {
-        return $query->whereNull('end_date')
-            ->orWhere('turns_left', '<', 0);
+        return $query->where(fn ($q) =>
+        $q->whereNull('end_date')
+            ->where('turns_left', '>', 0)
+        );
     }
 }
