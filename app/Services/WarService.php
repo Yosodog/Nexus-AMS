@@ -185,28 +185,52 @@ class WarService
     }
 
     /**
+     * @param Collection $wars
+     * @param string $attKey
+     * @param string $defKey
+     * @param bool $flip
+     * @return array
+     */
+    private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
+    {
+        return [
+            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$defKey : $w->$attKey)
+                : ($flip ? $w->$attKey : $w->$defKey)
+            ),
+            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$attKey : $w->$defKey)
+                : ($flip ? $w->$defKey : $w->$attKey)
+            ),
+        ];
+    }
+
+    /**
      * @return array
      */
     public function getDamageDealtVsTaken(): array
     {
         $wars = $this->getWarsLast30Days();
 
-        $metrics = [
-            'infra_destroyed_value',
-            'soldiers_killed',
-            'tanks_killed',
-            'aircraft_killed',
-            'ships_killed',
+        $infraMetrics = [
+            'infra_destroyed_value' => ['att_infra_destroyed_value', 'def_infra_destroyed_value'],
+        ];
+
+        $unitMetrics = [
+            'soldiers' => ['att_soldiers_lost', 'def_soldiers_lost'],
+            'tanks' => ['att_tanks_lost', 'def_tanks_lost'],
+            'aircraft' => ['att_aircraft_lost', 'def_aircraft_lost'],
+            'ships' => ['att_ships_lost', 'def_ships_lost'],
         ];
 
         $result = [];
 
-        foreach ($metrics as $metric) {
-            [$attKey, $defKey] = ["att_{$metric}", "def_{$metric}"];
-            $result[$metric] = [
-                'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey),
-                'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$defKey : $w->$attKey),
-            ];
+        foreach ($infraMetrics as $key => [$attKey, $defKey]) {
+            $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, false);
+        }
+
+        foreach ($unitMetrics as $key => [$attKey, $defKey]) {
+            $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, true);
         }
 
         return $result;
