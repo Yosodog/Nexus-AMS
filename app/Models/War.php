@@ -86,6 +86,7 @@ class War extends Model
      */
     public function scopeActive($query)
     {
-        return $query->whereNull('end_date');
+        return $query->whereNull('end_date')
+            ->orWhere('turns_left', '<', 0);
     }
 }
