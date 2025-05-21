@@ -37,4 +37,8 @@ class Taxes extends Model
      * @var string
      */
     protected $primaryKey = 'id';
+
+    protected $casts = [
+        'date' => 'datetime',
+    ];
 }

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Taxes;
+use App\Models\Transaction;
+use App\Services\NationDashboardService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
@@ -9,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -48,5 +52,24 @@ class UserController extends Controller
             'alert-type',
             'success'
         );
+    }
+
+    /**
+     * @param NationDashboardService $dashboardService
+     * @return View
+     */
+    public function dashboard(NationDashboardService $dashboardService): View
+    {
+        $nation = Auth::user()->nation;
+
+        return view('user.dashboard', array_merge(
+            ['nation' => $nation],
+            $dashboardService->getDashboardData($nation),
+            [
+                'mmrScore' => 0,
+                'grantTotal' => 0,
+                'loanTotal' => 0,
+            ]
+        ));
     }
 }

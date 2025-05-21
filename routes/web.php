@@ -43,6 +43,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
         'user.settings.update'
     );
+
+    // User dashboard
+    Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
+
     // Account Routes
     Route::get("/accounts", [AccountsController::class, 'index'])->name("accounts");
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
