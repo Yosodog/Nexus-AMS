@@ -245,6 +245,14 @@ class Nation extends Model
     }
 
     /**
+     * @return HasMany
+     */
+    public function signIns(): HasMany
+    {
+        return $this->hasMany(NationSignIn::class, 'nation_id');
+    }
+
+    /**
      * Interpret project_bits and return an associative array indicating project ownership.
      *
      * @return array
