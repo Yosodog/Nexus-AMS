@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
@@ -99,6 +100,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
     ->group(function () {
         // Base routes
         Route::get("/", [DashboardController::class, 'dashboard'])->name("admin.dashboard");
+
+        // Users
+        Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit'); // stub
 
         // Account
         Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");

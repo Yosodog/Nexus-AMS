@@ -14,6 +14,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.users.index') }}" class="nav-link">
+                        <i class="bi bi-person-badge-fill"></i>
+                        <p>Users</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.members') }}" class="nav-link">
                         <i class="bi bi-people-fill"></i>
                         <p>Members</p>

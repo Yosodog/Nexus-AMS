@@ -40,6 +40,10 @@ class User extends Authenticatable
         'verification_code'
     ];
 
+    protected $casts = [
+        'last_active_at' => 'datetime',
+    ];
+
     /**
      * @param int $nation_id
      *
