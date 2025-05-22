@@ -103,7 +103,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         // Users
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
-        Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit'); // stub
+        Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
+        Route::put('/user/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
 
         // Account
         Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");

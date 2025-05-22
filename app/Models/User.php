@@ -26,7 +26,7 @@ class User extends Authenticatable
         'password',
         'nation_id',
         'verification_code',
-        'verified_at'
+        'verified_at',
     ];
 
     /**
@@ -42,6 +42,7 @@ class User extends Authenticatable
 
     protected $casts = [
         'last_active_at' => 'datetime',
+        'disabled' => 'boolean',
     ];
 
     /**
