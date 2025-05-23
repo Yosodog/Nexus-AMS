@@ -70,8 +70,8 @@
                                 <tbody>
                                 @foreach ($daily as $entry)
                                     <tr>
-                                        <td>{{ Carbon::parse($entry->day)->toFormattedDateString() }}</td>
-                                        <td>{{ number_format($entry->total, 2) }}</td>
+                                        <td>{{ Carbon::parse($entry['day'])->toFormattedDateString() }}</td>
+                                        <td>{{ number_format($entry['total'], 2) }}</td>
                                     </tr>
                                 @endforeach
                                 </tbody>
