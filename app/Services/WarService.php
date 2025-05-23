@@ -133,17 +133,28 @@ class WarService
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
         return cache()->remember("top_nations_active_wars_{$limit}", 300, function () use ($limit) {
-            return War::whereNull('end_date')
-                ->selectRaw('att_id as nation_id, COUNT(*) as total')
+            $attackerCounts = War::whereNull('end_date')
                 ->where(function ($query) {
                     $this->whereOurAllianceEngagedProperly($query);
                 })
+                ->selectRaw('att_id as nation_id, COUNT(*) as total')
                 ->groupBy('att_id')
-                ->orderByDesc('total')
-                ->limit($limit)
-                ->get()
-                ->pluck('total', 'nation_id')
-                ->toArray();
+                ->pluck('total', 'nation_id');
+
+            $defenderCounts = War::whereNull('end_date')
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->selectRaw('def_id as nation_id, COUNT(*) as total')
+                ->groupBy('def_id')
+                ->pluck('total', 'nation_id');
+
+            // Merge counts: add together if they exist in both
+            $combined = $attackerCounts->mergeRecursive($defenderCounts)->map(function ($value) {
+                return is_array($value) ? array_sum($value) : $value;
+            });
+
+            return $combined->sortDesc()->take($limit)->toArray();
         });
     }
 
