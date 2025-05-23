@@ -6,13 +6,23 @@ use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\CityGrantService;
 use App\Services\PWHelperService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CityGrantController
 {
+    use AuthorizesRequests;
+
+    /**
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
     public function cityGrants()
     {
+        $this->authorize('view-city-grants');
+
         $pendingRequests = CityGrantRequest::where('status', 'pending')->get();
         $previousRequests = CityGrantRequest::whereIn('status', ['approved', 'denied'])
             ->orderBy('updated_at', 'desc')
@@ -39,13 +49,16 @@ class CityGrantController
         );
     }
 
-    /**
+    /**ß
      * @param CityGrantRequest $request
      *
      * @return mixed
+     * @throws AuthorizationException
      */
     public function approveCityGrant(CityGrantRequest $grantRequest)
     {
+        $this->authorize('manage-city-grants');
+
         if ($grantRequest->status != 'pending') {
             return redirect()->back()->with([
                 'alert-message' => 'Grant is not pending.',
@@ -66,9 +79,12 @@ class CityGrantController
      * @param CityGrantRequest $request
      *
      * @return mixed
+     * @throws AuthorizationException
      */
     public function denyCityGrant(CityGrantRequest $grantRequest)
     {
+        $this->authorize('manage-city-grants');
+
         if ($grantRequest->status !== 'pending') {
             return redirect()->back()->with([
                 'alert-message' => 'Grant is not pending.',
@@ -89,9 +105,12 @@ class CityGrantController
      * @param \Illuminate\Support\Facades\Request $request
      * @param CityGrant $city_grant
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function updateCityGrant(Request $request, CityGrant $city_grant)
     {
+        $this->authorize('manage-city-grants');
+
         $validated = $request->validate([
             'city_number' => 'required|integer|min:1|unique:city_grants,city_number,' . $city_grant->id,
             'grant_amount' => 'required|integer|min:1',
@@ -129,9 +148,12 @@ class CityGrantController
     /**
      * @param Request $request
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function createCityGrant(Request $request)
     {
+        $this->authorize('manage-city-grants');
+
         $validated = $request->validate([
             'city_number' => 'required|integer|min:1|unique:city_grants,city_number',
             'grant_amount' => 'required|integer|min:1',

@@ -46,4 +46,16 @@ class Role extends Model
 
         return parent::delete();
     }
+
+    /**
+     * @return Collection
+     */
+    public function permissionEntries(): \Illuminate\Support\Collection
+    {
+        return collect(
+            DB::table('role_permissions')
+                ->where('role_id', $this->id)
+                ->pluck('permission')
+        );
+    }
 }
