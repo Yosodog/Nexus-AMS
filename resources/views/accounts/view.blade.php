@@ -135,5 +135,36 @@
         {{ $transactions->links() }}
     </x-utils.card>
 
+    @if($ddLogs->count())
+        <div class="divider"></div>
+
+        <x-utils.card title="Direct Deposit Activity" extraClasses="mb-2">
+            <div class="overflow-x-auto">
+                <table class="table w-full table-zebra">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Money</th>
+                        @foreach(PWHelperService::resources(false) as $resource)
+                            <th>{{ ucfirst($resource) }}</th>
+                        @endforeach
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($ddLogs as $log)
+                        <tr class="hover">
+                            <td>{{ $log->created_at->format('Y-m-d H:i') }}</td>
+                            <td>${{ number_format($log->money, 2) }}</td>
+                            @foreach(PWHelperService::resources(false) as $resource)
+                                <td>{{ number_format($log->$resource, 2) }}</td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-utils.card>
+    @endif
+
     @include("accounts.components.deposit_js")
 @endsection

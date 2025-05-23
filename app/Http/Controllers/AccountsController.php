@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
+use App\Models\DirectDepositLog;
 use App\Models\Loan;
 use App\Services\AccountService;
 use App\Services\DirectDepositService;
@@ -238,12 +239,18 @@ class AccountsController extends Controller
 
         $accounts->load("nation");
 
-        // Get related transactions where they are to or from
         $transactions = AccountService::getRelatedTransactions($accounts);
+
+        $ddLogs = DirectDepositLog::where('account_id', $accounts->id)
+            ->latest()
+            ->limit(50)
+            ->orderBy('created_at', 'DESC')
+            ->get();
 
         return view("accounts.view", [
             "account" => $accounts,
-            "transactions" => $transactions
+            "transactions" => $transactions,
+            "ddLogs" => $ddLogs,
         ]);
     }
 
