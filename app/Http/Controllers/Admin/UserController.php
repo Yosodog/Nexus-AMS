@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +28,9 @@ class UserController extends Controller
      */
     public function edit(User $user): View
     {
-        return view('admin.users.edit', compact('user'));
+        $allRoles = Role::orderBy('name')->get();
+
+        return view('admin.users.edit', compact('user', 'allRoles'));
     }
 
     /**
@@ -45,6 +48,8 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', 'min:8'],
             'nation_id' => ['nullable', 'integer', 'exists:nations,id'],
             'verified_at' => ['nullable'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['exists:roles,id'],
         ]);
 
         $user->name = $validated['name'];
@@ -59,6 +64,13 @@ class UserController extends Controller
         }
 
         $user->save();
+
+        // Sync only non-protected roles
+        if (isset($validated['roles'])) {
+            $allowedRoles = Role::whereIn('id', $validated['roles'])->pluck('id');
+
+            $user->roles()->sync($allowedRoles);
+        }
 
         return redirect()->route('admin.users.index')->with([
             'alert-message' => 'User updated successfully.',

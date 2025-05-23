@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Role;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +14,7 @@ class RoleSeeder extends Seeder
 
         DB::transaction(function () use ($permissions) {
             $adminRole = Role::firstOrCreate(
-                ['name' => 'admin'],
+                ['name' => 'default admin'],
                 ['protected' => true]
             );
 
