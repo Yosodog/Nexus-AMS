@@ -22,13 +22,7 @@ class WarService
      */
     public function getStats(): array
     {
-        $sevenDaysAgo = now()->subDays(7);
-
-        $warsLast7Days = War::where('date', '>=', $sevenDaysAgo)
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->get();
+        $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
 
         $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
             if ($war->att_alliance_id === $this->ourAllianceId) {
@@ -70,7 +64,12 @@ class WarService
      */
     public function getActiveWars(): Collection
     {
-        return $this->cachedActiveWars ??= War::with(['attacker.alliance', 'defender.alliance'])
+        return $this->cachedActiveWars ??= War::with([
+            'attacker:id,leader_name,alliance_id',
+            'attacker.alliance:id,name',
+            'defender:id,leader_name,alliance_id',
+            'defender.alliance:id,name',
+        ])
             ->whereNull('end_date')
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -189,7 +188,12 @@ class WarService
         }
 
         return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
-            return War::with(['attacker.alliance', 'defender.alliance'])
+            return War::with([
+                'attacker:id,leader_name,alliance_id',
+                'attacker.alliance:id,name',
+                'defender:id,leader_name,alliance_id',
+                'defender.alliance:id,name',
+            ])
                 ->where('date', '>=', now()->subDays(30))
                 ->where(function ($query) {
                     $this->whereOurAllianceEngagedProperly($query);
