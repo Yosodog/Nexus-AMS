@@ -34,7 +34,19 @@ class WarService
         }, 0);
 
         $activeWars = $this->getActiveWars();
-        $averageDuration = $activeWars->avg(fn($w) => Carbon::parse($w->date)->diffInDays(now()));
+        $averageDuration = $activeWars->avg(function ($war) {
+            $start = Carbon::parse($war->date);
+
+            // If it ended, use the end date
+            if ($war->end_date) {
+                return $start->diffInDays(Carbon::parse($war->end_date));
+            }
+
+            // If it's still active, use now (but clamp to max 5 days)
+            $duration = $start->diffInDays(now());
+
+            return min($duration, 5);
+        });
 
         return [
             'total_ongoing' => $activeWars->count(),
