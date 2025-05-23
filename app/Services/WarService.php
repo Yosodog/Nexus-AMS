@@ -22,38 +22,40 @@ class WarService
      */
     public function getStats(): array
     {
-        $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
+        return cache()->remember('war_stats_summary', 300, function () {
+            $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
 
-        $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
-            if ($war->att_alliance_id === $this->ourAllianceId) {
-                return $carry + $war->att_money_looted;
-            } elseif ($war->def_alliance_id === $this->ourAllianceId) {
-                return $carry + $war->def_money_looted;
-            }
-            return $carry;
-        }, 0);
+            $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
+                if ($war->att_alliance_id === $this->ourAllianceId) {
+                    return $carry + $war->att_money_looted;
+                } elseif ($war->def_alliance_id === $this->ourAllianceId) {
+                    return $carry + $war->def_money_looted;
+                }
+                return $carry;
+            }, 0);
 
-        $activeWars = $this->getActiveWars();
-        $averageDuration = $activeWars->avg(function ($war) {
-            $start = Carbon::parse($war->date);
+            $activeWars = $this->getActiveWars();
+            $averageDuration = $activeWars->avg(function ($war) {
+                $start = Carbon::parse($war->date);
 
-            // If it ended, use the end date
-            if ($war->end_date) {
-                return $start->diffInDays(Carbon::parse($war->end_date));
-            }
+                // If it ended, use the end date
+                if ($war->end_date) {
+                    return $start->diffInDays(Carbon::parse($war->end_date));
+                }
 
-            // If it's still active, use now (but clamp to max 5 days)
-            $duration = $start->diffInDays(now());
+                // If it's still active, use now (but clamp to max 5 days)
+                $duration = $start->diffInDays(now());
 
-            return min($duration, 5);
+                return min($duration, 5);
+            });
+
+            return [
+                'total_ongoing' => $activeWars->count(),
+                'wars_last_7_days' => $warsLast7Days->count(),
+                'avg_duration' => round($averageDuration, 1),
+                'total_looted' => $totalLooted,
+            ];
         });
-
-        return [
-            'total_ongoing' => $activeWars->count(),
-            'wars_last_7_days' => $warsLast7Days->count(),
-            'avg_duration' => round($averageDuration, 1),
-            'total_looted' => $totalLooted,
-        ];
     }
 
     /**
@@ -184,20 +186,22 @@ class WarService
         return cache()->remember('war_resource_usage_summary', 300, function () {
             $wars = $this->getWarsLast30Days();
 
-            return [
-                'gasoline' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)
-                ],
-                'munitions' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)
-                ],
-                'steel' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)
-                ],
-                'aluminum' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used)
-                ],
+            $resources = [
+                'gasoline' => ['att_gas_used', 'def_gas_used'],
+                'munitions' => ['att_mun_used', 'def_mun_used'],
+                'steel' => ['att_steel_used', 'def_steel_used'],
+                'aluminum' => ['att_alum_used', 'def_alum_used'],
             ];
+
+            $summary = [];
+
+            foreach ($resources as $key => [$attKey, $defKey]) {
+                $summary[$key] = [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey)
+                ];
+            }
+
+            return $summary;
         });
     }
 
