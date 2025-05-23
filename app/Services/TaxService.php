@@ -70,6 +70,11 @@ class TaxService
             }
         }
 
+        // Pre-warm cache so users don't wait on page load
+        self::getSummaryStats();
+        self::getResourceChartData();
+        self::getDailyTotals();
+
         return $newLastId;
     }
 
@@ -102,7 +107,7 @@ class TaxService
         $resources = PWHelperService::resources(false);
         $baseQuery = Taxes::where('date', '>=', $start);
 
-        return Cache::remember('tax_summary_stats', now()->addMinutes(30), function () use ($resources, $baseQuery) {
+        return Cache::remember('tax_summary_stats', now()->addMinutes(60), function () use ($resources, $baseQuery) {
             $sums = (clone $baseQuery)->selectRaw(
                 collect($resources)->prepend('money')->map(fn($r) => "SUM(`$r`) as `$r`")->implode(', ')
             )->first();
@@ -133,7 +138,7 @@ class TaxService
      */
     public static function getResourceChartData(): array
     {
-        return Cache::remember('tax_resource_chart_data', now()->addMinutes(30), function () {
+        return Cache::remember('tax_resource_chart_data', now()->addMinutes(60), function () {
             return self::getAggregatedResourceData(true);
         });
     }
@@ -179,7 +184,7 @@ class TaxService
      */
     public static function getDailyTotals(): array
     {
-        return Cache::remember('tax_daily_totals', now()->addMinutes(30), function () {
+        return Cache::remember('tax_daily_totals', now()->addMinutes(60), function () {
             return self::getAggregatedResourceData(false);
         });
     }
