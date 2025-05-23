@@ -291,7 +291,7 @@ class WarService
      */
     public function getActiveWarsByNation(): array
     {
-        $wars = $this->getWarsLast30Days();
+        $wars = $this->getActiveWars();
 
         $nationCounts = [];
 
