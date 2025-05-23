@@ -22,26 +22,64 @@ class WarService
      */
     public function getStats(): array
     {
-        $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
+        return cache()->remember('war_stats_summary', 300, function () {
+            $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
 
-        $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
-            if ($war->att_alliance_id === $this->ourAllianceId) {
-                return $carry + $war->att_money_looted;
-            } elseif ($war->def_alliance_id === $this->ourAllianceId) {
-                return $carry + $war->def_money_looted;
-            }
-            return $carry;
-        }, 0);
+            $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
+                if ($war->att_alliance_id === $this->ourAllianceId) {
+                    return $carry + $war->att_money_looted;
+                } elseif ($war->def_alliance_id === $this->ourAllianceId) {
+                    return $carry + $war->def_money_looted;
+                }
+                return $carry;
+            }, 0);
 
-        $activeWars = $this->getActiveWars();
-        $averageDuration = $activeWars->avg(fn($w) => Carbon::parse($w->date)->diffInDays(now()));
+            $activeWars = $this->getActiveWars();
+            $averageDuration = $activeWars->avg(function ($war) {
+                $start = Carbon::parse($war->date);
 
-        return [
-            'total_ongoing' => $activeWars->count(),
-            'wars_last_7_days' => $warsLast7Days->count(),
-            'avg_duration' => round($averageDuration, 1),
-            'total_looted' => $totalLooted,
-        ];
+                // If it ended, use the end date
+                if ($war->end_date) {
+                    return $start->diffInDays(Carbon::parse($war->end_date));
+                }
+
+                // If it's still active, use now (but clamp to max 5 days)
+                $duration = $start->diffInDays(now());
+
+                return min($duration, 5);
+            });
+
+            return [
+                'total_ongoing' => $activeWars->count(),
+                'wars_last_7_days' => $warsLast7Days->count(),
+                'avg_duration' => round($averageDuration, 1),
+                'total_looted' => $totalLooted,
+            ];
+        });
+    }
+
+    /**
+     * @return Collection
+     */
+    public function getWarsLast30Days(): Collection
+    {
+        if ($this->cachedRecentWars) {
+            return $this->cachedRecentWars;
+        }
+
+        return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
+            return War::with([
+                'attacker:id,leader_name,alliance_id',
+                'attacker.alliance:id,name',
+                'defender:id,leader_name,alliance_id',
+                'defender.alliance:id,name',
+            ])
+                ->where('date', '>=', now()->subDays(30))
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->get();
+        });
     }
 
     /**
@@ -121,17 +159,28 @@ class WarService
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
         return cache()->remember("top_nations_active_wars_{$limit}", 300, function () use ($limit) {
-            return War::whereNull('end_date')
-                ->selectRaw('att_id as nation_id, COUNT(*) as total')
+            $attackerCounts = War::whereNull('end_date')
                 ->where(function ($query) {
                     $this->whereOurAllianceEngagedProperly($query);
                 })
+                ->selectRaw('att_id as nation_id, COUNT(*) as total')
                 ->groupBy('att_id')
-                ->orderByDesc('total')
-                ->limit($limit)
-                ->get()
-                ->pluck('total', 'nation_id')
-                ->toArray();
+                ->pluck('total', 'nation_id');
+
+            $defenderCounts = War::whereNull('end_date')
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->selectRaw('def_id as nation_id, COUNT(*) as total')
+                ->groupBy('def_id')
+                ->pluck('total', 'nation_id');
+
+            // Merge counts: add together if they exist in both
+            $combined = $attackerCounts->mergeRecursive($defenderCounts)->map(function ($value) {
+                return is_array($value) ? array_sum($value) : $value;
+            });
+
+            return $combined->sortDesc()->take($limit)->toArray();
         });
     }
 
@@ -161,66 +210,23 @@ class WarService
         return cache()->remember('war_resource_usage_summary', 300, function () {
             $wars = $this->getWarsLast30Days();
 
-            return [
-                'gasoline' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)
-                ],
-                'munitions' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)
-                ],
-                'steel' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)
-                ],
-                'aluminum' => [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used)
-                ],
+            $resources = [
+                'gasoline' => ['att_gas_used', 'def_gas_used'],
+                'munitions' => ['att_mun_used', 'def_mun_used'],
+                'steel' => ['att_steel_used', 'def_steel_used'],
+                'aluminum' => ['att_alum_used', 'def_alum_used'],
             ];
+
+            $summary = [];
+
+            foreach ($resources as $key => [$attKey, $defKey]) {
+                $summary[$key] = [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey)
+                ];
+            }
+
+            return $summary;
         });
-    }
-
-    /**
-     * @return Collection
-     */
-    public function getWarsLast30Days(): Collection
-    {
-        if ($this->cachedRecentWars) {
-            return $this->cachedRecentWars;
-        }
-
-        return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
-            return War::with([
-                'attacker:id,leader_name,alliance_id',
-                'attacker.alliance:id,name',
-                'defender:id,leader_name,alliance_id',
-                'defender.alliance:id,name',
-            ])
-                ->where('date', '>=', now()->subDays(30))
-                ->where(function ($query) {
-                    $this->whereOurAllianceEngagedProperly($query);
-                })
-                ->get();
-        });
-    }
-
-    /**
-     * @param Collection $wars
-     * @param string $attKey
-     * @param string $defKey
-     * @param bool $flip
-     * @return array
-     */
-    private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
-    {
-        return [
-            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
-                ? ($flip ? $w->$defKey : $w->$attKey)
-                : ($flip ? $w->$attKey : $w->$defKey)
-            ),
-            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
-                ? ($flip ? $w->$attKey : $w->$defKey)
-                : ($flip ? $w->$defKey : $w->$attKey)
-            ),
-        ];
     }
 
     /**
@@ -257,6 +263,27 @@ class WarService
     }
 
     /**
+     * @param Collection $wars
+     * @param string $attKey
+     * @param string $defKey
+     * @param bool $flip
+     * @return array
+     */
+    private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
+    {
+        return [
+            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$defKey : $w->$attKey)
+                : ($flip ? $w->$attKey : $w->$defKey)
+            ),
+            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$attKey : $w->$defKey)
+                : ($flip ? $w->$defKey : $w->$attKey)
+            ),
+        ];
+    }
+
+    /**
      * @return array
      */
     public function getAggressorDefenderSplit(): array
@@ -279,7 +306,7 @@ class WarService
      */
     public function getActiveWarsByNation(): array
     {
-        $wars = $this->getWarsLast30Days();
+        $wars = $this->getActiveWars();
 
         $nationCounts = [];
 
