@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\BankRecords;
 use App\Models\Taxes;
 use Carbon\Carbon;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -14,9 +17,15 @@ class TaxService
     /**
      * @param int $alliance_id
      * @return int The last scanned ID is returned
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
      */
     public static function updateAllianceTaxes(int $alliance_id): int
     {
+        Cache::forget('tax_summary_stats');
+        Cache::forget('tax_resource_chart_data');
+        Cache::forget('tax_daily_totals');
+
         $taxes = TaxService::getAllianceTaxes($alliance_id);
         $lastTaxId = TaxService::getLastScannedTaxRecordId();
         $newLastId = $lastTaxId;
@@ -67,6 +76,8 @@ class TaxService
     /**
      * @param int $alliance_id
      * @return BankRecords
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
      */
     public static function getAllianceTaxes(int $alliance_id): BankRecords
     {
@@ -89,22 +100,32 @@ class TaxService
     public static function getSummaryStats(): array
     {
         $start = now()->subDays(30);
-        $query = Taxes::where('date', '>=', $start);
+        $resources = PWHelperService::resources(false);
+        $baseQuery = Taxes::where('date', '>=', $start);
 
-        return [
-            'total_money' => $query->sum('money'),
-            'top_resource' => collect(PWHelperService::resources(false))
-                ->mapWithKeys(fn($res) => [$res => $query->sum($res)])
-                ->sortDesc()
-                ->keys()
-                ->first(),
+        return Cache::remember('tax_summary_stats', now()->addMinutes(30), function () use ($resources, $baseQuery) {
+            $sums = (clone $baseQuery)->selectRaw(
+                collect($resources)->prepend('money')->map(fn($r) => "SUM(`$r`) as `$r`")->implode(', ')
+            )->first();
 
-            'transaction_count' => $query->count(),
-            'average_daily_money' => $query->select(DB::raw('DATE(date) as d'), DB::raw('SUM(money) as total'))
+            $transactionCount = (clone $baseQuery)->count();
+            $dailyAvg = (clone $baseQuery)
+                ->selectRaw('DATE(date) as d, SUM(money) as total')
                 ->groupBy('d')
                 ->get()
-                ->avg('total'),
-        ];
+                ->avg('total');
+
+            return [
+                'total_money' => $sums->money,
+                'top_resource' => collect($resources)
+                    ->mapWithKeys(fn($res) => [$res => $sums->$res])
+                    ->sortDesc()
+                    ->keys()
+                    ->first(),
+                'transaction_count' => $transactionCount,
+                'average_daily_money' => $dailyAvg,
+            ];
+        });
     }
 
     /**
@@ -112,25 +133,9 @@ class TaxService
      */
     public static function getResourceChartData(): array
     {
-        $start = now()->subDays(30);
-        $resources = PWHelperService::resources();
-
-        $data = [];
-
-        foreach ($resources as $res) {
-            $daily = Taxes::where('date', '>=', $start)
-                ->selectRaw('DATE(`date`) as day, SUM(`' . $res . '`) as total')
-                ->groupBy('day')
-                ->orderBy('day')
-                ->pluck('total', 'day');
-
-            $data[$res] = [
-                'labels' => $daily->keys()->toArray(),
-                'data' => $daily->values()->toArray(),
-            ];
-        }
-
-        return $data;
+        return Cache::remember('tax_resource_chart_data', now()->addMinutes(30), function () {
+            return self::getAggregatedResourceData(true);
+        });
     }
 
     /**
@@ -138,21 +143,43 @@ class TaxService
      */
     public static function getDailyTotals(): array
     {
+        return Cache::remember('tax_daily_totals', now()->addMinutes(30), function () {
+            return self::getAggregatedResourceData(false);
+        });
+    }
+
+    /**
+     * @param bool $formatForChart
+     * @return array
+     */
+    private static function getAggregatedResourceData(bool $formatForChart): array
+    {
         $start = now()->subDays(30);
         $resources = PWHelperService::resources();
 
-        $totals = [];
+        $results = Taxes::where('date', '>=', $start)
+            ->selectRaw('DATE(`date`) as day')
+            ->selectRaw(collect($resources)->map(fn($r) => "SUM(`$r`) as `$r`")->implode(', '))
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        $data = [];
 
         foreach ($resources as $res) {
-            $daily = Taxes::where('date', '>=', $start)
-                ->selectRaw('DATE(`date`) as day, SUM(`' . $res . '`) as total')
-                ->groupBy('day')
-                ->orderBy('day')
-                ->get();
-
-            $totals[$res] = $daily;
+            if ($formatForChart) {
+                $data[$res] = [
+                    'labels' => $results->pluck('day')->toArray(),
+                    'data' => $results->pluck($res)->toArray(),
+                ];
+            } else {
+                $data[$res] = $results->map(fn($row) => [
+                    'day' => $row->day,
+                    'total' => $row->$res,
+                ]);
+            }
         }
 
-        return $totals;
+        return $data;
     }
 }
