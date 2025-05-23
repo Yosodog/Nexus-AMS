@@ -161,7 +161,7 @@ class DirectDepositService
         }
 
         $targetTaxId = $enrollment->previous_tax_id;
-        $fallbackTaxId = (int)$this->settings->get('direct_deposit_fallback_tax_id');
+        $fallbackTaxId = SettingService::getDirectDepositFallbackId();
 
         // Attempt to assign the previous tax bracket
         try {

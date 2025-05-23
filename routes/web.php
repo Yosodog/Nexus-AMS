@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
+use App\Http\Controllers\DirectDepositController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\RaidFinderController;
@@ -60,6 +61,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::post("/accounts/delete", [AccountsController::class, "delete"])->name("accounts.delete.post");
 
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
+
+    // Direct Deposit
+    Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll');
+    Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll');
 
     // Loan
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");

@@ -34,8 +34,8 @@ class TaxBracketService
             ->setMutation()
             ->addArgument('id', $this->id)
             ->addArgument('target_id', $this->target_id)
-            ->addFields(['id', 'name', 'rate']);
+            ->addFields(['id', 'tax_rate', 'resource_tax_rate']);
 
-        $client->sendQuery($builder);
+        $client->sendQuery($builder, headers: true);
     }
 }
