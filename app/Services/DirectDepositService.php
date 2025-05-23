@@ -10,6 +10,7 @@ use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\Nation;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DirectDepositService
 {
@@ -53,8 +54,8 @@ class DirectDepositService
         $retained = [];
 
         foreach ($fields as $field) {
-            $amount = (float) $record->$field;
-            $rate = (float) $bracket->$field;
+            $amount = (float)$record->$field;
+            $rate = (float)$bracket->$field;
 
             $taxed = round($amount * ($rate / 100), 2);
             $kept = round($amount - $taxed, 2);
@@ -87,22 +88,6 @@ class DirectDepositService
     }
 
     /**
-     * Enroll a nation in Direct Deposit and update their in-game tax bracket.
-     */
-    public function enroll(Nation $nation, Account $account): void
-    {
-        // TODO: implement mutation to set DD tax ID and persist enrollment
-    }
-
-    /**
-     * Disenroll a nation from Direct Deposit and revert their tax bracket.
-     */
-    public function disenroll(Nation $nation): void
-    {
-        // TODO: lookup previous tax ID and revert tax bracket
-    }
-
-    /**
      * Determine which tax bracket applies to a nation by city count.
      */
     public function getApplicableBracket(Nation $nation): ?DirectDepositTaxBracket
@@ -129,5 +114,74 @@ class DirectDepositService
         }
 
         return $this->accountService->createDefaultForNation($nation);
+    }
+
+    /**
+     * @param Nation $nation
+     * @param Account $account
+     * @return void
+     */
+    public function enroll(Nation $nation, Account $account): void
+    {
+        $ddTaxId = $this->ddTaxId;
+        $currentTaxId = $nation->tax_id;
+
+        // Determine previous tax ID
+        $previousTaxId = ($currentTaxId === $ddTaxId)
+            ? SettingService::getDirectDepositFallbackId()
+            : $currentTaxId;
+
+        // Save enrollment
+        DirectDepositEnrollment::updateOrCreate(
+            ['nation_id' => $nation->id],
+            [
+                'account_id' => $account->id,
+                'previous_tax_id' => $previousTaxId,
+                'enrolled_at' => now(),
+            ]
+        );
+
+        // Queue GraphQL mutation to assign DD bracket
+        $mutation = new TaxBracketService();
+        $mutation->id = $ddTaxId;
+        $mutation->target_id = $nation->id;
+        $mutation->send();
+    }
+
+    /**
+     * @param Nation $nation
+     * @return void
+     */
+    public function disenroll(Nation $nation): void
+    {
+        $enrollment = DirectDepositEnrollment::where('nation_id', $nation->id)->first();
+
+        if (!$enrollment) {
+            return;
+        }
+
+        $targetTaxId = $enrollment->previous_tax_id;
+        $fallbackTaxId = (int)$this->settings->get('direct_deposit_fallback_tax_id');
+
+        // Attempt to assign the previous tax bracket
+        try {
+            $mutation = new TaxBracketService();
+            $mutation->id = $targetTaxId;
+            $mutation->target_id = $nation->id;
+            $mutation->send();
+        } catch (Throwable $e) {
+            // Fallback if failure
+            Log::warning(
+                "Failed to assign previous tax ID {$targetTaxId} for nation {$nation->id}, retrying with fallback."
+            );
+
+            $fallbackMutation = new TaxBracketService();
+            $fallbackMutation->id = $fallbackTaxId;
+            $fallbackMutation->target_id = $nation->id;
+            $fallbackMutation->send();
+        }
+
+        // Delete enrollment
+        $enrollment->delete();
     }
 }

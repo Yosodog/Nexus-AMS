@@ -133,4 +133,29 @@ class SettingService
         self::setValue("dd_tax_id", $DDTaxID);
     }
 
+    /**
+     * @return int
+     */
+    public static function getDirectDepositFallbackId(): int
+    {
+        $value = self::getValue("dd_fallback_tax_id");
+
+        if (is_null($value)) {
+            self::setDirectDepositFallbackId(0); // Default to 0
+
+            return 0;
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * @param int $DDTaxID
+     * @return void
+     */
+    public static function setDirectDepositFallbackId(int $DDTaxID): void
+    {
+        self::setValue("dd_fallback_tax_id", $DDTaxID);
+    }
+
 }
