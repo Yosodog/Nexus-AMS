@@ -32,7 +32,7 @@
                                     <input type="checkbox" name="permissions[]" value="{{ $perm }}"
                                            class="form-check-input"
                                            id="perm-{{ $perm }}"
-                                            {{ in_array($perm, $role->permissions()->toArray()) ? 'checked' : '' }}
+                                            {{ in_array($perm, $role->permissions->pluck('permission')->toArray()) ? 'checked' : '' }}
                                             {{ $role->protected ? 'disabled' : '' }}>
                                     <label for="perm-{{ $perm }}" class="form-check-label">{{ $perm }}</label>
                                 </div>

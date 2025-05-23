@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -23,15 +24,11 @@ class Role extends Model
     }
 
     /**
-     * @return Collection
+     * @return HasMany
      */
-    public function permissions(): Collection
+    public function permissions(): HasMany
     {
-        return collect(
-            DB::table('role_permissions')
-                ->where('role_id', $this->id)
-                ->pluck('permission')
-        );
+        return $this->hasMany(RolePermission::class);
     }
 
     /**
