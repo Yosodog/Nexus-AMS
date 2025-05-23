@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\RaidController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
@@ -105,6 +106,14 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
         Route::put('/user/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
+
+        // Roles
+        Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
+        Route::post('/roles', [RoleController::class, 'store'])->name('admin.roles.store');
+        Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('admin.roles.edit');
+        Route::put('/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
 
         // Account
         Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");

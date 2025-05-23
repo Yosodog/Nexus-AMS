@@ -6,20 +6,27 @@ use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Services\GrantService;
 use App\Services\PWHelperService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class GrantController
 {
+    use AuthorizesRequests;
+
     /**
      * @return Factory|View|Application|object
+     * @throws AuthorizationException
      */
     public function grants()
     {
+        $this->authorize('view-grants');
+
         $grants = Grants::orderBy('created_at', 'desc')->get();
         $pendingRequests = GrantApplication::with('grant', 'nation', 'account')
             ->where('status', 'pending')
@@ -47,9 +54,12 @@ class GrantController
     /**
      * @param Request $request
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function createGrant(Request $request)
     {
+        $this->authorize('manage-grants');
+
         $validated = $request->validate([
             'name' => 'required|string|unique:grants,name',
             'description' => 'nullable|string',
@@ -81,9 +91,12 @@ class GrantController
      * @param Grants $grant
      * @param Request $request
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function updateGrant(Grants $grant, Request $request)
     {
+        $this->authorize('manage-grants');
+
         $validated = $request->validate([
             'name' => 'required|string|unique:grants,name,' . $grant->id,
             'description' => 'nullable|string',
@@ -113,9 +126,12 @@ class GrantController
     /**
      * @param GrantApplication $application
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function approveApplication(GrantApplication $application)
     {
+        $this->authorize('manage-grants');
+
         GrantService::approveGrant($application);
 
         return redirect()->back()
@@ -126,9 +142,12 @@ class GrantController
     /**
      * @param GrantApplication $application
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function denyApplication(GrantApplication $application)
     {
+        $this->authorize('manage-grants');
+
         GrantService::denyGrant($application);
 
         return redirect()->back()

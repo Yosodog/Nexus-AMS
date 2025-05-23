@@ -41,5 +41,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPulse', function (User $user) {
             return $user->is_admin;
         });
+
+        foreach (config('permissions', []) as $permission) {
+            Gate::define($permission, fn(User $user) => $user->hasPermission($permission));
+        }
     }
 }
