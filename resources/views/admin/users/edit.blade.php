@@ -57,6 +57,19 @@
                                 </select>
                             </div>
                         @endif
+
+                        <div class="mb-3">
+                            <label for="roles" class="form-label">Roles</label>
+                            <select name="roles[]" id="roles" class="form-select" multiple>
+                                @foreach($allRoles as $role)
+                                    <option value="{{ $role->id }}"
+                                            {{ $user->roles->pluck('id')->contains($role->id) ? 'selected' : '' }}>
+                                        {{ ucfirst($role->name) }}{{ $role->protected ? ' (System)' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple roles.</div>
+                        </div>
                     </div>
                 </div>
             </div>

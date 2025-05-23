@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -44,6 +45,8 @@ class User extends Authenticatable
         'last_active_at' => 'datetime',
         'disabled' => 'boolean',
     ];
+
+    protected $with = ['roles'];
 
     /**
      * @param int $nation_id
@@ -89,5 +92,24 @@ class User extends Authenticatable
             'password' => 'hashed',
             'verified_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return BelongsToMany
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * @param string $permission
+     * @return bool
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return $this->roles
+            ->flatMap(fn($role) => $role->permissionEntries())
+            ->contains($permission);
     }
 }

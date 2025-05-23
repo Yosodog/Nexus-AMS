@@ -7,19 +7,26 @@ use App\Models\WarAidRequest;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class WarAidController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * @return Factory|View|Application|object
+     * @throws AuthorizationException
      */
     public function index()
     {
+        $this->authorize('view-war-aid');
+
         $pending = WarAidRequest::where('status', 'pending')->with('nation', 'account')->get();
         $history = WarAidRequest::whereIn('status', ['approved', 'denied'])->with('nation', 'account')->latest(
         )->paginate(25);
@@ -33,9 +40,12 @@ class WarAidController extends Controller
      * @param WarAidRequest $aidRequest
      * @param WarAidService $warAidService
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function approve(Request $request, WarAidRequest $aidRequest, WarAidService $warAidService)
     {
+        $this->authorize('manage-war-aid');
+
         $data = $request->validate(
             collect(PWHelperService::resources())->mapWithKeys(fn($r) => [$r => ['nullable', 'integer', 'min:0']]
             )->toArray()
@@ -53,9 +63,12 @@ class WarAidController extends Controller
      * @param WarAidRequest $aidRequest
      * @param WarAidService $warAidService
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function deny(WarAidRequest $aidRequest, WarAidService $warAidService)
     {
+        $this->authorize('manage-war-aid');
+
         $warAidService->denyAidRequest($aidRequest);
 
         return back()->with([
@@ -66,9 +79,12 @@ class WarAidController extends Controller
 
     /**
      * @return RedirectResponse
+     * @throws AuthorizationException
      */
     public function toggle()
     {
+        $this->authorize('manage-war-aid');
+
         $currently = SettingService::isWarAidEnabled();
         SettingService::setWarAidEnabled(!$currently);
 
