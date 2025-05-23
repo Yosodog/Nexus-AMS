@@ -56,6 +56,9 @@ class UpdateApplication extends Command
         $this->info('Database migrations applied successfully.');
         Log::info('Database migrations applied successfully.');
 
+        $this->info("Updating permissions");
+        Artisan::call('db:seed --class=RoleSeeder --force');
+        
         // Clear cache
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
