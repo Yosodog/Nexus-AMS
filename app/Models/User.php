@@ -108,8 +108,17 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
-        return $this->roles
-            ->flatMap(fn($role) => $role->permissionEntries())
-            ->contains($permission);
+        static $cachedPermissions = [];
+
+        // Cache by user ID
+        if (!array_key_exists($this->id, $cachedPermissions)) {
+            $cachedPermissions[$this->id] = $this->roles
+                ->flatMap(fn ($role) => $role->permissionEntries())
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return in_array($permission, $cachedPermissions[$this->id], true);
     }
 }
