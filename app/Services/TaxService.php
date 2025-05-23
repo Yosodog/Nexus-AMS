@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
-use App\GraphQL\Models\BankRecords;
 use App\Models\Taxes;
-use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -26,8 +26,8 @@ class TaxService
         Cache::forget('tax_resource_chart_data');
         Cache::forget('tax_daily_totals');
 
-        $taxes = TaxService::getAllianceTaxes($alliance_id);
-        $lastTaxId = TaxService::getLastScannedTaxRecordId();
+        $taxes = self::getAllianceTaxes($alliance_id);
+        $lastTaxId = self::getLastScannedTaxRecordId();
         $newLastId = $lastTaxId;
 
         foreach ($taxes as $record) {
@@ -39,7 +39,7 @@ class TaxService
                 DB::transaction(function () use ($record) {
                     Taxes::create([
                         'id' => $record->id, // Use PW tax record ID as our primary key
-                        'date' => Carbon::parse($record->date)->toDateTimeString(),
+                        'date' => $record->date,
                         'sender_id' => $record->sender_id,
                         'receiver_id' => $record->receiver_id,
                         'receiver_type' => $record->receiver_type,
@@ -75,15 +75,13 @@ class TaxService
 
     /**
      * @param int $alliance_id
-     * @return BankRecords
+     * @return Collection
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function getAllianceTaxes(int $alliance_id): BankRecords
+    public static function getAllianceTaxes(int $alliance_id): Collection
     {
-        $alliance = AllianceQueryService::getAllianceWithTaxes($alliance_id);
-
-        return $alliance->taxrecs;
+        return collect(AllianceQueryService::getAllianceWithTaxes($alliance_id)->taxrecs);
     }
 
     /**
@@ -91,11 +89,12 @@ class TaxService
      */
     public static function getLastScannedTaxRecordId(): int
     {
-        return Taxes::max('id') ?? 0;
+        return Taxes::value(DB::raw('MAX(id)')) ?: 0;
     }
 
     /**
      * @return array
+     * @throws Exception
      */
     public static function getSummaryStats(): array
     {
@@ -130,21 +129,12 @@ class TaxService
 
     /**
      * @return array
+     * @throws Exception
      */
     public static function getResourceChartData(): array
     {
         return Cache::remember('tax_resource_chart_data', now()->addMinutes(30), function () {
             return self::getAggregatedResourceData(true);
-        });
-    }
-
-    /**
-     * @return array
-     */
-    public static function getDailyTotals(): array
-    {
-        return Cache::remember('tax_daily_totals', now()->addMinutes(30), function () {
-            return self::getAggregatedResourceData(false);
         });
     }
 
@@ -181,5 +171,16 @@ class TaxService
         }
 
         return $data;
+    }
+
+    /**
+     * @return array
+     * @throws Exception
+     */
+    public static function getDailyTotals(): array
+    {
+        return Cache::remember('tax_daily_totals', now()->addMinutes(30), function () {
+            return self::getAggregatedResourceData(false);
+        });
     }
 }
