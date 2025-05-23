@@ -18,6 +18,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta3/dist/css/adminlte.min.css"
           crossorigin="anonymous">
 
+    <style>
+        .nav-link.disabled {
+            color: rgba(255, 255, 255, 0.4) !important;
+            pointer-events: none;
+        }
+    </style>
+
     @stack('styles')
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
