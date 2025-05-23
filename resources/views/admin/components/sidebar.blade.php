@@ -8,17 +8,16 @@
         <nav>
             <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
                 <li class="nav-item">
-                    <a href="{{ route('admin.dashboard') }}"
-                       class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                        <i class="bi bi-speedometer"></i>
-                        <p>Dashboard</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.dashboard') }}"
+                                icon="bi bi-speedometer"
+                                :active="request()->routeIs('admin.dashboard')">
+                        Dashboard
+                    </x-nav.link>
                 </li>
 
                 {{-- User Management --}}
                 <li class="nav-item {{ request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*') ? 'menu-open' : '' }}">
-                    <a href="#"
-                       class="nav-link {{ request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*') ? 'active' : '' }}">
+                    <a href="#" class="nav-link {{ request()->routeIs('admin.users.*') || request()->routeIs('admin.roles.*') ? 'active' : '' }}">
                         <i class="bi bi-person-badge-fill"></i>
                         <p>
                             User Management
@@ -27,114 +26,127 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="{{ route('admin.users.index') }}"
-                               class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }} {{ auth()->user()->can('view-users') ? '' : 'disabled' }}">
-                                <i class="bi bi-person-lines-fill ms-3"></i>
-                                <p>Manage Users</p>
-                            </a>
+                            <x-nav.link href="{{ route('admin.users.index') }}"
+                                        icon="bi bi-person-lines-fill ms-3"
+                                        permission="view-users"
+                                        :active="request()->routeIs('admin.users.*')">
+                                Manage Users
+                            </x-nav.link>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('admin.roles.index') }}"
-                               class="nav-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }} {{ auth()->user()->can('view-roles') ? '' : 'disabled' }}">
-                                <i class="bi bi-shield-lock ms-3"></i>
-                                <p>Manage Roles</p>
-                            </a>
+                            <x-nav.link href="{{ route('admin.roles.index') }}"
+                                        icon="bi bi-shield-lock ms-3"
+                                        permission="view-roles"
+                                        :active="request()->routeIs('admin.roles.*')">
+                                Manage Roles
+                            </x-nav.link>
                         </li>
                     </ul>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.members') }}"
-                       class="nav-link {{ request()->routeIs('admin.members') ? 'active' : '' }} {{ auth()->user()->can('view-members') ? '' : 'disabled' }}">
-                        <i class="bi bi-people-fill"></i>
-                        <p>Members</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.members') }}"
+                                icon="bi bi-people-fill"
+                                permission="view-members"
+                                :active="request()->routeIs('admin.members')">
+                        Members
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-header">Economics</li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.accounts.dashboard') }}"
-                       class="nav-link {{ request()->routeIs('admin.accounts.*') ? 'active' : '' }} {{ auth()->user()->can('view-accounts') ? '' : 'disabled' }}">
-                        <i class="bi bi-bank"></i>
-                        <p>Accounts</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.accounts.dashboard') }}"
+                                icon="bi bi-bank"
+                                permission="view-accounts"
+                                :active="request()->routeIs('admin.accounts.*')">
+                        Accounts
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.grants.city') }}"
-                       class="nav-link {{ request()->routeIs('admin.grants.city') ? 'active' : '' }} {{ auth()->user()->can('view-city-grants') ? '' : 'disabled' }}">
-                        <i class="bi bi-houses-fill"></i>
-                        <p>City Grants</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.grants.city') }}"
+                                icon="bi bi-houses-fill"
+                                permission="view-city-grants"
+                                :active="request()->routeIs('admin.grants.city')">
+                        City Grants
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.grants') }}"
-                       class="nav-link {{ request()->routeIs('admin.grants') ? 'active' : '' }} {{ auth()->user()->can('view-grants') ? '' : 'disabled' }}">
-                        <i class="bi bi-bandaid-fill"></i>
-                        <p>Grants</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.grants') }}"
+                                icon="bi bi-bandaid-fill"
+                                permission="view-grants"
+                                :active="request()->routeIs('admin.grants')">
+                        Grants
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.loans') }}"
-                       class="nav-link {{ request()->routeIs('admin.loans') ? 'active' : '' }} {{ auth()->user()->can('view-loans') ? '' : 'disabled' }}">
-                        <i class="bi bi-piggy-bank-fill"></i>
-                        <p>Loans</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.loans') }}"
+                                icon="bi bi-piggy-bank-fill"
+                                permission="view-loans"
+                                :active="request()->routeIs('admin.loans')">
+                        Loans
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.taxes') }}"
-                       class="nav-link {{ request()->routeIs('admin.taxes') ? 'active' : '' }} {{ auth()->user()->can('view-taxes') ? '' : 'disabled' }}">
-                        <i class="bi bi-hand-thumbs-down-fill"></i>
-                        <p>Taxes</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.taxes') }}"
+                                icon="bi bi-hand-thumbs-down-fill"
+                                permission="view-taxes"
+                                :active="request()->routeIs('admin.taxes')">
+                        Taxes
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-header">Defense</li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.wars') }}"
-                       class="nav-link {{ request()->routeIs('admin.wars') ? 'active' : '' }} {{ auth()->user()->can('view-wars') ? '' : 'disabled' }}">
-                        <i class="bi bi-speedometer"></i>
-                        <p>Wars</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.wars') }}"
+                                icon="bi bi-speedometer"
+                                permission="view-wars"
+                                :active="request()->routeIs('admin.wars')">
+                        Wars
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.war-aid') }}"
-                       class="nav-link {{ request()->routeIs('admin.war-aid') ? 'active' : '' }} {{ auth()->user()->can('view-war-aid') ? '' : 'disabled' }}">
-                        <i class="bi bi-wallet-fill"></i>
-                        <p>War Aid</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.war-aid') }}"
+                                icon="bi bi-wallet-fill"
+                                permission="view-war-aid"
+                                :active="request()->routeIs('admin.war-aid')">
+                        War Aid
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ route('admin.raids.index') }}"
-                       class="nav-link {{ request()->routeIs('admin.raids.*') ? 'active' : '' }} {{ auth()->user()->can('view-raids') ? '' : 'disabled' }}">
-                        <i class="bi bi-currency-exchange"></i>
-                        <p>Raids</p>
-                    </a>
+                    <x-nav.link href="{{ route('admin.raids.index') }}"
+                                icon="bi bi-currency-exchange"
+                                permission="view-raids"
+                                :active="request()->routeIs('admin.raids.*')">
+                        Raids
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-header">System</li>
 
                 <li class="nav-item">
-                    <a href="{{ url("/telescope") }}"
-                       class="nav-link {{ request()->is('telescope') ? 'active' : '' }} {{ auth()->user()->can('view-diagnostic-info') ? '' : 'disabled' }}">
-                        <i class="bi bi-bug-fill"></i>
-                        <p>Telescope</p>
-                    </a>
+                    <x-nav.link href="{{ url('/telescope') }}"
+                                icon="bi bi-bug-fill"
+                                permission="view-diagnostic-info"
+                                :active="request()->is('telescope')">
+                        Telescope
+                    </x-nav.link>
                 </li>
 
                 <li class="nav-item">
-                    <a href="{{ url("/pulse") }}"
-                       class="nav-link {{ request()->is('pulse') ? 'active' : '' }} {{ auth()->user()->can('view-diagnostic-info') ? '' : 'disabled' }}">
-                        <i class="bi bi-activity"></i>
-                        <p>Pulse</p>
-                    </a>
+                    <x-nav.link href="{{ url('/pulse') }}"
+                                icon="bi bi-activity"
+                                permission="view-diagnostic-info"
+                                :active="request()->is('pulse')">
+                        Pulse
+                    </x-nav.link>
                 </li>
             </ul>
         </nav>
