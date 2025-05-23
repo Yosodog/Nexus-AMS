@@ -59,6 +59,30 @@ class WarService
     }
 
     /**
+     * @return Collection
+     */
+    public function getWarsLast30Days(): Collection
+    {
+        if ($this->cachedRecentWars) {
+            return $this->cachedRecentWars;
+        }
+
+        return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
+            return War::with([
+                'attacker:id,leader_name,alliance_id',
+                'attacker.alliance:id,name',
+                'defender:id,leader_name,alliance_id',
+                'defender.alliance:id,name',
+            ])
+                ->where('date', '>=', now()->subDays(30))
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->get();
+        });
+    }
+
+    /**
      * @param $query
      * @return void
      */
@@ -206,51 +230,6 @@ class WarService
     }
 
     /**
-     * @return Collection
-     */
-    public function getWarsLast30Days(): Collection
-    {
-        if ($this->cachedRecentWars) {
-            return $this->cachedRecentWars;
-        }
-
-        return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
-            return War::with([
-                'attacker:id,leader_name,alliance_id',
-                'attacker.alliance:id,name',
-                'defender:id,leader_name,alliance_id',
-                'defender.alliance:id,name',
-            ])
-                ->where('date', '>=', now()->subDays(30))
-                ->where(function ($query) {
-                    $this->whereOurAllianceEngagedProperly($query);
-                })
-                ->get();
-        });
-    }
-
-    /**
-     * @param Collection $wars
-     * @param string $attKey
-     * @param string $defKey
-     * @param bool $flip
-     * @return array
-     */
-    private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
-    {
-        return [
-            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
-                ? ($flip ? $w->$defKey : $w->$attKey)
-                : ($flip ? $w->$attKey : $w->$defKey)
-            ),
-            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
-                ? ($flip ? $w->$attKey : $w->$defKey)
-                : ($flip ? $w->$defKey : $w->$attKey)
-            ),
-        ];
-    }
-
-    /**
      * @return array
      */
     public function getDamageDealtVsTaken(): array
@@ -281,6 +260,27 @@ class WarService
 
             return $result;
         });
+    }
+
+    /**
+     * @param Collection $wars
+     * @param string $attKey
+     * @param string $defKey
+     * @param bool $flip
+     * @return array
+     */
+    private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
+    {
+        return [
+            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$defKey : $w->$attKey)
+                : ($flip ? $w->$attKey : $w->$defKey)
+            ),
+            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+                ? ($flip ? $w->$attKey : $w->$defKey)
+                : ($flip ? $w->$defKey : $w->$attKey)
+            ),
+        ];
     }
 
     /**
