@@ -39,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
         Route::model('WarAidRequest', WarAidRequest::class);
 
         Gate::define('viewPulse', function (User $user) {
-            return $user->is_admin;
+            return Gate::allows('view-diagnostic-info');
         });
 
         foreach (config('permissions', []) as $permission) {
