@@ -9,6 +9,8 @@ use Illuminate\Support\Collection;
 class WarService
 {
     protected int $ourAllianceId;
+    protected ?Collection $cachedActiveWars = null;
+    protected ?Collection $cachedRecentWars = null;
 
     public function __construct()
     {
@@ -20,13 +22,7 @@ class WarService
      */
     public function getStats(): array
     {
-        $sevenDaysAgo = now()->subDays(7);
-
-        $warsLast7Days = War::where('date', '>=', $sevenDaysAgo)
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->get();
+        $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
 
         $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
             if ($war->att_alliance_id === $this->ourAllianceId) {
@@ -68,7 +64,12 @@ class WarService
      */
     public function getActiveWars(): Collection
     {
-        return War::with(['attacker.alliance', 'defender.alliance'])
+        return $this->cachedActiveWars ??= War::with([
+            'attacker:id,leader_name,alliance_id',
+            'attacker.alliance:id,name',
+            'defender:id,leader_name,alliance_id',
+            'defender.alliance:id,name',
+        ])
             ->whereNull('end_date')
             ->where(function ($query) {
                 $this->whereOurAllianceEngagedProperly($query);
@@ -82,14 +83,16 @@ class WarService
      */
     public function getWarTypeDistribution(): array
     {
-        return War::whereNull('end_date')
-            ->selectRaw('war_type, COUNT(*) as count')
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->groupBy('war_type')
-            ->pluck('count', 'war_type')
-            ->toArray();
+        return cache()->remember('war_type_distribution', 300, function () {
+            return War::whereNull('end_date')
+                ->selectRaw('war_type, COUNT(*) as count')
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->groupBy('war_type')
+                ->pluck('count', 'war_type')
+                ->toArray();
+        });
     }
 
     /**
@@ -97,16 +100,18 @@ class WarService
      */
     public function getWarStartHistory(): array
     {
-        return War::whereDate('date', '>=', now()->subDays(30))
-            ->selectRaw('DATE(date) as date, COUNT(*) as count')
-            ->whereNull('end_date')
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->groupByRaw('DATE(date)')
-            ->orderBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
+        return cache()->remember('war_start_history', 300, function () {
+            return War::whereDate('date', '>=', now()->subDays(30))
+                ->selectRaw('DATE(date) as date, COUNT(*) as count')
+                ->whereNull('end_date')
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->groupByRaw('DATE(date)')
+                ->orderBy('date')
+                ->pluck('count', 'date')
+                ->toArray();
+        });
     }
 
     /**
@@ -115,17 +120,19 @@ class WarService
      */
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
-        return War::whereNull('end_date')
-            ->selectRaw('att_id as nation_id, COUNT(*) as total')
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->groupBy('att_id')
-            ->orderByDesc('total')
-            ->limit($limit)
-            ->get()
-            ->pluck('total', 'nation_id')
-            ->toArray();
+        return cache()->remember("top_nations_active_wars_{$limit}", 300, function () use ($limit) {
+            return War::whereNull('end_date')
+                ->selectRaw('att_id as nation_id, COUNT(*) as total')
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->groupBy('att_id')
+                ->orderByDesc('total')
+                ->limit($limit)
+                ->get()
+                ->pluck('total', 'nation_id')
+                ->toArray();
+        });
     }
 
     /**
@@ -151,24 +158,24 @@ class WarService
      */
     public function getResourceUsageSummary(): array
     {
-        $wars = $this->getWarsLast30Days();
+        return cache()->remember('war_resource_usage_summary', 300, function () {
+            $wars = $this->getWarsLast30Days();
 
-        return [
-            'gasoline' => [
-                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)
-            ],
-            'munitions' => [
-                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)
-            ],
-            'steel' => [
-                'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)
-            ],
-            'aluminum' => [
-                'used' => $wars->sum(
-                    fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used
-                )
-            ],
-        ];
+            return [
+                'gasoline' => [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_gas_used : $w->def_gas_used)
+                ],
+                'munitions' => [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_mun_used : $w->def_mun_used)
+                ],
+                'steel' => [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_steel_used : $w->def_steel_used)
+                ],
+                'aluminum' => [
+                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->att_alum_used : $w->def_alum_used)
+                ],
+            ];
+        });
     }
 
     /**
@@ -176,12 +183,23 @@ class WarService
      */
     public function getWarsLast30Days(): Collection
     {
-        return War::with(['attacker.alliance', 'defender.alliance'])
-            ->where('date', '>=', now()->subDays(30))
-            ->where(function ($query) {
-                $this->whereOurAllianceEngagedProperly($query);
-            })
-            ->get();
+        if ($this->cachedRecentWars) {
+            return $this->cachedRecentWars;
+        }
+
+        return $this->cachedRecentWars = cache()->remember('wars_last_30_days_collection', 300, function () {
+            return War::with([
+                'attacker:id,leader_name,alliance_id',
+                'attacker.alliance:id,name',
+                'defender:id,leader_name,alliance_id',
+                'defender.alliance:id,name',
+            ])
+                ->where('date', '>=', now()->subDays(30))
+                ->where(function ($query) {
+                    $this->whereOurAllianceEngagedProperly($query);
+                })
+                ->get();
+        });
     }
 
     /**
@@ -210,30 +228,32 @@ class WarService
      */
     public function getDamageDealtVsTaken(): array
     {
-        $wars = $this->getWarsLast30Days();
+        return cache()->remember('war_damage_dealt_vs_taken', 300, function () {
+            $wars = $this->getWarsLast30Days();
 
-        $infraMetrics = [
-            'infra_destroyed_value' => ['att_infra_destroyed_value', 'def_infra_destroyed_value'],
-        ];
+            $infraMetrics = [
+                'infra_destroyed_value' => ['att_infra_destroyed_value', 'def_infra_destroyed_value'],
+            ];
 
-        $unitMetrics = [
-            'soldiers' => ['att_soldiers_lost', 'def_soldiers_lost'],
-            'tanks' => ['att_tanks_lost', 'def_tanks_lost'],
-            'aircraft' => ['att_aircraft_lost', 'def_aircraft_lost'],
-            'ships' => ['att_ships_lost', 'def_ships_lost'],
-        ];
+            $unitMetrics = [
+                'soldiers' => ['att_soldiers_lost', 'def_soldiers_lost'],
+                'tanks' => ['att_tanks_lost', 'def_tanks_lost'],
+                'aircraft' => ['att_aircraft_lost', 'def_aircraft_lost'],
+                'ships' => ['att_ships_lost', 'def_ships_lost'],
+            ];
 
-        $result = [];
+            $result = [];
 
-        foreach ($infraMetrics as $key => [$attKey, $defKey]) {
-            $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, false);
-        }
+            foreach ($infraMetrics as $key => [$attKey, $defKey]) {
+                $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, false);
+            }
 
-        foreach ($unitMetrics as $key => [$attKey, $defKey]) {
-            $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, true);
-        }
+            foreach ($unitMetrics as $key => [$attKey, $defKey]) {
+                $result[$key] = $this->calculateDealtAndTaken($wars, $attKey, $defKey, true);
+            }
 
-        return $result;
+            return $result;
+        });
     }
 
     /**
@@ -241,15 +261,17 @@ class WarService
      */
     public function getAggressorDefenderSplit(): array
     {
-        $wars = $this->getWarsLast30Days();
+        return cache()->remember('war_aggressor_defender_split', 300, function () {
+            $wars = $this->getWarsLast30Days();
 
-        $aggressor = $wars->filter(fn($w) => $this->isUsAttacker($w))->count();
-        $defender = $wars->count() - $aggressor;
+            $aggressor = $wars->filter(fn($w) => $this->isUsAttacker($w))->count();
+            $defender = $wars->count() - $aggressor;
 
-        return [
-            'Aggressor' => $aggressor,
-            'Defender' => $defender,
-        ];
+            return [
+                'Aggressor' => $aggressor,
+                'Defender' => $defender,
+            ];
+        });
     }
 
     /**
