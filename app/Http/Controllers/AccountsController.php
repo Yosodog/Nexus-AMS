@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
+use App\Models\DirectDepositEnrollment;
+use App\Models\DirectDepositLog;
 use App\Models\Loan;
 use App\Services\AccountService;
+use App\Services\DirectDepositService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
 use Closure;
@@ -41,9 +44,13 @@ class AccountsController extends Controller
             ->where('remaining_balance', '>', 0)
             ->get();
 
+        $ddService = app(DirectDepositService::class);
+
         return view("accounts.index", [
             "accounts" => $accounts,
             "activeLoans" => $activeLoans,
+            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', Auth::user()->nation_id)->first(),
+            'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
         ]);
     }
 
@@ -232,12 +239,18 @@ class AccountsController extends Controller
 
         $accounts->load("nation");
 
-        // Get related transactions where they are to or from
         $transactions = AccountService::getRelatedTransactions($accounts);
+
+        $ddLogs = DirectDepositLog::where('account_id', $accounts->id)
+            ->latest()
+            ->limit(50)
+            ->orderBy('created_at', 'DESC')
+            ->get();
 
         return view("accounts.view", [
             "account" => $accounts,
-            "transactions" => $transactions
+            "transactions" => $transactions,
+            "ddLogs" => $ddLogs,
         ]);
     }
 

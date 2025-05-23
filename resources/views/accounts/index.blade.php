@@ -18,4 +18,8 @@
 
     @include("accounts.components.transfer")
     @include("accounts.components.deposit_js")
+
+    <div class="divider"></div>
+
+    @include("accounts.components.direct_deposit")
 @endsection

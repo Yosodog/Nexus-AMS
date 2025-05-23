@@ -287,6 +287,9 @@ class Nation
         $this->wars_won = isset($json->wars_won) ? (int)$json->wars_won : null;
         $this->wars_lost = isset($json->wars_lost) ? (int)$json->wars_lost : null;
 
+        // Tax ID
+        $this->tax_id = isset($json->tax_id) ? (int)$json->tax_id : null;
+
         // Economy
         $this->gross_national_income = isset($json->gross_national_income) ? (float)$json->gross_national_income : null;
         $this->gross_domestic_product = isset($json->gross_domestic_product) ? (float)$json->gross_domestic_product : null;

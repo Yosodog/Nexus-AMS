@@ -86,6 +86,8 @@
             </table>
         </div>
     </div>
+
+    @include('admin.accounts.direct_deposit')
 @endsection
 
 @section("scripts")

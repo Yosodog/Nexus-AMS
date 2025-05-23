@@ -30,10 +30,15 @@ class TaxService
         $lastTaxId = self::getLastScannedTaxRecordId();
         $newLastId = $lastTaxId;
 
+        $ddService = app(DirectDepositService::class);
+
         foreach ($taxes as $record) {
             if ($record->id <= $lastTaxId) {
                 continue;
             }
+
+            // Process DD. If the tax_id matches the DD tax ID, then it will process the DD and return what is left for taxes.
+            $record = $ddService->process($record);
 
             try {
                 DB::transaction(function () use ($record) {

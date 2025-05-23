@@ -21,4 +21,6 @@ return [
     'view-diagnostic-info',
     'view-war-aid',
     'manage-war-aid',
+    'view-dd',
+    'manage-dd',
 ];

@@ -8,6 +8,7 @@ use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\ManualTransaction;
+use App\Models\Nation;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\DepositCreated;
@@ -396,4 +397,24 @@ class AccountService
         ]);
     }
 
+    /**
+     * If for some reason (DD) we need an account but they don't have one, we're gonna create one for them
+     * @param Nation $nation
+     * @return Account
+     */
+    public function createDefaultForNation(Nation $nation): Account
+    {
+        $account = new Account();
+
+        $account->nation_id = $nation->id;
+        $account->name = 'System Created Account';
+
+        foreach (PWHelperService::resources() as $resource) {
+            $account->$resource = 0;
+        }
+
+        $account->save();
+
+        return $account;
+    }
 }
