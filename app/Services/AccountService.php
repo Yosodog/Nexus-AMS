@@ -404,21 +404,17 @@ class AccountService
      */
     public function createDefaultForNation(Nation $nation): Account
     {
-        return Account::create([
-            'nation_id' => $nation->id,
-            'name' => 'System Created Account',
-            'money' => 0,
-            'coal' => 0,
-            'oil' => 0,
-            'uranium' => 0,
-            'iron' => 0,
-            'bauxite' => 0,
-            'lead' => 0,
-            'gasoline' => 0,
-            'munitions' => 0,
-            'steel' => 0,
-            'aluminum' => 0,
-            'food' => 0,
-        ]);
+        $account = new Account();
+
+        $account->nation_id = $nation->id;
+        $account->name = 'System Created Account';
+
+        foreach (PWHelperService::resources() as $resource) {
+            $account->$resource = 0;
+        }
+
+        $account->save();
+
+        return $account;
     }
 }

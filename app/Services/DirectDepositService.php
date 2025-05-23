@@ -36,7 +36,7 @@ class DirectDepositService
      */
     public function process(BankRecord $record): BankRecord
     {
-        if ($record->tax_id !== $this->ddTaxId) {
+        if ($record->tax_id != $this->ddTaxId) {
             return $record; // Not a DD tax record
         }
 
