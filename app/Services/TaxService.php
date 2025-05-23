@@ -109,7 +109,7 @@ class TaxService
 
             $transactionCount = (clone $baseQuery)->count();
             $dailyAvg = (clone $baseQuery)
-                ->selectRaw('DATE(date) as d, SUM(money) as total')
+                ->select('day as d', DB::raw('SUM(money) as total'))
                 ->groupBy('d')
                 ->get()
                 ->avg('total');
@@ -148,8 +148,8 @@ class TaxService
         $resources = PWHelperService::resources();
 
         $results = Taxes::where('date', '>=', $start)
-            ->selectRaw('DATE(`date`) as day')
-            ->selectRaw(collect($resources)->map(fn($r) => "SUM(`$r`) as `$r`")->implode(', '))
+            ->select('day')
+            ->addSelect(collect($resources)->map(fn($r) => DB::raw("SUM(`$r`) as `$r`"))->toArray())
             ->groupBy('day')
             ->orderBy('day')
             ->get();
