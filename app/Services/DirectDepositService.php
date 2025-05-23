@@ -9,24 +9,80 @@ use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\Nation;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DirectDepositService
 {
+    /**
+     * @var int
+     */
+    public int $ddTaxId;
+
+    /**
+     * @param SettingService $settings
+     * @param AccountService $accountService
+     */
     public function __construct(
         protected SettingService $settings,
         protected AccountService $accountService,
     ) {
+        $this->ddTaxId = SettingService::getDirectDepositId();
     }
 
     /**
-     * Process a BankRecord using Direct Deposit.
-     * Adjusts retained taxes and deposits remaining balance.
+     * @param BankRecord $record
+     * @return BankRecord
      */
     public function process(BankRecord $record): BankRecord
     {
-        // TODO: implement tax split and deposit logic
+        if ($record->tax_id !== $this->ddTaxId) {
+            return $record; // Not a DD tax record
+        }
+
+        $nation = Nation::find($record->sender_id);
+        if (!$nation) {
+            Log::warning("DirectDeposit: Nation not found for BankRecord ID {$record->id}");
+            return $record;
+        }
+
+        $bracket = $this->getApplicableBracket($nation);
+        $account = $this->getDepositAccount($nation);
+        $fields = PWHelperService::resources();
+
+        $deposit = [];
+        $retained = [];
+
+        foreach ($fields as $field) {
+            $amount = (float) $record->$field;
+            $rate = (float) $bracket->$field;
+
+            $taxed = round($amount * ($rate / 100), 2);
+            $kept = round($amount - $taxed, 2);
+
+            $retained[$field] = $taxed;
+            $deposit[$field] = $kept;
+        }
+
+        // Apply deposit directly to the account without logging a manual transaction
+        foreach ($deposit as $resource => $amount) {
+            $account->{$resource} += $amount;
+        }
+
+        $account->save();
+
+        // Log it in direct_deposit_logs
+        DirectDepositLog::create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'bank_record_id' => $record->id,
+            ...$deposit,
+        ]);
+
+        // Update the BankRecord to only include retained (taxed) values
+        foreach ($fields as $field) {
+            $record->$field = $retained[$field];
+        }
+
         return $record;
     }
 

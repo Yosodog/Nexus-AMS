@@ -108,4 +108,29 @@ class SettingService
         self::setValue("raid_top_alliance_cap", $topN);
     }
 
+    /**
+     * @return int
+     */
+    public static function getDirectDepositId(): int
+    {
+        $value = self::getValue("dd_tax_id");
+
+        if (is_null($value)) {
+            self::setDirectDepositId(0); // Default to 0
+
+            return 0;
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * @param int $DDTaxID
+     * @return void
+     */
+    public static function setDirectDepositId(int $DDTaxID): void
+    {
+        self::setValue("dd_tax_id", $DDTaxID);
+    }
+
 }

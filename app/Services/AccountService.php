@@ -8,6 +8,7 @@ use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\ManualTransaction;
+use App\Models\Nation;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\DepositCreated;
@@ -396,4 +397,28 @@ class AccountService
         ]);
     }
 
+    /**
+     * If for some reason (DD) we need an account but they don't have one, we're gonna create one for them
+     * @param Nation $nation
+     * @return Account
+     */
+    public function createDefaultForNation(Nation $nation): Account
+    {
+        return Account::create([
+            'nation_id' => $nation->id,
+            'name' => 'System Created Account',
+            'money' => 0,
+            'coal' => 0,
+            'oil' => 0,
+            'uranium' => 0,
+            'iron' => 0,
+            'bauxite' => 0,
+            'lead' => 0,
+            'gasoline' => 0,
+            'munitions' => 0,
+            'steel' => 0,
+            'aluminum' => 0,
+            'food' => 0,
+        ]);
+    }
 }
