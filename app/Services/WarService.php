@@ -141,7 +141,6 @@ class WarService
         return cache()->remember('war_start_history', 300, function () {
             return War::whereDate('date', '>=', now()->subDays(30))
                 ->selectRaw('DATE(date) as date, COUNT(*) as count')
-                ->whereNull('end_date')
                 ->where(function ($query) {
                     $this->whereOurAllianceEngagedProperly($query);
                 })
