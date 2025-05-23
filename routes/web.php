@@ -130,6 +130,15 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
             ->name('admin.dd.settings');
 
+        Route::post('/admin/direct-deposit/brackets/create', [AccountController::class, 'createDirectDepositBracket'])
+            ->name('admin.dd.brackets.create');
+
+        Route::post('/admin/direct-deposit/brackets/update', [AccountController::class, 'updateDirectDepositBrackets'])
+            ->name('admin.dd.brackets.update');
+
+        Route::post('/admin/direct-deposit/brackets/delete', [AccountController::class, 'deleteDirectDepositBrackets'])
+            ->name('admin.dd.brackets.delete');
+
         // City Grants
         Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
             "admin.grants.city"

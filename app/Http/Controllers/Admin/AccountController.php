@@ -137,4 +137,90 @@ class AccountController extends Controller
         ]);
     }
 
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws AuthorizationException
+     */
+    public function createDirectDepositBracket(Request $request)
+    {
+        $this->authorize('manage-dd');
+
+        $request->validate([
+            'city_number' => 'required|integer|min:0|unique:direct_deposit_tax_brackets,city_number',
+        ]);
+
+        $defaults = array_fill_keys(PWHelperService::resources(), 10);
+        $defaults['city_number'] = $request->input('city_number');
+
+        DirectDepositTaxBracket::create($defaults);
+
+        return redirect()->route('admin.accounts.dashboard')->with([
+            'alert-message' => 'Tax bracket created with default 10% rates.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws AuthorizationException
+     */
+    public function updateDirectDepositBrackets(Request $request)
+    {
+        $this->authorize('manage-dd');
+
+        $request->validate([
+            'selected' => 'required|array',
+            'selected.*' => 'exists:direct_deposit_tax_brackets,id',
+            'rates' => 'required|array',
+        ]);
+
+        $rates = collect(PWHelperService::resources())
+            ->mapWithKeys(function ($resource) use ($request) {
+                $value = $request->input("rates.$resource");
+                return $value !== null ? [$resource => (float) $value] : [];
+            })->toArray();
+
+        if (empty($rates)) {
+            return redirect()->route('admin.accounts.dashboard')->with([
+                'alert-message' => 'No rates provided to update.',
+                'alert-type' => 'warning',
+            ]);
+        }
+
+        DirectDepositTaxBracket::whereIn('id', $request->input('selected'))
+            ->update($rates);
+
+        return redirect()->route('admin.accounts.dashboard')->with([
+            'alert-message' => 'Selected brackets updated successfully.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws AuthorizationException
+     */
+    public function deleteDirectDepositBrackets(Request $request)
+    {
+        $this->authorize('manage-dd');
+
+        $request->validate([
+            'selected' => 'required|array',
+            'selected.*' => 'exists:direct_deposit_tax_brackets,id',
+        ]);
+
+        $deleted = DirectDepositTaxBracket::whereIn('id', $request->input('selected'))
+            ->where('city_number', '!=', 0)
+            ->delete();
+
+        return redirect()->route('admin.accounts.dashboard')->with([
+            'alert-message' => "$deleted bracket(s) deleted successfully.",
+            'alert-type' => 'success',
+        ]);
+    }
+
 }
