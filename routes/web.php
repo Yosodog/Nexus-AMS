@@ -127,6 +127,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
             'admin.accounts.adjust'
         );
 
+        Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
+            ->name('admin.dd.settings');
+
         // City Grants
         Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
             "admin.grants.city"

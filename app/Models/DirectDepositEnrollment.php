@@ -26,6 +26,13 @@ class DirectDepositEnrollment extends Model
     protected $dates = ['enrolled_at'];
 
     /**
+     * @var string[]
+     */
+    protected $casts = [
+        'enrolled_at' => 'datetime',
+    ];
+
+    /**
      * @return BelongsTo
      */
     public function nation(): BelongsTo
