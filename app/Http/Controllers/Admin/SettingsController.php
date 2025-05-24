@@ -18,10 +18,16 @@ class SettingsController extends Controller
      */
     public function index(): View
     {
-        $batchId = SettingService::getLastNationSyncBatchId();
-        $batch = $batchId ? Bus::findBatch($batchId) : null;
+        $nationBatchId = SettingService::getLastNationSyncBatchId();
+        $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
 
-        return view('admin.settings', compact('batch'));
+        $nationBatch = $nationBatchId ? Bus::findBatch($nationBatchId) : null;
+        $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
+
+        return view('admin.settings', [
+            'nationBatch' => $nationBatch,
+            'allianceBatch' => $allianceBatch,
+        ]);
     }
 
     /**
@@ -33,6 +39,19 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Nation sync command dispatched.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @return RedirectResponse
+     */
+    public function runSyncAlliance(): RedirectResponse
+    {
+        Artisan::call('sync:alliances');
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Alliance sync command dispatched.',
             'alert-type' => 'success',
         ]);
     }

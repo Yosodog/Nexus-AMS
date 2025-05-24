@@ -183,4 +183,54 @@ class SettingService
         self::setValue("last_nation_sync_batch_id", $batchId);
     }
 
+    /**
+     * @return string
+     */
+    public static function getLastAllianceSyncBatchId(): string
+    {
+        $value = self::getValue("last_alliance_sync_batch_id");
+
+        if (is_null($value)) {
+            self::setLastNationSyncBatchId("");
+
+            return "";
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param string $batchId
+     * @return void
+     */
+    public static function setLastAllianceSyncBatchId(string $batchId): void
+    {
+        self::setValue("last_alliance_sync_batch_id", $batchId);
+    }
+
+    /**
+     * @return string
+     */
+    public static function getLastWarSyncBatchId(): string
+    {
+        $value = self::getValue("last_war_sync_batch_id");
+
+        if (is_null($value)) {
+            self::setLastNationSyncBatchId("");
+
+            return "";
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param string $batchId
+     * @return void
+     */
+    public static function setLastWarSyncBatchId(string $batchId): void
+    {
+        self::setValue("last_war_sync_batch_id", $batchId);
+    }
+
 }
