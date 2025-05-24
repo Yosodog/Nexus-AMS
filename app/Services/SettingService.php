@@ -158,4 +158,29 @@ class SettingService
         self::setValue("dd_fallback_tax_id", $DDTaxID);
     }
 
+    /**
+     * @return string
+     */
+    public static function getLastNationSyncBatchId(): string
+    {
+        $value = self::getValue("last_nation_sync_batch_id");
+
+        if (is_null($value)) {
+            self::setLastNationSyncBatchId("");
+
+            return "";
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param string $batchId
+     * @return void
+     */
+    public static function setLastNationSyncBatchId(string $batchId): void
+    {
+        self::setValue("last_nation_sync_batch_id", $batchId);
+    }
+
 }

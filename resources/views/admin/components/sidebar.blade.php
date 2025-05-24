@@ -132,6 +132,15 @@
                 <li class="nav-header">System</li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.settings') }}"
+                                icon="bi bi-gear"
+                                permission="view-diagnostic-info"
+                                :active="request()->is('telescope')">
+                        Settings
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ url('/telescope') }}"
                                 icon="bi bi-bug-fill"
                                 permission="view-diagnostic-info"

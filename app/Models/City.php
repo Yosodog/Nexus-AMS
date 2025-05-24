@@ -4,9 +4,12 @@ namespace App\Models;
 
 use App\GraphQL\Models\City as CityGraphQL;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class City extends Model
 {
+    use SoftDeletes;
+
     public $guarded = [];
     protected $table = "cities";
 
