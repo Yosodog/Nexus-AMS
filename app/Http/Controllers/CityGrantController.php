@@ -17,7 +17,7 @@ class CityGrantController
     public function index()
     {
         $nation = Auth::user()->nation;
-        $grants = CityGrant::where('enabled', true)->get();
+        $grants = CityGrant::all();
         $accounts = $nation->accounts;
         $nextCityNumber = $nation->num_cities + 1;
         $grantRequests = CityGrantRequest::where('nation_id', $nation->id)->orderBy('created_at', 'desc')->get();
