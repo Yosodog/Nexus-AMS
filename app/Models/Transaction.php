@@ -43,4 +43,20 @@ class Transaction extends Model
         $this->save();
     }
 
+    /**
+     * @return bool
+     */
+    public function isNationWithdrawal(): bool
+    {
+        return $this->transaction_type === 'withdrawal' && is_null($this->to_account_id);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isRefunded(): bool
+    {
+        return !is_null($this->refunded_at);
+    }
+
 }

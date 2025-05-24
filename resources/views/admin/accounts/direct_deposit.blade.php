@@ -1,5 +1,5 @@
 @can('view-dd')
-    <div class="mt-5">
+    <div class="mt-4">
         {{-- DD Settings --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header">
