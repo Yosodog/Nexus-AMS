@@ -8,15 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 class UpdateApplication extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:update {--no-composer : Skip installing composer dependencies} {--no-node : Skip installing Node.js dependencies}';
-    /**
-     * @var string
-     */
+    protected $signature = 'app:update 
+        {--no-composer : Skip installing composer dependencies} 
+        {--no-node : Skip installing Node.js dependencies}';
+
     protected $description = 'Updates the application by pulling changes, updating dependencies, running migrations, clearing cache, and restarting services';
 
     /**
@@ -27,62 +22,56 @@ class UpdateApplication extends Command
         $this->info('Starting application update...');
         Log::info('Application update started.');
 
-        $this->info("Bringing application offline for update.");
-        Artisan::call("down");
+        Artisan::call('down');
+        $this->info('Application is now in maintenance mode.');
 
-        $this->runShellCommand('git pull origin main', 'Pulling latest code from GitHub');
+        $this->runShellCommand('git pull origin main', 'Pulling latest code from Git');
 
         if (!$this->option('no-composer')) {
             $this->runShellCommand(
                 'composer install --no-interaction --prefer-dist --optimize-autoloader',
-                'Updating Composer dependencies'
+                'Installing Composer dependencies'
             );
         } else {
-            $this->info('Skipping Composer dependencies update.');
-            Log::info('Skipping Composer dependencies update.');
+            $this->info('Skipping Composer dependency installation.');
+            Log::info('Skipped Composer install.');
         }
 
         if (!$this->option('no-node')) {
             $this->runShellCommand(
                 'npm install && npm run build',
-                'Updating Node.js dependencies and building frontend'
+                'Installing Node.js dependencies and building frontend'
             );
         } else {
-            $this->info('Skipping Node.js dependencies update.');
-            Log::info('Skipping Node.js dependencies update.');
+            $this->info('Skipping Node.js build.');
+            Log::info('Skipped Node.js build.');
         }
 
-        Artisan::call('migrate --force');
-        $this->info('Database migrations applied successfully.');
-        Log::info('Database migrations applied successfully.');
+        Artisan::call('migrate', ['--force' => true]);
+        $this->info('Migrations applied.');
+        Log::info('Migrations applied.');
 
-        $this->info("Updating permissions");
-        Artisan::call('db:seed --class=RoleSeeder --force');
-        
-        // Clear cache
+        Artisan::call('db:seed', ['--class' => 'RoleSeeder', '--force' => true]);
+        $this->info('Role seeder completed.');
+
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('route:clear');
         Artisan::call('view:clear');
+        $this->info('Cleared application caches.');
 
-        $this->info('Application cache cleared.');
-        Log::info('Application cache cleared.');
-
-        // Then re-cache
-        Artisan::call('config:cache');
+        //Artisan::call('config:cache'); This causes massive issues for some reason...
         Artisan::call('route:cache');
         Artisan::call('view:cache');
+        $this->info('Rebuilt application caches.');
 
-        $this->info("Rebuilt cache.");
-        Log::info('Application cache rebuilt.');
+        $this->fixPermissions();
 
-        $this->info('Restarting queue workers');
         Artisan::call('queue:restart');
+        $this->info('Queue workers restarted.');
 
-        $this->info("Bringing application back online.");
-        Artisan::call("up");
-
-        $this->info('Application update completed successfully.');
+        Artisan::call('up');
+        $this->info('Application is now live.');
         Log::info('Application update completed successfully.');
     }
 
@@ -99,11 +88,33 @@ class UpdateApplication extends Command
         exec($command, $output, $returnCode);
 
         if ($returnCode === 0) {
-            $this->info($description . ' completed successfully.');
-            Log::info($description . ' completed successfully.');
+            $this->info($description . ' completed.');
+            Log::info($description . ' completed.', ['output' => implode("\n", $output)]);
         } else {
-            $this->error($description . ' failed. Check logs for details.');
-            Log::error($description . ' failed.', ['output' => $output]);
+            $this->error($description . ' failed.');
+            Log::error($description . ' failed.', ['output' => implode("\n", $output)]);
+        }
+    }
+
+    /**
+     * This is assuming the app is running as www-user... we'll deal with this issue later if it becomes a problem
+     */
+    private function fixPermissions(): void
+    {
+        $user = 'www-data';
+        $paths = ['storage', 'bootstrap/cache'];
+
+        foreach ($paths as $path) {
+            $fullPath = base_path($path);
+            $this->runShellCommand("chown -R {$user}:{$user} {$fullPath}", "Setting ownership for {$path}");
+            $this->runShellCommand(
+                "find {$fullPath} -type d -exec chmod 775 {} \\;",
+                "Setting directory permissions for {$path}"
+            );
+            $this->runShellCommand(
+                "find {$fullPath} -type f -exec chmod 664 {} \\;",
+                "Setting file permissions for {$path}"
+            );
         }
     }
 }
