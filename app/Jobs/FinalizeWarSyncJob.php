@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -35,6 +36,15 @@ class FinalizeWarSyncJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $batch = Bus::findBatch($this->batchId);
+
+        if ($batch?->cancelled()) {
+            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} was cancelled.");
+            Cache::forget("sync_batch:{$this->batchId}:pages");
+            SettingService::setLastWarSyncBatchId($this->batchId);
+            return;
+        }
+
         $keys = Cache::get("sync_batch:{$this->batchId}:pages", []);
         $allWarIds = [];
 

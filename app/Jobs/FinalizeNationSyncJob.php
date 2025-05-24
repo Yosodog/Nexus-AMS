@@ -9,6 +9,7 @@ use App\Models\NationResources;
 use App\Services\SettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -34,6 +35,15 @@ class FinalizeNationSyncJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $batch = Bus::findBatch($this->batchId);
+
+        if ($batch?->cancelled()) {
+            Log::warning("FinalizeNationSyncJob skipped — batch {$this->batchId} was cancelled.");
+            Cache::forget("sync_batch:{$this->batchId}:pages");
+            SettingService::setLastNationSyncBatchId($this->batchId);
+            return;
+        }
+
         $keys = Cache::get("sync_batch:{$this->batchId}:pages", []);
         $allNationIds = [];
 
