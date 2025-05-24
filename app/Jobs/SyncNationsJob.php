@@ -17,15 +17,17 @@ use App\Models\NationResources;
 use App\Services\NationQueryService;
 use App\Services\PWHelperService;
 use Exception;
+use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 // Job to synchronize nations data from external API and persist it to the database
 class SyncNationsJob implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, Batchable;
 
     // Set a very high timeout to allow the job to complete even if it takes a long time
     public $timeout = 99999999;
@@ -96,6 +98,10 @@ class SyncNationsJob implements ShouldQueue
             // Perform bulk upsert operations in a single transaction for improved performance and atomicity
             $this->bulkUpsert($nationData, $resourcesData, $militaryData, $citiesData);
 
+            // Save processed nation IDs to cache for finalizer
+            $nationIds = array_column($nationData, 'id');
+            Cache::put("sync_batch:{$this->batchId}:{$this->page}", $nationIds, now()->addHours(1));
+
             // Clean up variables and force garbage collection to free memory
             unset($nations, $nationData, $resourcesData, $militaryData, $citiesData);
             gc_collect_cycles();
@@ -103,6 +109,7 @@ class SyncNationsJob implements ShouldQueue
             // Log any exceptions encountered during the synchronization process
             Log::error("Failed to fetch nations: " . $e->getMessage());
         }
+
     }
 
     /**
