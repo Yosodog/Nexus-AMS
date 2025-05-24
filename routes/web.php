@@ -222,12 +222,29 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         );
 
         Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
-        Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name('admin.raids.no-raid.store');
-        Route::delete('/defense/raids/no-raid/{id}', [RaidController::class, 'destroyNoRaid'])->name('admin.raids.no-raid.destroy');
-        Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name('admin.raids.top-cap.update');
+        Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name(
+            'admin.raids.no-raid.store'
+        );
+        Route::delete('/defense/raids/no-raid/{id}', [RaidController::class, 'destroyNoRaid'])->name(
+            'admin.raids.no-raid.destroy'
+        );
+        Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name(
+            'admin.raids.top-cap.update'
+        );
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
-        Route::post('/admin/settings/sync-nation/run', [SettingsController::class, 'runSyncNation'])->name(
+        Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(
             'admin.settings.sync.run'
         );
+        Route::post('/settings/sync/alliances', [SettingsController::class, 'runSyncAlliance'])->name(
+            'admin.settings.sync.alliances'
+        );
+
+        Route::post('/settings/sync/wars', [SettingsController::class, 'runSyncWar'])->name(
+            'admin.settings.sync.wars'
+        );
+        Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
+            'admin.settings.sync.cancel'
+        );
+
     });

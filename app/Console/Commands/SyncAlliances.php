@@ -2,11 +2,17 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\FinalizeAllianceSyncJob;
+use App\Jobs\FinalizeNationSyncJob;
 use App\Jobs\SyncAlliancesJob;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\SelectionSetHelper;
+use App\Services\SettingService;
+use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 
 class SyncAlliances extends Command
 {
@@ -33,32 +39,35 @@ class SyncAlliances extends Command
 
         $perPage = 500;
         $page = 1;
-        $lastPage = 1;
+        $jobs = [];
 
         do {
-            // Dispatch a job for each page
-            SyncAlliancesJob::dispatch($page, $perPage);
-
-            $this->info("Queued batch for page {$page}.");
-
-            // Simulate an initial request to check the last page
-            if ($page == 1) {
+            if ($page === 1) {
                 $client = new QueryService();
                 $builder = (new GraphQLQueryBuilder())
                     ->setRootField("alliances")
                     ->addArgument('first', $perPage)
-                    ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
-                        $builder->addFields(SelectionSetHelper::allianceSet());
-                    })->withPaginationInfo();
+                    ->addNestedField("data", fn($b) => $b->addFields(SelectionSetHelper::allianceSet()))
+                    ->withPaginationInfo();
 
                 $response = $client->getPaginationInfo($builder);
-
                 $lastPage = $response['lastPage'] ?? 1;
             }
 
+            $jobs[] = new SyncAlliancesJob($page, $perPage);
             $page++;
         } while ($page <= $lastPage);
 
-        $this->info("All alliance sync jobs have been queued.");
+        $batch = Bus::batch($jobs)
+            ->name("Alliance Sync - " . now()->toDateTimeString())
+            ->then(fn(Batch $batch) => FinalizeAllianceSyncJob::dispatch($batch->id))
+            ->allowFailures()
+            ->dispatch();
+
+        Cache::put("sync_batch:{$batch->id}:pages", range(1, $lastPage), now()->addMinutes(60));
+
+        SettingService::setLastAllianceSyncBatchId($batch->id);
+
+        $this->info("Queued {$lastPage} alliance sync jobs in a batch.");
     }
 }

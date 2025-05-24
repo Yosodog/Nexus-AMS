@@ -56,6 +56,11 @@ class SyncNationsJob implements ShouldQueue
      */
     public function handle(): void
     {
+        if ($this->batch()?->cancelled()) {
+            Log::info("SyncNationsJob for page {$this->page} was cancelled.");
+            return;
+        }
+
         try {
             // Fetch nations from the API using the NationQueryService with pagination parameters
             $nations = NationQueryService::getMultipleNations(
