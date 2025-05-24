@@ -239,4 +239,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/settings/sync/alliances', [SettingsController::class, 'runSyncAlliance'])->name(
             'admin.settings.sync.alliances'
         );
+
+        Route::post('/settings/sync/wars', [SettingsController::class, 'runSyncWar'])->name(
+            'admin.settings.sync.wars'
+        );
     });

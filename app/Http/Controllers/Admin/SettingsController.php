@@ -20,13 +20,18 @@ class SettingsController extends Controller
     {
         $nationBatchId = SettingService::getLastNationSyncBatchId();
         $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
+        $warBatchId = SettingService::getLastWarSyncBatchId();
+
 
         $nationBatch = $nationBatchId ? Bus::findBatch($nationBatchId) : null;
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
+        $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
+
 
         return view('admin.settings', [
             'nationBatch' => $nationBatch,
             'allianceBatch' => $allianceBatch,
+            'warBatch' => $warBatch,
         ]);
     }
 
@@ -52,6 +57,19 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Alliance sync command dispatched.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @return RedirectResponse
+     */
+    public function runSyncWar(): RedirectResponse
+    {
+        Artisan::call('sync:wars');
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'War sync command dispatched.',
             'alert-type' => 'success',
         ]);
     }
