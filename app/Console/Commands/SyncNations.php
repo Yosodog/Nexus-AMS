@@ -7,9 +7,12 @@ use App\Jobs\SyncNationsJob;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\SelectionSetHelper;
+use App\Services\SettingService;
+use Carbon\Carbon;
 use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 
 class SyncNations extends Command
 {
@@ -56,11 +59,15 @@ class SyncNations extends Command
             $page++;
         } while ($page <= $lastPage);
 
-        Bus::batch($jobs)
-            ->name("Nation Sync")
+        $batch = Bus::batch($jobs)
+            ->name("Nation Sync - " . Carbon::now()->toDateTimeString())
             ->then(fn(Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
+
+        Cache::put("sync_batch:{$batch->id}:pages", range(1, $lastPage), now()->addMinutes(60));
+
+        SettingService::setLastNationSyncBatchId($batch->id);
 
         $this->info("Queued {$page} nation sync jobs in a batch.");
         $this->info("All nation sync jobs have been queued.");

@@ -6,9 +6,11 @@ use App\Models\City;
 use App\Models\Nation;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
+use App\Services\SettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class FinalizeNationSyncJob implements ShouldQueue
 {
@@ -42,11 +44,21 @@ class FinalizeNationSyncJob implements ShouldQueue
 
         $allNationIds = array_unique($allNationIds);
 
+        if (empty($allNationIds)) {
+            Log::warning("❌ FinalizeNationSyncJob aborted: no nation IDs were collected for batch {$this->batchId}");
+
+            Cache::forget("sync_batch:{$this->batchId}:pages");
+            SettingService::setLastNationSyncBatchId($this->batchId);
+
+            return;
+        }
+
         Nation::whereNotIn('id', $allNationIds)->delete();
         NationResources::whereNotIn('nation_id', $allNationIds)->delete();
         NationMilitary::whereNotIn('nation_id', $allNationIds)->delete();
         City::whereNotIn('nation_id', $allNationIds)->delete();
 
         Cache::forget("sync_batch:{$this->batchId}:pages");
+        SettingService::setLastNationSyncBatchId($this->batchId);
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
@@ -225,4 +226,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::delete('/defense/raids/no-raid/{id}', [RaidController::class, 'destroyNoRaid'])->name('admin.raids.no-raid.destroy');
         Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name('admin.raids.top-cap.update');
 
+        Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
+        Route::post('/admin/settings/sync-nation/run', [SettingsController::class, 'runSyncNation'])->name(
+            'admin.settings.sync.run'
+        );
     });
