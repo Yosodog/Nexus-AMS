@@ -53,7 +53,7 @@
                             <form method="POST" action="{{ route('admin.dd.brackets.create') }}" class="d-flex align-items-center gap-2">
                                 @csrf
                                 <input type="number" name="city_number" class="form-control form-control-sm w-auto"
-                                       min="0" required placeholder="City #" autofocus>
+                                       min="0" required placeholder="City #">
                                 <button type="submit" class="btn btn-sm btn-success">Create Bracket</button>
                             </form>
                         @endcan
