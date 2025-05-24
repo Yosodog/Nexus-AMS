@@ -127,6 +127,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/accounts/{account}/adjust', [AccountController::class, 'adjustBalance'])->name(
             'admin.accounts.adjust'
         );
+        Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
+            ->name('admin.accounts.transactions.refund');
 
         Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
             ->name('admin.dd.settings');

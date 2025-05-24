@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositTaxBracket;
+use App\Models\Transaction;
 use App\Services\AccountService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
@@ -15,7 +16,7 @@ use Illuminate\Container\Container;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Request as RequestFacade;
 
 class AccountController extends Controller
 {
@@ -34,6 +35,10 @@ class AccountController extends Controller
         $enrollments = DirectDepositEnrollment::with('account.user')->get();
         $ddTaxId = SettingService::getDirectDepositId();
         $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+        $recentTransactions = Transaction::with(['fromAccount', 'toAccount', 'nation'])
+            ->latest('created_at')
+            ->take(50)
+            ->get();
 
         return view('admin.accounts.dashboard', [
             'accounts' => $accounts,
@@ -41,6 +46,7 @@ class AccountController extends Controller
             'enrollments' => $enrollments,
             'ddTaxId' => $ddTaxId,
             'fallbackTaxId' => $fallbackTaxId,
+            'recentTransactions' => $recentTransactions
         ]);
     }
 
@@ -64,6 +70,57 @@ class AccountController extends Controller
             "account" => $accounts,
             "transactions" => $transactions,
             "manualTransactions" => $manualTransactions
+        ]);
+    }
+
+    /**
+     * @param Transaction $transaction
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws AuthorizationException
+     */
+    public function refundTransaction(Transaction $transaction)
+    {
+        $this->authorize('manage-accounts');
+
+        if (!$transaction->isNationWithdrawal()) {
+            abort(403, 'This transaction cannot be refunded.');
+        }
+
+        if ($transaction->isRefunded()) {
+            return back()->with([
+                'alert-message' => 'This transaction has already been refunded.',
+                'alert-type' => 'error'
+            ]);
+        }
+
+        $fromAccount = $transaction->fromAccount;
+        if (!$fromAccount) {
+            return back()->with([
+                'alert-message' => 'Original sender account not found.',
+                'alert-type' => 'error'
+            ]);
+        }
+
+        $adjustment = [];
+        foreach (PWHelperService::resources() as $resource) {
+            $adjustment[$resource] = $transaction->$resource;
+        }
+
+        $adjustment['note'] = "Refund for Transaction #{$transaction->id}";
+
+        AccountService::adjustAccountBalance(
+            $fromAccount,
+            $adjustment,
+            auth()->id(),
+            RequestFacade::ip()
+        );
+
+        $transaction->refunded_at = now();
+        $transaction->save();
+
+        return back()->with([
+            'alert-message' => 'Refund successful.',
+            'alert-type' => 'success'
         ]);
     }
 

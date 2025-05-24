@@ -87,13 +87,14 @@
                                 @foreach(PWHelperService::resources() as $resource)
                                     <th>{{ ucfirst($resource) }}</th>
                                 @endforeach
+                                <th>Action</th>
                             </tr>
                             </thead>
                             <tbody>
                             @foreach ($transactions as $transaction)
                                 <tr class="hover">
                                     <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
-                                    {{-- Handle From Account --}}
+                                    {{-- From Account --}}
                                     <td>
                                         @if($transaction->transaction_type === 'deposit' && $transaction->nation_id)
                                             @if($transaction->nation)
@@ -114,7 +115,7 @@
                                         @endif
                                     </td>
 
-                                    {{-- Handle To Account --}}
+                                    {{-- To Account --}}
                                     <td>
                                         @if($transaction->toAccount)
                                             <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}"
@@ -140,6 +141,20 @@
                                     @foreach(PWHelperService::resources(false) as $resource)
                                         <td>{{ number_format($transaction->$resource, 2) }}</td>
                                     @endforeach
+
+                                    <td>
+                                        @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
+                                            <form method="POST"
+                                                  action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
+                                                  onsubmit="return confirm('Are you sure you want to refund this transaction?');">
+                                                @csrf
+                                                <button class="btn btn-sm btn-outline-danger">Refund</button>
+                                            </form>
+                                        @elseif($transaction->isRefunded())
+                                            <span class="badge bg-secondary" data-bs-toggle="tooltip"
+                                                  title="This transaction was refunded.">Refunded</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                             </tbody>

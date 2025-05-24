@@ -88,6 +88,77 @@
     </div>
 
     @include('admin.accounts.direct_deposit')
+
+    {{-- Recent Transactions --}}
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Transactions (Last 50)</h5>
+        </div>
+
+        <div class="card-body p-3 table-responsive">
+            <table class="table table-hover text-nowrap align-middle" id="recent_transactions_table">
+                <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Type</th>
+                    @foreach(PWHelperService::resources() as $resource)
+                        <th>{{ ucfirst($resource) }}</th>
+                    @endforeach
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($recentTransactions as $transaction)
+                    <tr>
+                        <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                        <td>
+                            @if($transaction->fromAccount)
+                                <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}">
+                                    {{ $transaction->fromAccount->name }}
+                                </a>
+                            @elseif($transaction->nation_id && $transaction->transaction_type === 'deposit')
+                                Nation #{{ $transaction->nation_id }}
+                            @else
+                                N/A
+                            @endif
+                        </td>
+                        <td>
+                            @if($transaction->toAccount)
+                                <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}">
+                                    {{ $transaction->toAccount->name }}
+                                </a>
+                            @elseif($transaction->nation_id)
+                                Nation #{{ $transaction->nation_id }}
+                            @else
+                                N/A
+                            @endif
+                        </td>
+                        <td>{{ ucfirst($transaction->transaction_type) }}</td>
+                        <td>${{ number_format($transaction->money, 2) }}</td>
+                        @foreach(PWHelperService::resources(false) as $resource)
+                            <td>{{ number_format($transaction->$resource, 2) }}</td>
+                        @endforeach
+                        <td>
+                            @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
+                                <form method="POST"
+                                      action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
+                                      onsubmit="return confirm('Are you sure you want to refund this transaction?');">
+                                    @csrf
+                                    <button class="btn btn-sm btn-outline-danger">Refund</button>
+                                </form>
+                            @elseif($transaction->isRefunded())
+                                <span class="badge bg-secondary">Refunded</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 @endsection
 
 @section("scripts")
