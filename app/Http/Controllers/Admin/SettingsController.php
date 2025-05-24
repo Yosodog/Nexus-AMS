@@ -9,10 +9,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
+    public function __construct()
+    {
+        Gate::authorize('view-diagnostic-info');
+    }
+
     /**
      * @return View
      */
@@ -70,6 +76,31 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'War sync command dispatched.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @param Request $request
+     * @return RedirectResponse
+     */
+    public function cancelSync(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'batch_id' => 'required|string',
+            'type' => 'required|in:nation,alliance,war',
+        ]);
+
+        $batch = Bus::findBatch($request->input('batch_id'));
+
+        if ($batch && ! $batch->finished() && ! $batch->cancelled()) {
+            $batch->cancel();
+        }
+
+        $message = ucfirst($request->input('type')) . ' sync cancelled.';
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $message,
             'alert-type' => 'success',
         ]);
     }

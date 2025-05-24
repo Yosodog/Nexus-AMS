@@ -243,4 +243,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/settings/sync/wars', [SettingsController::class, 'runSyncWar'])->name(
             'admin.settings.sync.wars'
         );
+        Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
+            'admin.settings.sync.cancel'
+        );
+
     });

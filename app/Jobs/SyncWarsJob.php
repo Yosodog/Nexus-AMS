@@ -25,6 +25,11 @@ class SyncWarsJob implements ShouldQueue
      */
     public function handle(): void
     {
+        if ($this->batch()?->cancelled()) {
+            Log::info("SyncWarsJob for page {$this->page} was cancelled.");
+            return;
+        }
+
         try {
             $wars = WarQueryService::getMultipleWars([
                 'page' => $this->page,

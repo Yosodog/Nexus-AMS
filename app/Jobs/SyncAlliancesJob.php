@@ -29,6 +29,11 @@ class SyncAlliancesJob implements ShouldQueue
      */
     public function handle(): void
     {
+        if ($this->batch()?->cancelled()) {
+            Log::info("SyncAlliancesJob for page {$this->page} was cancelled.");
+            return;
+        }
+
         try {
             $alliances = AllianceQueryService::getMultipleAlliances([
                 "page" => $this->page

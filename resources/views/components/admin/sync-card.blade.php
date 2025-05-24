@@ -3,11 +3,20 @@
         <h5 class="mb-0 text-primary fw-semibold">{{ $title }}</h5>
 
         @if($batch && !$batch->finished())
-            <div class="ms-auto">
+            <div class="d-flex gap-2 ms-auto">
                 <button class="btn btn-sm btn-outline-secondary" type="button" disabled>
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     Syncing...
                 </button>
+                <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
+                      onsubmit="return confirm('Are you sure you want to cancel this sync?')">
+                    @csrf
+                    <input type="hidden" name="batch_id" value="{{ $batch->id }}">
+                    <input type="hidden" name="type" value="{{ strtolower(Str::before($title, ' ')) }}">
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="bi bi-x-circle me-1"></i> Cancel
+                    </button>
+                </form>
             </div>
         @else
             <form method="POST" action="{{ $route }}" class="ms-auto">
@@ -26,12 +35,12 @@
             <dt class="col-sm-4 text-muted">Status</dt>
             <dd class="col-sm-8">
                 @if($batch)
-                    @if($batch->finished())
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Finished</span>
-                    @elseif($batch->cancelled())
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Cancelled</span>
+                    @if($batch->cancelled())
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Cancelled</span>
+                    @elseif($batch->finished())
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Finished</span>
                     @else
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Running</span>
+                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Running</span>
                     @endif
                 @else
                     <span class="text-muted">Idle</span>
