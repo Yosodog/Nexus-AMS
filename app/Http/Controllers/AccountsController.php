@@ -215,8 +215,10 @@ class AccountsController extends Controller
                 'alert-message' => 'Transfer successful!',
                 "alert-type" => 'success',
             ]);
-        } catch (ValidationException|UserErrorException $e) {
+        } catch (ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->with('alert-type', 'error');
+        } catch (UserErrorException $e) {
+            return redirect()->back()->withErrors($e->getMessage())->with('alert-type', 'error');
         } catch (Exception $e) {
             Log::error("Error when transferring. " . $e->getMessage());
 
