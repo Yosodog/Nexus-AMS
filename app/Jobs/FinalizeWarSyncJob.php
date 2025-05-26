@@ -67,7 +67,7 @@ class FinalizeWarSyncJob implements ShouldQueue
 
         $updatedCount = War::whereNull('end_date')
             ->whereNotIn('id', $allWarIds)
-            ->where('start_date', '<=', $cutoff)
+            ->where('date', '<=', $cutoff)
             ->update(['end_date' => $now]);
 
         Log::info("✅ FinalizeWarSyncJob: Marked {$updatedCount} stale wars as ended (batch {$this->batchId}).");
