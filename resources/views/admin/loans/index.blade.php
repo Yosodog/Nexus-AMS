@@ -51,7 +51,7 @@
                     <tbody>
                     @foreach ($pendingLoans as $loan)
                         <tr>
-                            <td>{{ $loan->nation->nation_name }}</td>
+                            <td>{{ $loan->nation?->nation_name ?? 'Unknown Nation' }}</td>
                             <td>${{ number_format($loan->amount) }}</td>
                             <td>{{ $loan->term_weeks }}</td>
                             <td>{{ $loan->created_at->format('M d, Y') }}</td>
@@ -97,7 +97,7 @@
                     <tbody>
                     @foreach ($activeLoans as $loan)
                         <tr>
-                            <td>{{ $loan->nation->nation_name }}</td>
+                            <td>{{ $loan->nation?->nation_name ?? 'Unknown Nation' }}</td>
                             <td>${{ number_format($loan->amount) }}</td>
                             <td>{{ number_format($loan->interest_rate, 2) }}%</td>
                             <td>{{ $loan->term_weeks }}</td>
