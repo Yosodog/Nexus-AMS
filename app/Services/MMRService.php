@@ -21,7 +21,8 @@ class MMRService
     ];
 
     /**
-     * Gets the applicable MMR tier for the given nation, falling back to Tier 0.
+     * @param Nation $nation
+     * @return MMRTier|null
      */
     public function getTierForNation(Nation $nation): ?MMRTier
     {
@@ -31,7 +32,9 @@ class MMRService
     }
 
     /**
-     * Evaluates the nation's MMR status based on the sign-in data and applicable tier.
+     * @param Nation $nation
+     * @param NationSignIn $signIn
+     * @return array
      */
     public function evaluate(Nation $nation, NationSignIn $signIn): array
     {
@@ -52,6 +55,9 @@ class MMRService
 
     /**
      * Calculates the MMR resource score (0-100) based on sign-in and banked amounts.
+     * @param NationSignIn $signIn
+     * @param MMRTier $tier
+     * @return int
      */
     protected function calculateResourceScore(NationSignIn $signIn, MMRTier $tier): int
     {
@@ -68,6 +74,10 @@ class MMRService
 
     /**
      * Determines if the nation meets the unit-based MMR thresholds.
+     * @param NationSignIn $signIn
+     * @param MMRTier $tier
+     * @param int $cityCount
+     * @return bool
      */
     protected function meetsUnitRequirements(NationSignIn $signIn, MMRTier $tier, int $cityCount): bool
     {
