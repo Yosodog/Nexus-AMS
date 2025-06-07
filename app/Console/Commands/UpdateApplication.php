@@ -51,7 +51,7 @@ class UpdateApplication extends Command
         $this->info('Migrations applied.');
         Log::info('Migrations applied.');
 
-        Artisan::call('db:seed', ['--class' => 'RoleSeeder', '--force' => true]);
+        Artisan::call('db:seed', ['--force' => true]);
         $this->info('Role seeder completed.');
 
         Artisan::call('config:clear');
