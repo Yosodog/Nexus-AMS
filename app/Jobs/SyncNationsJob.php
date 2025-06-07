@@ -20,7 +20,6 @@ use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -102,10 +101,6 @@ class SyncNationsJob implements ShouldQueue
 
             // Perform bulk upsert operations in a single transaction for improved performance and atomicity
             $this->bulkUpsert($nationData, $resourcesData, $militaryData, $citiesData);
-
-            // Save processed nation IDs to cache for finalizer
-            $nationIds = array_column($nationData, 'id');
-            Cache::put("sync_batch:{$this->batchId}:{$this->page}", $nationIds, now()->addHours(1));
 
             // Clean up variables and force garbage collection to free memory
             unset($nations, $nationData, $resourcesData, $militaryData, $citiesData);

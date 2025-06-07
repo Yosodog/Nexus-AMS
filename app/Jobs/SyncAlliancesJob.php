@@ -46,9 +46,6 @@ class SyncAlliancesJob implements ShouldQueue
                 $ids[] = $alliance->id;
             }
 
-            // Cache IDs for finalization
-            Cache::put("sync_batch:{$this->batchId}:{$this->page}", $ids, now()->addHours(1));
-
             unset($alliances, $ids);
             gc_collect_cycles();
         } catch (Exception $e) {
