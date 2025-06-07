@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
+use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -248,5 +249,13 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
             'admin.settings.sync.cancel'
         );
+
+        Route::prefix('mmr')->group(function () {
+            Route::get('/', [MMRController::class, 'index'])->name('admin.mmr.index');
+            Route::post('/store', [MMRController::class, 'store'])->name('admin.mmr.store');
+            Route::delete('/destroy', [MMRController::class, 'destroy'])->name('admin.mmr.destroy');
+            Route::post('/{tier}/update', [MMRController::class, 'update'])->name('admin.mmr.update');
+            Route::post('/update-all', [MMRController::class, 'updateAll'])->name('admin.mmr.updateAll');
+        });
 
     });

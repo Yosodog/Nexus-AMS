@@ -23,4 +23,6 @@ return [
     'manage-war-aid',
     'view-dd',
     'manage-dd',
+    'manage-mmr',
+    'view-mmr'
 ];

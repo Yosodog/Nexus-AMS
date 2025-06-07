@@ -221,6 +221,14 @@ class Nation extends Model
     }
 
     /**
+     * @return HasOne
+     */
+    public function latestSignIn()
+    {
+        return $this->hasOne(NationSignIn::class, 'nation_id')->latestOfMany();
+    }
+
+    /**
      * @param int $nation_id
      * @return Nation
      */

@@ -417,4 +417,23 @@ class AccountService
 
         return $account;
     }
+
+    /**
+     * Get the total amount of a specific resource for a nation.
+     *
+     * @param int $nationId
+     * @param string $resource
+     *
+     * @return int
+     * @throws \InvalidArgumentException
+     */
+    public static function getTotalResourceForNation(int $nationId, string $resource): int
+    {
+        if (!in_array($resource, PWHelperService::resources(false))) {
+            throw new \InvalidArgumentException("Invalid resource: $resource");
+        }
+
+        return (int) self::where('nation_id', $nationId)
+            ->sum($resource);
+    }
 }
