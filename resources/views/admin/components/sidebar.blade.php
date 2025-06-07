@@ -129,6 +129,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.mmr.index') }}"
+                                icon="bi bi-basket-fill"
+                                permission="view-raids"
+                                :active="request()->routeIs('admin.mmr.*')">
+                        MMR
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">System</li>
 
                 <li class="nav-item">
