@@ -7,6 +7,7 @@ use App\Services\CityQueryService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
@@ -51,7 +52,21 @@ class UpdateCityJob implements ShouldQueue
             // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
             // So we'll just query and add it as usual lol The nations job does things differently so this is not needed
             $city = CityQueryService::getCityById($cityData['id']);
-            City::updateFromAPI($city);
+            try {
+                City::updateFromAPI($city);
+            } catch (UniqueConstraintViolationException $e) {
+                // If the city is "soft deleted" when it wasn't supposed to, try to restore it
+                // The DB will throw a Unique exception because it exists, but Laravel can't find it because it's soft deleted
+                $trashedCity = City::withTrashed()
+                    ->find($city->id);
+
+                if ($trashedCity && $trashedCity->trashed()) {
+                    $trashedCity->restore();
+                    City::updateFromAPI($city);
+                } else {
+                    throw $e; // Something else is wrong
+                }
+            }
         } catch (Exception $e) {
             Log::error("Failed to update cities", ['error' => $e->getMessage()]);
         }
