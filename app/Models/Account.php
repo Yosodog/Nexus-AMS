@@ -56,6 +56,14 @@ class Account extends Model
     }
 
     /**
+     * @return HasMany
+     */
+    public function mmrPurchases()
+    {
+        return $this->hasMany(MMRAssistantPurchase::class);
+    }
+
+    /**
      * Checks if the account is completely empty.
      *
      * @return bool
