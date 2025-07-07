@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\MMRSetting;
 use App\Models\MMRTier;
 use App\Models\Nation;
 use App\Services\MMRService;
+use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -168,6 +170,33 @@ class MMRController extends Controller
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'All tiers updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @param Request $request
+     * @return RedirectResponse
+     * @throws AuthorizationException
+     */
+    public function updateAssistantSettings(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-mmr');
+
+        SettingService::setMMRAssistantEnabled($request->input('enabled', false));
+
+        foreach ($request->input('resources', []) as $resource => $data) {
+            MMRSetting::updateOrCreate(
+                ['resource' => $resource],
+                [
+                    'enabled' => isset($data['enabled']),
+                    'surcharge_pct' => floatval($data['surcharge_pct'] ?? 0),
+                ]
+            );
+        }
+
+        return redirect()->route('admin.mmr.index')->with([
+            'alert-message' => 'MMR Assistant settings updated.',
             'alert-type' => 'success',
         ]);
     }

@@ -98,6 +98,103 @@
                 </div>
             </div>
 
+            {{-- Section: MMR Assistant Resource Settings --}}
+            <div class="mb-5">
+                <h4 class="fw-semibold d-flex align-items-center">
+                    MMR Assistant Resource Settings
+
+                    {{-- Popover for global helper --}}
+                    <i class="bi bi-info-circle-fill ms-2 text-muted"
+                       tabindex="0"
+                       data-bs-toggle="popover"
+                       data-bs-trigger="focus"
+                       data-bs-placement="right"
+                       data-bs-html="true"
+                       title="What is this?"
+                       data-bs-content="
+               <strong>MMR Assistant</strong> automatically buys resources for members based on their Direct Deposit after-tax income.
+               <br><br>
+               You can globally enable or disable this feature. When disabled, no purchases will be made, regardless of user settings.
+           "></i>
+                </h4>
+
+                <p class="text-muted mb-3">
+                    Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they’re purchasable via MMR Assistant.
+                </p>
+
+                <div class="card">
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.mmr.assistant.update') }}">
+                            @csrf
+
+                            {{-- Global toggle --}}
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="mmrEnabledToggle"
+                                       name="enabled"
+                                       value="1"
+                                        @checked(\App\Services\SettingService::getMMRAssistantEnabled()) />
+                                <label class="form-check-label fw-semibold" for="mmrEnabledToggle">
+                                    Enable MMR Assistant Globally
+
+                                    @if(\App\Services\SettingService::getMMRAssistantEnabled())
+                                        <span class="badge bg-success ms-2">Enabled</span>
+                                    @else
+                                        <span class="badge bg-secondary ms-2">Disabled</span>
+                                    @endif
+                                </label>
+                            </div>
+
+                            <div class="table-responsive mb-3">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Resource</th>
+                                        <th>Enabled</th>
+                                        <th>Surcharge %</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach(\App\Models\MMRSetting::orderBy('resource')->get() as $setting)
+                                        <tr>
+                                            <td class="text-capitalize">{{ $setting->resource }}</td>
+                                            <td>
+                                                <input type="checkbox"
+                                                       name="resources[{{ $setting->resource }}][enabled]"
+                                                       value="1"
+                                                        @checked($setting->enabled) />
+                                            </td>
+                                            <td>
+                                                <input type="number"
+                                                       name="resources[{{ $setting->resource }}][surcharge_pct]"
+                                                       class="form-control"
+                                                       step="0.01"
+                                                       min="0"
+                                                       value="{{ $setting->surcharge_pct }}" />
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-save me-1"></i> Save Settings
+                                </button>
+
+                                <div class="input-group" style="width: 300px;">
+                                    <span class="input-group-text">Set all surcharges to</span>
+                                    <input type="number" id="setAllSurcharge" class="form-control" step="0.01" min="0">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="applySurchargeToAll()">Apply</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             {{-- Section: Resource Table --}}
             <div class="mb-3">
                 <h4 class="fw-semibold">Member Resource Totals</h4>
@@ -249,5 +346,33 @@
             pageLength: 50,
             responsive: true
         });
+    </script>
+
+    <script>
+        function applySurchargeToAll() {
+            const value = parseFloat(document.getElementById('setAllSurcharge').value);
+            if (isNaN(value)) return;
+
+            document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
+                input.value = value.toFixed(2);
+            });
+        }
+    </script>
+
+    <script>
+        // Bootstrap popover for info icon
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+            new bootstrap.Popover(el);
+        });
+
+        // Set all surcharge tool
+        function applySurchargeToAll() {
+            const value = parseFloat(document.getElementById('setAllSurcharge').value);
+            if (isNaN(value)) return;
+
+            document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
+                input.value = value.toFixed(2);
+            });
+        }
     </script>
 @endpush

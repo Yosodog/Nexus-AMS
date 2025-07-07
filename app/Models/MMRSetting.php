@@ -22,4 +22,6 @@ class MMRSetting extends Model
         'enabled' => 'boolean',
         'surcharge_pct' => 'float',
     ];
+
+    public $table = "mmr_settings";
 }
