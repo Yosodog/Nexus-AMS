@@ -68,6 +68,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll');
     Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll');
 
+    // MMR Assistant
+    Route::post('/mmr-assistant/update', [DirectDepositController::class, 'updateMMRA'])
+        ->name('mmra.update');
+
     // Loan
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');

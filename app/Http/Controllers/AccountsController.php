@@ -7,10 +7,15 @@ use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\Loan;
+use App\Models\MMRAssistantPurchase;
+use App\Models\MMRConfig;
+use App\Models\MMRSetting;
 use App\Services\AccountService;
 use App\Services\DirectDepositService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
+use App\Services\SettingService;
+use App\Services\TradePriceService;
 use Closure;
 use Exception;
 use Illuminate\Container\Container;
@@ -32,25 +37,55 @@ class AccountsController extends Controller
 
     public function index()
     {
-        $accounts = AccountService::getAccountsByNid(Auth::user()->nation_id);
+        $nationId = Auth::user()->nation_id;
+        $accounts = AccountService::getAccountsByNid($nationId);
 
         if ($accounts->count() === 0) {
             return redirect()->route("accounts.create");
         }
 
-        // Get active loans for the transfer dropdown
-        $activeLoans = Loan::where('nation_id', Auth::user()->nation_id)
+        $activeLoans = Loan::where('nation_id', $nationId)
             ->where('status', 'approved')
             ->where('remaining_balance', '>', 0)
             ->get();
 
         $ddService = app(DirectDepositService::class);
 
+        // MMR Assistant
+        $config = MMRConfig::where('nation_id', $nationId)->first();
+        $settings = MMRSetting::orderBy('resource')->get()->keyBy('resource');
+        $resources = PWHelperService::resources(false);
+        $mmrEnabled = SettingService::getMMRAssistantEnabled();
+
+        $lastTaxRecord = DirectDepositLog::where('nation_id', $nationId)
+            ->latest('created_at')
+            ->first();
+
+        $afterTaxIncome = $lastTaxRecord?->money ?? 0;
+
+        $logs = MMRAssistantPurchase::query()
+            ->when($config?->account_id, fn($q) => $q->where('account_id', $config->account_id))
+            ->orWhereHas('account', fn($q) => $q->where('nation_id', $nationId))
+            ->orderByDesc('created_at')
+            ->limit(25)
+            ->get();
+
+        $priceService = app(TradePriceService::class);
+        $mmrPrices = $priceService->get24hAverageWithSurcharge();
+
         return view("accounts.index", [
             "accounts" => $accounts,
             "activeLoans" => $activeLoans,
-            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', Auth::user()->nation_id)->first(),
-            'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
+            "enrollment" => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
+            "bracket" => $ddService->getApplicableBracket(Auth::user()->nation),
+            // MMR data
+            "mmrConfig" => $config,
+            "mmrSettings" => $settings,
+            "mmrResources" => $resources,
+            "mmrEnabled" => $mmrEnabled,
+            "mmrLogs" => $logs,
+            "mmrAfterTaxIncome" => $afterTaxIncome,
+            "mmrPrices" => $mmrPrices,
         ]);
     }
 

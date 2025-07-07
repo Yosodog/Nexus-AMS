@@ -38,6 +38,8 @@
             @csrf
             <button class="btn btn-error" type="submit">Disenroll from Direct Deposit</button>
         </form>
+
+        @include("accounts.components.mmr_assistant")
     @else
         <p class="mb-2 text-warning font-semibold">You are not currently enrolled in Direct Deposit.</p>
 

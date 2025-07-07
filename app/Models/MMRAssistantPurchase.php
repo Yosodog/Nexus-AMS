@@ -44,6 +44,8 @@ class MMRAssistantPurchase extends Model
         'food' => 'float', 'food_ppu' => 'float',
     ];
 
+    public $table = "mmr_assistant_purchases";
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */

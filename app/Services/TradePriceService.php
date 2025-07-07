@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\TradePrice as TradePriceGraphQL;
+use App\Models\MMRSetting;
 use App\Models\TradePrice;
 use Illuminate\Http\Client\ConnectionException;
 
@@ -67,5 +68,27 @@ class TradePriceService
         $model->buildWithJSON((object)$response->{0});
 
         return $model;
+    }
+
+    /**
+     * Gets the 24-hour average but also adds the MMR Assistant Surcharge
+     *
+     * @return array
+     */
+    public function get24hAverageWithSurcharge(): array
+    {
+        $average = $this->get24hAverage();
+        $surcharges = MMRSetting::pluck('surcharge_pct', 'resource');
+
+        $result = [];
+
+        foreach (PWHelperService::resources(false) as $resource) {
+            $base = $average->{$resource} ?? 0;
+            $surcharge = $surcharges[$resource] ?? 0;
+
+            $result[$resource] = round($base * (1 + ($surcharge / 100)), 2);
+        }
+
+        return $result;
     }
 }
