@@ -144,7 +144,7 @@
                     <x-nav.link href="{{ route('admin.settings') }}"
                                 icon="bi bi-gear"
                                 permission="view-diagnostic-info"
-                                :active="request()->is('telescope')">
+                                :active="request()->routeIs('admin.settings')">
                         Settings
                     </x-nav.link>
                 </li>
