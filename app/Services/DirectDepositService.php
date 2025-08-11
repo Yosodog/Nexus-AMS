@@ -47,11 +47,11 @@ class DirectDepositService
         }
 
         $bracket = $this->getApplicableBracket($nation);
-        $account = $this->getDepositAccount($nation);
+        $ddAccount = $this->getDepositAccount($nation);
         $fields = PWHelperService::resources();
 
-        $deposit = [];
-        $retained = [];
+        $deposit = []; // after-tax to member
+        $retained = []; // alliance taxes
 
         foreach ($fields as $field) {
             $amount = (float)$record->$field;
@@ -64,22 +64,47 @@ class DirectDepositService
             $deposit[$field] = $kept;
         }
 
-        // Apply deposit directly to the account without logging a manual transaction
-        foreach ($deposit as $resource => $amount) {
-            $account->{$resource} += $amount;
+        // Preserve the original after-tax numbers for the DD log (pre‑MMR)
+        $originalDeposit = $deposit;
+
+        // ---- MMR: compute plan from after-tax cash (money only)
+        $afterTaxCash = (float)($originalDeposit['money'] ?? 0.0);
+        $plan = app(MMRAssistantService::class)->plan($nation, $afterTaxCash);
+
+        $mmrTotalSpend = (float)($plan['total_spend'] ?? 0.0);
+        $mmrAccount = $plan['account'];
+
+        // Reduce the member's actual cash deposit by the MMR spend
+        if ($mmrTotalSpend > 0.0) {
+            $deposit['money'] = max(0.0, round($deposit['money'] - $mmrTotalSpend, 2));
         }
 
-        $account->save();
+        // Apply the reduced deposit to the DD account
+        foreach ($deposit as $resource => $amount) {
+            $ddAccount->{$resource} += $amount;
+        }
+        $ddAccount->save();
 
-        // Log it in direct_deposit_logs
+        // Log the DD event with the *original* after-tax values (so the player sees what they earned)
         DirectDepositLog::create([
             'nation_id' => $nation->id,
-            'account_id' => $account->id,
+            'account_id' => $ddAccount->id,
             'bank_record_id' => $record->id,
-            ...$deposit,
+            ...$originalDeposit,
         ]);
 
-        // Update the BankRecord to only include retained (taxed) values
+        // Apply MMR plan: credit resources on the configured MMR account
+        if ($mmrTotalSpend > 0.0 && $mmrAccount) {
+            try {
+                app(MMRAssistantService::class)->applyPlan($mmrAccount, $plan);
+            } catch (Throwable $e) {
+                Log::warning(
+                    "MMR Assistant apply failed for nation {$nation->id} on BankRecord {$record->id}: {$e->getMessage()}"
+                );
+            }
+        }
+
+        // IMPORTANT: Return the *retained* (tax) values for the tax record
         foreach ($fields as $field) {
             $record->$field = $retained[$field];
         }

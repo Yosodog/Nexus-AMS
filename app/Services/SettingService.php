@@ -233,4 +233,29 @@ class SettingService
         self::setValue("last_war_sync_batch_id", $batchId);
     }
 
+    /**
+     * @return bool
+     */
+    public static function getMMRAssistantEnabled(): bool
+    {
+        $value = self::getValue("mmr_assistant_enabled");;
+
+        if (is_null($value)) {
+            self::setMMRAssistantEnabled(false);
+
+            return "";
+        }
+
+        return (bool)$value;
+    }
+
+    /**
+     * @param bool $enabled
+     * @return void
+     */
+    public static function setMMRAssistantEnabled(bool $enabled): void
+    {
+        self::setValue("mmr_assistant_enabled", (int)$enabled);
+    }
+
 }
