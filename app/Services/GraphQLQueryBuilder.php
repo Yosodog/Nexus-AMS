@@ -159,6 +159,11 @@ class GraphQLQueryBuilder
     public function addFields(array|string $fields): self
     {
         if (is_array($fields)) {
+            foreach ($fields as $f) {
+                if (!is_string($f)) {
+                    throw new \InvalidArgumentException('addFields() expects strings only.');
+                }
+            }
             $this->fields = array_merge($this->fields, $fields);
         } else {
             $this->fields[] = $fields;

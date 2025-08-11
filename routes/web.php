@@ -25,6 +25,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\BlockWhenPWDown;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
 
@@ -55,7 +56,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     // Account Routes
     Route::get("/accounts", [AccountsController::class, 'index'])->name("accounts");
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
-        ->name('accounts.transfer');
+        ->name('accounts.transfer')
+        ->middleware(BlockWhenPWDown::class);
 
     Route::get("/accounts/create", [AccountsController::class, "createView"])->name("accounts.create");
     Route::post("/accounts/create", [AccountsController::class, "create"])->name("accounts.create.post");
@@ -65,8 +67,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
 
     // Direct Deposit
-    Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll');
-    Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll');
+    Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')
+        ->middleware(BlockWhenPWDown::class);
+    Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll')
+        ->middleware(BlockWhenPWDown::class);
 
     // MMR Assistant
     Route::post('/mmr-assistant/update', [DirectDepositController::class, 'updateMMRA'])
@@ -74,8 +78,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
 
     // Loan
     Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
-    Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply');
-    Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay');
+    Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply')
+        ->middleware(BlockWhenPWDown::class);
+    Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay')
+        ->middleware(BlockWhenPWDown::class);
 
     /***** Defense Routes *****/
     Route::prefix('defense')->middleware(['auth'])->group(function () {
@@ -85,11 +91,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
 
         // War aid
         Route::get('/waraid', [WarAidController::class, 'index'])->name('defense.war-aid');
-        Route::post('/waraid', [WarAidController::class, 'store'])->name('defense.war-aid.store');
+        Route::post('/waraid', [WarAidController::class, 'store'])->name('defense.war-aid.store')
+            ->middleware(BlockWhenPWDown::class);
 
         Route::get('/raid-finder', [RaidFinderController::class, 'index'])->name(
             'defense.raid-finder'
-        );
+        )->middleware(BlockWhenPWDown::class);
     });
     // Counters
 
@@ -100,10 +107,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
         Route::get("/city", [UserCityGrantController::class, 'index'])->name("grants.city");
         Route::post("/city", [UserCityGrantController::class, 'request'])->name(
             "grants.city.request"
-        );
+        )
+            ->middleware(BlockWhenPWDown::class);
 
         Route::get('{grant:slug}', [UserGrantController::class, 'show'])->name('grants.show_grants');
-        Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply');
+        Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply')
+            ->middleware(BlockWhenPWDown::class);
     });
 });
 
@@ -133,7 +142,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
             'admin.accounts.adjust'
         );
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
-            ->name('admin.accounts.transactions.refund');
+            ->name('admin.accounts.transactions.refund')
+            ->middleware(BlockWhenPWDown::class);
 
         Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
             ->name('admin.dd.settings');
@@ -178,19 +188,21 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name(
             "admin.grants.approve"
-        );
+        )
+            ->middleware(BlockWhenPWDown::class);
         Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name(
             "admin.grants.deny"
-        );
+        )
+            ->middleware(BlockWhenPWDown::class);
 
         // Loan
         Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");
         Route::post("/loans/{Loan}/approve", [LoansController::class, 'approve'])->name(
             "admin.loans.approve"
-        );
+        )->middleware(BlockWhenPWDown::class);
         Route::post("/loans/{Loan}/deny", [LoansController::class, 'deny'])->name(
             "admin.loans.deny"
-        );
+        )->middleware(BlockWhenPWDown::class);
         Route::get("/loans/{Loan}/view", [LoansController::class, 'view'])->name(
             "admin.loans.view"
         );
@@ -200,7 +212,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         Route::post('/loans/{Loan}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
             'admin.loans.markPaid'
-        );
+        )->middleware(BlockWhenPWDown::class);
 
         // Taxes
         Route::get('/taxes', [AdminTaxesController::class, 'index'])->name('admin.taxes');
@@ -219,11 +231,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::patch(
             '/defense/waraid/{WarAidRequest}/approve',
             [AdminWarAidControllerAlias::class, 'approve']
-        )->name('admin.war-aid.approve');
+        )->name('admin.war-aid.approve')->middleware(BlockWhenPWDown::class);
         Route::patch(
             '/defense/waraid/{WarAidRequest}/deny',
             [AdminWarAidControllerAlias::class, 'deny']
-        )->name('admin.war-aid.deny');
+        )->name('admin.war-aid.deny')->middleware(BlockWhenPWDown::class);
         Route::post('/defense/waraid/toggle', [AdminWarAidControllerAlias::class, 'toggle'])->name(
             'admin.war-aid.toggle'
         );
@@ -242,14 +254,14 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
         Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(
             'admin.settings.sync.run'
-        );
+        )->middleware(BlockWhenPWDown::class);
         Route::post('/settings/sync/alliances', [SettingsController::class, 'runSyncAlliance'])->name(
             'admin.settings.sync.alliances'
-        );
+        )->middleware(BlockWhenPWDown::class);
 
         Route::post('/settings/sync/wars', [SettingsController::class, 'runSyncWar'])->name(
             'admin.settings.sync.wars'
-        );
+        )->middleware(BlockWhenPWDown::class);
         Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
             'admin.settings.sync.cancel'
         );
