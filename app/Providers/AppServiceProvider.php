@@ -8,10 +8,13 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\User;
 use App\Models\WarAidRequest;
+use App\Services\PWHealthService;
 use App\Services\PWMessageService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -45,5 +48,10 @@ class AppServiceProvider extends ServiceProvider
         foreach (config('permissions', []) as $permission) {
             Gate::define($permission, fn(User $user) => $user->hasPermission($permission));
         }
+
+        View::composer('*', function ($view) {
+            $view->with('pwApiDown', Cache::get(PWHealthService::CACHE_KEY_STATUS) === false);
+            $view->with('pwApiLastChecked', Cache::get(PWHealthService::CACHE_KEY_CHECKED_AT));
+        });
     }
 }

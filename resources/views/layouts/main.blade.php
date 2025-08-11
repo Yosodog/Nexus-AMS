@@ -10,6 +10,17 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
+@if($pwApiDown)
+    <div class="bg-warning text-warning-content text-sm py-1 text-center w-full">
+        Nexus has detected PW API issues. Functionality will be limited.
+        @if(!empty($pwApiLastChecked))
+            <span class="opacity-75 ml-2">
+                (Last checked {{ \Carbon\Carbon::parse($pwApiLastChecked)->diffForHumans() }})
+            </span>
+        @endif
+    </div>
+@endif
+
 <x-header/>
 
 <div class="container mx-auto py-8 flex-grow">
