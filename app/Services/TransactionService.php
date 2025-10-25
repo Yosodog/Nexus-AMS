@@ -25,19 +25,25 @@ class TransactionService
         int $fromAccountId,
         string $transactionType,
         int|null $toAccountId = null,
-        bool $isPending = true
+        bool $isPending = true,
+        ?string $note = null,
+        bool $requiresAdminApproval = false,
+        ?string $pendingReason = null
     ): Transaction {
         $transaction = new Transaction();
         $transaction->from_account_id = $fromAccountId;
         $transaction->to_account_id = $toAccountId ?? null;
         $transaction->nation_id = $nation_id;
         $transaction->transaction_type = $transactionType;
+        $transaction->note = $note;
 
         foreach ($resources as $res => $value) {
             $transaction->$res = $value;
         }
 
         $transaction->is_pending = $isPending;
+        $transaction->requires_admin_approval = $requiresAdminApproval;
+        $transaction->pending_reason = $pendingReason;
 
         $transaction->save();
 

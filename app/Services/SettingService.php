@@ -258,4 +258,29 @@ class SettingService
         self::setValue("mmr_assistant_enabled", (int)$enabled);
     }
 
+    /**
+     * @return int
+     */
+    public static function getWithdrawMaxDailyCount(): int
+    {
+        $value = self::getValue('withdraw_max_daily_count');
+
+        if (is_null($value)) {
+            self::setWithdrawMaxDailyCount(0);
+
+            return 0;
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * @param int $count
+     * @return void
+     */
+    public static function setWithdrawMaxDailyCount(int $count): void
+    {
+        self::setValue('withdraw_max_daily_count', max(0, $count));
+    }
+
 }

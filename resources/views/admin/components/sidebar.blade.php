@@ -65,6 +65,15 @@
                 </li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.withdrawals.index') }}"
+                                icon="bi bi-cash-coin"
+                                permission="manage-accounts"
+                                :active="request()->routeIs('admin.withdrawals.*')">
+                        Withdrawals
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.grants.city') }}"
                                 icon="bi bi-houses-fill"
                                 permission="view-city-grants"
