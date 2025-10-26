@@ -116,10 +116,12 @@ class Page extends Model
 
         $this->draft = $version->editor_state;
 
+        $shouldForgetCachedHtml = true;
+
         if (! $restoreAsDraft) {
             $this->published = $version->editor_state;
             $this->status = self::STATUS_PUBLISHED;
-            $this->cached_html = null;
+            $shouldForgetCachedHtml = false;
         } else {
             $this->status = self::STATUS_DRAFT;
         }
@@ -131,7 +133,9 @@ class Page extends Model
             'restore_as_draft' => $restoreAsDraft,
         ]);
 
-        $this->forgetCachedHtml();
+        if ($shouldForgetCachedHtml) {
+            $this->forgetCachedHtml();
+        }
     }
 
     public function snapshots(int $limit = 50): Collection
