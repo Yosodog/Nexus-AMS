@@ -171,6 +171,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/offshores/{offshore}/refresh', [OffshoreController::class, 'refresh'])
             ->name('admin.offshores.refresh')
             ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/main-bank/refresh', [OffshoreController::class, 'refreshMainBank'])
+            ->name('admin.offshores.main-bank.refresh')
+            ->middleware(BlockWhenPWDown::class);
         Route::post('/offshores/{offshore}/sweep', [OffshoreController::class, 'sweepToOffshore'])
             ->name('admin.offshores.sweep')
             ->middleware(BlockWhenPWDown::class);

@@ -33,7 +33,7 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-12">
+        <div class="col-12 col-xl-8">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Configured Offshores</h5>
@@ -233,7 +233,6 @@
         </div>
     </div>
 
-    <div class="row g-4">
         <div class="col-12 col-xl-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -266,6 +265,22 @@
                     @else
                         <p class="text-muted mb-0">No cached main bank data yet.</p>
                     @endif
+                </div>
+            </div>
+        </div>
+
+        @if($canManageOffshores)
+            <div class="col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Manual Transfer</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.</p>
+                        <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#manualTransferModal">
+                            <i class="bi bi-cash-coin me-1"></i> Start Transfer
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
