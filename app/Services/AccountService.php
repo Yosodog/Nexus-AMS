@@ -66,7 +66,7 @@ class AccountService
     /**
      * @param Account $account
      *
-     * @return void
+     * @return Transaction
      * @throws UserErrorException
      */
     /**
@@ -74,7 +74,7 @@ class AccountService
      *
      * @param Account $account
      *
-     * @return void
+     * @return Transaction
      * @throws UserErrorException
      */
     public static function deleteAccount(Account $account): void
@@ -238,7 +238,7 @@ class AccountService
      * @param int $nation_id
      * @param array $resources
      *
-     * @return void
+     * @return Transaction
      * @throws PWQueryFailedException
      * @throws UserErrorException
      * @throws ConnectionException
@@ -247,7 +247,7 @@ class AccountService
         int $fromAccountId,
         int $nation_id,
         array $resources
-    ): void {
+    ): Transaction {
         // Start transaction to ensure data integrity
         DB::beginTransaction();
 
@@ -261,14 +261,12 @@ class AccountService
                 $fromAccount
             );
 
-            $bank = new BankService();
-            $bank->receiver = $nation_id;
-            $bank->note = "Withdraw from " . $fromAccount->name;
+            $evaluation = WithdrawalLimitService::evaluate($nation_id, $resources);
+            $note = "Withdraw from " . $fromAccount->name;
 
             // Perform the transfer
             foreach (PWHelperService::resources() as $res) {
                 $fromAccount->$res -= $resources[$res];
-                $bank->$res = $resources[$res];
             }
 
             // Save changes
@@ -279,17 +277,51 @@ class AccountService
                 Auth::user()->nation_id,
                 $fromAccountId,
                 "withdrawal",
+                null,
+                true,
+                $note,
+                $evaluation['requires_approval'],
+                $evaluation['pending_reason']
             );
 
             DB::commit(); // Commit before spawning the job. I'd rather it fail.
 
-            // Send withdraw
-            $bank->send($transaction);
+            if (!$evaluation['requires_approval']) {
+                self::dispatchWithdrawal($transaction, $fromAccount);
+            }
+
+            return $transaction;
         } catch (Exception $e) {
             // Rollback in case of error
             DB::rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * @param Transaction $transaction
+     * @param Account|null $fromAccount
+     *
+     * @return void
+     * @throws Exception
+     */
+    public static function dispatchWithdrawal(Transaction $transaction, ?Account $fromAccount = null): void
+    {
+        $fromAccount ??= $transaction->fromAccount;
+
+        if (is_null($fromAccount)) {
+            throw new Exception('Unable to locate the source account for this withdrawal.');
+        }
+
+        $bank = new BankService();
+        $bank->receiver = $transaction->nation_id;
+        $bank->note = $transaction->note ?? ('Withdraw from ' . $fromAccount->name);
+
+        foreach (PWHelperService::resources() as $res) {
+            $bank->$res = $transaction->$res;
+        }
+
+        $bank->send($transaction);
     }
 
     /**

@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
+use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
@@ -156,6 +157,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
 
         Route::post('/admin/direct-deposit/brackets/delete', [AccountController::class, 'deleteDirectDepositBrackets'])
             ->name('admin.dd.brackets.delete');
+
+        // Withdrawals
+        Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('admin.withdrawals.index');
+        Route::post('/withdrawals/limits', [WithdrawalController::class, 'updateLimits'])->name('admin.withdrawals.limits');
+        Route::post('/withdrawals/{transaction}/approve', [WithdrawalController::class, 'approve'])->name('admin.withdrawals.approve');
+        Route::post('/withdrawals/{transaction}/deny', [WithdrawalController::class, 'deny'])->name('admin.withdrawals.deny');
 
         // City Grants
         Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
