@@ -8,42 +8,24 @@ use App\Models\WithdrawLimit;
 use App\Services\AccountService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
-use App\Services\WithdrawalLimitService;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class WithdrawalController extends Controller
 {
     /**
-     * @return View
+     * @return RedirectResponse
      * @throws AuthorizationException
      */
-    public function index(): View
+    public function index(): RedirectResponse
     {
-        $this->authorize('manage-accounts');
+        Gate::authorize('manage-accounts');
 
-        $limits = WithdrawalLimitService::limits();
-        $resources = PWHelperService::resources();
-
-        $pendingWithdrawals = Transaction::query()
-            ->with(['fromAccount.nation', 'fromAccount.user', 'nation'])
-            ->where('transaction_type', 'withdrawal')
-            ->where('requires_admin_approval', true)
-            ->whereNull('approved_at')
-            ->whereNull('denied_at')
-            ->orderBy('created_at')
-            ->get();
-
-        return view('admin.withdrawals.index', [
-            'limits' => $limits,
-            'resources' => $resources,
-            'pendingWithdrawals' => $pendingWithdrawals,
-            'maxDailyWithdrawals' => SettingService::getWithdrawMaxDailyCount(),
-        ]);
+        return redirect()->route('admin.accounts.dashboard');
     }
 
     /**
@@ -53,7 +35,7 @@ class WithdrawalController extends Controller
      */
     public function updateLimits(Request $request): RedirectResponse
     {
-        $this->authorize('manage-accounts');
+        Gate::authorize('manage-accounts');
 
         $resources = PWHelperService::resources();
         $rules = [
@@ -78,7 +60,7 @@ class WithdrawalController extends Controller
 
         SettingService::setWithdrawMaxDailyCount($validated['max_daily_withdrawals']);
 
-        return redirect()->route('admin.withdrawals.index')->with([
+        return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal limits updated successfully.',
             'alert-type' => 'success',
         ]);
@@ -91,10 +73,10 @@ class WithdrawalController extends Controller
      */
     public function approve(Transaction $transaction): RedirectResponse
     {
-        $this->authorize('manage-accounts');
+        Gate::authorize('manage-accounts');
 
         if (!$transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
-            return redirect()->route('admin.withdrawals.index')->with([
+            return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',
             ]);
@@ -109,7 +91,7 @@ class WithdrawalController extends Controller
 
         AccountService::dispatchWithdrawal($transaction);
 
-        return redirect()->route('admin.withdrawals.index')->with([
+        return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal approved and queued for processing.',
             'alert-type' => 'success',
         ]);
@@ -124,10 +106,10 @@ class WithdrawalController extends Controller
      */
     public function deny(Request $request, Transaction $transaction): RedirectResponse
     {
-        $this->authorize('manage-accounts');
+        Gate::authorize('manage-accounts');
 
         if (!$transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
-            return redirect()->route('admin.withdrawals.index')->with([
+            return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',
             ]);
@@ -153,7 +135,7 @@ class WithdrawalController extends Controller
             $transaction->save();
         });
 
-        return redirect()->route('admin.withdrawals.index')->with([
+        return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal request denied and funds returned to the account.',
             'alert-type' => 'success',
         ]);

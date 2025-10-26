@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Services\AccountService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
+use App\Services\WithdrawalLimitService;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Container;
@@ -39,6 +40,16 @@ class AccountController extends Controller
             ->latest('created_at')
             ->take(50)
             ->get();
+        $pendingWithdrawals = Transaction::query()
+            ->with(['fromAccount.nation', 'fromAccount.user', 'nation'])
+            ->where('transaction_type', 'withdrawal')
+            ->where('requires_admin_approval', true)
+            ->whereNull('approved_at')
+            ->whereNull('denied_at')
+            ->orderBy('created_at')
+            ->get();
+        $withdrawalLimits = WithdrawalLimitService::limits();
+        $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
 
         return view('admin.accounts.dashboard', [
             'accounts' => $accounts,
@@ -46,7 +57,10 @@ class AccountController extends Controller
             'enrollments' => $enrollments,
             'ddTaxId' => $ddTaxId,
             'fallbackTaxId' => $fallbackTaxId,
-            'recentTransactions' => $recentTransactions
+            'recentTransactions' => $recentTransactions,
+            'pendingWithdrawals' => $pendingWithdrawals,
+            'withdrawalLimits' => $withdrawalLimits,
+            'maxDailyWithdrawals' => $maxDailyWithdrawals,
         ]);
     }
 
