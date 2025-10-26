@@ -23,9 +23,21 @@ class RoleController extends Controller
     {
         $this->authorize('view-roles');
 
-        $roles = Role::orderBy('protected', 'desc')->orderBy('name')->get();
+        $roles = Role::with([
+            'permissions' => fn ($query) => $query->orderBy('permission'),
+        ])
+            ->withCount('users')
+            ->orderBy('protected', 'desc')
+            ->orderBy('name')
+            ->get();
 
-        return view('admin.roles.index', compact('roles'));
+        $stats = [
+            'total_roles' => $roles->count(),
+            'protected_roles' => $roles->where('protected', true)->count(),
+            'unique_permissions' => $roles->flatMap(fn ($role) => $role->permissions->pluck('permission'))->unique()->count(),
+        ];
+
+        return view('admin.roles.index', compact('roles', 'stats'));
     }
 
     /**
