@@ -107,13 +107,14 @@ class AllianceQueryService
 
     /**
      * @param int $aID
+     * @param QueryService|null $client
      * @return Alliance
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
-    public static function getAllianceWithTaxes(int $aID): Alliance
+    public static function getAllianceWithTaxes(int $aID, ?QueryService $client = null): Alliance
     {
-        $client = new QueryService();
+        $client ??= new QueryService();
 
         $builder = (new GraphQLQueryBuilder())
             ->setRootField("alliances")
