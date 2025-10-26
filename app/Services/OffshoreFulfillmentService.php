@@ -323,9 +323,23 @@ class OffshoreFulfillmentService
      */
     protected function sendOffshoreWithdrawal(Offshore $offshore, Transaction $transaction, array $payload): void
     {
+        $apiKey = $offshore->api_key_decrypted;
+        $mutationKey = $offshore->mutation_key_decrypted;
+
+        if (! $apiKey || ! $mutationKey) {
+            Log::error('Missing offshore credentials for fulfillment withdrawal', [
+                'transaction_id' => $transaction->id,
+                'offshore_id' => $offshore->id,
+                'missing_api_key' => empty($apiKey),
+                'missing_mutation_key' => empty($mutationKey),
+            ]);
+
+            throw new PWQueryFailedException('Offshore credentials are missing or invalid.');
+        }
+
         $parameters = [
-            'apiKey' => $offshore->api_key_decrypted,
-            'mutationKey' => $offshore->mutation_key_decrypted,
+            'apiKey' => $apiKey,
+            'mutationKey' => $mutationKey,
         ];
 
         /** @var QueryService $client */

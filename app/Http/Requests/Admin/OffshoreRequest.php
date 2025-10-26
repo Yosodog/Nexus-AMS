@@ -58,7 +58,14 @@ abstract class OffshoreRequest extends FormRequest
             return null;
         }
 
-        return collect($this->input('guardrails', []))
+        $rawGuardrails = $this->input('guardrails', []);
+
+        if (! is_array($rawGuardrails)) {
+            return [];
+        }
+
+        return collect($rawGuardrails)
+            ->filter(fn($guardrail) => is_array($guardrail))
             ->map(fn(array $guardrail) => [
                 'resource' => $guardrail['resource'],
                 'minimum_amount' => (float) $guardrail['minimum_amount'],
