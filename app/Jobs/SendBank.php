@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Transaction;
 use App\Services\BankService;
+use App\Services\OffshoreFulfillmentService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -27,11 +28,24 @@ class SendBank implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(OffshoreFulfillmentService $fulfillmentService): void
     {
-        $this->bankService->sendWithdraw();
+        // Attempt to top up the main bank before issuing the withdrawal mutation.
+        $result = $fulfillmentService->coverShortfall($this->transaction);
 
-        $this->transaction->setSent();
+        $this->transaction->recordOffshoreFulfillment($result);
+
+        if ($result->shouldSendWithdrawal()) {
+            // Safe to proceed—the bank has either enough stock or was topped up successfully.
+            $this->bankService->sendWithdraw();
+
+            $this->transaction->setSent();
+
+            return;
+        }
+
+        // Something prevented us from fulfilling automatically. Escalate to admins.
+        $this->transaction->markPendingAdminReview('Offshore fulfillment failed: ' . $result->message);
     }
 
 }
