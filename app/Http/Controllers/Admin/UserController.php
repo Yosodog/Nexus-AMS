@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -40,7 +41,48 @@ class UserController extends Controller
 
         $allRoles = Role::orderBy('name')->get();
 
-        return view('admin.users.edit', compact('user', 'allRoles'));
+        $user->load([
+            'nation.alliance',
+            'nation.resources',
+            'nation.latestSignIn',
+            'accounts' => fn ($query) => $query->orderBy('name'),
+        ]);
+
+        $accounts = $user->accounts;
+        $accountIds = $accounts->pluck('id');
+
+        $recentTransactions = collect();
+
+        if ($accountIds->isNotEmpty() || $user->nation_id) {
+            $recentTransactionsQuery = Transaction::with(['fromAccount', 'toAccount', 'nation'])
+                ->latest('created_at')
+                ->limit(10);
+
+            if ($accountIds->isNotEmpty()) {
+                $recentTransactionsQuery->where(function ($query) use ($accountIds) {
+                    $query->whereIn('from_account_id', $accountIds)
+                        ->orWhereIn('to_account_id', $accountIds);
+                });
+
+                if ($user->nation_id) {
+                    $recentTransactionsQuery->orWhere('nation_id', $user->nation_id);
+                }
+            } else {
+                $recentTransactionsQuery->where('nation_id', $user->nation_id);
+            }
+
+            $recentTransactions = $recentTransactionsQuery->get();
+        }
+
+        $latestSignIn = optional($user->nation)->latestSignIn;
+
+        return view('admin.users.edit', compact(
+            'user',
+            'allRoles',
+            'accounts',
+            'recentTransactions',
+            'latestSignIn'
+        ));
     }
 
     /**
