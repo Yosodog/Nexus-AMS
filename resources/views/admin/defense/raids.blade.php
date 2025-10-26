@@ -59,7 +59,7 @@
                     <tr>
                         <td>{{ $entry->id }}</td>
                         <td>{{ $entry->alliance_id }}</td>
-                        <td><a href="https://politicsandwar.com/alliance/id={{ $entry->alliance_id }}" target="-_blank">{{ $entry->alliance->name}}</a></td>
+                        <td><a href="https://politicsandwar.com/alliance/id={{ $entry->alliance_id }}" target="_blank">{{ $entry->alliance->name}}</a></td>
                         <td>
                             <form method="POST" action="{{ route('admin.raids.no-raid.destroy', $entry->id) }}"
                                   onsubmit="return confirm('Are you sure you want to remove this alliance?')">
@@ -71,7 +71,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="text-center text-muted">No entries in no-raid list.</td>
+                        <td colspan="4" class="text-center text-muted">No entries in no-raid list.</td>
                     </tr>
                 @endforelse
                 </tbody>
