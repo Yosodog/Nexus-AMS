@@ -162,6 +162,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/offshores/reorder', [OffshoreController::class, 'reorder'])
             ->name('admin.offshores.reorder')
             ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/main-bank/refresh', [OffshoreController::class, 'refreshMainBank'])
+            ->name('admin.offshores.main-bank.refresh')
+            ->middleware(BlockWhenPWDown::class);
         Route::post('/offshores/{offshore}/toggle', [OffshoreController::class, 'toggle'])
             ->name('admin.offshores.toggle')
             ->middleware(BlockWhenPWDown::class);
