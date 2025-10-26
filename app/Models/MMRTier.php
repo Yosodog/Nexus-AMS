@@ -10,11 +10,13 @@ class MMRTier extends Model
 
     protected $fillable = [
         'city_count',
+        'money',
         'steel',
         'aluminum',
         'munitions',
         'uranium',
         'food',
+        'gasoline',
         'barracks',
         'factories',
         'hangars',
@@ -25,11 +27,13 @@ class MMRTier extends Model
     ];
 
     protected $casts = [
+        'money' => 'integer',
         'steel' => 'integer',
         'aluminum' => 'integer',
         'munitions' => 'integer',
         'uranium' => 'integer',
         'food' => 'integer',
+        'gasoline' => 'integer',
         'barracks' => 'integer',
         'factories' => 'integer',
         'hangars' => 'integer',
