@@ -8,13 +8,12 @@ use Illuminate\Support\Collection;
 
 class WarService
 {
-    protected int $ourAllianceId;
+    protected ?Collection $membershipIds = null;
     protected ?Collection $cachedActiveWars = null;
     protected ?Collection $cachedRecentWars = null;
 
-    public function __construct()
+    public function __construct(private readonly AllianceMembershipService $membershipService)
     {
-        $this->ourAllianceId = (int)env("PW_ALLIANCE_ID");
     }
 
     /**
@@ -26,9 +25,9 @@ class WarService
             $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
 
             $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
-                if ($war->att_alliance_id === $this->ourAllianceId) {
+                if ($this->isUsAttacker($war)) {
                     return $carry + $war->att_money_looted;
-                } elseif ($war->def_alliance_id === $this->ourAllianceId) {
+                } elseif ($this->isUsDefender($war)) {
                     return $carry + $war->def_money_looted;
                 }
                 return $carry;
@@ -89,10 +88,10 @@ class WarService
     private function whereOurAllianceEngagedProperly($query): void
     {
         $query->where(function ($q) {
-            $q->where('att_alliance_id', $this->ourAllianceId)
+            $q->whereIn('att_alliance_id', $this->membershipIds()->all())
                 ->where('att_alliance_position', '!=', 'APPLICANT');
         })->orWhere(function ($q) {
-            $q->where('def_alliance_id', $this->ourAllianceId)
+            $q->whereIn('def_alliance_id', $this->membershipIds()->all())
                 ->where('def_alliance_position', '!=', 'APPLICANT');
         });
     }
@@ -198,7 +197,17 @@ class WarService
      */
     public function isUsAttacker(War $war): bool
     {
-        return $war->att_alliance_id === $this->ourAllianceId;
+        return $this->membershipIds()->contains((int) $war->att_alliance_id);
+    }
+
+    protected function isUsDefender(War $war): bool
+    {
+        return $this->membershipIds()->contains((int) $war->def_alliance_id);
+    }
+
+    protected function membershipIds(): Collection
+    {
+        return $this->membershipIds ??= $this->membershipService->getAllianceIds();
     }
 
     /**

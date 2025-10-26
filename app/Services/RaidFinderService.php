@@ -18,6 +18,7 @@ class RaidFinderService
     public function __construct(
         protected TradePriceService $priceService,
         protected LootCalculatorService $lootCalculator,
+        protected AllianceMembershipService $membershipService,
     ) {
     }
 
@@ -29,7 +30,7 @@ class RaidFinderService
     {
         $ownNation = Nation::findOrFail($nationId);
 
-        if ($ownNation->alliance_id !== (int)env("PW_ALLIANCE_ID")) {
+        if (! $this->membershipService->contains($ownNation->alliance_id)) {
             abort(403, 'Nation does not belong to our alliance.');
         }
 
@@ -208,7 +209,10 @@ class RaidFinderService
     {
         $topN = SettingService::getTopRaidable(); // Admin configurable
         $topAlliances = Alliance::orderByDesc('score')->take($topN)->pluck('id')->toArray();
-        $eligibleAlliances = Alliance::whereNotIn('id', $topAlliances)->pluck('id')->toArray();
+        $eligibleAlliances = Alliance::whereNotIn('id', $topAlliances)
+            ->whereNotIn('id', $this->membershipService->getAllianceIds()->all())
+            ->pluck('id')
+            ->toArray();
         $noRaidList = NoRaidList::pluck('alliance_id')->toArray();
         $treaties = Treaty::all();
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MMRSetting;
 use App\Models\MMRTier;
 use App\Models\Nation;
+use App\Services\AllianceMembershipService;
 use App\Services\MMRService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -30,15 +31,14 @@ class MMRController extends Controller
      * @return View The
      * @throws AuthorizationException
      */
-    public function index(MMRService $service): View
+    public function index(MMRService $service, AllianceMembershipService $membershipService): View
     {
         $this->authorize('view-mmr');
 
-        $allianceId = env('PW_ALLIANCE_ID');
         $tiers = MMRTier::orderBy('city_count')->get();
 
         $nations = Nation::with('latestSignIn')
-            ->where('alliance_id', $allianceId)
+            ->whereIn('alliance_id', $membershipService->getAllianceIds())
             ->get()
             ->filter(fn($nation) => $nation->latestSignIn); // filter out those missing sign-ins
 

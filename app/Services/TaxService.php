@@ -16,18 +16,19 @@ class TaxService
 {
     /**
      * @param int $alliance_id
+     * @param QueryService|null $client
      * @return int The last scanned ID is returned
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
-    public static function updateAllianceTaxes(int $alliance_id): int
+    public static function updateAllianceTaxes(int $alliance_id, ?QueryService $client = null): int
     {
         Cache::forget('tax_summary_stats');
         Cache::forget('tax_resource_chart_data');
         Cache::forget('tax_daily_totals');
 
-        $taxes = self::getAllianceTaxes($alliance_id);
-        $lastTaxId = self::getLastScannedTaxRecordId();
+        $taxes = self::getAllianceTaxes($alliance_id, $client);
+        $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
@@ -85,21 +86,28 @@ class TaxService
 
     /**
      * @param int $alliance_id
+     * @param QueryService|null $client
      * @return Collection
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function getAllianceTaxes(int $alliance_id): Collection
+    public static function getAllianceTaxes(int $alliance_id, ?QueryService $client = null): Collection
     {
-        return collect(AllianceQueryService::getAllianceWithTaxes($alliance_id)->taxrecs);
+        return collect(AllianceQueryService::getAllianceWithTaxes($alliance_id, $client)->taxrecs);
     }
 
     /**
      * @return int
      */
-    public static function getLastScannedTaxRecordId(): int
+    public static function getLastScannedTaxRecordId(?int $allianceId = null): int
     {
-        return Taxes::value(DB::raw('MAX(id)')) ?: 0;
+        $query = Taxes::query();
+
+        if ($allianceId !== null) {
+            $query->where('receiver_id', $allianceId);
+        }
+
+        return (int)($query->max('id') ?? 0);
     }
 
     /**

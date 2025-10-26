@@ -125,10 +125,11 @@
                 </tr>
                 </thead>
                 <tbody>
+                @php($membershipService = app(\App\Services\AllianceMembershipService::class))
                 @foreach ($wars as $war)
                     @php
-                        $isUsAttacker = $war->att_alliance_id == env("PW_ALLIANCE_ID");
-                        $isUsDefender = $war->def_alliance_id == env("PW_ALLIANCE_ID");
+                        $isUsAttacker = $membershipService->contains($war->att_alliance_id);
+                        $isUsDefender = $membershipService->contains($war->def_alliance_id);
                         $ourResistance = $isUsAttacker ? $war->att_resistance : ($isUsDefender ? $war->def_resistance : null);
                     @endphp
                     <tr @if($ourResistance !== null && $ourResistance < 20) class="table-danger" @endif>

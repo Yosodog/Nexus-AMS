@@ -18,11 +18,14 @@ class MainBankService
 
     private int $mainAllianceId;
 
-    public function __construct(?int $mainAllianceId = null)
+    public function __construct(
+        private readonly AllianceMembershipService $membershipService,
+        ?int $mainAllianceId = null
+    )
     {
         $resolvedAllianceId = $mainAllianceId !== null && $mainAllianceId > 0
             ? $mainAllianceId
-            : (int) env('PW_ALLIANCE_ID', 0);
+            : $this->membershipService->getPrimaryAllianceId();
 
         $this->mainAllianceId = $resolvedAllianceId;
     }

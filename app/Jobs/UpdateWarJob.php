@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\War;
+use App\Services\AllianceMembershipService;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,12 +43,10 @@ class UpdateWarJob implements ShouldQueue
      */
     private function determineIfAllianceWar(array $warData): bool
     {
-        if ($warData['att_alliance_id'] == env("PW_ALLIANCE_ID") || $warData['def_alliance_id'] == env(
-                "PW_ALLIANCE_ID"
-            )) {
-            return true;
-        }
+        /** @var AllianceMembershipService $membershipService */
+        $membershipService = app(AllianceMembershipService::class);
 
-        return false;
+        return $membershipService->contains($warData['att_alliance_id'])
+            || $membershipService->contains($warData['def_alliance_id']);
     }
 }
