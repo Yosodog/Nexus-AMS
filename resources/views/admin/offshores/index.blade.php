@@ -233,8 +233,8 @@
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-12 col-lg-8 col-xl-6 col-xxl-4 mx-auto">
+    <div class="row mt-4">
+        <div class="col-12 ">
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Main Bank Snapshot</h5>
