@@ -6,8 +6,12 @@ use App\Broadcasting\PWMessageChannel;
 use App\Models\CityGrantRequest;
 use App\Models\Loan;
 use App\Models\Nation;
+use App\Models\Offshore;
+use App\Models\OffshoreGuardrail;
 use App\Models\User;
 use App\Models\WarAidRequest;
+use App\Observers\OffshoreGuardrailObserver;
+use App\Observers\OffshoreObserver;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use Illuminate\Support\Facades\Cache;
@@ -40,6 +44,9 @@ class AppServiceProvider extends ServiceProvider
         Route::model('Loan', Loan::class);
         Route::model('Nation', Nation::class);
         Route::model('WarAidRequest', WarAidRequest::class);
+
+        Offshore::observe(OffshoreObserver::class);
+        OffshoreGuardrail::observe(OffshoreGuardrailObserver::class);
 
         Gate::define('viewPulse', function (User $user) {
             return Gate::allows('view-diagnostic-info');

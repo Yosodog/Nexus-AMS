@@ -33,6 +33,10 @@ class QueryService
      */
     protected string $endpoint;
     /**
+     * @var string|null
+     */
+    protected ?string $mutationKey = null;
+    /**
      * @var int
      */
     protected int $maxConcurrency = 5;
@@ -40,9 +44,10 @@ class QueryService
     /**
      *
      */
-    public function __construct()
+    public function __construct(?string $apiKey = null, ?string $mutationKey = null)
     {
-        $this->apiKey = $this->getAPIKey();
+        $this->apiKey = $apiKey ?? $this->getAPIKey();
+        $this->mutationKey = $mutationKey ?? $this->getMutationKey();
         $this->endpoint = $this->buildEndpoint();
     }
 
@@ -58,7 +63,15 @@ class QueryService
             throw new Exception("Env value PW_API_KEY not set");
         }
 
-        return env("PW_API_KEY");
+        return $apiKey;
+    }
+
+    /**
+     * @return string|null
+     */
+    protected function getMutationKey(): ?string
+    {
+        return env('PW_API_MUTATION_KEY');
     }
 
     /**
@@ -150,10 +163,10 @@ class QueryService
      */
     protected function getHeaders(): array
     {
-        return [
-            'X-Bot-Key' => env("PW_API_MUTATION_KEY"),
-            'X-Api-Key' => env("PW_API_KEY"),
-        ];
+        return array_filter([
+            'X-Bot-Key' => $this->mutationKey,
+            'X-Api-Key' => $this->apiKey,
+        ], fn($value) => ! is_null($value));
     }
 
     /**
