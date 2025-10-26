@@ -66,11 +66,13 @@ class MMRController extends Controller
             array_merge(
                 ['city_count' => $validated['city_count']],
                 array_fill_keys([
+                    'money',
                     'steel',
                     'aluminum',
                     'munitions',
                     'uranium',
                     'food',
+                    'gasoline',
                     'barracks',
                     'factories',
                     'hangars',
@@ -133,11 +135,13 @@ class MMRController extends Controller
     {
         $this->authorize('manage-mmr');
         $fields = [
+            'money',
             'steel',
             'aluminum',
             'munitions',
             'uranium',
             'food',
+            'gasoline',
             'barracks',
             'factories',
             'hangars',
