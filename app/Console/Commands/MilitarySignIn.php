@@ -120,10 +120,6 @@ class MilitarySignIn extends Command
             $parameters['apiKey'] = $credentials['api_key'];
         }
 
-        if (! empty($credentials['mutation_key'])) {
-            $parameters['mutationKey'] = $credentials['mutation_key'];
-        }
-
         return app(QueryService::class, $parameters);
     }
 }
