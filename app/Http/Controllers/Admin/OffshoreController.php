@@ -45,7 +45,7 @@ class OffshoreController extends Controller
             'offshores' => $offshores,
             'snapshots' => $snapshots,
             'transfers' => $transfers,
-            'resources' => PWHelperService::resources(includeMoney: true, includeCredits: true),
+            'resources' => PWHelperService::resources(),
             'guardrailResources' => OffshoreGuardrail::RESOURCES,
             'showCreateModal' => $request->session()->pull('show-offshore-modal') === 'create',
             'editOffshoreId' => $request->session()->pull('edit-offshore-id'),
