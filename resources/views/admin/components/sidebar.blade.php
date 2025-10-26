@@ -53,6 +53,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.cities.index') }}"
+                                icon="bi bi-buildings"
+                                permission="view-members"
+                                :active="request()->routeIs('admin.cities.*')">
+                        Cities
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">Economics</li>
 
                 <li class="nav-item">

@@ -56,7 +56,6 @@
                 <table id="citiesTable" class="table table-hover table-striped align-middle table-sm" style="width: 100%">
                     <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>City</th>
                         <th>Nation</th>
                         <th>Alliance</th>
@@ -91,8 +90,7 @@
                         <th>Factory</th>
                         <th>Hangar</th>
                         <th>Drydock</th>
-                        <th>Created At</th>
-                        <th>Updated At</th>
+                        <th>Last Updated</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -101,11 +99,16 @@
                             $infraAligned = $city->isInfrastructureAligned();
                             $landAligned = $city->isLandAligned();
                             $nation = $city->nation;
+                            $alliance = $nation?->alliance;
                         @endphp
                         <tr @class(['bg-danger-subtle text-danger-emphasis' => ! $city->powered])>
-                            <td>{{ $city->id }}</td>
                             <td>
-                                <span class="fw-semibold">{{ $city->name }}</span>
+                                <a href="https://politicsandwar.com/city/id={{ $city->id }}"
+                                   target="_blank"
+                                   rel="noopener"
+                                   class="fw-semibold link-underline-opacity-0 link-underline-opacity-75-hover">
+                                    {{ $city->name }}
+                                </a>
                             </td>
                             <td>
                                 @if($nation)
@@ -119,7 +122,14 @@
                                 @endif
                             </td>
                             <td>
-                                @if($nation)
+                                @if($nation && $alliance)
+                                    <a href="https://politicsandwar.com/alliance/id={{ $alliance->id }}"
+                                       target="_blank"
+                                       rel="noopener"
+                                       class="badge text-bg-secondary link-underline-opacity-0 link-underline-opacity-75-hover">
+                                        {{ $alliance->name }}
+                                    </a>
+                                @elseif($nation && $nation->alliance_id)
                                     <span class="badge text-bg-secondary">#{{ $nation->alliance_id }}</span>
                                 @else
                                     <span class="text-muted">&mdash;</span>
@@ -170,11 +180,8 @@
                             <td>{{ $city->factory }}</td>
                             <td>{{ $city->hangar }}</td>
                             <td>{{ $city->drydock }}</td>
-                            <td data-order="{{ optional($city->created_at)->format('Y-m-d H:i:s') }}">
-                                {{ optional($city->created_at)->format('Y-m-d H:i') ?? '—' }}
-                            </td>
-                            <td data-order="{{ optional($city->updated_at)->format('Y-m-d H:i:s') }}">
-                                {{ optional($city->updated_at)->format('Y-m-d H:i') ?? '—' }}
+                            <td data-order="{{ optional($city->updated_at)->timestamp ?? 0 }}">
+                                {{ optional($city->updated_at)->diffForHumans() ?? '—' }}
                             </td>
                         </tr>
                     @endforeach

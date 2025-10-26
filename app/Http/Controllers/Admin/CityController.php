@@ -17,9 +17,17 @@ class CityController extends Controller
         $this->authorize('view-members');
 
         $cities = City::query()
-            ->with(['nation:id,nation_name,leader_name,alliance_id'])
+            ->with([
+                'nation' => fn($query) => $query
+                    ->select('id', 'nation_name', 'leader_name', 'alliance_id', 'vacation_mode_turns')
+                    ->with(['alliance:id,name,acronym']),
+            ])
             ->whereHas('nation', function ($query) use ($membershipService) {
-                $query->whereIn('alliance_id', $membershipService->getAllianceIds());
+                $query->whereIn('alliance_id', $membershipService->getAllianceIds())
+                    ->where(function ($query) {
+                        $query->whereNull('vacation_mode_turns')
+                            ->orWhere('vacation_mode_turns', '<=', 0);
+                    });
             })
             ->orderByDesc('powered')
             ->orderBy('nation_id')
