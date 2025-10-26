@@ -28,7 +28,7 @@ class TaxService
         Cache::forget('tax_daily_totals');
 
         $taxes = self::getAllianceTaxes($alliance_id, $client);
-        $lastTaxId = self::getLastScannedTaxRecordId();
+        $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
@@ -99,9 +99,15 @@ class TaxService
     /**
      * @return int
      */
-    public static function getLastScannedTaxRecordId(): int
+    public static function getLastScannedTaxRecordId(?int $allianceId = null): int
     {
-        return Taxes::value(DB::raw('MAX(id)')) ?: 0;
+        $query = Taxes::query();
+
+        if ($allianceId !== null) {
+            $query->where('receiver_id', $allianceId);
+        }
+
+        return (int)($query->max('id') ?? 0);
     }
 
     /**
