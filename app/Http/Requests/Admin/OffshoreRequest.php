@@ -19,15 +19,19 @@ abstract class OffshoreRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('manage-offshores') ?? false;
     }
 
     public function rules(): array
     {
         $nameRule = $this->isUpdate() ? ['sometimes', 'string', 'max:255'] : ['required', 'string', 'max:255'];
         $allianceRule = $this->isUpdate() ? ['sometimes', 'integer', 'exists:alliances,id'] : ['required', 'integer', 'exists:alliances,id'];
-        $apiKeyRule = $this->isUpdate() ? ['sometimes', 'string', 'max:255'] : ['required', 'string', 'max:255'];
-        $mutationKeyRule = $this->isUpdate() ? ['sometimes', 'string', 'max:255'] : ['required', 'string', 'max:255'];
+        $apiKeyRule = $this->isUpdate()
+            ? ['sometimes', 'nullable', 'string', 'max:255']
+            : ['required', 'string', 'max:255'];
+        $mutationKeyRule = $this->isUpdate()
+            ? ['sometimes', 'nullable', 'string', 'max:255']
+            : ['required', 'string', 'max:255'];
 
         return [
             'name' => $nameRule,
@@ -44,7 +48,12 @@ abstract class OffshoreRequest extends FormRequest
 
     public function payload(): array
     {
-        return $this->safe()->except(['guardrails']);
+        return collect($this->safe()->except(['guardrails']))
+            ->reject(function ($value, string $key) {
+                // Avoid overwriting credentials with empty or null values during updates.
+                return in_array($key, ['api_key', 'mutation_key'], true) && blank($value);
+            })
+            ->all();
     }
 
     public function guardrails(): ?array
@@ -53,7 +62,14 @@ abstract class OffshoreRequest extends FormRequest
             return null;
         }
 
-        return collect($this->input('guardrails', []))
+        $rawGuardrails = $this->input('guardrails', []);
+
+        if (! is_array($rawGuardrails)) {
+            return [];
+        }
+
+        return collect($rawGuardrails)
+            ->filter(fn($guardrail) => is_array($guardrail))
             ->map(fn(array $guardrail) => [
                 'resource' => $guardrail['resource'],
                 'minimum_amount' => (float) $guardrail['minimum_amount'],

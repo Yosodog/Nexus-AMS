@@ -11,6 +11,8 @@ return [
     'manage-grants',
     'view-accounts',
     'manage-accounts',
+    'view-offshores',
+    'manage-offshores',
     'view-loans',
     'manage-loans',
     'view-taxes',

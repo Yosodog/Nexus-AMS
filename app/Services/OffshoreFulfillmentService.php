@@ -81,7 +81,7 @@ class OffshoreFulfillmentService
      */
     protected function performFulfillment(Transaction $transaction): OffshoreFulfillmentResult
     {
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
         $required = [];
 
         foreach ($resources as $resource) {
@@ -283,7 +283,7 @@ class OffshoreFulfillmentService
             ->setRootField('alliances')
             ->addArgument('id', $this->mainAllianceId)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
-                $builder->addFields(array_merge(SelectionSetHelper::allianceSet(), ['credits']));
+                $builder->addFields(SelectionSetHelper::allianceSet());
             });
 
         try {
@@ -307,7 +307,7 @@ class OffshoreFulfillmentService
         }
 
         $result = (array)($response->{0} ?? []);
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
 
         return collect($resources)
             ->mapWithKeys(fn(string $resource) => [
@@ -323,9 +323,23 @@ class OffshoreFulfillmentService
      */
     protected function sendOffshoreWithdrawal(Offshore $offshore, Transaction $transaction, array $payload): void
     {
+        $apiKey = $offshore->api_key_decrypted;
+        $mutationKey = $offshore->mutation_key_decrypted;
+
+        if (! $apiKey || ! $mutationKey) {
+            Log::error('Missing offshore credentials for fulfillment withdrawal', [
+                'transaction_id' => $transaction->id,
+                'offshore_id' => $offshore->id,
+                'missing_api_key' => empty($apiKey),
+                'missing_mutation_key' => empty($mutationKey),
+            ]);
+
+            throw new PWQueryFailedException('Offshore credentials are missing or invalid.');
+        }
+
         $parameters = [
-            'apiKey' => $offshore->api_key_decrypted,
-            'mutationKey' => $offshore->mutation_key_decrypted,
+            'apiKey' => $apiKey,
+            'mutationKey' => $mutationKey,
         ];
 
         /** @var QueryService $client */
