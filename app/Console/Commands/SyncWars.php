@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Exceptions\PWQueryFailedException;
 use App\Jobs\FinalizeWarSyncJob;
 use App\Jobs\SyncWarsJob;
+use App\Services\AllianceMembershipService;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\SelectionSetHelper;
@@ -12,7 +13,6 @@ use App\Services\SettingService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Bus;
-
 use Illuminate\Support\Facades\Cache;
 
 use function retry;
@@ -35,16 +35,26 @@ class SyncWars extends Command
         $jobs = [];
         $page = 1;
 
+        /** @var AllianceMembershipService $membershipService */
+        $membershipService = app(AllianceMembershipService::class);
+        $primaryAllianceId = $membershipService->getPrimaryAllianceId();
+
+        if ($primaryAllianceId === 0) {
+            $this->error('Primary alliance ID is not configured.');
+
+            return;
+        }
+
         $pagination = retry(
             3,
-            function () use ($perPage) {
+            function () use ($perPage, $primaryAllianceId) {
                 $client = new QueryService();
                 $builder = (new GraphQLQueryBuilder())
                     ->setRootField("wars")
                     ->addArgument([
                         'first' => $perPage,
                         'active' => false,
-                        'alliance_id' => (int)env("PW_ALLIANCE_ID"),
+                        'alliance_id' => $primaryAllianceId,
                     ])
                     ->addNestedField("data", fn($b) => $b->addFields(SelectionSetHelper::warSet()))
                     ->withPaginationInfo();

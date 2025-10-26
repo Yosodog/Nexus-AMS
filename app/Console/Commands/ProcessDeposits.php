@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AllianceMembershipService;
 use App\Services\DepositService;
 use Illuminate\Console\Command;
 
@@ -27,7 +28,15 @@ class ProcessDeposits extends Command
      */
     public function handle()
     {
-        DepositService::processDeposits(env("PW_ALLIANCE_ID"));
+        $primaryAllianceId = app(AllianceMembershipService::class)->getPrimaryAllianceId();
+
+        if ($primaryAllianceId === 0) {
+            $this->error('Primary alliance ID is not configured; skipping deposit processing.');
+
+            return;
+        }
+
+        DepositService::processDeposits($primaryAllianceId);
     }
 
 }

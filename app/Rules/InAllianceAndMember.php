@@ -4,6 +4,7 @@ namespace App\Rules;
 
 use App\Exceptions\PWEntityDoesNotExist;
 use App\Models\Nation;
+use App\Services\AllianceMembershipService;
 use App\Services\NationQueryService;
 use Closure;
 use Exception;
@@ -12,6 +13,10 @@ use Illuminate\Translation\PotentiallyTranslatedString;
 
 class InAllianceAndMember implements ValidationRule
 {
+    public function __construct(private readonly ?AllianceMembershipService $membershipService = null)
+    {
+    }
+
     /**
      * Run the validation rule.
      *
@@ -19,39 +24,40 @@ class InAllianceAndMember implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        // First let's just see if the nation is in our database
+        $membershipService = $this->membershipService ?? app(AllianceMembershipService::class);
+
         try {
             $nation = Nation::getNationById($value);
 
-            if ($nation->alliance_id == env("PW_ALLIANCE_ID")) {
-                if ($nation->alliance_position == "APPLICANT") {
-                    $fail("You are either not in the alliance or you are still an applicant.");
+            if ($membershipService->contains($nation->alliance_id)) {
+                if ($nation->alliance_position === 'APPLICANT') {
+                    $fail('You are either not in the alliance or you are still an applicant.');
                 }
 
                 return;
             }
-        } catch (Exception $e) {
-        } // We will not do anything with the exception. If they're not in our DB, then we will just move down here naturally
-        // Additionally, if they are in the DB but they are not in the alliance, we need to query to see if our database is just out of date.
+        } catch (Exception $exception) {
+            // Ignore and fall back to the live API check below.
+        }
 
         try {
             $nation = NationQueryService::getNationById($value);
         } catch (PWEntityDoesNotExist) {
-            $fail("That nation does not exist");
+            $fail('That nation does not exist');
 
             return;
         }
 
-        Nation::updateFromAPI($nation); // Obviously we're out of date so just go ahead and save/update the data now
+        Nation::updateFromAPI($nation);
 
-        if ($nation->alliance_id == env("PW_ALLIANCE_ID")) {
-            if ($nation->alliance_position == "APPLICANT") {
-                $fail("You are either not in the alliance or you are still an applicant.");
+        if ($membershipService->contains($nation->alliance_id)) {
+            if ($nation->alliance_position === 'APPLICANT') {
+                $fail('You are either not in the alliance or you are still an applicant.');
             }
 
             return;
         }
 
-        $fail("You are either not in the alliance or you are still an applicant.");
+        $fail('You are either not in the alliance or you are still an applicant.');
     }
 }

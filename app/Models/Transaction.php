@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\OffshoreFulfillmentResult;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,7 @@ class Transaction extends Model
         'approved_at' => 'datetime',
         'denied_at' => 'datetime',
         'refunded_at' => 'datetime',
+        'offshore_fulfillment_details' => 'array',
     ];
 
     /**
@@ -64,6 +66,25 @@ class Transaction extends Model
     public function setSent(): void
     {
         $this->is_pending = false;
+        $this->save();
+    }
+
+    public function recordOffshoreFulfillment(OffshoreFulfillmentResult $result): void
+    {
+        // Persist a snapshot of the fulfillment attempt so reviewers can audit it later.
+        $this->offshore_fulfillment_status = $result->status;
+        $this->offshore_fulfillment_message = $result->message;
+        $this->offshore_fulfillment_details = $result->toArray();
+        $this->save();
+    }
+
+    public function markPendingAdminReview(string $reason): void
+    {
+        $this->requires_admin_approval = true;
+        // Preserve any existing reason while appending the new context for admins.
+        $this->pending_reason = $this->pending_reason
+            ? $this->pending_reason . ' | ' . $reason
+            : $reason;
         $this->save();
     }
 
