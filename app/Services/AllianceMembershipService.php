@@ -40,7 +40,7 @@ class AllianceMembershipService
      */
     public function getPrimaryAllianceId(): int
     {
-        return $this->getAllianceIds()->first() ?? 0;
+        return (int) env('PW_ALLIANCE_ID', 0);
     }
 
     /**
