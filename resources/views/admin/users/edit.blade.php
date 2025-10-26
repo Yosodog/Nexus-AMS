@@ -5,7 +5,7 @@
         $nation = $user->nation;
         $latestSignIn = $latestSignIn ?? optional($nation)->latestSignIn;
         $accounts = $accounts ?? collect();
-        $resourceKeys = ['money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food', 'credits'];
+        $resourceKeys = ['money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'];
         $accountTotalMoney = $accounts->sum('money');
         $roles = $user->roles->pluck('name');
     @endphp
