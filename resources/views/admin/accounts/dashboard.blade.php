@@ -131,7 +131,7 @@
                                 </thead>
                                 <tbody>
                                 @foreach(PWHelperService::resources() as $resource)
-                                    @php $limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0) @endphp
+                                    @php $limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0 @endphp
                                     <tr>
                                         <td class="text-capitalize">{{ $resource }}</td>
                                         <td>
