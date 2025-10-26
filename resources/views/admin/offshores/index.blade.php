@@ -339,6 +339,7 @@
                                 </button>
                             </div>
                             @php($createGuardrails = $modalContext === 'create' ? old('guardrails', []) : [])
+                            <input type="hidden" name="guardrails" value="">
                             <div id="create-guardrail-container" class="guardrail-container" data-next-index="{{ count($createGuardrails) }}">
                                 @foreach($createGuardrails as $index => $guardrail)
                                     @include('admin.offshores.partials.guardrail-row', ['index' => $index, 'guardrail' => $guardrail, 'resources' => $guardrailResources])
@@ -418,6 +419,7 @@
                                             'minimum_amount' => $guardrail->minimum_amount,
                                         ])->all();
                                 @endphp
+                                <input type="hidden" name="guardrails" value="">
                                 <div id="edit-guardrail-container-{{ $offshore->id }}" class="guardrail-container"
                                      data-next-index="{{ count($editGuardrails) }}">
                                     @foreach($editGuardrails as $index => $guardrail)

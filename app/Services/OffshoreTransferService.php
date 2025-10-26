@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Events\OffshoreCacheInvalidated;
 use App\Exceptions\OffshoreTransferException;
 use App\Exceptions\PWQueryFailedException;
-use App\GraphQL\GraphQLQueryBuilder;
-use App\GraphQL\SelectionSetHelper;
 use App\Models\Offshore;
 use App\Models\OffshoreTransfer;
 use App\Models\User;
@@ -133,16 +131,15 @@ class OffshoreTransferService
      */
     protected function sendFromOffshoreToMain(Offshore $offshore, array $payload, string $note): void
     {
+        $credentials = $this->requireOffshoreCredentials($offshore);
+
         $this->executeTransfer(
             fn(GraphQLQueryBuilder $builder) => $builder
                 ->addArgument('receiver', $this->mainAllianceId)
                 ->addArgument('receiver_type', 2)
                 ->addArgument('note', $note),
             $payload,
-            [
-                'apiKey' => $offshore->api_key_decrypted,
-                'mutationKey' => $offshore->mutation_key_decrypted,
-            ],
+            $credentials,
             [
                 'direction' => 'offshore_to_main',
                 'offshore_id' => $offshore->id,
@@ -228,5 +225,29 @@ class OffshoreTransferService
         }
 
         return $offshore?->name ?? 'Offshore';
+    }
+
+    /**
+     * @return array{apiKey: string, mutationKey: string}
+     */
+    protected function requireOffshoreCredentials(Offshore $offshore): array
+    {
+        $apiKey = $offshore->api_key_decrypted;
+        $mutationKey = $offshore->mutation_key_decrypted;
+
+        if (! $apiKey || ! $mutationKey) {
+            Log::error('Missing offshore credentials for manual transfer', [
+                'offshore_id' => $offshore->id,
+                'missing_api_key' => empty($apiKey),
+                'missing_mutation_key' => empty($mutationKey),
+            ]);
+
+            throw new OffshoreTransferException('Offshore credentials are missing or invalid.');
+        }
+
+        return [
+            'apiKey' => $apiKey,
+            'mutationKey' => $mutationKey,
+        ];
     }
 }
