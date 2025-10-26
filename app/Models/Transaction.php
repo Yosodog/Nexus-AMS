@@ -10,6 +10,14 @@ class Transaction extends Model
 
     public $table = "transactions";
 
+    protected $casts = [
+        'is_pending' => 'bool',
+        'requires_admin_approval' => 'bool',
+        'approved_at' => 'datetime',
+        'denied_at' => 'datetime',
+        'refunded_at' => 'datetime',
+    ];
+
     /**
      * @return BelongsTo
      */
@@ -32,6 +40,22 @@ class Transaction extends Model
     public function nation()
     {
         return $this->belongsTo(Nation::class, "nation_id", "id");
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function deniedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'denied_by');
     }
 
     /**

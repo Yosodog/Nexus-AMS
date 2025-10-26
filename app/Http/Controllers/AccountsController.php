@@ -239,11 +239,18 @@ class AccountsController extends Controller
                     $transfer
                 );
             } else {
-                AccountService::transferToNation(
+                $transaction = AccountService::transferToNation(
                     $request->input("from"),
                     Auth::user()->nation_id,
                     $transfer
                 );
+
+                if ($transaction->requires_admin_approval) {
+                    return redirect()->back()->with([
+                        'alert-message' => 'Withdrawal submitted for review. An admin will approve it soon.',
+                        'alert-type' => 'info',
+                    ]);
+                }
             }
 
             return redirect()->back()->with([
