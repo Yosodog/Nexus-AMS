@@ -24,10 +24,19 @@ class UserController extends Controller
     {
         $this->authorize('view-users');
 
-        $users = User::with('nation')
+        $statsQuery = User::query();
+
+        $stats = [
+            'total_users' => (clone $statsQuery)->count(),
+            'admins' => (clone $statsQuery)->where('is_admin', true)->count(),
+            'active_today' => (clone $statsQuery)->whereNotNull('last_active_at')->where('last_active_at', '>=', now()->subDay())->count(),
+        ];
+
+        $users = User::with(['nation', 'roles'])
+            ->latest('last_active_at')
             ->paginate(25);
 
-        return view('admin.users.index', compact('users'));
+        return view('admin.users.index', compact('users', 'stats'));
     }
 
     /**

@@ -28,7 +28,7 @@ class Role extends Model
      */
     public function permissions(): HasMany
     {
-        return $this->hasMany(RolePermission::class);
+        return $this->hasMany(RolePermission::class)->orderBy('permission');
     }
 
     /**
