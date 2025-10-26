@@ -14,6 +14,7 @@ use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
+use App\Services\AllianceMembershipService;
 use App\Services\AllianceQueryService;
 use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
@@ -277,11 +278,14 @@ class SubController extends Controller
             $warCreates = [$warCreates];
         }
 
+        /** @var AllianceMembershipService $membershipService */
+        $membershipService = app(AllianceMembershipService::class);
+
         foreach ($warCreates as $create) {
             // If it's not a war involving our alliance, then skip
-            if ($create['att_alliance_id'] == env("PW_ALLIANCE_ID") || $create['def_alliance_id'] == env(
-                    "PW_ALLIANCE_ID"
-                )) {
+            if ($membershipService->contains($create['att_alliance_id']) || $membershipService->contains(
+                $create['def_alliance_id']
+            )) {
                 War::updateFromAPI((object)$create);
             }
         }

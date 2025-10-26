@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\War;
+use App\Services\AllianceMembershipService;
 use App\Services\WarQueryService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,10 +32,11 @@ class SyncWarsJob implements ShouldQueue
         }
 
         try {
+            $membershipService = app(AllianceMembershipService::class);
             $wars = WarQueryService::getMultipleWars([
                 'page' => $this->page,
                 'active' => false,
-                'alliance_id' => (int)env("PW_ALLIANCE_ID"),
+                'alliance_id' => $membershipService->getPrimaryAllianceId(),
             ], $this->perPage, pagination: true, handlePagination: false);
 
             $ids = [];

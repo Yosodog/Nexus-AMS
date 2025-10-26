@@ -15,15 +15,16 @@ use Throwable;
 
 class OffshoreTransferService
 {
-    private readonly int $mainAllianceId;
+    private int $mainAllianceId;
 
     public function __construct(
         private readonly OffshoreService $offshoreService,
+        private readonly AllianceMembershipService $membershipService,
         ?int $mainAllianceId = null
     ) {
         $resolvedAllianceId = $mainAllianceId !== null && $mainAllianceId > 0
             ? $mainAllianceId
-            : (int) env('PW_ALLIANCE_ID', 0);
+            : $this->membershipService->getPrimaryAllianceId();
 
         $this->mainAllianceId = $resolvedAllianceId;
     }
@@ -40,6 +41,8 @@ class OffshoreTransferService
         User $user,
         ?string $note = null
     ): OffshoreTransfer {
+        $this->mainAllianceId = $this->membershipService->getPrimaryAllianceId();
+
         $transfer = new OffshoreTransfer([
             'user_id' => $user->id,
             'source_type' => $sourceType,

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AllianceMembershipService;
 use App\Services\TaxService;
 use Illuminate\Console\Command;
 
@@ -21,7 +22,15 @@ class CollectTaxes extends Command
      */
     public function handle(): void
     {
-        $lastScanned = TaxService::updateAllianceTaxes(env("PW_ALLIANCE_ID"));
+        $primaryAllianceId = app(AllianceMembershipService::class)->getPrimaryAllianceId();
+
+        if ($primaryAllianceId === 0) {
+            $this->error('Primary alliance ID is not configured.');
+
+            return;
+        }
+
+        $lastScanned = TaxService::updateAllianceTaxes($primaryAllianceId);
 
         $this->info("Updated alliance taxes. Last scanned ID: $lastScanned");
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Nation;
+use App\Services\AllianceMembershipService;
 use App\Services\NationMatchService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -18,7 +19,12 @@ class CounterFinderController extends Controller
      * @param int|null $nation
      * @return Factory|View|Application|RedirectResponse|object
      */
-    public function index(Request $request, NationMatchService $matchService, ?int $nation = null)
+    public function index(
+        Request $request,
+        NationMatchService $matchService,
+        AllianceMembershipService $membershipService,
+        ?int $nation = null
+    )
     {
         $targetNation = null;
         $nations = collect();
@@ -33,7 +39,7 @@ class CounterFinderController extends Controller
             }
 
             $ourNations = Nation::with('military')
-                ->where('alliance_id', env('PW_ALLIANCE_ID'))
+                ->whereIn('alliance_id', $membershipService->getAllianceIds())
                 ->where('alliance_position', '!=', 'APPLICANT')
                 ->where("vacation_mode_turns", 0)
                 ->get();
@@ -53,7 +59,7 @@ class CounterFinderController extends Controller
         } else {
             // No target provided, just list all of our nations
             $nations = Nation::with('military')
-                ->where('alliance_id', env('PW_ALLIANCE_ID'))
+                ->whereIn('alliance_id', $membershipService->getAllianceIds())
                 ->get();
         }
 

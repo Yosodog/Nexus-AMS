@@ -18,6 +18,10 @@ class OffshoreService
 {
     private const CACHE_TTL_MINUTES = 30;
 
+    public function __construct(private readonly AllianceMembershipService $allianceMembershipService)
+    {
+    }
+
     public function all(bool $includeDisabled = false): Collection
     {
         $query = Offshore::query()
@@ -127,6 +131,8 @@ class OffshoreService
     public function clearCaches(Offshore $offshore): void
     {
         Cache::forget($this->balancesCacheKey($offshore));
+        // Keep the alliance membership cache in sync so permission checks stay accurate.
+        $this->allianceMembershipService->refresh();
     }
 
     protected function fetchLiveBalances(Offshore $offshore): array

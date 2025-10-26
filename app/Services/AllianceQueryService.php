@@ -37,13 +37,14 @@ class AllianceQueryService
      * Will get an alliance with all associated members
      *
      * @param int $aID
+     * @param QueryService|null $client
      * @return Alliance
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function getAllianceWithMembersById(int $aID): Alliance
+    public static function getAllianceWithMembersById(int $aID, ?QueryService $client = null): Alliance
     {
-        $client = new QueryService();
+        $client ??= new QueryService();
 
         $builder = (new GraphQLQueryBuilder())
             ->setRootField("alliances")

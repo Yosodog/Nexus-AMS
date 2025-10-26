@@ -22,9 +22,10 @@ class OffshoreFulfillmentService
     private int $mainAllianceId;
 
     public function __construct(
-        protected OffshoreService $offshoreService
+        protected OffshoreService $offshoreService,
+        protected AllianceMembershipService $membershipService
     ) {
-        $this->mainAllianceId = (int) env('PW_ALLIANCE_ID');
+        $this->mainAllianceId = $this->membershipService->getPrimaryAllianceId();
     }
 
     /**
@@ -36,6 +37,8 @@ class OffshoreFulfillmentService
      */
     public function coverShortfall(Transaction $transaction): OffshoreFulfillmentResult
     {
+        $this->mainAllianceId = $this->membershipService->getPrimaryAllianceId();
+
         if ($this->mainAllianceId === 0) {
             Log::error('Main alliance id not configured; cannot perform offshore fulfillment', [
                 'transaction_id' => $transaction->id,
@@ -43,10 +46,10 @@ class OffshoreFulfillmentService
 
             return new OffshoreFulfillmentResult(
                 OffshoreFulfillmentResult::STATUS_FAILED,
-                'Missing PW_ALLIANCE_ID configuration for offshore fulfillment.',
+                'Missing alliance membership configuration for offshore fulfillment.',
                 errors: [
                     [
-                        'message' => 'PW_ALLIANCE_ID environment variable is not set.',
+                        'message' => 'Primary alliance ID is not available in the membership cache.',
                     ],
                 ]
             );

@@ -27,6 +27,7 @@
                 </tr>
                 </thead>
                 <tbody>
+                @php($membershipService = app(\App\Services\AllianceMembershipService::class))
                 @foreach($users as $user)
                     <tr>
                         <td>
@@ -38,7 +39,7 @@
                         <td>{{ $user->nation->discord ?? '—' }}</td>
                         <td><a href="https://politicsandwar.com/nation/id={{ $user->nation_id }}" target="_blank">{{ $user->nation_id }}</a></td>
                         <td>
-                            @if($user->nation && $user->nation->alliance_id === (int) env("PW_ALLIANCE_ID"))
+                            @if($user->nation && $membershipService->contains($user->nation->alliance_id))
                                 <span class="badge bg-primary">Yes</span>
                             @else
                                 <span class="badge bg-secondary">No</span>

@@ -27,6 +27,21 @@ Nexus AMS is structured to be modular and scalable:
 
 This application is supposed to help you manage your alliance, so expect a fully-fledged system eventually.
 
+### Alliance membership helper
+Many features need to know whether a nation belongs to "our" alliance group. Always resolve
+`AllianceMembershipService` instead of reading `PW_ALLIANCE_ID` directly:
+
+```php
+$membership = app(\App\Services\AllianceMembershipService::class);
+
+if ($membership->contains($nation->alliance_id)) {
+    // Treat this nation as part of our umbrella, including enabled offshores.
+}
+```
+
+The service merges the primary alliance ID with every enabled offshore and caches the result. When an offshore
+is toggled or its alliance changes, the membership cache is refreshed automatically.
+
 ### Tech Stack:
 - **Backend:** Laravel (PHP 8.3+)
 - **Frontend:** Blade with Tailwind CSS (DaisyUI)

@@ -12,13 +12,17 @@ use Carbon\Carbon;
 
 class MemberStatsService
 {
+    public function __construct(private readonly AllianceMembershipService $membershipService)
+    {
+    }
+
     /**
      * @return array
      */
     public function getOverviewData(): array
     {
         $nations = Nation::with(['resources', 'accounts', 'military'])
-            ->where('alliance_id', env("PW_ALLIANCE_ID"))
+            ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
             ->get();

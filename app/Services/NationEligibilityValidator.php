@@ -9,10 +9,12 @@ class NationEligibilityValidator
 {
 
     protected Nation $nation;
+    protected AllianceMembershipService $membershipService;
 
-    public function __construct(Nation $nation)
+    public function __construct(Nation $nation, ?AllianceMembershipService $membershipService = null)
     {
         $this->nation = $nation;
+        $this->membershipService = $membershipService ?? app(AllianceMembershipService::class);
     }
 
     /**
@@ -22,7 +24,7 @@ class NationEligibilityValidator
      */
     public function validateAllianceMembership(): void
     {
-        if ($this->nation->alliance_id != env("PW_ALLIANCE_ID")) {
+        if (! $this->membershipService->contains($this->nation->alliance_id)) {
             throw ValidationException::withMessages([
                 'alliance' => 'You are not a member of the required alliance.',
             ]);
