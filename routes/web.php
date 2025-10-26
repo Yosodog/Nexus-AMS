@@ -319,9 +319,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
             Route::post('/update-mmr-assistant-settings', [MMRController::class, 'updateAssistantSettings'])->name('admin.mmr.assistant.update');
         });
 
-        Route::prefix('customization')
-            ->middleware('can:manage-custom-pages')
-            ->group(function () {
+        Route::prefix('customization')->group(function () {
+            Route::middleware('can:manage-custom-pages')->group(function () {
                 Route::get('/', [CustomizationController::class, 'index'])->name('admin.customization.index');
                 Route::get('/pages/{page}', [CustomizationController::class, 'edit'])->name('admin.customization.edit');
                 Route::post('/pages/{page}/preview', [CustomizationController::class, 'preview'])->name('admin.customization.preview');
@@ -331,9 +330,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
                 Route::post('/pages/{page}/restore', [CustomizationController::class, 'restore'])->name('admin.customization.restore');
 
                 Route::post('/images', [CustomizationImageController::class, 'store'])->name('admin.customization.images.store');
-                Route::get('/images/{token}', [CustomizationImageController::class, 'show'])
-                    ->middleware('signed')
-                    ->name('admin.customization.images.show');
             });
+
+            Route::get('/images/{token}', [CustomizationImageController::class, 'show'])
+                ->middleware('signed')
+                ->name('admin.customization.images.show');
+        });
 
     });
