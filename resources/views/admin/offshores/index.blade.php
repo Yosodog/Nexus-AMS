@@ -44,9 +44,11 @@
 
                 <div class="card-body">
                     <div class="table-responsive">
-                        <form id="offshore-priority-form" action="{{ route('admin.offshores.reorder') }}" method="POST">
+                        <form id="offshore-priority-form" action="{{ route('admin.offshores.reorder') }}" method="POST" class="d-none">
                             @csrf
-                            <table class="table table-hover align-middle">
+                        </form>
+
+                        <table class="table table-hover align-middle">
                                 <thead class="table-light">
                                 <tr>
                                     <th style="width: 90px;">Priority</th>
@@ -74,7 +76,8 @@
                                                        value="{{ old('order.' . $offshore->id, $offshore->priority) }}"
                                                        class="form-control form-control-sm"
                                                        min="0"
-                                                       aria-label="Priority for {{ $offshore->name }}">
+                                                       aria-label="Priority for {{ $offshore->name }}"
+                                                       form="offshore-priority-form">
                                             @else
                                                 <span class="badge text-bg-secondary">{{ $offshore->priority }}</span>
                                             @endif
@@ -134,12 +137,19 @@
                                                     <button class="btn btn-outline-secondary"
                                                             type="button"
                                                             data-bs-toggle="modal"
-                                                            data-bs-target="#editOffshoreModal-{{ $offshore->id }}">
+                                                            data-bs-target="#editOffshoreModal-{{ $offshore->id }}"
+                                                            data-bs-tooltip="true"
+                                                            data-bs-placement="top"
+                                                            title="Edit offshore">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
                                                     <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-outline-primary" title="Refresh balances">
+                                                        <button type="submit"
+                                                                class="btn btn-outline-primary"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
+                                                                title="Refresh balances">
                                                             <i class="bi bi-arrow-clockwise"></i>
                                                         </button>
                                                     </form>
@@ -151,6 +161,8 @@
                                                             data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#manualTransferModal"
+                                                            data-bs-tooltip="true"
+                                                            data-bs-placement="top"
                                                             title="Transfer to main bank">
                                                         <i class="bi bi-upload"></i>
                                                     </button>
@@ -162,12 +174,18 @@
                                                             data-destination-id="{{ $offshore->id }}"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#manualTransferModal"
+                                                            data-bs-tooltip="true"
+                                                            data-bs-placement="top"
                                                             title="Send funds from main bank">
                                                         <i class="bi bi-download"></i>
                                                     </button>
                                                     <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-outline-warning" title="Toggle availability">
+                                                        <button type="submit"
+                                                                class="btn btn-outline-warning"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
+                                                                title="Toggle availability">
                                                             <i class="bi bi-power"></i>
                                                         </button>
                                                     </form>
@@ -175,7 +193,11 @@
                                                           onsubmit="return confirm('Delete {{ $offshore->name }}? This action cannot be undone.');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-outline-danger" title="Delete offshore">
+                                                        <button type="submit"
+                                                                class="btn btn-outline-danger"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
+                                                                title="Delete offshore">
                                                             <i class="bi bi-trash"></i>
                                                         </button>
                                                     </form>
@@ -192,7 +214,6 @@
                                 @endforelse
                                 </tbody>
                             </table>
-                        </form>
                     </div>
                 </div>
             </div>
@@ -530,6 +551,22 @@
         </div>
     </template>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.bootstrap || !bootstrap.Tooltip) {
+                return;
+            }
+
+            const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-tooltip="true"]'));
+
+            tooltipTriggerList.forEach((tooltipTriggerEl) => {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+@endpush
 
 @push('scripts')
     <script>
