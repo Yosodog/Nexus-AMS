@@ -32,16 +32,20 @@ class ManualOffshoreTransferRequest extends FormRequest
             $sourceType = $this->input('source_type');
             $destinationType = $this->input('destination_type');
 
-            if ($sourceType === $destinationType) {
-                $validator->errors()->add('destination_type', 'Source and destination must be different.');
-            }
-
             if ($sourceType === 'offshore' && ! $this->filled('source_offshore_id')) {
                 $validator->errors()->add('source_offshore_id', 'Select an offshore to withdraw from.');
             }
 
             if ($destinationType === 'offshore' && ! $this->filled('destination_offshore_id')) {
                 $validator->errors()->add('destination_offshore_id', 'Select an offshore to deposit to.');
+            }
+
+            if ($sourceType === $destinationType) {
+                if ($sourceType !== 'offshore') {
+                    $validator->errors()->add('destination_type', 'Source and destination must be different.');
+                } elseif ($this->input('source_offshore_id') === $this->input('destination_offshore_id')) {
+                    $validator->errors()->add('destination_offshore_id', 'Select a different offshore to deposit to.');
+                }
             }
 
             $payload = $this->validatedResources();
