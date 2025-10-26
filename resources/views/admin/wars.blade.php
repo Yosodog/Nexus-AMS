@@ -125,7 +125,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @php($membershipService = app(\App\Services\AllianceMembershipService::class))
+                @php $membershipService = app(\App\Services\AllianceMembershipService::class) @endphp
                 @foreach ($wars as $war)
                     @php
                         $isUsAttacker = $membershipService->contains($war->att_alliance_id);

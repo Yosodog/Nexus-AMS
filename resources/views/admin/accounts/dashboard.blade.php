@@ -131,7 +131,7 @@
                                 </thead>
                                 <tbody>
                                 @foreach(PWHelperService::resources() as $resource)
-                                    @php($limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0)
+                                    @php $limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0) @endphp
                                     <tr>
                                         <td class="text-capitalize">{{ $resource }}</td>
                                         <td>
@@ -183,7 +183,7 @@
                                     <td>
                                         <ul class="mb-0 ps-3">
                                             @foreach(PWHelperService::resources() as $resource)
-                                                @php($amount = $transaction->{$resource})
+                                                @php $amount = $transaction->{$resource} @endphp
                                                 @if($amount > 0)
                                                     <li>
                                                         {{ ucfirst($resource) }}:

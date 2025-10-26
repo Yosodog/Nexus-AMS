@@ -27,7 +27,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @php($membershipService = app(\App\Services\AllianceMembershipService::class))
+                @php $membershipService = app(\App\Services\AllianceMembershipService::class) @endphp
                 @foreach($users as $user)
                     <tr>
                         <td>
