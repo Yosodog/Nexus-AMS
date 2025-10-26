@@ -127,21 +127,30 @@
                                 <tr>
                                     <th>Resource</th>
                                     <th>Daily Auto-Approval Limit</th>
+                                    <th>Resource</th>
+                                    <th>Daily Auto-Approval Limit</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                @foreach(PWHelperService::resources() as $resource)
-                                    @php($limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0)
+                                @php($resources = array_values(PWHelperService::resources()))
+                                @foreach(array_chunk($resources, 2) as $pair)
                                     <tr>
-                                        <td class="text-capitalize">{{ $resource }}</td>
-                                        <td>
-                                            <div class="input-group">
-                                                <span class="input-group-text">{{ $resource === 'money' ? '$' : '' }}</span>
-                                                <input type="number" step="0.01" min="0" class="form-control"
-                                                       name="limits[{{ $resource }}]"
-                                                       value="{{ old('limits.' . $resource, $limit) }}">
-                                            </div>
-                                        </td>
+                                        @foreach($pair as $resource)
+                                            @php($limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0)
+                                            <td class="text-capitalize">{{ $resource }}</td>
+                                            <td>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">{{ $resource === 'money' ? '$' : '' }}</span>
+                                                    <input type="number" step="0.01" min="0" class="form-control"
+                                                           name="limits[{{ $resource }}]"
+                                                           value="{{ old('limits.' . $resource, $limit) }}">
+                                                </div>
+                                            </td>
+                                        @endforeach
+                                        @if(count($pair) === 1)
+                                            <td></td>
+                                            <td></td>
+                                        @endif
                                     </tr>
                                 @endforeach
                                 </tbody>
