@@ -407,9 +407,10 @@ class AccountService
      *
      * @return mixed
      */
-    public static function getRelatedManualTransactions(Account $account, int $perPage)
+    public static function getRelatedManualTransactions(Account $account, int $perPage = 50)
     {
         return ManualTransaction::where("account_id", $account->id)
+            ->with('admin')
             ->orderBy("created_at", "DESC")
             ->paginate($perPage);
     }

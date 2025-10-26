@@ -135,6 +135,52 @@
         {{ $transactions->links() }}
     </x-utils.card>
 
+    <div class="divider"></div>
+
+    <x-utils.card title="Manual Adjustments" extraClasses="mb-2">
+        @if($manualTransactions->count())
+            <div class="overflow-x-auto">
+                <table class="table w-full table-zebra">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Admin</th>
+                        <th>Money</th>
+                        @foreach(PWHelperService::resources(false) as $resource)
+                            <th>{{ ucfirst($resource) }}</th>
+                        @endforeach
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($manualTransactions as $transaction)
+                        <tr class="hover">
+                            <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                            <td>
+                                @if($transaction->admin)
+                                    {{ $transaction->admin->name }}
+                                @elseif($transaction->admin_id)
+                                    Admin #{{ $transaction->admin_id }}
+                                @else
+                                    System
+                                @endif
+                            </td>
+                            <td>${{ number_format($transaction->money, 2) }}</td>
+                            @foreach(PWHelperService::resources(false) as $resource)
+                                <td>{{ number_format($transaction->$resource, 2) }}</td>
+                            @endforeach
+                            <td>{{ $transaction->note }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            {{ $manualTransactions->links() }}
+        @else
+            <p class="text-center py-4">No manual adjustments found.</p>
+        @endif
+    </x-utils.card>
+
     @if($ddLogs->count())
         <div class="divider"></div>
 
