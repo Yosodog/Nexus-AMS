@@ -122,7 +122,9 @@ class OffshoreController extends Controller
             'order.*' => ['integer'],
         ]);
 
-        $order = collect($data['order'] ?? [])->map(fn($priority) => (int) $priority);
+        $order = collect($data['order'] ?? [])->mapWithKeys(
+            fn($priority, $id) => [(int) $id => (int) $priority]
+        );
 
         $offshores = Offshore::query()->whereIn('id', $order->keys())->get();
 
