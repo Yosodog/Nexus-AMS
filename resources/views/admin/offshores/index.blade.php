@@ -5,6 +5,8 @@
     $modalContext = old('modal_context');
     $showCreateModal = ($showCreateModal ?? false) || $modalContext === 'create';
     $editOffshoreId = $editOffshoreId ?? (Str::startsWith($modalContext, 'edit-') ? (int) Str::after($modalContext, 'edit-') : null);
+    $mainBankSnapshot = $mainBankSnapshot ?? ['balances' => [], 'cached_at' => null];
+    $mainBankCachedAt = $mainBankSnapshot['cached_at'] ?? null;
 @endphp
 
 @extends('layouts.admin')
@@ -179,6 +181,17 @@
                                                             title="Send funds from main bank">
                                                         <i class="bi bi-download"></i>
                                                     </button>
+                                                    <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" class="d-inline"
+                                                          onsubmit="return confirm('Sweep the entire main bank into {{ $offshore->name }}? This cannot be undone.');">
+                                                        @csrf
+                                                        <button type="submit"
+                                                                class="btn btn-outline-dark"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
+                                                                title="Sweep entire main bank into this offshore">
+                                                            <i class="bi bi-bank"></i>
+                                                        </button>
+                                                    </form>
                                                     <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit"
@@ -218,91 +231,133 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        @if($canManageOffshores)
-            <div class="col-lg-5">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">Manual Transfer</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted small">Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.</p>
-                        <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#manualTransferModal">
-                            <i class="bi bi-cash-coin me-1"></i> Start Transfer
-                        </button>
-                    </div>
+    <div class="row g-4">
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Main Bank Snapshot</h5>
+                    @if($canManageOffshores)
+                        <form action="{{ route('admin.offshores.main-bank.refresh') }}" method="POST" class="ms-2">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                            </button>
+                        </form>
+                    @endif
+                </div>
+                <div class="card-body">
+                    @php
+                        $visibleMainBalances = collect($mainBankSnapshot['balances'] ?? [])->filter(fn($amount) => $amount > 0);
+                    @endphp
+                    @if($visibleMainBalances->isNotEmpty())
+                        <div class="text-muted small">
+                            Cached {{ $mainBankCachedAt ? $mainBankCachedAt->diffForHumans() : 'recently' }}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            @foreach($visibleMainBalances as $resource => $amount)
+                                <span class="badge text-bg-light text-capitalize">
+                                    {{ $resource }}:
+                                    {{ $resource === 'money' ? '$' . number_format($amount, 2) : number_format($amount, 2) }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No cached main bank data yet.</p>
+                    @endif
                 </div>
             </div>
-            <div class="col-lg-7">
-        @else
-            <div class="col-12">
-        @endif
-                <div class="card shadow-sm h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Recent Manual Transfers</h5>
-                        <span class="text-muted small">Last {{ $transfers->count() }} records</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped align-middle mb-0">
-                                <thead>
-                                <tr>
-                                    <th>When</th>
-                                    <th>Initiated By</th>
-                                    <th>Route</th>
-                                    <th>Payload</th>
-                                    <th>Status</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @forelse($transfers as $transfer)
-                                    <tr>
-                                        <td>{{ $transfer->created_at?->format('M d, Y H:i') ?? 'Unknown' }}</td>
-                                        <td>{{ $transfer->user?->name ?? 'Unknown User' }}</td>
-                                        <td>
-                                            {{ $transfer->source_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->sourceOffshore?->name ?? 'Offshore') }}
-                                            <i class="bi bi-arrow-right-short"></i>
-                                            {{ $transfer->destination_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->destinationOffshore?->name ?? 'Offshore') }}
-                                        </td>
-                                        <td>
-                                            <ul class="list-inline mb-0 small">
-                                                @foreach($transfer->payload as $resource => $amount)
-                                                    <li class="list-inline-item text-capitalize">
-                                                        <span class="badge text-bg-light">
-                                                            {{ $resource }}:
-                                                            {{ $resource === 'money' ? '$' . number_format($amount, 2) : number_format($amount, 2) }}
-                                                        </span>
-                                                    </li>
-                                                @endforeach
-                                            </ul>
-                                            @if($transfer->message)
-                                                <div class="small text-muted mt-1">{{ $transfer->message }}</div>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @switch($transfer->status)
-                                                @case(\App\Models\OffshoreTransfer::STATUS_COMPLETED)
-                                                    <span class="badge text-bg-success">Completed</span>
-                                                    @break
-                                                @case(\App\Models\OffshoreTransfer::STATUS_FAILED)
-                                                    <span class="badge text-bg-danger">Failed</span>
-                                                    @break
-                                                @default
-                                                    <span class="badge text-bg-secondary">Pending</span>
-                                            @endswitch
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">No transfers recorded yet.</td>
-                                    </tr>
-                                @endforelse
-                                </tbody>
-                            </table>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            <div class="row g-4 h-100">
+                @if($canManageOffshores)
+                    <div class="col-12 col-lg-5 col-xl-6">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Manual Transfer</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small">Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.</p>
+                                <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#manualTransferModal">
+                                    <i class="bi bi-cash-coin me-1"></i> Start Transfer
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    <div class="col-12 col-lg-7 col-xl-6">
+                @else
+                    <div class="col-12">
+                @endif
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Recent Manual Transfers</h5>
+                                <span class="text-muted small">Last {{ $transfers->count() }} records</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped align-middle mb-0">
+                                        <thead>
+                                        <tr>
+                                            <th>When</th>
+                                            <th>Initiated By</th>
+                                            <th>Route</th>
+                                            <th>Payload</th>
+                                            <th>Status</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @forelse($transfers as $transfer)
+                                            <tr>
+                                                <td>{{ $transfer->created_at?->format('M d, Y H:i') ?? 'Unknown' }}</td>
+                                                <td>{{ $transfer->user?->name ?? 'Unknown User' }}</td>
+                                                <td>
+                                                    {{ $transfer->source_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->sourceOffshore?->name ?? 'Offshore') }}
+                                                    <i class="bi bi-arrow-right-short"></i>
+                                                    {{ $transfer->destination_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->destinationOffshore?->name ?? 'Offshore') }}
+                                                </td>
+                                                <td>
+                                                    <ul class="list-inline mb-0 small">
+                                                        @foreach($transfer->payload as $resource => $amount)
+                                                            <li class="list-inline-item text-capitalize">
+                                                                <span class="badge text-bg-light">
+                                                                    {{ $resource }}:
+                                                                    {{ $resource === 'money' ? '$' . number_format($amount, 2) : number_format($amount, 2) }}
+                                                                </span>
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                    @if($transfer->message)
+                                                        <div class="small text-muted mt-1">{{ $transfer->message }}</div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @switch($transfer->status)
+                                                        @case(\App\Models\OffshoreTransfer::STATUS_COMPLETED)
+                                                            <span class="badge text-bg-success">Completed</span>
+                                                            @break
+                                                        @case(\App\Models\OffshoreTransfer::STATUS_FAILED)
+                                                            <span class="badge text-bg-danger">Failed</span>
+                                                            @break
+                                                        @default
+                                                            <span class="badge text-bg-secondary">Pending</span>
+                                                    @endswitch
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-4">No transfers recorded yet.</td>
+                                            </tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
             </div>
+        </div>
     </div>
 
     @if($canManageOffshores)
