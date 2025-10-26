@@ -247,7 +247,7 @@ class AccountsController extends Controller
 
                 if ($transaction->requires_admin_approval) {
                     return redirect()->back()->with([
-                        'alert-message' => 'Withdrawal submitted for review. An admin will approve it soon.',
+                        'alert-message' => 'That withdrawal was over the limit. It will be processed once approved by an admin.',
                         'alert-type' => 'info',
                     ]);
                 }
