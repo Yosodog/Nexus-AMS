@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             DirectDepositDefaultBracketSeeder::class,
             MMRTierZeroSeeder::class,
             MMRSettingSeeder::class,
+            OffshorePrioritySeeder::class,
         ]);
     }
 }
