@@ -143,7 +143,7 @@ class MainBankService
             ->setRootField('alliances')
             ->addArgument('id', $this->mainAllianceId)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
-                $builder->addFields(array_merge(SelectionSetHelper::allianceSet(), ['credits']));
+                $builder->addFields(SelectionSetHelper::allianceSet());
             });
 
         try {
@@ -167,7 +167,7 @@ class MainBankService
         }
 
         $result = (array) ($response->{0} ?? []);
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
 
         return collect($resources)
             ->mapWithKeys(fn(string $resource) => [

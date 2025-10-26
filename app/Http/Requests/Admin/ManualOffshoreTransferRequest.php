@@ -61,7 +61,7 @@ class ManualOffshoreTransferRequest extends FormRequest
      */
     public function validatedResources(): array
     {
-        $allowedResources = PWHelperService::resources(includeMoney: true, includeCredits: true);
+        $allowedResources = PWHelperService::resources();
 
         return collect($this->input('resources', []))
             ->filter(fn($value, $resource) => in_array($resource, $allowedResources, true))
