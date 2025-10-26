@@ -19,7 +19,7 @@ abstract class OffshoreRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('manage-offshores') ?? false;
     }
 
     public function rules(): array
@@ -44,7 +44,12 @@ abstract class OffshoreRequest extends FormRequest
 
     public function payload(): array
     {
-        return $this->safe()->except(['guardrails']);
+        return collect($this->safe()->except(['guardrails']))
+            ->reject(function ($value, string $key) {
+                // Avoid overwriting credentials with empty strings during updates.
+                return in_array($key, ['api_key', 'mutation_key'], true) && $value === '';
+            })
+            ->all();
     }
 
     public function guardrails(): ?array

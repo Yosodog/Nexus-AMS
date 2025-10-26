@@ -65,6 +65,15 @@
                 </li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.offshores.index') }}"
+                                icon="bi bi-compass"
+                                permission="view-offshores"
+                                :active="request()->routeIs('admin.offshores.*')">
+                        Offshores
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.grants.city') }}"
                                 icon="bi bi-houses-fill"
                                 permission="view-city-grants"

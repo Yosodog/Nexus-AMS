@@ -7,6 +7,7 @@ use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
@@ -77,9 +78,16 @@ class OffshoreService
             Cache::forget($cacheKey);
         }
 
-        return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL_MINUTES), function () use ($offshore) {
-            return $this->fetchLiveBalances($offshore);
-        });
+        $snapshot = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(self::CACHE_TTL_MINUTES),
+            function () use ($offshore) {
+                // Ensure we store both the balances and when they were captured for UI context.
+                return $this->buildSnapshot($offshore);
+            }
+        );
+
+        return $this->normalizeSnapshot($snapshot)['balances'];
     }
 
     public function refreshBalances(Offshore $offshore, bool $force = false): array
@@ -93,8 +101,9 @@ class OffshoreService
         }
 
         $balances = $this->fetchLiveBalances($offshore);
+        $snapshot = $this->buildSnapshot($offshore, $balances);
 
-        Cache::put($cacheKey, $balances, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        Cache::put($cacheKey, $snapshot, now()->addMinutes(self::CACHE_TTL_MINUTES));
 
         Log::info('Offshore balances refreshed', [
             'offshore_id' => $offshore->id,
@@ -103,6 +112,16 @@ class OffshoreService
         ]);
 
         return $balances;
+    }
+
+    /**
+     * Retrieve the cached balances alongside their timestamp for dashboards.
+     */
+    public function getCachedSnapshot(Offshore $offshore): array
+    {
+        $snapshot = Cache::get($this->balancesCacheKey($offshore));
+
+        return $this->normalizeSnapshot($snapshot);
     }
 
     public function clearCaches(Offshore $offshore): void
@@ -206,5 +225,54 @@ class OffshoreService
     protected function balancesCacheKey(Offshore $offshore): string
     {
         return sprintf('offshores:%d:balances', $offshore->id);
+    }
+
+    /**
+     * @param array<string, float>|mixed $snapshot
+     * @return array{balances: array<string, float>, cached_at: Carbon|null}
+     */
+    protected function normalizeSnapshot(mixed $snapshot): array
+    {
+        if (is_array($snapshot) && array_key_exists('balances', $snapshot)) {
+            $balances = (array) ($snapshot['balances'] ?? []);
+            $cachedAt = $snapshot['cached_at'] ?? null;
+
+            if ($cachedAt instanceof Carbon) {
+                return [
+                    'balances' => $balances,
+                    'cached_at' => $cachedAt,
+                ];
+            }
+
+            return [
+                'balances' => $balances,
+                'cached_at' => $cachedAt ? Carbon::parse($cachedAt) : null,
+            ];
+        }
+
+        if (is_array($snapshot)) {
+            return [
+                'balances' => array_map('floatval', $snapshot),
+                'cached_at' => null,
+            ];
+        }
+
+        return [
+            'balances' => [],
+            'cached_at' => null,
+        ];
+    }
+
+    /**
+     * Build a snapshot payload for caching.
+     */
+    protected function buildSnapshot(Offshore $offshore, ?array $balances = null): array
+    {
+        $balances ??= $this->fetchLiveBalances($offshore);
+
+        return [
+            'balances' => $balances,
+            'cached_at' => now(),
+        ];
     }
 }

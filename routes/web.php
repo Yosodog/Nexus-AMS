@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
+use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -144,6 +145,31 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         );
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
             ->name('admin.accounts.transactions.refund')
+            ->middleware(BlockWhenPWDown::class);
+
+        Route::get('/offshores', [OffshoreController::class, 'index'])->name('admin.offshores.index');
+        Route::get('/offshores/create', [OffshoreController::class, 'create'])->name('admin.offshores.create');
+        Route::post('/offshores', [OffshoreController::class, 'store'])
+            ->name('admin.offshores.store')
+            ->middleware(BlockWhenPWDown::class);
+        Route::get('/offshores/{offshore}/edit', [OffshoreController::class, 'edit'])->name('admin.offshores.edit');
+        Route::put('/offshores/{offshore}', [OffshoreController::class, 'update'])
+            ->name('admin.offshores.update')
+            ->middleware(BlockWhenPWDown::class);
+        Route::delete('/offshores/{offshore}', [OffshoreController::class, 'destroy'])
+            ->name('admin.offshores.destroy')
+            ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/reorder', [OffshoreController::class, 'reorder'])
+            ->name('admin.offshores.reorder')
+            ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/{offshore}/toggle', [OffshoreController::class, 'toggle'])
+            ->name('admin.offshores.toggle')
+            ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/{offshore}/refresh', [OffshoreController::class, 'refresh'])
+            ->name('admin.offshores.refresh')
+            ->middleware(BlockWhenPWDown::class);
+        Route::post('/offshores/transfer', [OffshoreController::class, 'transfer'])
+            ->name('admin.offshores.transfer')
             ->middleware(BlockWhenPWDown::class);
 
         Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
