@@ -5,6 +5,8 @@
     $modalContext = old('modal_context');
     $showCreateModal = ($showCreateModal ?? false) || $modalContext === 'create';
     $editOffshoreId = $editOffshoreId ?? (Str::startsWith($modalContext, 'edit-') ? (int) Str::after($modalContext, 'edit-') : null);
+    $mainBankSnapshot = $mainBankSnapshot ?? ['balances' => [], 'cached_at' => null];
+    $mainBankCachedAt = $mainBankSnapshot['cached_at'] ?? null;
 @endphp
 
 @extends('layouts.admin')
@@ -31,7 +33,7 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-12">
+        <div class="col-12 col-xl-8">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Configured Offshores</h5>
@@ -179,6 +181,17 @@
                                                             title="Send funds from main bank">
                                                         <i class="bi bi-download"></i>
                                                     </button>
+                                                    <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" class="d-inline"
+                                                          onsubmit="return confirm('Sweep the entire main bank into {{ $offshore->name }}? This cannot be undone.');">
+                                                        @csrf
+                                                        <button type="submit"
+                                                                class="btn btn-outline-dark"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
+                                                                title="Sweep entire main bank into this offshore">
+                                                            <i class="bi bi-bank"></i>
+                                                        </button>
+                                                    </form>
                                                     <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit"
@@ -215,6 +228,42 @@
                                 </tbody>
                             </table>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Main Bank Snapshot</h5>
+                    @if($canManageOffshores)
+                        <form action="{{ route('admin.offshores.main-bank.refresh') }}" method="POST" class="ms-2">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                            </button>
+                        </form>
+                    @endif
+                </div>
+                <div class="card-body">
+                    @php
+                        $visibleMainBalances = collect($mainBankSnapshot['balances'] ?? [])->filter(fn($amount) => $amount > 0);
+                    @endphp
+                    @if($visibleMainBalances->isNotEmpty())
+                        <div class="text-muted small">
+                            Cached {{ $mainBankCachedAt ? $mainBankCachedAt->diffForHumans() : 'recently' }}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            @foreach($visibleMainBalances as $resource => $amount)
+                                <span class="badge text-bg-light text-capitalize">
+                                    {{ $resource }}:
+                                    {{ $resource === 'money' ? '$' . number_format($amount, 2) : number_format($amount, 2) }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No cached main bank data yet.</p>
+                    @endif
                 </div>
             </div>
         </div>
