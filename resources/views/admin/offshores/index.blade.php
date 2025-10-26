@@ -249,7 +249,8 @@
                 </div>
                 <div class="card-body">
                     @php
-                        $visibleMainBalances = collect($mainBankSnapshot['balances'] ?? [])->filter(fn($amount) => $amount > 0);
+                        $visibleMainBalances = collect($mainBankSnapshot['balances'] ?? [])
+                            ->filter(fn($amount) => $amount !== null);
                     @endphp
                     @if($visibleMainBalances->isNotEmpty())
                         <div class="text-muted small">
