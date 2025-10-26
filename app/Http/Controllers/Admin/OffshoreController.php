@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\UpdateOffshoreRequest;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
 use App\Models\OffshoreTransfer;
+use App\Services\MainBankService;
 use App\Services\OffshoreService;
 use App\Services\OffshoreTransferService;
 use App\Services\PWHelperService;
@@ -23,7 +24,8 @@ class OffshoreController extends Controller
 {
     public function __construct(
         private readonly OffshoreService $offshoreService,
-        private readonly OffshoreTransferService $transferService
+        private readonly OffshoreTransferService $transferService,
+        private readonly MainBankService $mainBankService
     ) {
     }
 
@@ -41,12 +43,15 @@ class OffshoreController extends Controller
             ->limit(15)
             ->get();
 
+        $mainBankSnapshot = $this->mainBankService->getCachedSnapshot();
+
         return view('admin.offshores.index', [
             'offshores' => $offshores,
             'snapshots' => $snapshots,
             'transfers' => $transfers,
             'resources' => PWHelperService::resources(),
             'guardrailResources' => OffshoreGuardrail::RESOURCES,
+            'mainBankSnapshot' => $mainBankSnapshot,
             'showCreateModal' => $request->session()->pull('show-offshore-modal') === 'create',
             'editOffshoreId' => $request->session()->pull('edit-offshore-id'),
         ]);
@@ -200,6 +205,65 @@ class OffshoreController extends Controller
 
         return redirect()->route('admin.offshores.index')->with([
             'alert-message' => 'Manual transfer dispatched successfully.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function refreshMainBank(): RedirectResponse
+    {
+        Gate::authorize('manage-offshores');
+
+        $balances = $this->mainBankService->refreshBalances();
+
+        return redirect()->route('admin.offshores.index')->with([
+            'alert-message' => 'Main bank balances refreshed: ' . implode(', ', $this->formatBalancesForMessage($balances)),
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function sweepToOffshore(Request $request, Offshore $offshore): RedirectResponse
+    {
+        Gate::authorize('manage-offshores');
+
+        $balances = $this->mainBankService->refreshBalances();
+
+        $payload = collect(PWHelperService::resources())
+            ->mapWithKeys(fn(string $resource) => [
+                $resource => (float) ($balances[$resource] ?? 0),
+            ])
+            ->filter(fn(float $amount) => $amount > 0)
+            ->all();
+
+        if (empty($payload)) {
+            return redirect()->route('admin.offshores.index')->with([
+                'alert-message' => 'Main bank is already empty—no transfer was dispatched.',
+                'alert-type' => 'info',
+            ]);
+        }
+
+        try {
+            $this->transferService->transfer(
+                OffshoreTransfer::TYPE_MAIN,
+                null,
+                OffshoreTransfer::TYPE_OFFSHORE,
+                $offshore,
+                $payload,
+                $request->user(),
+                sprintf('Main bank sweep into %s', $offshore->name)
+            );
+        } catch (OffshoreTransferException $exception) {
+            return redirect()->route('admin.offshores.index')->with([
+                'alert-message' => 'Main bank sweep failed: ' . $exception->getMessage(),
+                'alert-type' => 'error',
+            ]);
+        }
+
+        $this->mainBankService->refreshBalances();
+        $this->offshoreService->refreshBalances($offshore, true);
+        event(new OffshoreCacheInvalidated($offshore->id, 'main-bank-sweep'));
+
+        return redirect()->route('admin.offshores.index')->with([
+            'alert-message' => sprintf('Main bank sweep dispatched to %s.', $offshore->name),
             'alert-type' => 'success',
         ]);
     }
