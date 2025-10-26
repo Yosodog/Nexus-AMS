@@ -19,7 +19,7 @@ class TradePrice extends Model
         'iron',
         'bauxite',
         'lead',
-        'gas',
+        'gasoline',
         'munitions',
         'steel',
         'aluminum',

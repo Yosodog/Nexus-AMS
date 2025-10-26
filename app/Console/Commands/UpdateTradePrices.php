@@ -39,7 +39,7 @@ class UpdateTradePrices extends Command
                 'iron' => (int)$graphqlPrice->iron,
                 'bauxite' => (int)$graphqlPrice->bauxite,
                 'lead' => (int)$graphqlPrice->lead,
-                'gas' => (int)$graphqlPrice->gasoline,
+                'gasoline' => (int)$graphqlPrice->gasoline,
                 'munitions' => (int)$graphqlPrice->munitions,
                 'steel' => (int)$graphqlPrice->steel,
                 'aluminum' => (int)$graphqlPrice->aluminum,
