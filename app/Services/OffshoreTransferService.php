@@ -17,13 +17,17 @@ use Throwable;
 
 class OffshoreTransferService
 {
+    private readonly int $mainAllianceId;
+
     public function __construct(
         private readonly OffshoreService $offshoreService,
-        private readonly int $mainAllianceId = 0
+        ?int $mainAllianceId = null
     ) {
-        $this->mainAllianceId = $this->mainAllianceId > 0
-            ? $this->mainAllianceId
+        $resolvedAllianceId = $mainAllianceId !== null && $mainAllianceId > 0
+            ? $mainAllianceId
             : (int) env('PW_ALLIANCE_ID', 0);
+
+        $this->mainAllianceId = $resolvedAllianceId;
     }
 
     /**
