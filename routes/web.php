@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
@@ -146,6 +147,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
             ->name('admin.accounts.transactions.refund')
             ->middleware(BlockWhenPWDown::class);
+
+        Route::get('/cities', [CityController::class, 'index'])->name('admin.cities.index');
 
         Route::get('/offshores', [OffshoreController::class, 'index'])->name('admin.offshores.index');
         Route::get('/offshores/create', [OffshoreController::class, 'create'])->name('admin.offshores.create');
