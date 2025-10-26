@@ -227,7 +227,7 @@ class OffshoreController extends Controller
 
         $balances = $this->mainBankService->refreshBalances();
 
-        $payload = collect(PWHelperService::resources())
+        $payload = collect(PWHelperService::resources(includeCredits: true))
             ->mapWithKeys(fn(string $resource) => [
                 $resource => (float) ($balances[$resource] ?? 0),
             ])
