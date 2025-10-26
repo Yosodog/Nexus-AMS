@@ -291,6 +291,7 @@ class AccountsController extends Controller
         $accounts->load("nation");
 
         $transactions = AccountService::getRelatedTransactions($accounts);
+        $manualTransactions = AccountService::getRelatedManualTransactions($accounts);
 
         $ddLogs = DirectDepositLog::where('account_id', $accounts->id)
             ->latest()
@@ -301,6 +302,7 @@ class AccountsController extends Controller
         return view("accounts.view", [
             "account" => $accounts,
             "transactions" => $transactions,
+            "manualTransactions" => $manualTransactions,
             "ddLogs" => $ddLogs,
         ]);
     }
