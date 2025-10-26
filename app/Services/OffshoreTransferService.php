@@ -111,7 +111,7 @@ class OffshoreTransferService
     protected function sendFromMainToOffshore(Offshore $offshore, array $payload, string $note): void
     {
         $this->executeTransfer(
-            fn(GraphQLQueryBuilder $builder) => $builder
+            fn(\App\Services\GraphQLQueryBuilder $builder) => $builder
                 ->addArgument('receiver', $offshore->alliance_id)
                 ->addArgument('receiver_type', 2)
                 ->addArgument('note', $note),
@@ -134,7 +134,7 @@ class OffshoreTransferService
         $credentials = $this->requireOffshoreCredentials($offshore);
 
         $this->executeTransfer(
-            fn(GraphQLQueryBuilder $builder) => $builder
+            fn(\App\Services\GraphQLQueryBuilder $builder) => $builder
                 ->addArgument('receiver', $this->mainAllianceId)
                 ->addArgument('receiver_type', 2)
                 ->addArgument('note', $note),
@@ -160,10 +160,10 @@ class OffshoreTransferService
         /** @var QueryService $client */
         $client = App::make(QueryService::class, $parameters);
 
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new \App\Services\GraphQLQueryBuilder())
             ->setRootField('bankWithdraw')
             ->setMutation()
-            ->addFields(SelectionSetHelper::bankRecordSet());
+            ->addFields(\App\Services\SelectionSetHelper::bankRecordSet());
 
         $builderCallback($builder);
 
