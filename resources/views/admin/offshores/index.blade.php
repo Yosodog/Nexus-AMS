@@ -321,7 +321,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Enabled</label>
-                                    @php($createEnabled = $modalContext === 'create' ? (int) old('enabled', 1) : 1)
+                                    @php $createEnabled = $modalContext === 'create' ? (int) old('enabled', 1) : 1 @endphp
                                     <select class="form-select" name="enabled">
                                         <option value="1" {{ $createEnabled === 1 ? 'selected' : '' }}>Yes</option>
                                         <option value="0" {{ $createEnabled === 0 ? 'selected' : '' }}>No</option>
@@ -338,7 +338,7 @@
                                     <i class="bi bi-plus-circle me-1"></i> Add Guardrail
                                 </button>
                             </div>
-                            @php($createGuardrails = $modalContext === 'create' ? old('guardrails', []) : [])
+                            @php $createGuardrails = $modalContext === 'create' ? old('guardrails', []) : [] @endphp
                             <input type="hidden" name="guardrails" value="">
                             <div id="create-guardrail-container" class="guardrail-container" data-next-index="{{ count($createGuardrails) }}">
                                 @foreach($createGuardrails as $index => $guardrail)
@@ -370,7 +370,7 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                @php($editContext = $modalContext === 'edit-' . $offshore->id)
+                                @php $editContext = $modalContext === 'edit-' . $offshore->id @endphp
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Name</label>
@@ -394,7 +394,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Enabled</label>
-                                        @php($editEnabled = $editContext ? (int) old('enabled', $offshore->enabled ? 1 : 0) : ($offshore->enabled ? 1 : 0))
+                                        @php $editEnabled = $editContext ? (int) old('enabled', $offshore->enabled ? 1 : 0) : ($offshore->enabled ? 1 : 0) @endphp
                                         <select class="form-select" name="enabled">
                                             <option value="1" {{ $editEnabled === 1 ? 'selected' : '' }}>Yes</option>
                                             <option value="0" {{ $editEnabled === 0 ? 'selected' : '' }}>No</option>
