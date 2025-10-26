@@ -81,7 +81,7 @@ class OffshoreFulfillmentService
      */
     protected function performFulfillment(Transaction $transaction): OffshoreFulfillmentResult
     {
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
         $required = [];
 
         foreach ($resources as $resource) {
@@ -283,7 +283,7 @@ class OffshoreFulfillmentService
             ->setRootField('alliances')
             ->addArgument('id', $this->mainAllianceId)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
-                $builder->addFields(array_merge(SelectionSetHelper::allianceSet(), ['credits']));
+                $builder->addFields(SelectionSetHelper::allianceSet());
             });
 
         try {
@@ -307,7 +307,7 @@ class OffshoreFulfillmentService
         }
 
         $result = (array)($response->{0} ?? []);
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
 
         return collect($resources)
             ->mapWithKeys(fn(string $resource) => [

@@ -175,7 +175,7 @@ class OffshoreService
         }
 
         $result = (array)($response->{0} ?? []);
-        $resources = PWHelperService::resources(includeCredits: true);
+        $resources = PWHelperService::resources();
 
         return collect($resources)
             ->mapWithKeys(fn(string $resource) => [

@@ -20,7 +20,6 @@ class OffshoreGuardrail extends Model
         'steel',
         'aluminum',
         'food',
-        'credits',
     ];
 
     protected $fillable = [
