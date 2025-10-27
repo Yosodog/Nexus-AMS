@@ -29,7 +29,6 @@ class ApplyPageController extends Controller
         $content = Cache::remember(self::CACHE_KEY, $expiresAt, function (): ?string {
             $page = Page::query()
                 ->where('slug', 'apply')
-                ->where('status', Page::STATUS_PUBLISHED)
                 ->first();
 
             if (! $page) {
