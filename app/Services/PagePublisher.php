@@ -11,28 +11,42 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
+/**
+ * Coordinate persistence of Editor.js blocks for CMS pages.
+ */
 class PagePublisher
 {
+    /**
+     * Save a draft revision for the provided page.
+     *
+     * @param  array<int, mixed>  $blocks
+     */
     public function saveDraft(Page $page, array $blocks, User $user, array $metadata = []): PageVersion
     {
         $this->authorize($user);
 
-        $normalized = $this->prepareBlocks($blocks);
-        $this->validateImagePaths($normalized);
+        $normalized = $this->normalizeBlocks($blocks);
 
         return $page->saveDraft($normalized, $user, $metadata);
     }
 
+    /**
+     * Publish a set of blocks and store the rendered HTML snapshot.
+     *
+     * @param  array<int, mixed>  $blocks
+     */
     public function publish(Page $page, array $blocks, string $renderedHtml, User $user, ?CarbonInterface $publishedAt = null): PageVersion
     {
         $this->authorize($user);
 
-        $normalized = $this->prepareBlocks($blocks);
-        $this->validateImagePaths($normalized);
+        $normalized = $this->normalizeBlocks($blocks);
 
         return $page->publish($normalized, $renderedHtml, $user, $publishedAt);
     }
 
+    /**
+     * Restore a historical version either as a draft or published revision.
+     */
     public function restore(Page $page, PageVersion $version, User $user, bool $restoreAsDraft = true): void
     {
         $this->authorize($user);
@@ -40,21 +54,51 @@ class PagePublisher
         $page->restoreFromVersion($version, $user, $restoreAsDraft);
     }
 
+    /**
+     * Forget cached HTML for the provided page.
+     */
     public function forget(Page $page): void
     {
         $page->forgetCachedHtml();
     }
 
+    /**
+     * Normalize the Editor.js block payload ensuring embeds and images are valid.
+     *
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
+    public function normalizeBlocks(array $blocks): array
+    {
+        $normalized = $this->prepareBlocks($blocks);
+        $this->validateImagePaths($normalized);
+
+        return $normalized;
+    }
+
+    /**
+     * Ensure the acting user has permission to manage custom pages.
+     */
     protected function authorize(User $user): void
     {
         Gate::forUser($user)->authorize('manage-custom-pages');
     }
 
+    /**
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
     protected function prepareBlocks(array $blocks): array
     {
         return $this->canonicalizeEmbeds($blocks);
     }
 
+    /**
+     * Walk each block recursively and normalize supported embed payloads.
+     *
+     * @param  array<int|string, mixed>  $blocks
+     * @return array<int|string, mixed>
+     */
     protected function canonicalizeEmbeds(array $blocks): array
     {
         $normalized = [];
@@ -62,10 +106,7 @@ class PagePublisher
         foreach ($blocks as $key => $block) {
             if (is_array($block)) {
                 if (($block['type'] ?? null) === 'embed') {
-                    $url = Arr::get($block, 'data.url');
-                    if (is_string($url) && $url !== '') {
-                        $block['data']['url'] = $this->canonicalizeUrl($url);
-                    }
+                    $block['data'] = $this->normalizeEmbedData($block['data'] ?? []);
                 }
 
                 if (isset($block['blocks']) && is_array($block['blocks'])) {
@@ -79,45 +120,44 @@ class PagePublisher
         return $normalized;
     }
 
+    /**
+     * Normalize and validate supported embed URLs.
+     */
     protected function canonicalizeUrl(string $url): string
     {
         $trimmed = trim($url);
 
         if ($trimmed === '') {
-            return $trimmed;
+            throw new InvalidArgumentException('Embed URLs must not be empty.');
         }
 
         $parsed = parse_url($trimmed);
 
         if ($parsed === false || empty($parsed['host'])) {
-            return $trimmed;
+            throw new InvalidArgumentException('Unsupported embed URL.');
         }
 
-        $scheme = strtolower($parsed['scheme'] ?? 'https');
         $host = strtolower($parsed['host']);
-        $path = $parsed['path'] ?? '/';
 
-        $queryString = '';
-        if (! empty($parsed['query'])) {
-            parse_str($parsed['query'], $queryParams);
-
-            $queryParams = array_filter(
-                $queryParams,
-                fn ($value, $key) => $value !== '' && ! Str::startsWith(strtolower($key), 'utm_') && strtolower($key) !== 'ref',
-                ARRAY_FILTER_USE_BOTH
-            );
-
-            if ($queryParams !== []) {
-                ksort($queryParams);
-                $queryString = '?' . http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
-            }
+        if (! $this->isYouTubeHost($host)) {
+            throw new InvalidArgumentException('Only YouTube embeds are supported.');
         }
 
-        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
+        $videoId = $this->extractYouTubeId($host, $parsed);
 
-        return sprintf('%s://%s%s%s%s', $scheme, $host, $path ?: '/', $queryString, $fragment);
+        if ($videoId === null) {
+            throw new InvalidArgumentException('Unable to determine the YouTube video identifier.');
+        }
+
+        $start = $this->extractStartOffset($parsed);
+        $query = $start !== null ? '?start=' . $start : '';
+
+        return sprintf('https://www.youtube.com/embed/%s%s', $videoId, $query);
     }
 
+    /**
+     * @param  array<int|string, mixed>  $blocks
+     */
     protected function validateImagePaths(array $blocks): void
     {
         foreach ($blocks as $block) {
@@ -126,7 +166,9 @@ class PagePublisher
             }
 
             if (($block['type'] ?? null) === 'image') {
-                $source = Arr::get($block, 'data.src') ?? Arr::get($block, 'data.path');
+                $source = Arr::get($block, 'data.src')
+                    ?? Arr::get($block, 'data.path')
+                    ?? Arr::get($block, 'data.file.url');
 
                 if (is_string($source) && $source !== '') {
                     $this->assertValidImagePath($source);
@@ -139,6 +181,145 @@ class PagePublisher
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function normalizeEmbedData(array $data): array
+    {
+        $url = Arr::get($data, 'url') ?? Arr::get($data, 'source') ?? Arr::get($data, 'embed');
+
+        if (! is_string($url) || trim($url) === '') {
+            throw new InvalidArgumentException('Embed URLs are required.');
+        }
+
+        $caption = Arr::get($data, 'caption');
+
+        $normalized = [
+            'url' => $this->canonicalizeUrl($url),
+        ];
+
+        if (is_string($caption) && $caption !== '') {
+            $normalized['caption'] = $caption;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Determine whether the given host belongs to YouTube.
+     */
+    protected function isYouTubeHost(string $host): bool
+    {
+        return $host === 'youtu.be'
+            || Str::endsWith($host, '.youtube.com')
+            || $host === 'youtube.com';
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    protected function extractYouTubeId(string $host, array $parsed): ?string
+    {
+        $path = $parsed['path'] ?? '';
+
+        if ($host === 'youtu.be') {
+            $candidate = ltrim($path, '/');
+        } elseif (Str::endsWith($host, 'youtube.com')) {
+            $candidate = $this->extractFromYouTubePath($path, $parsed['query'] ?? '');
+        } else {
+            $candidate = null;
+        }
+
+        if (! is_string($candidate) || $candidate === '') {
+            return null;
+        }
+
+        $candidate = trim($candidate);
+
+        if (! preg_match('/^[A-Za-z0-9_-]{11}$/', $candidate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    protected function extractFromYouTubePath(string $path, ?string $query): ?string
+    {
+        $normalizedPath = trim($path) ?: '/';
+
+        if (Str::startsWith($normalizedPath, '/embed/')) {
+            $value = substr($normalizedPath, strlen('/embed/')) ?: null;
+
+            return $value !== null ? strtok($value, '/') ?: null : null;
+        }
+
+        if (Str::startsWith($normalizedPath, '/shorts/')) {
+            $value = substr($normalizedPath, strlen('/shorts/')) ?: null;
+
+            return $value !== null ? strtok($value, '/') ?: null : null;
+        }
+
+        if (Str::startsWith($normalizedPath, '/v/')) {
+            $value = substr($normalizedPath, strlen('/v/')) ?: null;
+
+            return $value !== null ? strtok($value, '/') ?: null : null;
+        }
+
+        if (Str::startsWith($normalizedPath, '/live/')) {
+            $value = substr($normalizedPath, strlen('/live/')) ?: null;
+
+            return $value !== null ? strtok($value, '/') ?: null : null;
+        }
+
+        if ($normalizedPath === '/' || Str::startsWith($normalizedPath, '/watch')) {
+            parse_str($query ?? '', $params);
+
+            if (isset($params['v']) && is_string($params['v'])) {
+                return $params['v'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    protected function extractStartOffset(array $parsed): ?int
+    {
+        $query = $parsed['query'] ?? '';
+
+        if ($query === '') {
+            return null;
+        }
+
+        parse_str($query, $params);
+
+        $raw = $params['start'] ?? $params['t'] ?? null;
+
+        if ($raw === null) {
+            return null;
+        }
+
+        if (is_numeric($raw)) {
+            return max(0, (int) $raw);
+        }
+
+        if (is_string($raw) && preg_match('/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/', $raw, $matches)) {
+            $hours = isset($matches[1]) ? (int) $matches[1] : 0;
+            $minutes = isset($matches[2]) ? (int) $matches[2] : 0;
+            $seconds = isset($matches[3]) ? (int) $matches[3] : 0;
+
+            return ($hours * 3600) + ($minutes * 60) + $seconds;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ensure stored image paths originate from an allowed storage location.
+     */
     protected function assertValidImagePath(string $path): void
     {
         $trimmed = trim($path);

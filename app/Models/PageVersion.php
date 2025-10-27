@@ -17,6 +17,7 @@ class PageVersion extends Model
 {
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PUBLISHED = 'published';
+    public const STATUS_PREVIEW = 'preview';
 
     protected $fillable = [
         'page_id',
@@ -49,5 +50,10 @@ class PageVersion extends Model
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;
+    }
+
+    public function isPreview(): bool
+    {
+        return $this->status === self::STATUS_PREVIEW;
     }
 }
