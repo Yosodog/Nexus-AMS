@@ -6,8 +6,11 @@ use App\Models\Page;
 use App\Models\PageVersion;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -90,7 +93,9 @@ class PagePublisher
      */
     protected function prepareBlocks(array $blocks): array
     {
-        return $this->canonicalizeEmbeds($blocks);
+        $normalized = $this->canonicalizeEmbeds($blocks);
+
+        return $this->canonicalizeImages($normalized);
     }
 
     /**
@@ -111,6 +116,33 @@ class PagePublisher
 
                 if (isset($block['blocks']) && is_array($block['blocks'])) {
                     $block['blocks'] = $this->canonicalizeEmbeds($block['blocks']);
+                }
+            }
+
+            $normalized[$key] = $block;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Normalize image metadata so blocks persist permanent storage URLs.
+     *
+     * @param  array<int|string, mixed>  $blocks
+     * @return array<int|string, mixed>
+     */
+    protected function canonicalizeImages(array $blocks): array
+    {
+        $normalized = [];
+
+        foreach ($blocks as $key => $block) {
+            if (is_array($block)) {
+                if (($block['type'] ?? null) === 'image') {
+                    $block['data'] = $this->normalizeImageData($block['data'] ?? []);
+                }
+
+                if (isset($block['blocks']) && is_array($block['blocks'])) {
+                    $block['blocks'] = $this->canonicalizeImages($block['blocks']);
                 }
             }
 
@@ -204,6 +236,125 @@ class PagePublisher
         }
 
         return $normalized;
+    }
+
+    /**
+     * Normalize the stored payload for Editor.js image blocks.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function normalizeImageData(array $data): array
+    {
+        $path = $this->extractImagePath($data);
+
+        if ($path === null) {
+            return $data;
+        }
+
+        $publicUrl = Storage::disk('public')->url($path);
+
+        $data['path'] = $path;
+        $data['url'] = $publicUrl;
+
+        $file = Arr::get($data, 'file', []);
+        if (! is_array($file)) {
+            $file = [];
+        }
+
+        $file['path'] = $path;
+        $file['url'] = $publicUrl;
+        $data['file'] = $file;
+
+        return $data;
+    }
+
+    /**
+     * Extract a persistent storage path from image block data.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function extractImagePath(array $data): ?string
+    {
+        $candidates = [
+            Arr::get($data, 'path'),
+            Arr::get($data, 'file.path'),
+            Arr::get($data, 'file.url'),
+            Arr::get($data, 'url'),
+            Arr::get($data, 'src'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (! is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            $resolved = $this->resolveImagePath($candidate);
+
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return null;
+    }
+
+    protected function resolveImagePath(string $candidate): ?string
+    {
+        $trimmed = trim($candidate);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (Str::startsWith($trimmed, 'custom-pages/')) {
+            return $trimmed;
+        }
+
+        if (Str::startsWith($trimmed, '/storage/')) {
+            return $this->normalizeStoragePath($trimmed);
+        }
+
+        if (! Str::startsWith($trimmed, ['http://', 'https://'])) {
+            return null;
+        }
+
+        $path = parse_url($trimmed, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (Str::startsWith($path, '/admin/customization/images/')) {
+            $token = substr($path, strlen('/admin/customization/images/'));
+            if (! is_string($token) || $token === '') {
+                return null;
+            }
+
+            try {
+                $decoded = Crypt::decryptString(urldecode($token));
+            } catch (DecryptException) {
+                return null;
+            }
+
+            return $this->normalizeStoragePath($decoded);
+        }
+
+        return $this->normalizeStoragePath($path);
+    }
+
+    protected function normalizeStoragePath(string $path): ?string
+    {
+        $normalized = ltrim(trim($path), '/');
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (Str::startsWith($normalized, 'storage/')) {
+            $normalized = substr($normalized, strlen('storage/')) ?: '';
+        }
+
+        return Str::startsWith($normalized, 'custom-pages/') ? $normalized : null;
     }
 
     /**
@@ -328,7 +479,7 @@ class PagePublisher
             throw new InvalidArgumentException('Image paths cannot be empty.');
         }
 
-        if (Str::startsWith($trimmed, ['/storage/', 'https://', 'http://'])) {
+        if (Str::startsWith($trimmed, ['custom-pages/', '/storage/', 'https://', 'http://'])) {
             return;
         }
 

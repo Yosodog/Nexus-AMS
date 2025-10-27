@@ -33,11 +33,14 @@ class CustomizationImageController extends Controller
             ['token' => Crypt::encryptString($path)],
         );
 
+        $publicUrl = Storage::disk('public')->url($path);
+
         return response()->json([
             'success' => 1,
             'file' => [
-                'url' => $signedUrl,
+                'url' => $publicUrl,
                 'path' => $path,
+                'preview_url' => $signedUrl,
             ],
         ], 201);
     }
