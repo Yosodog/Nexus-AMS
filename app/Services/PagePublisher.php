@@ -11,8 +11,16 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
+/**
+ * Coordinate persistence of Editor.js blocks for CMS pages.
+ */
 class PagePublisher
 {
+    /**
+     * Save a draft revision for the provided page.
+     *
+     * @param  array<int, mixed>  $blocks
+     */
     public function saveDraft(Page $page, array $blocks, User $user, array $metadata = []): PageVersion
     {
         $this->authorize($user);
@@ -22,6 +30,11 @@ class PagePublisher
         return $page->saveDraft($normalized, $user, $metadata);
     }
 
+    /**
+     * Publish a set of blocks and store the rendered HTML snapshot.
+     *
+     * @param  array<int, mixed>  $blocks
+     */
     public function publish(Page $page, array $blocks, string $renderedHtml, User $user, ?CarbonInterface $publishedAt = null): PageVersion
     {
         $this->authorize($user);
@@ -31,6 +44,9 @@ class PagePublisher
         return $page->publish($normalized, $renderedHtml, $user, $publishedAt);
     }
 
+    /**
+     * Restore a historical version either as a draft or published revision.
+     */
     public function restore(Page $page, PageVersion $version, User $user, bool $restoreAsDraft = true): void
     {
         $this->authorize($user);
@@ -38,11 +54,20 @@ class PagePublisher
         $page->restoreFromVersion($version, $user, $restoreAsDraft);
     }
 
+    /**
+     * Forget cached HTML for the provided page.
+     */
     public function forget(Page $page): void
     {
         $page->forgetCachedHtml();
     }
 
+    /**
+     * Normalize the Editor.js block payload ensuring embeds and images are valid.
+     *
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
     public function normalizeBlocks(array $blocks): array
     {
         $normalized = $this->prepareBlocks($blocks);
@@ -51,16 +76,29 @@ class PagePublisher
         return $normalized;
     }
 
+    /**
+     * Ensure the acting user has permission to manage custom pages.
+     */
     protected function authorize(User $user): void
     {
         Gate::forUser($user)->authorize('manage-custom-pages');
     }
 
+    /**
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
     protected function prepareBlocks(array $blocks): array
     {
         return $this->canonicalizeEmbeds($blocks);
     }
 
+    /**
+     * Walk each block recursively and normalize supported embed payloads.
+     *
+     * @param  array<int|string, mixed>  $blocks
+     * @return array<int|string, mixed>
+     */
     protected function canonicalizeEmbeds(array $blocks): array
     {
         $normalized = [];
@@ -82,6 +120,9 @@ class PagePublisher
         return $normalized;
     }
 
+    /**
+     * Normalize and validate supported embed URLs.
+     */
     protected function canonicalizeUrl(string $url): string
     {
         $trimmed = trim($url);
@@ -114,6 +155,9 @@ class PagePublisher
         return sprintf('https://www.youtube.com/embed/%s%s', $videoId, $query);
     }
 
+    /**
+     * @param  array<int|string, mixed>  $blocks
+     */
     protected function validateImagePaths(array $blocks): void
     {
         foreach ($blocks as $block) {
@@ -137,6 +181,10 @@ class PagePublisher
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     protected function normalizeEmbedData(array $data): array
     {
         $url = Arr::get($data, 'url') ?? Arr::get($data, 'source') ?? Arr::get($data, 'embed');
@@ -158,6 +206,9 @@ class PagePublisher
         return $normalized;
     }
 
+    /**
+     * Determine whether the given host belongs to YouTube.
+     */
     protected function isYouTubeHost(string $host): bool
     {
         return $host === 'youtu.be'
@@ -266,6 +317,9 @@ class PagePublisher
         return null;
     }
 
+    /**
+     * Ensure stored image paths originate from an allowed storage location.
+     */
     protected function assertValidImagePath(string $path): void
     {
         $trimmed = trim($path);

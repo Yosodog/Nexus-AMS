@@ -1,4 +1,5 @@
 @php
+    /** @var \Illuminate\Support\Collection<int, \App\Models\PageActivityLog> $recentActivity */
     $initialBlocks = $page->draft ?? [];
     $endpoints = [
         'preview' => route('admin.customization.preview', $page),
@@ -8,6 +9,18 @@
         'restore' => route('admin.customization.restore', $page),
         'upload' => route('admin.customization.images.store'),
     ];
+
+    $initialActivity = $recentActivity
+        ->map(function (\App\Models\PageActivityLog $log): array {
+            return [
+                'id' => $log->id,
+                'action' => $log->action,
+                'metadata' => $log->metadata,
+                'created_at' => $log->created_at?->toIso8601String(),
+                'user' => $log->user?->only(['id', 'name']),
+            ];
+        })
+        ->values();
 @endphp
 
 @extends('layouts.admin')
@@ -64,13 +77,7 @@
                          data-blocks='@json($initialBlocks)'
                          data-page='@json(['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status])'
                          data-csrf="{{ csrf_token() }}"
-                         data-initial-activity='@json($recentActivity->map(fn($log) => [
-                             'id' => $log->id,
-                             'action' => $log->action,
-                             'metadata' => $log->metadata,
-                             'created_at' => $log->created_at?->toIso8601String(),
-                             'user' => $log->user?->only(['id', 'name']),
-                         ]))'></div>
+                       data-initial-activity='@json($initialActivity)'></div>
 
                     <div class="mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">

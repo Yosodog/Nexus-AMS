@@ -4,6 +4,9 @@ namespace App\Services;
 
 use Illuminate\Support\Arr;
 
+/**
+ * Render sanitized HTML fragments from Editor.js block payloads.
+ */
 class PageRenderer
 {
     /**
@@ -39,6 +42,9 @@ class PageRenderer
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderParagraph(array $block): string
     {
         $text = (string) Arr::get($block, 'data.text', '');
@@ -50,6 +56,9 @@ class PageRenderer
         return sprintf('<p class="mb-3">%s</p>', nl2br(e($text)));
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderHeader(array $block): string
     {
         $level = (int) Arr::get($block, 'data.level', 2);
@@ -63,6 +72,9 @@ class PageRenderer
         return sprintf('<h%d class="fw-semibold mt-4 mb-3">%s</h%d>', $level, e($text), $level);
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderList(array $block): string
     {
         $items = Arr::get($block, 'data.items', []);
@@ -90,6 +102,9 @@ class PageRenderer
         return sprintf('<%1$s class="%2$s">%3$s</%1$s>', $style, $classes, $listItems);
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderQuote(array $block): string
     {
         $text = trim((string) Arr::get($block, 'data.text', ''));
@@ -108,6 +123,9 @@ class PageRenderer
         return sprintf('<figure class="border-start border-3 ps-3 my-4">%s</figure>', $quote);
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderImage(array $block): string
     {
         $url = Arr::get($block, 'data.url')
@@ -133,6 +151,9 @@ class PageRenderer
         return sprintf('<figure class="my-4 text-center">%s</figure>', $figure);
     }
 
+    /**
+     * @param  array<string, mixed>  $block
+     */
     protected function renderEmbed(array $block): string
     {
         $url = trim((string) Arr::get($block, 'data.url', ''));

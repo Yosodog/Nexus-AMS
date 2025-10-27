@@ -6,6 +6,15 @@ import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
 import Quote from '@editorjs/quote';
 
+// Bootstrap the admin customization editor with a curated Editor.js toolset.
+
+/**
+ * Safely parse JSON stored on data attributes.
+ *
+ * @param {string|null} value
+ * @param {any} fallback
+ * @returns {any}
+ */
 function parseJson(value, fallback) {
     if (!value) {
         return fallback;
@@ -20,6 +29,12 @@ function parseJson(value, fallback) {
     }
 }
 
+/**
+ * Convert snake_case actions into human readable labels.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 function headline(text) {
     if (!text) {
         return '';
@@ -31,6 +46,12 @@ function headline(text) {
         .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+/**
+ * Format ISO-8601 timestamps for display.
+ *
+ * @param {string|null} value
+ * @returns {string}
+ */
 function formatTimestamp(value) {
     if (!value) {
         return 'Recently';
@@ -45,6 +66,13 @@ function formatTimestamp(value) {
     return date.toLocaleString();
 }
 
+/**
+ * Update the badge next to the preview controls.
+ *
+ * @param {HTMLElement|null} badge
+ * @param {string} message
+ * @param {string} [style]
+ */
 function setStatusBadge(badge, message, style = 'secondary') {
     if (!badge) {
         return;
@@ -54,6 +82,14 @@ function setStatusBadge(badge, message, style = 'secondary') {
     badge.className = `badge text-bg-${style}`;
 }
 
+/**
+ * Refresh the audit summary cards with the latest metadata.
+ *
+ * @param {HTMLElement|null} container
+ * @param {string|null} timestamp
+ * @param {string|null} userName
+ * @param {string} fallbackMessage
+ */
 function updateAuditSection(container, timestamp, userName, fallbackMessage) {
     if (!container) {
         return;
@@ -81,6 +117,12 @@ function updateAuditSection(container, timestamp, userName, fallbackMessage) {
     container.appendChild(userLine);
 }
 
+/**
+ * Reflect the page status badge in the sidebar card.
+ *
+ * @param {HTMLElement|null} statusContainer
+ * @param {string} status
+ */
 function updateStatus(statusContainer, status) {
     if (!statusContainer || !status) {
         return;
@@ -90,6 +132,12 @@ function updateStatus(statusContainer, status) {
     statusContainer.textContent = normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+/**
+ * Render recent activity logs in the sidebar list.
+ *
+ * @param {HTMLElement|null} listElement
+ * @param {Array<object>} logs
+ */
 function renderActivity(listElement, logs) {
     if (!listElement) {
         return;
@@ -132,6 +180,12 @@ function renderActivity(listElement, logs) {
     });
 }
 
+/**
+ * Populate the version history modal table with recent entries.
+ *
+ * @param {HTMLElement|null} table
+ * @param {Array<object>} versions
+ */
 function renderVersionsTable(table, versions) {
     if (!table) {
         return;
@@ -199,6 +253,13 @@ function renderVersionsTable(table, versions) {
     });
 }
 
+/**
+ * Display a temporary alert anchored near the provided node.
+ *
+ * @param {HTMLElement|null} anchor
+ * @param {string} message
+ * @param {string} [type]
+ */
 function showTransientAlert(anchor, message, type = 'success') {
     if (!anchor) {
         return;
@@ -217,6 +278,13 @@ function showTransientAlert(anchor, message, type = 'success') {
     }, 4000);
 }
 
+/**
+ * Issue a JSON POST request and bubble up any validation errors.
+ *
+ * @param {string} url
+ * @param {string} token
+ * @param {Record<string, any>} [payload]
+ */
 async function postJson(url, token, payload = {}) {
     const response = await fetch(url, {
         method: 'POST',
@@ -240,6 +308,11 @@ async function postJson(url, token, payload = {}) {
     throw error;
 }
 
+/**
+ * Fetch the latest version and activity payload from the server.
+ *
+ * @param {string} url
+ */
 async function fetchHistory(url) {
     const response = await fetch(url, {
         method: 'GET',
@@ -256,6 +329,12 @@ async function fetchHistory(url) {
     throw new Error('Unable to load history.');
 }
 
+/**
+ * Temporarily disable a button while an async task completes.
+ *
+ * @param {HTMLButtonElement|null} button
+ * @param {() => Promise<any>} callback
+ */
 function disableWhileRunning(button, callback) {
     if (!button) {
         return callback();

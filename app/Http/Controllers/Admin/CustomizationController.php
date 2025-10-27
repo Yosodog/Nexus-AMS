@@ -16,6 +16,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 
+/**
+ * Handle administrative customization workflows for CMS-driven pages.
+ */
 class CustomizationController extends Controller
 {
     public function __construct(
@@ -24,6 +27,9 @@ class CustomizationController extends Controller
     ) {
     }
 
+    /**
+     * Display the list of managed pages.
+     */
     public function index(): View
     {
         $this->authorize('manage-custom-pages');
@@ -38,6 +44,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Render the editor UI for a specific page.
+     */
     public function edit(Page $page): View
     {
         $this->authorize('manage-custom-pages');
@@ -60,6 +69,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Produce a non-persistent preview of a page draft.
+     */
     public function preview(CustomizationPreviewRequest $request, Page $page): JsonResponse
     {
         $this->authorize('manage-custom-pages');
@@ -91,6 +103,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Persist the submitted draft content without publishing it.
+     */
     public function saveDraft(CustomizationDraftRequest $request, Page $page): JsonResponse
     {
         $this->authorize('manage-custom-pages');
@@ -105,6 +120,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Publish the current draft and cache the rendered HTML.
+     */
     public function publish(CustomizationPublishRequest $request, Page $page): JsonResponse
     {
         $this->authorize('manage-custom-pages');
@@ -121,6 +139,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Return recent versions and activity logs for audit purposes.
+     */
     public function versions(Page $page): JsonResponse
     {
         $this->authorize('manage-custom-pages');
@@ -134,6 +155,9 @@ class CustomizationController extends Controller
         ]);
     }
 
+    /**
+     * Restore a historical version either as a draft or a published revision.
+     */
     public function restore(CustomizationRestoreRequest $request, Page $page): JsonResponse
     {
         $this->authorize('manage-custom-pages');
@@ -169,6 +193,9 @@ class CustomizationController extends Controller
         ], fn ($value) => $value !== null));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function serializeVersion(PageVersion $version): array
     {
         return [
@@ -181,6 +208,9 @@ class CustomizationController extends Controller
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function serializeActivity(PageActivityLog $log): array
     {
         return [
@@ -192,6 +222,9 @@ class CustomizationController extends Controller
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function serializePageState(Page $page): array
     {
         return [

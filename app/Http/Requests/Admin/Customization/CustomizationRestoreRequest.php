@@ -4,6 +4,9 @@ namespace App\Http\Requests\Admin\Customization;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Validate restore requests originating from the customization editor.
+ */
 class CustomizationRestoreRequest extends FormRequest
 {
     public function authorize(): bool
@@ -19,11 +22,17 @@ class CustomizationRestoreRequest extends FormRequest
         ];
     }
 
+    /**
+     * Retrieve the target version identifier.
+     */
     public function versionId(): int
     {
         return (int) $this->input('version_id');
     }
 
+    /**
+     * Determine whether the restored version should be published immediately.
+     */
     public function shouldPublish(): bool
     {
         return $this->boolean('publish');

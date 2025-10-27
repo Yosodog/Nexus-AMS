@@ -4,6 +4,9 @@ namespace App\Http\Requests\Admin\Customization;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Shared validation rules for editor submissions targeting custom pages.
+ */
 abstract class CustomizationContentRequest extends FormRequest
 {
     public function authorize(): bool
@@ -27,6 +30,9 @@ abstract class CustomizationContentRequest extends FormRequest
         return $this->input('blocks', []);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function metadata(): array
     {
         return $this->input('metadata', []);
