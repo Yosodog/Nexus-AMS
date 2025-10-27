@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
+use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
@@ -36,6 +37,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home');
 })->name("home");
+
+Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
 Route::middleware(['auth'])->group(function () {
     // Verification

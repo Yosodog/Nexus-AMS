@@ -1,4 +1,16 @@
-@php use App\Models\Grants; @endphp
+@php
+    use App\Models\Grants;
+    use App\Services\AllianceMembershipService;
+    use Illuminate\Support\Facades\Auth;
+
+    $user = Auth::user();
+    $membershipService = app(AllianceMembershipService::class);
+    $allianceId = data_get($user, 'nation.alliance_id');
+    $showMemberNavigation = $user !== null && $membershipService->contains($allianceId);
+    $enabledGrants = $showMemberNavigation
+        ? Grants::query()->where('is_enabled', true)->orderBy('name')->get()
+        : collect();
+@endphp
 <div class="container mx-auto">
     <div class="navbar bg-base-100">
         <div class="navbar-start">
@@ -17,10 +29,7 @@
                                 d="M4 6h16M4 12h8m-8 6h16"/>
                     </svg>
                 </div>
-                @if (Auth::check())
-                    @php
-                        $enabledGrants = Grants::where('is_enabled', true)->orderBy('name')->get();
-                    @endphp
+                @if ($showMemberNavigation)
                     <ul
                             tabindex="0"
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
@@ -46,11 +55,17 @@
                             </ul>
                         </li>
                     </ul>
+                @elseif($user)
+                    <ul
+                            tabindex="0"
+                            class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
+                        <li><a href="{{ route('apply.show') }}">Apply</a></li>
+                    </ul>
                 @else
                     <ul
                             tabindex="0"
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
-                        <li><a>Apply</a></li>
+                        <li><a href="{{ route('apply.show') }}">Apply</a></li>
                     </ul>
                 @endif
 
@@ -59,7 +74,7 @@
         </div>
         {{-- End mobile nav and begin desktop nav --}}
         <div class="navbar-center hidden lg:flex">
-            @if (Auth::check())
+            @if ($showMemberNavigation)
                 <ul class="menu menu-horizontal px-1 z-50">
                     <li><a href="{{ route("accounts") }}">Accounts</a></li>
                     <li>
@@ -93,9 +108,13 @@
                         </details>
                     </li>
                 </ul>
+            @elseif($user)
+                <ul class="menu menu-horizontal px-1">
+                    <li><a href="{{ route('apply.show') }}">Apply</a></li>
+                </ul>
             @else
                 <ul class="menu menu-horizontal px-1">
-                    <li><a>Apply</a></li>
+                    <li><a href="{{ route('apply.show') }}">Apply</a></li>
                 </ul>
             @endif
         </div>
@@ -113,13 +132,13 @@
                     <path d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/>
                 </svg>
             </label>
-            @if (Auth::check())
+            @if ($user)
                 <div class="dropdown dropdown-end">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
                         <div class="w-10 rounded-full">
                             <img
-                                    alt="{{ Auth::user()->nation->leader_name }} Flag"
-                                    src="{{ Auth::user()->nation->flag }}"/>
+                                    alt="{{ data_get($user, 'nation.leader_name', 'User') }} Flag"
+                                    src="{{ data_get($user, 'nation.flag') }}"/>
                         </div>
                     </div>
                     <ul
@@ -127,7 +146,7 @@
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
                         <li><a href="{{ route("user.dashboard") }}">Dashboard</a></li>
                         <li><a href="{{ route("user.settings") }}">Settings</a></li>
-                        @if (Auth::user()->is_admin)
+                        @if ($user->is_admin)
                             <li><a href="{{ route("admin.dashboard") }}">Admin</a></li>
                         @endif
                         <li>
