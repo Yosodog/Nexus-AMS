@@ -349,6 +349,29 @@ function disableWhileRunning(button, callback) {
     });
 }
 
+/**
+ * Build default block payloads for quick insert shortcuts.
+ *
+ * @param {string} type
+ * @param {DOMStringMap} dataset
+ * @returns {object}
+ */
+function presetBlockData(type, dataset) {
+    if (type === 'embed') {
+        const service = dataset && dataset.customizationService ? dataset.customizationService : 'youtube';
+
+        return {
+            service: service,
+            source: '',
+            embed: '',
+            url: '',
+            caption: '',
+        };
+    }
+
+    return {};
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const holder = document.getElementById('customization-editor');
 
@@ -440,6 +463,42 @@ document.addEventListener('DOMContentLoaded', () => {
             },
         },
     });
+
+    editor.isReady
+        .then(() => {
+            const quickInsertButtons = document.querySelectorAll('[data-customization-block]');
+
+            quickInsertButtons.forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+
+                    if (!(button instanceof HTMLButtonElement)) {
+                        return;
+                    }
+
+                    const blockType = button.dataset.customizationBlock;
+
+                    if (!blockType) {
+                        return;
+                    }
+
+                    try {
+                        editor.blocks.insert(
+                            blockType,
+                            presetBlockData(blockType, button.dataset),
+                            undefined,
+                            undefined,
+                            true,
+                        );
+                    } catch (error) {
+                        console.error('Failed to insert block', error);
+                    }
+                });
+            });
+        })
+        .catch((error) => {
+            console.error('Editor failed to initialize', error);
+        });
 
     async function refreshActivity() {
         if (!endpoints.versions) {

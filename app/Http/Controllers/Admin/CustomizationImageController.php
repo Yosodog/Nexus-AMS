@@ -38,9 +38,10 @@ class CustomizationImageController extends Controller
         return response()->json([
             'success' => 1,
             'file' => [
-                'url' => $publicUrl,
+                'url' => $signedUrl,
                 'path' => $path,
                 'preview_url' => $signedUrl,
+                'public_url' => $publicUrl,
             ],
         ], 201);
     }

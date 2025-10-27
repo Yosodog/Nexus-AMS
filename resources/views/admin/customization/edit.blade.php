@@ -71,6 +71,18 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <span class="text-muted small">Quick insert:</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-customization-block="image">
+                            <i class="bi bi-image me-1"></i> Image
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                data-customization-block="embed"
+                                data-customization-service="youtube">
+                            <i class="bi bi-youtube me-1"></i> YouTube Embed
+                        </button>
+                    </div>
                     <div id="customization-editor"
                          class="bg-body-secondary rounded border p-3"
                          data-endpoints='@json($endpoints)'

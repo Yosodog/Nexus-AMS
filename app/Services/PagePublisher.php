@@ -256,6 +256,8 @@ class PagePublisher
 
         $data['path'] = $path;
         $data['url'] = $publicUrl;
+        $data['public_url'] = $publicUrl;
+        unset($data['preview_url']);
 
         $file = Arr::get($data, 'file', []);
         if (! is_array($file)) {
@@ -264,6 +266,8 @@ class PagePublisher
 
         $file['path'] = $path;
         $file['url'] = $publicUrl;
+        $file['public_url'] = $publicUrl;
+        unset($file['preview_url']);
         $data['file'] = $file;
 
         return $data;
