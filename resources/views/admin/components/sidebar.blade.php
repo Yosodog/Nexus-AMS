@@ -159,6 +159,15 @@
                 <li class="nav-header">System</li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.recruitment.index') }}"
+                                icon="bi bi-envelope-paper"
+                                permission="view-recruitment"
+                                :active="request()->routeIs('admin.recruitment.*')">
+                        Recruitment
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.settings') }}"
                                 icon="bi bi-gear"
                                 permission="view-diagnostic-info"

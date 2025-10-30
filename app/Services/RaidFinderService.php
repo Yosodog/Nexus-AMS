@@ -11,21 +11,12 @@ use Throwable;
 
 class RaidFinderService
 {
-    /**
-     * @param TradePriceService $priceService
-     * @param LootCalculatorService $lootCalculator
-     */
     public function __construct(
         protected TradePriceService $priceService,
         protected LootCalculatorService $lootCalculator,
         protected AllianceMembershipService $membershipService,
-    ) {
-    }
+    ) {}
 
-    /**
-     * @param int $nationId
-     * @return Collection
-     */
     public function findTargets(int $nationId): Collection
     {
         $ownNation = Nation::findOrFail($nationId);
@@ -66,6 +57,7 @@ class RaidFinderService
 
                 if ($war->turns_left > 0) {
                     $defensiveWars++;
+
                     continue;
                 }
 
@@ -91,7 +83,7 @@ class RaidFinderService
                 continue;
             }
 
-            $averageLoot = (int)round($lootTotal / $validWarCount);
+            $averageLoot = (int) round($lootTotal / $validWarCount);
 
             $targets->push(collect([
                 'nation' => $nation,
@@ -104,40 +96,35 @@ class RaidFinderService
         return $targets->sortByDesc('value')->values();
     }
 
-    /**
-     * @param float $minScore
-     * @param float $maxScore
-     * @return Collection
-     */
     private function queryRaidableNations(float $minScore, float $maxScore): Collection
     {
         $raidableAlliances = $this->getRaidableAllianceIDs();
 
-        $query = (new GraphQLQueryBuilder())
+        $query = (new GraphQLQueryBuilder)
             ->setRootField('nations')
             ->addArgument('min_score', $minScore)
             ->addArgument('max_score', $maxScore)
             ->addArgument('vmode', false)
             ->addArgument('first', 500)
             ->addArgument('color', [
-                "aqua",
-                "black",
-                "blue",
-                "brown",
-                "green",
-                "lime",
-                "maroon",
-                "olive",
-                "orange",
-                "pink",
-                "purple",
-                "red",
-                "white",
-                "yellow",
-                "gray"
+                'aqua',
+                'black',
+                'blue',
+                'brown',
+                'green',
+                'lime',
+                'maroon',
+                'olive',
+                'orange',
+                'pink',
+                'purple',
+                'red',
+                'white',
+                'yellow',
+                'gray',
             ])
             ->addArgument('alliance_id', $raidableAlliances)
-            ->addNestedField('paginatorInfo', fn($b) => $b->addFields(['hasMorePages', 'lastPage', 'currentPage'])
+            ->addNestedField('paginatorInfo', fn ($b) => $b->addFields(['hasMorePages', 'lastPage', 'currentPage'])
             )
             ->addNestedField('data', function (GraphQLQueryBuilder $b) {
                 $b->addFields([
@@ -151,14 +138,14 @@ class RaidFinderService
                     'num_cities',
                     'war_policy',
                 ])
-                    ->addNestedField('alliance', fn($b) => $b->addFields(SelectionSetHelper::allianceSet())
+                    ->addNestedField('alliance', fn ($b) => $b->addFields(SelectionSetHelper::allianceSet())
                     )
                     ->addNestedField('wars', function (GraphQLQueryBuilder $b) {
                         $b->addArgument('active', false)
-                            ->addArgument('orderBy', [
-                                'column' => 'DATE',
-                                'order' => 'DESC',
-                            ])
+                            ->addArgument('orderBy', [[
+                                'column' => GraphQLQueryBuilder::literal('DATE'),
+                                'order' => GraphQLQueryBuilder::literal('DESC'),
+                            ]])
                             ->addFields([
                                 'id',
                                 'date',
@@ -166,7 +153,7 @@ class RaidFinderService
                                 'winner_id',
                                 'turns_left',
                             ])
-                            ->addNestedField('attacks', fn($b) => $b->addFields([
+                            ->addNestedField('attacks', fn ($b) => $b->addFields([
                                 'money_looted',
                                 'money_stolen',
                                 'coal_looted',
@@ -187,24 +174,21 @@ class RaidFinderService
             ->withPaginationInfo();
 
         try {
-            $results = (new QueryService())->sendQuery($query);
+            $results = (new QueryService)->sendQuery($query);
         } catch (Throwable $e) {
-            abort(503, 'PW API error while querying nations: ' . $e->getMessage());
+            abort(503, 'PW API error while querying nations: '.$e->getMessage());
         }
 
         $nationModels = collect();
         foreach ($results as $json) {
-            $nation = new \App\GraphQL\Models\Nation();
-            $nation->buildWithJSON((object)$json);
+            $nation = new \App\GraphQL\Models\Nation;
+            $nation->buildWithJSON((object) $json);
             $nationModels->push($nation);
         }
 
         return $nationModels;
     }
 
-    /**
-     * @return array
-     */
     private function getRaidableAllianceIDs(): array
     {
         $topN = SettingService::getTopRaidable(); // Admin configurable
@@ -224,13 +208,12 @@ class RaidFinderService
             }
 
             $hasTreatyWithTop = $treaties->contains(function ($treaty) use ($aid, $topAlliances) {
-                return (
+                return
                     ($treaty->alliance1_id === $aid && in_array($treaty->alliance2_id, $topAlliances)) ||
-                    ($treaty->alliance2_id === $aid && in_array($treaty->alliance1_id, $topAlliances))
-                );
+                    ($treaty->alliance2_id === $aid && in_array($treaty->alliance1_id, $topAlliances));
             });
 
-            if (!$hasTreatyWithTop) {
+            if (! $hasTreatyWithTop) {
                 $raidable[] = $aid;
             }
         }
