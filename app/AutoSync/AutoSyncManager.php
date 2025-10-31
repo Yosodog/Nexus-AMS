@@ -92,6 +92,40 @@ class AutoSyncManager
     }
 
     /**
+     * Manually mark the provided identifiers as synchronised for the given model class.
+     *
+     * This is useful when a parent sync hydrates related models (for example, a nation
+     * refreshing its cities) and we want to short-circuit duplicate fetch attempts later
+     * in the request lifecycle.
+     *
+     * @param class-string<Model&SyncableWithPoliticsAndWar> $modelClass
+     * @param array<int, string|int|null> $identifiers
+     * @param array<string, mixed> $context
+     * @return void
+     */
+    public function markModelsSynced(string $modelClass, array $identifiers, array $context = []): void
+    {
+        if (! is_subclass_of($modelClass, SyncableWithPoliticsAndWar::class)) {
+            return;
+        }
+
+        $identifiers = array_values(array_filter(
+            array_map(static fn($identifier) => is_null($identifier) ? null : (string) $identifier, $identifiers),
+            static fn($identifier) => ! is_null($identifier) && $identifier !== ''
+        ));
+
+        if (empty($identifiers)) {
+            return;
+        }
+
+        $signature = $this->contextSignature($context);
+
+        foreach ($identifiers as $identifier) {
+            $this->markSynced($modelClass, $identifier, $signature, $context);
+        }
+    }
+
+    /**
      * Refresh a model when required attributes are missing from the current record.
      *
      * @param Model $model

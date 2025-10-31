@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\AutoSync\AutoSyncManager;
 use App\AutoSync\Concerns\AutoSyncsWithPoliticsAndWar;
 use App\AutoSync\Contracts\SyncableWithPoliticsAndWar;
 use App\AutoSync\SyncDefinition;
@@ -147,6 +148,10 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
             $nation = self::create($nationData);
         }
 
+        $syncedCityIds = [];
+        $syncedResourceIds = [];
+        $syncedMilitaryIds = [];
+
         // Conditional update for resources
         if (!is_null($graphQLNationModel->money)) {
             $resourcesData = collect((array)$graphQLNationModel)
@@ -177,6 +182,8 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
 
                 $resourceModel->fill($resourcesData);
                 $resourceModel->save();
+
+                $syncedResourceIds[] = $resourceModel->getAttribute('nation_id');
             }
         }
 
@@ -225,11 +232,34 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
 
             $militaryModel->fill($militaryData);
             $militaryModel->save();
+
+            $syncedMilitaryIds[] = $militaryModel->getAttribute('nation_id');
         }
 
         if (!is_null($graphQLNationModel->cities)) {
             foreach ($graphQLNationModel->cities as $city) {
-                City::updateFromAPI($city);
+                $cityModel = City::updateFromAPI($city);
+
+                if ($cityModel->getKey() !== null) {
+                    $syncedCityIds[] = $cityModel->getKey();
+                }
+            }
+        }
+
+        if (! empty($syncedCityIds) || ! empty($syncedResourceIds) || ! empty($syncedMilitaryIds)) {
+            /** @var AutoSyncManager $manager */
+            $manager = app(AutoSyncManager::class);
+
+            if (! empty($syncedCityIds)) {
+                $manager->markModelsSynced(City::class, array_unique($syncedCityIds));
+            }
+
+            if (! empty($syncedResourceIds)) {
+                $manager->markModelsSynced(NationResources::class, array_unique($syncedResourceIds));
+            }
+
+            if (! empty($syncedMilitaryIds)) {
+                $manager->markModelsSynced(NationMilitary::class, array_unique($syncedMilitaryIds));
             }
         }
 
