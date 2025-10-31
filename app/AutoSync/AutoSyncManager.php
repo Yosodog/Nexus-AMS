@@ -18,6 +18,11 @@ class AutoSyncManager
 {
     protected array $definitions = [];
 
+    /**
+     * Track synchronized identifiers for the current request grouped by context signature.
+     *
+     * @var array<class-string<Model>, array<string, array<string, bool>>>
+     */
     protected array $syncedInRequest = [];
 
     protected array $staleRefreshAttempted = [];
@@ -216,19 +221,25 @@ class AutoSyncManager
             return;
         }
 
-        $force = $context['force'] ?? false;
+        $force = (bool) ($context['force'] ?? false);
+
+        // Build a context signature so relation-specific includes can trigger their own refresh cycle.
+        $signature = $this->contextSignature($context);
 
         if (! $force) {
-            $ids = array_diff($ids, $this->syncedInRequest[$modelClass] ?? []);
+            // Skip identifiers that have already been synchronized for this signature within the current request.
+            $ids = array_values(array_filter($ids, function ($id) use ($modelClass, $signature) {
+                return ! $this->isSynced($modelClass, (string) $id, $signature);
+            }));
         }
 
         if (empty($ids)) {
             return;
         }
 
-        $ids = array_filter($ids, function ($id) use ($modelClass) {
+        $ids = array_values(array_filter($ids, function ($id) use ($modelClass) {
             return ! Cache::has($this->missingCacheKey($modelClass, $id));
-        });
+        }));
 
         if (empty($ids)) {
             return;
@@ -238,7 +249,7 @@ class AutoSyncManager
 
         foreach (array_chunk($ids, $chunkSize) as $chunk) {
             // Synchronize in batches to honour API limits and lock granularity.
-            $this->syncChunk($definition, $chunk, $context);
+            $this->syncChunk($definition, $chunk, $context, $signature);
         }
     }
 
@@ -285,7 +296,7 @@ class AutoSyncManager
      * @param array<string, mixed> $context
      * @return void
      */
-    protected function syncChunk(SyncDefinition $definition, array $ids, array $context = []): void
+    protected function syncChunk(SyncDefinition $definition, array $ids, array $context = [], string $signature = 'default'): void
     {
         $locks = $this->acquireLocks($definition->modelClass, $ids);
         $lockedIds = array_keys(array_filter($locks));
@@ -310,11 +321,10 @@ class AutoSyncManager
                 }
             }
 
-            $synced = array_unique($synced);
-            $this->syncedInRequest[$definition->modelClass] = array_unique(array_merge(
-                array_map('strval', $this->syncedInRequest[$definition->modelClass] ?? []),
-                $synced
-            ));
+            foreach (array_unique($synced) as $identifier) {
+                // Remember each identifier under the context signature to short-circuit duplicate fetches later in the request.
+                $this->markSynced($definition->modelClass, $identifier, $signature);
+            }
 
             $lockedKeys = array_map('strval', $lockedIds);
             $missing = array_diff($lockedKeys, $synced);
@@ -433,6 +443,76 @@ class AutoSyncManager
     protected function makeModelKey(string $modelClass, mixed $identifier): string
     {
         return $modelClass.':'.$identifier;
+    }
+
+    /**
+     * Determine a stable signature for a sync invocation based on the provided context.
+     *
+     * @param array<string, mixed> $context
+     * @return string
+     */
+    protected function contextSignature(array $context): string
+    {
+        $parts = [];
+
+        foreach ($context as $key => $value) {
+            if ($key === 'force') {
+                continue;
+            }
+
+            if ($value === null || $value === false) {
+                continue;
+            }
+
+            if (is_bool($value)) {
+                $parts[$key] = $value ? '1' : '0';
+
+                continue;
+            }
+
+            if (is_scalar($value)) {
+                $parts[$key] = (string) $value;
+            }
+        }
+
+        if (empty($parts)) {
+            return 'default';
+        }
+
+        ksort($parts);
+
+        return implode('|', array_map(
+            static fn(string $contextKey, string $contextValue): string => $contextKey.':'.$contextValue,
+            array_keys($parts),
+            $parts
+        ));
+    }
+
+    /**
+     * Determine whether the provided identifier has already been synced for the signature.
+     *
+     * @param string $modelClass
+     * @param string $identifier
+     * @param string $signature
+     * @return bool
+     */
+    protected function isSynced(string $modelClass, string $identifier, string $signature): bool
+    {
+        return isset($this->syncedInRequest[$modelClass][$identifier][$signature]);
+    }
+
+    /**
+     * Mark an identifier as synced for the provided context signature.
+     *
+     * @param string $modelClass
+     * @param string $identifier
+     * @param string $signature
+     * @return void
+     */
+    protected function markSynced(string $modelClass, string $identifier, string $signature): void
+    {
+        $identifier = (string) $identifier;
+        $this->syncedInRequest[$modelClass][$identifier][$signature] = true;
     }
 
     /**
