@@ -187,24 +187,5 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.ckeditor.com/4.22.1/standard-all/ckeditor.js" crossorigin="anonymous"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof CKEDITOR === 'undefined') {
-                console.warn('CKEditor failed to load for recruitment messaging.');
-                return;
-            }
-
-            document.querySelectorAll('.js-ckeditor').forEach((element) => {
-                if (!element.id) {
-                    element.id = `editor-${Math.random().toString(36).substring(2, 8)}`;
-                }
-
-                CKEDITOR.replace(element.id, {
-                    height: 260,
-                    removePlugins: 'cloudservices,easyimage',
-                });
-            });
-        });
-    </script>
+    @vite('resources/js/recruitment-editor.js')
 @endpush

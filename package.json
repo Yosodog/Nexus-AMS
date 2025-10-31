@@ -17,6 +17,7 @@
         "vite": "^6.4"
     },
     "dependencies": {
+        "ckeditor5": "^47.1.0",
         "theme-change": "^2.5.0"
     }
 }
