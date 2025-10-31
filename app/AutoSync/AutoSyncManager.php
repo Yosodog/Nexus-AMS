@@ -55,6 +55,11 @@ class AutoSyncManager
      */
     public function ensureFreshModel(Model $model): Model
     {
+        if (! $model instanceof SyncableWithPoliticsAndWar) {
+            // Some relationships return internal Nexus models that do not support API hydration.
+            return $model;
+        }
+
         $definition = $this->definitionFor($model::class);
 
         if (! $definition->staleAfterHours) {
@@ -102,7 +107,7 @@ class AutoSyncManager
     public function ensureFreshCollection(EloquentCollection $collection): EloquentCollection
     {
         foreach ($collection as $index => $model) {
-            if ($model instanceof Model) {
+            if ($model instanceof Model && $model instanceof SyncableWithPoliticsAndWar) {
                 $collection->put($index, $this->ensureFreshModel($model));
             }
         }
