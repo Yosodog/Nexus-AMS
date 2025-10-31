@@ -31,6 +31,16 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
+
+        $this->app->scoped('pw.health.view-data', function () {
+            $status = Cache::get(PWHealthService::CACHE_KEY_STATUS);
+            $checkedAt = Cache::get(PWHealthService::CACHE_KEY_CHECKED_AT);
+
+            return [
+                'down' => $status === false,
+                'checkedAt' => $checkedAt,
+            ];
+        });
     }
 
     /**
@@ -55,12 +65,14 @@ class AppServiceProvider extends ServiceProvider
         });
 
         foreach (config('permissions', []) as $permission) {
-            Gate::define($permission, fn(User $user) => $user->hasPermission($permission));
+            Gate::define($permission, fn (User $user) => $user->hasPermission($permission));
         }
 
         View::composer('*', function ($view) {
-            $view->with('pwApiDown', Cache::get(PWHealthService::CACHE_KEY_STATUS) === false);
-            $view->with('pwApiLastChecked', Cache::get(PWHealthService::CACHE_KEY_CHECKED_AT));
+            $pwHealthData = app('pw.health.view-data');
+
+            $view->with('pwApiDown', $pwHealthData['down']);
+            $view->with('pwApiLastChecked', $pwHealthData['checkedAt']);
         });
     }
 }
