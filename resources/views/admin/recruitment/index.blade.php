@@ -187,5 +187,5 @@
 @endsection
 
 @push('scripts')
-    @vite('resources/js/recruitment-editor.js')
+    @vite('resources/js/ckeditor.js')
 @endpush

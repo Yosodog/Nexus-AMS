@@ -177,6 +177,15 @@
                 </li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.customization.index') }}"
+                                icon="bi bi-palette"
+                                permission="manage-custom-pages"
+                                :active="request()->routeIs('admin.customization.*')">
+                        Customize Pages
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ url('/telescope') }}"
                                 icon="bi bi-bug-fill"
                                 permission="view-diagnostic-info"

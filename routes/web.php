@@ -4,6 +4,8 @@ use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
+use App\Http\Controllers\Admin\CustomizationController;
+use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
+use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
@@ -36,6 +39,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home');
 })->name("home");
+
+Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
 Route::middleware(['auth'])->group(function () {
     // Verification
@@ -326,5 +331,22 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
             Route::post('/update-all', [MMRController::class, 'updateAll'])->name('admin.mmr.updateAll');
             Route::post('/update-mmr-assistant-settings', [MMRController::class, 'updateAssistantSettings'])->name('admin.mmr.assistant.update');
         });
+
+        Route::prefix('customization')
+            ->middleware('can:manage-custom-pages')
+            ->group(function () {
+                Route::get('/', [CustomizationController::class, 'index'])->name('admin.customization.index');
+                Route::get('/pages/{page}', [CustomizationController::class, 'edit'])->name('admin.customization.edit');
+                Route::post('/pages/{page}/preview', [CustomizationController::class, 'preview'])->name('admin.customization.preview');
+                Route::post('/pages/{page}/draft', [CustomizationController::class, 'saveDraft'])->name('admin.customization.draft');
+                Route::post('/pages/{page}/publish', [CustomizationController::class, 'publish'])->name('admin.customization.publish');
+                Route::get('/pages/{page}/versions', [CustomizationController::class, 'versions'])->name('admin.customization.versions');
+                Route::post('/pages/{page}/restore', [CustomizationController::class, 'restore'])->name('admin.customization.restore');
+
+                Route::post('/images', [CustomizationImageController::class, 'store'])->name('admin.customization.images.store');
+                Route::get('/images/{token}', [CustomizationImageController::class, 'show'])
+                    ->middleware('signed')
+                    ->name('admin.customization.images.show');
+            });
 
     });
