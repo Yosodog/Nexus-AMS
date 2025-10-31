@@ -3,46 +3,56 @@
 namespace App\Services;
 
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Render sanitized HTML fragments from Editor.js block payloads.
+ * Render HTML content for CMS pages. Trust CKEditor output while preserving legacy Editor.js blocks.
  */
 class PageRenderer
 {
-    private const IMAGE_STORAGE_PREFIX = '/storage/';
-    private const CUSTOM_IMAGE_ROUTE_PREFIX = '/admin/customization/images/';
-
     /**
-     * @var array<int, string>
+     * Render the stored payload into HTML.
+     *
+     * @param  array<int, mixed>|string  $content
      */
-    private array $allowedImageHosts;
-
-    public function __construct()
+    public function render(array|string $content): string
     {
-        $this->allowedImageHosts = $this->resolveAllowedImageHosts();
+        if (is_array($content)) {
+            if (array_key_exists('html', $content) && is_string($content['html'])) {
+                return $this->normalizeHtml($content['html']);
+            }
+
+            return $this->renderLegacyBlocks($content);
+        }
+
+        return $this->normalizeHtml($content);
+    }
+
+    private function normalizeHtml(string $html): string
+    {
+        return trim($html);
     }
 
     /**
-     * Transform Editor.js blocks into sanitized DaisyUI/Tailwind-ready markup.
+     * Render legacy Editor.js blocks for backward compatibility.
      *
-     * @param  array<int, mixed>  $blocks
+     * @param  array<int|string, mixed>  $blocks
      */
-    public function render(array $blocks): string
+    private function renderLegacyBlocks(array $blocks): string
     {
-        return collect($blocks)
-            ->map(fn ($block) => is_array($block) ? $this->renderBlock($block) : '')
-            ->filter()
-            ->implode(PHP_EOL);
+        $fragments = array_map(function ($block) {
+            return is_array($block) ? $this->renderLegacyBlock($block) : '';
+        }, $blocks);
+
+        $filtered = array_filter($fragments, fn ($html) => is_string($html) && $html !== '');
+
+        return implode(PHP_EOL, $filtered);
     }
 
     /**
-     * Render an individual block into HTML.
-     *
      * @param  array<string, mixed>  $block
      */
-    protected function renderBlock(array $block): string
+    private function renderLegacyBlock(array $block): string
     {
         return match ($block['type'] ?? null) {
             'paragraph' => $this->renderParagraph($block),
@@ -51,6 +61,7 @@ class PageRenderer
             'quote' => $this->renderQuote($block),
             'image' => $this->renderImage($block),
             'embed' => $this->renderEmbed($block),
+            'code' => $this->renderCode($block),
             default => '',
         };
     }
@@ -58,7 +69,7 @@ class PageRenderer
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderParagraph(array $block): string
+    private function renderParagraph(array $block): string
     {
         $text = $this->sanitizeMultiline(Arr::get($block, 'data.text'));
 
@@ -66,16 +77,13 @@ class PageRenderer
             return '';
         }
 
-        return sprintf(
-            '<p class="mb-4 leading-relaxed text-base-content">%s</p>',
-            nl2br(e($text))
-        );
+        return sprintf('<p class="mb-4 leading-relaxed">%s</p>', nl2br(e($text)));
     }
 
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderHeader(array $block): string
+    private function renderHeader(array $block): string
     {
         $level = (int) ($block['data']['level'] ?? 2);
         $level = $level >= 1 && $level <= 6 ? $level : 2;
@@ -96,7 +104,7 @@ class PageRenderer
         $sizeClass = $sizes[$level] ?? $sizes[2];
 
         return sprintf(
-            '<h%d class="mt-8 mb-3 font-semibold text-base-content %s">%s</h%d>',
+            '<h%d class="mt-8 mb-3 font-semibold %s">%s</h%d>',
             $level,
             $sizeClass,
             e($text),
@@ -107,7 +115,7 @@ class PageRenderer
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderList(array $block): string
+    private function renderList(array $block): string
     {
         $items = Arr::get($block, 'data.items');
 
@@ -117,28 +125,31 @@ class PageRenderer
 
         $tag = Arr::get($block, 'data.style') === 'ordered' ? 'ol' : 'ul';
         $baseClass = $tag === 'ol' ? 'list-decimal' : 'list-disc';
-        $listItems = collect($items)
-            ->map(fn ($item) => $this->sanitizeInline(is_string($item) ? $item : null))
-            ->filter()
-            ->map(fn (string $item) => sprintf('<li class="pl-1">%s</li>', e($item)))
-            ->implode('');
 
-        if ($listItems === '') {
+        $listItems = array_map(function ($item) {
+            $value = $this->sanitizeInline(is_string($item) ? $item : null);
+
+            return $value !== null ? sprintf('<li class="pl-1">%s</li>', e($value)) : '';
+        }, $items);
+
+        $listItems = array_filter($listItems, fn ($html) => $html !== '');
+
+        if ($listItems === []) {
             return '';
         }
 
         return sprintf(
-            '<%1$s class="%2$s ml-6 mb-4 space-y-2 text-base-content">%3$s</%1$s>',
+            '<%1$s class="%2$s ps-5 space-y-1">%3$s</%1$s>',
             $tag,
             $baseClass,
-            $listItems
+            implode('', $listItems)
         );
     }
 
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderQuote(array $block): string
+    private function renderQuote(array $block): string
     {
         $text = $this->sanitizeMultiline(Arr::get($block, 'data.text'));
 
@@ -147,221 +158,114 @@ class PageRenderer
         }
 
         $caption = $this->sanitizeInline(Arr::get($block, 'data.caption'));
+
         $quote = sprintf(
-            '<blockquote class="italic text-lg leading-relaxed">%s</blockquote>',
+            '<blockquote class="border-l-4 border-primary pl-4 py-2 my-4 text-base-content/80"><p class="mb-0">%s</p></blockquote>',
             nl2br(e($text))
         );
 
-        if ($caption !== null) {
-            $quote .= sprintf(
-                '<figcaption class="mt-3 text-sm text-base-content/70">%s</figcaption>',
-                e($caption)
-            );
+        if ($caption === null) {
+            return $quote;
         }
 
-        return sprintf('<figure class="my-6 border-l-4 border-primary/40 pl-5">%s</figure>', $quote);
+        return $quote.sprintf(
+            '<p class="ml-4 text-sm text-base-content/60">— %s</p>',
+            e($caption)
+        );
     }
 
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderImage(array $block): string
+    private function renderImage(array $block): string
     {
-        $url = $this->resolveImageUrl($block);
+        $source = Arr::get($block, 'data.file.url')
+            ?? Arr::get($block, 'data.src')
+            ?? Arr::get($block, 'data.path');
 
-        if ($url === null) {
+        if (! is_string($source)) {
+            return '';
+        }
+
+        $src = $this->normalizeImageSource($source);
+
+        if ($src === null) {
             return '';
         }
 
         $caption = $this->sanitizeInline(Arr::get($block, 'data.caption'));
-        $alt = $this->sanitizeInline(Arr::get($block, 'data.alt')) ?? $caption ?? 'Embedded illustration';
 
-        $figure = sprintf(
-            '<img src="%s" alt="%s" loading="lazy" class="mx-auto max-h-[480px] w-full rounded-2xl object-contain shadow-lg">',
-            e($url),
-            e($alt)
+        $image = sprintf(
+            '<img src="%s" alt="%s" class="max-w-full h-auto rounded shadow-sm" loading="lazy">',
+            e($src),
+            e($caption ?? 'Illustration')
         );
 
-        if ($caption !== null) {
-            $figure .= sprintf(
-                '<figcaption class="mt-3 text-center text-sm text-base-content/70">%s</figcaption>',
-                e($caption)
-            );
+        if ($caption === null) {
+            return sprintf('<figure class="my-6 text-center">%s</figure>', $image);
         }
 
-        return sprintf('<figure class="my-8">%s</figure>', $figure);
+        return sprintf(
+            '<figure class="my-6 text-center">%s<figcaption class="mt-2 text-sm text-base-content/60">%s</figcaption></figure>',
+            $image,
+            e($caption)
+        );
     }
 
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderEmbed(array $block): string
+    private function renderEmbed(array $block): string
     {
-        $url = $this->sanitizeInline(Arr::get($block, 'data.url'));
+        $url = Arr::get($block, 'data.embed') ?? Arr::get($block, 'data.source') ?? Arr::get($block, 'data.url');
 
-        if ($url === null || ! $this->isAllowedEmbedUrl($url)) {
+        if (! is_string($url)) {
+            return '';
+        }
+
+        $src = $this->normalizeEmbedSource($url);
+
+        if ($src === null) {
             return '';
         }
 
         $caption = $this->sanitizeInline(Arr::get($block, 'data.caption'));
+
         $iframe = sprintf(
-            '<iframe src="%s" class="h-full w-full" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" sandbox="allow-same-origin allow-scripts allow-presentation" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen title="Embedded video"></iframe>',
-            e($url)
+            '<iframe src="%s" title="%s" loading="lazy" allowfullscreen></iframe>',
+            e($src),
+            e($caption ?? 'Embedded media')
         );
 
-        $content = sprintf('<div class="ratio ratio-16x9 overflow-hidden rounded-2xl shadow-lg">%s</div>', $iframe);
-
-        if ($caption !== null) {
-            $content .= sprintf(
-                '<p class="mt-3 text-center text-sm text-base-content/70">%s</p>',
-                e($caption)
-            );
+        if ($caption === null) {
+            return sprintf('<figure class="media my-6">%s</figure>', $iframe);
         }
 
-        return sprintf('<div class="my-6">%s</div>', $content);
+        return sprintf(
+            '<figure class="media my-6">%s<figcaption class="mt-2 text-sm text-base-content/60">%s</figcaption></figure>',
+            $iframe,
+            e($caption)
+        );
     }
 
     /**
-     * Attempt to resolve a valid image URL from the provided block.
-     *
      * @param  array<string, mixed>  $block
      */
-    protected function resolveImageUrl(array $block): ?string
+    private function renderCode(array $block): string
     {
-        $path = Arr::get($block, 'data.path');
+        $code = Arr::get($block, 'data.code');
 
-        if (is_string($path) && ($normalized = $this->sanitizePath($path)) !== null) {
-            if ($this->isAllowedImagePath($normalized)) {
-                return Storage::disk('public')->url($normalized);
-            }
-
-            return null;
+        if (! is_string($code) || trim($code) === '') {
+            return '';
         }
 
-        $candidates = [
-            Arr::get($block, 'data.url'),
-            Arr::get($block, 'data.file.url'),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (! is_string($candidate)) {
-                continue;
-            }
-
-            $normalized = trim($candidate);
-
-            if ($normalized === '') {
-                continue;
-            }
-
-            if ($this->isAllowedImageUrl($normalized)) {
-                return $normalized;
-            }
-        }
-
-        return null;
+        return sprintf(
+            '<pre class="bg-base-200 rounded p-3 my-4 overflow-auto"><code>%s</code></pre>',
+            e($code)
+        );
     }
 
-    /**
-     * Ensure the provided storage path points to an approved directory.
-     */
-    protected function isAllowedImagePath(string $path): bool
-    {
-        if (str_contains($path, '..')) {
-            return false;
-        }
-
-        return Str::startsWith($path, 'custom-pages/');
-    }
-
-    /**
-     * Determine whether an absolute image URL belongs to our allowed storage hosts.
-     */
-    protected function isAllowedImageUrl(string $url): bool
-    {
-        if (Str::startsWith($url, self::IMAGE_STORAGE_PREFIX)) {
-            return true;
-        }
-
-        $parsed = parse_url($url);
-
-        if ($parsed === false || ! isset($parsed['scheme'], $parsed['host'])) {
-            return false;
-        }
-
-        if (strtolower($parsed['scheme']) !== 'https') {
-            return false;
-        }
-
-        $path = '/' . ltrim($parsed['path'] ?? '', '/');
-
-        if (! Str::startsWith($path, [self::IMAGE_STORAGE_PREFIX, self::CUSTOM_IMAGE_ROUTE_PREFIX])) {
-            return false;
-        }
-
-        if ($this->allowedImageHosts === []) {
-            return true;
-        }
-
-        return in_array(strtolower($parsed['host']), $this->allowedImageHosts, true);
-    }
-
-    /**
-     * Validate that the embed URL is a permitted YouTube embed.
-     */
-    protected function isAllowedEmbedUrl(string $url): bool
-    {
-        $parsed = parse_url($url);
-
-        if ($parsed === false || ! isset($parsed['scheme'], $parsed['host'], $parsed['path'])) {
-            return false;
-        }
-
-        if (strtolower($parsed['scheme']) !== 'https') {
-            return false;
-        }
-
-        $host = strtolower($parsed['host']);
-
-        if (! Str::endsWith($host, 'youtube.com')) {
-            return false;
-        }
-
-        $segments = array_values(array_filter(explode('/', trim((string) $parsed['path'], '/'))));
-
-        if (count($segments) < 2 || $segments[0] !== 'embed') {
-            return false;
-        }
-
-        $videoId = $segments[1];
-
-        if (! preg_match('/^[A-Za-z0-9_-]{11}$/', $videoId)) {
-            return false;
-        }
-
-        if (isset($parsed['query'])) {
-            parse_str($parsed['query'], $params);
-
-            $allowedKeys = ['start'];
-
-            foreach ($params as $key => $value) {
-                if (! in_array($key, $allowedKeys, true)) {
-                    return false;
-                }
-
-                if (! $this->isValidStartOffset($value)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Normalize sanitized inline text.
-     */
-    protected function sanitizeInline(mixed $value): ?string
+    private function sanitizeInline(?string $value): ?string
     {
         $text = $this->sanitizeMultiline($value);
 
@@ -380,90 +284,72 @@ class PageRenderer
         return $normalized === '' ? null : $normalized;
     }
 
-    /**
-     * Normalize multiline text while preserving intentional line breaks.
-     */
-    protected function sanitizeMultiline(mixed $value): ?string
+    private function sanitizeMultiline(?string $value): ?string
     {
         if (! is_string($value)) {
             return null;
         }
 
         $stripped = strip_tags($value);
-        $normalized = trim((string) preg_replace('/\r\n?/', "\n", $stripped));
+        $normalized = preg_replace('/\r\n?/', "\n", $stripped);
 
-        return $normalized === '' ? null : $normalized;
+        if (! is_string($normalized)) {
+            return null;
+        }
+
+        $trimmed = trim($normalized);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
-    /**
-     * @return array<int, string>
-     */
-    protected function resolveAllowedImageHosts(): array
+    private function normalizeImageSource(string $src): ?string
     {
-        $hosts = [];
-
-        $appUrl = config('app.url');
-
-        if (is_string($appUrl)) {
-            $host = parse_url($appUrl, PHP_URL_HOST);
-
-            if (is_string($host) && $host !== '') {
-                $hosts[] = strtolower($host);
-            }
-        }
-
-        $publicUrl = config('filesystems.disks.public.url');
-
-        if (is_string($publicUrl)) {
-            $host = parse_url($publicUrl, PHP_URL_HOST);
-
-            if (is_string($host) && $host !== '') {
-                $hosts[] = strtolower($host);
-            }
-        }
-
-        return array_values(array_unique(array_filter($hosts)));
-    }
-
-    /**
-     * Determine whether the provided embed start offset value is valid.
-     */
-    protected function isValidStartOffset(mixed $value): bool
-    {
-        if ($value === null) {
-            return true;
-        }
-
-        if (is_numeric($value)) {
-            return (int) $value >= 0;
-        }
-
-        if (! is_string($value)) {
-            return false;
-        }
-
-        if ($value === '') {
-            return false;
-        }
-
-        if (preg_match('/^(\d+)h(\d+)m(\d+)s$/', $value)) {
-            return true;
-        }
-
-        return ctype_digit($value);
-    }
-
-    /**
-     * Clean up relative storage paths before validation.
-     */
-    protected function sanitizePath(string $path): ?string
-    {
-        $trimmed = trim($path);
+        $trimmed = trim($src);
 
         if ($trimmed === '') {
             return null;
         }
 
-        return ltrim($trimmed, '/');
+        if (Str::startsWith($trimmed, ['/storage/', '/admin/customization/images/'])) {
+            return $trimmed;
+        }
+
+        if (Str::startsWith($trimmed, 'storage/')) {
+            return '/'.ltrim($trimmed, '/');
+        }
+
+        if (! preg_match('#^https?://#i', $trimmed)) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    private function normalizeEmbedSource(string $src): ?string
+    {
+        $trimmed = trim($src);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (! preg_match('#^https?://#i', $trimmed)) {
+            return null;
+        }
+
+        $host = strtolower((string) parse_url($trimmed, PHP_URL_HOST));
+
+        if (! $this->isAllowedEmbedHost($host)) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    private function isAllowedEmbedHost(string $host): bool
+    {
+        return $host === 'youtu.be'
+            || Str::endsWith($host, '.youtube.com')
+            || $host === 'youtube.com';
     }
 }

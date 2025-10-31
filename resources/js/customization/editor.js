@@ -1,17 +1,7 @@
-import EditorJS from '@editorjs/editorjs';
-import Embed from '@editorjs/embed';
-import Header from '@editorjs/header';
-import ImageTool from '@editorjs/image';
-import List from '@editorjs/list';
-import Paragraph from '@editorjs/paragraph';
-import Quote from '@editorjs/quote';
-
-// Bootstrap the admin customization editor with a curated Editor.js toolset.
-
 /**
- * Safely parse JSON stored on data attributes.
+ * Helper to safely parse JSON stored in data attributes.
  *
- * @param {string|null} value
+ * @param {string|undefined} value
  * @param {any} fallback
  * @returns {any}
  */
@@ -30,7 +20,7 @@ function parseJson(value, fallback) {
 }
 
 /**
- * Convert snake_case actions into human readable labels.
+ * Convert snake_case text into title case.
  *
  * @param {string} text
  * @returns {string}
@@ -49,7 +39,7 @@ function headline(text) {
 /**
  * Format ISO-8601 timestamps for display.
  *
- * @param {string|null} value
+ * @param {string|null|undefined} value
  * @returns {string}
  */
 function formatTimestamp(value) {
@@ -86,8 +76,8 @@ function setStatusBadge(badge, message, style = 'secondary') {
  * Refresh the audit summary cards with the latest metadata.
  *
  * @param {HTMLElement|null} container
- * @param {string|null} timestamp
- * @param {string|null} userName
+ * @param {string|null|undefined} timestamp
+ * @param {string|null|undefined} userName
  * @param {string} fallbackMessage
  */
 function updateAuditSection(container, timestamp, userName, fallbackMessage) {
@@ -164,7 +154,7 @@ function renderActivity(listElement, logs) {
 
         const meta = document.createElement('div');
         const userName = log?.user?.name ?? 'System';
-        meta.textContent = `${formatTimestamp(log?.created_at)} — ${userName}`;
+        meta.textContent = `${formatTimestamp(log?.created_at)} - ${userName}`;
 
         item.appendChild(title);
         item.appendChild(meta);
@@ -356,12 +346,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const endpoints = parseJson(holder.dataset.endpoints, {});
-    let blocks = parseJson(holder.dataset.blocks, []);
-    if (!Array.isArray(blocks)) {
-        blocks = [];
+    const editorElement = holder.querySelector('[data-editor-input]');
+
+    if (!(editorElement instanceof HTMLElement)) {
+        console.warn('Customization editor input not found.');
+
+        return;
     }
 
+    const endpoints = parseJson(holder.dataset.endpoints, {});
     const csrfToken = holder.dataset.csrf ?? '';
     const page = parseJson(holder.dataset.page, {});
     const previewPane = document.getElementById('customization-preview-pane');
@@ -387,55 +380,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const editor = new EditorJS({
-        holder: holder,
-        data: {
-            blocks: blocks,
-        },
-        inlineToolbar: false,
-        tools: {
-            paragraph: {
-                class: Paragraph,
-                inlineToolbar: ['bold', 'italic'],
-            },
-            header: {
-                class: Header,
-                inlineToolbar: ['bold', 'italic'],
-                config: {
-                    levels: [2, 3, 4],
-                    defaultLevel: 2,
-                },
-            },
-            list: {
-                class: List,
-                inlineToolbar: true,
-            },
-            quote: {
-                class: Quote,
-                inlineToolbar: false,
-            },
-            image: {
-                class: ImageTool,
-                config: {
-                    endpoints: {
-                        byFile: endpoints.upload,
-                    },
-                    additionalRequestHeaders: {
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    captionPlaceholder: 'Add a caption',
-                },
-            },
-            embed: {
-                class: Embed,
-                config: {
-                    services: {
-                        youtube: true,
-                    },
-                },
-            },
-        },
-    });
+    let editorInstance = typeof window.getCkeditorInstance === 'function'
+        ? window.getCkeditorInstance(editorElement)
+        : null;
+    let pendingContent = null;
+
+    if (!editorInstance) {
+        editorElement.addEventListener('ckeditor:ready', (event) => {
+            editorInstance = event.detail?.editor ?? null;
+            if (editorInstance && pendingContent !== null) {
+                editorInstance.setData(pendingContent);
+                pendingContent = null;
+            }
+        }, { once: true });
+    }
+
+    async function getContent() {
+        if (editorInstance && typeof editorInstance.getData === 'function') {
+            return editorInstance.getData();
+        }
+
+        if (editorElement instanceof HTMLTextAreaElement) {
+            return editorElement.value;
+        }
+
+        return '';
+    }
+
+    function setContent(html) {
+        const normalized = typeof html === 'string' ? html : '';
+
+        if (editorInstance && typeof editorInstance.setData === 'function') {
+            editorInstance.setData(normalized);
+            pendingContent = null;
+        } else if (editorElement instanceof HTMLTextAreaElement) {
+            editorElement.value = normalized;
+            pendingContent = normalized;
+        }
+    }
 
     async function refreshActivity() {
         if (!endpoints.versions) {
@@ -448,12 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(error);
         }
-    }
-
-    async function gatherBlocks() {
-        const output = await editor.save();
-
-        return Array.isArray(output.blocks) ? output.blocks : [];
     }
 
     function updateFromVersion(version, publish = false) {
@@ -469,9 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handlePreview(button) {
+        if (!endpoints.preview) {
+            return;
+        }
+
         await disableWhileRunning(button, async () => {
             const payload = {
-                blocks: await gatherBlocks(),
+                content: await getContent(),
                 metadata: {
                     origin: 'admin-ui',
                 },
@@ -479,22 +459,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const response = await postJson(endpoints.preview, csrfToken, payload);
+
                 if (previewPane && typeof response.html === 'string') {
                     previewPane.innerHTML = response.html;
                 }
-                setStatusBadge(previewStatus, `Preview updated ${formatTimestamp(new Date().toISOString())}`, 'success');
+
+                if (response.version?.created_at) {
+                    updateAuditSection(draftContainer, response.version.created_at, response.version?.user?.name, 'No drafts yet');
+                }
+
+                setStatusBadge(previewStatus, 'Preview generated', 'info');
                 await refreshActivity();
             } catch (error) {
                 console.error(error);
                 setStatusBadge(previewStatus, error.message ?? 'Preview failed', 'danger');
+                showTransientAlert(holder, error.message ?? 'Preview failed.', 'danger');
             }
         });
     }
 
     async function handleDraft(button) {
+        if (!endpoints.draft) {
+            return;
+        }
+
         await disableWhileRunning(button, async () => {
             const payload = {
-                blocks: await gatherBlocks(),
+                content: await getContent(),
                 metadata: {
                     origin: 'admin-ui',
                 },
@@ -502,21 +493,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const response = await postJson(endpoints.draft, csrfToken, payload);
-                updateStatus(statusContainer, response?.page?.status ?? page.status);
                 updateFromVersion(response.version, false);
-                showTransientAlert(holder, 'Draft saved successfully.', 'success');
+                updateStatus(statusContainer, response?.page?.status ?? page.status);
+                setStatusBadge(previewStatus, 'Draft saved', 'success');
                 await refreshActivity();
             } catch (error) {
                 console.error(error);
-                showTransientAlert(holder, error.message ?? 'Saving draft failed.', 'danger');
+                showTransientAlert(holder, error.message ?? 'Save failed.', 'danger');
             }
         });
     }
 
     async function handlePublish(button) {
+        if (!endpoints.publish) {
+            return;
+        }
+
         await disableWhileRunning(button, async () => {
             const payload = {
-                blocks: await gatherBlocks(),
+                content: await getContent(),
                 metadata: {
                     origin: 'admin-ui',
                 },
@@ -539,12 +534,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadVersions() {
-        if (!versionsAlert) {
+        if (!versionsAlert || !endpoints.versions) {
             return;
         }
 
         versionsAlert.className = 'alert alert-info small';
-        versionsAlert.textContent = 'Loading version history…';
+        versionsAlert.textContent = 'Loading version history...';
         versionsAlert.classList.remove('d-none');
 
         try {
@@ -579,8 +574,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             const response = await postJson(endpoints.restore, csrfToken, payload);
 
-            if (response.version?.editor_state) {
-                await editor.render({ blocks: response.version.editor_state });
+            if (typeof response.content === 'string') {
+                setContent(response.content);
+            } else if (typeof response.version?.content === 'string') {
+                setContent(response.version.content);
             }
 
             if (publish) {

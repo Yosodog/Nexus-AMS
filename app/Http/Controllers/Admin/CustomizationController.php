@@ -24,8 +24,7 @@ class CustomizationController extends Controller
     public function __construct(
         private readonly PagePublisher $publisher,
         private readonly PageRenderer $renderer,
-    ) {
-    }
+    ) {}
 
     /**
      * Display the list of managed pages.
@@ -77,11 +76,11 @@ class CustomizationController extends Controller
         $this->authorize('manage-custom-pages');
 
         $user = $request->user();
-        $normalized = $this->publisher->normalizeBlocks($request->blocks());
-        $html = $this->renderer->render($normalized);
+        $content = $this->publisher->normalizeContent($request->content());
+        $html = $this->renderer->render($content);
 
         $version = $page->versions()->create([
-            'editor_state' => $normalized,
+            'editor_state' => $content,
             'status' => PageVersion::STATUS_PREVIEW,
             'user_id' => $user?->id,
         ]);
@@ -111,8 +110,8 @@ class CustomizationController extends Controller
         $this->authorize('manage-custom-pages');
 
         $user = $request->user();
-        $normalized = $this->publisher->normalizeBlocks($request->blocks());
-        $version = $this->publisher->saveDraft($page, $normalized, $user, $request->metadata());
+        $content = $this->publisher->normalizeContent($request->content());
+        $version = $this->publisher->saveDraft($page, $content, $user, $request->metadata());
 
         return response()->json([
             'version' => $this->serializeVersion($version),
@@ -128,9 +127,9 @@ class CustomizationController extends Controller
         $this->authorize('manage-custom-pages');
 
         $user = $request->user();
-        $normalized = $this->publisher->normalizeBlocks($request->blocks());
-        $html = $this->renderer->render($normalized);
-        $version = $this->publisher->publish($page, $normalized, $html, $user);
+        $content = $this->publisher->normalizeContent($request->content());
+        $html = $this->renderer->render($content);
+        $version = $this->publisher->publish($page, $content, $html, $user);
 
         return response()->json([
             'html' => $html,
@@ -164,13 +163,13 @@ class CustomizationController extends Controller
 
         $user = $request->user();
         $sourceVersion = $page->versions()->findOrFail($request->versionId());
-        $normalized = $this->publisher->normalizeBlocks($sourceVersion->editor_state);
+        $content = $this->publisher->normalizeContent($sourceVersion->editor_state ?? '');
 
         if ($request->shouldPublish()) {
-            $html = $this->renderer->render($normalized);
-            $restoredVersion = $this->publisher->publish($page, $normalized, $html, $user);
+            $html = $this->renderer->render($content);
+            $restoredVersion = $this->publisher->publish($page, $content, $html, $user);
         } else {
-            $restoredVersion = $this->publisher->saveDraft($page, $normalized, $user, [
+            $restoredVersion = $this->publisher->saveDraft($page, $content, $user, [
                 'restored_from_version' => $sourceVersion->id,
             ]);
             $html = null;
@@ -188,6 +187,7 @@ class CustomizationController extends Controller
 
         return response()->json(array_filter([
             'html' => $html,
+            'content' => $content,
             'version' => $this->serializeVersion($restoredVersion),
             'page' => $this->serializePageState($page->refresh()),
         ], fn ($value) => $value !== null));
@@ -202,6 +202,7 @@ class CustomizationController extends Controller
             'id' => $version->id,
             'status' => $version->status,
             'editor_state' => $version->editor_state,
+            'content' => $version->editor_state,
             'created_at' => $version->created_at?->toIso8601String(),
             'published_at' => $version->published_at?->toIso8601String(),
             'user' => $version->user?->only(['id', 'name']),

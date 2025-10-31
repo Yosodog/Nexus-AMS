@@ -159,6 +159,17 @@ const tableConfig = {
     ],
 };
 
+const editors = new Map();
+window.__ckeditorInstances = editors;
+
+function trackEditor(element, editor) {
+    editors.set(element, editor);
+    element.dataset.ckeditorReady = 'true';
+    element.dispatchEvent(new CustomEvent('ckeditor:ready', {
+        detail: { editor },
+    }));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.js-ckeditor').forEach((element) => {
         ClassicEditor.create(element, {
@@ -184,8 +195,16 @@ document.addEventListener('DOMContentLoaded', () => {
             htmlEmbed: {
                 showPreviews: true,
             },
-        }).catch((error) => {
-            console.error('Failed to initialize CKEditor 5', error);
-        });
+        })
+            .then((editor) => {
+                trackEditor(element, editor);
+            })
+            .catch((error) => {
+                console.error('Failed to initialize CKEditor 5', error);
+            });
     });
 });
+
+window.getCkeditorInstance = function getCkeditorInstance(element) {
+    return editors.get(element) ?? null;
+};

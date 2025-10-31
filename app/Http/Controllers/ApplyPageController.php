@@ -13,11 +13,10 @@ use Illuminate\Support\Facades\Cache;
 class ApplyPageController extends Controller
 {
     private const CACHE_KEY = 'pages:apply:html';
+
     private const CACHE_TTL_MINUTES = 5;
 
-    public function __construct(private readonly PageRenderer $renderer)
-    {
-    }
+    public function __construct(private readonly PageRenderer $renderer) {}
 
     /**
      * Display the published Apply page, falling back gracefully when no content exists.
@@ -35,13 +34,20 @@ class ApplyPageController extends Controller
                 return null;
             }
 
-            $blocks = $page->published;
+            if (is_string($page->cached_html) && trim($page->cached_html) !== '') {
+                return $page->cached_html;
+            }
 
-            if (! is_array($blocks) || $blocks === []) {
+            $published = is_string($page->published) ? $page->published : '';
+
+            if ($published === '') {
                 return null;
             }
 
-            return $this->renderer->render($blocks);
+            $html = $this->renderer->render($published);
+            $page->forceFill(['cached_html' => $html])->save();
+
+            return $html;
         });
 
         return view('pages.apply', [

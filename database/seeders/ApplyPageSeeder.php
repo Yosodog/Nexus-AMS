@@ -18,39 +18,22 @@ class ApplyPageSeeder extends Seeder
      */
     public function run(): void
     {
-        $blocks = [
-            [
-                'type' => 'header',
-                'data' => [
-                    'text' => 'Apply to Join Nexus',
-                    'level' => 2,
-                ],
-            ],
-            [
-                'type' => 'paragraph',
-                'data' => [
-                    'text' => 'Tell prospective members about your alliance and how to get in touch.',
-                ],
-            ],
-            [
-                'type' => 'list',
-                'data' => [
-                    'style' => 'unordered',
-                    'items' => [
-                        'Share the minimum requirements for applicants.',
-                        'Explain how long the review process usually takes.',
-                        'Provide a Discord or in-game contact for follow-up questions.',
-                    ],
-                ],
-            ],
-        ];
+        $content = <<<'HTML'
+<h2>Apply to Join Nexus</h2>
+<p>Tell prospective members about your alliance and how to get in touch.</p>
+<ul>
+    <li>Share the minimum requirements for applicants.</li>
+    <li>Explain how long the review process usually takes.</li>
+    <li>Provide a Discord or in-game contact for follow-up questions.</li>
+</ul>
+HTML;
 
         $page = Page::query()->firstOrCreate(
             ['slug' => 'apply'],
             [
                 'status' => Page::STATUS_PUBLISHED,
-                'draft' => $blocks,
-                'published' => $blocks,
+                'draft' => $content,
+                'published' => $content,
             ]
         );
 
@@ -60,12 +43,12 @@ class ApplyPageSeeder extends Seeder
 
         /** @var PageRenderer $renderer */
         $renderer = app(PageRenderer::class);
-        $html = $renderer->render($blocks);
+        $html = $renderer->render($content);
 
         $page->forceFill(['cached_html' => $html])->save();
 
         $page->versions()->create([
-            'editor_state' => $blocks,
+            'editor_state' => $content,
             'status' => PageVersion::STATUS_PUBLISHED,
             'published_at' => now(),
         ]);

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Support\Arrayable;
+use App\Services\PageRenderer;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
@@ -15,13 +16,14 @@ use InvalidArgumentException;
  * @property int $id
  * @property string $slug
  * @property string $status
- * @property array|null $draft
- * @property array|null $published
+ * @property string|null $draft
+ * @property string|null $published
  * @property string|null $cached_html
  */
 class Page extends Model
 {
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PUBLISHED = 'published';
 
     private const CACHE_TTL_MINUTES = 5;
@@ -35,9 +37,24 @@ class Page extends Model
     ];
 
     protected $casts = [
-        'draft' => 'array',
-        'published' => 'array',
+        'cached_html' => 'string',
     ];
+
+    protected function draft(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $this->transformEditorValue($value),
+            set: fn ($value) => $this->prepareEditorValueForStorage($value),
+        );
+    }
+
+    protected function published(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $this->transformEditorValue($value),
+            set: fn ($value) => $this->prepareEditorValueForStorage($value),
+        );
+    }
 
     public function versions(): HasMany
     {
@@ -57,16 +74,14 @@ class Page extends Model
         return $this->hasMany(PageActivityLog::class);
     }
 
-    public function saveDraft(Arrayable|array $blocks, ?User $user = null, array $metadata = []): PageVersion
+    public function saveDraft(string $content, ?User $user = null, array $metadata = []): PageVersion
     {
-        $payload = $blocks instanceof Arrayable ? $blocks->toArray() : $blocks;
-
-        $this->draft = $payload;
+        $this->draft = $content;
         $this->status = self::STATUS_DRAFT;
         $this->save();
 
         $version = $this->versions()->create([
-            'editor_state' => $payload,
+            'editor_state' => $content,
             'status' => PageVersion::STATUS_DRAFT,
             'user_id' => $user?->id,
         ]);
@@ -80,20 +95,19 @@ class Page extends Model
         return $version;
     }
 
-    public function publish(Arrayable|array $blocks, string $renderedHtml, ?User $user = null, ?CarbonInterface $publishedAt = null): PageVersion
+    public function publish(string $content, string $renderedHtml, ?User $user = null, ?CarbonInterface $publishedAt = null): PageVersion
     {
-        $payload = $blocks instanceof Arrayable ? $blocks->toArray() : $blocks;
         $publishedAt ??= now();
 
         $this->fill([
-            'published' => $payload,
-            'draft' => $payload,
+            'published' => $content,
+            'draft' => $content,
             'status' => self::STATUS_PUBLISHED,
             'cached_html' => $renderedHtml,
         ])->save();
 
         $version = $this->versions()->create([
-            'editor_state' => $payload,
+            'editor_state' => $content,
             'status' => PageVersion::STATUS_PUBLISHED,
             'user_id' => $user?->id,
             'published_at' => $publishedAt,
@@ -108,18 +122,20 @@ class Page extends Model
         return $version;
     }
 
-    public function restoreFromVersion(PageVersion $version, ?User $user = null, bool $restoreAsDraft = true): void
+    public function restoreFromVersion(PageVersion $version, ?User $user = null, bool $restoreAsDraft = true, ?string $content = null): void
     {
         if ($version->page_id !== $this->id) {
             throw new InvalidArgumentException('Version does not belong to the provided page.');
         }
 
-        $this->draft = $version->editor_state;
+        $normalized = $content ?? (string) $version->editor_state;
+
+        $this->draft = $normalized;
 
         $shouldForgetCachedHtml = true;
 
         if (! $restoreAsDraft) {
-            $this->published = $version->editor_state;
+            $this->published = $normalized;
             $this->status = self::STATUS_PUBLISHED;
             $shouldForgetCachedHtml = false;
         } else {
@@ -168,5 +184,62 @@ class Page extends Model
             'user_id' => $user?->id,
             'metadata' => $metadata,
         ]);
+    }
+
+    private function transformEditorValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $this->normalizeDecodedEditorValue($decoded);
+            }
+
+            return $value;
+        }
+
+        return $this->normalizeDecodedEditorValue($value);
+    }
+
+    private function normalizeDecodedEditorValue(mixed $value): ?string
+    {
+        if (is_array($value) || is_string($value)) {
+            return app(PageRenderer::class)->render($value);
+        }
+
+        if (is_object($value)) {
+            $encoded = json_encode($value);
+
+            if (is_string($encoded)) {
+                $decoded = json_decode($encoded, true);
+
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $this->normalizeDecodedEditorValue($decoded);
+                }
+            }
+        }
+
+        return is_scalar($value) ? (string) $value : null;
+    }
+
+    private function prepareEditorValueForStorage(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            return json_encode(['html' => $value], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        return json_encode((string) $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }

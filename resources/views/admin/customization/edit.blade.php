@@ -1,6 +1,6 @@
 @php
     /** @var \Illuminate\Support\Collection<int, \App\Models\PageActivityLog> $recentActivity */
-    $initialBlocks = $page->draft ?? [];
+    $initialContent = is_string($page->draft) ? $page->draft : '';
     $endpoints = [
         'preview' => route('admin.customization.preview', $page),
         'draft' => route('admin.customization.draft', $page),
@@ -74,10 +74,14 @@
                     <div id="customization-editor"
                          class="bg-body-secondary rounded border p-3"
                          data-endpoints='@json($endpoints)'
-                         data-blocks='@json($initialBlocks)'
                          data-page='@json(['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status])'
                          data-csrf="{{ csrf_token() }}"
-                       data-initial-activity='@json($initialActivity)'></div>
+                         data-initial-activity='@json($initialActivity)'>
+                        <textarea id="customization-editor-input"
+                                  class="form-control js-ckeditor"
+                                  data-editor-input="true"
+                                  rows="14">{!! $initialContent !!}</textarea>
+                    </div>
 
                     <div class="mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -184,5 +188,6 @@
 @endsection
 
 @push('scripts')
+    @vite('resources/js/ckeditor.js')
     @vite('resources/js/customization/editor.js')
 @endpush

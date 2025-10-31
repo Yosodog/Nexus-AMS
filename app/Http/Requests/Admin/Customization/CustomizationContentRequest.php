@@ -17,17 +17,14 @@ abstract class CustomizationContentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'blocks' => ['required', 'array'],
+            'content' => ['required', 'string'],
             'metadata' => ['sometimes', 'array'],
         ];
     }
 
-    /**
-     * @return array<int, mixed>
-     */
-    public function blocks(): array
+    public function content(): string
     {
-        return $this->input('blocks', []);
+        return (string) $this->input('content', '');
     }
 
     /**
