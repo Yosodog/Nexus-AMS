@@ -8,6 +8,7 @@ use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\Transaction;
 use App\Services\AccountService;
+use App\Services\AllianceMembershipService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WithdrawalLimitService;
@@ -31,7 +32,16 @@ class AccountController extends Controller
     {
         $this->authorize('view-accounts');
 
-        $accounts = Account::with('user')->orderBy('nation_id')->has('user')->get();
+        $membership = app(AllianceMembershipService::class);
+        $allianceIds = $membership->getAllianceIds();
+
+        $accounts = Account::with('user')
+            ->whereHas('nation', function ($q) use ($allianceIds) {
+                $q->whereIn('alliance_id', $allianceIds);
+            })
+            ->orderBy('nation_id')
+            ->get();
+
         $brackets = DirectDepositTaxBracket::orderBy('city_number')->get();
         $enrollments = DirectDepositEnrollment::with('account.user')->get();
         $ddTaxId = SettingService::getDirectDepositId();
