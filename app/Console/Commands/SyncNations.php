@@ -12,7 +12,6 @@ use Carbon\Carbon;
 use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 
 class SyncNations extends Command
 {
@@ -64,8 +63,6 @@ class SyncNations extends Command
             ->then(fn(Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
-
-        Cache::put("sync_batch:{$batch->id}:pages", range(1, $lastPage), now()->addMinutes(60));
 
         SettingService::setLastNationSyncBatchId($batch->id);
 

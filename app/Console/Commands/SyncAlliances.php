@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Jobs\FinalizeAllianceSyncJob;
-use App\Jobs\FinalizeNationSyncJob;
 use App\Jobs\SyncAlliancesJob;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
@@ -12,7 +11,6 @@ use App\Services\SettingService;
 use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 
 class SyncAlliances extends Command
 {
@@ -63,8 +61,6 @@ class SyncAlliances extends Command
             ->then(fn(Batch $batch) => FinalizeAllianceSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
-
-        Cache::put("sync_batch:{$batch->id}:pages", range(1, $lastPage), now()->addMinutes(60));
 
         SettingService::setLastAllianceSyncBatchId($batch->id);
 

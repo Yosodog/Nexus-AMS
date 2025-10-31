@@ -38,14 +38,31 @@ class FinalizeWarSyncJob implements ShouldQueue
     {
         $batch = Bus::findBatch($this->batchId);
 
-        if ($batch?->cancelled()) {
-            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} was cancelled.");
-            Cache::forget("sync_batch:{$this->batchId}:pages");
+        if (!$batch) {
+            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} could not be found.");
+            $this->flushBatchCache();
             SettingService::setLastWarSyncBatchId($this->batchId);
+
             return;
         }
 
-        $keys = Cache::get("sync_batch:{$this->batchId}:pages", []);
+        if ($batch->cancelled()) {
+            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} was cancelled.");
+            $this->flushBatchCache();
+            SettingService::setLastWarSyncBatchId($this->batchId);
+
+            return;
+        }
+
+        if ($batch->failedJobs > 0) {
+            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} had {$batch->failedJobs} failure(s).");
+            $this->flushBatchCache();
+            SettingService::setLastWarSyncBatchId($this->batchId);
+
+            return;
+        }
+
+        $keys = Cache::pull("sync_batch:{$this->batchId}:pages", []);
         $allWarIds = [];
 
         foreach ($keys as $page) {
@@ -55,9 +72,19 @@ class FinalizeWarSyncJob implements ShouldQueue
 
         $allWarIds = array_unique($allWarIds);
 
+        $processedCount = Cache::pull("sync_batch:{$this->batchId}:wars_processed", 0);
+
+        if ($processedCount === 0) {
+            Log::warning("FinalizeWarSyncJob skipped — no wars were recorded as processed for batch {$this->batchId}.");
+            $this->flushBatchCache();
+            SettingService::setLastWarSyncBatchId($this->batchId);
+
+            return;
+        }
+
         if (empty($allWarIds)) {
             Log::warning("❌ FinalizeWarSyncJob aborted: no war IDs were collected for batch {$this->batchId}");
-            Cache::forget("sync_batch:{$this->batchId}:pages");
+            $this->flushBatchCache();
             SettingService::setLastWarSyncBatchId($this->batchId);
             return;
         }
@@ -70,9 +97,20 @@ class FinalizeWarSyncJob implements ShouldQueue
             ->where('date', '<=', $cutoff)
             ->update(['end_date' => $now]);
 
-        Log::info("✅ FinalizeWarSyncJob: Marked {$updatedCount} stale wars as ended (batch {$this->batchId}).");
+        Log::info("✅ FinalizeWarSyncJob: Marked {$updatedCount} stale wars as ended (batch {$this->batchId}, processed {$processedCount}).");
 
-        Cache::forget("sync_batch:{$this->batchId}:pages");
+        $this->flushBatchCache();
         SettingService::setLastWarSyncBatchId($this->batchId);
+    }
+
+    private function flushBatchCache(): void
+    {
+        $pages = Cache::pull("sync_batch:{$this->batchId}:pages", []);
+
+        foreach ($pages as $page) {
+            Cache::forget("sync_batch:{$this->batchId}:{$page}");
+        }
+
+        Cache::forget("sync_batch:{$this->batchId}:wars_processed");
     }
 }
