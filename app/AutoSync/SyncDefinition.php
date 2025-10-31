@@ -12,7 +12,8 @@ class SyncDefinition
         public readonly string $identifierColumn,
         protected readonly Closure $fetcher,
         protected readonly Closure $upserter,
-        public readonly ?int $staleAfterHours = null
+        public readonly ?int $staleAfterHours = null,
+        public readonly array $requiredAttributes = []
     ) {
     }
 

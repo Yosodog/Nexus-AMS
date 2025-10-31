@@ -39,10 +39,10 @@ class NationMilitary extends Model implements SyncableWithPoliticsAndWar
         return new SyncDefinition(
             self::class,
             'nation_id',
-            function (array $ids) {
-                return Nation::getAutoSyncDefinition()->fetchRecords($ids);
+            function (array $ids, array $context = []) {
+                return Nation::getAutoSyncDefinition()->fetchRecords($ids, $context);
             },
-            function ($record) {
+            function ($record, array $context = []) {
                 $nation = Nation::updateFromAPI($record);
 
                 return $nation->military()->withTrashed()->first();

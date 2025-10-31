@@ -117,7 +117,7 @@ class War extends Model implements SyncableWithPoliticsAndWar
         return new SyncDefinition(
             self::class,
             'id',
-            function (array $ids) {
+            function (array $ids, array $context = []) {
                 $ids = array_values(array_unique(array_map('intval', $ids)));
 
                 if (empty($ids)) {
@@ -132,7 +132,7 @@ class War extends Model implements SyncableWithPoliticsAndWar
 
                 return WarQueryService::getMultipleWars($arguments, max(1, min(count($ids), config('pw-sync.chunk_size', 100))), false, false);
             },
-            function ($record) {
+            function ($record, array $context = []) {
                 return self::updateFromAPI($record);
             }
         );

@@ -22,6 +22,8 @@ class AutoSyncManager
 
     protected array $staleRefreshAttempted = [];
 
+    protected array $attributeRefreshAttempted = [];
+
     protected array $relationAttempts = [];
 
     public function __construct(protected PWHealthService $healthService)
@@ -48,7 +50,7 @@ class AutoSyncManager
     }
 
     /**
-     * Refresh a model from the API when it is considered stale.
+     * Refresh a model from the API when it is missing critical data or is considered stale.
      *
      * @param Model $model
      * @return Model
@@ -62,40 +64,9 @@ class AutoSyncManager
 
         $definition = $this->definitionFor($model::class);
 
-        if (! $definition->staleAfterHours) {
-            return $model;
-        }
+        $model = $this->refreshForMissingAttributes($model, $definition);
 
-        $updatedAt = $model->getAttribute('updated_at');
-
-        if (! $updatedAt) {
-            return $model;
-        }
-
-        $key = $this->makeModelKey($model::class, $this->extractIdentifier($model, $definition));
-
-        if (isset($this->staleRefreshAttempted[$key])) {
-            return $model;
-        }
-
-        if ($updatedAt->greaterThan(now()->subHours($definition->staleAfterHours))) {
-            return $model;
-        }
-
-        $this->staleRefreshAttempted[$key] = true;
-
-        $identifier = $this->extractIdentifier($model, $definition);
-
-        if ($identifier === null) {
-            return $model;
-        }
-
-        $this->sync($model::class, [$identifier], ['force' => true]);
-
-        // Reload from the database to ensure we return the refreshed instance.
-        $refreshed = $this->reloadModel($model, $definition, $identifier);
-
-        return $refreshed ?? $model;
+        return $this->refreshStaleModel($model, $definition);
     }
 
     /**
@@ -113,6 +84,115 @@ class AutoSyncManager
         }
 
         return $collection;
+    }
+
+    /**
+     * Refresh a model when required attributes are missing from the current record.
+     *
+     * @param Model $model
+     * @param SyncDefinition $definition
+     * @return Model
+     */
+    protected function refreshForMissingAttributes(Model $model, SyncDefinition $definition): Model
+    {
+        if (empty($definition->requiredAttributes)) {
+            return $model;
+        }
+
+        $identifier = $this->extractIdentifier($model, $definition);
+
+        if ($identifier === null) {
+            return $model;
+        }
+
+        $baseKey = $this->makeModelKey($model::class, $identifier);
+        $ttl = (int) config('pw-sync.missing_attribute_ttl', 3600);
+        $pending = [];
+
+        foreach ($definition->requiredAttributes as $attribute) {
+            if (! $this->isAttributeMissing($model, $attribute)) {
+                continue;
+            }
+
+            $cacheKey = $this->missingAttributeCacheKey($model::class, $attribute, $identifier);
+
+            if (Cache::has($cacheKey)) {
+                continue;
+            }
+
+            $attemptKey = $baseKey.':'.$attribute;
+
+            if (isset($this->attributeRefreshAttempted[$attemptKey])) {
+                continue;
+            }
+
+            $this->attributeRefreshAttempted[$attemptKey] = true;
+            $pending[$attribute] = $cacheKey;
+        }
+
+        if (empty($pending)) {
+            return $model;
+        }
+
+        $this->sync($model::class, [$identifier], ['force' => true]);
+
+        $refreshed = $this->reloadModel($model, $definition, $identifier);
+
+        if ($refreshed instanceof Model) {
+            $model = $refreshed;
+        }
+
+        foreach ($pending as $attribute => $cacheKey) {
+            if ($this->isAttributeMissing($model, $attribute)) {
+                Cache::put($cacheKey, true, now()->addSeconds($ttl));
+            }
+        }
+
+        return $model;
+    }
+
+    /**
+     * Refresh a model when it falls outside the configured staleness window.
+     *
+     * @param Model $model
+     * @param SyncDefinition $definition
+     * @return Model
+     */
+    protected function refreshStaleModel(Model $model, SyncDefinition $definition): Model
+    {
+        if (! $definition->staleAfterHours) {
+            return $model;
+        }
+
+        $updatedAt = $model->getAttribute('updated_at');
+
+        if (! $updatedAt) {
+            return $model;
+        }
+
+        $identifier = $this->extractIdentifier($model, $definition);
+
+        if ($identifier === null) {
+            return $model;
+        }
+
+        $key = $this->makeModelKey($model::class, $identifier);
+
+        if (isset($this->staleRefreshAttempted[$key])) {
+            return $model;
+        }
+
+        if ($updatedAt->greaterThan(now()->subHours($definition->staleAfterHours))) {
+            return $model;
+        }
+
+        $this->staleRefreshAttempted[$key] = true;
+
+        $this->sync($model::class, [$identifier], ['force' => true]);
+
+        $refreshed = $this->reloadModel($model, $definition, $identifier);
+
+        return $refreshed ?? $model;
     }
 
     /**
@@ -194,7 +274,7 @@ class AutoSyncManager
 
         $refreshed = $retry();
 
-        return $this->maybeRefreshRelationResults($refreshed);
+        return $this->finalizeRelationResults($relation, $results, $refreshed);
     }
 
     /**
@@ -364,6 +444,24 @@ class AutoSyncManager
      */
     protected function shouldAttemptRelationSync(Relation $relation, mixed $results): bool
     {
+        $cacheKey = $this->relationMissingCacheKey($relation);
+
+        if ($cacheKey && Cache::has($cacheKey)) {
+            return false;
+        }
+
+        return $this->relationResultsIndicateMissing($relation, $results);
+    }
+
+    /**
+     * Determine whether relation results indicate missing data regardless of cache state.
+     *
+     * @param Relation $relation
+     * @param mixed $results
+     * @return bool
+     */
+    protected function relationResultsIndicateMissing(Relation $relation, mixed $results): bool
+    {
         $parent = $relation->getParent();
         $related = $relation->getRelated();
 
@@ -420,6 +518,97 @@ class AutoSyncManager
         if ($parent instanceof \App\Models\Nation) {
             $this->sync(\App\Models\Nation::class, [$parent->getKey()], ['include_cities' => true]);
         }
+    }
+
+    /**
+     * Finalize relation refresh attempts by caching misses and returning hydrated results.
+     *
+     * @param Relation $relation
+     * @param mixed $original
+     * @param mixed $refreshed
+     * @return mixed
+     */
+    protected function finalizeRelationResults(Relation $relation, mixed $original, mixed $refreshed)
+    {
+        $cacheKey = $this->relationMissingCacheKey($relation);
+
+        if ($cacheKey) {
+            if ($this->relationResultsIndicateMissing($relation, $refreshed)) {
+                Cache::put(
+                    $cacheKey,
+                    true,
+                    now()->addSeconds((int) config('pw-sync.relation_missing_ttl', 1800))
+                );
+            } else {
+                Cache::forget($cacheKey);
+            }
+        }
+
+        return $this->maybeRefreshRelationResults($refreshed);
+    }
+
+    /**
+     * Build the cache key that tracks attribute hydration failures.
+     *
+     * @param string $modelClass
+     * @param string $attribute
+     * @param mixed $identifier
+     * @return string
+     */
+    protected function missingAttributeCacheKey(string $modelClass, string $attribute, mixed $identifier): string
+    {
+        return 'pw-sync:missing-attr:'.md5($modelClass.':'.$attribute.':'.$identifier);
+    }
+
+    /**
+     * Determine whether the provided attribute is missing on the model.
+     *
+     * @param Model $model
+     * @param string $attribute
+     * @return bool
+     */
+    protected function isAttributeMissing(Model $model, string $attribute): bool
+    {
+        $value = $model->getAttribute($attribute);
+
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value) && trim($value) === '') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Build the cache key used to suppress redundant relation sync attempts.
+     *
+     * @param Relation $relation
+     * @return string|null
+     */
+    protected function relationMissingCacheKey(Relation $relation): ?string
+    {
+        $parent = $relation->getParent();
+
+        if (! $parent instanceof Model) {
+            return null;
+        }
+
+        $parentKey = $parent->getKey();
+
+        if ($parentKey === null) {
+            return null;
+        }
+
+        $foreignKey = method_exists($relation, 'getForeignKeyName')
+            ? $relation->getForeignKeyName()
+            : get_class($relation);
+
+        return 'pw-sync:relation-missing:'.md5(
+            get_class($parent).':'.$foreignKey.':'.$parentKey.':'.get_class($relation->getRelated())
+        );
     }
 
     /**

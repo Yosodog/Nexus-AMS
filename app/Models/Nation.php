@@ -338,11 +338,17 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
         return new SyncDefinition(
             self::class,
             'id',
-            function (array $ids) {
+            function (array $ids, array $context = []) {
                 $ids = array_values(array_unique(array_map('intval', $ids)));
 
                 if (empty($ids)) {
                     return [];
+                }
+
+                $withCities = (bool) ($context['include_cities'] ?? false);
+
+                if ($withCities && count($ids) === 1) {
+                    return [NationQueryService::getNationAndCitiesById($ids[0])];
                 }
 
                 $arguments = [
@@ -354,7 +360,7 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
                 return NationQueryService::getMultipleNations(
                     $arguments,
                     max(1, min(count($ids), config('pw-sync.chunk_size', 100))),
-                    true,
+                    $withCities,
                     false,
                     false
                 );
@@ -362,7 +368,8 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
             function ($record) {
                 return self::updateFromAPI($record);
             },
-            $staleAfter
+            $staleAfter,
+            ['nation_name', 'leader_name']
         );
     }
 }

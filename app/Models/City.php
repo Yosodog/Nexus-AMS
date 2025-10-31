@@ -155,7 +155,7 @@ class City extends Model implements SyncableWithPoliticsAndWar
         return new SyncDefinition(
             self::class,
             'id',
-            function (array $ids) {
+            function (array $ids, array $context = []) {
                 $ids = array_values(array_unique(array_map('intval', $ids)));
 
                 if (empty($ids)) {
@@ -176,7 +176,8 @@ class City extends Model implements SyncableWithPoliticsAndWar
             function ($record) {
                 return self::updateFromAPI($record);
             },
-            $staleAfter
+            $staleAfter,
+            ['name']
         );
     }
 }

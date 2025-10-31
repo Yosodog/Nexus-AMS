@@ -115,10 +115,11 @@ class Alliance extends Model implements SyncableWithPoliticsAndWar
                     false
                 );
             },
-            function ($record) {
-                return self::updateFromAPI($record);
+            function ($record, array $context = []) {
+                return self::updateFromAPI($record, (bool) ($context['include_nations'] ?? true));
             },
-            $staleAfter
+            $staleAfter,
+            ['name']
         );
     }
 }
