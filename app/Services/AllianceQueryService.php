@@ -65,6 +65,43 @@ class AllianceQueryService
     }
 
     /**
+     * Fetch multiple alliances with their member nations eagerly loaded.
+     *
+     * @param array<int, int> $ids
+     * @return Alliances
+     */
+    public static function getMultipleAlliancesWithMembers(array $ids): Alliances
+    {
+        $client = new QueryService();
+
+        $builder = (new GraphQLQueryBuilder())
+            ->setRootField('alliances')
+            ->addArgument('first', max(1, count($ids)))
+            ->addArgument([
+                'id' => count($ids) === 1
+                    ? $ids[0]
+                    : GraphQLQueryBuilder::literal('[' . implode(', ', $ids) . ']'),
+            ])
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
+                $builder->addFields(SelectionSetHelper::allianceSet())
+                    ->addNestedField('nations', function (GraphQLQueryBuilder $nationBuilder) {
+                        $nationBuilder->addFields(SelectionSetHelper::nationSet());
+                    });
+            });
+
+        $response = $client->sendQuery($builder, handlePagination: false);
+        $alliances = new Alliances([]);
+
+        foreach ($response as $result) {
+            $alliance = new Alliance([]);
+            $alliance->buildWithJSON((object)$result);
+            $alliances->add($alliance);
+        }
+
+        return $alliances;
+    }
+
+    /**
      * @param array $arguments
      * @param int $perPage
      * @param bool $pagination
