@@ -10,6 +10,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -106,8 +107,8 @@ class UserController extends Controller
         $this->authorize('edit-users');
 
         $validated = $request->validate([
-            'name' => ['required', 'string'],
-            'email' => ['required', 'email'],
+            'name' => ['required', 'string', Rule::unique('users', 'name')->ignore($user->id)],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'is_admin' => ['required', 'boolean'],
             'disabled' => ['required', 'boolean'],
             'password' => ['nullable', 'confirmed', 'min:8'],

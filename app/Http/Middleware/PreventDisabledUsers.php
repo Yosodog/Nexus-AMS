@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Fortify\Fortify;
 use Symfony\Component\HttpFoundation\Response;
 
 class PreventDisabledUsers
@@ -20,7 +21,7 @@ class PreventDisabledUsers
             Auth::logout();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'Your account has been disabled.',
+                Fortify::username() => 'Your account has been disabled.',
             ]);
         }
 
