@@ -53,6 +53,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.cities.index') }}"
+                                icon="bi bi-buildings"
+                                permission="view-members"
+                                :active="request()->routeIs('admin.cities.*')">
+                        Cities
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">Economics</li>
 
                 <li class="nav-item">
@@ -148,6 +157,15 @@
                 </li>
 
                 <li class="nav-header">System</li>
+
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.recruitment.index') }}"
+                                icon="bi bi-envelope-paper"
+                                permission="view-recruitment"
+                                :active="request()->routeIs('admin.recruitment.*')">
+                        Recruitment
+                    </x-nav.link>
+                </li>
 
                 <li class="nav-item">
                     <x-nav.link href="{{ route('admin.settings') }}"

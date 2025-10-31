@@ -21,6 +21,8 @@ return [
     'view-raids',
     'manage-raids',
     'view-diagnostic-info',
+    'view-recruitment',
+    'manage-recruitment',
     'view-war-aid',
     'manage-war-aid',
     'view-dd',

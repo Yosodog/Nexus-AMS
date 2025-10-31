@@ -7,10 +7,12 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
+use App\Models\GrantApplication;
 use App\Models\ManualTransaction;
 use App\Models\Nation;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\WarAidRequest;
 use App\Notifications\DepositCreated;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
@@ -87,6 +89,33 @@ class AccountService
         // Check if the account has pending or active loans
         if ($account->loans()->whereIn('status', ['pending', 'approved'])->exists()) {
             throw new UserErrorException("The account has pending or active loans.");
+        }
+
+        // Check if the account has pending grant applications
+        if (GrantApplication::where('account_id', $account->id)->where('status', 'pending')->exists()) {
+            throw new UserErrorException("The account has pending grant applications.");
+        }
+
+        // Check if the account has pending war aid requests
+        if (WarAidRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
+            throw new UserErrorException("The account has pending war aid requests.");
+        }
+
+        // Check if the account has pending deposit requests
+        if (DepositRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
+            throw new UserErrorException("The account has pending deposit requests.");
+        }
+
+        // Check if the account has pending transactions (withdrawals or transfers)
+        $hasPendingTransactions = Transaction::where('is_pending', true)
+            ->where(function ($query) use ($account) {
+                $query->where('from_account_id', $account->id)
+                    ->orWhere('to_account_id', $account->id);
+            })
+            ->exists();
+
+        if ($hasPendingTransactions) {
+            throw new UserErrorException("The account has pending transactions.");
         }
 
         // Check to ensure the account is empty
@@ -378,9 +407,10 @@ class AccountService
      *
      * @return mixed
      */
-    public static function getRelatedManualTransactions(Account $account, int $perPage)
+    public static function getRelatedManualTransactions(Account $account, int $perPage = 50)
     {
         return ManualTransaction::where("account_id", $account->id)
+            ->with('admin')
             ->orderBy("created_at", "DESC")
             ->paginate($perPage);
     }

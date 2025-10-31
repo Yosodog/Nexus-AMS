@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\SettingService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -14,16 +15,14 @@ use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function __construct()
-    {
-        Gate::authorize('view-diagnostic-info');
-    }
-
     /**
      * @return View
+     * @throws AuthorizationException
      */
     public function index(): View
     {
+        $this->authorize('view-diagnostic-info');
+
         $nationBatchId = SettingService::getLastNationSyncBatchId();
         $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
         $warBatchId = SettingService::getLastWarSyncBatchId();
@@ -46,6 +45,8 @@ class SettingsController extends Controller
      */
     public function runSyncNation(): RedirectResponse
     {
+        $this->authorize('view-diagnostic-info');
+
         Artisan::call('sync:nations');
 
         return redirect()->route('admin.settings')->with([
@@ -59,6 +60,8 @@ class SettingsController extends Controller
      */
     public function runSyncAlliance(): RedirectResponse
     {
+        $this->authorize('view-diagnostic-info');
+
         Artisan::call('sync:alliances');
 
         return redirect()->route('admin.settings')->with([
@@ -72,6 +75,8 @@ class SettingsController extends Controller
      */
     public function runSyncWar(): RedirectResponse
     {
+        $this->authorize('view-diagnostic-info');
+
         Artisan::call('sync:wars');
 
         return redirect()->route('admin.settings')->with([
@@ -86,6 +91,8 @@ class SettingsController extends Controller
      */
     public function cancelSync(Request $request): RedirectResponse
     {
+        $this->authorize('view-diagnostic-info');
+
         $request->validate([
             'batch_id' => 'required|string',
             'type' => 'required|in:nation,alliance,war',

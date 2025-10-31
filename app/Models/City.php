@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\GraphQL\Models\City as CityGraphQL;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class City extends Model
@@ -12,6 +13,13 @@ class City extends Model
 
     public $guarded = [];
     protected $table = "cities";
+
+    protected $casts = [
+        'date' => 'date',
+        'powered' => 'boolean',
+        'infrastructure' => 'float',
+        'land' => 'float',
+    ];
 
     /**
      * @param CityGraphQL $graphQLCityModel
@@ -68,5 +76,34 @@ class City extends Model
     public static function getById(int $id): self
     {
         return self::where("id", $id)->firstOrFail();
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function nation(): BelongsTo
+    {
+        return $this->belongsTo(Nation::class, 'nation_id');
+    }
+
+    public function isInfrastructureAligned(): bool
+    {
+        return $this->isMultipleOfFifty((float) $this->infrastructure);
+    }
+
+    public function isLandAligned(): bool
+    {
+        return $this->isMultipleOfFifty((float) $this->land);
+    }
+
+    protected function isMultipleOfFifty(float $value): bool
+    {
+        if ($value === 0.0) {
+            return true;
+        }
+
+        $nearest = round($value / 50) * 50;
+
+        return abs($value - $nearest) < 0.01;
     }
 }

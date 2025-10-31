@@ -148,36 +148,87 @@
     @if($mmrLogs->isEmpty())
         <p class="text-sm text-base-content/70">No MMR Assistant logs found yet.</p>
     @else
-        <div class="overflow-x-auto">
-            <table class="table table-sm w-full">
-                <thead class="bg-base-300 text-base-content text-sm uppercase">
-                <tr>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Total Spent</th>
-                    <th>Top Resources</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach($mmrLogs as $log)
+        <div class="overflow-hidden rounded-lg border border-base-300">
+            <div class="overflow-x-auto">
+                <table class="table table-sm w-full">
+                    <thead class="bg-base-300 text-base-content text-sm uppercase">
                     <tr>
-                        <td>{{ $log->created_at->format('M d, H:i') }}</td>
-                        <td>{{ optional($log->account)->name ?? 'Deleted Account' }}</td>
-                        <td>${{ number_format($log->total_spent, 2) }}</td>
-                        <td>
-                            @php
-                                $top = collect($mmrResources)
-                                    ->mapWithKeys(fn($r) => [$r => $log->$r])
-                                    ->filter(fn($v) => $v > 0)
-                                    ->sortDesc()
-                                    ->take(3);
-                            @endphp
-                            {{ $top->map(fn($v, $k) => ucfirst($k) . ': ' . number_format($v))->implode(', ') }}
-                        </td>
+                        <th class="w-40">Date</th>
+                        <th>Account</th>
+                        <th class="w-32">Total Spent</th>
+                        <th>Purchases</th>
                     </tr>
-                @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    @foreach($mmrLogs as $log)
+                        @php
+                            $resourceDetails = collect($mmrResources)
+                                ->map(function ($resource) use ($log) {
+                                    $amount = $log->$resource ?? 0;
+                                    $ppu = $log->{"{$resource}_ppu"} ?? 0;
+
+                                    return [
+                                        'resource' => $resource,
+                                        'label' => ucfirst($resource),
+                                        'amount' => $amount,
+                                        'ppu' => $ppu,
+                                        'total' => $amount * $ppu,
+                                    ];
+                                })
+                                ->filter(fn($row) => $row['amount'] > 0)
+                                ->values();
+
+                            $topResources = $resourceDetails->sortByDesc('total')->take(3);
+                            $remainingCount = max($resourceDetails->count() - $topResources->count(), 0);
+                        @endphp
+                        <tr>
+                            <td class="align-top text-sm text-base-content/80">{{ $log->created_at->format('M d, H:i') }}</td>
+                            <td class="align-top">
+                                <div class="font-medium">{{ optional($log->account)->name ?? 'Deleted Account' }}</div>
+                                <div class="text-xs text-base-content/60">#{{ $log->account_id }}</div>
+                            </td>
+                            <td class="align-top font-semibold">${{ number_format($log->total_spent, 2) }}</td>
+                            <td class="align-top">
+                                @if($resourceDetails->isEmpty())
+                                    <span class="text-sm text-base-content/70">No purchases recorded.</span>
+                                @else
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($topResources as $item)
+                                            <span class="badge badge-outline">
+                                                {{ $item['label'] }} · ${{ number_format($item['total'], 2) }}
+                                            </span>
+                                        @endforeach
+
+                                        @if($remainingCount > 0)
+                                            <span class="badge badge-ghost">+{{ $remainingCount }} more</span>
+                                        @endif
+                                    </div>
+
+                                    <details class="mt-2 rounded-lg border border-base-200 bg-base-200 px-4 py-2 text-sm">
+                                        <summary class="cursor-pointer font-medium text-base-content">Full breakdown</summary>
+                                        <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            @foreach($resourceDetails as $item)
+                                                <div class="flex items-start justify-between gap-2">
+                                                    <span class="capitalize font-medium text-base-content/90">{{ $item['resource'] }}</span>
+                                                    <div class="text-right">
+                                                        <div>{{ number_format($item['amount'], 2) }} @ ${{ number_format($item['ppu'], 2) }}</div>
+                                                        <div class="text-xs text-base-content/60">=${{ number_format($item['total'], 2) }}</div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="border-t border-base-300 bg-base-200 px-4 py-3">
+                {{ $mmrLogs->links() }}
+            </div>
         </div>
     @endif
 @endif

@@ -4,8 +4,7 @@ use App\Console\Commands\ProcessDeposits;
 use App\Services\PWHealthService;
 use Illuminate\Support\Facades\Schedule;
 
-
-$whenPWUp = fn() => app(PWHealthService::class)->isUp();
+$whenPWUp = fn () => app(PWHealthService::class)->isUp();
 
 Schedule::command('pw:health-check')->everyMinute();
 
@@ -27,15 +26,17 @@ Schedule::command(ProcessDeposits::class)->everyMinute()->runInBackground()->whe
 Schedule::command('loans:process-payments')->dailyAt('00:15');
 
 // Other system stuff
-Schedule::command('telescope:prune --hours=72')->dailyAt("23:45");
+Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
 
 // Taxes
-Schedule::command('taxes:collect')->hourlyAt("15")->when($whenPWUp);
+Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);
 
 // Military sign in
-Schedule::command("military:sign-in")->dailyAt("12:10")->when($whenPWUp);
+Schedule::command('military:sign-in')->dailyAt('12:10')->when($whenPWUp);
+
+// Recruitment
+Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($whenPWUp);
 
 // Treaty sync
-Schedule::command("sync:treaties")->hourlyAt("10")->when($whenPWUp);
-Schedule::command("trades:update")->hourlyAt("10")->when($whenPWUp);
-
+Schedule::command('sync:treaties')->hourlyAt('10')->when($whenPWUp);
+Schedule::command('trades:update')->hourlyAt('10')->when($whenPWUp);

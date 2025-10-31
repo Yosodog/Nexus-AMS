@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\CustomizationImageController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\RaidController;
+use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
@@ -151,6 +153,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
             ->name('admin.accounts.transactions.refund')
             ->middleware(BlockWhenPWDown::class);
+
+        Route::get('/cities', [CityController::class, 'index'])->name('admin.cities.index');
 
         Route::get('/offshores', [OffshoreController::class, 'index'])->name('admin.offshores.index');
         Route::get('/offshores/create', [OffshoreController::class, 'create'])->name('admin.offshores.create');
@@ -297,6 +301,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name(
             'admin.raids.top-cap.update'
         );
+
+        Route::get('/recruitment', [RecruitmentController::class, 'index'])->name('admin.recruitment.index');
+        Route::post('/recruitment', [RecruitmentController::class, 'update'])->name('admin.recruitment.update');
+        Route::post('/recruitment/test', [RecruitmentController::class, 'sendTest'])->name(
+            'admin.recruitment.test'
+        )->middleware(BlockWhenPWDown::class);
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
         Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(
