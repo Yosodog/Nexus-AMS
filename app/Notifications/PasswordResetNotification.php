@@ -29,10 +29,10 @@ class PasswordResetNotification extends Notification implements ShouldQueue
             'email' => $notifiable->email,
         ], true);
 
-        $subject = 'Reset Your Nexus AMS Password';
+        $subject = 'Reset Your Password';
 
         $message = "[b]Password Reset Requested[/b]\n\n"
-            . "We received a request to reset the Nexus AMS password for your account.\n\n"
+            . "We received a request to reset the password for your account.\n\n"
             . "Use the link below to choose a new password:\n"
             . "{$resetUrl}\n\n"
             . "This link expires in 60 minutes. If you did not request this reset, you can ignore this message.";
