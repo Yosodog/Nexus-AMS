@@ -80,7 +80,7 @@
                             <span class="text-uppercase fw-semibold text-dark-50 small">Average Balance</span>
                             <h2 class="fw-bold mb-0">${{ number_format($accounts->avg('money'), 2) }}</h2>
                         </div>
-                        <span class="badge text-bg-dark text-warning-emphasis">
+                        <span class="badge text-bg-light text-success-emphasis">
                             <i class="bi bi-graph-up"></i>
                         </span>
                     </div>
@@ -96,7 +96,7 @@
                             <span class="text-uppercase fw-semibold text-dark-50 small">Top Account</span>
                             <h2 class="fw-bold mb-0">${{ number_format($accounts->max('money'), 2) }}</h2>
                         </div>
-                        <span class="badge text-bg-dark text-info-emphasis">
+                        <span class="badge text-bg-light text-success-emphasis">
                             <i class="bi bi-trophy"></i>
                         </span>
                     </div>
@@ -118,7 +118,7 @@
                 <p class="mb-0 text-muted small">Search, sort, and drill down into every managed bank account.</p>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="badge text-bg-secondary">{{ number_format($accounts->count()) }} records</span>
+                <span class="badge text-bg-secondary">{{ number_format($accounts->count()) }} accounts</span>
                 <span class="badge text-bg-light text-secondary-emphasis">Avg balance ${{ number_format($accounts->avg('money'), 2) }}</span>
             </div>
         </div>
@@ -128,7 +128,6 @@
                 <table id="account_table" class="table table-hover table-striped align-middle mb-0 w-100">
                     <thead class="table-light">
                     <tr>
-                        <th>Nation</th>
                         <th>Owner</th>
                         <th>Name</th>
                         <th class="text-end">Money</th>
@@ -141,13 +140,8 @@
                     @foreach ($accounts as $acc)
                         <tr>
                             <td>
-                                <a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank" rel="noopener" class="text-decoration-none">
-                                    Nation #{{ $acc->nation_id }}
-                                </a>
-                            </td>
-                            <td>
                                 @if($acc->user)
-                                    <span class="fw-semibold">{{ $acc->user->name }}</span>
+                                    <span class="fw-semibold"><a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank" rel="noopener" class="text-decoration-none">{{ $acc->user->name }}</a></span>
                                 @else
                                     <span class="text-muted"><i class="bi bi-person-x me-1"></i>Deleted</span>
                                 @endif
@@ -156,7 +150,6 @@
                                 <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link-primary fw-semibold">
                                     {{ $acc->name }}
                                 </a>
-                                <div class="small text-muted">Updated {{ optional($acc->updated_at)->diffForHumans() ?? 'n/a' }}</div>
                             </td>
                             <td class="text-end" data-order="{{ $acc->money }}">${{ number_format($acc->money, 2) }}</td>
                             @foreach($resourceList as $resource)
@@ -332,7 +325,7 @@
                             </div>
                             <span class="badge text-bg-info"><i class="bi bi-arrow-repeat"></i></span>
                         </div>
-                        <p class="mb-0 small text-muted">Automatic approvals reset nightly at server midnight.</p>
+                        <p class="mb-0 small text-muted">Automatic approvals of transactions in the last 24 hours.</p>
                     </div>
                 </div>
             </div>
@@ -516,14 +509,13 @@
     </div>
 @endsection
 
-@section("scripts")
-    @parent
+@push("scripts")
     <script>
         $(function () {
             $('#account_table').DataTable({
                 pageLength: 25,
                 lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'All']],
-                order: [[3, 'desc']],
+                order: [[2, 'desc']],
                 scrollX: true,
                 autoWidth: false,
                 language: {
@@ -537,4 +529,4 @@
             });
         });
     </script>
-@endsection
+@endpush
