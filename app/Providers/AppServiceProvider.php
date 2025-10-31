@@ -55,12 +55,22 @@ class AppServiceProvider extends ServiceProvider
         });
 
         foreach (config('permissions', []) as $permission) {
-            Gate::define($permission, fn(User $user) => $user->hasPermission($permission));
+            Gate::define($permission, fn (User $user) => $user->hasPermission($permission));
         }
 
         View::composer('*', function ($view) {
-            $view->with('pwApiDown', Cache::get(PWHealthService::CACHE_KEY_STATUS) === false);
-            $view->with('pwApiLastChecked', Cache::get(PWHealthService::CACHE_KEY_CHECKED_AT));
+            static $status;
+            static $checkedAt;
+            static $resolved = false;
+
+            if (! $resolved) {
+                $status = Cache::get(PWHealthService::CACHE_KEY_STATUS);
+                $checkedAt = Cache::get(PWHealthService::CACHE_KEY_CHECKED_AT);
+                $resolved = true;
+            }
+
+            $view->with('pwApiDown', $status === false);
+            $view->with('pwApiLastChecked', $checkedAt);
         });
     }
 }
