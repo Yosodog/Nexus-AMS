@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor',
             ],
         }).catch((error) => {
-            console.error('Failed to initialize CKEditor 5 for recruitment messaging.', error);
+            console.error('Failed to initialize CKEditor 5', error);
         });
     });
 });
