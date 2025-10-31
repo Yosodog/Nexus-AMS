@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Broadcasting\PWMessageChannel;
+use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Models\CityGrantRequest;
 use App\Models\Loan;
 use App\Models\Nation;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController as FortifyPasswordResetLinkController;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
     }
 
     /**

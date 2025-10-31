@@ -23,6 +23,9 @@
                     <input type="password" name="password" class="grow" placeholder="Password"/>
                 </label>
             </div>
+            <div class="flex justify-between items-center mt-2">
+                <a class="link link-primary text-sm" href="{{ route('password.request') }}">Forgot your password?</a>
+            </div>
             <div class="card-actions justify-end">
                 <input type="submit" class="btn btn-primary w-full" value="Login">
             </div>
