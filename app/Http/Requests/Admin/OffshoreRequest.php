@@ -17,6 +17,25 @@ abstract class OffshoreRequest extends FormRequest
 
     abstract protected function isUpdate(): bool;
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('guardrails')) {
+            return;
+        }
+
+        $guardrails = $this->input('guardrails');
+
+        if (is_null($guardrails)) {
+            $this->merge(['guardrails' => []]);
+
+            return;
+        }
+
+        if (is_string($guardrails) && trim($guardrails) === '') {
+            $this->merge(['guardrails' => []]);
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-offshores') ?? false;
@@ -69,8 +88,8 @@ abstract class OffshoreRequest extends FormRequest
         }
 
         return collect($rawGuardrails)
-            ->filter(fn($guardrail) => is_array($guardrail))
-            ->map(fn(array $guardrail) => [
+            ->filter(fn ($guardrail) => is_array($guardrail))
+            ->map(fn (array $guardrail) => [
                 'resource' => $guardrail['resource'],
                 'minimum_amount' => (float) $guardrail['minimum_amount'],
             ])
