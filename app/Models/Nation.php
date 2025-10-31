@@ -2,7 +2,13 @@
 
 namespace App\Models;
 
+use App\AutoSync\AutoSyncManager;
+use App\AutoSync\Concerns\AutoSyncsWithPoliticsAndWar;
+use App\AutoSync\Contracts\SyncableWithPoliticsAndWar;
+use App\AutoSync\SyncDefinition;
 use App\GraphQL\Models\Nation as NationGraphQL;
+use App\Services\GraphQLQueryBuilder;
+use App\Services\NationQueryService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,8 +16,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 
-class Nation extends Model
+class Nation extends Model implements SyncableWithPoliticsAndWar
 {
+    use AutoSyncsWithPoliticsAndWar;
     use Notifiable, SoftDeletes;
 
     /**
@@ -66,9 +73,15 @@ class Nation extends Model
         'nuclear_launch_facility'
     ];
 
+    /**
+     * Upsert the nation and related aggregates using API payload data.
+     *
+     * @param NationGraphQL $graphQLNationModel
+     * @return self
+     */
     public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
-        // Extract only non-null values
+        // Extract only non-null values so existing attributes remain untouched.
         $nationData = collect((array)$graphQLNationModel)
             ->only([
                 'id',
@@ -114,20 +127,30 @@ class Nation extends Model
             ->toArray();
 
         // Check if the nation already exists
-        $nation = self::find($graphQLNationModel->id);
+        $nation = self::withTrashed()->find($graphQLNationModel->id);
 
         if ($nation) {
+            if ($nation->trashed()) {
+                $nation->restore();
+            }
+
             // Use `fill()` to update only provided values without affecting existing ones
             $nation->fill($nationData);
 
             // Check if there are any changes before saving (prevents unnecessary queries)
             if ($nation->isDirty()) {
                 $nation->save();
+            } else {
+                $nation->touch();
             }
         } else {
             // Create a new Nation record
             $nation = self::create($nationData);
         }
+
+        $syncedCityIds = [];
+        $syncedResourceIds = [];
+        $syncedMilitaryIds = [];
 
         // Conditional update for resources
         if (!is_null($graphQLNationModel->money)) {
@@ -151,7 +174,16 @@ class Nation extends Model
                 ->toArray();
 
             if (!empty($resourcesData)) {
-                $nation->resources()->updateOrCreate(['nation_id' => $nation->id], $resourcesData);
+                $resourceModel = NationResources::withTrashed()->firstOrNew(['nation_id' => $nation->id]);
+
+                if ($resourceModel->trashed()) {
+                    $resourceModel->restore();
+                }
+
+                $resourceModel->fill($resourcesData);
+                $resourceModel->save();
+
+                $syncedResourceIds[] = $resourceModel->getAttribute('nation_id');
             }
         }
 
@@ -192,12 +224,42 @@ class Nation extends Model
             ->toArray();
 
         if (!empty($militaryData)) {
-            $nation->military()->updateOrCreate(['nation_id' => $nation->id], $militaryData);
+            $militaryModel = NationMilitary::withTrashed()->firstOrNew(['nation_id' => $nation->id]);
+
+            if ($militaryModel->trashed()) {
+                $militaryModel->restore();
+            }
+
+            $militaryModel->fill($militaryData);
+            $militaryModel->save();
+
+            $syncedMilitaryIds[] = $militaryModel->getAttribute('nation_id');
         }
 
         if (!is_null($graphQLNationModel->cities)) {
             foreach ($graphQLNationModel->cities as $city) {
-                City::updateFromAPI($city);
+                $cityModel = City::updateFromAPI($city);
+
+                if ($cityModel->getKey() !== null) {
+                    $syncedCityIds[] = $cityModel->getKey();
+                }
+            }
+        }
+
+        if (! empty($syncedCityIds) || ! empty($syncedResourceIds) || ! empty($syncedMilitaryIds)) {
+            /** @var AutoSyncManager $manager */
+            $manager = app(AutoSyncManager::class);
+
+            if (! empty($syncedCityIds)) {
+                $manager->markModelsSynced(City::class, array_unique($syncedCityIds));
+            }
+
+            if (! empty($syncedResourceIds)) {
+                $manager->markModelsSynced(NationResources::class, array_unique($syncedResourceIds));
+            }
+
+            if (! empty($syncedMilitaryIds)) {
+                $manager->markModelsSynced(NationMilitary::class, array_unique($syncedMilitaryIds));
             }
         }
 
@@ -205,6 +267,8 @@ class Nation extends Model
     }
 
     /**
+     * Get the attached resources snapshot for the nation.
+     *
      * @return HasOne
      */
     public function resources()
@@ -213,6 +277,8 @@ class Nation extends Model
     }
 
     /**
+     * Get the attached military snapshot for the nation.
+     *
      * @return HasOne
      */
     public function military()
@@ -221,6 +287,8 @@ class Nation extends Model
     }
 
     /**
+     * Retrieve the latest sign-in relationship for the nation.
+     *
      * @return HasOne
      */
     public function latestSignIn()
@@ -229,6 +297,8 @@ class Nation extends Model
     }
 
     /**
+     * Retrieve a nation by its identifier.
+     *
      * @param int $nation_id
      * @return Nation
      */
@@ -238,6 +308,8 @@ class Nation extends Model
     }
 
     /**
+     * Retrieve the owning alliance for the nation.
+     *
      * @return BelongsTo
      */
     public function alliance()
@@ -246,6 +318,8 @@ class Nation extends Model
     }
 
     /**
+     * Retrieve AMS accounts that belong to the nation.
+     *
      * @return HasMany
      */
     public function accounts()
@@ -254,6 +328,8 @@ class Nation extends Model
     }
 
     /**
+     * Retrieve sign-in records for the nation.
+     *
      * @return HasMany
      */
     public function signIns(): HasMany
@@ -278,5 +354,66 @@ class Nation extends Model
         $this->projectsArray = $projects;
 
         return $projects;
+    }
+
+    /**
+     * Describe how to synchronize nations from Politics & War.
+     *
+     * @return SyncDefinition
+     */
+    public static function getAutoSyncDefinition(): SyncDefinition
+    {
+        $staleAfter = config('pw-sync.staleness.' . self::class);
+
+        return new SyncDefinition(
+            self::class,
+            'id',
+            function (array $ids, array $context = []) {
+                $ids = array_values(array_unique(array_map('intval', $ids)));
+
+                if (empty($ids)) {
+                    return [];
+                }
+
+                $withCities = (bool) ($context['include_cities'] ?? false);
+
+                if ($withCities && count($ids) === 1) {
+                    return [NationQueryService::getNationAndCitiesById($ids[0])];
+                }
+
+                $arguments = [
+                    'id' => count($ids) === 1
+                        ? $ids[0]
+                        : GraphQLQueryBuilder::literal('[' . implode(', ', $ids) . ']'),
+                ];
+
+                return NationQueryService::getMultipleNations(
+                    $arguments,
+                    max(1, min(count($ids), config('pw-sync.chunk_size', 100))),
+                    $withCities,
+                    false,
+                    false
+                );
+            },
+            function ($record) {
+                return self::updateFromAPI($record);
+            },
+            $staleAfter,
+            ['nation_name', 'leader_name'],
+            function (array $ids, array $context = []): array {
+                // Automatically include city payloads for single-nation refreshes so we avoid a second follow-up sync.
+                if (! array_key_exists('include_cities', $context)) {
+                    $context['include_cities'] = count($ids) === 1;
+                }
+
+                return $context;
+            },
+            [
+                [
+                    'when' => ['include_cities' => true],
+                    'also' => [[]],
+                ],
+            ]
+        );
     }
 }

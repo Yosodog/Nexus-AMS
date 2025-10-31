@@ -168,12 +168,24 @@ class Nation
         $this->offensive_wars_count = isset($json->offensive_wars_count) ? (int)$json->offensive_wars_count : null;
         $this->defensive_wars_count = isset($json->defensive_wars_count) ? (int)$json->defensive_wars_count : null;
 
-        if (isset($json->cities) && is_array($json->cities)) {
-            $this->cities = new Cities([]);
-            foreach ($json->cities as $city) {
-                $cityModel = new City();
-                $cityModel->buildWithJSON((object)$city);
-                $this->cities->add($cityModel);
+        if (isset($json->cities)) {
+            $cityPayloads = [];
+
+            if (is_array($json->cities)) {
+                $cityPayloads = $json->cities;
+            } elseif (is_object($json->cities) && isset($json->cities->data) && is_array($json->cities->data)) {
+                // GraphQL connections wrap related results in a "data" array – normalise that here so the
+                // hydration logic always receives a flat list of cities regardless of response shape.
+                $cityPayloads = $json->cities->data;
+            }
+
+            if (! empty($cityPayloads)) {
+                $this->cities = new Cities([]);
+                foreach ($cityPayloads as $city) {
+                    $cityModel = new City();
+                    $cityModel->buildWithJSON((object)$city);
+                    $this->cities->add($cityModel);
+                }
             }
         }
 

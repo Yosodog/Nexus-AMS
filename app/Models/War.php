@@ -2,18 +2,27 @@
 
 namespace App\Models;
 
+use App\AutoSync\Concerns\AutoSyncsWithPoliticsAndWar;
+use App\AutoSync\Contracts\SyncableWithPoliticsAndWar;
+use App\AutoSync\SyncDefinition;
 use App\GraphQL\Models\War as WarGraphQL;
+use App\Services\GraphQLQueryBuilder;
+use App\Services\WarQueryService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use stdClass;
 
-class War extends Model
+class War extends Model implements SyncableWithPoliticsAndWar
 {
+    use AutoSyncsWithPoliticsAndWar;
+
     protected $table = 'wars';
     protected $guarded = [];
 
     /**
+     * Upsert a war record from a Politics & War payload.
+     *
      * @param WarGraphQL|array|stdClass $war
      * @return War
      */
@@ -65,6 +74,8 @@ class War extends Model
     }
 
     /**
+     * Retrieve the attacking nation for the war.
+     *
      * @return BelongsTo
      */
     public function attacker()
@@ -73,6 +84,8 @@ class War extends Model
     }
 
     /**
+     * Retrieve the defending nation for the war.
+     *
      * @return BelongsTo
      */
     public function defender()
@@ -81,6 +94,8 @@ class War extends Model
     }
 
     /**
+     * Constrain the query to wars that are still active.
+     *
      * @param $query
      * @return mixed
      */
@@ -89,6 +104,37 @@ class War extends Model
         return $query->where(fn ($q) =>
         $q->whereNull('end_date')
             ->where('turns_left', '>', 0)
+        );
+    }
+
+    /**
+     * Describe how to synchronize wars from Politics & War.
+     *
+     * @return SyncDefinition
+     */
+    public static function getAutoSyncDefinition(): SyncDefinition
+    {
+        return new SyncDefinition(
+            self::class,
+            'id',
+            function (array $ids, array $context = []) {
+                $ids = array_values(array_unique(array_map('intval', $ids)));
+
+                if (empty($ids)) {
+                    return [];
+                }
+
+                $arguments = [
+                    'id' => count($ids) === 1
+                        ? $ids[0]
+                        : GraphQLQueryBuilder::literal('[' . implode(', ', $ids) . ']'),
+                ];
+
+                return WarQueryService::getMultipleWars($arguments, max(1, min(count($ids), config('pw-sync.chunk_size', 100))), false, false);
+            },
+            function ($record, array $context = []) {
+                return self::updateFromAPI($record);
+            }
         );
     }
 }

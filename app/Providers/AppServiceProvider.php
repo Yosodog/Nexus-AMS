@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\AutoSync\AutoSyncManager;
 use App\Broadcasting\PWMessageChannel;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Models\CityGrantRequest;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(AutoSyncManager::class, fn($app) => new AutoSyncManager($app->make(PWHealthService::class)));
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
 
         $this->app->scoped('pw.health.view-data', function () {
