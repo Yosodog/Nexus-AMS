@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\RecruitmentMessage;
 use App\Models\Setting;
 
 class SettingService
@@ -261,25 +262,17 @@ class SettingService
 
     public static function getRecruitmentPrimaryMessage(): string
     {
-        $value = self::getValue('recruitment_primary_message');
+        $appName = config('app.name', 'Nexus');
+        $default = '<p>Welcome to Politics &amp; War!</p>'
+            ."<p>The team at {$appName} would love to help you get started. "
+            .'Join our Discord and we can walk you through your first steps.</p>';
 
-        if (is_null($value) || $value === '') {
-            $appName = config('app.name', 'Nexus');
-            $default = '<p>Welcome to Politics &amp; War!</p>'
-                ."<p>The team at {$appName} would love to help you get started. "
-                .'Join our Discord and we can walk you through your first steps.</p>';
-
-            self::setRecruitmentPrimaryMessage($default);
-
-            return $default;
-        }
-
-        return (string) $value;
+        return self::getRecruitmentMessage('primary', $default);
     }
 
     public static function setRecruitmentPrimaryMessage(string $message): void
     {
-        self::setValue('recruitment_primary_message', $message);
+        self::setRecruitmentMessage('primary', $message);
     }
 
     public static function getRecruitmentFollowUpSubject(): string
@@ -304,23 +297,38 @@ class SettingService
 
     public static function getRecruitmentFollowUpMessage(): string
     {
-        $value = self::getValue('recruitment_follow_up_message');
+        $appName = config('app.name', 'Nexus');
+        $default = '<p>Hey there! Just following up to see how your nation is progressing.</p>'
+            ."<p>If you are still looking for an alliance, we'd love to have you at {$appName}.</p>";
 
-        if (is_null($value) || $value === '') {
-            $appName = config('app.name', 'Nexus');
-            $default = '<p>Hey there! Just following up to see how your nation is progressing.</p>'
-                ."<p>If you are still looking for an alliance, we'd love to have you at {$appName}.</p>";
-
-            self::setRecruitmentFollowUpMessage($default);
-
-            return $default;
-        }
-
-        return (string) $value;
+        return self::getRecruitmentMessage('follow_up', $default);
     }
 
     public static function setRecruitmentFollowUpMessage(string $message): void
     {
-        self::setValue('recruitment_follow_up_message', $message);
+        self::setRecruitmentMessage('follow_up', $message);
+    }
+
+    protected static function getRecruitmentMessage(string $type, string $default): string
+    {
+        $message = RecruitmentMessage::query()
+            ->where('type', $type)
+            ->value('message');
+
+        if (is_null($message) || $message === '') {
+            self::setRecruitmentMessage($type, $default);
+
+            return $default;
+        }
+
+        return (string) $message;
+    }
+
+    protected static function setRecruitmentMessage(string $type, string $message): void
+    {
+        RecruitmentMessage::query()->updateOrCreate(
+            ['type' => $type],
+            ['message' => $message]
+        );
     }
 }
