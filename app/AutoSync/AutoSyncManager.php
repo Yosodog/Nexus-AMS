@@ -217,6 +217,8 @@ class AutoSyncManager
         $definition = $this->definitionFor($modelClass);
         $ids = array_values(array_unique(array_map('strval', array_filter($ids, static fn($id) => ! is_null($id)))));
 
+        $context = $definition->prepareContext($ids, $context);
+
         if (empty($ids)) {
             return;
         }
@@ -323,7 +325,7 @@ class AutoSyncManager
 
             foreach (array_unique($synced) as $identifier) {
                 // Remember each identifier under the context signature to short-circuit duplicate fetches later in the request.
-                $this->markSynced($definition->modelClass, $identifier, $signature);
+                $this->markSynced($definition->modelClass, $identifier, $signature, $context);
             }
 
             $lockedKeys = array_map('strval', $lockedIds);
@@ -507,12 +509,26 @@ class AutoSyncManager
      * @param string $modelClass
      * @param string $identifier
      * @param string $signature
+     * @param array<string, mixed> $context
      * @return void
      */
-    protected function markSynced(string $modelClass, string $identifier, string $signature): void
+    protected function markSynced(string $modelClass, string $identifier, string $signature, array $context = []): void
     {
         $identifier = (string) $identifier;
         $this->syncedInRequest[$modelClass][$identifier][$signature] = true;
+
+        $definition = $this->definitionFor($modelClass);
+        $aliases = $definition->aliasSignatures($context, function (array $aliasContext): string {
+            return $this->contextSignature($aliasContext);
+        });
+
+        foreach ($aliases as $aliasSignature) {
+            if ($aliasSignature === $signature) {
+                continue;
+            }
+
+            $this->syncedInRequest[$modelClass][$identifier][$aliasSignature] = true;
+        }
     }
 
     /**

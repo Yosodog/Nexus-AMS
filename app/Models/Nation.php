@@ -369,7 +369,21 @@ class Nation extends Model implements SyncableWithPoliticsAndWar
                 return self::updateFromAPI($record);
             },
             $staleAfter,
-            ['nation_name', 'leader_name']
+            ['nation_name', 'leader_name'],
+            function (array $ids, array $context = []): array {
+                // Automatically include city payloads for single-nation refreshes so we avoid a second follow-up sync.
+                if (! array_key_exists('include_cities', $context)) {
+                    $context['include_cities'] = count($ids) === 1;
+                }
+
+                return $context;
+            },
+            [
+                [
+                    'when' => ['include_cities' => true],
+                    'also' => [[]],
+                ],
+            ]
         );
     }
 }
