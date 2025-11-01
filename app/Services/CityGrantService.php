@@ -13,41 +13,26 @@ use Illuminate\Validation\ValidationException;
 
 class CityGrantService
 {
-
-    /**
-     * @param int $cityNum
-     *
-     * @return CityGrant
-     */
     public static function findGrantWithCityNum(int $cityNum): CityGrant
     {
-        return CityGrant::where("city_number", $cityNum)
+        return CityGrant::where('city_number', $cityNum)
             ->firstOrFail();
     }
 
-    /**
-     * @param CityGrant $grant
-     * @param int $nationId
-     * @param int $accountId
-     *
-     * @return CityGrantRequest
-     */
     public static function createRequest(CityGrant $grant, int $nationId, int $accountId): CityGrantRequest
     {
         return CityGrantRequest::create([
-            "city_number" => $grant->city_number,
-            "grant_amount" => $grant->grant_amount,
-            "nation_id" => $nationId,
-            "account_id" => $accountId,
-            "status" => "pending",
+            'city_number' => $grant->city_number,
+            'grant_amount' => $grant->grant_amount,
+            'nation_id' => $nationId,
+            'account_id' => $accountId,
+            'status' => 'pending',
         ]);
     }
 
     /**
-     * @param CityGrant $grant
-     * @param Nation $nation
-     *
      * @return void
+     *
      * @throws ValidationException
      */
     public static function validateEligibility(CityGrant $grant, Nation $nation)
@@ -55,8 +40,8 @@ class CityGrantService
         $requirements = $grant->requirements ?? [];
 
         // Make sure they don't have a pending city grant
-        $pending = CityGrantRequest::where("nation_id", Auth::user()->nation_id)
-            ->where("status", "pending")
+        $pending = CityGrantRequest::where('nation_id', Auth::user()->nation_id)
+            ->where('status', 'pending')
             ->get();
 
         if ($pending->count() > 0) {
@@ -64,8 +49,8 @@ class CityGrantService
         }
 
         // Check to see if they've gotten this grant before
-        $gotten = CityGrantRequest::where("nation_id", Auth::user()->nation_id)
-            ->where("status", "approved")
+        $gotten = CityGrantRequest::where('nation_id', Auth::user()->nation_id)
+            ->where('status', 'approved')
             ->get();
 
         if ($gotten->count() > 0) {
@@ -121,5 +106,4 @@ class CityGrantService
 
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
     }
-
 }

@@ -4,14 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->boolean("is_pending");
+            $table->boolean('is_pending');
         });
     }
 
@@ -21,7 +22,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropColumn("is_pending");
+            $table->dropColumn('is_pending');
         });
     }
 };

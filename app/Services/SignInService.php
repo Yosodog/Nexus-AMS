@@ -7,10 +7,6 @@ use App\Models\NationSignIn;
 
 class SignInService
 {
-    /**
-     * @param Nation $nation
-     * @return void
-     */
     public function snapshotNation(Nation $nation): void
     {
         $accounts = AccountService::getAccountsByNid($nation->id);

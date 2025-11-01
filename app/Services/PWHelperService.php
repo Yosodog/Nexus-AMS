@@ -4,7 +4,6 @@ namespace App\Services;
 
 class PWHelperService
 {
-
     /**
      * This is to work with the Project Bits field of the API
      * It's just an associative array to map each project to its bit position
@@ -51,11 +50,6 @@ class PWHelperService
         'Nuclear Launch Facility' => 1 << 38,
     ];
 
-    /**
-     * @param int $projectBits
-     *
-     * @return array
-     */
     public static function getNationProjects(int $projectBits): array
     {
         $ownedProjects = [];
@@ -70,8 +64,6 @@ class PWHelperService
     }
 
     /**
-     * @param bool $includeMoney
-     * @param bool $includeCredits
      * @return string[]
      */
     public static function resources(bool $includeMoney = true, bool $includeCredits = false): array
@@ -100,5 +92,4 @@ class PWHelperService
 
         return $resources;
     }
-
 }

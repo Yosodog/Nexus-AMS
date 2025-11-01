@@ -12,7 +12,7 @@ class Account extends Model
 {
     use SoftDeletes;
 
-    public $table = "accounts";
+    public $table = 'accounts';
 
     protected array $resources;
 
@@ -28,7 +28,7 @@ class Account extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nation::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, 'nation_id', 'id');
     }
 
     /**
@@ -36,7 +36,7 @@ class Account extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class, "nation_id", "nation_id");
+        return $this->belongsTo(User::class, 'nation_id', 'nation_id');
     }
 
     /**
@@ -44,7 +44,7 @@ class Account extends Model
      */
     public function cityGrants()
     {
-        return $this->hasMany(CityGrantRequest::class, "account_id");
+        return $this->hasMany(CityGrantRequest::class, 'account_id');
     }
 
     /**
@@ -52,7 +52,7 @@ class Account extends Model
      */
     public function loans()
     {
-        return $this->hasMany(Loan::class, "account_id");
+        return $this->hasMany(Loan::class, 'account_id');
     }
 
     /**
@@ -65,8 +65,6 @@ class Account extends Model
 
     /**
      * Checks if the account is completely empty.
-     *
-     * @return bool
      */
     public function isEmpty(): bool
     {

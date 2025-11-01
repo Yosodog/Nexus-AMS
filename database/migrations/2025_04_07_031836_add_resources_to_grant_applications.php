@@ -29,7 +29,7 @@ return new class extends Migration
         Schema::table('grant_applications', function (Blueprint $table) {
             $table->dropColumn([
                 'money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead',
-                'gasoline', 'munitions', 'steel', 'aluminum', 'food'
+                'gasoline', 'munitions', 'steel', 'aluminum', 'food',
             ]);
         });
     }

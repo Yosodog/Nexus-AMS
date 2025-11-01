@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Account;
 use App\Models\MMRTier;
 use App\Models\Nation;
 use App\Models\NationSignIn;
@@ -20,10 +19,6 @@ class MMRService
         // nukes spies handled separately
     ];
 
-    /**
-     * @param Nation $nation
-     * @return MMRTier|null
-     */
     public function getTierForNation(Nation $nation): ?MMRTier
     {
         return MMRTier::whereIn('city_count', [$nation->num_cities, 0])
@@ -31,16 +26,11 @@ class MMRService
             ->first();
     }
 
-    /**
-     * @param Nation $nation
-     * @param NationSignIn $signIn
-     * @return array
-     */
     public function evaluate(Nation $nation, NationSignIn $signIn): array
     {
         $tier = $this->getTierForNation($nation);
 
-        if (!$tier) {
+        if (! $tier) {
             return [
                 'mmr_score' => 0,
                 'meets_unit_requirements' => false,
@@ -55,9 +45,6 @@ class MMRService
 
     /**
      * Calculates the MMR resource score (0-100) based on sign-in and banked amounts.
-     * @param NationSignIn $signIn
-     * @param MMRTier $tier
-     * @return int
      */
     protected function calculateResourceScore(NationSignIn $signIn, MMRTier $tier): int
     {
@@ -74,16 +61,12 @@ class MMRService
 
     /**
      * Determines if the nation meets the unit-based MMR thresholds.
-     * @param NationSignIn $signIn
-     * @param MMRTier $tier
-     * @param int $cityCount
-     * @return bool
      */
     protected function meetsUnitRequirements(NationSignIn $signIn, MMRTier $tier, int $cityCount): bool
     {
         foreach (self::UNITS as $unit => $info) {
             $required = $tier->{$info['field']} * $info['multiplier'] * $cityCount;
-            if ($signIn->$unit < $required) {
+            if ($required > $signIn->$unit) {
                 return false;
             }
         }

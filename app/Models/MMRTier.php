@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MMRTier extends Model
 {
-    public $table = "mmr_tiers";
+    public $table = 'mmr_tiers';
 
     protected $fillable = [
         'city_count',

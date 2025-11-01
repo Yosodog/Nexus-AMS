@@ -7,6 +7,7 @@ use Iterator;
 class Wars implements Iterator
 {
     private array $wars;
+
     private int $position = 0;
 
     public function __construct(array $wars = [])
@@ -21,7 +22,7 @@ class Wars implements Iterator
 
     public function next(): void
     {
-        ++$this->position;
+        $this->position++;
     }
 
     public function key(): int

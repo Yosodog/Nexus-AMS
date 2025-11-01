@@ -12,7 +12,8 @@ class Loan extends Model
     /**
      * @var string
      */
-    public $table = "loans";
+    public $table = 'loans';
+
     /**
      * @var string[]
      */
@@ -25,11 +26,11 @@ class Loan extends Model
         'term_weeks',
         'status',
         'approved_at',
-        'next_due_date'
+        'next_due_date',
     ];
 
     protected $casts = [
-        'next_due_date' => 'datetime'
+        'next_due_date' => 'datetime',
     ];
 
     /**
@@ -48,25 +49,16 @@ class Loan extends Model
         return $this->belongsTo(Account::class);
     }
 
-    /**
-     * @return bool
-     */
     public function isPending(): bool
     {
         return $this->status === 'pending';
     }
 
-    /**
-     * @return bool
-     */
     public function isApproved(): bool
     {
         return $this->status === 'approved';
     }
 
-    /**
-     * @return float
-     */
     public function getNextPaymentDue(): float
     {
         $loanService = app(LoanService::class); // Resolve the service
@@ -88,5 +80,4 @@ class Loan extends Model
     {
         return $this->hasMany(LoanPayment::class, 'loan_id');
     }
-
 }

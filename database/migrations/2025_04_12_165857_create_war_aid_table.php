@@ -9,7 +9,8 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void {
+    public function up(): void
+    {
         Schema::create('war_aid_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('nation_id');
@@ -32,13 +33,14 @@ return new class extends Migration
             $table->timestamp('denied_at')->nullable();
             $table->timestamps();
 
-            $table->index("nation_id");
-            $table->index("account_id");
-            $table->index("status");
+            $table->index('nation_id');
+            $table->index('account_id');
+            $table->index('status');
         });
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::dropIfExists('war_aid_requests');
     }
 };

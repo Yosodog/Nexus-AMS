@@ -25,8 +25,6 @@ class CreateNationJob implements ShouldQueue
 
     /**
      * The subscription doesn't give us everything we need, so we'll just query the API to get all the info. Weird, but I don't care.
-     *
-     * @return void
      */
     public function handle(): void
     {
@@ -38,7 +36,7 @@ class CreateNationJob implements ShouldQueue
                 Nation::updateFromAPI($nationModel);
             }
         } catch (Exception $e) {
-            Log::error("Failed to create nations", ['error' => $e->getMessage()]);
+            Log::error('Failed to create nations', ['error' => $e->getMessage()]);
         }
     }
 }

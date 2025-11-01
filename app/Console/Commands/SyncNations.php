@@ -44,11 +44,11 @@ class SyncNations extends Command
             $jobs[] = new SyncNationsJob($page, $perPage);
 
             if ($page === 1) {
-                $client = new QueryService();
-                $builder = (new GraphQLQueryBuilder())
-                    ->setRootField("nations")
+                $client = new QueryService;
+                $builder = (new GraphQLQueryBuilder)
+                    ->setRootField('nations')
                     ->addArgument('first', $perPage)
-                    ->addNestedField("data", fn($b) => $b->addFields(SelectionSetHelper::nationSet()))
+                    ->addNestedField('data', fn ($b) => $b->addFields(SelectionSetHelper::nationSet()))
                     ->withPaginationInfo();
 
                 $response = $client->getPaginationInfo($builder);
@@ -59,14 +59,14 @@ class SyncNations extends Command
         } while ($page <= $lastPage);
 
         $batch = Bus::batch($jobs)
-            ->name("Nation Sync - " . Carbon::now()->toDateTimeString())
-            ->then(fn(Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
+            ->name('Nation Sync - '.Carbon::now()->toDateTimeString())
+            ->then(fn (Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
 
         SettingService::setLastNationSyncBatchId($batch->id);
 
         $this->info("Queued {$page} nation sync jobs in a batch.");
-        $this->info("All nation sync jobs have been queued.");
+        $this->info('All nation sync jobs have been queued.');
     }
 }

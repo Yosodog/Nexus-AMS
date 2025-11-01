@@ -18,9 +18,7 @@ class OffshoreService
 {
     private const CACHE_TTL_MINUTES = 30;
 
-    public function __construct(private readonly AllianceMembershipService $allianceMembershipService)
-    {
-    }
+    public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
 
     public function all(bool $includeDisabled = false): Collection
     {
@@ -153,7 +151,7 @@ class OffshoreService
         /** @var QueryService $client */
         $client = App::make(QueryService::class, $parameters);
 
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new GraphQLQueryBuilder)
             ->setRootField('alliances')
             ->addArgument('id', $offshore->alliance_id)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
@@ -180,11 +178,11 @@ class OffshoreService
             return [];
         }
 
-        $result = (array)($response->{0} ?? []);
+        $result = (array) ($response->{0} ?? []);
         $resources = PWHelperService::resources();
 
         return collect($resources)
-            ->mapWithKeys(fn(string $resource) => [
+            ->mapWithKeys(fn (string $resource) => [
                 $resource => (float) Arr::get($result, $resource, 0),
             ])
             ->all();
@@ -197,7 +195,7 @@ class OffshoreService
         }
 
         $guardrailsCollection = collect($guardrails)
-            ->filter(fn($guardrail) => is_array($guardrail))
+            ->filter(fn ($guardrail) => is_array($guardrail))
             ->mapWithKeys(function (array $guardrail) {
                 $resource = $guardrail['resource'] ?? null;
 
@@ -234,7 +232,7 @@ class OffshoreService
     }
 
     /**
-     * @param array<string, float>|mixed $snapshot
+     * @param  array<string, float>|mixed  $snapshot
      * @return array{balances: array<string, float>, cached_at: Carbon|null}
      */
     protected function normalizeSnapshot(mixed $snapshot): array

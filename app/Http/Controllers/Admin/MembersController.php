@@ -14,8 +14,6 @@ class MembersController extends Controller
     use AuthorizesRequests;
 
     /**
-     * @param MemberStatsService $statsService
-     * @return View
      * @throws AuthorizationException
      */
     public function index(MemberStatsService $statsService): View
@@ -26,9 +24,6 @@ class MembersController extends Controller
     }
 
     /**
-     * @param Nation $nation
-     * @param MemberStatsService $service
-     * @return View
      * @throws AuthorizationException
      */
     public function show(Nation $nation, MemberStatsService $service): View

@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class NationResources extends Model
 {
     use SoftDeletes;
-    protected $table = "nation_resources";
+
+    protected $table = 'nation_resources';
 
     protected $guarded = [];
 

@@ -17,6 +17,7 @@ class CityGrantController
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function cityGrants()
@@ -76,9 +77,9 @@ class CityGrantController
     }
 
     /**
-     * @param CityGrantRequest $request
-     *
+     * @param  CityGrantRequest  $request
      * @return mixed
+     *
      * @throws AuthorizationException
      */
     public function denyCityGrant(CityGrantRequest $grantRequest)
@@ -102,9 +103,9 @@ class CityGrantController
     }
 
     /**
-     * @param \Illuminate\Support\Facades\Request $request
-     * @param CityGrant $city_grant
+     * @param  \Illuminate\Support\Facades\Request  $request
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function updateCityGrant(Request $request, CityGrant $city_grant)
@@ -112,12 +113,12 @@ class CityGrantController
         $this->authorize('manage-city-grants');
 
         $validated = $request->validate([
-            'city_number' => 'required|integer|min:1|unique:city_grants,city_number,' . $city_grant->id,
+            'city_number' => 'required|integer|min:1|unique:city_grants,city_number,'.$city_grant->id,
             'grant_amount' => 'required|integer|min:1',
             'enabled' => 'required|boolean',
             'description' => 'nullable|string|max:255',
             'projects' => 'array',
-            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
+            'projects.*' => 'string|in:'.implode(',', array_keys(PWHelperService::PROJECTS)),
         ]);
 
         // Convert selected projects to project bits
@@ -146,8 +147,8 @@ class CityGrantController
     }
 
     /**
-     * @param Request $request
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function createCityGrant(Request $request)
@@ -160,7 +161,7 @@ class CityGrantController
             'enabled' => 'required|boolean',
             'description' => 'nullable|string|max:255',
             'projects' => 'array',
-            'projects.*' => 'string|in:' . implode(',', array_keys(PWHelperService::PROJECTS)),
+            'projects.*' => 'string|in:'.implode(',', array_keys(PWHelperService::PROJECTS)),
         ]);
 
         // Convert selected projects to project bits
@@ -187,5 +188,4 @@ class CityGrantController
             'success'
         );
     }
-
 }

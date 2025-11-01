@@ -14,6 +14,7 @@ class CollectTaxes extends Command
      * @var string
      */
     protected $signature = 'taxes:collect';
+
     /**
      * @var string
      */
@@ -24,9 +25,6 @@ class CollectTaxes extends Command
         parent::__construct();
     }
 
-    /**
-     * @return int
-     */
     public function handle(): int
     {
         $allianceIds = $this->membershipService->getAllianceIds();
@@ -77,8 +75,7 @@ class CollectTaxes extends Command
      * We reuse the offshore API key when available so protected monetary and
      * resource fields remain visible during tax imports.
      *
-     * @param array{api_key: string|null, mutation_key: string|null}|null $credentials
-     * @return QueryService
+     * @param  array{api_key: string|null, mutation_key: string|null}|null  $credentials
      */
     protected function resolveQueryClient(?array $credentials): QueryService
     {

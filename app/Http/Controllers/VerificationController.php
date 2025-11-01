@@ -12,21 +12,18 @@ use Illuminate\Support\Facades\Auth;
 
 class VerificationController extends Controller
 {
-
     /**
-     * @param Request $request
-     * @param string $code
-     *
+     * @param  Request  $request
      * @return mixed
      */
     public function verify(string $code)
     {
         if (Auth::user()->verification_code != $code) {
             return redirect()
-                ->route("home")
+                ->route('home')
                 ->with([
                     'alert-message' => 'Invalid verification code.',
-                    "alert-type" => 'error',
+                    'alert-type' => 'error',
                 ]);
         }
 
@@ -36,10 +33,10 @@ class VerificationController extends Controller
         ]);
 
         return redirect()
-            ->route("home")
+            ->route('home')
             ->with([
                 'alert-message' => 'Your account has been verified! 🥳',
-                "alert-type" => 'success',
+                'alert-type' => 'success',
             ]);
     }
 
@@ -50,18 +47,19 @@ class VerificationController extends Controller
     {
         if (Auth::user()->isVerified()) {
             return redirect()
-                ->route("home")
+                ->route('home')
                 ->with([
                     'alert-message' => 'Your account is already verified!',
                     'alert-type' => 'info',
                 ]);
         }
 
-        return view("auth.notverified");
+        return view('auth.notverified');
     }
 
     /**
      * @return mixed
+     *
      * @throws Exception
      */
     public function resendVerification()
@@ -72,7 +70,7 @@ class VerificationController extends Controller
             );
 
             if ($secondsSinceLastAttempt < 60) { // Allow every 60 seconds
-                return redirect()->route("not_verified")->with([
+                return redirect()->route('not_verified')->with([
                     'alert-message' => 'Please wait before requesting another verification message.',
                     'alert-type' => 'warning',
                 ]);
@@ -86,7 +84,7 @@ class VerificationController extends Controller
         // Check if user is already verified
         if ($user->isVerified()) {
             return redirect()
-                ->route("home")
+                ->route('home')
                 ->with([
                     'alert-message' => 'Your account is already verified!',
                     'alert-type' => 'info',
@@ -106,11 +104,10 @@ class VerificationController extends Controller
         session(['last_verification_attempt' => now()]);
 
         return redirect()
-            ->route("not_verified")
+            ->route('not_verified')
             ->with([
                 'alert-message' => 'A new verification message has been sent!',
                 'alert-type' => 'success',
             ]);
     }
-
 }

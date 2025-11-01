@@ -26,6 +26,7 @@ class AccountController extends Controller
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function dashboard()
@@ -75,53 +76,52 @@ class AccountController extends Controller
     }
 
     /**
-     * @param Account $accounts
-     *
      * @return Closure|Container|mixed|object|null
+     *
      * @throws AuthorizationException
      */
     public function view(Account $accounts)
     {
         $this->authorize('view-accounts');
 
-        $accounts->load("nation")
-            ->load("user");
+        $accounts->load('nation')
+            ->load('user');
 
         $transactions = AccountService::getRelatedTransactions($accounts, 500);
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts, 500);
 
-        return view("admin.accounts.view", [
-            "account" => $accounts,
-            "transactions" => $transactions,
-            "manualTransactions" => $manualTransactions
+        return view('admin.accounts.view', [
+            'account' => $accounts,
+            'transactions' => $transactions,
+            'manualTransactions' => $manualTransactions,
         ]);
     }
 
     /**
-     * @param Transaction $transaction
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function refundTransaction(Transaction $transaction)
     {
         $this->authorize('manage-accounts');
 
-        if (!$transaction->isNationWithdrawal()) {
+        if (! $transaction->isNationWithdrawal()) {
             abort(403, 'This transaction cannot be refunded.');
         }
 
         if ($transaction->isRefunded()) {
             return back()->with([
                 'alert-message' => 'This transaction has already been refunded.',
-                'alert-type' => 'error'
+                'alert-type' => 'error',
             ]);
         }
 
         $fromAccount = $transaction->fromAccount;
-        if (!$fromAccount) {
+        if (! $fromAccount) {
             return back()->with([
                 'alert-message' => 'Original sender account not found.',
-                'alert-type' => 'error'
+                'alert-type' => 'error',
             ]);
         }
 
@@ -144,15 +144,14 @@ class AccountController extends Controller
 
         return back()->with([
             'alert-message' => 'Refund successful.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
     /**
-     * @param Account $accounts
-     * @param Request $request
-     *
+     * @param  Account  $accounts
      * @return mixed
+     *
      * @throws AuthorizationException
      */
     public function adjustBalance(Request $request)
@@ -175,7 +174,7 @@ class AccountController extends Controller
             'note' => 'required|string|max:255|required',
         ]);
 
-        $account = AccountService::getAccountById($request->input("accountId"));
+        $account = AccountService::getAccountById($request->input('accountId'));
 
         $data = [];
 
@@ -183,7 +182,7 @@ class AccountController extends Controller
             $data[$resource] = $request->input($resource);
         }
 
-        $data["note"] = $request->input("note");
+        $data['note'] = $request->input('note');
 
         AccountService::adjustAccountBalance($account, $data, Auth::id(), $request->ip());
 
@@ -191,13 +190,13 @@ class AccountController extends Controller
             ->back()
             ->with([
                 'alert-message' => 'Account modified successfully.',
-                "alert-type" => 'success',
+                'alert-type' => 'success',
             ]);
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function saveDirectDepositSettings(Request $request)
@@ -214,14 +213,13 @@ class AccountController extends Controller
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Direct Deposit settings updated successfully.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
-
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function createDirectDepositBracket(Request $request)
@@ -244,8 +242,8 @@ class AccountController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function updateDirectDepositBrackets(Request $request)
@@ -261,6 +259,7 @@ class AccountController extends Controller
         $rates = collect(PWHelperService::resources())
             ->mapWithKeys(function ($resource) use ($request) {
                 $value = $request->input("rates.$resource");
+
                 return $value !== null ? [$resource => (float) $value] : [];
             })->toArray();
 
@@ -281,8 +280,8 @@ class AccountController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function deleteDirectDepositBrackets(Request $request)
@@ -303,5 +302,4 @@ class AccountController extends Controller
             'alert-type' => 'success',
         ]);
     }
-
 }

@@ -14,6 +14,7 @@ use Throwable;
 class MainBankService
 {
     private const CACHE_KEY = 'offshores:main:balances';
+
     private const CACHE_TTL_MINUTES = 30;
 
     private int $mainAllianceId;
@@ -21,8 +22,7 @@ class MainBankService
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         ?int $mainAllianceId = null
-    )
-    {
+    ) {
         $resolvedAllianceId = $mainAllianceId !== null && $mainAllianceId > 0
             ? $mainAllianceId
             : $this->membershipService->getPrimaryAllianceId();
@@ -42,7 +42,7 @@ class MainBankService
         $snapshot = Cache::remember(
             self::CACHE_KEY,
             now()->addMinutes(self::CACHE_TTL_MINUTES),
-            fn() => $this->buildSnapshot()
+            fn () => $this->buildSnapshot()
         );
 
         return $this->normalizeSnapshot($snapshot)['balances'];
@@ -80,7 +80,7 @@ class MainBankService
     }
 
     /**
-     * @param array<string, float>|mixed $snapshot
+     * @param  array<string, float>|mixed  $snapshot
      * @return array{balances: array<string, float>, cached_at: Carbon|null}
      */
     protected function normalizeSnapshot(mixed $snapshot): array
@@ -118,7 +118,7 @@ class MainBankService
     /**
      * Build a snapshot payload for caching.
      *
-     * @param array<string, float>|null $balances
+     * @param  array<string, float>|null  $balances
      * @return array{balances: array<string, float>, cached_at: Carbon}
      */
     protected function buildSnapshot(?array $balances = null): array
@@ -142,7 +142,7 @@ class MainBankService
             return [];
         }
 
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new GraphQLQueryBuilder)
             ->setRootField('alliances')
             ->addArgument('id', $this->mainAllianceId)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
@@ -173,7 +173,7 @@ class MainBankService
         $resources = PWHelperService::resources();
 
         return collect($resources)
-            ->mapWithKeys(fn(string $resource) => [
+            ->mapWithKeys(fn (string $resource) => [
                 $resource => (float) Arr::get($result, $resource, 0),
             ])
             ->all();

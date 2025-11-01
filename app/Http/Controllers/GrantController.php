@@ -15,7 +15,6 @@ use Throwable;
 class GrantController extends Controller
 {
     /**
-     * @param Grants $grant
      * @return Factory|View|Application|object
      */
     public function show(Grants $grant)
@@ -32,8 +31,6 @@ class GrantController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @param Grants $grant
      * @return RedirectResponse
      */
     public function apply(Request $request, Grants $grant)
@@ -49,10 +46,10 @@ class GrantController extends Controller
         $accountId = $request->input('account_id');
         $ownsAccount = $nation->accounts()->where('id', $accountId)->exists();
 
-        if (!$ownsAccount) {
+        if (! $ownsAccount) {
             return back()->with([
                 'alert-message' => 'You do not own the selected account.',
-                'alert-type' => 'error'
+                'alert-type' => 'error',
             ]);
         }
 
@@ -61,13 +58,13 @@ class GrantController extends Controller
         } catch (Throwable $e) {
             return back()->with([
                 'alert-message' => $e->getMessage(),
-                'alert-type' => 'error'
+                'alert-type' => 'error',
             ]);
         }
 
         return back()->with([
             'alert-message' => 'Your grant application has been submitted!',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 }

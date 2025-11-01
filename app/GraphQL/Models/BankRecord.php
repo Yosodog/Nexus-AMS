@@ -7,35 +7,55 @@ use stdClass;
 class BankRecord
 {
     public int $id;
+
     public string $date;
+
     public int $sender_id;
+
     public int $sender_type;
+
     public Nation $sender;
+
     public int $receiver_id;
+
     public int $receiver_type;
+
     public Nation $receiver;
+
     public int $banker_id;
+
     public Nation $banker;
+
     public ?string $note;
+
     public float $money;
+
     public float $coal;
+
     public float $oil;
+
     public float $uranium;
+
     public float $iron;
+
     public float $bauxite;
+
     public float $lead;
+
     public float $gasoline;
+
     public float $munitions;
+
     public float $steel;
+
     public float $aluminum;
+
     public float $food;
+
     public int $tax_id;
 
     /**
      * Populate the Bankrec instance with JSON data.
-     *
-     * @param stdClass $json
-     * @return void
      */
     public function buildWithJSON(stdClass $json): void
     {

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\MMRSetting;
 use App\Services\PWHelperService;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class MMRSettingSeeder extends Seeder

@@ -6,21 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
 use App\Services\RaidFinderService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class RaidFinderController extends Controller
 {
-    /**
-     * @param RaidFinderService $raidFinderService
-     */
     public function __construct(
         protected RaidFinderService $raidFinderService,
         protected AllianceMembershipService $membershipService
-    )
-    {
-    }
+    ) {}
 
     public function show(?int $nation_id = null)
     {
@@ -34,7 +28,7 @@ class RaidFinderController extends Controller
 
         $cacheKey = "raid-finder:{$nationId}";
 
-        $targets = Cache::remember($cacheKey, now()->addMinutes(30), fn() => $this->raidFinderService->findTargets($nationId));
+        $targets = Cache::remember($cacheKey, now()->addMinutes(30), fn () => $this->raidFinderService->findTargets($nationId));
 
         return response()->json($targets);
     }

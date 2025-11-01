@@ -272,7 +272,7 @@ class SelectionSetHelper
             'steel',
             'aluminum',
             'food',
-            'tax_id'
+            'tax_id',
         ];
     }
 

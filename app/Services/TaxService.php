@@ -15,9 +15,8 @@ use Throwable;
 class TaxService
 {
     /**
-     * @param int $alliance_id
-     * @param QueryService|null $client
      * @return int The last scanned ID is returned
+     *
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
@@ -71,7 +70,7 @@ class TaxService
             } catch (Throwable $e) {
                 Log::error('Failed to insert tax record', [
                     'tax_id' => $record->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -85,9 +84,6 @@ class TaxService
     }
 
     /**
-     * @param int $alliance_id
-     * @param QueryService|null $client
-     * @return Collection
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -96,9 +92,6 @@ class TaxService
         return collect(AllianceQueryService::getAllianceWithTaxes($alliance_id, $client)->taxrecs);
     }
 
-    /**
-     * @return int
-     */
     public static function getLastScannedTaxRecordId(?int $allianceId = null): int
     {
         $query = Taxes::query();
@@ -107,11 +100,10 @@ class TaxService
             $query->where('receiver_id', $allianceId);
         }
 
-        return (int)($query->max('id') ?? 0);
+        return (int) ($query->max('id') ?? 0);
     }
 
     /**
-     * @return array
      * @throws Exception
      */
     public static function getSummaryStats(): array
@@ -122,7 +114,7 @@ class TaxService
 
         return Cache::remember('tax_summary_stats', now()->addMinutes(60), function () use ($resources, $baseQuery) {
             $sums = (clone $baseQuery)->selectRaw(
-                collect($resources)->prepend('money')->map(fn($r) => "SUM(`$r`) as `$r`")->implode(', ')
+                collect($resources)->prepend('money')->map(fn ($r) => "SUM(`$r`) as `$r`")->implode(', ')
             )->first();
 
             $transactionCount = (clone $baseQuery)->count();
@@ -135,7 +127,7 @@ class TaxService
             return [
                 'total_money' => $sums->money,
                 'top_resource' => collect($resources)
-                    ->mapWithKeys(fn($res) => [$res => $sums->$res])
+                    ->mapWithKeys(fn ($res) => [$res => $sums->$res])
                     ->sortDesc()
                     ->keys()
                     ->first(),
@@ -146,7 +138,6 @@ class TaxService
     }
 
     /**
-     * @return array
      * @throws Exception
      */
     public static function getResourceChartData(): array
@@ -156,10 +147,6 @@ class TaxService
         });
     }
 
-    /**
-     * @param bool $formatForChart
-     * @return array
-     */
     private static function getAggregatedResourceData(bool $formatForChart): array
     {
         $start = now()->subDays(30);
@@ -167,7 +154,7 @@ class TaxService
 
         $results = Taxes::where('date', '>=', $start)
             ->select('day')
-            ->addSelect(collect($resources)->map(fn($r) => DB::raw("SUM(`$r`) as `$r`"))->toArray())
+            ->addSelect(collect($resources)->map(fn ($r) => DB::raw("SUM(`$r`) as `$r`"))->toArray())
             ->groupBy('day')
             ->orderBy('day')
             ->get();
@@ -181,7 +168,7 @@ class TaxService
                     'data' => $results->pluck($res)->toArray(),
                 ];
             } else {
-                $data[$res] = $results->map(fn($row) => [
+                $data[$res] = $results->map(fn ($row) => [
                     'day' => $row->day,
                     'total' => $row->$res,
                 ]);
@@ -192,7 +179,6 @@ class TaxService
     }
 
     /**
-     * @return array
      * @throws Exception
      */
     public static function getDailyTotals(): array

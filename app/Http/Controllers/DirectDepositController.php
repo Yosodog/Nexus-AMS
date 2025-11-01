@@ -12,21 +12,14 @@ use Illuminate\Validation\Rule;
 
 class DirectDepositController extends Controller
 {
-    /**
-     * @var DirectDepositService
-     */
     public DirectDepositService $directDepositService;
 
-    /**
-     *
-     */
     public function __construct()
     {
         $this->directDepositService = app(DirectDepositService::class);
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function enroll(Request $request)
@@ -40,7 +33,7 @@ class DirectDepositController extends Controller
 
         return back()->with([
             'alert-message' => 'You have been enrolled in Direct Deposit.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
@@ -55,12 +48,11 @@ class DirectDepositController extends Controller
 
         return back()->with([
             'alert-message' => 'You have been disenrolled from Direct Deposit.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updateMMRA(Request $request)
@@ -72,11 +64,11 @@ class DirectDepositController extends Controller
             'enabled' => 'nullable|boolean',
             'account_id' => ['required', Rule::exists('accounts', 'id')->where('nation_id', $nationId)],
         ],
-            collect(PWHelperService::resources(false))->mapWithKeys(fn($r) => [
+            collect(PWHelperService::resources(false))->mapWithKeys(fn ($r) => [
                 "{$r}_pct" => 'nullable|numeric|min:0|max:100',
             ])->toArray()));
 
-        $total = collect($data)->filter(fn($v, $k) => str_ends_with($k, '_pct'))->sum();
+        $total = collect($data)->filter(fn ($v, $k) => str_ends_with($k, '_pct'))->sum();
 
         if ($total > 100) {
             return back()->with([
@@ -94,7 +86,7 @@ class DirectDepositController extends Controller
 
         $previous = MMRConfig::where('nation_id', $nationId)->first();
         $enabled = array_key_exists('enabled', $data)
-            ? (bool)$data['enabled']
+            ? (bool) $data['enabled']
             : ($previous?->enabled ?? false);
 
         MMRConfig::updateOrCreate(
@@ -102,7 +94,7 @@ class DirectDepositController extends Controller
             array_merge(
                 ['enabled' => $enabled],
                 ['account_id' => $data['account_id']],
-                collect(PWHelperService::resources(false))->mapWithKeys(fn($r) => [
+                collect(PWHelperService::resources(false))->mapWithKeys(fn ($r) => [
                     "{$r}_pct" => floatval($data["{$r}_pct"] ?? 0),
                 ])->toArray()
             )

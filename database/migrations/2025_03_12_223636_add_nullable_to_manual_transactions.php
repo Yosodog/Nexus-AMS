@@ -9,14 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void {
+    public function up(): void
+    {
         Schema::table('manual_transactions', function (Blueprint $table) {
             $table->unsignedBigInteger('admin_id')->nullable()->change();
             $table->string('ip_address', 45)->nullable()->change();
         });
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::table('manual_transactions', function (Blueprint $table) {
             $table->unsignedBigInteger('admin_id')->nullable(false)->change();
             $table->string('ip_address', 45)->nullable(false)->change();

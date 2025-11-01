@@ -27,8 +27,9 @@ class MMRController extends Controller
      * sign-in details, and evaluates each nation's MMR based on the
      * associated sign-in data.
      *
-     * @param MMRService $service The service used to evaluate nations' MMR.
+     * @param  MMRService  $service  The service used to evaluate nations' MMR.
      * @return View The
+     *
      * @throws AuthorizationException
      */
     public function index(MMRService $service, AllianceMembershipService $membershipService): View
@@ -40,7 +41,7 @@ class MMRController extends Controller
         $nations = Nation::with('latestSignIn')
             ->whereIn('alliance_id', $membershipService->getAllianceIds())
             ->get()
-            ->filter(fn($nation) => $nation->latestSignIn); // filter out those missing sign-ins
+            ->filter(fn ($nation) => $nation->latestSignIn); // filter out those missing sign-ins
 
         $evaluations = $nations->mapWithKeys(function ($nation) use ($service) {
             return [$nation->id => $service->evaluate($nation, $nation->latestSignIn)];
@@ -50,8 +51,6 @@ class MMRController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function store(Request $request): RedirectResponse
@@ -79,14 +78,14 @@ class MMRController extends Controller
                     'drydocks',
                     'missiles',
                     'nukes',
-                    'spies'
+                    'spies',
                 ], 0)
             )
         );
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => "Tier for {$validated['city_count']} cities created.",
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
@@ -96,26 +95,27 @@ class MMRController extends Controller
      * the operation's outcome.
      *
      * @return RedirectResponse Redirect response to the MMR index route with an alert message.
+     *
      * @throws AuthorizationException
      */
     public function destroy(Request $request): RedirectResponse
     {
         $this->authorize('manage-mmr');
 
-        $tier = MMRTier::find((int)$request->input('tier_id'));
+        $tier = MMRTier::find((int) $request->input('tier_id'));
 
-        if (!$tier || $tier->city_count === 0) {
+        if (! $tier || $tier->city_count === 0) {
             return redirect()->route('admin.mmr.index')->with([
-                'alert-message' => "Invalid or protected tier.",
-                'alert-type' => 'error'
+                'alert-message' => 'Invalid or protected tier.',
+                'alert-type' => 'error',
             ]);
         }
 
         $tier->delete();
 
         return redirect()->route('admin.mmr.index')->with([
-            'alert-message' => "Tier deleted.",
-            'alert-type' => 'success'
+            'alert-message' => 'Tier deleted.',
+            'alert-type' => 'success',
         ]);
     }
 
@@ -126,7 +126,7 @@ class MMRController extends Controller
      * tier to update its fields. Each field is validated to ensure it meets
      * the required criteria before updating the tier.
      *
-     * @param Request $request The incoming HTTP request containing the data to update.
+     * @param  Request  $request  The incoming HTTP request containing the data to update.
      * @return RedirectResponse A redirect response indicating the result of the operation.
      *
      * @throws AuthorizationException If the user is not authorized to manage MMR.
@@ -148,7 +148,7 @@ class MMRController extends Controller
             'drydocks',
             'missiles',
             'nukes',
-            'spies'
+            'spies',
         ];
         $tiers = $request->input('tiers', []);
         $errors = [];
@@ -160,10 +160,10 @@ class MMRController extends Controller
 
             foreach ($fields as $field) {
                 $value = $data[$field] ?? 0;
-                if (!is_numeric($value) || $value < 0) {
+                if (! is_numeric($value) || $value < 0) {
                     $errors["tiers.$id.$field"] = 'Must be a non-negative number.';
                 } else {
-                    $update[$field] = max(0, (int)$value);
+                    $update[$field] = max(0, (int) $value);
                 }
             }
 
@@ -179,8 +179,6 @@ class MMRController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function updateAssistantSettings(Request $request): RedirectResponse

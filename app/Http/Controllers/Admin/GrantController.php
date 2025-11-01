@@ -21,6 +21,7 @@ class GrantController
 
     /**
      * @return Factory|View|Application|object
+     *
      * @throws AuthorizationException
      */
     public function grants()
@@ -52,8 +53,8 @@ class GrantController
     }
 
     /**
-     * @param Request $request
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function createGrant(Request $request)
@@ -68,7 +69,7 @@ class GrantController
             'is_one_time' => 'nullable|in:true,false,1,0,on,off',
         ]);
 
-        $grant = new Grants();
+        $grant = new Grants;
         $grant->name = $request->input('name');
         $grant->slug = Str::slug($grant->name);
         $grant->description = $request->input('description');
@@ -88,9 +89,8 @@ class GrantController
     }
 
     /**
-     * @param Grants $grant
-     * @param Request $request
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function updateGrant(Grants $grant, Request $request)
@@ -98,7 +98,7 @@ class GrantController
         $this->authorize('manage-grants');
 
         $validated = $request->validate([
-            'name' => 'required|string|unique:grants,name,' . $grant->id,
+            'name' => 'required|string|unique:grants,name,'.$grant->id,
             'description' => 'nullable|string',
             'money' => 'nullable|numeric|min:0',
             'is_enabled' => 'nullable|in:true,false,1,0,on,off',
@@ -124,8 +124,8 @@ class GrantController
     }
 
     /**
-     * @param GrantApplication $application
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function approveApplication(GrantApplication $application)
@@ -140,8 +140,8 @@ class GrantController
     }
 
     /**
-     * @param GrantApplication $application
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function denyApplication(GrantApplication $application)

@@ -12,6 +12,7 @@ class NationVerification extends Notification implements ShouldQueue
     use Queueable;
 
     public User $user;
+
     public string $verification_code;
 
     /**
@@ -36,21 +37,16 @@ class NationVerification extends Notification implements ShouldQueue
         return ['pnw'];
     }
 
-    /**
-     * @param object $notifiable
-     *
-     * @return array
-     */
     public function toPNW(object $notifiable): array
     {
         return [
             'nation_id' => $this->user->nation_id,
-            'subject' => "Verify Your Account",
-            'message' => "Welcome to " . env(
-                    "APP_NAME"
-                ) . "! \n\nPlease verify your account by clicking the link below:\n\n" .
-                route('verify.account', ['code' => $this->verification_code]) .
-                "\n\nYour verification code: {$this->verification_code}"
+            'subject' => 'Verify Your Account',
+            'message' => 'Welcome to '.env(
+                'APP_NAME'
+            )."! \n\nPlease verify your account by clicking the link below:\n\n".
+                route('verify.account', ['code' => $this->verification_code]).
+                "\n\nYour verification code: {$this->verification_code}",
         ];
     }
 

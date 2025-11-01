@@ -7,44 +7,65 @@ use stdClass;
 class Alliance
 {
     public string $id;
+
     public string $name;
+
     public string $acronym;
+
     public float $score;
+
     public string $color;
+
     // public DateTimeAuto $date;
     public Nations $nations;
+
     public float $average_score;
+
     // public array $treaties; // [Treaty!]!
     // public array $alliance_positions; // [AlliancePosition!]!
     public bool $accept_members;
+
     public string $flag;
+
     public string $forum_link;
+
     public string $discord_link;
+
     public ?string $wiki_link;
+
     // public array $bankrecs; // [Bankrec]
     public BankRecords $taxrecs;
+
     // public array $tax_brackets; // [TaxBracket]
     // public array $wars; // [War!]!
-    public float|null $money;
-    public float|null $coal;
-    public float|null $oil;
-    public float|null $uranium;
-    public float|null $iron;
-    public float|null $bauxite;
-    public float|null $lead;
-    public float|null $gasoline;
-    public float|null $munitions;
-    public float|null $steel;
-    public float|null $aluminum;
-    public float|null $food;
+    public ?float $money;
+
+    public ?float $coal;
+
+    public ?float $oil;
+
+    public ?float $uranium;
+
+    public ?float $iron;
+
+    public ?float $bauxite;
+
+    public ?float $lead;
+
+    public ?float $gasoline;
+
+    public ?float $munitions;
+
+    public ?float $steel;
+
+    public ?float $aluminum;
+
+    public ?float $food;
+
     // public array $awards; // [Award]
     public int $rank;
     // public array $bulletins; // [Bulletin]
 
-    /**
-     * @param stdClass $json
-     * @return void
-     */
     public function buildWithJSON(stdClass $json): void
     {
         $this->id = $json->id;
@@ -57,18 +78,18 @@ class Alliance
         if (isset($json->nations)) {
             $this->nations = new Nations([]);
             foreach ($json->nations as $nation) {
-                $nationModel = new Nation();
-                $nationModel->buildWithJSON((object)$nation);
+                $nationModel = new Nation;
+                $nationModel->buildWithJSON((object) $nation);
                 $this->nations->add($nationModel);
             }
         }
 
         if (isset($json->taxrecs)) {
-            $this->taxrecs = new BankRecords();
+            $this->taxrecs = new BankRecords;
 
             foreach ($json->taxrecs as $record) {
-                $bankRec = new BankRecord();
-                $bankRec->buildWithJSON((object)$record);
+                $bankRec = new BankRecord;
+                $bankRec->buildWithJSON((object) $record);
                 $this->taxrecs->add($bankRec);
             }
         }

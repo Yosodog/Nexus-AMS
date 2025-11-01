@@ -11,7 +11,9 @@ class GrantNotification extends Notification
     use Queueable;
 
     public int $nation_id;
+
     public string $status;
+
     public GrantApplication $application;
 
     /**
@@ -42,15 +44,15 @@ class GrantNotification extends Notification
         $grantName = $this->application->grant->name;
 
         if ($this->status === 'approved') {
-            $subject = "Grant Approved!";
+            $subject = 'Grant Approved!';
             $message = "Your application for the [b]{$grantName}[/b] has been approved! 🎉\n\n"
-                . "The grant resources have been deposited into your selected account.\n\n"
-                . "Please use these funds as intended and reach out to leadership if you have questions.";
+                ."The grant resources have been deposited into your selected account.\n\n"
+                .'Please use these funds as intended and reach out to leadership if you have questions.';
         } else {
-            $subject = "Grant Denied";
+            $subject = 'Grant Denied';
             $message = "Unfortunately, your application for the [b]{$grantName}[/b] has been denied. ❌\n\n"
-                . "If you believe this was an error, please contact leadership for clarification.\n\n"
-                . "You may apply again if you are still eligible.";
+                ."If you believe this was an error, please contact leadership for clarification.\n\n"
+                .'You may apply again if you are still eligible.';
         }
 
         return [

@@ -13,15 +13,15 @@ class WarQueryService
         bool $pagination = true,
         bool $handlePagination = true
     ): Wars {
-        $client = new QueryService();
+        $client = new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("wars")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('wars')
             ->addArgument('first', $perPage)
             ->addArgument($arguments)
             ->addNestedField(
-                "data",
-                fn(GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
+                'data',
+                fn (GraphQLQueryBuilder $builder) => $builder->addFields(SelectionSetHelper::warSet())
             );
 
         if ($pagination) {
@@ -32,8 +32,8 @@ class WarQueryService
         $wars = new Wars([]);
 
         foreach ($response as $result) {
-            $war = new War();
-            $war->buildWithJSON((object)$result);
+            $war = new War;
+            $war->buildWithJSON((object) $result);
             $wars->add($war);
         }
 

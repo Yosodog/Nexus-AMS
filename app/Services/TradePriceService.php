@@ -10,37 +10,30 @@ use Illuminate\Http\Client\ConnectionException;
 
 class TradePriceService
 {
-    /**
-     * @return TradePrice
-     */
     public function getLatest(): TradePrice
     {
         return TradePrice::latest('created_at')->firstOrFail();
     }
 
-    /**
-     * @return TradePrice
-     */
     public function get24hAverage(): TradePrice
     {
         $rows = TradePrice::latest('created_at')->take(24)->get();
 
-        $avg = new TradePrice();
+        $avg = new TradePrice;
         foreach (PWHelperService::resources(includeCredits: true) as $resource) {
-            $avg->{$resource} = (int)round($rows->avg($resource));
+            $avg->{$resource} = (int) round($rows->avg($resource));
         }
 
         return $avg;
     }
 
     /**
-     * @return TradePriceGraphQL
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
     public function pullFromGraphQL(): TradePriceGraphQL
     {
-        $query = (new GraphQLQueryBuilder())
+        $query = (new GraphQLQueryBuilder)
             ->setRootField('tradeprices')
             ->addArgument('first', 1)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
@@ -58,22 +51,20 @@ class TradePriceService
                     'steel',
                     'aluminum',
                     'food',
-                    'credits'
+                    'credits',
                 ]);
             });
 
-        $response = (new QueryService())->sendQuery($query);
+        $response = (new QueryService)->sendQuery($query);
 
-        $model = new TradePriceGraphQL();
-        $model->buildWithJSON((object)$response->{0});
+        $model = new TradePriceGraphQL;
+        $model->buildWithJSON((object) $response->{0});
 
         return $model;
     }
 
     /**
      * Gets the 24-hour average but also adds the MMR Assistant Surcharge
-     *
-     * @return array
      */
     public function get24hAverageWithSurcharge(): array
     {

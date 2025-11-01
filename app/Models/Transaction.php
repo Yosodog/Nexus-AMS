@@ -8,8 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
-
-    public $table = "transactions";
+    public $table = 'transactions';
 
     protected $casts = [
         'is_pending' => 'bool',
@@ -25,7 +24,7 @@ class Transaction extends Model
      */
     public function toAccount()
     {
-        return $this->belongsTo(Account::class, "to_account_id", "id");
+        return $this->belongsTo(Account::class, 'to_account_id', 'id');
     }
 
     /**
@@ -33,7 +32,7 @@ class Transaction extends Model
      */
     public function fromAccount()
     {
-        return $this->belongsTo(Account::class, "from_account_id", "id");
+        return $this->belongsTo(Account::class, 'from_account_id', 'id');
     }
 
     /**
@@ -41,28 +40,19 @@ class Transaction extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nation::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, 'nation_id', 'id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function deniedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'denied_by');
     }
 
-    /**
-     * @return void
-     */
     public function setSent(): void
     {
         $this->is_pending = false;
@@ -83,25 +73,18 @@ class Transaction extends Model
         $this->requires_admin_approval = true;
         // Preserve any existing reason while appending the new context for admins.
         $this->pending_reason = $this->pending_reason
-            ? $this->pending_reason . ' | ' . $reason
+            ? $this->pending_reason.' | '.$reason
             : $reason;
         $this->save();
     }
 
-    /**
-     * @return bool
-     */
     public function isNationWithdrawal(): bool
     {
         return $this->transaction_type === 'withdrawal' && is_null($this->to_account_id);
     }
 
-    /**
-     * @return bool
-     */
     public function isRefunded(): bool
     {
-        return !is_null($this->refunded_at);
+        return ! is_null($this->refunded_at);
     }
-
 }

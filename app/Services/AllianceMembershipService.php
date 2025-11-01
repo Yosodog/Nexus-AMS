@@ -17,9 +17,7 @@ class AllianceMembershipService
 {
     private const CACHE_KEY = 'alliances:membership:ids';
 
-    public function __construct(private readonly Repository $cache)
-    {
-    }
+    public function __construct(private readonly Repository $cache) {}
 
     /**
      * Return all alliance IDs that should be considered part of our umbrella.
@@ -82,7 +80,6 @@ class AllianceMembershipService
      * credentials (rotation, external vault, etc.) only have a single
      * integration point.
      *
-     * @param int $allianceId
      * @return array{api_key: string|null, mutation_key: string|null}|null
      */
     public function getCredentialsForAlliance(int $allianceId): ?array
@@ -137,13 +134,13 @@ class AllianceMembershipService
             ->enabled()
             ->pluck('alliance_id')
             ->filter()
-            ->map(fn($id) => (int) $id)
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
 
         return collect([$primaryAllianceId])
             ->merge($offshoreIds)
-            ->filter(fn(int $id) => $id > 0)
+            ->filter(fn (int $id) => $id > 0)
             ->unique()
             ->values()
             ->all();

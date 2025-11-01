@@ -10,7 +10,7 @@ class NationMilitary extends Model
 {
     use SoftDeletes;
 
-    protected $table = "nation_military";
+    protected $table = 'nation_military';
 
     protected $guarded = [];
 

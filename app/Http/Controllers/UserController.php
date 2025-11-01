@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Taxes;
-use App\Models\Transaction;
 use App\Services\NationDashboardService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -12,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -26,7 +23,6 @@ class UserController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return RedirectResponse
      */
     public function updateSettings(Request $request)
@@ -34,8 +30,8 @@ class UserController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:users,name,' . $user->id], // Ensure unique name
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id], // Ensure unique email
+            'name' => ['required', 'string', 'max:255', 'unique:users,name,'.$user->id], // Ensure unique name
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id], // Ensure unique email
             'password' => ['nullable', Password::defaults(), 'confirmed'],
         ]);
 
@@ -54,10 +50,6 @@ class UserController extends Controller
         );
     }
 
-    /**
-     * @param NationDashboardService $dashboardService
-     * @return View
-     */
     public function dashboard(NationDashboardService $dashboardService): View
     {
         $nation = Auth::user()->nation;

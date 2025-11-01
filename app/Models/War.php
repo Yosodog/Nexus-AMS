@@ -11,16 +11,13 @@ use stdClass;
 class War extends Model
 {
     protected $table = 'wars';
+
     protected $guarded = [];
 
-    /**
-     * @param WarGraphQL|array|stdClass $war
-     * @return War
-     */
     public static function updateFromAPI(WarGraphQL|array|stdClass $war): War
     {
         if ($war instanceof WarGraphQL || $war instanceof stdClass) {
-            $war = (array)$war;
+            $war = (array) $war;
         }
 
         // Normalize if deprecated field is present
@@ -37,9 +34,6 @@ class War extends Model
     /**
      * Normalizes deprecated GraphQL subscription fields by converting *_killed → *_lost.
      * These deprecated fields are still included in subscriptions so have to do this
-     *
-     * @param array $war
-     * @return array
      */
     public static function normalizeDeprecatedKilledFields(array $war): array
     {
@@ -55,7 +49,7 @@ class War extends Model
         ];
 
         foreach ($killedToLostMap as $killed => $lost) {
-            if (array_key_exists($killed, $war) && !array_key_exists($lost, $war)) {
+            if (array_key_exists($killed, $war) && ! array_key_exists($lost, $war)) {
                 $war[$lost] = $war[$killed];
             }
             unset($war[$killed]);
@@ -80,14 +74,9 @@ class War extends Model
         return $this->belongsTo(Nation::class, 'def_id');
     }
 
-    /**
-     * @param $query
-     * @return mixed
-     */
     public function scopeActive($query): mixed
     {
-        return $query->where(fn ($q) =>
-        $q->whereNull('end_date')
+        return $query->where(fn ($q) => $q->whereNull('end_date')
             ->where('turns_left', '>', 0)
         );
     }

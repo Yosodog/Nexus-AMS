@@ -18,7 +18,7 @@ class CityController extends Controller
 
         $cities = City::query()
             ->with([
-                'nation' => fn($query) => $query
+                'nation' => fn ($query) => $query
                     ->select('id', 'nation_name', 'leader_name', 'alliance_id', 'vacation_mode_turns')
                     ->with(['alliance:id,name,acronym']),
             ])

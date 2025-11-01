@@ -31,25 +31,16 @@ class DirectDepositLog extends Model
         'food',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function nation(): BelongsTo
     {
         return $this->belongsTo(Nation::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function bankRecord(): BelongsTo
     {
         return $this->belongsTo(BankRecord::class);

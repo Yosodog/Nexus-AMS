@@ -1,10 +1,10 @@
 <?php
 
+use App\Enums\AlliancePositionEnum;
+use App\Enums\WarTypeEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use App\Enums\AlliancePositionEnum;
-use App\Enums\WarTypeEnum;
 
 return new class extends Migration
 {

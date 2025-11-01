@@ -10,7 +10,7 @@ class Grants extends Model
     /**
      * @var string
      */
-    public $table = "grants";
+    public $table = 'grants';
 
     /**
      * @var string[]
@@ -32,7 +32,7 @@ class Grants extends Model
         'validation_rules',
         'is_enabled',
         'is_one_time',
-        'description'
+        'description',
     ];
 
     /**
@@ -44,12 +44,8 @@ class Grants extends Model
         'is_one_time' => 'boolean',
     ];
 
-    /**
-     * @return HasMany
-     */
     public function applications(): HasMany
     {
-        return $this->hasMany(GrantApplication::class, "grant_id", "id");
+        return $this->hasMany(GrantApplication::class, 'grant_id', 'id');
     }
-
 }

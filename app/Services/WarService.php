@@ -9,20 +9,17 @@ use Illuminate\Support\Collection;
 class WarService
 {
     protected ?Collection $membershipIds = null;
+
     protected ?Collection $cachedActiveWars = null;
+
     protected ?Collection $cachedRecentWars = null;
 
-    public function __construct(private readonly AllianceMembershipService $membershipService)
-    {
-    }
+    public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
-    /**
-     * @return array
-     */
     public function getStats(): array
     {
         return cache()->remember('war_stats_summary', 300, function () {
-            $warsLast7Days = $this->getWarsLast30Days()->filter(fn($w) => $w->date >= now()->subDays(7));
+            $warsLast7Days = $this->getWarsLast30Days()->filter(fn ($w) => $w->date >= now()->subDays(7));
 
             $totalLooted = $warsLast7Days->reduce(function ($carry, $war) {
                 if ($this->isUsAttacker($war)) {
@@ -30,6 +27,7 @@ class WarService
                 } elseif ($this->isUsDefender($war)) {
                     return $carry + $war->def_money_looted;
                 }
+
                 return $carry;
             }, 0);
 
@@ -57,9 +55,6 @@ class WarService
         });
     }
 
-    /**
-     * @return Collection
-     */
     public function getWarsLast30Days(): Collection
     {
         if ($this->cachedRecentWars) {
@@ -81,10 +76,6 @@ class WarService
         });
     }
 
-    /**
-     * @param $query
-     * @return void
-     */
     private function whereOurAllianceEngagedProperly($query): void
     {
         $query->where(function ($q) {
@@ -96,9 +87,6 @@ class WarService
         });
     }
 
-    /**
-     * @return Collection
-     */
     public function getActiveWars(): Collection
     {
         return $this->cachedActiveWars ??= War::with([
@@ -115,9 +103,6 @@ class WarService
             ->get();
     }
 
-    /**
-     * @return array
-     */
     public function getWarTypeDistribution(): array
     {
         return cache()->remember('war_type_distribution', 300, function () {
@@ -132,9 +117,6 @@ class WarService
         });
     }
 
-    /**
-     * @return array
-     */
     public function getWarStartHistory(): array
     {
         return cache()->remember('war_start_history', 300, function () {
@@ -150,10 +132,6 @@ class WarService
         });
     }
 
-    /**
-     * @param int $limit
-     * @return array
-     */
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
         return cache()->remember("top_nations_active_wars_{$limit}", 300, function () use ($limit) {
@@ -182,19 +160,11 @@ class WarService
         });
     }
 
-    /**
-     * @param War $war
-     * @return int
-     */
     public function getOurResistance(War $war): int
     {
         return $this->isUsAttacker($war) ? $war->att_resistance : $war->def_resistance;
     }
 
-    /**
-     * @param War $war
-     * @return bool
-     */
     public function isUsAttacker(War $war): bool
     {
         return $this->membershipIds()->contains((int) $war->att_alliance_id);
@@ -229,7 +199,7 @@ class WarService
 
             foreach ($resources as $key => [$attKey, $defKey]) {
                 $summary[$key] = [
-                    'used' => $wars->sum(fn($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey)
+                    'used' => $wars->sum(fn ($w) => $this->isUsAttacker($w) ? $w->$attKey : $w->$defKey),
                 ];
             }
 
@@ -237,9 +207,6 @@ class WarService
         });
     }
 
-    /**
-     * @return array
-     */
     public function getDamageDealtVsTaken(): array
     {
         return cache()->remember('war_damage_dealt_vs_taken', 300, function () {
@@ -270,36 +237,26 @@ class WarService
         });
     }
 
-    /**
-     * @param Collection $wars
-     * @param string $attKey
-     * @param string $defKey
-     * @param bool $flip
-     * @return array
-     */
     private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
     {
         return [
-            'dealt' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+            'dealt' => $wars->sum(fn ($w) => $this->isUsAttacker($w)
                 ? ($flip ? $w->$defKey : $w->$attKey)
                 : ($flip ? $w->$attKey : $w->$defKey)
             ),
-            'taken' => $wars->sum(fn($w) => $this->isUsAttacker($w)
+            'taken' => $wars->sum(fn ($w) => $this->isUsAttacker($w)
                 ? ($flip ? $w->$attKey : $w->$defKey)
                 : ($flip ? $w->$defKey : $w->$attKey)
             ),
         ];
     }
 
-    /**
-     * @return array
-     */
     public function getAggressorDefenderSplit(): array
     {
         return cache()->remember('war_aggressor_defender_split', 300, function () {
             $wars = $this->getWarsLast30Days();
 
-            $aggressor = $wars->filter(fn($w) => $this->isUsAttacker($w))->count();
+            $aggressor = $wars->filter(fn ($w) => $this->isUsAttacker($w))->count();
             $defender = $wars->count() - $aggressor;
 
             return [
@@ -309,9 +266,6 @@ class WarService
         });
     }
 
-    /**
-     * @return array
-     */
     public function getActiveWarsByNation(): array
     {
         $wars = $this->getActiveWars();
@@ -321,7 +275,7 @@ class WarService
         foreach ($wars as $war) {
             $nation = $this->isUsAttacker($war) ? $war->attacker : $war->defender;
 
-            if (!$nation) {
+            if (! $nation) {
                 continue;
             }
 

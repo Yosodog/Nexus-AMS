@@ -19,8 +19,8 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
-use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
+use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
@@ -38,7 +38,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('home');
-})->name("home");
+})->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
@@ -52,7 +52,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('verification.resend');
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: function () {
+Route::middleware(['auth', EnsureUserIsVerified::class])->group(callback: function () {
     // User settings
     Route::get('/user/settings', [UserController::class, 'settings'])->name('user.settings');
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
@@ -63,17 +63,17 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
 
     // Account Routes
-    Route::get("/accounts", [AccountsController::class, 'index'])->name("accounts");
+    Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts');
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
         ->name('accounts.transfer')
         ->middleware(BlockWhenPWDown::class);
 
-    Route::get("/accounts/create", [AccountsController::class, "createView"])->name("accounts.create");
-    Route::post("/accounts/create", [AccountsController::class, "create"])->name("accounts.create.post");
+    Route::get('/accounts/create', [AccountsController::class, 'createView'])->name('accounts.create');
+    Route::post('/accounts/create', [AccountsController::class, 'create'])->name('accounts.create.post');
 
-    Route::post("/accounts/delete", [AccountsController::class, "delete"])->name("accounts.delete.post");
+    Route::post('/accounts/delete', [AccountsController::class, 'delete'])->name('accounts.delete.post');
 
-    Route::get("/accounts/{accounts}", [AccountsController::class, 'viewAccount'])->name("accounts.view");
+    Route::get('/accounts/{accounts}', [AccountsController::class, 'viewAccount'])->name('accounts.view');
 
     // Direct Deposit
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')
@@ -86,7 +86,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
         ->name('mmra.update');
 
     // Loan
-    Route::get("/loans", [UserLoansController::class, 'index'])->name("loans.index");
+    Route::get('/loans', [UserLoansController::class, 'index'])->name('loans.index');
     Route::post('/loans/apply', [UserLoansController::class, 'apply'])->name('loans.apply')
         ->middleware(BlockWhenPWDown::class);
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay')
@@ -109,13 +109,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     });
     // Counters
 
-
     // Grants
     Route::prefix('grants')->middleware(['auth'])->group(function () {
         // City grants
-        Route::get("/city", [UserCityGrantController::class, 'index'])->name("grants.city");
-        Route::post("/city", [UserCityGrantController::class, 'request'])->name(
-            "grants.city.request"
+        Route::get('/city', [UserCityGrantController::class, 'index'])->name('grants.city');
+        Route::post('/city', [UserCityGrantController::class, 'request'])->name(
+            'grants.city.request'
         )
             ->middleware(BlockWhenPWDown::class);
 
@@ -125,11 +124,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class,])->group(callback: funct
     });
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,])
-    ->prefix("admin")
+Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
+    ->prefix('admin')
     ->group(function () {
         // Base routes
-        Route::get("/", [DashboardController::class, 'dashboard'])->name("admin.dashboard");
+        Route::get('/', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
 
         // Users
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
@@ -145,8 +144,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
 
         // Account
-        Route::get("/accounts", [AccountController::class, 'dashboard'])->name("admin.accounts.dashboard");
-        Route::get("/accounts/{accounts}", [AccountController::class, 'view'])->name("admin.accounts.view");
+        Route::get('/accounts', [AccountController::class, 'dashboard'])->name('admin.accounts.dashboard');
+        Route::get('/accounts/{accounts}', [AccountController::class, 'view'])->name('admin.accounts.view');
         Route::post('/accounts/{account}/adjust', [AccountController::class, 'adjustBalance'])->name(
             'admin.accounts.adjust'
         );
@@ -209,53 +208,53 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class,]
         Route::post('/withdrawals/{transaction}/deny', [WithdrawalController::class, 'deny'])->name('admin.withdrawals.deny');
 
         // City Grants
-        Route::get("/grants/city", [CityGrantController::class, 'cityGrants'])->name(
-            "admin.grants.city"
+        Route::get('/grants/city', [CityGrantController::class, 'cityGrants'])->name(
+            'admin.grants.city'
         );
         Route::post('/grants/city/{city_grant}/update', [CityGrantController::class, 'updateCityGrant'])
-            ->name("admin.grants.city.update");
+            ->name('admin.grants.city.update');
 
         Route::post('/grants/city/create', [CityGrantController::class, 'createCityGrant'])->name(
-            "admin.grants.city.create"
+            'admin.grants.city.create'
         );
 
-        Route::post("/grants/city/approve/{CityGrantRequest}", [CityGrantController::class, 'approveCityGrant'])->name(
-            "admin.grants.city.approve"
+        Route::post('/grants/city/approve/{CityGrantRequest}', [CityGrantController::class, 'approveCityGrant'])->name(
+            'admin.grants.city.approve'
         );
 
-        Route::post("/grants/city/deny/{CityGrantRequest}", [CityGrantController::class, 'denyCityGrant'])->name(
-            "admin.grants.city.deny"
+        Route::post('/grants/city/deny/{CityGrantRequest}', [CityGrantController::class, 'denyCityGrant'])->name(
+            'admin.grants.city.deny'
         );
 
         // Grants
-        Route::get("/grants", [AdminGrantController::class, 'grants'])->name("admin.grants");
-        Route::post("/grants/create", [AdminGrantController::class, 'createGrant'])->name("admin.grants.create");
-        Route::post("/grants/{grant}/update", [AdminGrantController::class, 'updateGrant'])->name(
-            "admin.grants.update"
+        Route::get('/grants', [AdminGrantController::class, 'grants'])->name('admin.grants');
+        Route::post('/grants/create', [AdminGrantController::class, 'createGrant'])->name('admin.grants.create');
+        Route::post('/grants/{grant}/update', [AdminGrantController::class, 'updateGrant'])->name(
+            'admin.grants.update'
         );
-        Route::post("/grants/{grant}/toggle", [AdminGrantController::class, 'toggleGrant'])->name(
-            "admin.grants.toggle"
+        Route::post('/grants/{grant}/toggle', [AdminGrantController::class, 'toggleGrant'])->name(
+            'admin.grants.toggle'
         );
 
-        Route::post("/grants/approve/{application}", [AdminGrantController::class, 'approveApplication'])->name(
-            "admin.grants.approve"
+        Route::post('/grants/approve/{application}', [AdminGrantController::class, 'approveApplication'])->name(
+            'admin.grants.approve'
         )
             ->middleware(BlockWhenPWDown::class);
-        Route::post("/grants/deny/{application}", [AdminGrantController::class, 'denyApplication'])->name(
-            "admin.grants.deny"
+        Route::post('/grants/deny/{application}', [AdminGrantController::class, 'denyApplication'])->name(
+            'admin.grants.deny'
         )
             ->middleware(BlockWhenPWDown::class);
 
         // Loan
-        Route::get("/loans", [LoansController::class, 'index'])->name("admin.loans");
-        Route::post("/loans/{Loan}/approve", [LoansController::class, 'approve'])->name(
-            "admin.loans.approve"
+        Route::get('/loans', [LoansController::class, 'index'])->name('admin.loans');
+        Route::post('/loans/{Loan}/approve', [LoansController::class, 'approve'])->name(
+            'admin.loans.approve'
         )->middleware(BlockWhenPWDown::class);
-        Route::post("/loans/{Loan}/deny", [LoansController::class, 'deny'])->name(
-            "admin.loans.deny"
+        Route::post('/loans/{Loan}/deny', [LoansController::class, 'deny'])->name(
+            'admin.loans.deny'
         )->middleware(BlockWhenPWDown::class);
-        Route::get("/loans/{Loan}/view", [LoansController::class, 'view'])->name(
-            "admin.loans.view"
+        Route::get('/loans/{Loan}/view', [LoansController::class, 'view'])->name(
+            'admin.loans.view'
         );
         Route::post('/loans/{Loan}/update', [LoansController::class, 'update'])->name(
             'admin.loans.update'

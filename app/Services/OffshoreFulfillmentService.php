@@ -16,7 +16,9 @@ use Throwable;
 class OffshoreFulfillmentService
 {
     private const LOCK_KEY = 'offshore-withdrawals';
+
     private const LOCK_TTL_SECONDS = 60;
+
     private const LOCK_WAIT_SECONDS = 5;
 
     private int $mainAllianceId;
@@ -58,7 +60,7 @@ class OffshoreFulfillmentService
         try {
             return Cache::lock(self::LOCK_KEY, self::LOCK_TTL_SECONDS)->block(
                 self::LOCK_WAIT_SECONDS,
-                fn() => $this->performFulfillment($transaction)
+                fn () => $this->performFulfillment($transaction)
             );
         } catch (LockTimeoutException $exception) {
             Log::warning('Unable to obtain offshore fulfillment lock', [
@@ -244,7 +246,7 @@ class OffshoreFulfillmentService
                 $errors[] = [
                     'offshore_id' => $offshore->id,
                     'offshore_name' => $offshore->name,
-                    'message' => 'Unexpected error: ' . $exception->getMessage(),
+                    'message' => 'Unexpected error: '.$exception->getMessage(),
                 ];
             }
         }
@@ -282,7 +284,7 @@ class OffshoreFulfillmentService
      */
     protected function getMainAllianceBalances(): ?array
     {
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new GraphQLQueryBuilder)
             ->setRootField('alliances')
             ->addArgument('id', $this->mainAllianceId)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
@@ -309,18 +311,19 @@ class OffshoreFulfillmentService
             return null;
         }
 
-        $result = (array)($response->{0} ?? []);
+        $result = (array) ($response->{0} ?? []);
         $resources = PWHelperService::resources();
 
         return collect($resources)
-            ->mapWithKeys(fn(string $resource) => [
+            ->mapWithKeys(fn (string $resource) => [
                 $resource => (float) Arr::get($result, $resource, 0),
             ])
             ->all();
     }
 
     /**
-     * @param array<string, float> $payload
+     * @param  array<string, float>  $payload
+     *
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
@@ -348,7 +351,7 @@ class OffshoreFulfillmentService
         /** @var QueryService $client */
         $client = App::make(QueryService::class, $parameters);
 
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new GraphQLQueryBuilder)
             ->setRootField('bankWithdraw')
             ->setMutation()
             ->addArgument('receiver', $this->mainAllianceId)
@@ -363,5 +366,4 @@ class OffshoreFulfillmentService
         // We do not log any request context here to avoid leaking credentials.
         $client->sendQuery($builder, headers: true);
     }
-
 }

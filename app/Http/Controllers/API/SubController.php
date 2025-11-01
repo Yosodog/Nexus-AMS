@@ -23,17 +23,13 @@ use Illuminate\Http\Request;
 
 class SubController extends Controller
 {
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function updateNation(Request $request): JsonResponse
     {
         // Decode JSON payload
         $nationUpdates = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($nationUpdates)) {
+        if (! is_array($nationUpdates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -48,17 +44,13 @@ class SubController extends Controller
         return response()->json(['message' => 'Nation update(s) queued for processing']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function createNation(Request $request): JsonResponse
     {
         // Decode JSON payload
         $nationCreate = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($nationCreate)) {
+        if (! is_array($nationCreate)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -73,17 +65,13 @@ class SubController extends Controller
         return response()->json(['message' => 'Nation creation(s) queued for processing']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function deleteNation(Request $request): JsonResponse
     {
         // Decode JSON payload
         $nationDelete = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($nationDelete)) {
+        if (! is_array($nationDelete)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -101,8 +89,6 @@ class SubController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return JsonResponse
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -112,7 +98,7 @@ class SubController extends Controller
         $allianceCreates = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($allianceCreates)) {
+        if (! is_array($allianceCreates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -129,17 +115,13 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance created successfully']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function updateAlliance(Request $request): JsonResponse
     {
         // Decode JSON payload
         $allianceUpdates = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($allianceUpdates)) {
+        if (! is_array($allianceUpdates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -154,17 +136,13 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance update(s) queued for processing']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function deleteAlliance(Request $request): JsonResponse
     {
         // Decode JSON payload
         $allianceDeletes = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($allianceDeletes)) {
+        if (! is_array($allianceDeletes)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -182,8 +160,8 @@ class SubController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return JsonResponse
+     *
      * @throws PWQueryFailedException
      * @throws PWRateLimitHitException
      */
@@ -193,7 +171,7 @@ class SubController extends Controller
         $cityCreates = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($cityCreates)) {
+        if (! is_array($cityCreates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -211,7 +189,6 @@ class SubController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return JsonResponse
      */
     public function updateCity(Request $request)
@@ -220,7 +197,7 @@ class SubController extends Controller
         $citiesData = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($citiesData)) {
+        if (! is_array($citiesData)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -236,7 +213,6 @@ class SubController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return JsonResponse
      */
     public function deleteCity(Request $request)
@@ -245,7 +221,7 @@ class SubController extends Controller
         $citiesDelete = $request->json()->all();
 
         // Ensure it's always an array
-        if (!is_array($citiesDelete)) {
+        if (! is_array($citiesDelete)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -262,15 +238,11 @@ class SubController extends Controller
         return response()->json(['message' => 'Alliance deleted successfully']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function createWar(Request $request): JsonResponse
     {
         $warCreates = $request->json()->all();
 
-        if (!is_array($warCreates)) {
+        if (! is_array($warCreates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -286,22 +258,18 @@ class SubController extends Controller
             if ($membershipService->contains($create['att_alliance_id']) || $membershipService->contains(
                 $create['def_alliance_id']
             )) {
-                War::updateFromAPI((object)$create);
+                War::updateFromAPI((object) $create);
             }
         }
 
         return response()->json(['message' => 'War created successfully']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function updateWar(Request $request): JsonResponse
     {
         $warUpdates = $request->json()->all();
 
-        if (!is_array($warUpdates)) {
+        if (! is_array($warUpdates)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -314,15 +282,11 @@ class SubController extends Controller
         return response()->json(['message' => 'War update(s) queued for processing']);
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
     public function deleteWar(Request $request): JsonResponse
     {
         $warDeletes = $request->json()->all();
 
-        if (!is_array($warDeletes)) {
+        if (! is_array($warDeletes)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 

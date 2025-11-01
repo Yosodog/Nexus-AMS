@@ -22,8 +22,6 @@ use Illuminate\Support\Facades\DB;
 class AccountService
 {
     /**
-     * @param int|User $user
-     *
      * @return mixed
      */
     public static function getAccountsByUser(int|User $user)
@@ -39,25 +37,17 @@ class AccountService
     }
 
     /**
-     * @param int $nation_id
-     *
      * @return mixed
      */
     public static function getAccountsByNid(int $nation_id)
     {
-        return Account::where("nation_id", $nation_id)
+        return Account::where('nation_id', $nation_id)
             ->get();
     }
 
-    /**
-     * @param int $nation_id
-     * @param string $name
-     *
-     * @return Account
-     */
     public static function createAccount(int $nation_id, string $name): Account
     {
-        $account = new Account();
+        $account = new Account;
         $account->name = $name;
         $account->nation_id = $nation_id;
         $account->save();
@@ -66,44 +56,43 @@ class AccountService
     }
 
     /**
-     * @param Account $account
-     *
      * @return Transaction
+     *
      * @throws UserErrorException
      */
     /**
      * Deletes an account after performing necessary checks.
      *
-     * @param Account $account
      *
      * @return Transaction
+     *
      * @throws UserErrorException
      */
     public static function deleteAccount(Account $account): void
     {
         // Check if the account has pending city grants
         if ($account->cityGrants()->where('status', 'pending')->exists()) {
-            throw new UserErrorException("The account has pending city grants.");
+            throw new UserErrorException('The account has pending city grants.');
         }
 
         // Check if the account has pending or active loans
         if ($account->loans()->whereIn('status', ['pending', 'approved'])->exists()) {
-            throw new UserErrorException("The account has pending or active loans.");
+            throw new UserErrorException('The account has pending or active loans.');
         }
 
         // Check if the account has pending grant applications
         if (GrantApplication::where('account_id', $account->id)->where('status', 'pending')->exists()) {
-            throw new UserErrorException("The account has pending grant applications.");
+            throw new UserErrorException('The account has pending grant applications.');
         }
 
         // Check if the account has pending war aid requests
         if (WarAidRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
-            throw new UserErrorException("The account has pending war aid requests.");
+            throw new UserErrorException('The account has pending war aid requests.');
         }
 
         // Check if the account has pending deposit requests
         if (DepositRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
-            throw new UserErrorException("The account has pending deposit requests.");
+            throw new UserErrorException('The account has pending deposit requests.');
         }
 
         // Check if the account has pending transactions (withdrawals or transfers)
@@ -115,12 +104,12 @@ class AccountService
             ->exists();
 
         if ($hasPendingTransactions) {
-            throw new UserErrorException("The account has pending transactions.");
+            throw new UserErrorException('The account has pending transactions.');
         }
 
         // Check to ensure the account is empty
-        if (!$account->isEmpty()) {
-            throw new UserErrorException("The account is not empty.");
+        if (! $account->isEmpty()) {
+            throw new UserErrorException('The account is not empty.');
         }
 
         // Proceed with deletion
@@ -130,11 +119,7 @@ class AccountService
     /**
      * Transfer resources from one account to another.
      *
-     * @param int $fromAccountId
-     * @param int $toAccountId
-     * @param array $resources
      *
-     * @return void
      * @throws UserErrorException
      */
     public static function transferToAccount(
@@ -171,7 +156,7 @@ class AccountService
                 $resources,
                 Auth::user()->nation_id,
                 $fromAccountId,
-                "transfer",
+                'transfer',
                 $toAccountId,
                 false
             );
@@ -184,14 +169,9 @@ class AccountService
         }
     }
 
-    /**
-     * @param int $id
-     *
-     * @return Account
-     */
     public static function getAccountById(int $id): Account
     {
-        return Account::where("id", $id)
+        return Account::where('id', $id)
             ->lockForUpdate()
             ->firstOrFail();
     }
@@ -202,43 +182,38 @@ class AccountService
      * you set the toAccount variable. If it is going to a nation, obviously do
      * not set the toAccount variable.
      *
-     * @param array $resources
-     * @param int $nation_id
-     * @param Account $fromAccount
-     * @param Account|null $toAccount
      *
-     * @return void
      * @throws UserErrorException
      */
     protected static function validateTransfer(
         array $resources,
         int $nation_id,
         Account $fromAccount,
-        Account|null $toAccount = null
+        ?Account $toAccount = null
     ): void {
         // Verify that we own the from account
         if ($fromAccount->nation_id != $nation_id) {
-            throw new UserErrorException("You do not own the from account");
+            throw new UserErrorException('You do not own the from account');
         }
 
         // Verify that we don't have a pending transaction
         if (TransactionService::hasPendingTransaction($nation_id)) {
             throw new UserErrorException(
-                "You are only allowed one pending transaction at a time. Try again later"
+                'You are only allowed one pending transaction at a time. Try again later'
             );
         }
 
         // If the toAccount is set, then verify that we own it too. It will not be set if we are transferring to a nation
-        if (!is_null($toAccount)) {
+        if (! is_null($toAccount)) {
             if ($toAccount->nation_id != $nation_id) {
-                throw new UserErrorException("You do not own the to account");
+                throw new UserErrorException('You do not own the to account');
             }
         }
 
         $thereIsSomething = false;
         foreach (PWHelperService::resources() as $res) {
             // Verify that the 'from' account has enough resources
-            if ($fromAccount->$res < $resources[$res]) {
+            if ($resources[$res] > $fromAccount->$res) {
                 throw new UserErrorException(
                     "Insufficient {$res} in the source account."
                 );
@@ -257,17 +232,12 @@ class AccountService
             }
         }
 
-        if (!$thereIsSomething) {
+        if (! $thereIsSomething) {
             throw new UserErrorException("You can't transfer nothing.");
         }
     }
 
     /**
-     * @param int $fromAccountId
-     * @param int $nation_id
-     * @param array $resources
-     *
-     * @return Transaction
      * @throws PWQueryFailedException
      * @throws UserErrorException
      * @throws ConnectionException
@@ -291,7 +261,7 @@ class AccountService
             );
 
             $evaluation = WithdrawalLimitService::evaluate($nation_id, $resources);
-            $note = "Withdraw from " . $fromAccount->name;
+            $note = 'Withdraw from '.$fromAccount->name;
 
             // Perform the transfer
             foreach (PWHelperService::resources() as $res) {
@@ -305,7 +275,7 @@ class AccountService
                 $resources,
                 Auth::user()->nation_id,
                 $fromAccountId,
-                "withdrawal",
+                'withdrawal',
                 null,
                 true,
                 $note,
@@ -315,7 +285,7 @@ class AccountService
 
             DB::commit(); // Commit before spawning the job. I'd rather it fail.
 
-            if (!$evaluation['requires_approval']) {
+            if (! $evaluation['requires_approval']) {
                 self::dispatchWithdrawal($transaction, $fromAccount);
             }
 
@@ -328,10 +298,6 @@ class AccountService
     }
 
     /**
-     * @param Transaction $transaction
-     * @param Account|null $fromAccount
-     *
-     * @return void
      * @throws Exception
      */
     public static function dispatchWithdrawal(Transaction $transaction, ?Account $fromAccount = null): void
@@ -342,9 +308,9 @@ class AccountService
             throw new Exception('Unable to locate the source account for this withdrawal.');
         }
 
-        $bank = new BankService();
+        $bank = new BankService;
         $bank->receiver = $transaction->nation_id;
-        $bank->note = $transaction->note ?? ('Withdraw from ' . $fromAccount->name);
+        $bank->note = $transaction->note ?? ('Withdraw from '.$fromAccount->name);
 
         foreach (PWHelperService::resources() as $res) {
             $bank->$res = $transaction->$res;
@@ -353,11 +319,6 @@ class AccountService
         $bank->send($transaction);
     }
 
-    /**
-     * @param Account $account
-     *
-     * @return DepositRequest
-     */
     public static function createDepositRequest(Account $account): DepositRequest
     {
         $deposit = DepositService::createRequest($account);
@@ -371,9 +332,6 @@ class AccountService
     }
 
     /**
-     * @param Account $account
-     * @param BankRecord $bankRecord
-     *
      * @return void
      */
     public static function updateAccountBalanceFromBankRec(
@@ -388,41 +346,28 @@ class AccountService
     }
 
     /**
-     * @param Account $account
-     *
      * @return mixed
      */
     public static function getRelatedTransactions(Account $account, int $perPage = 50)
     {
-        return Transaction::where("to_account_id", $account->id)
-            ->orWhere("from_account_id", $account->id)
-            ->with("nation")
-            ->orderBy("created_at", "DESC")
+        return Transaction::where('to_account_id', $account->id)
+            ->orWhere('from_account_id', $account->id)
+            ->with('nation')
+            ->orderBy('created_at', 'DESC')
             ->paginate($perPage);
     }
 
     /**
-     * @param Account $account
-     * @param int $perPage
-     *
      * @return mixed
      */
     public static function getRelatedManualTransactions(Account $account, int $perPage = 50)
     {
-        return ManualTransaction::where("account_id", $account->id)
+        return ManualTransaction::where('account_id', $account->id)
             ->with('admin')
-            ->orderBy("created_at", "DESC")
+            ->orderBy('created_at', 'DESC')
             ->paginate($perPage);
     }
 
-    /**
-     * @param Account $account
-     * @param array $adjustment
-     * @param int|null $adminId
-     * @param string|null $ipAddress
-     *
-     * @return ManualTransaction
-     */
     public static function adjustAccountBalance(
         Account $account,
         array $adjustment,
@@ -461,12 +406,10 @@ class AccountService
 
     /**
      * If for some reason (DD) we need an account but they don't have one, we're gonna create one for them
-     * @param Nation $nation
-     * @return Account
      */
     public function createDefaultForNation(Nation $nation): Account
     {
-        $account = new Account();
+        $account = new Account;
 
         $account->nation_id = $nation->id;
         $account->name = 'System Created Account';
@@ -483,15 +426,12 @@ class AccountService
     /**
      * Get the total amount of a specific resource for a nation.
      *
-     * @param int $nationId
-     * @param string $resource
      *
-     * @return int
      * @throws \InvalidArgumentException
      */
     public static function getTotalResourceForNation(int $nationId, string $resource): int
     {
-        if (!in_array($resource, PWHelperService::resources(false))) {
+        if (! in_array($resource, PWHelperService::resources(false))) {
             throw new \InvalidArgumentException("Invalid resource: $resource");
         }
 

@@ -11,8 +11,6 @@ class NationDashboardService
 {
     /**
      * Get all dashboard data for a given nation.
-     * @param Nation $nation
-     * @return array
      */
     public function getDashboardData(Nation $nation): array
     {
@@ -25,7 +23,7 @@ class NationDashboardService
             'recentTransactions' => $this->getRecentTransactions($accountIds),
             'nationAge' => now()->diffInDays($nation->created_at),
             'scorePerCity' => $nation->num_cities > 0 ? round($nation->score / $nation->num_cities, 2) : 0,
-            'taxTotal' => $taxes->sum(fn($g) => $g->sum('money')),
+            'taxTotal' => $taxes->sum(fn ($g) => $g->sum('money')),
             'scoreChart' => $this->buildScoreChart($signIns),
             'militaryChart' => $this->buildMultiSeriesChart($signIns, [
                 'fields' => ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes'],
@@ -45,8 +43,6 @@ class NationDashboardService
 
     /**
      * Get last 30 days of taxes grouped by Y-m-d date.
-     * @param Nation $nation
-     * @return Collection
      */
     protected function getRecentTaxes(Nation $nation): Collection
     {
@@ -54,13 +50,11 @@ class NationDashboardService
             ->where('date', '>=', now()->subDays(30))
             ->orderBy('date')
             ->get()
-            ->groupBy(fn($t) => $t->date->format('Y-m-d'));
+            ->groupBy(fn ($t) => $t->date->format('Y-m-d'));
     }
 
     /**
      * Get the most recent account-related transactions.
-     * @param Collection $accountIds
-     * @return Collection
      */
     protected function getRecentTransactions(Collection $accountIds): Collection
     {
@@ -75,8 +69,6 @@ class NationDashboardService
 
     /**
      * Score line chart.
-     * @param Collection $signIns
-     * @return array
      */
     protected function buildScoreChart(Collection $signIns): array
     {
@@ -88,18 +80,15 @@ class NationDashboardService
 
     /**
      * Multi-line chart generator for any set of numeric fields.
-     * @param Collection $signIns
-     * @param array $config
-     * @return array
      */
     protected function buildMultiSeriesChart(Collection $signIns, array $config): array
     {
         return [
             'labels' => $this->pluckDates($signIns),
-            'datasets' => collect($config['fields'])->map(fn($field) => [
+            'datasets' => collect($config['fields'])->map(fn ($field) => [
                 'label' => ucfirst($field),
                 'data' => $signIns->pluck($field)->toArray(),
-                'borderColor' => '#' . substr(md5($field), 0, 6),
+                'borderColor' => '#'.substr(md5($field), 0, 6),
                 'fill' => false,
             ])->toArray(),
         ];
@@ -107,22 +96,17 @@ class NationDashboardService
 
     /**
      * Money tax chart (bar).
-     * @param Collection $taxes
-     * @return array
      */
     protected function buildMoneyTaxChart(Collection $taxes): array
     {
         return [
             'labels' => $taxes->keys()->toArray(),
-            'data' => $taxes->map(fn($day) => round($day->sum('money'), 2))->toArray(),
+            'data' => $taxes->map(fn ($day) => round($day->sum('money'), 2))->toArray(),
         ];
     }
 
     /**
      * Resource tax stacked bar chart.
-     * @param array $resources
-     * @param Collection $taxes
-     * @return array
      */
     protected function buildResourceTaxChart(array $resources, Collection $taxes): array
     {
@@ -154,6 +138,6 @@ class NationDashboardService
      */
     protected function pluckDates(Collection $signIns): array
     {
-        return $signIns->pluck('created_at')->map(fn($d) => $d->format('M d'))->toArray();
+        return $signIns->pluck('created_at')->map(fn ($d) => $d->format('M d'))->toArray();
     }
 }

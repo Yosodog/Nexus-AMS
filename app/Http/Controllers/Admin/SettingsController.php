@@ -9,14 +9,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
     /**
-     * @return View
      * @throws AuthorizationException
      */
     public function index(): View
@@ -27,11 +24,9 @@ class SettingsController extends Controller
         $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
         $warBatchId = SettingService::getLastWarSyncBatchId();
 
-
         $nationBatch = $nationBatchId ? Bus::findBatch($nationBatchId) : null;
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
         $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
-
 
         return view('admin.settings', [
             'nationBatch' => $nationBatch,
@@ -40,9 +35,6 @@ class SettingsController extends Controller
         ]);
     }
 
-    /**
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function runSyncNation(): RedirectResponse
     {
         $this->authorize('view-diagnostic-info');
@@ -55,9 +47,6 @@ class SettingsController extends Controller
         ]);
     }
 
-    /**
-     * @return RedirectResponse
-     */
     public function runSyncAlliance(): RedirectResponse
     {
         $this->authorize('view-diagnostic-info');
@@ -70,9 +59,6 @@ class SettingsController extends Controller
         ]);
     }
 
-    /**
-     * @return RedirectResponse
-     */
     public function runSyncWar(): RedirectResponse
     {
         $this->authorize('view-diagnostic-info');
@@ -85,10 +71,6 @@ class SettingsController extends Controller
         ]);
     }
 
-    /**
-     * @param Request $request
-     * @return RedirectResponse
-     */
     public function cancelSync(Request $request): RedirectResponse
     {
         $this->authorize('view-diagnostic-info');
@@ -104,7 +86,7 @@ class SettingsController extends Controller
             $batch->cancel();
         }
 
-        $message = ucfirst($request->input('type')) . ' sync cancelled.';
+        $message = ucfirst($request->input('type')).' sync cancelled.';
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $message,

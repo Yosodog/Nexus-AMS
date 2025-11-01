@@ -15,8 +15,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PageActivityLog extends Model
 {
     public const ACTION_DRAFT_SAVED = 'draft_saved';
+
     public const ACTION_PUBLISHED = 'published';
+
     public const ACTION_RESTORED = 'restored';
+
     public const ACTION_PREVIEWED = 'previewed';
 
     protected $fillable = [

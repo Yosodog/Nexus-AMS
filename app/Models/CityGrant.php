@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class CityGrant extends Model
 {
-
     /**
      * @var string[]
      */
@@ -26,6 +25,4 @@ class CityGrant extends Model
         'enabled' => 'boolean',
         'requirements' => 'array',
     ];
-
-
 }

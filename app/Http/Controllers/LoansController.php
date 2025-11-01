@@ -24,7 +24,6 @@ class LoansController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return RedirectResponse
      */
     public function apply(Request $request)
@@ -32,7 +31,7 @@ class LoansController extends Controller
         $request->validate([
             'amount' => 'required|numeric',
             'account_id' => 'required|exists:accounts,id',
-            'term_weeks' => 'required|integer|min:1|max:52'
+            'term_weeks' => 'required|integer|min:1|max:52',
         ]);
 
         $nation = Auth::user()->nation;
@@ -43,6 +42,7 @@ class LoansController extends Controller
             $this->loanService->validateLoanEligibility($nation, $account);
 
             $this->loanService->applyForLoan($nation, $account, $request->amount, $request->term_weeks);
+
             return redirect()->back()->with('alert-message', 'Loan application submitted! ✅')->with(
                 'alert-type',
                 'success'
@@ -67,6 +67,7 @@ class LoansController extends Controller
             ->get()
             ->map(function ($loan) {
                 $loan->next_payment_due = $loan->getNextPaymentDue(); // Add next minimum payment
+
                 return $loan;
             });
 
@@ -82,8 +83,8 @@ class LoansController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return RedirectResponse
+     *
      * @throws ValidationException
      */
     public function repay(Request $request)
@@ -111,6 +112,7 @@ class LoansController extends Controller
         // Process the loan repayment
         try {
             $this->loanService->repayLoan($loan, $account, $request->amount);
+
             return redirect()->back()->with('alert-message', 'Loan payment successful! ✅')->with(
                 'alert-type',
                 'success'

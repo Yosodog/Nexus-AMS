@@ -8,11 +8,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UpdateLastActive
 {
-    /**
-     * @param Request $request
-     * @param Closure $next
-     * @return Response
-     */
     public function handle(Request $request, Closure $next): Response
     {
         if (auth()->check()) {

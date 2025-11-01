@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -30,7 +31,7 @@ return new class extends Migration {
                     'TACTICIAN',
                     'GUARDIAN',
                     'COVERT',
-                    'ARCANE'
+                    'ARCANE',
                 ]
             )->default('ATTRITION');
             $table->unsignedSmallInteger('war_policy_turns');
@@ -41,7 +42,7 @@ return new class extends Migration {
                     'TECHNOLOGICAL_ADVANCEMENT',
                     'IMPERIALISM',
                     'URBANIZATION',
-                    'RAPID_EXPANSION'
+                    'RAPID_EXPANSION',
                 ]
             )->default('MANIFEST_DESTINY');
             $table->unsignedSmallInteger('domestic_policy_turns');

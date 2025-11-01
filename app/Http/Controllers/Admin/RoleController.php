@@ -16,7 +16,6 @@ class RoleController extends Controller
     use AuthorizesRequests;
 
     /**
-     * @return View
      * @throws AuthorizationException
      */
     public function index(): View
@@ -41,8 +40,6 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Role $role
-     * @return View
      * @throws AuthorizationException
      */
     public function edit(Role $role): View
@@ -55,9 +52,6 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @param Role $role
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function update(Request $request, Role $role): RedirectResponse
@@ -74,7 +68,7 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', config('permissions'))],
+            'permissions.*' => ['string', 'in:'.implode(',', config('permissions'))],
         ]);
 
         $role->update(['name' => $validated['name']]);
@@ -95,8 +89,6 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function store(Request $request): RedirectResponse
@@ -106,7 +98,7 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'unique:roles,name'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', config('permissions'))],
+            'permissions.*' => ['string', 'in:'.implode(',', config('permissions'))],
         ]);
 
         $role = Role::create([
@@ -128,7 +120,6 @@ class RoleController extends Controller
     }
 
     /**
-     * @return View
      * @throws AuthorizationException
      */
     public function create(): View
@@ -141,8 +132,6 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Role $role
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function destroy(Role $role): RedirectResponse

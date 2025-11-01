@@ -16,12 +16,10 @@ use Illuminate\Support\Facades\Log;
 
 class FinalizeWarSyncJob implements ShouldQueue
 {
-    use Batchable, Queueable, Dispatchable, InteractsWithQueue, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Create a new job instance.
-     *
-     * @param string $batchId
      */
     public function __construct(string $batchId)
     {
@@ -38,7 +36,7 @@ class FinalizeWarSyncJob implements ShouldQueue
     {
         $batch = Bus::findBatch($this->batchId);
 
-        if (!$batch) {
+        if (! $batch) {
             Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} could not be found.");
             $this->flushBatchCache();
             SettingService::setLastWarSyncBatchId($this->batchId);
@@ -86,6 +84,7 @@ class FinalizeWarSyncJob implements ShouldQueue
             Log::warning("❌ FinalizeWarSyncJob aborted: no war IDs were collected for batch {$this->batchId}");
             $this->flushBatchCache();
             SettingService::setLastWarSyncBatchId($this->batchId);
+
             return;
         }
 

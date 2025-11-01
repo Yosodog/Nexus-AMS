@@ -41,7 +41,7 @@ class AccountsController extends Controller
         $accounts = AccountService::getAccountsByNid($nationId);
 
         if ($accounts->count() === 0) {
-            return redirect()->route("accounts.create");
+            return redirect()->route('accounts.create');
         }
 
         $activeLoans = Loan::where('nation_id', $nationId)
@@ -65,7 +65,7 @@ class AccountsController extends Controller
 
         $logsQuery = MMRAssistantPurchase::query()
             ->where(function ($query) use ($config, $nationId) {
-                $query->whereHas('account', fn($q) => $q->where('nation_id', $nationId));
+                $query->whereHas('account', fn ($q) => $q->where('nation_id', $nationId));
 
                 if ($config?->account_id) {
                     $query->orWhere('account_id', $config->account_id);
@@ -80,32 +80,30 @@ class AccountsController extends Controller
         $priceService = app(TradePriceService::class);
         $mmrPrices = $priceService->get24hAverageWithSurcharge();
 
-        return view("accounts.index", [
-            "accounts" => $accounts,
-            "activeLoans" => $activeLoans,
-            "enrollment" => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
-            "bracket" => $ddService->getApplicableBracket(Auth::user()->nation),
+        return view('accounts.index', [
+            'accounts' => $accounts,
+            'activeLoans' => $activeLoans,
+            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
+            'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
             // MMR data
-            "mmrConfig" => $config,
-            "mmrSettings" => $settings,
-            "mmrResources" => $resources,
-            "mmrEnabled" => $mmrEnabled,
-            "mmrLogs" => $logs,
-            "mmrAfterTaxIncome" => $afterTaxIncome,
-            "mmrPrices" => $mmrPrices,
+            'mmrConfig' => $config,
+            'mmrSettings' => $settings,
+            'mmrResources' => $resources,
+            'mmrEnabled' => $mmrEnabled,
+            'mmrLogs' => $logs,
+            'mmrAfterTaxIncome' => $afterTaxIncome,
+            'mmrPrices' => $mmrPrices,
         ]);
     }
 
     /**
-     * @param Request $request
-     *
      * @return RedirectResponse
      */
     public function transfer(Request $request)
     {
         // Check if this is a loan repayment
         if (str_starts_with($request->input('to'), 'loan_')) {
-            $loanId = (int)substr($request->input('to'), 5);
+            $loanId = (int) substr($request->input('to'), 5);
 
             // First validate basic requirements
             $request->validate([
@@ -120,14 +118,14 @@ class AccountsController extends Controller
                 // Validate loan ownership
                 if ($loan->nation_id !== Auth::user()->nation_id) {
                     throw ValidationException::withMessages([
-                        'to' => ['You do not own this loan.']
+                        'to' => ['You do not own this loan.'],
                     ]);
                 }
 
                 // Validate account ownership
                 if ($account->nation_id !== Auth::user()->nation_id) {
                     throw ValidationException::withMessages([
-                        'from' => ['You do not own this account.']
+                        'from' => ['You do not own this account.'],
                     ]);
                 }
 
@@ -135,18 +133,18 @@ class AccountsController extends Controller
                 if ($request->input('money') > $loan->remaining_balance) {
                     throw ValidationException::withMessages([
                         'money' => [
-                            'Payment amount cannot exceed the remaining loan balance of $' . number_format(
+                            'Payment amount cannot exceed the remaining loan balance of $'.number_format(
                                 $loan->remaining_balance,
                                 2
-                            )
-                        ]
+                            ),
+                        ],
                     ]);
                 }
 
                 // Validate account has sufficient funds
                 if ($request->input('money') > $account->money) {
                     throw ValidationException::withMessages([
-                        'money' => ['Insufficient funds in the selected account.']
+                        'money' => ['Insufficient funds in the selected account.'],
                     ]);
                 }
 
@@ -160,7 +158,8 @@ class AccountsController extends Controller
             } catch (ValidationException $e) {
                 return redirect()->back()->withErrors($e->errors())->with('alert-type', 'error');
             } catch (Exception $e) {
-                Log::error("Error processing loan payment: " . $e->getMessage());
+                Log::error('Error processing loan payment: '.$e->getMessage());
+
                 return redirect()->back()->with([
                     'alert-message' => 'An error occurred while processing your loan payment. Please try again.',
                     'alert-type' => 'error',
@@ -169,7 +168,7 @@ class AccountsController extends Controller
         }
 
         // Regular transfer logic
-        if ($request->input("to") == "nation") {
+        if ($request->input('to') == 'nation') {
             $request->validate([
                 'from' => 'required|integer|exists:accounts,id',
             ]);
@@ -196,17 +195,17 @@ class AccountsController extends Controller
                 }
             }
 
-            if (!$hasResources) {
+            if (! $hasResources) {
                 throw ValidationException::withMessages([
-                    'transfer' => ['You must transfer at least one resource with an amount greater than 0.']
+                    'transfer' => ['You must transfer at least one resource with an amount greater than 0.'],
                 ]);
             }
 
             // Get the source account and validate ownership
-            $fromAccount = Account::findOrFail($request->input("from"));
+            $fromAccount = Account::findOrFail($request->input('from'));
             if ($fromAccount->nation_id !== Auth::user()->nation_id) {
                 throw ValidationException::withMessages([
-                    'from' => ['You do not own the source account.']
+                    'from' => ['You do not own the source account.'],
                 ]);
             }
 
@@ -215,39 +214,39 @@ class AccountsController extends Controller
                 if ($amount > $fromAccount->{$resource}) {
                     throw ValidationException::withMessages([
                         $resource => [
-                            "Insufficient {$resource} in source account. Available: " . number_format(
+                            "Insufficient {$resource} in source account. Available: ".number_format(
                                 $fromAccount->{$resource},
                                 2
-                            )
-                        ]
+                            ),
+                        ],
                     ]);
                 }
             }
 
             // If transferring to another account, validate ownership
-            if ($request->input("to") !== "nation") {
-                $toAccount = Account::findOrFail($request->input("to"));
+            if ($request->input('to') !== 'nation') {
+                $toAccount = Account::findOrFail($request->input('to'));
                 if ($toAccount->nation_id !== Auth::user()->nation_id) {
                     throw ValidationException::withMessages([
-                        'to' => ['You do not own the destination account.']
+                        'to' => ['You do not own the destination account.'],
                     ]);
                 }
 
                 // Validate not transferring to the same account
                 if ($fromAccount->id === $toAccount->id) {
                     throw ValidationException::withMessages([
-                        'to' => ['Cannot transfer resources to the same account.']
+                        'to' => ['Cannot transfer resources to the same account.'],
                     ]);
                 }
 
                 AccountService::transferToAccount(
-                    $request->input("from"),
-                    $request->input("to"),
+                    $request->input('from'),
+                    $request->input('to'),
                     $transfer
                 );
             } else {
                 $transaction = AccountService::transferToNation(
-                    $request->input("from"),
+                    $request->input('from'),
                     Auth::user()->nation_id,
                     $transfer
                 );
@@ -262,33 +261,31 @@ class AccountsController extends Controller
 
             return redirect()->back()->with([
                 'alert-message' => 'Transfer successful!',
-                "alert-type" => 'success',
+                'alert-type' => 'success',
             ]);
         } catch (ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->with('alert-type', 'error');
         } catch (UserErrorException $e) {
             return redirect()->back()->withErrors($e->getMessage())->with('alert-type', 'error');
         } catch (Exception $e) {
-            Log::error("Error when transferring. " . $e->getMessage());
+            Log::error('Error when transferring. '.$e->getMessage());
 
             return redirect()->back()->withErrors(
-                "There was an error with your transfer. Please try again"
+                'There was an error with your transfer. Please try again'
             );
         }
     }
 
     /**
-     * @param Account $accounts
-     *
      * @return Closure|Container|mixed|object|null
      */
     public function viewAccount(Account $accounts)
     {
         if ($accounts->nation_id != Auth::user()->nation_id) {
-            abort("403");
+            abort('403');
         }
 
-        $accounts->load("nation");
+        $accounts->load('nation');
 
         $transactions = AccountService::getRelatedTransactions($accounts);
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts);
@@ -299,11 +296,11 @@ class AccountsController extends Controller
             ->orderBy('created_at', 'DESC')
             ->get();
 
-        return view("accounts.view", [
-            "account" => $accounts,
-            "transactions" => $transactions,
-            "manualTransactions" => $manualTransactions,
-            "ddLogs" => $ddLogs,
+        return view('accounts.view', [
+            'account' => $accounts,
+            'transactions' => $transactions,
+            'manualTransactions' => $manualTransactions,
+            'ddLogs' => $ddLogs,
         ]);
     }
 
@@ -312,12 +309,10 @@ class AccountsController extends Controller
      */
     public function createView()
     {
-        return view("accounts.create");
+        return view('accounts.create');
     }
 
     /**
-     * @param Request $request
-     *
      * @return mixed
      */
     public function create(Request $request)
@@ -330,26 +325,24 @@ class AccountsController extends Controller
                 Rule::unique('accounts')->where(function ($query) {
                     return $query->where('nation_id', Auth::user()->nation_id)
                         ->whereNull('deleted_at');
-                })
+                }),
             ],
         ]);
 
         AccountService::createAccount(
             Auth::user()->nation_id,
-            $request->input("name")
+            $request->input('name')
         );
 
         return redirect()
             ->route('accounts')
             ->with([
                 'alert-message' => 'Account created successfully.',
-                "alert-type" => 'success',
+                'alert-type' => 'success',
             ]);
     }
 
     /**
-     * @param Request $request
-     *
      * @return RedirectResponse
      */
     public function delete(Request $request)
@@ -367,12 +360,11 @@ class AccountsController extends Controller
             return redirect()
                 ->back()
                 ->withErrors([$e->getMessage()])
-                ->with(["alert-type" => "error"]);
+                ->with(['alert-type' => 'error']);
         }
 
         return redirect()
-            ->route("accounts")
-            ->with("success", "Account deleted!");
+            ->route('accounts')
+            ->with('success', 'Account deleted!');
     }
-
 }

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LoanPayment extends Model
 {
-    public $table = "loan_payments";
+    public $table = 'loan_payments';
 
     protected $fillable = [
         'loan_id',

@@ -21,6 +21,7 @@ class WarAidController extends Controller
 
     /**
      * @return Factory|View|Application|object
+     *
      * @throws AuthorizationException
      */
     public function index()
@@ -36,10 +37,8 @@ class WarAidController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @param WarAidRequest $aidRequest
-     * @param WarAidService $warAidService
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function approve(Request $request, WarAidRequest $aidRequest, WarAidService $warAidService)
@@ -47,7 +46,7 @@ class WarAidController extends Controller
         $this->authorize('manage-war-aid');
 
         $data = $request->validate(
-            collect(PWHelperService::resources())->mapWithKeys(fn($r) => [$r => ['nullable', 'integer', 'min:0']]
+            collect(PWHelperService::resources())->mapWithKeys(fn ($r) => [$r => ['nullable', 'integer', 'min:0']]
             )->toArray()
         );
 
@@ -55,14 +54,13 @@ class WarAidController extends Controller
 
         return back()->with([
             'alert-message' => 'Aid request approved.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
     /**
-     * @param WarAidRequest $aidRequest
-     * @param WarAidService $warAidService
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function deny(WarAidRequest $aidRequest, WarAidService $warAidService)
@@ -73,12 +71,13 @@ class WarAidController extends Controller
 
         return back()->with([
             'alert-message' => 'Aid request denied.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 
     /**
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function toggle()
@@ -86,11 +85,11 @@ class WarAidController extends Controller
         $this->authorize('manage-war-aid');
 
         $currently = SettingService::isWarAidEnabled();
-        SettingService::setWarAidEnabled(!$currently);
+        SettingService::setWarAidEnabled(! $currently);
 
         return back()->with([
-            'alert-message' => 'War aid has been ' . ($currently ? 'disabled' : 'enabled') . '.',
-            'alert-type' => 'info'
+            'alert-message' => 'War aid has been '.($currently ? 'disabled' : 'enabled').'.',
+            'alert-type' => 'info',
         ]);
     }
 }

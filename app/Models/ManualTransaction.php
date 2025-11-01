@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ManualTransaction extends Model
 {
-    public $table = "manual_transactions";
+    public $table = 'manual_transactions';
 
     protected $fillable = [
         'account_id',
@@ -25,7 +25,7 @@ class ManualTransaction extends Model
         'aluminum',
         'food',
         'note',
-        'ip_address'
+        'ip_address',
     ];
 
     /**
@@ -33,7 +33,7 @@ class ManualTransaction extends Model
      */
     public function account()
     {
-        return $this->belongsTo(Account::class, "account_id", "id");
+        return $this->belongsTo(Account::class, 'account_id', 'id');
     }
 
     /**
@@ -41,6 +41,6 @@ class ManualTransaction extends Model
      */
     public function admin()
     {
-        return $this->belongsTo(User::class, "admin_id", "id");
+        return $this->belongsTo(User::class, 'admin_id', 'id');
     }
 }

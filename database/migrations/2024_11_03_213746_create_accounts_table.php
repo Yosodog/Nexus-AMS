@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -26,14 +27,14 @@ return new class extends Migration {
             $table->decimal('steel', 14, 2)->default(0);
             $table->decimal('aluminum', 14, 2)->default(0);
             $table->decimal('food', 14, 2)->default(0);
-            $table->boolean("frozen")->default(0);
+            $table->boolean('frozen')->default(0);
 
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign("nation_id")
-                ->references("id")
-                ->on("nations")
+            $table->foreign('nation_id')
+                ->references('id')
+                ->on('nations')
                 ->nullOnDelete()
                 ->noActionOnUpdate();
         });

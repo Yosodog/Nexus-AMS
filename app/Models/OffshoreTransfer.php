@@ -9,10 +9,13 @@ use Illuminate\Support\Carbon;
 class OffshoreTransfer extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     public const TYPE_MAIN = 'main';
+
     public const TYPE_OFFSHORE = 'offshore';
 
     protected $fillable = [

@@ -8,20 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Alliance extends Model
 {
-    public $table = "alliances";
+    public $table = 'alliances';
+
     protected $guarded = [];
 
     /**
      * Create or update an Alliance model from GraphQL Alliance data.
      *
-     * @param AllianceGraphQL $graphQLAllianceModel - The GraphQL alliance data
-     * @param bool $withNations
-     * @return Alliance
+     * @param  AllianceGraphQL  $graphQLAllianceModel  - The GraphQL alliance data
      */
     public static function updateFromAPI(AllianceGraphQL $graphQLAllianceModel, bool $withNations = true): Alliance
     {
         // Extract alliance data
-        $allianceData = collect((array)$graphQLAllianceModel)->only([
+        $allianceData = collect((array) $graphQLAllianceModel)->only([
             'id',
             'name',
             'acronym',
@@ -33,7 +32,7 @@ class Alliance extends Model
             'forum_link',
             'discord_link',
             'wiki_link',
-            'rank'
+            'rank',
         ])->toArray();
 
         // Use `updateOrCreate` to handle both creation and update
@@ -50,12 +49,11 @@ class Alliance extends Model
     }
 
     /**
-     * @param int $id
      * @return mixed
      */
     public static function getById(int $id)
     {
-        return self::where("id", $id)->firstOrFail();
+        return self::where('id', $id)->firstOrFail();
     }
 
     /**
@@ -63,6 +61,6 @@ class Alliance extends Model
      */
     public function nations()
     {
-        return $this->hasMany(Nation::class, "alliance_id");
+        return $this->hasMany(Nation::class, 'alliance_id');
     }
 }

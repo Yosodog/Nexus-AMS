@@ -12,13 +12,8 @@ use Carbon\Carbon;
 
 class MemberStatsService
 {
-    public function __construct(private readonly AllianceMembershipService $membershipService)
-    {
-    }
+    public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
-    /**
-     * @return array
-     */
     public function getOverviewData(): array
     {
         $nations = Nation::with(['resources', 'accounts', 'military'])
@@ -29,7 +24,7 @@ class MemberStatsService
 
         $maxTier = $nations->max('num_cities') ?? 0;
 
-        $cityTiers = collect(range(1, $maxTier))->mapWithKeys(fn($tier) => [
+        $cityTiers = collect(range(1, $maxTier))->mapWithKeys(fn ($tier) => [
             $tier => $nations->where('num_cities', $tier)->count(),
         ])->toArray();
 
@@ -39,13 +34,10 @@ class MemberStatsService
             'totalCities' => $nations->sum('num_cities'),
             'cityTiers' => $cityTiers,
             'cityGrowthHistory' => $this->getCityGrowthHistory(),
-            'members' => $nations->map(fn($nation) => $this->formatNation($nation)),
+            'members' => $nations->map(fn ($nation) => $this->formatNation($nation)),
         ];
     }
 
-    /**
-     * @return array
-     */
     protected function getCityGrowthHistory(): array
     {
         return NationSignIn::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
@@ -56,10 +48,6 @@ class MemberStatsService
             ->toArray();
     }
 
-    /**
-     * @param Nation $nation
-     * @return array
-     */
     protected function formatNation(Nation $nation): array
     {
         $cities = $nation->num_cities;
@@ -77,7 +65,7 @@ class MemberStatsService
             'ships' => $nation->military->ships ?? 0,
         ];
 
-        $militaryPercent = collect($max)->mapWithKeys(fn($maxVal, $type) => [
+        $militaryPercent = collect($max)->mapWithKeys(fn ($maxVal, $type) => [
             $type => $maxVal > 0 ? round(($current[$type] / $maxVal) * 100, 2) : 0,
         ])->toArray();
 
@@ -88,7 +76,7 @@ class MemberStatsService
             'aluminum',
             'munitions',
             'uranium',
-            'food'
+            'food',
         ];
 
         $resourceValues = collect($resources)->mapWithKeys(function ($res) use ($nation) {
@@ -99,7 +87,7 @@ class MemberStatsService
                 $res => [
                     'total' => $accountTotal + $inGame,
                     'in_game' => $inGame,
-                ]
+                ],
             ];
         });
 
@@ -118,9 +106,6 @@ class MemberStatsService
 
     /**
      * Gets stats for the admin/members/{nations} page
-     *
-     * @param Nation $nation
-     * @return array
      */
     public function getNationStats(Nation $nation): array
     {
@@ -157,7 +142,7 @@ class MemberStatsService
             ->where('date', '>=', now()->subDays(365))
             ->orderBy('date')
             ->get()
-            ->groupBy(fn($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
+            ->groupBy(fn ($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
             ->map(function ($group, $date) {
                 return [
                     'date' => $date,
@@ -179,7 +164,7 @@ class MemberStatsService
             ->where('date', '>=', now()->subDays(7))
             ->orderBy('date')
             ->get()
-            ->groupBy(fn($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
+            ->groupBy(fn ($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
             ->map(function ($group, $date) {
                 return [
                     'date' => $date,
@@ -194,7 +179,7 @@ class MemberStatsService
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
             ->get()
-            ->map(fn($row) => [
+            ->map(fn ($row) => [
                 'date' => $row->created_at->format('Y-m-d'),
                 'money' => $row->money,
                 'steel' => $row->steel,
@@ -219,7 +204,7 @@ class MemberStatsService
             'recentLoans' => $recentLoans,
             'recentTaxes' => $recentTaxes,
 
-            'resourceSignInHistory' => $resourceSignInHistory
+            'resourceSignInHistory' => $resourceSignInHistory,
         ];
     }
 }

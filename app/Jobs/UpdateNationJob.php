@@ -34,8 +34,8 @@ class UpdateNationJob implements ShouldQueue
     {
         try {
             foreach ($this->nationsData as $nationData) {
-                $nationModel = new GraphQLNationModel();
-                $nationModel->buildWithJSON((object)$nationData);
+                $nationModel = new GraphQLNationModel;
+                $nationModel->buildWithJSON((object) $nationData);
 
                 try {
                     // Attempt to update or create the nation
@@ -58,7 +58,7 @@ class UpdateNationJob implements ShouldQueue
 
             }
         } catch (Exception $e) {
-            Log::error("Failed to update nations", ['error' => $e->getMessage()]);
+            Log::error('Failed to update nations', ['error' => $e->getMessage()]);
         }
     }
 }

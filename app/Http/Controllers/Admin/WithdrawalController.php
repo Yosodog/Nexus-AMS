@@ -11,15 +11,14 @@ use App\Services\PWHelperService;
 use App\Services\SettingService;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 
 class WithdrawalController extends Controller
 {
     /**
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function index(): RedirectResponse
@@ -30,8 +29,6 @@ class WithdrawalController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function updateLimits(Request $request): RedirectResponse
@@ -68,15 +65,13 @@ class WithdrawalController extends Controller
     }
 
     /**
-     * @param Transaction $transaction
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function approve(Transaction $transaction): RedirectResponse
     {
         Gate::authorize('manage-accounts');
 
-        if (!$transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
+        if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
             return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',
@@ -99,9 +94,6 @@ class WithdrawalController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @param Transaction $transaction
-     * @return RedirectResponse
      * @throws AuthorizationException
      * @throws Exception
      */
@@ -109,7 +101,7 @@ class WithdrawalController extends Controller
     {
         Gate::authorize('manage-accounts');
 
-        if (!$transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
+        if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
             return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',

@@ -11,8 +11,6 @@ readonly class BlockWhenPWDown
     public function __construct(private PWHealthService $status) {}
 
     /**
-     * @param Request $request
-     * @param Closure $next
      * @return \Illuminate\Http\RedirectResponse|mixed
      */
     public function handle(Request $request, Closure $next)
@@ -22,7 +20,7 @@ readonly class BlockWhenPWDown
                 ->back()
                 ->with([
                     'alert-message' => 'This action is currently restricted due to PW API issues. Please try again soon.',
-                    'alert-type'    => 'error',
+                    'alert-type' => 'error',
                 ]);
         }
 

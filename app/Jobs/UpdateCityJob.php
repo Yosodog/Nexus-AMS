@@ -68,7 +68,7 @@ class UpdateCityJob implements ShouldQueue
                 }
             }
         } catch (Exception $e) {
-            Log::error("Failed to update cities", ['error' => $e->getMessage()]);
+            Log::error('Failed to update cities', ['error' => $e->getMessage()]);
         }
     }
 }

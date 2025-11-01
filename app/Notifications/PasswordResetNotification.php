@@ -32,10 +32,10 @@ class PasswordResetNotification extends Notification implements ShouldQueue
         $subject = 'Reset Your Password';
 
         $message = "[b]Password Reset Requested[/b]\n\n"
-            . "We received a request to reset the password for your account.\n\n"
-            . "Use the link below to choose a new password:\n"
-            . "{$resetUrl}\n\n"
-            . "This link expires in 60 minutes. If you did not request this reset, you can ignore this message.";
+            ."We received a request to reset the password for your account.\n\n"
+            ."Use the link below to choose a new password:\n"
+            ."{$resetUrl}\n\n"
+            .'This link expires in 60 minutes. If you did not request this reset, you can ignore this message.';
 
         return [
             'nation_id' => $notifiable->nation_id,

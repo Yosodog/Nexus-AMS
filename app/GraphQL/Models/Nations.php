@@ -7,6 +7,7 @@ use Iterator;
 class Nations implements Iterator
 {
     private array $nations;  // Array to store Nation objects
+
     private int $position;    // Current position of the iterator
 
     public function __construct(array $nations = [])
@@ -17,8 +18,6 @@ class Nations implements Iterator
 
     /**
      * Return the current element.
-     *
-     * @return Nation
      */
     public function current(): Nation
     {
@@ -30,7 +29,7 @@ class Nations implements Iterator
      */
     public function next(): void
     {
-        ++$this->position;
+        $this->position++;
     }
 
     /**
@@ -45,8 +44,6 @@ class Nations implements Iterator
 
     /**
      * Checks if current position is valid.
-     *
-     * @return bool
      */
     public function valid(): bool
     {
@@ -63,8 +60,6 @@ class Nations implements Iterator
 
     /**
      * Add a Nation object to the collection.
-     *
-     * @param Nation $nation
      */
     public function add(Nation $nation): void
     {
@@ -73,8 +68,6 @@ class Nations implements Iterator
 
     /**
      * Get the total count of nations.
-     *
-     * @return int
      */
     public function count(): int
     {

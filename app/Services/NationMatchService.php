@@ -7,31 +7,22 @@ use Illuminate\Support\Collection;
 
 class NationMatchService
 {
-    /**
-     * @param Nation $target
-     * @param iterable $sourceNations
-     * @return Collection
-     */
     public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
     {
         $minScore = $target->score * 0.75;
         $maxScore = $target->score * 2.5;
 
         return collect($sourceNations)
-            ->filter(fn(Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)
+            ->filter(fn (Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)
             ->map(function (Nation $n) use ($target) {
                 $n->match_score = $this->score($n, $target);
+
                 return $n;
             })
             ->sortByDesc('match_score')
             ->values();
     }
 
-    /**
-     * @param Nation $source
-     * @param Nation $target
-     * @return int
-     */
     public function score(Nation $source, Nation $target): int
     {
         if (
@@ -68,19 +59,13 @@ class NationMatchService
         $soldiersRatio = min($s->soldiers / max($t->soldiers, 1), 2.0);
         $shipsRatio = min($s->ships / max($t->ships, 1), 2.0);
 
-        return (
+        return
             $aircraftRatio * 0.45 +
             $tanksRatio * 0.25 +
             $soldiersRatio * 0.20 +
-            $shipsRatio * 0.10
-        );
+            $shipsRatio * 0.10;
     }
 
-    /**
-     * @param Nation $source
-     * @param Nation $target
-     * @return bool
-     */
     public function canAttack(Nation $source, Nation $target): bool
     {
         $min = $source->score * 0.75;
@@ -89,19 +74,14 @@ class NationMatchService
         return $target->score >= $min && $target->score <= $max;
     }
 
-    /**
-     * @param Nation $nation
-     * @return float
-     */
     protected function militaryPower(Nation $nation): float
     {
         $military = $nation->military;
 
-        return (
+        return
             $military->aircraft * 10 +
             $military->tanks * 6 +
             $military->soldiers * 3 +
-            $military->ships * 1
-        );
+            $military->ships * 1;
     }
 }

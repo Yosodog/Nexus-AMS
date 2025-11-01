@@ -10,11 +10,9 @@ use Illuminate\Support\Str;
 
 class DepositService
 {
-
     /**
-     * @param int $allianceId
-     *
      * @return void
+     *
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -54,18 +52,20 @@ class DepositService
                 ->where('status', 'pending')
                 ->first();
 
-            if (!$depositRequest) {
+            if (! $depositRequest) {
                 continue; // No matching request found
             }
 
             $account = $depositRequest->account;
-            if (!$account) {
+            if (! $account) {
                 self::setDepositCompleted($depositRequest);
+
                 continue; // Shouldn't happen, but just in case
             }
 
             if ($record->receiver_id != $allianceId) {
                 self::setDepositCompleted($depositRequest);
+
                 continue; // Also just in case
             }
 
@@ -92,41 +92,28 @@ class DepositService
         return DepositRequest::where('status', 'pending')->get();
     }
 
-    /**
-     * @param DepositRequest $request
-     *
-     * @return void
-     */
     public static function setDepositCompleted(DepositRequest $request): void
     {
-        $request->status = "completed";
+        $request->status = 'completed';
         $request->save();
     }
 
     /**
      * Creates a deposit request
-     *
-     * @param Account $account
-     *
-     * @return DepositRequest
      */
     public static function createRequest(Account $account): DepositRequest
     {
         $depositCode = self::generate_code();
 
-        $deposit = new DepositRequest();
+        $deposit = new DepositRequest;
         $deposit->account_id = $account->id;
         $deposit->deposit_code = $depositCode;
 
         return $deposit;
     }
 
-    /**
-     * @return string
-     */
     public static function generate_code(): string
     {
         return strtoupper(Str::random(8));
     }
-
 }

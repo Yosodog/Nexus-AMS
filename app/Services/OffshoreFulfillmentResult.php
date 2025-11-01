@@ -5,8 +5,11 @@ namespace App\Services;
 class OffshoreFulfillmentResult
 {
     public const STATUS_SKIPPED = 'skipped';
+
     public const STATUS_FULFILLED = 'fulfilled';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_TIMEOUT = 'timeout';
 
     public function __construct(
@@ -17,8 +20,7 @@ class OffshoreFulfillmentResult
         public readonly array $guardrailBlocks = [],
         public readonly array $remainingDeficits = [],
         public readonly array $initialDeficits = []
-    ) {
-    }
+    ) {}
 
     public function shouldSendWithdrawal(): bool
     {

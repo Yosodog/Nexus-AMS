@@ -9,19 +9,17 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsVerified
 {
-
     /**
      * Handle an incoming request.
      *
-     * @param Closure(Request): (Response) $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && !Auth::user()->isVerified()) {
+        if (Auth::check() && ! Auth::user()->isVerified()) {
             return redirect('/notverified');
         }
 
         return $next($request);
     }
-
 }

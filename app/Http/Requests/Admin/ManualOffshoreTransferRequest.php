@@ -64,9 +64,9 @@ class ManualOffshoreTransferRequest extends FormRequest
         $allowedResources = PWHelperService::resources();
 
         return collect($this->input('resources', []))
-            ->filter(fn($value, $resource) => in_array($resource, $allowedResources, true))
-            ->map(fn($value) => (float) $value)
-            ->filter(fn(float $amount) => $amount > 0)
+            ->filter(fn ($value, $resource) => in_array($resource, $allowedResources, true))
+            ->map(fn ($value) => (float) $value)
+            ->filter(fn (float $amount) => $amount > 0)
             ->all();
     }
 

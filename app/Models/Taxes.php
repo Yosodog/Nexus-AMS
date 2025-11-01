@@ -10,6 +10,7 @@ class Taxes extends Model
      * @var bool
      */
     public $incrementing = false;
+
     /**
      * @var string[]
      */
@@ -33,6 +34,7 @@ class Taxes extends Model
         'food',
         'tax_id',
     ];
+
     /**
      * @var string
      */

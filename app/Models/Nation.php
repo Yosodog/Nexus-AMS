@@ -16,14 +16,14 @@ class Nation extends Model
 
     /**
      * Will be set to what projects this nation has. Must run getProjectsAttribute() first.
-     *
-     * @var array
      */
     public array $projectsArray;
+
     protected $guarded = [];
 
     // Projects array to interpret bit values
-    protected $table = "nations";
+    protected $table = 'nations';
+
     protected array $defaultProjectsArray = [
         'iron_works',
         'bauxite_works',
@@ -63,13 +63,13 @@ class Nation extends Model
         'mars_landing',
         'surveillance_network',
         'guiding_satellite',
-        'nuclear_launch_facility'
+        'nuclear_launch_facility',
     ];
 
     public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
         // Extract only non-null values
-        $nationData = collect((array)$graphQLNationModel)
+        $nationData = collect((array) $graphQLNationModel)
             ->only([
                 'id',
                 'alliance_id',
@@ -108,9 +108,9 @@ class Nation extends Model
                 'defensive_wars_count',
                 'money_looted',
                 'total_infrastructure_destroyed',
-                'total_infrastructure_lost'
+                'total_infrastructure_lost',
             ])
-            ->filter(fn($value) => $value !== null) // Remove null values
+            ->filter(fn ($value) => $value !== null) // Remove null values
             ->toArray();
 
         // Check if the nation already exists
@@ -130,8 +130,8 @@ class Nation extends Model
         }
 
         // Conditional update for resources
-        if (!is_null($graphQLNationModel->money)) {
-            $resourcesData = collect((array)$graphQLNationModel)
+        if (! is_null($graphQLNationModel->money)) {
+            $resourcesData = collect((array) $graphQLNationModel)
                 ->only([
                     'money',
                     'coal',
@@ -145,18 +145,18 @@ class Nation extends Model
                     'steel',
                     'aluminum',
                     'food',
-                    'credits'
+                    'credits',
                 ])
-                ->filter(fn($value) => $value !== null)
+                ->filter(fn ($value) => $value !== null)
                 ->toArray();
 
-            if (!empty($resourcesData)) {
+            if (! empty($resourcesData)) {
                 $nation->resources()->updateOrCreate(['nation_id' => $nation->id], $resourcesData);
             }
         }
 
         // Conditional update for military
-        $militaryData = collect((array)$graphQLNationModel)
+        $militaryData = collect((array) $graphQLNationModel)
             ->only([
                 'soldiers',
                 'tanks',
@@ -186,16 +186,16 @@ class Nation extends Model
                 'nuke_kills',
                 'spy_casualties',
                 'spy_kills',
-                'spy_attacks'
+                'spy_attacks',
             ])
-            ->filter(fn($value) => $value !== null)
+            ->filter(fn ($value) => $value !== null)
             ->toArray();
 
-        if (!empty($militaryData)) {
+        if (! empty($militaryData)) {
             $nation->military()->updateOrCreate(['nation_id' => $nation->id], $militaryData);
         }
 
-        if (!is_null($graphQLNationModel->cities)) {
+        if (! is_null($graphQLNationModel->cities)) {
             foreach ($graphQLNationModel->cities as $city) {
                 City::updateFromAPI($city);
             }
@@ -228,13 +228,9 @@ class Nation extends Model
         return $this->hasOne(NationSignIn::class, 'nation_id')->latestOfMany();
     }
 
-    /**
-     * @param int $nation_id
-     * @return Nation
-     */
     public static function getNationById(int $nation_id): Nation
     {
-        return self::where("nation_id", $nation_id)->firstOrFail();
+        return self::where('nation_id', $nation_id)->firstOrFail();
     }
 
     /**
@@ -242,7 +238,7 @@ class Nation extends Model
      */
     public function alliance()
     {
-        return $this->belongsTo(Alliance::class, "alliance_id", "id");
+        return $this->belongsTo(Alliance::class, 'alliance_id', 'id');
     }
 
     /**
@@ -250,12 +246,9 @@ class Nation extends Model
      */
     public function accounts()
     {
-        return $this->hasMany(Account::class, "nation_id");
+        return $this->hasMany(Account::class, 'nation_id');
     }
 
-    /**
-     * @return HasMany
-     */
     public function signIns(): HasMany
     {
         return $this->hasMany(NationSignIn::class, 'nation_id');
@@ -263,8 +256,6 @@ class Nation extends Model
 
     /**
      * Interpret project_bits and return an associative array indicating project ownership.
-     *
-     * @return array
      */
     public function getProjectsAttribute(): array
     {

@@ -17,20 +17,20 @@ class UpdateAllianceJob implements ShouldQueue
     public array $alliancesData;
 
     public array $skips = [
-        "date",
-        "money",
-        "money",
-        "coal",
-        "oil",
-        "uranium",
-        "iron",
-        "bauxite",
-        "lead",
-        "gasoline",
-        "munitions",
-        "steel",
-        "aluminum",
-        "food",
+        'date',
+        'money',
+        'money',
+        'coal',
+        'oil',
+        'uranium',
+        'iron',
+        'bauxite',
+        'lead',
+        'gasoline',
+        'munitions',
+        'steel',
+        'aluminum',
+        'food',
     ];
 
     /**
@@ -68,7 +68,7 @@ class UpdateAllianceJob implements ShouldQueue
             $alliance = AllianceQueryService::getAllianceById($allianceModel->id);
             Alliance::updateFromAPI($alliance);
         } catch (Exception $e) {
-            Log::error("Failed to update alliances", ['error' => $e->getMessage()]);
+            Log::error('Failed to update alliances', ['error' => $e->getMessage()]);
         }
     }
 }

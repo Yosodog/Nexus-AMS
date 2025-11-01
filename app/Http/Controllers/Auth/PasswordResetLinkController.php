@@ -26,7 +26,7 @@ class PasswordResetLinkController extends Controller
             'nation_id' => ['required', 'integer', 'min:1'],
         ]);
 
-        $rateLimiterKey = Str::lower('password-reset:' . $request->ip());
+        $rateLimiterKey = Str::lower('password-reset:'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($rateLimiterKey, 5)) {
             $seconds = RateLimiter::availableIn($rateLimiterKey);

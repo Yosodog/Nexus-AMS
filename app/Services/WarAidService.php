@@ -12,9 +12,6 @@ use Throwable;
 class WarAidService
 {
     /**
-     * @param Nation $nation
-     * @param array $data
-     * @return WarAidRequest
      * @throws ValidationException
      */
     public function submitAidRequest(Nation $nation, array $data): WarAidRequest
@@ -37,11 +34,6 @@ class WarAidService
         ]);
     }
 
-    /**
-     * @param WarAidRequest $request
-     * @param array $adjusted
-     * @return void
-     */
     public function approveAidRequest(WarAidRequest $request, array $adjusted): void
     {
         DB::transaction(function () use ($request, $adjusted) {
@@ -55,7 +47,7 @@ class WarAidService
                 $request->account,
                 [
                     ...$this->extractResources($adjusted),
-                    'note' => 'Approved war aid request ID #' . $request->id,
+                    'note' => 'Approved war aid request ID #'.$request->id,
                 ],
                 adminId: auth()->id(),
                 ipAddress: request()->ip()
@@ -71,21 +63,13 @@ class WarAidService
         });
     }
 
-    /**
-     * @param array $data
-     * @return array
-     */
     private function extractResources(array $data): array
     {
         return collect(PWHelperService::resources())
-            ->mapWithKeys(fn($res) => [$res => $data[$res] ?? 0])
+            ->mapWithKeys(fn ($res) => [$res => $data[$res] ?? 0])
             ->all();
     }
 
-    /**
-     * @param WarAidRequest $request
-     * @return void
-     */
     public function denyAidRequest(WarAidRequest $request): void
     {
         $request->update([
@@ -102,10 +86,6 @@ class WarAidService
         );
     }
 
-    /**
-     * @param Nation $nation
-     * @return array
-     */
     public function getNationAvailableResources(Nation $nation): array
     {
         try {

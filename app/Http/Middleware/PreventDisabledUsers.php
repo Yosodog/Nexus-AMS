@@ -10,11 +10,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PreventDisabledUsers
 {
-    /**
-     * @param Request $request
-     * @param Closure $next
-     * @return Response
-     */
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check() && Auth::user()->disabled) {

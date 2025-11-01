@@ -13,8 +13,6 @@ class WarController extends Controller
     use AuthorizesRequests;
 
     /**
-     * @param WarService $warService
-     * @return View
      * @throws AuthorizationException
      */
     public function index(WarService $warService): View

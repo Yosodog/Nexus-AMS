@@ -16,6 +16,7 @@ class MilitarySignIn extends Command
      * @var string
      */
     protected $signature = 'military:sign-in';
+
     /**
      * @var string
      */
@@ -24,14 +25,10 @@ class MilitarySignIn extends Command
     public function __construct(
         protected SignInService $signInService,
         protected AllianceMembershipService $membershipService
-    )
-    {
+    ) {
         parent::__construct();
     }
 
-    /**
-     * @return int
-     */
     public function handle(): int
     {
         $allianceIds = $this->membershipService->getAllianceIds();
@@ -94,7 +91,7 @@ class MilitarySignIn extends Command
                     Nation::updateFromAPI($nation); // Why not update it while we're here
                     $this->line("✅ {$nation->nation_name}");
                 } catch (Throwable $e) {
-                    $this->error("❌ {$nation->nation_name}: " . $e->getMessage());
+                    $this->error("❌ {$nation->nation_name}: ".$e->getMessage());
                 }
             }
         }
@@ -109,8 +106,7 @@ class MilitarySignIn extends Command
      * reach outside the primary alliance so protected resource fields remain
      * available to the snapshot service.
      *
-     * @param array{api_key: string|null, mutation_key: string|null}|null $credentials
-     * @return QueryService
+     * @param  array{api_key: string|null, mutation_key: string|null}|null  $credentials
      */
     protected function resolveQueryClient(?array $credentials): QueryService
     {

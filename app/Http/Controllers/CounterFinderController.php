@@ -14,9 +14,6 @@ use Illuminate\Http\Request;
 class CounterFinderController extends Controller
 {
     /**
-     * @param Request $request
-     * @param NationMatchService $matchService
-     * @param int|null $nation
      * @return Factory|View|Application|RedirectResponse|object
      */
     public function index(
@@ -24,15 +21,14 @@ class CounterFinderController extends Controller
         NationMatchService $matchService,
         AllianceMembershipService $membershipService,
         ?int $nation = null
-    )
-    {
+    ) {
         $targetNation = null;
         $nations = collect();
 
         if ($nation !== null) {
             $targetNation = Nation::with('military')->find($nation);
 
-            if (!$targetNation) {
+            if (! $targetNation) {
                 return redirect()
                     ->route('defense.counters')
                     ->with(['alert-message' => 'Target nation not found.', 'alert-type' => 'error']);
@@ -41,7 +37,7 @@ class CounterFinderController extends Controller
             $ourNations = Nation::with('military')
                 ->whereIn('alliance_id', $membershipService->getAllianceIds())
                 ->where('alliance_position', '!=', 'APPLICANT')
-                ->where("vacation_mode_turns", 0)
+                ->where('vacation_mode_turns', 0)
                 ->get();
 
             $nations = $ourNations->map(function ($nation) use ($matchService, $targetNation) {
@@ -52,9 +48,10 @@ class CounterFinderController extends Controller
                     $nation->match_score = null;
                     $nation->in_range = false;
                 }
+
                 return $nation;
-            })->sortBy(fn($n) => !$n->in_range)
-                ->sortByDesc(fn($n) => $n->match_score)
+            })->sortBy(fn ($n) => ! $n->in_range)
+                ->sortByDesc(fn ($n) => $n->match_score)
                 ->values();
         } else {
             // No target provided, just list all of our nations

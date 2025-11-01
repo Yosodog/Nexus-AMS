@@ -7,6 +7,7 @@ use Iterator;
 class BankRecords implements Iterator
 {
     private array $bankRecs;  // Array to store BankRec objects
+
     private int $position;    // Current position of the iterator
 
     public function __construct(array $bankRecs = [])
@@ -17,8 +18,6 @@ class BankRecords implements Iterator
 
     /**
      * Return the current element.
-     *
-     * @return BankRecord
      */
     public function current(): BankRecord
     {
@@ -30,7 +29,7 @@ class BankRecords implements Iterator
      */
     public function next(): void
     {
-        ++$this->position;
+        $this->position++;
     }
 
     /**
@@ -45,8 +44,6 @@ class BankRecords implements Iterator
 
     /**
      * Checks if current position is valid.
-     *
-     * @return bool
      */
     public function valid(): bool
     {
@@ -63,8 +60,6 @@ class BankRecords implements Iterator
 
     /**
      * Add a BankRecord object to the collection.
-     *
-     * @param BankRecord $bankRec
      */
     public function add(BankRecord $bankRec): void
     {
@@ -73,8 +68,6 @@ class BankRecords implements Iterator
 
     /**
      * Get the total count of BankRecords.
-     *
-     * @return int
      */
     public function count(): int
     {

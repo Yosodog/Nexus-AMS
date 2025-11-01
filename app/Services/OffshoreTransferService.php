@@ -30,7 +30,7 @@ class OffshoreTransferService
     }
 
     /**
-     * @param array<string, float> $payload
+     * @param  array<string, float>  $payload
      */
     public function transfer(
         string $sourceType,
@@ -82,11 +82,11 @@ class OffshoreTransferService
                 event(new OffshoreCacheInvalidated($source->id, 'manual-transfer'));
             } elseif ($sourceType === OffshoreTransfer::TYPE_OFFSHORE && $destinationType === OffshoreTransfer::TYPE_OFFSHORE && $source && $destination) {
                 // Bridge the transfer through the main bank when moving between two offshores.
-                $this->sendFromOffshoreToMain($source, $payload, $noteText . ' (Step 1/2)');
+                $this->sendFromOffshoreToMain($source, $payload, $noteText.' (Step 1/2)');
                 $this->offshoreService->refreshBalances($source, true);
                 event(new OffshoreCacheInvalidated($source->id, 'manual-transfer'));
 
-                $this->sendFromMainToOffshore($destination, $payload, $noteText . ' (Step 2/2)');
+                $this->sendFromMainToOffshore($destination, $payload, $noteText.' (Step 2/2)');
                 $this->offshoreService->refreshBalances($destination, true);
                 event(new OffshoreCacheInvalidated($destination->id, 'manual-transfer'));
             } else {
@@ -98,7 +98,7 @@ class OffshoreTransferService
         } catch (Throwable $exception) {
             $transfer->markFailed($exception->getMessage());
 
-            throw new OffshoreTransferException('Unexpected error: ' . $exception->getMessage(), previous: $exception);
+            throw new OffshoreTransferException('Unexpected error: '.$exception->getMessage(), previous: $exception);
         }
 
         $transfer->markCompleted('Transfer completed successfully.');
@@ -109,12 +109,12 @@ class OffshoreTransferService
     /**
      * Send funds from the main alliance bank to an offshore partner.
      *
-     * @param array<string, float> $payload
+     * @param  array<string, float>  $payload
      */
     protected function sendFromMainToOffshore(Offshore $offshore, array $payload, string $note): void
     {
         $this->executeTransfer(
-            fn(\App\Services\GraphQLQueryBuilder $builder) => $builder
+            fn (\App\Services\GraphQLQueryBuilder $builder) => $builder
                 ->addArgument('receiver', $offshore->alliance_id)
                 ->addArgument('receiver_type', 2)
                 ->addArgument('note', $note),
@@ -130,14 +130,14 @@ class OffshoreTransferService
     /**
      * Request a withdrawal from an offshore into the main alliance bank.
      *
-     * @param array<string, float> $payload
+     * @param  array<string, float>  $payload
      */
     protected function sendFromOffshoreToMain(Offshore $offshore, array $payload, string $note): void
     {
         $credentials = $this->requireOffshoreCredentials($offshore);
 
         $this->executeTransfer(
-            fn(\App\Services\GraphQLQueryBuilder $builder) => $builder
+            fn (\App\Services\GraphQLQueryBuilder $builder) => $builder
                 ->addArgument('receiver', $this->mainAllianceId)
                 ->addArgument('receiver_type', 2)
                 ->addArgument('note', $note),
@@ -151,8 +151,8 @@ class OffshoreTransferService
     }
 
     /**
-     * @param array<string, float> $payload
-     * @param array<string, mixed> $context
+     * @param  array<string, float>  $payload
+     * @param  array<string, mixed>  $context
      */
     protected function executeTransfer(
         callable $builderCallback,
@@ -163,7 +163,7 @@ class OffshoreTransferService
         /** @var QueryService $client */
         $client = App::make(QueryService::class, $parameters);
 
-        $builder = (new \App\Services\GraphQLQueryBuilder())
+        $builder = (new \App\Services\GraphQLQueryBuilder)
             ->setRootField('bankWithdraw')
             ->setMutation()
             ->addFields(\App\Services\SelectionSetHelper::bankRecordSet());
@@ -198,7 +198,7 @@ class OffshoreTransferService
                 'message' => $exception->getMessage(),
             ]));
 
-            throw new OffshoreTransferException('Unexpected error: ' . $exception->getMessage(), previous: $exception);
+            throw new OffshoreTransferException('Unexpected error: '.$exception->getMessage(), previous: $exception);
         }
     }
 

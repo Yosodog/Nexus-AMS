@@ -14,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -38,7 +38,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'verification_code'
+        'verification_code',
     ];
 
     protected $casts = [
@@ -49,13 +49,11 @@ class User extends Authenticatable
     protected $with = ['roles'];
 
     /**
-     * @param int $nation_id
-     *
      * @return mixed
      */
     public static function getByNationId(int $nation_id)
     {
-        return self::where("nation_id", $nation_id)
+        return self::where('nation_id', $nation_id)
             ->firstOrFail();
     }
 
@@ -64,20 +62,17 @@ class User extends Authenticatable
      */
     public function nation()
     {
-        return $this->hasOne(Nation::class, "id", "nation_id");
+        return $this->hasOne(Nation::class, 'id', 'nation_id');
     }
 
     public function accounts()
     {
-        return $this->hasMany(Account::class, "nation_id", "nation_id");
+        return $this->hasMany(Account::class, 'nation_id', 'nation_id');
     }
 
-    /**
-     * @return bool
-     */
     public function isVerified(): bool
     {
-        return !is_null($this->verified_at);
+        return ! is_null($this->verified_at);
     }
 
     /**
@@ -94,26 +89,19 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * @return BelongsToMany
-     */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
     }
 
-    /**
-     * @param string $permission
-     * @return bool
-     */
     public function hasPermission(string $permission): bool
     {
         static $userPermissionCache = [];
 
-        if (!array_key_exists($this->id, $userPermissionCache)) {
+        if (! array_key_exists($this->id, $userPermissionCache)) {
             $userPermissionCache[$this->id] = $this->roles
                 ->loadMissing('permissions')
-                ->flatMap(fn($role) => $role->permissions->pluck('permission'))
+                ->flatMap(fn ($role) => $role->permissions->pluck('permission'))
                 ->unique()
                 ->values()
                 ->all();

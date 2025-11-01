@@ -10,25 +10,23 @@ use Illuminate\Http\Client\ConnectionException;
 class AllianceQueryService
 {
     /**
-     * @param int $aID
-     * @return Alliance
      * @throws PWQueryFailedException|ConnectionException
      */
     public static function getAllianceById(int $aID): Alliance
     {
-        $client = new QueryService();
+        $client = new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("alliances")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('alliances')
             ->addArgument('id', $aID)
-            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::allianceSet());
             });
 
         $response = $client->sendQuery($builder);
 
-        $alliance = new Alliance();
-        $alliance->buildWithJSON((object)$response->{0});
+        $alliance = new Alliance;
+        $alliance->buildWithJSON((object) $response->{0});
 
         return $alliance;
     }
@@ -36,40 +34,32 @@ class AllianceQueryService
     /**
      * Will get an alliance with all associated members
      *
-     * @param int $aID
-     * @param QueryService|null $client
-     * @return Alliance
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
     public static function getAllianceWithMembersById(int $aID, ?QueryService $client = null): Alliance
     {
-        $client ??= new QueryService();
+        $client ??= new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("alliances")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('alliances')
             ->addArgument('id', $aID)
-            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::allianceSet())
-                    ->addNestedField("nations", function (GraphQLQueryBuilder $nationBuilder) {
+                    ->addNestedField('nations', function (GraphQLQueryBuilder $nationBuilder) {
                         $nationBuilder->addFields(SelectionSetHelper::nationSet());
                     });
             });
 
         $response = $client->sendQuery($builder);
 
-        $alliance = new Alliance();
-        $alliance->buildWithJSON((object)$response->{0});
+        $alliance = new Alliance;
+        $alliance->buildWithJSON((object) $response->{0});
 
         return $alliance;
     }
 
     /**
-     * @param array $arguments
-     * @param int $perPage
-     * @param bool $pagination
-     * @param bool $handlePagination
-     * @return Alliances
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -79,13 +69,13 @@ class AllianceQueryService
         bool $pagination = true,
         bool $handlePagination = true
     ): Alliances {
-        $client = new QueryService();
+        $client = new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("alliances")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('alliances')
             ->addArgument('first', $perPage)
             ->addArgument($arguments)
-            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::allianceSet());
             });
 
@@ -97,8 +87,8 @@ class AllianceQueryService
         $alliances = new Alliances([]);
 
         foreach ($response as $queryAlliance) {
-            $alliance = new Alliance();
-            $alliance->buildWithJSON((object)$queryAlliance);
+            $alliance = new Alliance;
+            $alliance->buildWithJSON((object) $queryAlliance);
             $alliances->add($alliance);
         }
 
@@ -106,30 +96,27 @@ class AllianceQueryService
     }
 
     /**
-     * @param int $aID
-     * @param QueryService|null $client
-     * @return Alliance
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
     public static function getAllianceWithTaxes(int $aID, ?QueryService $client = null): Alliance
     {
-        $client ??= new QueryService();
+        $client ??= new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("alliances")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('alliances')
             ->addArgument('id', $aID)
-            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::allianceSet())
-                    ->addNestedField("taxrecs", function (GraphQLQueryBuilder $nationBuilder) {
+                    ->addNestedField('taxrecs', function (GraphQLQueryBuilder $nationBuilder) {
                         $nationBuilder->addFields(SelectionSetHelper::bankRecordSet());
                     });
             });
 
         $response = $client->sendQuery($builder);
 
-        $alliance = new Alliance();
-        $alliance->buildWithJSON((object)$response->{0});
+        $alliance = new Alliance;
+        $alliance->buildWithJSON((object) $response->{0});
 
         return $alliance;
     }

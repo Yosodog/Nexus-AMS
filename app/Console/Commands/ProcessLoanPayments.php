@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 class ProcessLoanPayments extends Command
 {
     protected $signature = 'loans:process-payments';
+
     protected $description = 'Processes all scheduled loan payments for today.';
 
     protected LoanService $loanService;
@@ -23,8 +24,8 @@ class ProcessLoanPayments extends Command
      */
     public function handle()
     {
-        $this->info("Processing all due loan payments...");
+        $this->info('Processing all due loan payments...');
         $this->loanService->processWeeklyPayments();
-        $this->info("All due loan payments processed successfully!");
+        $this->info('All due loan payments processed successfully!');
     }
 }

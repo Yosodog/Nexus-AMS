@@ -18,11 +18,6 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
 
     public ?string $accountName;
 
-    /**
-     * @param int $nationId
-     * @param Transaction $transaction
-     * @param string|null $accountName
-     */
     public function __construct(int $nationId, Transaction $transaction, ?string $accountName = null)
     {
         $this->nationId = $nationId;
@@ -31,7 +26,6 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @param object $notifiable
      * @return array<int, string>
      */
     public function via(object $notifiable): array
@@ -40,14 +34,13 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @param object $notifiable
      * @return array<string, string>
      */
     public function toPNW(object $notifiable): array
     {
         $accountLabel = $this->accountName ?? 'your alliance bank account';
         $submittedAt = $this->transaction->created_at
-            ? $this->transaction->created_at->timezone('UTC')->format('M d, Y H:i') . ' UTC'
+            ? $this->transaction->created_at->timezone('UTC')->format('M d, Y H:i').' UTC'
             : null;
 
         $resourceLines = collect(PWHelperService::resources())
@@ -60,7 +53,7 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
                 $label = $resource === 'money' ? 'Money' : ucfirst($resource);
 
                 return $resource === 'money'
-                    ? "- {$label}: $" . $formattedAmount
+                    ? "- {$label}: $".$formattedAmount
                     : "- {$label}: {$formattedAmount}";
             });
 
@@ -73,11 +66,11 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
         }
 
         if ($resourceLines->isNotEmpty()) {
-            $messageParts[] = "[b]Requested resources:[/b]\n" . $resourceLines->implode("\n");
+            $messageParts[] = "[b]Requested resources:[/b]\n".$resourceLines->implode("\n");
         }
 
-        if (!empty($this->transaction->denial_reason)) {
-            $messageParts[] = "[b]Reason provided:[/b]\n" . $this->transaction->denial_reason;
+        if (! empty($this->transaction->denial_reason)) {
+            $messageParts[] = "[b]Reason provided:[/b]\n".$this->transaction->denial_reason;
         }
 
         $messageParts[] = 'The funds have been returned to the source account. Please reach out to leadership if you have questions.';

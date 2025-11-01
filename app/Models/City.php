@@ -12,7 +12,8 @@ class City extends Model
     use SoftDeletes;
 
     public $guarded = [];
-    protected $table = "cities";
+
+    protected $table = 'cities';
 
     protected $casts = [
         'date' => 'date',
@@ -21,14 +22,10 @@ class City extends Model
         'land' => 'float',
     ];
 
-    /**
-     * @param CityGraphQL $graphQLCityModel
-     * @return self
-     */
     public static function updateFromAPI(CityGraphQL $graphQLCityModel): self
     {
         // Extract city data
-        $cityData = collect((array)$graphQLCityModel)->only([
+        $cityData = collect((array) $graphQLCityModel)->only([
             'id',
             'nation_id',
             'name',
@@ -62,25 +59,18 @@ class City extends Model
             'munitions_factory',
             'factory',
             'hangar',
-            'drydock'
+            'drydock',
         ])->toArray();
 
         // Use `updateOrCreate` to handle both creation and update
         return self::updateOrCreate(['id' => $graphQLCityModel->id], $cityData);
     }
 
-    /**
-     * @param int $id
-     * @return self
-     */
     public static function getById(int $id): self
     {
-        return self::where("id", $id)->firstOrFail();
+        return self::where('id', $id)->firstOrFail();
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function nation(): BelongsTo
     {
         return $this->belongsTo(Nation::class, 'nation_id');

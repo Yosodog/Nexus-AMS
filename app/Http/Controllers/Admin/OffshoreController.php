@@ -26,8 +26,7 @@ class OffshoreController extends Controller
         private readonly OffshoreService $offshoreService,
         private readonly OffshoreTransferService $transferService,
         private readonly MainBankService $mainBankService
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -123,7 +122,7 @@ class OffshoreController extends Controller
         ]);
 
         $order = collect($data['order'] ?? [])->mapWithKeys(
-            fn($priority, $id) => [(int) $id => (int) $priority]
+            fn ($priority, $id) => [(int) $id => (int) $priority]
         );
 
         $offshores = Offshore::query()->whereIn('id', $order->keys())->get();
@@ -170,7 +169,7 @@ class OffshoreController extends Controller
         event(new OffshoreCacheInvalidated($offshore->id, 'refresh'));
 
         return redirect()->route('admin.offshores.index')->with([
-            'alert-message' => 'Balances refreshed: ' . implode(', ', $this->formatBalancesForMessage($balances)),
+            'alert-message' => 'Balances refreshed: '.implode(', ', $this->formatBalancesForMessage($balances)),
             'alert-type' => 'success',
         ]);
     }
@@ -200,7 +199,7 @@ class OffshoreController extends Controller
             );
         } catch (OffshoreTransferException $exception) {
             return redirect()->route('admin.offshores.index')->with([
-                'alert-message' => 'Transfer failed: ' . $exception->getMessage(),
+                'alert-message' => 'Transfer failed: '.$exception->getMessage(),
                 'alert-type' => 'error',
             ]);
         }
@@ -218,7 +217,7 @@ class OffshoreController extends Controller
         $balances = $this->mainBankService->refreshBalances();
 
         return redirect()->route('admin.offshores.index')->with([
-            'alert-message' => 'Main bank balances refreshed: ' . implode(', ', $this->formatBalancesForMessage($balances)),
+            'alert-message' => 'Main bank balances refreshed: '.implode(', ', $this->formatBalancesForMessage($balances)),
             'alert-type' => 'success',
         ]);
     }
@@ -230,10 +229,10 @@ class OffshoreController extends Controller
         $balances = $this->mainBankService->refreshBalances();
 
         $payload = collect(PWHelperService::resources())
-            ->mapWithKeys(fn(string $resource) => [
+            ->mapWithKeys(fn (string $resource) => [
                 $resource => (float) ($balances[$resource] ?? 0),
             ])
-            ->filter(fn(float $amount) => $amount > 0)
+            ->filter(fn (float $amount) => $amount > 0)
             ->all();
 
         if (empty($payload)) {
@@ -255,7 +254,7 @@ class OffshoreController extends Controller
             );
         } catch (OffshoreTransferException $exception) {
             return redirect()->route('admin.offshores.index')->with([
-                'alert-message' => 'Main bank sweep failed: ' . $exception->getMessage(),
+                'alert-message' => 'Main bank sweep failed: '.$exception->getMessage(),
                 'alert-type' => 'error',
             ]);
         }
@@ -271,17 +270,17 @@ class OffshoreController extends Controller
     }
 
     /**
-     * @param array<string, float> $balances
+     * @param  array<string, float>  $balances
      * @return array<int, string>
      */
     protected function formatBalancesForMessage(array $balances): array
     {
         return collect($balances)
-            ->filter(fn(float $amount) => $amount > 0)
+            ->filter(fn (float $amount) => $amount > 0)
             ->map(function (float $amount, string $resource) {
                 $formatted = number_format($amount, 2);
 
-                return sprintf('%s: %s', ucfirst($resource), $resource === 'money' ? '$' . $formatted : $formatted);
+                return sprintf('%s: %s', ucfirst($resource), $resource === 'money' ? '$'.$formatted : $formatted);
             })
             ->values()
             ->all();

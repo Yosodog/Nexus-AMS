@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-
 class MMRAssistantPurchase extends Model
 {
     /**
@@ -44,7 +43,7 @@ class MMRAssistantPurchase extends Model
         'food' => 'float', 'food_ppu' => 'float',
     ];
 
-    public $table = "mmr_assistant_purchases";
+    public $table = 'mmr_assistant_purchases';
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

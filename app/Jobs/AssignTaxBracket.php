@@ -10,7 +10,7 @@ use Illuminate\Queue\SerializesModels;
 
 class AssignTaxBracket implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     protected TaxBracketService $taxBracketService;
 

@@ -12,35 +12,26 @@ use Illuminate\Support\Facades\Log;
 
 class UpdateWarJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue;
+    use InteractsWithQueue, Queueable;
 
-    public function __construct(public array $warsData)
-    {
-    }
+    public function __construct(public array $warsData) {}
 
-    /**
-     * @return void
-     */
     public function handle(): void
     {
         try {
             foreach ($this->warsData as $warData) {
                 // If the war isn't involving our alliance, then skip
-                if (!$this->determineIfAllianceWar($warData)) {
+                if (! $this->determineIfAllianceWar($warData)) {
                     continue;
                 }
                 // Convert to stdClass and hydrate the model
-                War::updateFromAPI((object)$warData);
+                War::updateFromAPI((object) $warData);
             }
         } catch (Exception $e) {
             Log::error('Failed to update wars', ['error' => $e->getMessage()]);
         }
     }
 
-    /**
-     * @param array $warData
-     * @return bool
-     */
     private function determineIfAllianceWar(array $warData): bool
     {
         /** @var AllianceMembershipService $membershipService */

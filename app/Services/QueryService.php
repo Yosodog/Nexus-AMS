@@ -15,35 +15,18 @@ use stdClass;
 
 class QueryService
 {
-
-    /**
-     * @var int
-     */
     public int $initialDelay = 5;
-    /**
-     * @var int
-     */
+
     public int $maxRetries = 5;
-    /**
-     * @var string
-     */
+
     protected string $apiKey;
-    /**
-     * @var string
-     */
+
     protected string $endpoint;
-    /**
-     * @var string|null
-     */
+
     protected ?string $mutationKey = null;
-    /**
-     * @var int
-     */
+
     protected int $maxConcurrency = 5;
 
-    /**
-     *
-     */
     public function __construct(?string $apiKey = null, ?string $mutationKey = null)
     {
         $this->apiKey = $apiKey ?? $this->getAPIKey();
@@ -52,50 +35,37 @@ class QueryService
     }
 
     /**
-     * @return string
      * @throws Exception
      */
     protected function getAPIKey(): string
     {
-        $apiKey = env("PW_API_KEY");
+        $apiKey = env('PW_API_KEY');
 
         if (is_null($apiKey)) {
-            throw new Exception("Env value PW_API_KEY not set");
+            throw new Exception('Env value PW_API_KEY not set');
         }
 
         return $apiKey;
     }
 
-    /**
-     * @return string|null
-     */
     protected function getMutationKey(): ?string
     {
         return env('PW_API_MUTATION_KEY');
     }
 
-    /**
-     * @return string
-     */
     protected function buildEndpoint(): string
     {
-        return "https://api.politicsandwar.com/graphql?api_key=" . $this->apiKey;
+        return 'https://api.politicsandwar.com/graphql?api_key='.$this->apiKey;
     }
 
     /**
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param int|null $maxConcurrency
-     * @param bool $headers
-     *
-     * @return stdClass
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
     public function sendQuery(
         GraphQLQueryBuilder $builder,
         array $variables = [],
-        int $maxConcurrency = null,
+        ?int $maxConcurrency = null,
         bool $headers = false,
         bool $handlePagination = true
     ): stdClass {
@@ -125,16 +95,16 @@ class QueryService
         if ($paginationEnabled) {
             $lastPage = $firstResponse['paginatorInfo']['lastPage'];
             if ($lastPage === 1) {
-                return (object)$allResults->toArray();
+                return (object) $allResults->toArray();
             }
         } else {
-            return (object)$allResults->toArray();
+            return (object) $allResults->toArray();
         }
 
         // Fetch remaining pages if there are multiple pages, and if we want to
         while ($page <= $lastPage && $handlePagination == true) {
             // Create and execute a batch of requests, starting from the current page
-            echo "Page: " . $page . "\n";
+            echo 'Page: '.$page."\n";
             $promises = $this->createBatchRequests(
                 $builder,
                 $variables,
@@ -153,32 +123,25 @@ class QueryService
             );
         }
 
-        return (object)$allResults->toArray();
+        return (object) $allResults->toArray();
     }
 
     /**
      * Gets headers for mutations that require these.
-     *
-     * @return array
      */
     protected function getHeaders(): array
     {
         return array_filter([
             'X-Bot-Key' => $this->mutationKey,
             'X-Api-Key' => $this->apiKey,
-        ], fn($value) => ! is_null($value));
+        ], fn ($value) => ! is_null($value));
     }
 
     /**
      * Sends the first query of a request so that we can check later if there's
      * only one page for this request
      *
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param string $rootField
-     * @param array $headers
      *
-     * @return array
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
@@ -208,19 +171,13 @@ class QueryService
             }
         }
 
-        throw new PWQueryFailedException("Initial query failed: " . json_encode($response));
+        throw new PWQueryFailedException('Initial query failed: '.json_encode($response));
     }
 
     /**
      * Sends the query for a request that is not the first page
      *
-     * @param string $query
-     * @param array $variables
-     * @param int $retryCount
-     * @param int $delay
-     * @param array $headers
      *
-     * @return PromiseInterface
      * @throws ConnectionException
      */
     protected function sendPageQuery(
@@ -232,13 +189,13 @@ class QueryService
     ): PromiseInterface {
         return Http::async()->withHeaders($headers)->post(
             $this->endpoint,
-            ['query' => $query, 'variables' => $variables,]
+            ['query' => $query, 'variables' => $variables]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
                 try {
                     if ($response instanceof Response) {
                         if ($response->status() === 429) {
-                            Log::warning('Rate limit hit, retrying in ' . $delay . ' seconds.');
+                            Log::warning('Rate limit hit, retrying in '.$delay.' seconds.');
                             sleep($delay);
                             $retryCount++;
                             $delay *= 2;
@@ -253,11 +210,11 @@ class QueryService
                             return $response->json();
                         }
 
-                        Log::error('Query failed: ' . $response->body());
-                        throw new PWQueryFailedException('Query failed: ' . $response->body());
+                        Log::error('Query failed: '.$response->body());
+                        throw new PWQueryFailedException('Query failed: '.$response->body());
                     }
                 } catch (ConnectionException $e) {
-                    Log::error('Connection exception: ' . $e->getMessage());
+                    Log::error('Connection exception: '.$e->getMessage());
                     throw new ConnectionException('Failed to connect to the Politics & War API.');
                 }
             }
@@ -267,13 +224,7 @@ class QueryService
     /**
      * Sends batch requests when we have multiple pages
      *
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param int $page
-     * @param int $maxConcurrency
-     * @param int $lastPage
      *
-     * @return array
      * @throws ConnectionException
      */
     protected function createBatchRequests(
@@ -315,12 +266,9 @@ class QueryService
     /**
      * Processes the batch requests
      *
-     * @param array $responses
-     * @param $allResults
-     * @param $lastPage
-     * @param string $rootField
      *
      * @return void
+     *
      * @throws PWQueryFailedException
      */
     protected function processBatchResponses(array $responses, &$allResults, &$lastPage, string $rootField)
@@ -345,10 +293,8 @@ class QueryService
     }
 
     /**
-     * @param GraphQLQueryBuilder $builder
-     * @param array $variables
-     * @param bool $headers
      * @return Collection
+     *
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */
@@ -375,5 +321,4 @@ class QueryService
 
         return $results;
     }
-
 }

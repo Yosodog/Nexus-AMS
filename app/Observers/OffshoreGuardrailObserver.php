@@ -9,9 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class OffshoreGuardrailObserver
 {
-    public function __construct(private readonly OffshoreService $offshoreService)
-    {
-    }
+    public function __construct(private readonly OffshoreService $offshoreService) {}
 
     public function created(OffshoreGuardrail $guardrail): void
     {

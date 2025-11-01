@@ -13,7 +13,6 @@ use Illuminate\Validation\ValidationException;
 
 class CityGrantController
 {
-
     public function index()
     {
         $nation = Auth::user()->nation;
@@ -26,15 +25,13 @@ class CityGrantController
     }
 
     /**
-     * @param Request $request
-     *
      * @return mixed
      */
     public function request(Request $request)
     {
         try {
             // First, ensure they own the account they're requesting for
-            $account = AccountService::getAccountById($request->input("account_id"));
+            $account = AccountService::getAccountById($request->input('account_id'));
 
             if ($account->nation_id != Auth::user()->nation_id) {
                 abort(403, "You don't own that account");
@@ -53,17 +50,17 @@ class CityGrantController
             return redirect()
                 ->route('grants.city')
                 ->with([
-                    'alert-message' => 'You are not eligible for this grant. ' . $exception->getMessage(),
+                    'alert-message' => 'You are not eligible for this grant. '.$exception->getMessage(),
                     // TODO be more specific lol
-                    "alert-type" => 'error',
+                    'alert-type' => 'error',
                 ]);
         } catch (Exception $exception) {
             return redirect()
                 ->route('grants.city')
                 ->with([
                     'alert-message' => 'There was some kind of error when requesting your city grant. Please contact someone from the economics team.'
-                        . $exception->getMessage(), // TODO log this error
-                    "alert-type" => 'error',
+                        .$exception->getMessage(), // TODO log this error
+                    'alert-type' => 'error',
                 ]);
         }
 
@@ -71,8 +68,7 @@ class CityGrantController
             ->route('grants.city')
             ->with([
                 'alert-message' => 'City grant requested! Please give us up to 24 hours to review your request.',
-                "alert-type" => 'success',
+                'alert-type' => 'success',
             ]);
     }
-
 }

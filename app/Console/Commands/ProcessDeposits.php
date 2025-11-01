@@ -8,7 +8,6 @@ use Illuminate\Console\Command;
 
 class ProcessDeposits extends Command
 {
-
     /**
      * The name and signature of the console command.
      *
@@ -38,5 +37,4 @@ class ProcessDeposits extends Command
 
         DepositService::processDeposits($primaryAllianceId);
     }
-
 }

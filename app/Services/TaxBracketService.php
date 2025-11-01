@@ -9,6 +9,7 @@ use Illuminate\Http\Client\ConnectionException;
 class TaxBracketService
 {
     public int $id;         // Tax bracket ID to assign
+
     public int $target_id;  // Nation ID
 
     /**
@@ -27,9 +28,9 @@ class TaxBracketService
      */
     public function sendAssign(): void
     {
-        $client = new QueryService();
+        $client = new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
+        $builder = (new GraphQLQueryBuilder)
             ->setRootField('assignTaxBracket')
             ->setMutation()
             ->addArgument('id', $this->id)

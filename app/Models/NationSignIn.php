@@ -10,7 +10,7 @@ class NationSignIn extends Model
     /**
      * @var string
      */
-    public $table = "nation_sign_ins";
+    public $table = 'nation_sign_ins';
 
     /**
      * @var bool
@@ -76,9 +76,6 @@ class NationSignIn extends Model
         'created_at' => 'datetime',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function nation(): BelongsTo
     {
         return $this->belongsTo(Nation::class);

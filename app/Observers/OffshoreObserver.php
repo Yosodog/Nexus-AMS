@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class OffshoreObserver
 {
-    public function __construct(private readonly OffshoreService $offshoreService)
-    {
-    }
+    public function __construct(private readonly OffshoreService $offshoreService) {}
 
     public function created(Offshore $offshore): void
     {

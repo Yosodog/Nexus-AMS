@@ -28,8 +28,8 @@ class WarAidController extends Controller
                 ->orWhere('def_id', $nation->id);
         })
             ->active()
-            ->with("attacker")
-            ->with("defender")
+            ->with('attacker')
+            ->with('defender')
             ->get();
 
         $requests = WarAidRequest::where('nation_id', $nation->id)
@@ -41,14 +41,13 @@ class WarAidController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @param WarAidService $warAidService
      * @return RedirectResponse
+     *
      * @throws ValidationException
      */
     public function store(Request $request, WarAidService $warAidService)
     {
-        if (!SettingService::isWarAidEnabled()) {
+        if (! SettingService::isWarAidEnabled()) {
             return redirect()->route('defense.war-aid')->with([
                 'alert-message' => 'War aid is currently disabled.',
                 'alert-type' => 'error',
@@ -59,15 +58,15 @@ class WarAidController extends Controller
             'account_id' => ['required', 'exists:accounts,id'],
             'note' => ['required', 'string', 'max:255'],
             ...collect(PWHelperService::resources())
-                ->mapWithKeys(fn($r) => [$r => ['nullable', 'integer', 'min:0']])
-                ->toArray()
+                ->mapWithKeys(fn ($r) => [$r => ['nullable', 'integer', 'min:0']])
+                ->toArray(),
         ]);
 
         $warAidService->submitAidRequest(Auth::user()->nation, $data);
 
         return redirect()->route('defense.war-aid')->with([
             'alert-message' => 'Your war aid request has been submitted.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 }

@@ -47,7 +47,7 @@ class MMRConfig extends Model
     /**
      * @var string
      */
-    public $table = "mmr_configs";
+    public $table = 'mmr_configs';
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

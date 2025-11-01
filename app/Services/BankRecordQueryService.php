@@ -12,22 +12,19 @@ class BankRecordQueryService
     /**
      * Will get all deposits into the alliance bank.
      *
-     * @param int $aID
-     * @param int $perQuery
-     * @return BankRecords
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
     public static function getAllianceDeposits(int $aID, int $perQuery = 500): BankRecords
     {
-        $client = new QueryService();
+        $client = new QueryService;
 
-        $builder = (new GraphQLQueryBuilder())
-            ->setRootField("bankrecs")
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankrecs')
             ->addArgument('first', $perQuery)
             ->addArgument('rid', $aID)
             ->addArgument('rtype', 2)
-            ->addNestedField("data", function (GraphQLQueryBuilder $builder) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::bankRecordSet());
             });
 
@@ -38,8 +35,8 @@ class BankRecordQueryService
         $bankRecs = new BankRecords([]);
 
         foreach ($response as $queryRecs) {
-            $bankRec = new BankRecord();
-            $bankRec->buildWithJSON((object)$queryRecs);
+            $bankRec = new BankRecord;
+            $bankRec->buildWithJSON((object) $queryRecs);
             $bankRecs->add($bankRec);
         }
 

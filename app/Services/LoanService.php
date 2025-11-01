@@ -14,17 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoanService
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
-    /**
-     * @param Nation $nation
-     * @param Account $account
-     * @param float $amount
-     * @param int $termLength
-     * @return Loan
-     */
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
         // Create the loan record
@@ -34,14 +25,11 @@ class LoanService
             'amount' => $amount,
             'term_weeks' => $termLength,
             'status' => 'pending',
-            'remaining_balance' => $amount
+            'remaining_balance' => $amount,
         ]);
     }
 
     /**
-     * @param Nation $nation
-     * @param Account $account
-     * @return bool
      * @throws ValidationException
      */
     public function validateLoanEligibility(Nation $nation, Account $account): bool
@@ -52,7 +40,7 @@ class LoanService
         // Loan specific validation
         if ($nation->id != $account->nation_id) {
             throw ValidationException::withMessages([
-                'account_id' => "You don't own that account"
+                'account_id' => "You don't own that account",
             ]);
         }
 
@@ -61,13 +49,6 @@ class LoanService
 
     /**
      * Approves a loan, updates the account balance, and notifies the user.
-     *
-     * @param Loan $loan
-     * @param float $amount
-     * @param float $interestRate
-     * @param int $termWeeks
-     * @param Nation $nation
-     * @return Loan
      */
     public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
     {
@@ -102,11 +83,6 @@ class LoanService
         });
     }
 
-    /**
-     * @param Loan $loan
-     * @param Nation $nation
-     * @return void
-     */
     public function denyLoan(Loan $loan, Nation $nation): void
     {
         $loan->update(['status' => 'denied']);
@@ -114,9 +90,6 @@ class LoanService
         $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));
     }
 
-    /**
-     * @return void
-     */
     public function processWeeklyPayments(): void
     {
         $today = now()->toDateString();
@@ -133,6 +106,7 @@ class LoanService
             if ($earlyPayments >= $weeklyPayment) {
                 $loan->update(['next_due_date' => now()->addDays(7)]);
                 $nation->notify(new LoanNotification($loan->nation_id, $loan, 'early_payment_applied'));
+
                 continue;
             }
 
@@ -143,6 +117,7 @@ class LoanService
             $primaryAccount = $loan->account;
             if ($primaryAccount && $primaryAccount->money >= $amountDue) {
                 $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
+
                 continue;
             }
 
@@ -151,6 +126,7 @@ class LoanService
             );
             if ($alternateAccount) {
                 $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
+
                 continue;
             }
 
@@ -177,10 +153,6 @@ class LoanService
         return round(($r * $P) / (1 - pow(1 + $r, -$n)), 2);
     }
 
-    /**
-     * @param Loan $loan
-     * @return float
-     */
     private function getEarlyPaymentsSinceLastDue(Loan $loan): float
     {
         return $loan->payments()
@@ -230,10 +202,6 @@ class LoanService
         });
     }
 
-    /**
-     * @param Loan $loan
-     * @return void
-     */
     public function markLoanAsPaid(Loan $loan): void
     {
         DB::transaction(function () use ($loan) {
@@ -248,10 +216,6 @@ class LoanService
     }
 
     /**
-     * @param Loan $loan
-     * @param Account $account
-     * @param float $amount
-     * @return void
      * @throws ValidationException
      */
     public function repayLoan(Loan $loan, Account $account, float $amount): void
@@ -308,10 +272,6 @@ class LoanService
         });
     }
 
-    /**
-     * @param Loan $loan
-     * @return void
-     */
     public function processLoanPayment(Loan $loan): void
     {
         $weeklyPayment = $this->calculateWeeklyPayment($loan);
@@ -324,6 +284,7 @@ class LoanService
         if ($earlyPayments >= $weeklyPayment) {
             $loan->update(['next_due_date' => now()->addDays(7)]);
             $nation->notify(new LoanNotification($loan->nation_id, $loan, 'early_payment_applied'));
+
             return;
         }
 
@@ -334,6 +295,7 @@ class LoanService
         $primaryAccount = $loan->account;
         if ($primaryAccount && $primaryAccount->balance >= $amountDue) {
             $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
+
             return;
         }
 
@@ -342,6 +304,7 @@ class LoanService
         );
         if ($alternateAccount) {
             $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
+
             return;
         }
 

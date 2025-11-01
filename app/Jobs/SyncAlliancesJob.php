@@ -17,12 +17,14 @@ use Illuminate\Support\Facades\Log;
  */
 class SyncAlliancesJob implements ShouldQueue
 {
-    use Queueable, Batchable;
+    use Batchable, Queueable;
 
     public int $page;
+
     public int $perPage;
 
     private CarbonImmutable $syncTimestamp;
+
     private string $syncTimestampString;
 
     /**
@@ -71,13 +73,12 @@ class SyncAlliancesJob implements ShouldQueue
      *
      * We read once from the GraphQL gateway, normalise the payload, and then perform high-volume
      * upserts using the query builder to avoid Eloquent model instantiation overhead.
-     *
-     * @return void
      */
     public function handle(): void
     {
         if ($this->batch()?->cancelled()) {
             Log::info("SyncAlliancesJob for page {$this->page} was cancelled.");
+
             return;
         }
 
@@ -86,7 +87,7 @@ class SyncAlliancesJob implements ShouldQueue
             $this->syncTimestampString = $this->syncTimestamp->toDateTimeString();
 
             $alliances = AllianceQueryService::getMultipleAlliances([
-                "page" => $this->page
+                'page' => $this->page,
             ], $this->perPage, handlePagination: false);
 
             if (empty($alliances)) {
@@ -102,7 +103,7 @@ class SyncAlliancesJob implements ShouldQueue
                 $records[] = $this->extractAllianceData(is_array($alliance) ? $alliance : (array) $alliance);
             }
 
-            if (!empty($records)) {
+            if (! empty($records)) {
                 foreach (array_chunk($records, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     // Raw query builder avoids Eloquent hydration and keeps CPU focused on SQL execution.
                     DB::table('alliances')->upsert($chunk, ['id'], self::ALLIANCE_UPDATE_COLUMNS);
@@ -114,7 +115,7 @@ class SyncAlliancesJob implements ShouldQueue
             unset($alliances, $records);
             gc_collect_cycles();
         } catch (Exception $e) {
-            Log::error("Failed to fetch alliances (page {$this->page}): " . $e->getMessage());
+            Log::error("Failed to fetch alliances (page {$this->page}): ".$e->getMessage());
         }
     }
 
@@ -141,7 +142,7 @@ class SyncAlliancesJob implements ShouldQueue
 
         $key = md5(implode('|', $columns));
 
-        if (!isset($templates[$key])) {
+        if (! isset($templates[$key])) {
             $templates[$key] = array_fill_keys($columns, null);
         }
 
@@ -155,7 +156,7 @@ class SyncAlliancesJob implements ShouldQueue
      */
     private function recordProcessedCount(int $count): void
     {
-        if (!isset($this->batchId) || $count === 0) {
+        if (! isset($this->batchId) || $count === 0) {
             return;
         }
 

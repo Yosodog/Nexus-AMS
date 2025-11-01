@@ -27,12 +27,12 @@ class WithdrawalLimitService
         $exceededResources = [];
         foreach (PWHelperService::resources() as $resource) {
             $limitValue = $limits[$resource]->daily_limit ?? null;
-            $requested = (float)($requestedResources[$resource] ?? 0);
+            $requested = (float) ($requestedResources[$resource] ?? 0);
             if (is_null($limitValue) || $limitValue <= 0 || $requested <= 0) {
                 continue;
             }
 
-            $currentTotal = (float)$transactions->sum($resource);
+            $currentTotal = (float) $transactions->sum($resource);
             if (($currentTotal + $requested) > $limitValue + 0.00001) {
                 $exceededResources[] = $resource;
             }
@@ -42,15 +42,15 @@ class WithdrawalLimitService
         $dailyCount = $transactions->count();
         $countLimitReached = $maxDailyWithdrawals > 0 && $dailyCount >= $maxDailyWithdrawals;
 
-        $requiresApproval = $countLimitReached || !empty($exceededResources);
+        $requiresApproval = $countLimitReached || ! empty($exceededResources);
 
         $pendingReason = null;
         if ($requiresApproval) {
             $messages = [];
-            if (!empty($exceededResources)) {
-                $messages[] = 'Exceeded daily limit for ' . collect($exceededResources)
-                        ->map(fn(string $resource) => ucfirst($resource))
-                        ->implode(', ');
+            if (! empty($exceededResources)) {
+                $messages[] = 'Exceeded daily limit for '.collect($exceededResources)
+                    ->map(fn (string $resource) => ucfirst($resource))
+                    ->implode(', ');
             }
 
             if ($countLimitReached) {

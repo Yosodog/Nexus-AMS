@@ -20,10 +20,10 @@ use function retry;
 class SyncWars extends Command
 {
     protected $signature = 'sync:wars';
+
     protected $description = 'Fetch and update all wars for our alliance from Politics & War API';
 
     /**
-     * @return void
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
@@ -48,15 +48,15 @@ class SyncWars extends Command
         $pagination = retry(
             3,
             function () use ($perPage, $primaryAllianceId) {
-                $client = new QueryService();
-                $builder = (new GraphQLQueryBuilder())
-                    ->setRootField("wars")
+                $client = new QueryService;
+                $builder = (new GraphQLQueryBuilder)
+                    ->setRootField('wars')
                     ->addArgument([
                         'first' => $perPage,
                         'active' => false,
                         'alliance_id' => $primaryAllianceId,
                     ])
-                    ->addNestedField("data", fn($b) => $b->addFields(SelectionSetHelper::warSet()))
+                    ->addNestedField('data', fn ($b) => $b->addFields(SelectionSetHelper::warSet()))
                     ->withPaginationInfo();
 
                 return $client->getPaginationInfo($builder);
@@ -71,8 +71,8 @@ class SyncWars extends Command
         }
 
         $batch = Bus::batch($jobs)
-            ->name("War Sync - " . now()->toDateTimeString())
-            ->then(fn($batch) => FinalizeWarSyncJob::dispatch($batch->id))
+            ->name('War Sync - '.now()->toDateTimeString())
+            ->then(fn ($batch) => FinalizeWarSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
 

@@ -13,19 +13,19 @@ use Illuminate\Http\Client\ConnectionException;
 class SyncTreaties extends Command
 {
     protected $signature = 'sync:treaties';
+
     protected $description = 'Syncs approved treaties from the Politics & War API';
 
     /**
-     * @return void
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
     public function handle(): void
     {
-        $query = (new GraphQLQueryBuilder())
+        $query = (new GraphQLQueryBuilder)
             ->setRootField('treaties')
             ->addArgument('first', 1000)
-            ->addNestedField('data', fn(GraphQLQueryBuilder $builder) => $builder->addFields([
+            ->addNestedField('data', fn (GraphQLQueryBuilder $builder) => $builder->addFields([
                 'id',
                 'date',
                 'treaty_type',
@@ -35,15 +35,15 @@ class SyncTreaties extends Command
                 'approved',
             ]));
 
-        $response = (new QueryService())->sendQuery($query);
+        $response = (new QueryService)->sendQuery($query);
 
         $treatyIDs = [];
 
         foreach ($response as $treatyJSON) {
-            $graphQLTreaty = new TreatyGraphQL();
-            $graphQLTreaty->buildWithJSON((object)$treatyJSON);
+            $graphQLTreaty = new TreatyGraphQL;
+            $graphQLTreaty->buildWithJSON((object) $treatyJSON);
 
-            if (!$graphQLTreaty->approved) {
+            if (! $graphQLTreaty->approved) {
                 continue;
             }
 

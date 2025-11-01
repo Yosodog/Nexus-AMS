@@ -15,13 +15,14 @@ class RaidController extends Controller
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     *
      * @throws AuthorizationException
      */
     public function index()
     {
         $this->authorize('view-raids');
 
-        $noRaidList = NoRaidList::orderBy('alliance_id')->with("alliance")->get();
+        $noRaidList = NoRaidList::orderBy('alliance_id')->with('alliance')->get();
         $topCap = SettingService::getTopRaidable();
 
         return view('admin.defense.raids', [
@@ -31,8 +32,8 @@ class RaidController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function storeNoRaid(Request $request)
@@ -44,19 +45,19 @@ class RaidController extends Controller
                 'required',
                 'integer',
                 'unique:no_raid_list,alliance_id',
-                'exists:alliances,id'
+                'exists:alliances,id',
             ],
         ]);
         NoRaidList::create([
-            'alliance_id' => $request->alliance_id
+            'alliance_id' => $request->alliance_id,
         ]);
 
         return redirect()->route('admin.raids.index')->with('alert-message', 'Alliance added to no-raid list')->with('alert-type', 'success');
     }
 
     /**
-     * @param int $id
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function destroyNoRaid(int $id)
@@ -69,8 +70,8 @@ class RaidController extends Controller
     }
 
     /**
-     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function updateTopCap(Request $request)

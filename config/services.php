@@ -34,6 +34,6 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'nexus_api_token' => env("NEXUS_API_TOKEN")
+    'nexus_api_token' => env('NEXUS_API_TOKEN'),
 
 ];

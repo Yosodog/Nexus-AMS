@@ -17,7 +17,7 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * @param array<string, string> $input
+     * @param  array<string, string>  $input
      */
     public function create(array $input): User
     {
@@ -40,15 +40,15 @@ class CreateNewUser implements CreatesNewUsers
                 'required',
                 'integer',
                 Rule::unique(User::class),
-                new InAllianceAndMember
-            ]
+                new InAllianceAndMember,
+            ],
         ])->validate();
 
         $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
-            'nation_id' => $input["nation_id"]
+            'nation_id' => $input['nation_id'],
         ]);
 
         $user->notify(new NationVerification($user));

@@ -20,13 +20,12 @@ use Throwable;
  */
 class SyncWarsJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, Batchable;
+    use Batchable, InteractsWithQueue, Queueable;
 
-    public function __construct(public int $page, public int $perPage)
-    {
-    }
+    public function __construct(public int $page, public int $perPage) {}
 
     private CarbonImmutable $syncTimestamp;
+
     private string $syncTimestampString;
 
     /**
@@ -147,13 +146,12 @@ class SyncWarsJob implements ShouldQueue
      *
      * We normalise the payload once, reuse cached column templates, and lean on the query builder
      * for the actual upsert so we spend our CPU cycles on SQL execution rather than PHP array churn.
-     *
-     * @return void
      */
     public function handle(): void
     {
         if ($this->batch()?->cancelled()) {
             Log::info("SyncWarsJob for page {$this->page} was cancelled.");
+
             return;
         }
 
@@ -184,7 +182,7 @@ class SyncWarsJob implements ShouldQueue
                 $ids[] = $record['id'];
             }
 
-            if (!empty($records)) {
+            if (! empty($records)) {
                 foreach (array_chunk($records, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     DB::table(self::TABLE_WARS)->upsert($chunk, ['id'], self::WAR_UPDATE_COLUMNS);
                 }
@@ -234,7 +232,7 @@ class SyncWarsJob implements ShouldQueue
 
         $key = md5(implode('|', $columns));
 
-        if (!isset($templates[$key])) {
+        if (! isset($templates[$key])) {
             $templates[$key] = array_fill_keys($columns, null);
         }
 

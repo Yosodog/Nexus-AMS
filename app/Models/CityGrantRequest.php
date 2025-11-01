@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CityGrantRequest extends Model
 {
-
     /**
      * @var string[]
      */
@@ -26,7 +25,6 @@ class CityGrantRequest extends Model
      */
     public function nation()
     {
-        return $this->belongsTo(Nation::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, 'nation_id', 'id');
     }
-
 }

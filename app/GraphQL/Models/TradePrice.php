@@ -7,25 +7,33 @@ use stdClass;
 class TradePrice
 {
     public string $id;
+
     public string $date;
 
     public float $coal;
+
     public float $oil;
+
     public float $uranium;
+
     public float $iron;
+
     public float $bauxite;
+
     public float $lead;
+
     public float $gasoline;
+
     public float $munitions;
+
     public float $steel;
+
     public float $aluminum;
+
     public float $food;
+
     public float $credits;
 
-    /**
-     * @param stdClass $json
-     * @return void
-     */
     public function buildWithJSON(stdClass $json): void
     {
         $this->id = $json->id;

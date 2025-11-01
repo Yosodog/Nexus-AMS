@@ -11,19 +11,14 @@ use Throwable;
 class UpdateTradePrices extends Command
 {
     protected $signature = 'trades:update';
+
     protected $description = 'Fetch and save the current trade prices from PW API';
 
-    /**
-     * @param TradePriceService $tradePriceService
-     */
     public function __construct(protected TradePriceService $tradePriceService)
     {
         parent::__construct();
     }
 
-    /**
-     * @return void
-     */
     public function handle(): void
     {
         $this->info('Fetching latest trade prices...');
@@ -33,18 +28,18 @@ class UpdateTradePrices extends Command
 
             TradePrice::create([
                 'date' => Carbon::parse($graphqlPrice->date)->toDateString(),
-                'coal' => (int)$graphqlPrice->coal,
-                'oil' => (int)$graphqlPrice->oil,
-                'uranium' => (int)$graphqlPrice->uranium,
-                'iron' => (int)$graphqlPrice->iron,
-                'bauxite' => (int)$graphqlPrice->bauxite,
-                'lead' => (int)$graphqlPrice->lead,
-                'gasoline' => (int)$graphqlPrice->gasoline,
-                'munitions' => (int)$graphqlPrice->munitions,
-                'steel' => (int)$graphqlPrice->steel,
-                'aluminum' => (int)$graphqlPrice->aluminum,
-                'food' => (int)$graphqlPrice->food,
-                'credits' => (int)$graphqlPrice->credits,
+                'coal' => (int) $graphqlPrice->coal,
+                'oil' => (int) $graphqlPrice->oil,
+                'uranium' => (int) $graphqlPrice->uranium,
+                'iron' => (int) $graphqlPrice->iron,
+                'bauxite' => (int) $graphqlPrice->bauxite,
+                'lead' => (int) $graphqlPrice->lead,
+                'gasoline' => (int) $graphqlPrice->gasoline,
+                'munitions' => (int) $graphqlPrice->munitions,
+                'steel' => (int) $graphqlPrice->steel,
+                'aluminum' => (int) $graphqlPrice->aluminum,
+                'food' => (int) $graphqlPrice->food,
+                'credits' => (int) $graphqlPrice->credits,
             ]);
 
             $this->info('Trade prices saved successfully.');

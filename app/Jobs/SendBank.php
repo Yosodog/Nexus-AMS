@@ -10,10 +10,10 @@ use Illuminate\Foundation\Queue\Queueable;
 
 class SendBank implements ShouldQueue
 {
-
     use Queueable;
 
     protected BankService $bankService;
+
     protected Transaction $transaction;
 
     /**
@@ -45,7 +45,6 @@ class SendBank implements ShouldQueue
         }
 
         // Something prevented us from fulfilling automatically. Escalate to admins.
-        $this->transaction->markPendingAdminReview('Offshore fulfillment failed: ' . $result->message);
+        $this->transaction->markPendingAdminReview('Offshore fulfillment failed: '.$result->message);
     }
-
 }

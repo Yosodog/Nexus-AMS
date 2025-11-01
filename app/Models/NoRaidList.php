@@ -16,11 +16,8 @@ class NoRaidList extends Model
         'alliance_id',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function alliance(): BelongsTo
     {
-        return $this->belongsTo(Alliance::class, "alliance_id");
+        return $this->belongsTo(Alliance::class, 'alliance_id');
     }
 }

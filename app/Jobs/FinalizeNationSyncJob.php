@@ -28,7 +28,7 @@ class FinalizeNationSyncJob implements ShouldQueue
     {
         $batch = Bus::findBatch($this->batchId);
 
-        if (!$batch) {
+        if (! $batch) {
             Log::warning("FinalizeNationSyncJob skipped — batch {$this->batchId} could not be found.");
             Cache::forget("sync_batch:{$this->batchId}:nations_processed");
             SettingService::setLastNationSyncBatchId($this->batchId);
@@ -74,9 +74,9 @@ class FinalizeNationSyncJob implements ShouldQueue
         }
 
         Nation::where('updated_at', '<', $cutoff)->delete();
-        NationResources::whereHas('nation', fn($q) => $q->where('updated_at', '<', $cutoff))->delete();
-        NationMilitary::whereHas('nation', fn($q) => $q->where('updated_at', '<', $cutoff))->delete();
-        City::whereHas('nation', fn($q) => $q->where('updated_at', '<', $cutoff))->delete();
+        NationResources::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
+        NationMilitary::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
+        City::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
 
         Log::info("🧹 FinalizeNationSyncJob: Soft-deleted {$staleNationCount} nations not updated since {$cutoff->toDateTimeString()} (processed {$processedCount}).");
 

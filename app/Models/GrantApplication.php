@@ -10,7 +10,7 @@ class GrantApplication extends Model
     /**
      * @var string
      */
-    public $table = "grant_applications";
+    public $table = 'grant_applications';
 
     /**
      * @var string[]
@@ -44,27 +44,18 @@ class GrantApplication extends Model
         'denied_at' => 'datetime',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function grant(): BelongsTo
     {
-        return $this->belongsTo(Grants::class, "grant_id", "id");
+        return $this->belongsTo(Grants::class, 'grant_id', 'id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function nation(): BelongsTo
     {
-        return $this->belongsTo(Nation::class, "nation_id", "id");
+        return $this->belongsTo(Nation::class, 'nation_id', 'id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class, "account_id", "id");
+        return $this->belongsTo(Account::class, 'account_id', 'id');
     }
 }

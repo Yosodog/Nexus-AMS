@@ -33,7 +33,7 @@ class FinalizeAllianceSyncJob implements ShouldQueue
     {
         $batch = Bus::findBatch($this->batchId);
 
-        if (!$batch) {
+        if (! $batch) {
             Log::warning("FinalizeAllianceSyncJob skipped — batch {$this->batchId} could not be found.");
             Cache::forget("sync_batch:{$this->batchId}:alliances_processed");
             SettingService::setLastAllianceSyncBatchId($this->batchId);

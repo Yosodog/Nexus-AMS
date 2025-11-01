@@ -29,5 +29,5 @@ return [
     'manage-dd',
     'manage-mmr',
     'view-mmr',
-    'manage-custom-pages'
+    'manage-custom-pages',
 ];

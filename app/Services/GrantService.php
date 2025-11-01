@@ -14,10 +14,6 @@ use Illuminate\Validation\ValidationException;
 class GrantService
 {
     /**
-     * @param Grants $grant
-     * @param Nation $nation
-     * @param int $accountId
-     * @return GrantApplication
      * @throws ValidationException
      */
     public static function applyToGrant(Grants $grant, Nation $nation, int $accountId): GrantApplication
@@ -28,9 +24,6 @@ class GrantService
     }
 
     /**
-     * @param Grants $grant
-     * @param Nation $nation
-     * @return void
      * @throws ValidationException
      */
     public static function validateEligibility(Grants $grant, Nation $nation): void
@@ -44,7 +37,7 @@ class GrantService
 
             if ($alreadyApproved) {
                 throw ValidationException::withMessages([
-                    'You have already received this grant.'
+                    'You have already received this grant.',
                 ]);
             }
         }
@@ -57,7 +50,7 @@ class GrantService
 
         if ($hasPending) {
             throw ValidationException::withMessages([
-                'You already have a pending application for this grant.'
+                'You already have a pending application for this grant.',
             ]);
         }
 
@@ -74,12 +67,6 @@ class GrantService
         // $validator->validateInfrastructure($requirements["infra_per_city"] ?? 0);
     }
 
-    /**
-     * @param Grants $grant
-     * @param int $nationId
-     * @param int $accountId
-     * @return GrantApplication
-     */
     public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication
     {
         return GrantApplication::create([
@@ -90,10 +77,6 @@ class GrantService
         ]);
     }
 
-    /**
-     * @param GrantApplication $application
-     * @return void
-     */
     public static function approveGrant(GrantApplication $application): void
     {
         $grant = $application->grant;
@@ -102,7 +85,7 @@ class GrantService
         $ipAddress = Request::ip();
 
         $resources = PWHelperService::resources();
-        $adjustment = array_combine($resources, array_map(fn($r) => $grant->$r, $resources));
+        $adjustment = array_combine($resources, array_map(fn ($r) => $grant->$r, $resources));
         $adjustment['note'] = "Grant '{$grant->name}' approved";
 
         AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress);
@@ -110,7 +93,7 @@ class GrantService
         $application->update(
             array_merge(
                 ['status' => 'approved', 'approved_at' => now()],
-                array_combine($resources, array_map(fn($r) => $grant->$r, $resources))
+                array_combine($resources, array_map(fn ($r) => $grant->$r, $resources))
             )
         );
 
@@ -119,10 +102,6 @@ class GrantService
         $nation->notify(new GrantNotification($application->nation_id, $application->fresh(), 'approved'));
     }
 
-    /**
-     * @param GrantApplication $application
-     * @return void
-     */
     public static function denyGrant(GrantApplication $application): void
     {
         $application->update([

@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  */
 class SyncNationsJob implements ShouldQueue
 {
-    use Queueable, Batchable;
+    use Batchable, Queueable;
 
     /**
      * Allow the heavy nation sync to run to completion even on slow queues.
@@ -45,14 +45,19 @@ class SyncNationsJob implements ShouldQueue
      * Pagination parameters passed in from the console command dispatcher.
      */
     public int $page;
+
     public int $perPage;
 
     private CarbonImmutable $syncTimestamp;
+
     private string $syncTimestampString;
 
     private const TABLE_NATIONS = 'nations';
+
     private const TABLE_NATION_RESOURCES = 'nation_resources';
+
     private const TABLE_NATION_MILITARY = 'nation_military';
+
     private const TABLE_CITIES = 'cities';
 
     private const NATION_COLUMNS = [
@@ -312,8 +317,8 @@ class SyncNationsJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param int $page    The current GraphQL page being synchronised.
-     * @param int $perPage The number of nations returned per page.
+     * @param  int  $page  The current GraphQL page being synchronised.
+     * @param  int  $perPage  The number of nations returned per page.
      */
     public function __construct(int $page, int $perPage)
     {
@@ -327,13 +332,12 @@ class SyncNationsJob implements ShouldQueue
      * The bulk of the CPU work here is transforming the nested GraphQL payload into flat tables.
      * We keep the loop tight and reuse column templates so we only perform array bookkeeping once
      * per chunk rather than per row.
-     *
-     * @return void
      */
     public function handle(): void
     {
         if ($this->batch()?->cancelled()) {
             Log::info("SyncNationsJob for page {$this->page} was cancelled.");
+
             return;
         }
 
@@ -343,7 +347,7 @@ class SyncNationsJob implements ShouldQueue
 
             // Fetch nations from the API using the NationQueryService with pagination parameters
             $nations = NationQueryService::getMultipleNations(
-                ["page" => $this->page],
+                ['page' => $this->page],
                 $this->perPage,
                 true,
                 handlePagination: false
@@ -371,19 +375,19 @@ class SyncNationsJob implements ShouldQueue
 
                 // Extract resource data if available
                 $resourceData = $this->extractResourceData($nationArray);
-                if (!is_null($resourceData)) {
+                if (! is_null($resourceData)) {
                     $resourcesData[] = $resourceData;
                 }
 
                 // Extract military data
                 $militaryDataArray = $this->extractMilitaryData($nationArray);
-                if (!empty($militaryDataArray)) {
+                if (! empty($militaryDataArray)) {
                     $militaryData[] = $militaryDataArray;
                 }
 
                 // Extract cities data
                 $citiesDataArray = $this->extractCitiesData($nationArray);
-                if (!empty($citiesDataArray)) {
+                if (! empty($citiesDataArray)) {
                     foreach ($citiesDataArray as $cityData) {
                         $citiesData[] = $cityData;
                     }
@@ -430,7 +434,7 @@ class SyncNationsJob implements ShouldQueue
      */
     private function extractResourceData(array $nation): ?array
     {
-        if (!array_key_exists('money', $nation) || $nation['money'] === null) {
+        if (! array_key_exists('money', $nation) || $nation['money'] === null) {
             return null;
         }
         $data = $this->mapValues($nation, self::RESOURCE_COLUMNS);
@@ -475,37 +479,33 @@ class SyncNationsJob implements ShouldQueue
             $cityData['created_at'] = $this->syncTimestampString;
             $cities[] = $cityData;
         }
+
         return $cities;
     }
 
     /**
      * Perform bulk upsert operations within a database transaction.
-     *
-     * @param array $nationData
-     * @param array $resourcesData
-     * @param array $militaryData
-     * @param array $citiesData
      */
     private function bulkUpsert(array $nationData, array $resourcesData, array $militaryData, array $citiesData): void
     {
         DB::transaction(function () use ($nationData, $resourcesData, $militaryData, $citiesData) {
-            if (!empty($nationData)) {
+            if (! empty($nationData)) {
                 foreach (array_chunk($nationData, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     // Query builder upserts avoid the overhead of hydrating Eloquent models per row.
                     DB::table(self::TABLE_NATIONS)->upsert($chunk, ['id'], self::NATION_UPDATE_COLUMNS);
                 }
             }
-            if (!empty($resourcesData)) {
+            if (! empty($resourcesData)) {
                 foreach (array_chunk($resourcesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     DB::table(self::TABLE_NATION_RESOURCES)->upsert($chunk, ['nation_id'], self::RESOURCE_UPDATE_COLUMNS);
                 }
             }
-            if (!empty($militaryData)) {
+            if (! empty($militaryData)) {
                 foreach (array_chunk($militaryData, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     DB::table(self::TABLE_NATION_MILITARY)->upsert($chunk, ['nation_id'], self::MILITARY_UPDATE_COLUMNS);
                 }
             }
-            if (!empty($citiesData)) {
+            if (! empty($citiesData)) {
                 foreach (array_chunk($citiesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
                     DB::table(self::TABLE_CITIES)->upsert($chunk, ['id'], self::CITY_UPDATE_COLUMNS);
                 }
@@ -527,7 +527,7 @@ class SyncNationsJob implements ShouldQueue
 
         $key = md5(implode('|', $columns));
 
-        if (!isset($templates[$key])) {
+        if (! isset($templates[$key])) {
             $templates[$key] = array_fill_keys($columns, null);
         }
 
@@ -541,7 +541,7 @@ class SyncNationsJob implements ShouldQueue
      */
     private function recordProcessedCount(int $count): void
     {
-        if (!isset($this->batchId) || $count === 0) {
+        if (! isset($this->batchId) || $count === 0) {
             return;
         }
 

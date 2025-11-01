@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Services;
 
 use App\GraphQL\Models\BankRecord;
@@ -14,15 +13,8 @@ use Throwable;
 
 class DirectDepositService
 {
-    /**
-     * @var int
-     */
     public int $ddTaxId;
 
-    /**
-     * @param SettingService $settings
-     * @param AccountService $accountService
-     */
     public function __construct(
         protected SettingService $settings,
         protected AccountService $accountService,
@@ -30,10 +22,6 @@ class DirectDepositService
         $this->ddTaxId = SettingService::getDirectDepositId();
     }
 
-    /**
-     * @param BankRecord $record
-     * @return BankRecord
-     */
     public function process(BankRecord $record): BankRecord
     {
         if ($record->tax_id != $this->ddTaxId) {
@@ -41,8 +29,9 @@ class DirectDepositService
         }
 
         $nation = Nation::find($record->sender_id);
-        if (!$nation) {
+        if (! $nation) {
             Log::warning("DirectDeposit: Nation not found for BankRecord ID {$record->id}");
+
             return $record;
         }
 
@@ -54,8 +43,8 @@ class DirectDepositService
         $retained = []; // alliance taxes
 
         foreach ($fields as $field) {
-            $amount = (float)$record->$field;
-            $rate = (float)$bracket->$field;
+            $amount = (float) $record->$field;
+            $rate = (float) $bracket->$field;
 
             $taxed = round($amount * ($rate / 100), 2);
             $kept = round($amount - $taxed, 2);
@@ -68,10 +57,10 @@ class DirectDepositService
         $originalDeposit = $deposit;
 
         // ---- MMR: compute plan from after-tax cash (money only)
-        $afterTaxCash = (float)($originalDeposit['money'] ?? 0.0);
+        $afterTaxCash = (float) ($originalDeposit['money'] ?? 0.0);
         $plan = app(MMRAssistantService::class)->plan($nation, $afterTaxCash);
 
-        $mmrTotalSpend = (float)($plan['total_spend'] ?? 0.0);
+        $mmrTotalSpend = (float) ($plan['total_spend'] ?? 0.0);
         $mmrAccount = $plan['account'];
 
         // Reduce the member's actual cash deposit by the MMR spend
@@ -141,11 +130,6 @@ class DirectDepositService
         return $this->accountService->createDefaultForNation($nation);
     }
 
-    /**
-     * @param Nation $nation
-     * @param Account $account
-     * @return void
-     */
     public function enroll(Nation $nation, Account $account): void
     {
         $ddTaxId = $this->ddTaxId;
@@ -167,21 +151,17 @@ class DirectDepositService
         );
 
         // Queue GraphQL mutation to assign DD bracket
-        $mutation = new TaxBracketService();
+        $mutation = new TaxBracketService;
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;
         $mutation->send();
     }
 
-    /**
-     * @param Nation $nation
-     * @return void
-     */
     public function disenroll(Nation $nation): void
     {
         $enrollment = DirectDepositEnrollment::where('nation_id', $nation->id)->first();
 
-        if (!$enrollment) {
+        if (! $enrollment) {
             return;
         }
 
@@ -190,7 +170,7 @@ class DirectDepositService
 
         // Attempt to assign the previous tax bracket
         try {
-            $mutation = new TaxBracketService();
+            $mutation = new TaxBracketService;
             $mutation->id = $targetTaxId;
             $mutation->target_id = $nation->id;
             $mutation->send();
@@ -200,7 +180,7 @@ class DirectDepositService
                 "Failed to assign previous tax ID {$targetTaxId} for nation {$nation->id}, retrying with fallback."
             );
 
-            $fallbackMutation = new TaxBracketService();
+            $fallbackMutation = new TaxBracketService;
             $fallbackMutation->id = $fallbackTaxId;
             $fallbackMutation->target_id = $nation->id;
             $fallbackMutation->send();

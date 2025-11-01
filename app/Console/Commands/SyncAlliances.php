@@ -41,11 +41,11 @@ class SyncAlliances extends Command
 
         do {
             if ($page === 1) {
-                $client = new QueryService();
-                $builder = (new GraphQLQueryBuilder())
-                    ->setRootField("alliances")
+                $client = new QueryService;
+                $builder = (new GraphQLQueryBuilder)
+                    ->setRootField('alliances')
                     ->addArgument('first', $perPage)
-                    ->addNestedField("data", fn($b) => $b->addFields(SelectionSetHelper::allianceSet()))
+                    ->addNestedField('data', fn ($b) => $b->addFields(SelectionSetHelper::allianceSet()))
                     ->withPaginationInfo();
 
                 $response = $client->getPaginationInfo($builder);
@@ -57,8 +57,8 @@ class SyncAlliances extends Command
         } while ($page <= $lastPage);
 
         $batch = Bus::batch($jobs)
-            ->name("Alliance Sync - " . now()->toDateTimeString())
-            ->then(fn(Batch $batch) => FinalizeAllianceSyncJob::dispatch($batch->id))
+            ->name('Alliance Sync - '.now()->toDateTimeString())
+            ->then(fn (Batch $batch) => FinalizeAllianceSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->dispatch();
 

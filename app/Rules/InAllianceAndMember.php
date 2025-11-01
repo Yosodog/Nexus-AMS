@@ -13,14 +13,12 @@ use Illuminate\Translation\PotentiallyTranslatedString;
 
 class InAllianceAndMember implements ValidationRule
 {
-    public function __construct(private readonly ?AllianceMembershipService $membershipService = null)
-    {
-    }
+    public function __construct(private readonly ?AllianceMembershipService $membershipService = null) {}
 
     /**
      * Run the validation rule.
      *
-     * @param Closure(string, ?string=): PotentiallyTranslatedString $fail
+     * @param  Closure(string, ?string=): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {

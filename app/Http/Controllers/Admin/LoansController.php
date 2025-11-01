@@ -27,6 +27,7 @@ class LoansController
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function index()
@@ -56,9 +57,9 @@ class LoansController
 
     /**
      * Approve a loan with modifications (amount, interest rate, term weeks).
-     * @param Request $request
-     * @param Loan $loan
+     *
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function approve(Request $request, Loan $loan)
@@ -87,8 +88,9 @@ class LoansController
 
     /**
      * Deny a loan application.
-     * @param Loan $loan
+     *
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function deny(Loan $loan)
@@ -105,8 +107,9 @@ class LoansController
 
     /**
      * Display the loan view/edit form.
-     * @param Loan $loan
+     *
      * @return Factory|View|Application|object
+     *
      * @throws AuthorizationException
      */
     public function view(Loan $loan)
@@ -124,9 +127,9 @@ class LoansController
 
     /**
      * Handle the loan update request.
-     * @param Request $request
-     * @param Loan $loan
+     *
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      * @throws ValidationException
      */
@@ -139,12 +142,12 @@ class LoansController
             'interest_rate' => 'required|numeric|min:0|max:100',
             'term_weeks' => 'required|integer|min:1|max:52',
             'next_due_date' => 'required|date|after:today',
-            'remaining_balance' => 'required|numeric|min:0|max:' . $loan->amount,
+            'remaining_balance' => 'required|numeric|min:0|max:'.$loan->amount,
             // Ensure balance is not higher than loan amount
         ];
 
         // Only require amount if no payments exist
-        if (!$loan->payments()->exists()) {
+        if (! $loan->payments()->exists()) {
             $rules['amount'] = 'required|numeric|min:1';
         }
 
@@ -172,8 +175,8 @@ class LoansController
     }
 
     /**
-     * @param Loan $loan
      * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function markAsPaid(Loan $loan)

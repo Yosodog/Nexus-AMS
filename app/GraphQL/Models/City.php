@@ -7,47 +7,76 @@ use stdClass;
 class City
 {
     public string $id;
+
     public string $nation_id;
+
     // public Nation $nation; // Nation
     public string $name;
+
     // public Date $date; // Date
     public float $infrastructure;
+
     public float $land;
+
     public string $date;
+
     public bool $powered;
+
     public int $oil_power;
+
     public int $wind_power;
+
     public int $coal_power;
+
     public int $nuclear_power;
+
     public int $coal_mine;
+
     public int $oil_well;
+
     public int $uranium_mine;
+
     public int $barracks;
+
     public int $farm;
+
     public int $police_station;
+
     public int $hospital;
+
     public int $recycling_center;
+
     public int $subway;
+
     public int $supermarket;
+
     public int $bank;
+
     public int $shopping_mall;
+
     public int $stadium;
+
     public int $lead_mine;
+
     public int $iron_mine;
+
     public int $bauxite_mine;
+
     public int $oil_refinery;
+
     public int $aluminum_refinery;
+
     public int $steel_mill;
+
     public int $munitions_factory;
+
     public int $factory;
+
     public int $hangar;
+
     public int $drydock;
     // public Date $nuke_date; // Date
 
-    /**
-     * @param stdClass $json
-     * @return void
-     */
     public function buildWithJSON(stdClass $json): void
     {
         $this->id = $json->id;
@@ -88,4 +117,3 @@ class City
         // $this->nuke_date = $json->nuke_date; // Uncomment and modify based on your Date handling
     }
 }
-

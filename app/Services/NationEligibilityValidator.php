@@ -7,8 +7,8 @@ use Illuminate\Validation\ValidationException;
 
 class NationEligibilityValidator
 {
-
     protected Nation $nation;
+
     protected AllianceMembershipService $membershipService;
 
     public function __construct(Nation $nation, ?AllianceMembershipService $membershipService = null)
@@ -58,10 +58,10 @@ class NationEligibilityValidator
      */
     public function validateColor(array $allowedColors): void
     {
-        if (!in_array($this->nation->color, $allowedColors)) {
+        if (! in_array($this->nation->color, $allowedColors)) {
             throw ValidationException::withMessages([
                 'color' => 'Your nation must be one of the following colors: '
-                    . implode(', ', $allowedColors),
+                    .implode(', ', $allowedColors),
             ]);
         }
     }
@@ -73,13 +73,13 @@ class NationEligibilityValidator
      */
     public function validateRequiredProjects(array $requiredProjects): void
     {
-        if (!empty($requiredProjects)) {
+        if (! empty($requiredProjects)) {
             $nationProjects = PWHelperService::getNationProjects(
                 $this->nation->project_bits
             );
 
             foreach ($requiredProjects as $project) {
-                if (!in_array($project, $nationProjects)) {
+                if (! in_array($project, $nationProjects)) {
                     throw ValidationException::withMessages([
                         'projects' => "You must own the $project project to be eligible.",
                     ]);
@@ -106,5 +106,4 @@ class NationEligibilityValidator
         //      ]);
         //  }
     }
-
 }

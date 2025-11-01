@@ -14,18 +14,11 @@ class PWMessageChannel
         $this->messageService = $messageService;
     }
 
-    /**
-     * @param object $notifiable
-     * @param Notification $notification
-     *
-     * @return void
-     */
     public function send(object $notifiable, Notification $notification): void
     {
-        if (!method_exists($notification, 'toPNW')) {
+        if (! method_exists($notification, 'toPNW')) {
             return;
         }
-
 
         $data = $notification->toPNW($notifiable);
 
