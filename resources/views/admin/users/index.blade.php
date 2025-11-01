@@ -2,6 +2,15 @@
 
 @section('content')
     @php use Illuminate\Support\Str; @endphp
+    @php
+        $filters = $filters ?? [
+            'search' => '',
+            'status' => 'enabled',
+            'is_admin' => false,
+            'alliance_member' => false,
+            'verification' => 'any',
+        ];
+    @endphp
 
     <div class="app-content-header">
         <div class="container-fluid">
@@ -71,6 +80,82 @@
                     Manage roles
                 </a>
             </div>
+            <div class="card-body border-top">
+                <form method="GET" class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-4">
+                        <label for="filter-search" class="form-label text-uppercase small fw-semibold text-muted">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input
+                                type="text"
+                                id="filter-search"
+                                name="search"
+                                class="form-control"
+                                placeholder="Username, Discord, or Nation ID"
+                                value="{{ $filters['search'] }}"
+                            >
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="filter-status" class="form-label text-uppercase small fw-semibold text-muted">Account status</label>
+                        <select id="filter-status" name="status" class="form-select">
+                            <option value="enabled" @selected($filters['status'] === 'enabled')>Enabled</option>
+                            <option value="disabled" @selected($filters['status'] === 'disabled')>Disabled</option>
+                            <option value="all" @selected($filters['status'] === 'all')>All accounts</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="filter-verification" class="form-label text-uppercase small fw-semibold text-muted">Verification</label>
+                        <select id="filter-verification" name="verification" class="form-select">
+                            <option value="any" @selected($filters['verification'] === 'any')>Any</option>
+                            <option value="verified" @selected($filters['verification'] === 'verified')>Verified</option>
+                            <option value="unverified" @selected($filters['verification'] === 'unverified')>Unverified</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="form-check mt-4">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="is_admin"
+                                value="1"
+                                id="filter-is-admin"
+                                @checked($filters['is_admin'])
+                            >
+                            <label class="form-check-label small" for="filter-is-admin">
+                                Admins only
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="form-check mt-4">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="alliance_member"
+                                value="1"
+                                id="filter-alliance-member"
+                                @checked($filters['alliance_member'])
+                            >
+                            <label class="form-check-label small" for="filter-alliance-member">
+                                Alliance members
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-12 d-grid gap-2 d-lg-flex justify-content-lg-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-1"></i>
+                            Apply filters
+                        </button>
+                        <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">
+                            Reset
+                        </a>
+                    </div>
+                </form>
+                <div class="text-muted small mt-3">
+                    Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} users
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -94,6 +179,12 @@
                                 <div class="d-flex flex-wrap gap-2 mt-2">
                                     @if($user->is_admin)
                                         <span class="badge bg-danger">Admin</span>
+                                    @endif
+                                    @if($user->disabled)
+                                        <span class="badge bg-warning text-dark">Disabled</span>
+                                    @endif
+                                    @if(is_null($user->verified_at))
+                                        <span class="badge bg-secondary">Unverified</span>
                                     @endif
                                     @if($user->last_active_at && now()->diffInMinutes($user->last_active_at) >= -5)
                                         <span class="badge bg-success">Online</span>
@@ -141,10 +232,10 @@
                 </table>
             </div>
 
-            <div class="card-footer bg-white">
-                {{ $users->links() }}
+            <div class="card-footer bg-white d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-2">
+                <span class="text-muted small">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
+                {{ $users->onEachSide(1)->links() }}
             </div>
         </div>
     </div>
 @endsection
-

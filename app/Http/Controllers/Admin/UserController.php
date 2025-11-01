@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\AllianceMembershipService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -18,10 +19,9 @@ class UserController extends Controller
     use AuthorizesRequests;
 
     /**
-     * @return View
      * @throws AuthorizationException
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('view-users');
 
@@ -33,16 +33,75 @@ class UserController extends Controller
             'active_today' => (clone $statsQuery)->whereNotNull('last_active_at')->where('last_active_at', '>=', now()->subDay())->count(),
         ];
 
-        $users = User::with(['nation', 'roles'])
-            ->latest('last_active_at')
-            ->paginate(25);
+        $search = trim((string) $request->query('search', ''));
+        $status = $request->query('status', 'enabled');
+        $verification = $request->query('verification', 'any');
 
-        return view('admin.users.index', compact('users', 'stats'));
+        $status = in_array($status, ['enabled', 'disabled', 'all'], true) ? $status : 'enabled';
+        $verification = in_array($verification, ['any', 'verified', 'unverified'], true) ? $verification : 'any';
+
+        $filters = [
+            'search' => $search,
+            'status' => $status,
+            'is_admin' => $request->boolean('is_admin'),
+            'alliance_member' => $request->boolean('alliance_member'),
+            'verification' => $verification,
+        ];
+
+        $usersQuery = User::query()
+            ->with(['nation', 'roles'])
+            ->latest('last_active_at');
+
+        if ($filters['search'] !== '') {
+            $usersQuery->where(function ($query) use ($filters) {
+                $searchTerm = '%'.$filters['search'].'%';
+
+                $query->where('name', 'like', $searchTerm)
+                    ->orWhere('email', 'like', $searchTerm)
+                    ->orWhereHas('nation', fn ($nationQuery) => $nationQuery->where('discord', 'like', $searchTerm));
+
+                if (is_numeric($filters['search'])) {
+                    $query->orWhere('nation_id', (int) $filters['search']);
+                }
+            });
+        }
+
+        if ($filters['status'] === 'enabled') {
+            $usersQuery->where('disabled', false);
+        } elseif ($filters['status'] === 'disabled') {
+            $usersQuery->where('disabled', true);
+        }
+
+        if ($filters['is_admin']) {
+            $usersQuery->where('is_admin', true);
+        }
+
+        if ($filters['alliance_member']) {
+            /** @var AllianceMembershipService $membershipService */
+            $membershipService = app(AllianceMembershipService::class);
+            $allianceIds = $membershipService->getAllianceIds();
+
+            if ($allianceIds->isEmpty()) {
+                $usersQuery->whereRaw('0 = 1');
+            } else {
+                $usersQuery->whereHas('nation', fn ($nationQuery) => $nationQuery->whereIn('alliance_id', $allianceIds));
+            }
+        }
+
+        if ($filters['verification'] === 'verified') {
+            $usersQuery->whereNotNull('verified_at');
+        } elseif ($filters['verification'] === 'unverified') {
+            $usersQuery->whereNull('verified_at');
+        }
+
+        $users = $usersQuery
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.users.index', compact('users', 'stats', 'filters'));
     }
 
     /**
-     * @param User $user
-     * @return View
      * @throws AuthorizationException
      */
     public function edit(User $user): View
@@ -96,10 +155,8 @@ class UserController extends Controller
     }
 
     /**
-     *
-     * @param Request $request
-     * @param User $user
      * @return \Illuminate\Http\RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function update(Request $request, User $user)
@@ -125,7 +182,7 @@ class UserController extends Controller
         $user->nation_id = $validated['nation_id'] ?? null;
         $user->verified_at = $validated['verified_at'] ? now() : null;
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
 
@@ -140,7 +197,7 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')->with([
             'alert-message' => 'User updated successfully.',
-            'alert-type' => 'success'
+            'alert-type' => 'success',
         ]);
     }
 }
