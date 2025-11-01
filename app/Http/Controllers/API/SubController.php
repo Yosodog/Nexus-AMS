@@ -6,10 +6,13 @@ use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\PWRateLimitHitException;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
+use App\Jobs\CreateWarAttackJob;
+use App\Jobs\DeleteNationAccountJob;
 use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
 use App\Jobs\UpdateWarJob;
+use App\Jobs\UpsertNationAccountJob;
 use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
@@ -302,5 +305,73 @@ class SubController extends Controller
         }
 
         return response()->json(['message' => 'War(s) deleted successfully']);
+    }
+
+    public function createWarAttack(Request $request): JsonResponse
+    {
+        $warAttacks = $request->json()->all();
+
+        if (! is_array($warAttacks)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($warAttacks['id'])) {
+            $warAttacks = [$warAttacks];
+        }
+
+        CreateWarAttackJob::dispatch($warAttacks);
+
+        return response()->json(['message' => 'War attack(s) queued for processing']);
+    }
+
+    public function createAccount(Request $request): JsonResponse
+    {
+        $accounts = $request->json()->all();
+
+        if (! is_array($accounts)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($accounts['id'])) {
+            $accounts = [$accounts];
+        }
+
+        UpsertNationAccountJob::dispatch($accounts);
+
+        return response()->json(['message' => 'Account(s) queued for creation']);
+    }
+
+    public function updateAccount(Request $request): JsonResponse
+    {
+        $accounts = $request->json()->all();
+
+        if (! is_array($accounts)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($accounts['id'])) {
+            $accounts = [$accounts];
+        }
+
+        UpsertNationAccountJob::dispatch($accounts);
+
+        return response()->json(['message' => 'Account update(s) queued for processing']);
+    }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $accounts = $request->json()->all();
+
+        if (! is_array($accounts)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        if (isset($accounts['id'])) {
+            $accounts = [$accounts];
+        }
+
+        DeleteNationAccountJob::dispatch($accounts);
+
+        return response()->json(['message' => 'Account deletion(s) queued for processing']);
     }
 }

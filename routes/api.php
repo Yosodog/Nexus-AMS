@@ -33,4 +33,10 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
     Route::post('war/create', [SubController::class, 'createWar']);
     Route::post('war/update', [SubController::class, 'updateWar']);
     Route::post('war/delete', [SubController::class, 'deleteWar']);
+
+    Route::post('war-attack/create', [SubController::class, 'createWarAttack']);
+
+    Route::post('account/create', [SubController::class, 'createAccount']);
+    Route::post('account/update', [SubController::class, 'updateAccount']);
+    Route::post('account/delete', [SubController::class, 'deleteAccount']);
 });

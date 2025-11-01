@@ -249,6 +249,11 @@ class Nation extends Model
         return $this->hasMany(Account::class, 'nation_id');
     }
 
+    public function accountProfile(): HasOne
+    {
+        return $this->hasOne(NationAccount::class, 'nation_id');
+    }
+
     public function signIns(): HasMany
     {
         return $this->hasMany(NationSignIn::class, 'nation_id');
