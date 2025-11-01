@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\WarAttackTypeEnum;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ class WarAttack extends Model
 
     protected $casts = [
         'date' => 'datetime',
+        'type' => WarAttackTypeEnum::class,
         'improvements_destroyed' => 'array',
         'cities_infra_before' => 'array',
     ];

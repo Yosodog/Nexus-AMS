@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\WarAttackTypeEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
             $table->timestamp('date')->nullable();
             $table->unsignedBigInteger('att_id');
             $table->unsignedBigInteger('def_id');
-            $table->string('type', 32);
+            $table->enum('type', WarAttackTypeEnum::values());
             $table->unsignedBigInteger('war_id')->index();
             $table->unsignedBigInteger('victor')->nullable();
             $table->unsignedTinyInteger('success')->nullable();
