@@ -26,7 +26,7 @@
                             </div>
                             <span class="text-primary fs-3"><i class="bi bi-people"></i></span>
                         </div>
-                        <p class="text-muted small mb-0 mt-3">All accounts that have access to Nexus.</p>
+                        <p class="text-muted small mb-0 mt-3">All accounts that have access to {{ config("app.name") }}</p>
                     </div>
                 </div>
             </div>
@@ -95,7 +95,7 @@
                                     @if($user->is_admin)
                                         <span class="badge bg-danger">Admin</span>
                                     @endif
-                                    @if($user->last_active_at && now()->diffInMinutes($user->last_active_at) <= 5)
+                                    @if($user->last_active_at && now()->diffInMinutes($user->last_active_at) >= -5)
                                         <span class="badge bg-success">Online</span>
                                     @endif
                                 </div>
