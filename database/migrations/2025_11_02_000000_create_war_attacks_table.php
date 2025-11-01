@@ -14,7 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('att_id');
             $table->unsignedBigInteger('def_id');
             $table->string('type', 32);
-            $table->unsignedBigInteger('war_id');
+            $table->unsignedBigInteger('war_id')->index();
             $table->unsignedBigInteger('victor')->nullable();
             $table->unsignedTinyInteger('success')->nullable();
             $table->decimal('attcas1', 12, 2)->nullable();
@@ -85,10 +85,6 @@ return new class extends Migration
                 ->on('nations')
                 ->cascadeOnDelete();
 
-            $table->foreign('war_id')
-                ->references('id')
-                ->on('wars')
-                ->cascadeOnDelete();
         });
     }
 

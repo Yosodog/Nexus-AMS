@@ -24,8 +24,16 @@ class NationAccount extends Model
         'credits' => 'integer',
     ];
 
-    public static function upsertFromEvent(array $account): self
+    public static function upsertFromEvent(array $account): ?self
     {
+        if (! isset($account['id'])) {
+            return null;
+        }
+
+        if (! Nation::query()->whereKey($account['id'])->exists()) {
+            return null;
+        }
+
         $payload = [
             'nation_id' => $account['id'],
             'credits' => $account['credits'] ?? null,

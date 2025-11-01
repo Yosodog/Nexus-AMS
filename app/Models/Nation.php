@@ -69,7 +69,7 @@ class Nation extends Model
     public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
         // Extract only non-null values
-        $nationData = collect((array) $graphQLNationModel)
+        $nationPayload = collect((array) $graphQLNationModel)
             ->only([
                 'id',
                 'alliance_id',
@@ -110,23 +110,61 @@ class Nation extends Model
                 'total_infrastructure_destroyed',
                 'total_infrastructure_lost',
             ])
-            ->filter(fn ($value) => $value !== null) // Remove null values
+            ->filter(fn ($value) => $value !== null)
             ->toArray();
 
-        // Check if the nation already exists
-        $nation = self::find($graphQLNationModel->id);
+        $nationId = $nationPayload['id'] ?? $graphQLNationModel->id;
+        unset($nationPayload['id']);
+
+        $nation = $nationId ? self::find($nationId) : null;
 
         if ($nation) {
-            // Use `fill()` to update only provided values without affecting existing ones
-            $nation->fill($nationData);
+            $nation->fill($nationPayload);
 
-            // Check if there are any changes before saving (prevents unnecessary queries)
             if ($nation->isDirty()) {
                 $nation->save();
             }
         } else {
-            // Create a new Nation record
-            $nation = self::create($nationData);
+            if ($nationId === null) {
+                return self::query()->make($nationPayload);
+            }
+
+            $defaults = [
+                'alliance_position_id' => 0,
+                'war_policy_turns' => 0,
+                'domestic_policy_turns' => 0,
+                'num_cities' => 0,
+                'score' => 0,
+                'population' => 0,
+                'vacation_mode_turns' => 0,
+                'beige_turns' => 0,
+                'espionage_available' => false,
+                'turns_since_last_city' => 0,
+                'turns_since_last_project' => 0,
+                'projects' => 0,
+                'project_bits' => '0',
+                'wars_won' => 0,
+                'wars_lost' => 0,
+                'alliance_seniority' => 0,
+                'gross_national_income' => 0,
+                'gross_domestic_product' => 0,
+                'vip' => false,
+                'commendations' => 0,
+                'denouncements' => 0,
+                'offensive_wars_count' => 0,
+                'defensive_wars_count' => 0,
+                'money_looted' => 0,
+                'total_infrastructure_destroyed' => 0,
+                'total_infrastructure_lost' => 0,
+            ];
+
+            foreach ($defaults as $key => $value) {
+                if (! array_key_exists($key, $nationPayload)) {
+                    $nationPayload[$key] = $value;
+                }
+            }
+
+            $nation = self::create(['id' => $nationId] + $nationPayload);
         }
 
         // Conditional update for resources
