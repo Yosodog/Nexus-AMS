@@ -2,26 +2,19 @@
 
 namespace App\Models;
 
-use App\AutoSync\Concerns\AutoSyncsWithPoliticsAndWar;
-use App\AutoSync\Contracts\SyncableWithPoliticsAndWar;
-use App\AutoSync\SyncDefinition;
 use App\GraphQL\Models\Alliance as AllianceGraphQL;
-use App\Services\AllianceQueryService;
-use App\Services\GraphQLQueryBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Alliance extends Model implements SyncableWithPoliticsAndWar
+class Alliance extends Model
 {
-    use AutoSyncsWithPoliticsAndWar;
-
     public $table = "alliances";
     protected $guarded = [];
 
     /**
      * Create or update an Alliance model from GraphQL Alliance data.
      *
-     * @param AllianceGraphQL $graphQLAllianceModel
+     * @param AllianceGraphQL $graphQLAllianceModel - The GraphQL alliance data
      * @param bool $withNations
      * @return Alliance
      */
@@ -57,8 +50,6 @@ class Alliance extends Model implements SyncableWithPoliticsAndWar
     }
 
     /**
-     * Retrieve an alliance by its identifier.
-     *
      * @param int $id
      * @return mixed
      */
@@ -68,58 +59,10 @@ class Alliance extends Model implements SyncableWithPoliticsAndWar
     }
 
     /**
-     * Retrieve member nations for the alliance.
-     *
      * @return HasMany
      */
     public function nations()
     {
         return $this->hasMany(Nation::class, "alliance_id");
-    }
-
-    /**
-     * Describe how to synchronize alliances from Politics & War.
-     *
-     * @return SyncDefinition
-     */
-    public static function getAutoSyncDefinition(): SyncDefinition
-    {
-        $staleAfter = config('pw-sync.staleness.' . self::class);
-
-        return new SyncDefinition(
-            self::class,
-            'id',
-            function (array $ids, array $context = []) {
-                $ids = array_values(array_unique(array_map('intval', $ids)));
-
-                if (empty($ids)) {
-                    return [];
-                }
-
-                $arguments = [
-                    'id' => count($ids) === 1
-                        ? $ids[0]
-                        : GraphQLQueryBuilder::literal('[' . implode(', ', $ids) . ']'),
-                ];
-
-                $withMembers = $context['include_nations'] ?? true;
-
-                if ($withMembers) {
-                    return AllianceQueryService::getMultipleAlliancesWithMembers($ids);
-                }
-
-                return AllianceQueryService::getMultipleAlliances(
-                    $arguments,
-                    max(1, min(count($ids), config('pw-sync.chunk_size', 100))),
-                    false,
-                    false
-                );
-            },
-            function ($record, array $context = []) {
-                return self::updateFromAPI($record, (bool) ($context['include_nations'] ?? true));
-            },
-            $staleAfter,
-            ['name']
-        );
     }
 }

@@ -62,10 +62,6 @@ class NationQueryService
 
         $response = $client->sendQuery($builder);
 
-        if (! isset($response->{0})) {
-            throw new PWEntityDoesNotExist();
-        }
-
         $nation = new Nation();
         $nation->buildWithJSON((object)$response->{0});
 
