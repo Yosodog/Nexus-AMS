@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\WarCounter;
+use App\Models\WarPlan;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+/**
+ * Admin dashboard aggregating counter and war plan states.
+ */
+class WarRoomController extends Controller
+{
+    /**
+     * Render the War Room dashboard.
+     */
+    public function index(Request $request): View
+    {
+        $this->authorize('view-wars');
+
+        $activeCounterSearch = $this->nullIfEmpty($request->string('counter_active_search')->trim()->toString());
+        $counterStatus = $request->query('counter_status', 'all');
+
+        $planSearch = $this->nullIfEmpty($request->string('plan_search')->trim()->toString());
+        $planStatus = $request->query('plan_status', 'all');
+
+        return view('admin.war-room.index', [
+            'counters' => $this->counterListing($activeCounterSearch, $counterStatus, 'counters_page'),
+            'counterStatus' => $counterStatus,
+            'plans' => $this->planListing($planSearch, $planStatus, 'plans_page'),
+            'planStatus' => $planStatus,
+            'counterSearch' => $activeCounterSearch,
+            'planSearch' => $planSearch,
+        ]);
+    }
+
+    /**
+     * Query helper for counters with optional search.
+     */
+    protected function counterListing(?string $search, string $status, string $pageParam): LengthAwarePaginator
+    {
+        $query = WarCounter::query()
+            ->with(['aggressor.alliance'])
+            ->whereIn('status', ['active', 'draft'])
+            ->latest('updated_at');
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->whereHas('aggressor', function ($builder) use ($search) {
+                $builder->where('leader_name', 'like', "%{$search}%")
+                    ->orWhere('nation_name', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate(10, ['*'], $pageParam)->withQueryString();
+    }
+
+    /**
+     * Query helper for plans with optional search.
+     */
+    protected function planListing(?string $search, string $status, string $pageParam): LengthAwarePaginator
+    {
+        $query = WarPlan::query()
+            ->withCount(['targets', 'assignments'])
+            ->whereIn('status', ['planning', 'active'])
+            ->latest('updated_at');
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        return $query->paginate(10, ['*'], $pageParam)->withQueryString();
+    }
+
+    protected function nullIfEmpty(?string $value): ?string
+    {
+        return $value === '' ? null : $value;
+    }
+}
