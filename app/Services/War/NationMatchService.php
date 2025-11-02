@@ -35,7 +35,7 @@ class NationMatchService
         $weights = config('war.nation_match.weights', []);
         $mode = $context['evaluation_mode'] ?? 'auto';
 
-       $mmrCompliance = $this->mmrCompliance($friendly);
+        $mmrCompliance = $this->mmrCompliance($friendly);
         $meta = [
             'factors' => [],
             'weights' => $weights,
