@@ -26,12 +26,6 @@ class WarCounterController extends Controller
     /**
      * Show counter planning room.
      *
-     * @param Request $request
-     * @param WarCounter $counter
-     * @param LiveFeedQueryService $liveFeed
-     * @param AllianceMembershipService $membershipService
-     * @param CounterAssignmentService $assignmentService
-     * @return View
      * @throws AuthorizationException
      */
     public function show(
@@ -94,9 +88,7 @@ class WarCounterController extends Controller
 
     /**
      * Manually create a draft counter.
-     * @param Request $request
-     * @param PlanOrchestratorService $orchestrator
-     * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function store(
@@ -145,10 +137,7 @@ class WarCounterController extends Controller
 
     /**
      * Auto-pick assignments for the counter.
-     * @param WarCounter $counter
-     * @param CounterAssignmentService $assignmentService
-     * @param AllianceMembershipService $membershipService
-     * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function autoPick(
@@ -171,11 +160,7 @@ class WarCounterController extends Controller
 
     /**
      * Manually add/lock a friendly nation to this counter.
-     * @param Request $request
-     * @param WarCounter $counter
-     * @param CounterAssignmentService $assignmentService
-     * @param AllianceMembershipService $membershipService
-     * @return RedirectResponse
+     *
      * @throws AuthorizationException
      */
     public function storeManualAssignment(
@@ -210,10 +195,6 @@ class WarCounterController extends Controller
     /**
      * Mark a proposed assignment as assigned.
      *
-     * @param WarCounter $counter
-     * @param WarCounterAssignment $assignment
-     * @param CounterAssignmentService $assignmentService
-     * @return RedirectResponse
      * @throws AuthorizationException
      */
     public function assign(WarCounter $counter, WarCounterAssignment $assignment, CounterAssignmentService $assignmentService): RedirectResponse
@@ -374,9 +355,6 @@ class WarCounterController extends Controller
 
     /**
      * Sanitize the provided war type.
-     *
-     * @param string|null $warType
-     * @return string
      */
     protected function sanitizeWarType(?string $warType): string
     {
