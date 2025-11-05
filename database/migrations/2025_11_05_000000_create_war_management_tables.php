@@ -111,7 +111,7 @@ return new class extends Migration
             $table->foreignIdFor(\App\Models\WarCounter::class, 'war_counter_id')->constrained('war_counters')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'friendly_nation_id')->constrained('nations')->cascadeOnDelete();
             $table->decimal('match_score', 6, 2)->default(0);
-            $table->enum('status', ['proposed', 'finalized'])->default('proposed')->index();
+            $table->enum('status', ['proposed', 'finalized', 'assigned'])->default('proposed')->index();
             $table->boolean('is_locked')->default(false);
             $table->json('meta')->nullable();
             $table->timestamps();

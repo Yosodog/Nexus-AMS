@@ -11,6 +11,7 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -29,6 +30,125 @@ class CounterAssignmentService
         private readonly NationMatchService $matchService,
         private readonly CacheFactory $cacheFactory
     ) {}
+
+    /**
+     * Manually add or lock an assignment for a specific friendly nation.
+     * Always marks the assignment locked so auto-pick won't overwrite it.
+     */
+    public function addManualAssignment(WarCounter $counter, Nation $friendly, ?float $overrideScore = null, string $status = 'assigned'): WarCounterAssignment
+    {
+        $availableSlots = $this->calculateAvailableSlots($friendly);
+        $context = [
+            'available_slots' => $availableSlots,
+            'assignment_load' => $this->currentAssignments($friendly),
+            'max_assignments' => $this->maxAssignmentsFor($friendly),
+            'cohesion_reference' => 0.8,
+            'enemy_tps' => 90,
+            'evaluation_mode' => 'manual',
+        ];
+
+        $match = $this->matchService->evaluate($friendly, $counter->aggressor, $context);
+
+        /** @var WarCounterAssignment $assignment */
+        $assignment = WarCounterAssignment::query()->updateOrCreate(
+            [
+                'war_counter_id' => $counter->id,
+                'friendly_nation_id' => $friendly->id,
+            ],
+            [
+                'match_score' => $overrideScore !== null ? (float) $overrideScore : ($match['score'] ?? 50.0),
+                'meta' => array_merge($match['meta'] ?? [], ['manual' => true]),
+                'status' => $status,
+                'is_locked' => true,
+            ]
+        );
+
+        return $assignment->refresh();
+    }
+
+    /**
+     * Confirm (lock) an assignment for the provided nation. Creates it if missing.
+     */
+    public function confirmAssignmentForNation(WarCounter $counter, Nation $friendly): WarCounterAssignment
+    {
+        $existing = WarCounterAssignment::query()
+            ->where('war_counter_id', $counter->id)
+            ->where('friendly_nation_id', $friendly->id)
+            ->first();
+
+        if ($existing) {
+            $existing->update(['is_locked' => true]);
+
+            return $existing->refresh();
+        }
+
+        return $this->addManualAssignment($counter, $friendly, null, 'assigned');
+    }
+
+    /**
+     * Ensure the number of proposed assignments does not exceed the counter team size.
+     * Extra proposals (lowest score first) are deleted.
+     */
+    public function enforceProposedLimit(WarCounter $counter): void
+    {
+        $teamSize = $counter->team_size ?? (int) config('war.counters.default_team_size', 3);
+
+        $proposed = $counter->assignments()->where('status', 'proposed')->orderByDesc('match_score')->get();
+
+        if ($proposed->count() <= $teamSize) {
+            return;
+        }
+
+        $toDelete = $proposed->slice($teamSize); // keep top N, drop the rest
+
+        foreach ($toDelete as $assignment) {
+            $assignment->delete();
+        }
+    }
+
+    /**
+     * Compute ranked candidate friendlies for a counter using the same scoring engine.
+     *
+     * @param  Collection<int, Nation>  $friendlies
+     * @return SupportCollection<int, array{friendly:Nation, score:float, meta:array, available_slots:int, assignment_load:int, max_assignments:int}>
+     */
+    public function listCandidates(WarCounter $counter, Collection $friendlies): SupportCollection
+    {
+        $autoFloor = (float) config('war.nation_match.relative_power.auto_floor', 0.18);
+
+        return $friendlies
+            ->map(function (Nation $friendly) use ($counter) {
+                $availableSlots = $this->calculateAvailableSlots($friendly);
+                $context = [
+                    'available_slots' => $availableSlots,
+                    'assignment_load' => $this->currentAssignments($friendly),
+                    'max_assignments' => $this->maxAssignmentsFor($friendly),
+                    'cohesion_reference' => 0.8,
+                    'enemy_tps' => 90,
+                    'evaluation_mode' => 'browse',
+                ];
+                $match = $this->matchService->evaluate($friendly, $counter->aggressor, $context);
+
+                $relativeFactor = $match['meta']['factors']['relative_power'] ?? 0.0;
+                $relativePower = is_array($relativeFactor) ? ($relativeFactor['value'] ?? 0.0) : (float) $relativeFactor;
+
+                return [
+                    'friendly' => $friendly,
+                    'score' => $match['score'],
+                    'meta' => $match['meta'],
+                    'available_slots' => $availableSlots,
+                    'assignment_load' => $context['assignment_load'],
+                    'max_assignments' => $context['max_assignments'],
+                    'relative_power' => $relativePower,
+                ];
+            })
+            ->filter(function ($row) use ($autoFloor) {
+                // Consider nations in "range" when relative power meets auto floor and they have any slots.
+                return ($row['relative_power'] ?? 0) >= $autoFloor && ($row['available_slots'] ?? 0) > 0;
+            })
+            ->sortByDesc(fn ($row) => $row['score'])
+            ->values();
+    }
 
     /**
      * Propose assignments for the counter.
@@ -78,9 +198,18 @@ class CounterAssignmentService
     public function finalize(WarCounter $counter): WarCounter
     {
         DB::transaction(function () use ($counter) {
-            $counter->assignments()
-                ->where('status', 'proposed')
-                ->update(['status' => 'finalized']);
+            $assignedCount = $counter->assignments()->where('status', 'assigned')->count();
+
+            if ($assignedCount > 0) {
+                $counter->assignments()
+                    ->where('status', 'assigned')
+                    ->update(['status' => 'finalized']);
+            } else {
+                // Backwards-compat: if nothing explicitly assigned, finalize proposed.
+                $counter->assignments()
+                    ->where('status', 'proposed')
+                    ->update(['status' => 'finalized']);
+            }
 
             $counter->update([
                 'status' => 'active',

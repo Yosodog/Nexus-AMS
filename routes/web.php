@@ -302,6 +302,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
         Route::get('/war-counters/{counter}', [AdminWarCounterController::class, 'show'])->name('admin.war-counters.show');
         Route::post('/war-counters/{counter}/update', [AdminWarCounterController::class, 'update'])->name('admin.war-counters.update');
         Route::post('/war-counters/{counter}/auto-pick', [AdminWarCounterController::class, 'autoPick'])->name('admin.war-counters.auto-pick');
+        Route::post('/war-counters/{counter}/assignments/manual', [AdminWarCounterController::class, 'storeManualAssignment'])->name('admin.war-counters.assignments.manual');
+        Route::post('/war-counters/{counter}/assignments/{assignment}/assign', [AdminWarCounterController::class, 'assign'])->name('admin.war-counters.assignments.assign');
+        Route::post('/war-counters/{counter}/assignments/{assignment}/unassign', [AdminWarCounterController::class, 'unassign'])->name('admin.war-counters.assignments.unassign');
+        Route::delete('/war-counters/{counter}/assignments/{assignment}', [AdminWarCounterController::class, 'removeAssignment'])->name('admin.war-counters.assignments.destroy');
         Route::post('/war-counters/{counter}/finalize', [AdminWarCounterController::class, 'finalize'])->name('admin.war-counters.finalize');
         Route::post('/war-counters/{counter}/archive', [AdminWarCounterController::class, 'archive'])->name('admin.war-counters.archive');
 
