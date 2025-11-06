@@ -199,7 +199,7 @@ class WarPlanController extends Controller
 
         $plan = $orchestrator->markAssignmentsPublished($plan);
 
-        $assignments = $plan->assignments()->with('friendlyNation')->get();
+        $assignments = $plan->assignments()->with(['friendlyNation', 'target.nation'])->get();
 
         $notificationService->queuePlanPublishNotifications($plan, $assignments, $channels);
 

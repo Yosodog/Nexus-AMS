@@ -36,12 +36,18 @@ class NotificationService
                 'event' => 'war.assignments.created',
                 'plan_id' => $plan->id,
                 'plan_name' => $plan->name,
-                'assignments' => $assignments->map(fn (WarPlanAssignment $assignment) => [
-                    'friendly_nation_id' => $assignment->friendly_nation_id,
-                    'friendly_name' => $assignment->friendlyNation?->leader_name,
-                    'enemy_nation_id' => $assignment->war_plan_target_id,
-                    'match_score' => $assignment->match_score,
-                ])->all(),
+                'assignments' => $assignments->map(function (WarPlanAssignment $assignment) {
+                    $targetNation = $assignment->target?->nation;
+
+                    return [
+                        'friendly_nation_id' => $assignment->friendly_nation_id,
+                        'friendly_name' => $assignment->friendlyNation?->leader_name,
+                        'enemy_nation_id' => $targetNation?->id,
+                        'enemy_name' => $targetNation?->nation_name,
+                        'war_plan_target_id' => $assignment->war_plan_target_id,
+                        'match_score' => $assignment->match_score,
+                    ];
+                })->all(),
                 'template' => config('war.notifications.templates.plan_assignments'),
             ];
 

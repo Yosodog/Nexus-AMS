@@ -135,6 +135,10 @@ class PlanOrchestratorService
      */
     public function markAssignmentsPublished(WarPlan $plan): WarPlan
     {
+        $plan->assignments()
+            ->where('status', 'proposed')
+            ->update(['status' => 'published']);
+
         $plan->fill(['assignments_published_at' => Carbon::now()])->save();
         $plan = $plan->refresh();
 
