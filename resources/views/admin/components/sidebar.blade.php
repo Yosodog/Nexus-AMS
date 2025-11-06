@@ -121,6 +121,15 @@
                 <li class="nav-header">Defense</li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.war-room') }}"
+                                icon="bi bi-command"
+                                permission="view-wars"
+                                :active="request()->routeIs('admin.war-room')">
+                        War Room
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.wars') }}"
                                 icon="bi bi-speedometer"
                                 permission="view-wars"

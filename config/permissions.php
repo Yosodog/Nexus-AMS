@@ -18,6 +18,7 @@ return [
     'view-taxes',
     'view-members',
     'view-wars',
+    'manage-war-room',
     'view-raids',
     'manage-raids',
     'view-diagnostic-info',

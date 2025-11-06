@@ -20,6 +20,9 @@ use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
 use App\Http\Controllers\Admin\WarController as AdminWarController;
+use App\Http\Controllers\Admin\WarCounterController as AdminWarCounterController;
+use App\Http\Controllers\Admin\WarPlanController as AdminWarPlanController;
+use App\Http\Controllers\Admin\WarRoomController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
@@ -273,6 +276,38 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
 
         // War
         Route::get('/defense/wars', [AdminWarController::class, 'index'])->name('admin.wars');
+
+        // War Room & Campaign management
+        Route::get('/war-room', [WarRoomController::class, 'index'])->name('admin.war-room');
+
+        Route::post('/war-plans', [AdminWarPlanController::class, 'store'])->name('admin.war-plans.store');
+        Route::get('/war-plans/{plan}', [AdminWarPlanController::class, 'show'])->name('admin.war-plans.show');
+        Route::put('/war-plans/{plan}', [AdminWarPlanController::class, 'update'])->name('admin.war-plans.update');
+        Route::post('/war-plans/{plan}/activate', [AdminWarPlanController::class, 'activate'])->name('admin.war-plans.activate');
+        Route::post('/war-plans/{plan}/archive', [AdminWarPlanController::class, 'archive'])->name('admin.war-plans.archive');
+        Route::post('/war-plans/{plan}/recompute', [AdminWarPlanController::class, 'recompute'])->name('admin.war-plans.recompute');
+        Route::post('/war-plans/{plan}/auto-assign', [AdminWarPlanController::class, 'autoAssign'])->name('admin.war-plans.auto-assign');
+        Route::post('/war-plans/{plan}/publish', [AdminWarPlanController::class, 'publish'])->name('admin.war-plans.publish');
+        Route::get('/war-plans/{plan}/export', [AdminWarPlanController::class, 'export'])->name('admin.war-plans.export');
+        Route::post('/war-plans/{plan}/import', [AdminWarPlanController::class, 'import'])->name('admin.war-plans.import');
+        Route::post('/war-plans/{plan}/targets/{target}/war-type', [AdminWarPlanController::class, 'updateTargetWarType'])->name('admin.war-plans.targets.update-war-type');
+        Route::post('/war-plans/{plan}/alliances', [AdminWarPlanController::class, 'addAlliance'])->name('admin.war-plans.alliances.store');
+        Route::delete('/war-plans/{plan}/alliances/{alliance}', [AdminWarPlanController::class, 'removeAlliance'])->name('admin.war-plans.alliances.destroy');
+        Route::post('/war-plans/{plan}/targets', [AdminWarPlanController::class, 'addTarget'])->name('admin.war-plans.targets.store');
+        Route::delete('/war-plans/{plan}/targets/{target}', [AdminWarPlanController::class, 'removeTarget'])->name('admin.war-plans.targets.destroy');
+        Route::post('/war-plans/{plan}/assignments/manual', [AdminWarPlanController::class, 'storeManualAssignment'])->name('admin.war-plans.assignments.manual');
+        Route::delete('/war-plans/{plan}/assignments/{assignment}', [AdminWarPlanController::class, 'removeAssignment'])->name('admin.war-plans.assignments.destroy');
+
+        Route::post('/war-counters', [AdminWarCounterController::class, 'store'])->name('admin.war-counters.store');
+        Route::get('/war-counters/{counter}', [AdminWarCounterController::class, 'show'])->name('admin.war-counters.show');
+        Route::post('/war-counters/{counter}/update', [AdminWarCounterController::class, 'update'])->name('admin.war-counters.update');
+        Route::post('/war-counters/{counter}/auto-pick', [AdminWarCounterController::class, 'autoPick'])->name('admin.war-counters.auto-pick');
+        Route::post('/war-counters/{counter}/assignments/manual', [AdminWarCounterController::class, 'storeManualAssignment'])->name('admin.war-counters.assignments.manual');
+        Route::post('/war-counters/{counter}/assignments/{assignment}/assign', [AdminWarCounterController::class, 'assign'])->name('admin.war-counters.assignments.assign');
+        Route::post('/war-counters/{counter}/assignments/{assignment}/unassign', [AdminWarCounterController::class, 'unassign'])->name('admin.war-counters.assignments.unassign');
+        Route::delete('/war-counters/{counter}/assignments/{assignment}', [AdminWarCounterController::class, 'removeAssignment'])->name('admin.war-counters.assignments.destroy');
+        Route::post('/war-counters/{counter}/finalize', [AdminWarCounterController::class, 'finalize'])->name('admin.war-counters.finalize');
+        Route::post('/war-counters/{counter}/archive', [AdminWarCounterController::class, 'archive'])->name('admin.war-counters.archive');
 
         // War Aid
         Route::get('/defense/waraid', [AdminWarAidControllerAlias::class, 'index'])->name(

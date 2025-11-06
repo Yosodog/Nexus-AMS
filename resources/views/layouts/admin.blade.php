@@ -57,6 +57,7 @@
         integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
 <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
 
+@stack('modals')
 @stack('scripts')
 @yield("scripts")
 </body>
