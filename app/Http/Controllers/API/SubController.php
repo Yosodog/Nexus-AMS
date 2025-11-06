@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Events\WarDeclared;
 use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\PWRateLimitHitException;
 use App\Http\Controllers\Controller;
@@ -262,6 +263,15 @@ class SubController extends Controller
                 $create['def_alliance_id']
             )) {
                 War::updateFromAPI((object) $create);
+
+                // Fire WarDeclared event so listeners can react (e.g., auto-counter)
+                event(new WarDeclared(
+                    warId: $create['id'],
+                    attackerNationId: $create['att_id'],
+                    attackerAllianceId: $create['att_alliance_id'] ?? null,
+                    defenderNationId: $create['def_id'],
+                    defenderAllianceId: $create['def_alliance_id'] ?? null,
+                ));
             }
         }
 
