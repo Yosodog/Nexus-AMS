@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
+use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use Illuminate\Support\Facades\Cache;
@@ -74,6 +75,20 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('pwApiDown', $pwHealthData['down']);
             $view->with('pwApiLastChecked', $pwHealthData['checkedAt']);
+        });
+
+        View::composer(['layouts.main', 'layouts.admin', 'components.header', 'admin.components.sidebar'], function ($view) {
+            $user = auth()->user();
+            $pendingRequests = [
+                'counts' => [],
+                'total' => 0,
+            ];
+
+            if ($user) {
+                $pendingRequests = app(PendingRequestsService::class)->getCountsForUser($user);
+            }
+
+            $view->with('pendingRequests', $pendingRequests);
         });
 
         LogViewer::auth(function ($request) {

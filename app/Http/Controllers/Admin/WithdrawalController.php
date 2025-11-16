@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\WithdrawLimit;
 use App\Notifications\WithdrawalDeniedNotification;
 use App\Services\AccountService;
+use App\Services\PendingRequestsService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use Exception;
@@ -135,6 +136,8 @@ class WithdrawalController extends Controller
 
         $transaction->refresh();
         $transaction->loadMissing('nation', 'fromAccount');
+
+        app(PendingRequestsService::class)->flushCache();
 
         if ($transaction->nation) {
             $transaction->nation->notify(new WithdrawalDeniedNotification(
