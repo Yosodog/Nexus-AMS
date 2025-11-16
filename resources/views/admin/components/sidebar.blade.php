@@ -220,6 +220,15 @@
                         Pulse
                     </x-nav.link>
                 </li>
+
+                <li class="nav-item">
+                    <x-nav.link href="{{ url('/log-viewer') }}"
+                                icon="bi bi-diagram-2-fill"
+                                permission="view-diagnostic-info"
+                                :active="request()->is('pulse')">
+                        Log Viewer
+                    </x-nav.link>
+                </li>
             </ul>
         </nav>
     </div>

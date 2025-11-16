@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController as FortifyPasswordResetLinkController;
+use Opcodes\LogViewer\Facades\LogViewer;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -73,6 +74,10 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('pwApiDown', $pwHealthData['down']);
             $view->with('pwApiLastChecked', $pwHealthData['checkedAt']);
+        });
+
+        LogViewer::auth(function ($request) {
+            return Gate::allows('view-diagnostic-info');
         });
     }
 }
