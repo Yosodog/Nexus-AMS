@@ -36,7 +36,7 @@ class UpdateApplication extends Command
 
         if (! $this->option('no-node')) {
             $this->runShellCommand(
-                'npm install && npm run build',
+                'npm ci && npm run build',
                 'Installing Node.js dependencies and building frontend'
             );
         } else {
