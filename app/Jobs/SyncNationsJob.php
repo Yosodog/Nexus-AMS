@@ -48,6 +48,8 @@ class SyncNationsJob implements ShouldQueue
 
     public int $perPage;
 
+    public ?int $minScore;
+
     private CarbonImmutable $syncTimestamp;
 
     private string $syncTimestampString;
@@ -320,10 +322,12 @@ class SyncNationsJob implements ShouldQueue
      * @param  int  $page  The current GraphQL page being synchronised.
      * @param  int  $perPage  The number of nations returned per page.
      */
-    public function __construct(int $page, int $perPage)
+    public function __construct(int $page, int $perPage, ?int $minScore = null)
     {
         $this->page = $page;
         $this->perPage = $perPage;
+        $this->minScore = $minScore;
+        $this->onQueue('sync');
     }
 
     /**
@@ -345,9 +349,14 @@ class SyncNationsJob implements ShouldQueue
             $this->syncTimestamp = now()->toImmutable();
             $this->syncTimestampString = $this->syncTimestamp->toDateTimeString();
 
+            $filters = ['page' => $this->page];
+            if ($this->minScore !== null) {
+                $filters['min_score'] = $this->minScore;
+            }
+
             // Fetch nations from the API using the NationQueryService with pagination parameters
             $nations = NationQueryService::getMultipleNations(
-                ['page' => $this->page],
+                $filters,
                 $this->perPage,
                 true,
                 handlePagination: false
