@@ -4,14 +4,26 @@ use App\Console\Commands\ProcessDeposits;
 use App\Services\PWHealthService;
 use Illuminate\Support\Facades\Schedule;
 
-$whenPWUp = fn () => app(PWHealthService::class)->isUp();
-
 Schedule::command('pw:health-check')->everyMinute();
 
+$whenPWUp = fn () => app(PWHealthService::class)->isUp();
+
 // Syncing
-Schedule::command('sync:nations')->twiceDailyAt(0, 12, 15)->runInBackground()
-    ->withoutOverlapping(10)
+Schedule::command('sync:nations:rolling --scope=highscore')
+    ->dailyAt('00:15')
+    ->runInBackground()
+    ->withoutOverlapping(5)
+    ->when(function () use ($whenPWUp) {
+        // Only run if PW is up AND today is NOT Monday, so it doesn't overlap with the weekly sync
+        return $whenPWUp() && ! now()->isMonday();
+    });
+
+Schedule::command('sync:nations:rolling --scope=all')
+    ->weeklyOn(1, '00:30')   // Monday 00:30
+    ->runInBackground()
+    ->withoutOverlapping(5)
     ->when($whenPWUp);
+
 Schedule::command('sync:alliances')->twiceDailyAt(0, 12, 15)->runInBackground()
     ->withoutOverlapping(10)
     ->when($whenPWUp);

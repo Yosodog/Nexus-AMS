@@ -41,7 +41,7 @@ class SyncNations extends Command
         $jobs = [];
 
         do {
-            $jobs[] = new SyncNationsJob($page, $perPage);
+            $jobs[] = new SyncNationsJob($page, $perPage, null);
 
             if ($page === 1) {
                 $client = new QueryService;
