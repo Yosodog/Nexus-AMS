@@ -118,6 +118,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.finance.index') }}"
+                                icon="bi bi-cash-coin"
+                                permission="view-financial-reports"
+                                :active="request()->routeIs('admin.finance.*')">
+                        Finance Ledger
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">Defense</li>
 
                 <li class="nav-item">

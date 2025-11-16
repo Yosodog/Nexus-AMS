@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceIncomeOccurred;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\Nation;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -75,12 +79,16 @@ class DirectDepositService
         $ddAccount->save();
 
         // Log the DD event with the *original* after-tax values (so the player sees what they earned)
-        DirectDepositLog::create([
+        $log = DirectDepositLog::create([
             'nation_id' => $nation->id,
             'account_id' => $ddAccount->id,
             'bank_record_id' => $record->id,
             ...$originalDeposit,
         ]);
+
+        if ($mmrTotalSpend > 0.0) {
+            $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
+        }
 
         // Apply MMR plan: credit resources on the configured MMR account
         if ($mmrTotalSpend > 0.0 && $mmrAccount) {
@@ -128,6 +136,36 @@ class DirectDepositService
         }
 
         return $this->accountService->createDefaultForNation($nation);
+    }
+
+    private function dispatchMmrContributionEvent(
+        Nation $nation,
+        ?Account $mmrAccount,
+        float $mmrSpend,
+        BankRecord $record,
+        DirectDepositLog $log,
+        array $plan
+    ): void {
+        if ($mmrSpend <= 0.0) {
+            return;
+        }
+
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_INCOME,
+            category: 'mmr_income',
+            description: "MMR Assistant withholding for {$nation->nation_name}",
+            date: Carbon::parse($record->date),
+            nationId: $nation->id,
+            accountId: $mmrAccount?->id,
+            source: $log,
+            money: $mmrSpend,
+            meta: [
+                'bank_record_id' => $record->id,
+                'plan' => $plan['lines'] ?? [],
+            ]
+        );
+
+        event(new AllianceIncomeOccurred($financeData->toArray()));
     }
 
     public function enroll(Nation $nation, Account $account): void

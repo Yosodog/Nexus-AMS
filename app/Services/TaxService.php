@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceIncomeOccurred;
 use App\Exceptions\PWQueryFailedException;
+use App\Models\AllianceFinanceEntry;
 use App\Models\Taxes;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +35,7 @@ class TaxService
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
+        $updatedDates = [];
 
         foreach ($taxes as $record) {
             if ($record->id <= $lastTaxId) {
@@ -41,8 +46,8 @@ class TaxService
             $record = $ddService->process($record);
 
             try {
-                DB::transaction(function () use ($record) {
-                    Taxes::create([
+                $taxModel = DB::transaction(function () use ($record) {
+                    return Taxes::create([
                         'id' => $record->id, // Use PW tax record ID as our primary key
                         'date' => $record->date,
                         'sender_id' => $record->sender_id,
@@ -66,6 +71,11 @@ class TaxService
                     ]);
                 });
 
+                if ($taxModel) {
+                    $dateKey = Carbon::parse($taxModel->date)->toDateString();
+                    $updatedDates[$dateKey] = true;
+                }
+
                 $newLastId = max($newLastId, $record->id);
             } catch (Throwable $e) {
                 Log::error('Failed to insert tax record', [
@@ -73,6 +83,10 @@ class TaxService
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+        foreach (array_keys($updatedDates) as $date) {
+            self::recordDailyTaxIncome($date);
         }
 
         // Pre-warm cache so users don't wait on page load
@@ -101,6 +115,53 @@ class TaxService
         }
 
         return (int) ($query->max('id') ?? 0);
+    }
+
+    protected static function recordDailyTaxIncome(string $date): void
+    {
+        $resourceSelects = collect(PWHelperService::resources())->map(
+            fn ($res) => "SUM(`{$res}`) as `{$res}`"
+        )->implode(', ');
+
+        $aggregate = Taxes::query()
+            ->whereDate('date', $date)
+            ->selectRaw('COUNT(*) as records, '.$resourceSelects)
+            ->first();
+
+        if (! $aggregate) {
+            return;
+        }
+
+        $sourceId = (int) str_replace('-', '', $date);
+
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_INCOME,
+            category: 'tax',
+            description: "Alliance tax intake for {$date}",
+            date: Carbon::parse($date),
+            nationId: null,
+            accountId: null,
+            sourceType: Taxes::class,
+            sourceId: $sourceId,
+            money: (float) ($aggregate->money ?? 0.0),
+            coal: (float) ($aggregate->coal ?? 0.0),
+            oil: (float) ($aggregate->oil ?? 0.0),
+            uranium: (float) ($aggregate->uranium ?? 0.0),
+            iron: (float) ($aggregate->iron ?? 0.0),
+            bauxite: (float) ($aggregate->bauxite ?? 0.0),
+            lead: (float) ($aggregate->lead ?? 0.0),
+            gasoline: (float) ($aggregate->gasoline ?? 0.0),
+            munitions: (float) ($aggregate->munitions ?? 0.0),
+            steel: (float) ($aggregate->steel ?? 0.0),
+            aluminum: (float) ($aggregate->aluminum ?? 0.0),
+            food: (float) ($aggregate->food ?? 0.0),
+            meta: [
+                '_merge_mode' => 'replace',
+                'records' => (int) ($aggregate->records ?? 0),
+            ],
+        );
+
+        event(new AllianceIncomeOccurred($financeData->toArray()));
     }
 
     /**

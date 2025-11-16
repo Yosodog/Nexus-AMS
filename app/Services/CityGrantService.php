@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceExpenseOccurred;
 use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Models\Nation;
@@ -92,6 +95,8 @@ class CityGrantService
         ]);
 
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'approved'));
+
+        self::dispatchCityGrantExpenseEvent($request, $account);
     }
 
     /**
@@ -105,5 +110,25 @@ class CityGrantService
         ]);
 
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
+    }
+
+    private static function dispatchCityGrantExpenseEvent(CityGrantRequest $request, Account $account): void
+    {
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'city_grant',
+            description: "City grant approved for Nation #{$request->nation_id}",
+            date: now(),
+            nationId: $request->nation_id,
+            accountId: $account->id,
+            source: $request,
+            money: (float) $request->grant_amount,
+            meta: [
+                'city_number' => $request->city_number,
+                'request_id' => $request->id,
+            ]
+        );
+
+        event(new AllianceExpenseOccurred($financeData->toArray()));
     }
 }

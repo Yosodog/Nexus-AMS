@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceExpenseOccurred;
 use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
 use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
@@ -93,7 +96,7 @@ final readonly class MMRAssistantService
             return null;
         }
 
-        return $this->db->transaction(function () use ($mmrAccount, $totalSpend, $lines) {
+        $log = $this->db->transaction(function () use ($mmrAccount, $totalSpend, $lines) {
             // Credit resources
             foreach ($lines as $res => $line) {
                 $qty = (float) $line['qty'];
@@ -116,5 +119,57 @@ final readonly class MMRAssistantService
 
             return $log;
         });
+
+        if ($log) {
+            $this->dispatchMmrExpenseEvent($mmrAccount, $totalSpend, $lines, $log);
+        }
+
+        return $log;
+    }
+
+    /**
+     * @param  array<string, array<string, float>>  $lines
+     */
+    private function dispatchMmrExpenseEvent(
+        Account $account,
+        float $totalSpend,
+        array $lines,
+        MMRAssistantPurchase $log
+    ): void {
+        if ($totalSpend <= 0.0) {
+            return;
+        }
+
+        $resourceQuantities = [];
+        foreach (PWHelperService::resources(false) as $resource) {
+            $resourceQuantities[$resource] = (float) ($lines[$resource]['qty'] ?? 0.0);
+        }
+
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'mmr_expense',
+            description: "MMR Assistant purchase for account {$account->name}",
+            date: now(),
+            nationId: $account->nation_id,
+            accountId: $account->id,
+            source: $log,
+            money: $totalSpend,
+            coal: $resourceQuantities['coal'] ?? 0.0,
+            oil: $resourceQuantities['oil'] ?? 0.0,
+            uranium: $resourceQuantities['uranium'] ?? 0.0,
+            iron: $resourceQuantities['iron'] ?? 0.0,
+            bauxite: $resourceQuantities['bauxite'] ?? 0.0,
+            lead: $resourceQuantities['lead'] ?? 0.0,
+            gasoline: $resourceQuantities['gasoline'] ?? 0.0,
+            munitions: $resourceQuantities['munitions'] ?? 0.0,
+            steel: $resourceQuantities['steel'] ?? 0.0,
+            aluminum: $resourceQuantities['aluminum'] ?? 0.0,
+            food: $resourceQuantities['food'] ?? 0.0,
+            meta: [
+                'plan' => $lines,
+            ]
+        );
+
+        event(new AllianceExpenseOccurred($financeData->toArray()));
     }
 }
