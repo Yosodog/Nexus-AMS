@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceExpenseOccurred;
 use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
 use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Nation;
@@ -100,6 +103,8 @@ class GrantService
         $nation = $application->nation;
 
         $nation->notify(new GrantNotification($application->nation_id, $application->fresh(), 'approved'));
+
+        self::dispatchGrantExpenseEvent($application->fresh(), $grant, $account);
     }
 
     public static function denyGrant(GrantApplication $application): void
@@ -110,5 +115,39 @@ class GrantService
         ]);
 
         $application->nation->notify(new GrantNotification($application->nation_id, $application, 'denied'));
+    }
+
+    private static function dispatchGrantExpenseEvent(
+        GrantApplication $application,
+        Grants $grant,
+        Account $account
+    ): void {
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'grant',
+            description: "Grant '{$grant->name}' approved for Nation #{$application->nation_id}",
+            date: now(),
+            nationId: $application->nation_id,
+            accountId: $account->id,
+            source: $application,
+            money: (float) ($grant->money ?? 0.0),
+            coal: (float) ($grant->coal ?? 0.0),
+            oil: (float) ($grant->oil ?? 0.0),
+            uranium: (float) ($grant->uranium ?? 0.0),
+            iron: (float) ($grant->iron ?? 0.0),
+            bauxite: (float) ($grant->bauxite ?? 0.0),
+            lead: (float) ($grant->lead ?? 0.0),
+            gasoline: (float) ($grant->gasoline ?? 0.0),
+            munitions: (float) ($grant->munitions ?? 0.0),
+            steel: (float) ($grant->steel ?? 0.0),
+            aluminum: (float) ($grant->aluminum ?? 0.0),
+            food: (float) ($grant->food ?? 0.0),
+            meta: [
+                'grant_id' => $grant->id,
+                'application_id' => $application->id,
+            ]
+        );
+
+        event(new AllianceExpenseOccurred($financeData->toArray()));
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\AllianceFinanceController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\CustomizationController;
@@ -269,6 +270,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
 
         // Taxes
         Route::get('/taxes', [AdminTaxesController::class, 'index'])->name('admin.taxes');
+
+        // Finance
+        Route::get('/finance', [AllianceFinanceController::class, 'index'])->name('admin.finance.index');
+        Route::get('/finance/export', [AllianceFinanceController::class, 'exportCsv'])->name('admin.finance.export');
 
         // Members
         Route::get('/members', [AdminMembersController::class, 'index'])->name('admin.members');

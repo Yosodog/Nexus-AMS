@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceExpenseOccurred;
+use App\Models\AllianceFinanceEntry;
 use App\Models\Nation;
 use App\Models\WarAidRequest;
 use App\Notifications\WarAidNotification;
@@ -36,7 +39,9 @@ class WarAidService
 
     public function approveAidRequest(WarAidRequest $request, array $adjusted): void
     {
-        DB::transaction(function () use ($request, $adjusted) {
+        $resources = $this->extractResources($adjusted);
+
+        $updatedRequest = DB::transaction(function () use ($request, $adjusted, $resources) {
             $request->update([
                 ...$adjusted,
                 'status' => 'approved',
@@ -46,7 +51,7 @@ class WarAidService
             AccountService::adjustAccountBalance(
                 $request->account,
                 [
-                    ...$this->extractResources($adjusted),
+                    ...$resources,
                     'note' => 'Approved war aid request ID #'.$request->id,
                 ],
                 adminId: auth()->id(),
@@ -60,7 +65,13 @@ class WarAidService
                     status: 'approved'
                 )
             );
+
+            return $request->fresh();
         });
+
+        if ($updatedRequest) {
+            $this->dispatchWarAidExpenseEvent($updatedRequest, $resources);
+        }
     }
 
     private function extractResources(array $data): array
@@ -105,5 +116,35 @@ class WarAidService
         } catch (Throwable $e) {
             return optional($nation->signIns()->latest()->first())->resources ?? [];
         }
+    }
+
+    private function dispatchWarAidExpenseEvent(WarAidRequest $request, array $resources): void
+    {
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'war_aid',
+            description: "War aid approved for Nation #{$request->nation_id}",
+            date: now(),
+            nationId: $request->nation_id,
+            accountId: $request->account_id,
+            source: $request,
+            money: (float) ($resources['money'] ?? 0.0),
+            coal: (float) ($resources['coal'] ?? 0.0),
+            oil: (float) ($resources['oil'] ?? 0.0),
+            uranium: (float) ($resources['uranium'] ?? 0.0),
+            iron: (float) ($resources['iron'] ?? 0.0),
+            bauxite: (float) ($resources['bauxite'] ?? 0.0),
+            lead: (float) ($resources['lead'] ?? 0.0),
+            gasoline: (float) ($resources['gasoline'] ?? 0.0),
+            munitions: (float) ($resources['munitions'] ?? 0.0),
+            steel: (float) ($resources['steel'] ?? 0.0),
+            aluminum: (float) ($resources['aluminum'] ?? 0.0),
+            food: (float) ($resources['food'] ?? 0.0),
+            meta: [
+                'war_aid_request_id' => $request->id,
+            ]
+        );
+
+        event(new AllianceExpenseOccurred($financeData->toArray()));
     }
 }

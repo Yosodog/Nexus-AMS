@@ -16,6 +16,7 @@ return [
     'view-loans',
     'manage-loans',
     'view-taxes',
+    'view-financial-reports',
     'view-members',
     'view-wars',
     'manage-war-room',

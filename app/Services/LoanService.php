@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceIncomeOccurred;
 use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\Nation;
@@ -169,7 +172,7 @@ class LoanService
         $interestPaid = round($amount * $interestRate, 2);
         $principalPaid = $amount - $interestPaid;
 
-        DB::transaction(function () use ($loan, $account, $amount, $principalPaid, $interestPaid) {
+        $loanPayment = DB::transaction(function () use ($loan, $account, $amount, $principalPaid, $interestPaid) {
             // Deduct the payment from the account
             $adjustment = [
                 'money' => -$amount,
@@ -178,7 +181,7 @@ class LoanService
             AccountService::adjustAccountBalance($account, $adjustment, null, null);
 
             // Log the loan payment
-            LoanPayment::create([
+            $payment = LoanPayment::create([
                 'loan_id' => $loan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
@@ -199,7 +202,13 @@ class LoanService
             if ($loan->remaining_balance <= 0) {
                 $this->markLoanAsPaid($loan);
             }
+
+            return $payment;
         });
+
+        if ($loanPayment) {
+            $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, $interestPaid);
+        }
     }
 
     public function markLoanAsPaid(Loan $loan): void
@@ -234,7 +243,7 @@ class LoanService
             );
         }
 
-        DB::transaction(function () use ($loan, $account, $amount) {
+        $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
             // Deduct the payment from the account
             $adjustment = [
                 'money' => -$amount,
@@ -248,7 +257,7 @@ class LoanService
             $principalPaid = $amount - $interestPaid;
 
             // Log the loan payment in loan_payments table
-            LoanPayment::create([
+            $payment = LoanPayment::create([
                 'loan_id' => $loan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
@@ -269,7 +278,14 @@ class LoanService
             if ($loan->remaining_balance <= 0) {
                 $this->markLoanAsPaid($loan);
             }
+
+            return [$payment, $interestPaid];
         });
+
+        if (is_array($loanPayment)) {
+            [$paymentModel, $interestPaid] = $loanPayment;
+            $this->dispatchLoanInterestEvent($loan, $account, $paymentModel, (float) $interestPaid);
+        }
     }
 
     public function processLoanPayment(Loan $loan): void
@@ -311,5 +327,33 @@ class LoanService
         // If still not enough funds, mark as missed payment
         $loan->update(['status' => 'missed']);
         $nation->notify(new LoanNotification($loan->nation_id, $loan, 'missed_payment'));
+    }
+
+    private function dispatchLoanInterestEvent(
+        Loan $loan,
+        Account $account,
+        LoanPayment $payment,
+        float $interestPaid
+    ): void {
+        if ($interestPaid <= 0) {
+            return;
+        }
+
+        $financeData = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_INCOME,
+            category: 'loan_interest',
+            description: "Loan interest payment recorded for Loan #{$loan->id}",
+            date: now(),
+            nationId: $loan->nation_id,
+            accountId: $account->id,
+            source: $payment,
+            money: $interestPaid,
+            meta: [
+                'loan_id' => $loan->id,
+                'loan_payment_id' => $payment->id,
+            ]
+        );
+
+        event(new AllianceIncomeOccurred($financeData->toArray()));
     }
 }

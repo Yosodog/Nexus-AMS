@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\AllianceExpenseOccurred;
+use App\Events\AllianceIncomeOccurred;
 use App\Events\WarDeclared;
 use App\Listeners\CreateCounterOnWarDeclared;
+use App\Listeners\RecordAllianceExpense;
+use App\Listeners\RecordAllianceIncome;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -20,5 +24,19 @@ class EventServiceProvider extends ServiceProvider
         WarDeclared::class => [
             CreateCounterOnWarDeclared::class,
         ],
+        AllianceIncomeOccurred::class => [
+            RecordAllianceIncome::class,
+        ],
+        AllianceExpenseOccurred::class => [
+            RecordAllianceExpense::class,
+        ],
     ];
+
+    /**
+     * Determine if events and listeners should be automatically discovered.
+     */
+    public function shouldDiscoverEvents(): bool
+    {
+        return false;
+    }
 }
