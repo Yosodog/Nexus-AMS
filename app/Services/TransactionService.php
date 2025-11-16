@@ -36,6 +36,10 @@ class TransactionService
 
         $transaction->save();
 
+        if ($transaction->is_pending && $transaction->isNationWithdrawal()) {
+            app(PendingRequestsService::class)->flushCache();
+        }
+
         return $transaction;
     }
 
@@ -72,5 +76,17 @@ class TransactionService
         }
 
         return false;
+    }
+
+    /**
+     * Count pending withdrawal transactions awaiting fulfillment or review.
+     */
+    public static function countPendingWithdrawals(): int
+    {
+        return Transaction::query()
+            ->where('is_pending', true)
+            ->where('transaction_type', 'withdrawal')
+            ->whereNull('to_account_id')
+            ->count();
     }
 }

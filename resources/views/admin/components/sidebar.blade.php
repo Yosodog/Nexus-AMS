@@ -1,4 +1,8 @@
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+    @php
+        $pendingCounts = $pendingRequests['counts'] ?? [];
+        $pendingTotal = $pendingRequests['total'] ?? 0;
+    @endphp
     <div class="sidebar-brand">
         <a href="{{ route('admin.dashboard') }}" class="brand-link">
             <span class="brand-text fw-light">NexusAMS - Admin</span>
@@ -68,7 +72,8 @@
                     <x-nav.link href="{{ route('admin.accounts.dashboard') }}"
                                 icon="bi bi-bank"
                                 permission="view-accounts"
-                                :active="request()->routeIs('admin.accounts.*')">
+                                :active="request()->routeIs('admin.accounts.*')"
+                                :badge="($pendingCounts['withdrawals'] ?? 0) > 0 ? $pendingCounts['withdrawals'] : null">
                         Accounts
                     </x-nav.link>
                 </li>
@@ -86,7 +91,8 @@
                     <x-nav.link href="{{ route('admin.grants.city') }}"
                                 icon="bi bi-houses-fill"
                                 permission="view-city-grants"
-                                :active="request()->routeIs('admin.grants.city')">
+                                :active="request()->routeIs('admin.grants.city')"
+                                :badge="($pendingCounts['city_grants'] ?? 0) > 0 ? $pendingCounts['city_grants'] : null">
                         City Grants
                     </x-nav.link>
                 </li>
@@ -95,7 +101,8 @@
                     <x-nav.link href="{{ route('admin.grants') }}"
                                 icon="bi bi-bandaid-fill"
                                 permission="view-grants"
-                                :active="request()->routeIs('admin.grants')">
+                                :active="request()->routeIs('admin.grants')"
+                                :badge="($pendingCounts['grants'] ?? 0) > 0 ? $pendingCounts['grants'] : null">
                         Grants
                     </x-nav.link>
                 </li>
@@ -104,7 +111,8 @@
                     <x-nav.link href="{{ route('admin.loans') }}"
                                 icon="bi bi-piggy-bank-fill"
                                 permission="view-loans"
-                                :active="request()->routeIs('admin.loans')">
+                                :active="request()->routeIs('admin.loans')"
+                                :badge="($pendingCounts['loans'] ?? 0) > 0 ? $pendingCounts['loans'] : null">
                         Loans
                     </x-nav.link>
                 </li>
@@ -151,7 +159,8 @@
                     <x-nav.link href="{{ route('admin.war-aid') }}"
                                 icon="bi bi-wallet-fill"
                                 permission="view-war-aid"
-                                :active="request()->routeIs('admin.war-aid')">
+                                :active="request()->routeIs('admin.war-aid')"
+                                :badge="($pendingCounts['war_aid'] ?? 0) > 0 ? $pendingCounts['war_aid'] : null">
                         War Aid
                     </x-nav.link>
                 </li>

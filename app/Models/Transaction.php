@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\OffshoreFulfillmentResult;
+use App\Services\PendingRequestsService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -57,6 +58,8 @@ class Transaction extends Model
     {
         $this->is_pending = false;
         $this->save();
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     public function recordOffshoreFulfillment(OffshoreFulfillmentResult $result): void

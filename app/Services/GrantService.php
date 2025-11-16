@@ -72,12 +72,16 @@ class GrantService
 
     public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication
     {
-        return GrantApplication::create([
+        $application = GrantApplication::create([
             'grant_id' => $grant->id,
             'nation_id' => $nationId,
             'account_id' => $accountId,
             'status' => 'pending',
         ]);
+
+        app(PendingRequestsService::class)->flushCache();
+
+        return $application;
     }
 
     public static function approveGrant(GrantApplication $application): void
@@ -105,6 +109,8 @@ class GrantService
         $nation->notify(new GrantNotification($application->nation_id, $application->fresh(), 'approved'));
 
         self::dispatchGrantExpenseEvent($application->fresh(), $grant, $account);
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     public static function denyGrant(GrantApplication $application): void
@@ -115,6 +121,16 @@ class GrantService
         ]);
 
         $application->nation->notify(new GrantNotification($application->nation_id, $application, 'denied'));
+
+        app(PendingRequestsService::class)->flushCache();
+    }
+
+    /**
+     * Count grant applications still pending approval.
+     */
+    public static function countPending(): int
+    {
+        return GrantApplication::where('status', 'pending')->count();
     }
 
     private static function dispatchGrantExpenseEvent(
