@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Broadcasting\PWMessageChannel;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
+use App\Logs\CronLog;
+use App\Logs\SubLog;
 use App\Models\CityGrantRequest;
 use App\Models\Loan;
 use App\Models\Nation;
@@ -13,6 +15,7 @@ use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
+use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use Illuminate\Support\Facades\Cache;
@@ -22,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController as FortifyPasswordResetLinkController;
+use Opcodes\LogViewer\Facades\LogViewer;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -74,5 +78,26 @@ class AppServiceProvider extends ServiceProvider
             $view->with('pwApiDown', $pwHealthData['down']);
             $view->with('pwApiLastChecked', $pwHealthData['checkedAt']);
         });
+
+        View::composer(['layouts.main', 'layouts.admin', 'components.header', 'admin.components.sidebar'], function ($view) {
+            $user = auth()->user();
+            $pendingRequests = [
+                'counts' => [],
+                'total' => 0,
+            ];
+
+            if ($user) {
+                $pendingRequests = app(PendingRequestsService::class)->getCountsForUser($user);
+            }
+
+            $view->with('pendingRequests', $pendingRequests);
+        });
+
+        LogViewer::auth(function ($request) {
+            return Gate::allows('view-diagnostic-info');
+        });
+
+        LogViewer::extend('cron', CronLog::class);
+        LogViewer::extend('sublog', SubLog::class);
     }
 }

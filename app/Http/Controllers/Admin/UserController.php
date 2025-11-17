@@ -7,8 +7,10 @@ use App\Models\Role;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AllianceMembershipService;
+use App\Services\DiscordAccountService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -144,9 +146,11 @@ class UserController extends Controller
         }
 
         $latestSignIn = optional($user->nation)->latestSignIn;
+        $discordAccount = DiscordAccountService::getActiveAccount($user);
 
         return view('admin.users.edit', compact(
             'user',
+            'discordAccount',
             'allRoles',
             'accounts',
             'recentTransactions',
@@ -198,6 +202,25 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with([
             'alert-message' => 'User updated successfully.',
             'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function unlinkDiscord(User $user): RedirectResponse
+    {
+        $this->authorize('edit-users');
+
+        $discordAccount = DiscordAccountService::unlinkUser($user);
+
+        $message = $discordAccount
+            ? 'Discord account unlinked for this user.'
+            : 'No Discord account was linked for this user.';
+
+        return redirect()->route('admin.users.edit', $user)->with([
+            'alert-message' => $message,
+            'alert-type' => $discordAccount ? 'success' : 'info',
         ]);
     }
 }

@@ -31,12 +31,16 @@ class WarAidService
         // Validate alliance membership
         (new NationEligibilityValidator($nation))->validateAllianceMembership(); // PHP 8.4 anyone???
 
-        return WarAidRequest::create(
+        $request = WarAidRequest::create(
             $this->normalizeAidRequestData([
                 ...$data,
                 'nation_id' => $nation->id,
             ])
         );
+
+        app(PendingRequestsService::class)->flushCache();
+
+        return $request;
     }
 
     public function approveAidRequest(WarAidRequest $request, array $adjusted): void
@@ -74,6 +78,8 @@ class WarAidService
         if ($updatedRequest) {
             $this->dispatchWarAidExpenseEvent($updatedRequest, $resources);
         }
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     private function extractResources(array $data): array
@@ -109,6 +115,8 @@ class WarAidService
                 status: 'denied'
             )
         );
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     public function getNationAvailableResources(Nation $nation): array
@@ -160,5 +168,13 @@ class WarAidService
         );
 
         event(new AllianceExpenseOccurred($financeData->toArray()));
+    }
+
+    /**
+     * Count war aid requests pending review.
+     */
+    public function countPending(): int
+    {
+        return WarAidRequest::where('status', 'pending')->count();
     }
 }

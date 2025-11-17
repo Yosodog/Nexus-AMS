@@ -32,6 +32,7 @@ class SettingsController extends Controller
             'nationBatch' => $nationBatch,
             'allianceBatch' => $allianceBatch,
             'warBatch' => $warBatch,
+            'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
         ]);
     }
 
@@ -90,6 +91,24 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $message,
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateDiscordRequirement(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $validated = $request->validate([
+            'require_discord_verification' => ['required', 'boolean'],
+        ]);
+
+        $required = (bool) $validated['require_discord_verification'];
+
+        SettingService::setDiscordVerificationRequired($required);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $required ? 'Discord verification is now required.' : 'Discord verification is now optional.',
             'alert-type' => 'success',
         ]);
     }

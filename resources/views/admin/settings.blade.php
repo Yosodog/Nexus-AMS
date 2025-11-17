@@ -67,11 +67,34 @@
     </div>
 
     {{-- Other Settings Sections Go Below --}}
-    <div class="row mt-5">
+    <div class="row mt-5 g-3">
         <div class="col-md-12">
             <h4 class="mb-3">Other Settings</h4>
-            <div class="alert alert-info">
-                More configuration options will appear here soon.
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Discord Verification</span>
+                    <span class="badge {{ $discordVerificationRequired ? 'text-bg-success' : 'text-bg-secondary' }}">
+                        {{ $discordVerificationRequired ? 'Required' : 'Optional' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Control whether members must complete Discord verification after in-game verification. When enabled,
+                        users without an active Discord link are redirected to the verification page.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.discord') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="require_discord_verification" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="requireDiscordVerification"
+                                   name="require_discord_verification" value="1" @checked($discordVerificationRequired)>
+                            <label class="form-check-label" for="requireDiscordVerification">Require Discord Verification</label>
+                        </div>
+                        <button class="btn btn-primary">Save Discord Setting</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

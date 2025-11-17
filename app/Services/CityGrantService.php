@@ -24,13 +24,17 @@ class CityGrantService
 
     public static function createRequest(CityGrant $grant, int $nationId, int $accountId): CityGrantRequest
     {
-        return CityGrantRequest::create([
+        $request = CityGrantRequest::create([
             'city_number' => $grant->city_number,
             'grant_amount' => $grant->grant_amount,
             'nation_id' => $nationId,
             'account_id' => $accountId,
             'status' => 'pending',
         ]);
+
+        app(PendingRequestsService::class)->flushCache();
+
+        return $request;
     }
 
     /**
@@ -97,6 +101,8 @@ class CityGrantService
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'approved'));
 
         self::dispatchCityGrantExpenseEvent($request, $account);
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     /**
@@ -110,6 +116,16 @@ class CityGrantService
         ]);
 
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
+
+        app(PendingRequestsService::class)->flushCache();
+    }
+
+    /**
+     * Count city grant requests awaiting review.
+     */
+    public static function countPending(): int
+    {
+        return CityGrantRequest::where('status', 'pending')->count();
     }
 
     private static function dispatchCityGrantExpenseEvent(CityGrantRequest $request, Account $account): void

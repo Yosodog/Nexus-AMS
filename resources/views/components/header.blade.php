@@ -4,6 +4,9 @@
     use Illuminate\Support\Facades\Auth;
 
     $user = Auth::user();
+    $pendingRequests = $pendingRequests ?? ['counts' => [], 'total' => 0];
+    $pendingTotal = $pendingRequests['total'] ?? 0;
+    $showPendingIndicator = $user && $pendingTotal > 0;
     $membershipService = app(AllianceMembershipService::class);
     $allianceId = data_get($user, 'nation.alliance_id');
     $showMemberNavigation = $user !== null && $membershipService->contains($allianceId);
@@ -135,7 +138,7 @@
             @if ($user)
                 <div class="dropdown dropdown-end">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-                        <div class="w-10 rounded-full">
+                        <div class="w-10 rounded-full {{ $showPendingIndicator ? 'ring ring-primary ring-offset-base-100 ring-offset-2' : '' }}">
                             <img
                                     alt="{{ data_get($user, 'nation.leader_name', 'User') }} Flag"
                                     src="{{ data_get($user, 'nation.flag') }}"/>
@@ -147,7 +150,14 @@
                         <li><a href="{{ route("user.dashboard") }}">Dashboard</a></li>
                         <li><a href="{{ route("user.settings") }}">Settings</a></li>
                         @if ($user->is_admin)
-                            <li><a href="{{ route("admin.dashboard") }}">Admin</a></li>
+                            <li>
+                                <a href="{{ route("admin.dashboard") }}" class="flex items-center gap-2">
+                                    <span>Admin</span>
+                                    @if ($showPendingIndicator)
+                                        <span class="badge badge-primary badge-sm">{{ $pendingTotal }}</span>
+                                    @endif
+                                </a>
+                            </li>
                         @endif
                         <li>
                             <a onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>

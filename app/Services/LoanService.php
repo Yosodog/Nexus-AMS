@@ -22,7 +22,7 @@ class LoanService
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
         // Create the loan record
-        return Loan::create([
+        $loan = Loan::create([
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'amount' => $amount,
@@ -30,6 +30,10 @@ class LoanService
             'status' => 'pending',
             'remaining_balance' => $amount,
         ]);
+
+        app(PendingRequestsService::class)->flushCache();
+
+        return $loan;
     }
 
     /**
@@ -55,7 +59,7 @@ class LoanService
      */
     public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
     {
-        return DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
+        $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
             // Update the loan details
             $loan->update([
                 'interest_rate' => $interestRate,
@@ -84,6 +88,10 @@ class LoanService
 
             return $loan;
         });
+
+        app(PendingRequestsService::class)->flushCache();
+
+        return $updatedLoan;
     }
 
     public function denyLoan(Loan $loan, Nation $nation): void
@@ -91,6 +99,8 @@ class LoanService
         $loan->update(['status' => 'denied']);
 
         $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));
+
+        app(PendingRequestsService::class)->flushCache();
     }
 
     public function processWeeklyPayments(): void
@@ -355,5 +365,13 @@ class LoanService
         );
 
         event(new AllianceIncomeOccurred($financeData->toArray()));
+    }
+
+    /**
+     * Count pending loan applications.
+     */
+    public function countPending(): int
+    {
+        return Loan::where('status', 'pending')->count();
     }
 }
