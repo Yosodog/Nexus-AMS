@@ -55,14 +55,15 @@ class SubLog extends Log
             }
 
             $this->context = [
-                'type'     => $type,
+                'type' => $type,
                 'resource' => $resource,
-                'action'   => $action,
-                'channel'  => $m['channel'],
-                'attempt'  => (int) $m['attempt'],
+                'action' => $action,
+                'channel' => $m['channel'],
+                'attempt' => (int) $m['attempt'],
             ];
 
             $this->level = $type;
+
             return;
         }
 
@@ -74,11 +75,12 @@ class SubLog extends Log
             $type = 'subscribed';
 
             $this->context = [
-                'type'    => $type,
+                'type' => $type,
                 'channel' => $m['channel'],
             ];
 
             $this->level = $type;
+
             return;
         }
 
@@ -90,12 +92,13 @@ class SubLog extends Log
             $type = 'update-sent';
 
             $this->context = [
-                'type'  => $type,
+                'type' => $type,
                 'model' => $m['model'],
                 'count' => (int) $m['count'],
             ];
 
             $this->level = $type;
+
             return;
         }
 

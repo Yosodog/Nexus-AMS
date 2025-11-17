@@ -16,14 +16,18 @@ class WarDeclared
      * @param  int  $warId  War identifier from PW.
      * @param  int  $attackerNationId  Aggressor nation ID.
      * @param  int|null  $attackerAllianceId  Aggressor alliance ID (nullable for no alliance).
+     * @param  string|null  $attackerAlliancePosition  Aggressor alliance position (nullable for no alliance).
      * @param  int  $defenderNationId  Defender nation ID.
      * @param  int|null  $defenderAllianceId  Defender alliance ID.
+     * @param  string|null  $defenderAlliancePosition  Defender alliance position (nullable for no alliance).
      */
     public function __construct(
         public readonly int $warId,
         public readonly int $attackerNationId,
         public readonly ?int $attackerAllianceId,
+        public readonly ?string $attackerAlliancePosition,
         public readonly int $defenderNationId,
-        public readonly ?int $defenderAllianceId
+        public readonly ?int $defenderAllianceId,
+        public readonly ?string $defenderAlliancePosition
     ) {}
 }

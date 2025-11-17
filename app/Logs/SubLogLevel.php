@@ -2,14 +2,12 @@
 
 namespace App\Logs;
 
-use Opcodes\LogViewer\LogLevels\LevelInterface;
 use Opcodes\LogViewer\LogLevels\LevelClass;
+use Opcodes\LogViewer\LogLevels\LevelInterface;
 
 class SubLogLevel implements LevelInterface
 {
-    public function __construct(public readonly string $value)
-    {
-    }
+    public function __construct(public readonly string $value) {}
 
     /**
      * Correct signature required by LevelInterface
@@ -56,17 +54,17 @@ class SubLogLevel implements LevelInterface
             'subscribed',
             'update-sent',
             'pusher-connected',
-            'create'          => LevelClass::success(),
+            'create' => LevelClass::success(),
 
             'received-channel',
-            'info'            => LevelClass::info(),
+            'info' => LevelClass::info(),
 
-            'config'          => LevelClass::warning(),
+            'config' => LevelClass::warning(),
 
             'delete',
-            'shutdown'        => LevelClass::danger(),
+            'shutdown' => LevelClass::danger(),
 
-            default           => LevelClass::none(),
+            default => LevelClass::none(),
         };
     }
 }
