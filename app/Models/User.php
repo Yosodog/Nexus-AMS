@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -28,6 +29,7 @@ class User extends Authenticatable
         'nation_id',
         'verification_code',
         'verified_at',
+        'discord_verification_token',
     ];
 
     /**
@@ -39,6 +41,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'verification_code',
+        'discord_verification_token',
     ];
 
     protected $casts = [
@@ -92,6 +95,19 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function discordAccounts(): HasMany
+    {
+        return $this->hasMany(DiscordAccount::class);
+    }
+
+    public function activeDiscordAccount(): ?DiscordAccount
+    {
+        return $this->discordAccounts()
+            ->whereNull('unlinked_at')
+            ->latest('linked_at')
+            ->first();
     }
 
     public function hasPermission(string $permission): bool

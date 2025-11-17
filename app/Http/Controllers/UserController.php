@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
+use App\Services\SettingService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
@@ -19,7 +21,15 @@ class UserController extends Controller
      */
     public function settings()
     {
-        return view('user.settings', ['user' => Auth::user()]);
+        $user = Auth::user();
+        $discordAccount = DiscordAccountService::getActiveAccount($user);
+
+        return view('user.settings', [
+            'user' => $user,
+            'discordAccount' => $discordAccount,
+            'discordVerificationToken' => $discordAccount ? null : DiscordAccountService::getOrCreateVerificationToken($user),
+            'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
+        ]);
     }
 
     /**

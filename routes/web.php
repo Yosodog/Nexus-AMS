@@ -29,6 +29,7 @@ use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
+use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\RaidFinderController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\BlockWhenPWDown;
+use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
 
@@ -54,9 +56,17 @@ Route::middleware(['auth'])->group(function () {
     );
     Route::post('/resend-verification', [VerificationController::class, 'resendVerification'])
         ->name('verification.resend');
+
+    Route::get('/verify-discord', [DiscordVerificationController::class, 'show'])->name('discord.verify.show');
+    Route::post('/verify-discord/regenerate', [DiscordVerificationController::class, 'regenerateToken'])->name(
+        'discord.token.regenerate'
+    );
+    Route::post('/verify-discord/unlink', [DiscordVerificationController::class, 'unlink'])->name(
+        'discord.unlink'
+    );
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class])->group(callback: function () {
+Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class])->group(callback: function () {
     // User settings
     Route::get('/user/settings', [UserController::class, 'settings'])->name('user.settings');
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
@@ -128,7 +138,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class])->group(callback: functi
     });
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
+Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
     ->prefix('admin')
     ->group(function () {
         // Base routes
@@ -138,6 +148,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
         Route::put('/user/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
+        Route::post('/user/{user}/discord/unlink', [AdminUserController::class, 'unlinkDiscord'])->name(
+            'admin.users.discord.unlink'
+        );
 
         // Roles
         Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
@@ -360,6 +373,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, AdminMiddleware::class])
         )->middleware(BlockWhenPWDown::class);
         Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
             'admin.settings.sync.cancel'
+        );
+        Route::post('/settings/discord', [SettingsController::class, 'updateDiscordRequirement'])->name(
+            'admin.settings.discord'
         );
 
         Route::prefix('mmr')->group(function () {

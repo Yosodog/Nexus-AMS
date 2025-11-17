@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\API\AccountController;
+use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
+use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,4 +41,8 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
     Route::post('account/create', [SubController::class, 'createAccount']);
     Route::post('account/update', [SubController::class, 'updateAccount']);
     Route::post('account/delete', [SubController::class, 'deleteAccount']);
+});
+
+Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(function () {
+    Route::post('/verify', [DiscordVerificationController::class, 'verify']);
 });

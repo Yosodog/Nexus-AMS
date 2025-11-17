@@ -194,6 +194,41 @@
         </form>
 
         <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Discord</h5>
+                            <small class="text-muted">Bot-verified link status.</small>
+                        </div>
+                        <span class="badge {{ $discordAccount ? 'text-bg-success' : 'text-bg-secondary' }}">
+                            {{ $discordAccount ? 'Linked' : 'Not linked' }}
+                        </span>
+                    </div>
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            @if($discordAccount)
+                                <div class="fw-semibold">{{ $discordAccount->discord_username }}</div>
+                                <div class="text-muted small">ID: {{ $discordAccount->discord_id }}</div>
+                                <div class="text-muted small">
+                                    Linked {{ optional($discordAccount->linked_at)->diffForHumans() ?? 'recently' }}
+                                </div>
+                            @else
+                                <p class="text-muted mb-0">No Discord account is currently linked.</p>
+                            @endif
+                        </div>
+                        <form method="POST" action="{{ route('admin.users.discord.unlink', $user) }}">
+                            @csrf
+                            <button class="btn btn-outline-danger" {{ $discordAccount ? '' : 'disabled' }}>
+                                Admin Unlink
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
