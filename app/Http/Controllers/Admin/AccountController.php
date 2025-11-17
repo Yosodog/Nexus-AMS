@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
+use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
+use App\Models\MMRAssistantPurchase;
 use App\Models\Transaction;
 use App\Services\AccountService;
 use App\Services\AllianceMembershipService;
@@ -47,10 +49,24 @@ class AccountController extends Controller
         $enrollments = DirectDepositEnrollment::with('account.user')->get();
         $ddTaxId = SettingService::getDirectDepositId();
         $fallbackTaxId = SettingService::getDirectDepositFallbackId();
-        $recentTransactions = Transaction::with(['fromAccount', 'toAccount', 'nation'])
-            ->latest('created_at')
+        $recentTransactionsSample = Transaction::latest('created_at')
             ->take(50)
             ->get();
+        $recentTransactions = Transaction::with(['fromAccount', 'toAccount', 'nation'])
+            ->latest('created_at')
+            ->paginate(15, ['*'], 'tx_page')
+            ->withQueryString()
+            ->fragment('recent-transactions');
+        $directDepositLogs = DirectDepositLog::with(['nation', 'account'])
+            ->latest('created_at')
+            ->paginate(10, ['*'], 'dd_page')
+            ->withQueryString()
+            ->fragment('direct-deposit-logs');
+        $mmrPurchases = MMRAssistantPurchase::with('account.nation')
+            ->latest('created_at')
+            ->paginate(10, ['*'], 'mmr_page')
+            ->withQueryString()
+            ->fragment('mmr-assistant');
         $pendingWithdrawals = Transaction::query()
             ->with(['fromAccount.nation', 'fromAccount.user', 'nation'])
             ->where('transaction_type', 'withdrawal')
@@ -68,7 +84,10 @@ class AccountController extends Controller
             'enrollments' => $enrollments,
             'ddTaxId' => $ddTaxId,
             'fallbackTaxId' => $fallbackTaxId,
+            'recentTransactionsSample' => $recentTransactionsSample,
             'recentTransactions' => $recentTransactions,
+            'directDepositLogs' => $directDepositLogs,
+            'mmrPurchases' => $mmrPurchases,
             'pendingWithdrawals' => $pendingWithdrawals,
             'withdrawalLimits' => $withdrawalLimits,
             'maxDailyWithdrawals' => $maxDailyWithdrawals,
