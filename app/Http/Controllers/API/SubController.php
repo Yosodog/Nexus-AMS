@@ -269,8 +269,10 @@ class SubController extends Controller
                     warId: $create['id'],
                     attackerNationId: $create['att_id'],
                     attackerAllianceId: $create['att_alliance_id'] ?? null,
+                    attackerAlliancePosition: $create['att_alliance_position'] ?? null,
                     defenderNationId: $create['def_id'],
                     defenderAllianceId: $create['def_alliance_id'] ?? null,
+                    defenderAlliancePosition: $create['def_alliance_position'] ?? null,
                 ));
             }
         }

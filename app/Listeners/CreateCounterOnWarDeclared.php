@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Enums\AlliancePositionEnum;
 use App\Events\WarDeclared;
 use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Models\WarCounter;
@@ -25,7 +26,8 @@ class CreateCounterOnWarDeclared
 
     public function handle(WarDeclared $event): void
     {
-        if (! $this->membershipService->contains($event->defenderAllianceId)) {
+        if (! $this->membershipService->contains($event->defenderAllianceId)
+            || $event->defenderAlliancePosition === AlliancePositionEnum::APPLICANT->value) {
             return;
         }
 
