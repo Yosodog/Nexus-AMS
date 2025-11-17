@@ -31,10 +31,12 @@ class WarAidService
         // Validate alliance membership
         (new NationEligibilityValidator($nation))->validateAllianceMembership(); // PHP 8.4 anyone???
 
-        return WarAidRequest::create([
-            ...$data,
-            'nation_id' => $nation->id,
-        ]);
+        return WarAidRequest::create(
+            $this->normalizeAidRequestData([
+                ...$data,
+                'nation_id' => $nation->id,
+            ])
+        );
     }
 
     public function approveAidRequest(WarAidRequest $request, array $adjusted): void
@@ -79,6 +81,18 @@ class WarAidService
         return collect(PWHelperService::resources())
             ->mapWithKeys(fn ($res) => [$res => $data[$res] ?? 0])
             ->all();
+    }
+
+    private function normalizeAidRequestData(array $data): array
+    {
+        $resources = collect(PWHelperService::resources())
+            ->mapWithKeys(fn ($resource) => [$resource => (int) ($data[$resource] ?? 0)])
+            ->all();
+
+        return [
+            ...$data,
+            ...$resources,
+        ];
     }
 
     public function denyAidRequest(WarAidRequest $request): void
