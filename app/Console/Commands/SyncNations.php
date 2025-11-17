@@ -35,6 +35,7 @@ class SyncNations extends Command
     public function handle()
     {
         $this->info('Queuing nation sync jobs...');
+        $this->cancelRollingBatchIfActive();
 
         $perPage = 100;
         $page = 1;
@@ -62,11 +63,28 @@ class SyncNations extends Command
             ->name('Nation Sync - '.Carbon::now()->toDateTimeString())
             ->then(fn (Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
             ->allowFailures()
+            ->withOption('mode', 'manual')
             ->dispatch();
 
-        SettingService::setLastNationSyncBatchId($batch->id);
+        SettingService::setLastManualNationSyncBatchId($batch->id);
 
         $this->info("Queued {$page} nation sync jobs in a batch.");
         $this->info('All nation sync jobs have been queued.');
+    }
+
+    private function cancelRollingBatchIfActive(): void
+    {
+        $rollingBatchId = SettingService::getLastRollingNationSyncBatchId();
+
+        if (! $rollingBatchId) {
+            return;
+        }
+
+        $rollingBatch = Bus::findBatch($rollingBatchId);
+
+        if ($rollingBatch && ! $rollingBatch->finished() && ! $rollingBatch->cancelled()) {
+            $rollingBatch->cancel();
+            $this->warn("Cancelled rolling nation sync batch {$rollingBatch->id} before running manual sync.");
+        }
     }
 }

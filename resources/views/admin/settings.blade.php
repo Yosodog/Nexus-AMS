@@ -32,6 +32,9 @@
                     Full sync jobs are automatically scheduled and run periodically, so manual execution is rarely needed. Manual sync should only be used to correct known discrepancies.
                 </p>
                 <p class="mb-2">
+                    The <strong>Manual Nation Sync</strong> runs immediately and cancels any in-progress rolling nation sync. The <strong>Rolling Nation Sync</strong> is queued by the scheduler and staggers the workload across ~23 hours; use the status card below to see when the last rolling job ran and when the next one is scheduled. Nations below 500 score are only included on the sync on Mondays.
+                </p>
+                <p class="mb-2">
                     Each sync fetches and updates all data for the selected type. Depending on system resources and queue activity, this can take anywhere from a few minutes to nearly an hour.
                 </p>
                 <p class="mb-0">
@@ -41,15 +44,24 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
             @include('components.admin.sync-card', [
-                'title' => 'Nation Sync',
+                'title' => 'Nation Sync (Manual)',
                 'batch' => $nationBatch,
                 'route' => route('admin.settings.sync.run'),
             ])
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-6">
+            @include('components.admin.rolling-sync-card', [
+                'batch' => $rollingNationBatch,
+                'rollingSchedule' => $rollingSchedule,
+            ])
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
             @include('components.admin.sync-card', [
                 'title' => 'Alliance Sync',
                 'batch' => $allianceBatch,
@@ -57,7 +69,7 @@
             ])
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-6">
             @include('components.admin.sync-card', [
                 'title' => 'War Sync',
                 'batch' => $warBatch,
@@ -67,9 +79,9 @@
     </div>
 
     {{-- Other Settings Sections Go Below --}}
-    <div class="row mt-5 g-3">
+    <div class="row mt-2 g-3">
         <div class="col-md-12">
-            <h4 class="mb-3">Other Settings</h4>
+            <h4 class="mb-2">Other Settings</h4>
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">

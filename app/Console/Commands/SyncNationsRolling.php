@@ -65,9 +65,12 @@ class SyncNationsRolling extends Command
             ->then(fn (Batch $batch) => FinalizeNationSyncJob::dispatch($batch->id))
             ->allowFailures()
             ->onQueue('sync')
+            ->withOption('mode', 'rolling')
+            ->withOption('scope', $scope)
+            ->withOption('step_seconds', $stepSeconds)
             ->dispatch();
 
-        SettingService::setLastNationSyncBatchId($batch->id);
+        SettingService::setLastRollingNationSyncBatchId($batch->id);
 
         $this->info("Queued {$lastPage} rolling nation sync jobs using {$scope} scope.");
 

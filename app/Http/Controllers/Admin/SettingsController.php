@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Bus\Batch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -20,16 +21,20 @@ class SettingsController extends Controller
     {
         $this->authorize('view-diagnostic-info');
 
-        $nationBatchId = SettingService::getLastNationSyncBatchId();
+        $manualNationBatchId = SettingService::getLastManualNationSyncBatchId();
+        $rollingNationBatchId = SettingService::getLastRollingNationSyncBatchId();
         $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
         $warBatchId = SettingService::getLastWarSyncBatchId();
 
-        $nationBatch = $nationBatchId ? Bus::findBatch($nationBatchId) : null;
+        $nationBatch = $manualNationBatchId ? Bus::findBatch($manualNationBatchId) : null;
+        $rollingNationBatch = $rollingNationBatchId ? Bus::findBatch($rollingNationBatchId) : null;
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
         $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
 
         return view('admin.settings', [
             'nationBatch' => $nationBatch,
+            'rollingNationBatch' => $rollingNationBatch,
+            'rollingSchedule' => $this->buildRollingScheduleContext($rollingNationBatch),
             'allianceBatch' => $allianceBatch,
             'warBatch' => $warBatch,
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
@@ -78,7 +83,7 @@ class SettingsController extends Controller
 
         $request->validate([
             'batch_id' => 'required|string',
-            'type' => 'required|in:nation,alliance,war',
+            'type' => 'required|in:nation,rolling_nation,alliance,war',
         ]);
 
         $batch = Bus::findBatch($request->input('batch_id'));
@@ -87,7 +92,12 @@ class SettingsController extends Controller
             $batch->cancel();
         }
 
-        $message = ucfirst($request->input('type')).' sync cancelled.';
+        $typeLabel = match ($request->input('type')) {
+            'rolling_nation' => 'Rolling nation',
+            default => ucfirst($request->input('type')),
+        };
+
+        $message = "{$typeLabel} sync cancelled.";
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $message,
@@ -111,5 +121,40 @@ class SettingsController extends Controller
             'alert-message' => $required ? 'Discord verification is now required.' : 'Discord verification is now optional.',
             'alert-type' => 'success',
         ]);
+    }
+
+    private function buildRollingScheduleContext(?Batch $batch): array
+    {
+        $stepSeconds = $batch?->options['step_seconds'] ?? null;
+        $scope = $batch?->options['scope'] ?? null;
+
+        if (! $batch || ! $stepSeconds) {
+            return [
+                'scope' => $scope,
+                'lastRunAt' => null,
+                'nextRunAt' => null,
+                'stepSeconds' => $stepSeconds,
+            ];
+        }
+
+        $processed = $batch->processedJobs();
+        $start = $batch->createdAt;
+
+        $lastRunAt = $processed > 0
+            ? $start->addSeconds($stepSeconds * max($processed - 1, 0))
+            : null;
+
+        $hasRemainingJobs = $processed < $batch->totalJobs && ! $batch->finished() && ! $batch->cancelled();
+
+        $nextRunAt = $hasRemainingJobs
+            ? $start->addSeconds($stepSeconds * $processed)
+            : null;
+
+        return [
+            'scope' => $scope,
+            'lastRunAt' => $lastRunAt,
+            'nextRunAt' => $nextRunAt,
+            'stepSeconds' => $stepSeconds,
+        ];
     }
 }

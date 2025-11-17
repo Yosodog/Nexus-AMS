@@ -134,10 +134,20 @@ class SettingService
 
     public static function getLastNationSyncBatchId(): string
     {
+        return self::getLastManualNationSyncBatchId();
+    }
+
+    public static function setLastNationSyncBatchId(string $batchId): void
+    {
+        self::setLastManualNationSyncBatchId($batchId);
+    }
+
+    public static function getLastManualNationSyncBatchId(): string
+    {
         $value = self::getValue('last_nation_sync_batch_id');
 
         if (is_null($value)) {
-            self::setLastNationSyncBatchId('');
+            self::setLastManualNationSyncBatchId('');
 
             return '';
         }
@@ -145,9 +155,27 @@ class SettingService
         return $value;
     }
 
-    public static function setLastNationSyncBatchId(string $batchId): void
+    public static function setLastManualNationSyncBatchId(string $batchId): void
     {
         self::setValue('last_nation_sync_batch_id', $batchId);
+    }
+
+    public static function getLastRollingNationSyncBatchId(): string
+    {
+        $value = self::getValue('last_rolling_nation_sync_batch_id');
+
+        if (is_null($value)) {
+            self::setLastRollingNationSyncBatchId('');
+
+            return '';
+        }
+
+        return $value;
+    }
+
+    public static function setLastRollingNationSyncBatchId(string $batchId): void
+    {
+        self::setValue('last_rolling_nation_sync_batch_id', $batchId);
     }
 
     public static function getLastAllianceSyncBatchId(): string
