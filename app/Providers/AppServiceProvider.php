@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Broadcasting\PWMessageChannel;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
+use App\Logs\CronLog;
+use App\Logs\SubLog;
 use App\Models\CityGrantRequest;
 use App\Models\Loan;
 use App\Models\Nation;
@@ -94,5 +96,8 @@ class AppServiceProvider extends ServiceProvider
         LogViewer::auth(function ($request) {
             return Gate::allows('view-diagnostic-info');
         });
+
+        LogViewer::extend('cron', CronLog::class);
+        LogViewer::extend('sublog', SubLog::class);
     }
 }
