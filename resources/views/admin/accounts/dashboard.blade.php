@@ -7,7 +7,7 @@
     $topAccounts = $accounts->sortByDesc('money')->take(5);
     $activeAccounts = $accounts->filter(fn ($account) => $account->user)->count();
     $inactiveAccounts = $accounts->count() - $activeAccounts;
-    $averageTransactionsPerDay = $recentTransactions
+    $averageTransactionsPerDay = $recentTransactionsSample
         ->groupBy(fn ($transaction) => $transaction->created_at->format('Y-m-d'))
         ->map->count()
         ->avg() ?? 0;
@@ -430,12 +430,191 @@
         @include('admin.accounts.direct_deposit')
     </div>
 
-    {{-- Recent Transactions --}}
-    <div class="card mt-4 shadow-sm border-0">
+    {{-- Direct Deposit Logs --}}
+    <div id="direct-deposit-logs" class="card mt-4 shadow-sm border-0">
         <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
             <div>
-                <h5 class="mb-1">Recent Transactions (Last 50)</h5>
-                <p class="mb-0 text-muted small">Track deposits, transfers, and withdrawals as they happen.</p>
+                <h5 class="mb-1 d-flex align-items-center gap-2">
+                    <span class="badge text-bg-primary">DD</span>
+                    Direct Deposit Logs
+                </h5>
+                <p class="mb-0 text-muted small">After-tax payouts with quick links to nations and deposit accounts.</p>
+            </div>
+            <a href="#mmr-assistant" class="text-decoration-none small fw-semibold text-primary ms-md-auto">Jump to MMR Assistant <i class="bi bi-arrow-down-right ms-1"></i></a>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Nation</th>
+                        <th>Deposit Account</th>
+                        <th class="text-end">Cash Paid</th>
+                        <th>Resources Delivered</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @forelse($directDepositLogs as $log)
+                        @php
+                            $deliveredResources = collect(PWHelperService::resources(false))
+                                ->filter(fn ($res) => (float) $log->$res > 0)
+                                ->mapWithKeys(fn ($res) => [$res => $log->$res]);
+                        @endphp
+                        <tr>
+                            <td>{{ $log->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            <td>
+                                <a href="https://politicsandwar.com/nation/id={{ $log->nation_id }}" target="_blank" class="text-decoration-none">
+                                    Nation #{{ $log->nation_id }}
+                                </a>
+                            </td>
+                            <td>
+                                @if($log->account)
+                                    <a href="{{ route('admin.accounts.view', $log->account->id) }}" class="fw-semibold text-decoration-none">
+                                        {{ $log->account->name }}
+                                    </a>
+                                    @if($log->account->user)
+                                        <div class="small text-muted">{{ $log->account->user->name }}</div>
+                                    @endif
+                                @else
+                                    <span class="text-muted">Account removed</span>
+                                @endif
+                            </td>
+                            <td class="text-end">${{ number_format((float) $log->money, 2) }}</td>
+                            <td>
+                                @if($deliveredResources->isNotEmpty())
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach($deliveredResources as $resource => $amount)
+                                            <span class="badge text-bg-light text-secondary border">
+                                                {{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-muted">Money only</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No direct deposit activity recorded yet.</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
+                <div class="small text-muted">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</div>
+                <div class="ms-lg-auto">
+                    {{ $directDepositLogs->withQueryString()->links('vendor.pagination.bootstrap-5') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- MMR Assistant Logs --}}
+    <div id="mmr-assistant" class="card mt-4 shadow-sm border-0">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <div>
+                <h5 class="mb-1 d-flex align-items-center gap-2">
+                    <span class="badge text-bg-dark">MMR</span>
+                    MMR Assistant Purchases
+                </h5>
+                <p class="mb-0 text-muted small">Withheld cash reinvested into resources based on player configs.</p>
+            </div>
+            <a href="#direct-deposit-logs" class="text-decoration-none small fw-semibold text-primary ms-md-auto">Back to DD logs <i class="bi bi-arrow-up-left ms-1"></i></a>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Account</th>
+                        <th>Nation</th>
+                        <th class="text-end">Total Spent</th>
+                        <th>Resources Purchased</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @forelse($mmrPurchases as $purchase)
+                        @php
+                            $purchasedResources = collect(PWHelperService::resources(false))
+                                ->filter(fn ($res) => (float) $purchase->$res > 0)
+                                ->mapWithKeys(fn ($res) => [$res => [
+                                    'qty' => $purchase->$res,
+                                    'ppu' => $purchase->getAttribute("{$res}_ppu"),
+                                ]]);
+                        @endphp
+                        <tr>
+                            <td>{{ $purchase->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            <td>
+                                @if($purchase->account)
+                                    <a href="{{ route('admin.accounts.view', $purchase->account->id) }}" class="fw-semibold text-decoration-none">
+                                        {{ $purchase->account->name }}
+                                    </a>
+                                @else
+                                    <span class="text-muted">Account removed</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($purchase->account?->nation_id)
+                                    <a href="https://politicsandwar.com/nation/id={{ $purchase->account->nation_id }}" target="_blank" class="text-muted text-decoration-none">
+                                        Nation #{{ $purchase->account->nation_id }}
+                                    </a>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td class="text-end">${{ number_format((float) $purchase->total_spent, 2) }}</td>
+                            <td>
+                                @if($purchasedResources->isNotEmpty())
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach($purchasedResources as $resource => $data)
+                                            <span class="badge text-bg-light text-secondary border">
+                                                {{ ucfirst($resource) }}: {{ number_format((float) $data['qty'], 2) }}
+                                                @if($data['ppu'])
+                                                    <span class="text-muted"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
+                                                @endif
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-muted">No resources purchased</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No MMR Assistant purchases yet.</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
+                <div class="small text-muted">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</div>
+                <div class="ms-lg-auto">
+                    {{ $mmrPurchases->withQueryString()->links('vendor.pagination.bootstrap-5') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Recent Transactions --}}
+    <div id="recent-transactions" class="card mt-4 shadow-sm border-0">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <div>
+                <h5 class="mb-1">Recent Transactions</h5>
+                <p class="mb-0 text-muted small">Paginated, newest-first view of alliance banking activity.</p>
             </div>
         </div>
 
@@ -456,7 +635,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @foreach($recentTransactions as $transaction)
+                    @forelse($recentTransactions as $transaction)
                         <tr>
                             <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
                             <td>
@@ -465,7 +644,9 @@
                                         {{ $transaction->fromAccount->name }}
                                     </a>
                                 @elseif($transaction->nation_id && $transaction->transaction_type === 'deposit')
-                                    Nation #{{ $transaction->nation_id }}
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="text-decoration-none">
+                                        Nation #{{ $transaction->nation_id }}
+                                    </a>
                                 @else
                                     <span class="text-muted">N/A</span>
                                 @endif
@@ -476,7 +657,9 @@
                                         {{ $transaction->toAccount->name }}
                                     </a>
                                 @elseif($transaction->nation_id)
-                                    Nation #{{ $transaction->nation_id }}
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="text-decoration-none">
+                                        Nation #{{ $transaction->nation_id }}
+                                    </a>
                                 @else
                                     <span class="text-muted">N/A</span>
                                 @endif
@@ -501,9 +684,24 @@
                                 @endif
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="{{ 6 + count(PWHelperService::resources(false)) }}" class="text-center text-muted py-4">
+                                No transactions found.
+                            </td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
+                <div class="small text-muted">Showing {{ $recentTransactions->count() }} of {{ $recentTransactions->total() }} transactions</div>
+                <div class="ms-lg-auto">
+                    {{ $recentTransactions->links('vendor.pagination.bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>
