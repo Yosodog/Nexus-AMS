@@ -35,5 +35,6 @@ return [
         ],
     ],
     'nexus_api_token' => env('NEXUS_API_TOKEN'),
+    'discord_bot_key' => env('DISCORD_BOT_KEY'),
 
 ];

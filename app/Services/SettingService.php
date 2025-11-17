@@ -60,6 +60,24 @@ class SettingService
         self::setValue('war_aid_enabled', $enabled ? 1 : 0);
     }
 
+    public static function isDiscordVerificationRequired(): bool
+    {
+        $value = self::getValue('require_discord_verification');
+
+        if (is_null($value)) {
+            self::setDiscordVerificationRequired(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setDiscordVerificationRequired(bool $required): void
+    {
+        self::setValue('require_discord_verification', $required ? 1 : 0);
+    }
+
     public static function getTopRaidable(): int
     {
         $value = self::getValue('raid_top_alliance_cap');
