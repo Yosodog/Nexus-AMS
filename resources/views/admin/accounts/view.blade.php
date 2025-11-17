@@ -212,6 +212,148 @@
                 </div>
             </div>
 
+            {{-- Direct Deposit Logs --}}
+            <div id="direct-deposit-logs" class="card mt-4">
+                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div>
+                        <h5 class="mb-1 d-flex align-items-center gap-2">
+                            <span class="badge text-bg-primary">DD</span>
+                            Direct Deposit Logs
+                        </h5>
+                        <p class="mb-0 text-muted small">After-tax payouts tagged to this account.</p>
+                    </div>
+                    <a href="#mmr-assistant" class="text-decoration-none small fw-semibold ms-md-auto">Jump to MMR Assistant <i class="bi bi-arrow-down-right ms-1"></i></a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover text-nowrap align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Nation</th>
+                                <th class="text-end">Cash Paid</th>
+                                <th>Resources Delivered</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($directDepositLogs as $log)
+                                @php
+                                    $deliveredResources = collect(PWHelperService::resources(false))
+                                        ->filter(fn ($res) => (float) $log->$res > 0)
+                                        ->mapWithKeys(fn ($res) => [$res => $log->$res]);
+                                @endphp
+                                <tr>
+                                    <td>{{ $log->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                    <td>
+                                        <a href="https://politicsandwar.com/nation/id={{ $log->nation_id }}" target="_blank" class="text-decoration-none">
+                                            Nation #{{ $log->nation_id }}
+                                        </a>
+                                    </td>
+                                    <td class="text-end">${{ number_format((float) $log->money, 2) }}</td>
+                                    <td>
+                                        @if($deliveredResources->isNotEmpty())
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach($deliveredResources as $resource => $amount)
+                                                    <span class="badge text-bg-light text-secondary border">
+                                                        {{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <span class="text-muted">Money only</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No direct deposit activity for this account.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
+                        <div class="small text-muted">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</div>
+                        <div class="ms-lg-auto">
+                            {{ $directDepositLogs->withQueryString()->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- MMR Assistant Purchases --}}
+            <div id="mmr-assistant" class="card mt-4">
+                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div>
+                        <h5 class="mb-1 d-flex align-items-center gap-2">
+                            <span class="badge text-bg-dark">MMR</span>
+                            MMR Assistant Purchases
+                        </h5>
+                        <p class="mb-0 text-muted small">Withheld cash converted into resources via MMR Assistant.</p>
+                    </div>
+                    <a href="#direct-deposit-logs" class="text-decoration-none small fw-semibold ms-md-auto">Back to DD logs <i class="bi bi-arrow-up-left ms-1"></i></a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover text-nowrap align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Total Spent</th>
+                                <th>Resources Purchased</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($mmrPurchases as $purchase)
+                                @php
+                                    $purchasedResources = collect(PWHelperService::resources(false))
+                                        ->filter(fn ($res) => (float) $purchase->$res > 0)
+                                        ->mapWithKeys(fn ($res) => [$res => [
+                                            'qty' => $purchase->$res,
+                                            'ppu' => $purchase->getAttribute("{$res}_ppu"),
+                                        ]]);
+                                @endphp
+                                <tr>
+                                    <td>{{ $purchase->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                    <td class="text-end">${{ number_format((float) $purchase->total_spent, 2) }}</td>
+                                    <td>
+                                        @if($purchasedResources->isNotEmpty())
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach($purchasedResources as $resource => $data)
+                                                    <span class="badge text-bg-light text-secondary border">
+                                                        {{ ucfirst($resource) }}: {{ number_format((float) $data['qty'], 2) }}
+                                                        @if($data['ppu'])
+                                                            <span class="text-muted"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
+                                                        @endif
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <span class="text-muted">No resources purchased</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">No MMR Assistant purchases for this account.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
+                        <div class="small text-muted">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</div>
+                        <div class="ms-lg-auto">
+                            {{ $mmrPurchases->withQueryString()->links('vendor.pagination.bootstrap-5') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 @endsection

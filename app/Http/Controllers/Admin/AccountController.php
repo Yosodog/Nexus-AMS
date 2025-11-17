@@ -108,11 +108,24 @@ class AccountController extends Controller
 
         $transactions = AccountService::getRelatedTransactions($accounts, 500);
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts, 500);
+        $directDepositLogs = DirectDepositLog::with('nation')
+            ->where('account_id', $accounts->id)
+            ->latest('created_at')
+            ->paginate(10, ['*'], 'dd_page')
+            ->withQueryString()
+            ->fragment('direct-deposit-logs');
+        $mmrPurchases = MMRAssistantPurchase::where('account_id', $accounts->id)
+            ->latest('created_at')
+            ->paginate(10, ['*'], 'mmr_page')
+            ->withQueryString()
+            ->fragment('mmr-assistant');
 
         return view('admin.accounts.view', [
             'account' => $accounts,
             'transactions' => $transactions,
             'manualTransactions' => $manualTransactions,
+            'directDepositLogs' => $directDepositLogs,
+            'mmrPurchases' => $mmrPurchases,
         ]);
     }
 
