@@ -39,7 +39,9 @@ class AccountController extends Controller
         $deposit = AccountService::createDepositRequest($account);
 
         return response()->json([
-            'message' => 'Deposit request created successfully.',
+            'message' => $deposit->wasRecentlyCreated
+                ? 'Deposit request created successfully.'
+                : 'You already have a pending deposit request for this account.',
             'deposit_code' => $deposit->deposit_code,
         ]);
     }

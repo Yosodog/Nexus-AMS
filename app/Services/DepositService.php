@@ -103,11 +103,23 @@ class DepositService
      */
     public static function createRequest(Account $account): DepositRequest
     {
+        // Reuse existing pending request so members see the original code
+        $existing = DepositRequest::where('account_id', $account->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
         $depositCode = self::generate_code();
 
         $deposit = new DepositRequest;
         $deposit->account_id = $account->id;
         $deposit->deposit_code = $depositCode;
+        $deposit->status = 'pending';
+        $deposit->save();
 
         return $deposit;
     }
