@@ -74,7 +74,7 @@
                 @endif
 
             </div>
-            <a class="btn btn-ghost text-xl" href="{{ route("home") }}">Nexus AMS</a>
+            <a class="btn btn-ghost text-xl" href="{{ route("home") }}">{{ env("APP_NAME") }}</a>
         </div>
         {{-- End mobile nav and begin desktop nav --}}
         <div class="navbar-center hidden lg:flex">
