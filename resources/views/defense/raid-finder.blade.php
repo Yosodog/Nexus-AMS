@@ -1,18 +1,19 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="prose w-full max-w-none mb-5">
-        <h1 class="text-center flex items-center justify-center gap-2">
-            Raid Finder
-        </h1>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 py-6" x-data="raidFinder()" x-init="loadRaids()">
-
-        <div class="mb-4">
-            <label for="nationId" class="label">Enter Nation ID</label>
-            <input id="nationId" type="number" class="input input-bordered w-full max-w-xs" x-model="nationId"/>
-            <button class="btn btn-primary ml-2" @click="loadRaids()">Refresh</button>
+    <div class="mx-auto px-4 py-6 space-y-6" x-data="raidFinder()" x-init="loadRaids()">
+        <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-base-content/60">Offense prep</p>
+                    <h1 class="text-3xl font-bold">Raid Finder</h1>
+                    <p class="text-sm text-base-content/70">Fetch fresh raid targets by nation ID and sort on the fly.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="nationId" type="number" class="input input-bordered w-40" x-model="nationId" placeholder="Nation ID"/>
+                    <button class="btn btn-primary" @click="loadRaids()">Refresh</button>
+                </div>
+            </div>
         </div>
 
         <!-- Loading spinner -->
@@ -21,40 +22,46 @@
         </div>
 
         <!-- Table -->
-        <div x-show="!loading" x-cloak>
-            <div class="overflow-x-auto">
-                <table class="table table-zebra w-full text-sm">
-                    <thead>
-                    <tr>
-                        <th>Leader</th>
-                        <th>Alliance</th>
-                        <th>Cities</th>
-                        <th>Last Active</th>
-                        <th>Score</th>
-                        <th>Wars</th>
-                        <th>Est. Loot</th>
-                        <th>Last Beige</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <template x-for="target in targets" :key="target.nation.id">
+        <div x-show="!loading" x-cloak class="card bg-base-100 shadow border border-base-300">
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="card-title">Targets</h2>
+                    <span class="badge badge-outline" x-text="`${targets.length} results`"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full text-sm">
+                        <thead>
                         <tr>
-                            <td>
-                                <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`"
-                                   class="link link-hover text-primary font-semibold"
-                                   x-text="target.nation.leader_name"></a>
-                            </td>
-                            <td x-text="target.nation.alliance?.name ?? 'None'"></td>
-                            <td x-text="target.nation.num_cities"></td>
-                            <td x-text="target.nation.last_active"></td>
-                            <td x-text="target.nation.score.toFixed(2)"></td>
-                            <td x-text="target.defensive_wars"></td>
-                            <td x-text="formatMoney(target.value)"></td>
-                            <td x-text="formatMoney(target.last_beige ?? 0)"></td>
+                            <th>Leader</th>
+                            <th>Alliance</th>
+                            <th>Cities</th>
+                            <th>Last Active</th>
+                            <th>Score</th>
+                            <th>Wars</th>
+                            <th>Est. Loot</th>
+                            <th>Last Beige</th>
                         </tr>
-                    </template>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        <template x-for="target in targets" :key="target.nation.id">
+                            <tr>
+                                <td>
+                                    <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`"
+                                       class="link link-hover text-primary font-semibold"
+                                       x-text="target.nation.leader_name"></a>
+                                </td>
+                                <td x-text="target.nation.alliance?.name ?? 'None'"></td>
+                                <td x-text="target.nation.num_cities"></td>
+                                <td x-text="target.nation.last_active"></td>
+                                <td x-text="target.nation.score.toFixed(2)"></td>
+                                <td x-text="target.defensive_wars"></td>
+                                <td x-text="formatMoney(target.value)"></td>
+                                <td x-text="formatMoney(target.last_beige ?? 0)"></td>
+                            </tr>
+                        </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

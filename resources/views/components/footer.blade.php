@@ -1,5 +1,5 @@
 @php use Carbon\Carbon; @endphp
-<footer class="bg-neutral text-neutral-content px-6 py-10">
+<footer class="bg-neutral text-neutral-content px-6 py-10 mt-auto w-full">
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <!-- Brand / Logo Section -->
         <div class="flex items-start gap-4">

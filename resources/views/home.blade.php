@@ -44,7 +44,7 @@
 
     <div class="space-y-12">
         {{-- Hero --}}
-        <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 p-10">
+        <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 p-10 shadow-lg">
             <div class="absolute inset-0 bg-gradient-to-b from-base-100/60 via-transparent to-base-100/60"></div>
             <div class="absolute -right-28 -top-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl"></div>
             <div class="relative grid gap-10 lg:grid-cols-2 lg:items-center">

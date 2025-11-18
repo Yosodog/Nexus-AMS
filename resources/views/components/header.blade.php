@@ -14,8 +14,9 @@
         ? Grants::query()->where('is_enabled', true)->orderBy('name')->get()
         : collect();
 @endphp
-<div class="container mx-auto">
-    <div class="navbar bg-base-100">
+<div class="w-full bg-base-100">
+    <div class="container mx-auto">
+        <div class="navbar">
         <div class="navbar-start">
             <div class="dropdown">
                 <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
@@ -175,4 +176,5 @@
     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
         @csrf
     </form>
+</div>
 </div>

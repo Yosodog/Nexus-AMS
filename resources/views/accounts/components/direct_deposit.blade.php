@@ -5,15 +5,18 @@
     $resources = PWHelperService::resources();
 @endphp
 
-<x-utils.card title="Direct Deposit">
+<x-utils.card title="Direct Deposit" extraClasses="space-y-3">
     @if ($isEnrolled)
-        <div class="mb-4">
-            <p class="mb-2 text-success font-semibold">You are enrolled in Direct Deposit.</p>
-            <p>Your deposits are going to: <span class="font-bold">{{ $enrollment->account->name }}</span></p>
+        <div class="rounded-xl bg-success/10 border border-success/30 p-4">
+            <p class="mb-1 text-success font-semibold">Enrolled</p>
+            <p class="text-sm text-base-content/80">Your deposits are heading to <span class="font-bold">{{ $enrollment->account->name }}</span>.</p>
         </div>
 
-        <div class="mb-4">
-            <h3 class="font-semibold mb-1">Your Current Tax Bracket ({{ $bracket->city_number }} Cities)</h3>
+        <div class="mb-4 space-y-2">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold">Current tax bracket</h3>
+                <span class="badge badge-outline">City {{ $bracket->city_number }}</span>
+            </div>
             <div class="overflow-x-auto">
                 <table class="table table-sm w-full">
                     <thead>
@@ -36,14 +39,17 @@
 
         <form method="POST" action="{{ route('dd.disenroll') }}">
             @csrf
-            <button class="btn btn-error" type="submit">Disenroll from Direct Deposit</button>
+            <button class="btn btn-error w-full" type="submit">Disenroll from Direct Deposit</button>
         </form>
 
         @include("accounts.components.mmr_assistant")
     @else
-        <p class="mb-2 text-warning font-semibold">You are not currently enrolled in Direct Deposit.</p>
+        <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
+            <p class="mb-1 text-warning font-semibold">Not enrolled</p>
+            <p class="text-sm text-base-content/80">Enroll to automate deposits and unlock the MMR assistant.</p>
+        </div>
 
-        <form method="POST" action="{{ route('dd.enroll') }}">
+        <form method="POST" action="{{ route('dd.enroll') }}" class="space-y-3">
             @csrf
             <label class="label" for="account_id">
                 <span class="label-text">Choose an account for deposits:</span>
@@ -53,7 +59,7 @@
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
                 @endforeach
             </select>
-            <button class="btn btn-primary" type="submit">Enroll in Direct Deposit</button>
+            <button class="btn btn-primary w-full" type="submit">Enroll in Direct Deposit</button>
         </form>
     @endif
 </x-utils.card>
