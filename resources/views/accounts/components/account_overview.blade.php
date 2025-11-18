@@ -20,16 +20,21 @@
             </thead>
             <tbody>
             @foreach($accounts as $account)
-                <tr class="hover">
+                <tr class="hover {{ $account->frozen ? 'bg-error/10' : '' }}">
                     <td class="font-semibold flex items-center gap-2">
                         <a href="{{ route('accounts.view', ['accounts' => $account]) }}"
                            class="link link-primary">
                             {{ $account->name }}
                         </a>
 
-                        <div class="tooltip" data-tip="Generate deposit code">
+                        @if($account->frozen)
+                            <span class="badge badge-error badge-sm">Frozen</span>
+                        @endif
+
+                        <div class="tooltip" data-tip="{{ $account->frozen ? 'Account is frozen' : 'Generate deposit code' }}">
                             <button class="btn btn-square btn-ghost btn-xs deposit-request-btn"
-                                    data-account-id="{{ $account->id }}">
+                                    data-account-id="{{ $account->id }}"
+                                    @disabled($account->frozen)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
                                 </svg>

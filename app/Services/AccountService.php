@@ -191,6 +191,10 @@ class AccountService
         Account $fromAccount,
         ?Account $toAccount = null
     ): void {
+        if ($fromAccount->frozen) {
+            throw new UserErrorException('This account is frozen. Withdrawals and transfers are disabled.');
+        }
+
         // Verify that we own the from account
         if ($fromAccount->nation_id != $nation_id) {
             throw new UserErrorException('You do not own the from account');
@@ -207,6 +211,10 @@ class AccountService
         if (! is_null($toAccount)) {
             if ($toAccount->nation_id != $nation_id) {
                 throw new UserErrorException('You do not own the to account');
+            }
+
+            if ($toAccount->frozen) {
+                throw new UserErrorException('The destination account is frozen. Transfers are disabled.');
             }
         }
 
@@ -366,6 +374,18 @@ class AccountService
             ->with('admin')
             ->orderBy('created_at', 'DESC')
             ->paginate($perPage);
+    }
+
+    public static function setFrozen(Account $account, bool $shouldFreeze): bool
+    {
+        if ($account->frozen === $shouldFreeze) {
+            return false;
+        }
+
+        $account->frozen = $shouldFreeze;
+        $account->save();
+
+        return true;
     }
 
     public static function adjustAccountBalance(

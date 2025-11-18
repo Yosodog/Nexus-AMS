@@ -138,7 +138,7 @@
                     </thead>
                     <tbody>
                     @foreach ($accounts as $acc)
-                        <tr>
+                        <tr class="{{ $acc->frozen ? 'table-danger' : '' }}">
                             <td>
                                 @if($acc->user)
                                     <span class="fw-semibold"><a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank" rel="noopener" class="text-decoration-none">{{ $acc->user->name }}</a></span>
@@ -147,9 +147,14 @@
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link-primary fw-semibold">
-                                    {{ $acc->name }}
-                                </a>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link-primary fw-semibold">
+                                        {{ $acc->name }}
+                                    </a>
+                                    @if($acc->frozen)
+                                        <span class="badge text-bg-danger">Frozen</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="text-end" data-order="{{ $acc->money }}">${{ number_format($acc->money, 2) }}</td>
                             @foreach($resourceList as $resource)
