@@ -19,6 +19,18 @@ class LoanService
 {
     public function __construct() {}
 
+    /**
+     * @throws ValidationException
+     */
+    private function ensureAccountNotFrozen(Account $account): void
+    {
+        if ($account->frozen) {
+            throw ValidationException::withMessages([
+                'account' => ['This account is frozen. Withdrawals are disabled.'],
+            ]);
+        }
+    }
+
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
         // Create the loan record
@@ -129,18 +141,29 @@ class LoanService
             // Try to withdraw the reduced amount from the primary account
             $primaryAccount = $loan->account;
             if ($primaryAccount && $primaryAccount->money >= $amountDue) {
-                $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
+                try {
+                    $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
 
-                continue;
+                    continue;
+                } catch (ValidationException $e) {
+                    // If the primary account is frozen, fall back to alternate options below
+                }
             }
 
             // Try another account if the primary doesn't have enough funds
-            $alternateAccount = $nation->accounts()->where('money', '>=', $amountDue)->orderBy('money', 'desc')->first(
-            );
+            $alternateAccount = $nation->accounts()
+                ->where('frozen', false)
+                ->where('money', '>=', $amountDue)
+                ->orderBy('money', 'desc')
+                ->first();
             if ($alternateAccount) {
-                $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
+                try {
+                    $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
 
-                continue;
+                    continue;
+                } catch (ValidationException $e) {
+                    // If the alternate account is frozen, treat like insufficient funds below
+                }
             }
 
             // If still not enough funds, mark as missed payment
@@ -178,6 +201,8 @@ class LoanService
      */
     private function withdrawFromAccount(Account $account, float $amount, Loan $loan): void
     {
+        $this->ensureAccountNotFrozen($account);
+
         $interestRate = $loan->interest_rate / 100;
         $interestPaid = round($amount * $interestRate, 2);
         $principalPaid = $amount - $interestPaid;
@@ -242,6 +267,8 @@ class LoanService
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);
         }
+
+        $this->ensureAccountNotFrozen($account);
 
         if ($account->money < $amount) {
             throw ValidationException::withMessages(['account' => 'Insufficient funds in selected account.']);
@@ -320,18 +347,29 @@ class LoanService
         // Try to withdraw the reduced amount from the primary account
         $primaryAccount = $loan->account;
         if ($primaryAccount && $primaryAccount->balance >= $amountDue) {
-            $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
+            try {
+                $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
 
-            return;
+                return;
+            } catch (ValidationException $e) {
+                // Attempt alternate accounts if the primary account is frozen
+            }
         }
 
         // Try another account if the primary doesn't have enough funds
-        $alternateAccount = $nation->accounts()->where('balance', '>=', $amountDue)->orderBy('balance', 'desc')->first(
-        );
+        $alternateAccount = $nation->accounts()
+            ->where('frozen', false)
+            ->where('balance', '>=', $amountDue)
+            ->orderBy('balance', 'desc')
+            ->first();
         if ($alternateAccount) {
-            $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
+            try {
+                $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
 
-            return;
+                return;
+            } catch (ValidationException $e) {
+                // Fall through to mark the payment as missed if alternate account is frozen
+            }
         }
 
         // If still not enough funds, mark as missed payment
