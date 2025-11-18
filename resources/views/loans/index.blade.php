@@ -128,6 +128,81 @@
             @endif
         </div>
 
+        @if (!$activeLoans->isEmpty())
+            <x-utils.card title="Your Active Loans" extraClasses="shadow-lg">
+                <div class="overflow-x-auto rounded-xl border border-base-300">
+                    <table class="table table-zebra w-full">
+                        <thead class="bg-base-200">
+                        <tr>
+                            <th>ID</th>
+                            <th>Loan amount</th>
+                            <th>Remaining balance</th>
+                            <th>Interest rate</th>
+                            <th>Term (weeks)</th>
+                            <th>Account</th>
+                            <th>Next payment due</th>
+                            <th>Next minimum payment</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach ($activeLoans as $loan)
+                            <tr>
+                                <td>{{ $loan->id }}</td>
+                                <td>${{ number_format($loan->amount, 2) }}</td>
+                                <td>${{ number_format($loan->remaining_balance, 2) }}</td>
+                                <td>{{ number_format($loan->interest_rate, 2) }}%</td>
+                                <td>{{ $loan->term_weeks }}</td>
+                                <td>
+                                    <a href="{{ route('accounts.view', $loan->account->id) }}"
+                                       class="link link-primary">{{ $loan->account->name }}</a>
+                                </td>
+                                <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
+                                <td>${{ number_format($loan->next_payment_due, 2) }}</td>
+                            </tr>
+
+                            @if (!$loan->payments->isEmpty())
+                                <tr>
+                                    <td colspan="8" class="bg-base-200/60">
+                                        <div class="mt-2 space-y-2">
+                                            <div class="font-semibold text-sm">Payment history</div>
+                                            <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-100">
+                                                <table class="table table-sm">
+                                                    <thead class="bg-base-200">
+                                                    <tr>
+                                                        <th>Amount</th>
+                                                        <th>Principal paid</th>
+                                                        <th>Interest paid</th>
+                                                        <th>Payment date</th>
+                                                        <th>Account</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach ($loan->payments as $payment)
+                                                        <tr>
+                                                            <td>${{ number_format($payment->amount, 2) }}</td>
+                                                            <td>${{ number_format($payment->principal_paid, 2) }}</td>
+                                                            <td>${{ number_format($payment->interest_paid, 2) }}</td>
+                                                            <td>{{ Carbon::create($payment->payment_date)->format('M d, Y') }}</td>
+                                                            <td>
+                                                                <a href="{{ route('accounts.view', $payment->account->id) }}"
+                                                                   class="link link-primary">{{ $payment->account->name }}</a>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-utils.card>
+        @endif
+
         <script>
             function switchTab(tab, element) {
                 document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
