@@ -47,6 +47,10 @@ class RoleController extends Controller
         $this->authorize('edit-roles');
 
         $permissions = config('permissions');
+        $role->load([
+            'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.email', 'users.nation_id')->orderBy('name'),
+            'users.nation:id,nation_name,flag',
+        ]);
 
         return view('admin.roles.edit', compact('role', 'permissions'));
     }
