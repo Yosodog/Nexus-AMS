@@ -7,15 +7,13 @@ Nexus AMS (Alliance Management System) is an open-source web application designe
 This project is currently in **Alpha** and is **not** production-ready. Expect breaking changes, incomplete features, and potential security risks. Use at your own risk!
 
 ## 💡 Why PHP and Laravel?
-Nexus AMS is built using **PHP 8.3+** and **Laravel**, leveraging the framework’s robustness, scalability, and ease of development. Don't hate on PHP/Laravel, it's the best tool for this job. Fight me.
+Nexus AMS is built using **PHP 8.2+** and **Laravel 12**, leveraging the framework’s robustness, scalability, and ease of development. Don't hate on PHP/Laravel, it's the best tool for this job. Fight me.
 
-## 🌍 About the Node.js Project (Nexus AMS Subs)
-[Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs) is a companion **Node.js** service that listens to **Politics & War GraphQL subscriptions** and forwards real-time updates to the Nexus AMS backend. It ensures live updates for nation data, alliances, and wars, etc, reducing the need for constant API polling.
-
-### How it Works:
-1. **Node.js Service:** Listens for live events from Politics & War using GraphQL Subscriptions.
-2. **Pusher Integration:** Manages real-time updates.
-3. **API Service:** Forwards updates to Nexus AMS.
+## 🌍 Companion services and tooling
+Nexus AMS ships alongside a few related projects:
+- [Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs): Node.js listener that consumes Politics & War GraphQL subscriptions and forwards live events (nations, alliances, wars) to the Nexus API instead of polling.
+- [Nexus AMS Discord Bot](https://github.com/Yosodog/Nexus-AMS-Discord): Discord bot scaffolding with slash-command support and a Nexus API client stub to extend coordination and verification workflows.
+- [Nexus-Setup](https://github.com/Yosodog/Nexus-Setup): Shell-based installer for provisioning a production-ready Nexus AMS + Subs stack on Ubuntu (Nginx, PHP, MySQL, Supervisor, and TLS) with one command.
 
 ## 🛠️ How Nexus AMS Works
 Nexus AMS is structured to be modular and scalable:
@@ -43,7 +41,7 @@ The service merges the primary alliance ID with every enabled offshore and cache
 is toggled or its alliance changes, the membership cache is refreshed automatically.
 
 ### Tech Stack:
-- **Backend:** Laravel (PHP 8.3+)
+- **Backend:** Laravel (PHP 8.2+)
 - **Frontend:** Blade with Tailwind CSS (DaisyUI)
 - **Database:** MySQL/PostgreSQL
 - **Subscriptions:** Node.js + GraphQL
@@ -52,7 +50,7 @@ is toggled or its alliance changes, the membership cache is refreshed automatica
 ## 📥 Installation Guide
 
 ### Prerequisites
-- **PHP 8.3+**
+- **PHP 8.2+**
 - **Composer**
 - **Node.js 18+**
 - **MySQL or PostgreSQL**
@@ -95,6 +93,7 @@ is toggled or its alliance changes, the membership cache is refreshed automatica
    ```sh
    php artisan serve
    ```
+> Prefer an automated production install? Use the [Nexus-Setup](https://github.com/Yosodog/Nexus-Setup) installer to provision Ubuntu with Nexus AMS, Nexus-AMS-Subs, TLS, Supervisor workers, and scheduler configuration in one run.
 
 ## 🤝 Contributing
 We welcome contributions! To get started:
@@ -128,8 +127,8 @@ Found a bug? Have a feature request?
 Contributors are encouraged to discuss ideas before implementing major changes.
 
 ## ❓ Need Help?
-For questions or support, contact **Yosodog** on Discord or open an issue on GitHub.
+For questions or support:
+- Contact **Yosodog** on Discord or open an issue on GitHub.
 
 ---
 **License:** GPL-3.0 License. See `LICENSE` file for details.
-
