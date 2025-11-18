@@ -53,8 +53,8 @@ class SubLogLevel implements LevelInterface
     {
         return match ($this->value) {
             'error' => LevelClass::danger(),
-            'warn'  => LevelClass::warning(),
-            'info'  => LevelClass::info(),
+            'warn' => LevelClass::warning(),
+            'info' => LevelClass::info(),
 
             'startup',
             'subscribed',

@@ -8,6 +8,7 @@ use Opcodes\LogViewer\Logs\Log;
 class SubLog extends Log
 {
     public static string $name = 'Subscription Service';
+
     public static string $levelClass = SubLogLevel::class;
 
     public static string $regex =

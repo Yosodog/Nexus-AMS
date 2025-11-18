@@ -28,8 +28,7 @@ class ManualDisbursementController extends Controller
     public function __construct(
         protected LoanService $loanService,
         protected WarAidService $warAidService
-    ) {
-    }
+    ) {}
 
     public function sendGrant(Request $request): RedirectResponse
     {
