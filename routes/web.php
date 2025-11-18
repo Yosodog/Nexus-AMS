@@ -31,6 +31,7 @@ use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
 use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\UserController;
@@ -42,9 +43,7 @@ use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
@@ -376,6 +375,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/settings/discord', [SettingsController::class, 'updateDiscordRequirement'])->name(
             'admin.settings.discord'
+        );
+        Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
+            'admin.settings.homepage'
         );
 
         Route::prefix('mmr')->group(function () {

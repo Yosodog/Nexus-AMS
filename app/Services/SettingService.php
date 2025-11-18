@@ -355,6 +355,78 @@ class SettingService
         self::setRecruitmentMessage('follow_up', $message);
     }
 
+    public static function getHomepageHeadline(string $allianceName): string
+    {
+        $default = "Join {$allianceName}";
+
+        return self::getStringSetting('home_headline', $default);
+    }
+
+    public static function setHomepageHeadline(string $headline): void
+    {
+        self::setValue('home_headline', $headline);
+    }
+
+    public static function getHomepageTagline(string $allianceName): string
+    {
+        $default = "{$allianceName} is growing — and we operate with clarity, fairness, and speed.";
+
+        return self::getStringSetting('home_tagline', $default);
+    }
+
+    public static function setHomepageTagline(string $tagline): void
+    {
+        self::setValue('home_tagline', $tagline);
+    }
+
+    public static function getHomepageAbout(string $allianceName): string
+    {
+        $appName = config('app.name', 'Nexus AMS');
+        $default = "{$allianceName} runs recruitment, economic programs, and defense with {$appName}. "
+            .'Your experience stays transparent while leadership keeps operations secure.';
+
+        return self::getStringSetting('home_about', $default);
+    }
+
+    public static function setHomepageAbout(string $about): void
+    {
+        self::setValue('home_about', $about);
+    }
+
+    public static function getHomepageHighlights(): array
+    {
+        $raw = self::getValue('home_highlights');
+
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+
+            if (is_array($decoded)) {
+                return collect($decoded)
+                    ->map(fn ($item) => is_string($item) ? trim($item) : '')
+                    ->filter()
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return [
+            'Guest-friendly application with consistent questions.',
+            'Clear grant and loan programs—no guesswork for members.',
+            'Defense coordination tools without exposing sensitive data.',
+        ];
+    }
+
+    public static function setHomepageHighlights(array $highlights): void
+    {
+        $cleaned = collect($highlights)
+            ->map(fn ($item) => is_string($item) ? trim($item) : '')
+            ->filter()
+            ->values()
+            ->all();
+
+        self::setValue('home_highlights', json_encode($cleaned));
+    }
+
     protected static function getRecruitmentMessage(string $type, string $default): string
     {
         $message = RecruitmentMessage::query()
@@ -376,5 +448,18 @@ class SettingService
             ['type' => $type],
             ['message' => $message]
         );
+    }
+
+    protected static function getStringSetting(string $key, string $default): string
+    {
+        $value = self::getValue($key);
+
+        if (is_null($value) || $value === '') {
+            self::setValue($key, $default);
+
+            return $default;
+        }
+
+        return (string) $value;
     }
 }
