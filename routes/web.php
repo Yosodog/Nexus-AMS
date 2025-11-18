@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
+use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\OffshoreController;
@@ -278,6 +279,20 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
         Route::post('/loans/{Loan}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
             'admin.loans.markPaid'
+        )->middleware(BlockWhenPWDown::class);
+
+        // Manual disbursements
+        Route::post('/manual-disbursements/grants', [ManualDisbursementController::class, 'sendGrant'])->name(
+            'admin.manual-disbursements.grants'
+        )->middleware(BlockWhenPWDown::class);
+        Route::post('/manual-disbursements/city-grants', [ManualDisbursementController::class, 'sendCityGrant'])->name(
+            'admin.manual-disbursements.city-grants'
+        )->middleware(BlockWhenPWDown::class);
+        Route::post('/manual-disbursements/loans', [ManualDisbursementController::class, 'sendLoan'])->name(
+            'admin.manual-disbursements.loans'
+        )->middleware(BlockWhenPWDown::class);
+        Route::post('/manual-disbursements/war-aid', [ManualDisbursementController::class, 'sendWarAid'])->name(
+            'admin.manual-disbursements.war-aid'
         )->middleware(BlockWhenPWDown::class);
 
         // Taxes
