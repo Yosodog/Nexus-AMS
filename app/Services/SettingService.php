@@ -49,7 +49,7 @@ class SettingService
         if (is_null($value)) {
             self::setValue('war_aid_enabled', 0); // Default to disabled
 
-            return true;
+            return false;
         }
 
         return (bool) $value;
@@ -85,7 +85,7 @@ class SettingService
         if (is_null($value)) {
             self::setTopRaidable(40); // Default to 40
 
-            return true;
+            return 40;
         }
 
         return (int) $value;
@@ -183,7 +183,7 @@ class SettingService
         $value = self::getValue('last_alliance_sync_batch_id');
 
         if (is_null($value)) {
-            self::setLastNationSyncBatchId('');
+            self::setLastAllianceSyncBatchId('');
 
             return '';
         }
@@ -201,7 +201,7 @@ class SettingService
         $value = self::getValue('last_war_sync_batch_id');
 
         if (is_null($value)) {
-            self::setLastNationSyncBatchId('');
+            self::setLastWarSyncBatchId('');
 
             return '';
         }
@@ -221,7 +221,7 @@ class SettingService
         if (is_null($value)) {
             self::setMMRAssistantEnabled(false);
 
-            return '';
+            return false;
         }
 
         return (bool) $value;
