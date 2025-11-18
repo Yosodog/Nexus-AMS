@@ -40,6 +40,17 @@ class DirectDepositService
         }
 
         $bracket = $this->getApplicableBracket($nation);
+        if (! $bracket) {
+            $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+            Log::warning(
+                "DirectDeposit: No tax bracket configured for nation {$nation->id}; using fallback tax ID {$fallbackTaxId}"
+            );
+
+            // Bail out and let the standard tax bracket handle this record.
+            $record->tax_id = $fallbackTaxId;
+
+            return $record;
+        }
         $ddAccount = $this->getDepositAccount($nation);
         $fields = PWHelperService::resources();
 

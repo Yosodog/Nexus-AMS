@@ -104,7 +104,6 @@ class QueryService
         // Fetch remaining pages if there are multiple pages, and if we want to
         while ($page <= $lastPage && $handlePagination == true) {
             // Create and execute a batch of requests, starting from the current page
-            echo 'Page: '.$page."\n";
             $promises = $this->createBatchRequests(
                 $builder,
                 $variables,

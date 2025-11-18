@@ -27,7 +27,7 @@ class SyncWars extends Command
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public function handle(): void
+    public function handle(): int
     {
         $this->info('Queuing war sync jobs...');
 
@@ -42,7 +42,7 @@ class SyncWars extends Command
         if ($primaryAllianceId === 0) {
             $this->error('Primary alliance ID is not configured.');
 
-            return;
+            return self::FAILURE;
         }
 
         $pagination = retry(
@@ -81,5 +81,7 @@ class SyncWars extends Command
         SettingService::setLastWarSyncBatchId($batch->id);
 
         $this->info("✅ Queued all {$lastPage} war sync job(s)!");
+
+        return self::SUCCESS;
     }
 }
