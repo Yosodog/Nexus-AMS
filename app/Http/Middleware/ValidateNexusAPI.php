@@ -17,9 +17,9 @@ class ValidateNexusAPI
     {
         // Validate Nexus API Token
         $nexusApiToken = config('services.nexus_api_token');
-        $providedToken = $request->header('Authorization');
+        $providedToken = trim((string) $request->header('Authorization', ''));
 
-        if ($providedToken != "Bearer $nexusApiToken") {
+        if (empty($nexusApiToken) || $providedToken !== "Bearer {$nexusApiToken}") {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 

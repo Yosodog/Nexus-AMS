@@ -16,9 +16,9 @@ class ValidateDiscordBotAPI
     public function handle(Request $request, Closure $next): Response
     {
         $botToken = config('services.discord_bot_key');
-        $providedToken = $request->header('Authorization');
+        $providedToken = trim((string) $request->header('Authorization', ''));
 
-        if ($providedToken !== "Bearer $botToken") {
+        if (empty($botToken) || $providedToken !== "Bearer {$botToken}") {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 

@@ -24,9 +24,15 @@ class DirectDepositController extends Controller
      */
     public function enroll(Request $request)
     {
-        $request->validate(['account_id' => 'required|exists:accounts,id']);
-
         $nation = Auth::user()->nation;
+
+        $request->validate([
+            'account_id' => [
+                'required',
+                Rule::exists('accounts', 'id')->where('nation_id', $nation->id),
+            ],
+        ]);
+
         $account = Account::findOrFail($request->account_id);
 
         $this->directDepositService->enroll($nation, $account);
