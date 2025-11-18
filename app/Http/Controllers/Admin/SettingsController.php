@@ -31,6 +31,14 @@ class SettingsController extends Controller
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
         $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
 
+        $appName = config('app.name', 'Nexus AMS');
+        $homepageSettings = [
+            'headline' => SettingService::getHomepageHeadline($appName),
+            'tagline' => SettingService::getHomepageTagline($appName),
+            'about' => SettingService::getHomepageAbout($appName),
+            'highlights' => SettingService::getHomepageHighlights(),
+        ];
+
         return view('admin.settings', [
             'nationBatch' => $nationBatch,
             'rollingNationBatch' => $rollingNationBatch,
@@ -38,6 +46,7 @@ class SettingsController extends Controller
             'allianceBatch' => $allianceBatch,
             'warBatch' => $warBatch,
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
+            'homepageSettings' => $homepageSettings,
         ]);
     }
 
@@ -119,6 +128,34 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $required ? 'Discord verification is now required.' : 'Discord verification is now optional.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateHomepage(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $validated = $request->validate([
+            'home_headline' => ['required', 'string', 'max:160'],
+            'home_tagline' => ['required', 'string', 'max:240'],
+            'home_about' => ['nullable', 'string', 'max:800'],
+            'home_highlights' => ['array'],
+            'home_highlights.*' => ['nullable', 'string', 'max:140'],
+        ]);
+
+        SettingService::setHomepageHeadline($validated['home_headline']);
+        SettingService::setHomepageTagline($validated['home_tagline']);
+        SettingService::setHomepageAbout($validated['home_about'] ?? '');
+
+        $highlights = collect($validated['home_highlights'] ?? [])
+            ->map(fn ($item) => (string) $item)
+            ->all();
+
+        SettingService::setHomepageHighlights($highlights);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Homepage content updated.',
             'alert-type' => 'success',
         ]);
     }

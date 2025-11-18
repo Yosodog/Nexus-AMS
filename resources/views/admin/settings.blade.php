@@ -84,6 +84,54 @@
             <h4 class="mb-2">Other Settings</h4>
         </div>
         <div class="col-lg-6">
+            @php
+                $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);
+                $highlightInputs = array_pad($highlightInputs, 3, '');
+            @endphp
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Homepage Messaging</span>
+                    <span class="badge text-bg-info">Public</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Customize the guest-facing homepage for your alliance. Content stays alliance-agnostic by default and can be tailored as your branding evolves.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.homepage') }}">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label" for="homeHeadline">Headline</label>
+                            <input type="text" class="form-control" id="homeHeadline" name="home_headline"
+                                   value="{{ old('home_headline', $homepageSettings['headline'] ?? '') }}" maxlength="160" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeTagline">Tagline</label>
+                            <input type="text" class="form-control" id="homeTagline" name="home_tagline"
+                                   value="{{ old('home_tagline', $homepageSettings['tagline'] ?? '') }}" maxlength="240" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeAbout">About blurb</label>
+                            <textarea class="form-control" id="homeAbout" name="home_about" rows="3" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
+                            <small class="text-muted">Shown beneath the hero to explain what makes your alliance stand out.</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Highlights (optional)</label>
+                            @foreach($highlightInputs as $index => $highlight)
+                                <input type="text"
+                                       class="form-control mb-2"
+                                       name="home_highlights[]"
+                                       value="{{ $highlight }}"
+                                       maxlength="140"
+                                       placeholder="e.g. Fast onboarding with clear expectations">
+                            @endforeach
+                            <small class="text-muted">These become quick bullet points on the homepage. Leave blank to use defaults.</small>
+                        </div>
+                        <button class="btn btn-primary">Save Homepage Content</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Discord Verification</span>
