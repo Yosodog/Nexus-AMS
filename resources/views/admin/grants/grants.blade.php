@@ -76,6 +76,45 @@
         </div>
     </div>
 
+    @can('manage-grants')
+        <div class="card mt-4">
+            <div class="card-header">Manual Grant Disbursement</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Sends a grant directly to a nation and bypasses one-time or pending application checks. Use only when an admin must push funds without an application.
+                </p>
+                <form method="POST" action="{{ route('admin.manual-disbursements.grants') }}">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Grant</label>
+                            <select name="grant_id" class="form-select" required>
+                                <option value="">Select a grant</option>
+                                @foreach($grants as $grant)
+                                    <option value="{{ $grant->id }}" @selected(old('grant_id') == $grant->id)>
+                                        {{ $grant->name }} ({{ $grant->is_one_time ? 'one-time' : 'repeatable' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nation ID</label>
+                            <input type="number" name="nation_id" class="form-control" required min="1" value="{{ old('nation_id') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Account ID</label>
+                            <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
+                            <small class="text-muted">Must belong to the nation above.</small>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-primary" type="submit">Send Grant</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endcan
+
     {{-- Grants Table --}}
     <div class="card mt-4">
         <div class="card-header">Custom Grants</div>

@@ -76,6 +76,57 @@
         </div>
     </div>
 
+    @can('manage-city-grants')
+        <div class="card mt-4">
+            <div class="card-header">Manual City Grant Disbursement</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Approves and pays a city grant immediately, bypassing pending or prior award checks. Use when admins need to push funds without a request.
+                </p>
+                <form method="POST" action="{{ route('admin.manual-disbursements.city-grants') }}">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">City Grant</label>
+                            <select name="city_grant_id" class="form-select" required>
+                                <option value="">Select a city grant</option>
+                                @foreach($grants as $grant)
+                                    <option value="{{ $grant->id }}" @selected(old('city_grant_id') == $grant->id)>
+                                        City #{{ $grant->city_number }} — ${{ number_format($grant->grant_amount) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nation ID</label>
+                            <input type="number" name="nation_id" class="form-control" required min="1" value="{{ old('nation_id') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Account ID</label>
+                            <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
+                            <small class="text-muted">Must belong to the nation above.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">City # Override (optional)</label>
+                            <input type="number" name="city_number" class="form-control" min="1" value="{{ old('city_number') }}"
+                                   placeholder="Defaults to selected grant's city #">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Grant Amount Override (optional)</label>
+                            <input type="number" name="grant_amount" class="form-control" min="1" value="{{ old('grant_amount') }}"
+                                   placeholder="Defaults to selected grant amount">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-primary" type="submit">Send City Grant</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endcan
+
     {{-- City Grants List --}}
     <div class="card mt-4">
         <div class="card-header">City Grants</div>

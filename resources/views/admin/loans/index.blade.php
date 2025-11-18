@@ -116,6 +116,46 @@
         </div>
     </div>
 
+    @can('manage-loans')
+        <div class="card mt-4">
+            <div class="card-header">Manual Loan Disbursement</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Creates and approves a loan immediately. This bypasses borrower eligibility and duplicate checks—use when an admin needs to push funds without an application.
+                </p>
+                <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Nation ID</label>
+                            <input type="number" name="nation_id" class="form-control" required min="1" value="{{ old('nation_id') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Account ID</label>
+                            <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
+                            <small class="text-muted">Must belong to the nation above.</small>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Amount</label>
+                            <input type="number" name="amount" class="form-control" required step="0.01" min="1" value="{{ old('amount') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Interest %</label>
+                            <input type="number" name="interest_rate" class="form-control" required step="0.01" min="0" max="100" value="{{ old('interest_rate') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Term (weeks)</label>
+                            <input type="number" name="term_weeks" class="form-control" required min="1" max="52" value="{{ old('term_weeks') }}">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-primary" type="submit">Send Loan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endcan
+
     {{-- Approve Loan Modal --}}
     <div class="modal fade" id="approveLoanModal" tabindex="-1" aria-labelledby="approveLoanModalLabel"
          aria-hidden="true">

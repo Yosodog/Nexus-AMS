@@ -84,6 +84,48 @@
                 </div>
             @endif
 
+            @can('manage-war-aid')
+                <div class="card mb-4">
+                    <div class="card-header">Manual War Aid Disbursement</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Issues war aid immediately and bypasses pending-request checks. Provide at least one resource amount.
+                        </p>
+                        <form method="POST" action="{{ route('admin.manual-disbursements.war-aid') }}">
+                            @csrf
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nation ID</label>
+                                    <input type="number" name="nation_id" class="form-control" required min="1" value="{{ old('nation_id') }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Account ID</label>
+                                    <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
+                                    <small class="text-muted">Must belong to the nation above.</small>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="form-label">Note (optional)</label>
+                                <input type="text" name="note" class="form-control" maxlength="255" value="{{ old('note') }}"
+                                       placeholder="Shown in request history">
+                            </div>
+                            <div class="row g-2 mt-2">
+                                @foreach(PWHelperService::resources() as $resource)
+                                    <div class="col-sm-6 col-md-4 col-lg-3">
+                                        <label class="form-label text-capitalize">{{ $resource }}</label>
+                                        <input type="number" min="0" name="{{ $resource }}" class="form-control"
+                                               value="{{ old($resource, 0) }}">
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-primary" type="submit">Send War Aid</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endcan
+
             {{-- Past Requests --}}
             <div class="card mb-4">
                 <div class="card-header">

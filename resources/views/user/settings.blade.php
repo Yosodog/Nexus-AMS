@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="max-w-6xl mx-auto py-10 space-y-6">
+    <div class="mx-auto">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
                 <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
