@@ -166,6 +166,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/accounts/{account}/adjust', [AccountController::class, 'adjustBalance'])->name(
             'admin.accounts.adjust'
         );
+        Route::post('/accounts/{account}/freeze', [AccountController::class, 'freeze'])->name(
+            'admin.accounts.freeze'
+        );
+        Route::post('/accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name(
+            'admin.accounts.unfreeze'
+        );
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
             ->name('admin.accounts.transactions.refund')
             ->middleware(BlockWhenPWDown::class);

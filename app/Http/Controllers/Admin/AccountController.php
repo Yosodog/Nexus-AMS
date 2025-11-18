@@ -18,6 +18,7 @@ use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request as RequestFacade;
@@ -126,6 +127,36 @@ class AccountController extends Controller
             'manualTransactions' => $manualTransactions,
             'directDepositLogs' => $directDepositLogs,
             'mmrPurchases' => $mmrPurchases,
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function freeze(Account $account): RedirectResponse
+    {
+        $this->authorize('manage-accounts');
+
+        $updated = AccountService::setFrozen($account, true);
+
+        return back()->with([
+            'alert-message' => $updated ? 'Account frozen successfully.' : 'Account is already frozen.',
+            'alert-type' => $updated ? 'success' : 'info',
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function unfreeze(Account $account): RedirectResponse
+    {
+        $this->authorize('manage-accounts');
+
+        $updated = AccountService::setFrozen($account, false);
+
+        return back()->with([
+            'alert-message' => $updated ? 'Account unfrozen successfully.' : 'Account was not frozen.',
+            'alert-type' => $updated ? 'success' : 'info',
         ]);
     }
 

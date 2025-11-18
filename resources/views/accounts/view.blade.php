@@ -8,6 +8,15 @@
     @endphp
 
     <div class="mx-auto space-y-8">
+        @if($account->frozen)
+            <div class="alert alert-error shadow-sm">
+                <div>
+                    <h3 class="font-semibold">Account frozen</h3>
+                    <p class="text-sm">Withdrawals and transfers are disabled for this account. Please contact an administrator for assistance.</p>
+                </div>
+            </div>
+        @endif
+
         <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -22,11 +31,16 @@
                         <span class="badge badge-outline">ID {{ $account->id }}</span>
                         <span class="badge badge-outline">${{ number_format($account->money, 2) }} cash</span>
                         <span class="badge badge-outline">{{ number_format($resourceTotal, 2) }} resources</span>
+                        <span class="badge {{ $account->frozen ? 'badge-error' : 'badge-success' }}">{{ $account->frozen ? 'Frozen' : 'Active' }}</span>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <div class="tooltip" data-tip="Create a fresh deposit code for this account">
-                        <button class="btn btn-primary deposit-request-btn" data-account-id="{{ $account->id }}">Create deposit</button>
+                    <div class="tooltip" data-tip="{{ $account->frozen ? 'Account is frozen' : 'Create a fresh deposit code for this account' }}">
+                        <button class="btn btn-primary deposit-request-btn"
+                                data-account-id="{{ $account->id }}"
+                                @disabled($account->frozen)>
+                            Create deposit
+                        </button>
                     </div>
                     <a href="{{ route('accounts') }}" class="btn btn-ghost">Back to accounts</a>
                 </div>

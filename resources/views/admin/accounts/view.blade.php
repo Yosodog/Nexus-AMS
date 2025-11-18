@@ -8,6 +8,22 @@
                 <div class="col-sm-6">
                     <h3 class="mb-0">View Account - {{ $account->name }}</h3>
                 </div>
+                <div class="col-sm-6 mt-3 mt-sm-0 d-flex justify-content-sm-end align-items-start align-items-sm-center gap-2">
+                    <span class="badge {{ $account->frozen ? 'text-bg-danger' : 'text-bg-success' }}">
+                        {{ $account->frozen ? 'Frozen' : 'Active' }}
+                    </span>
+                    @can('manage-accounts')
+                        <form method="POST"
+                              action="{{ $account->frozen ? route('admin.accounts.unfreeze', $account) : route('admin.accounts.freeze', $account) }}"
+                              onsubmit="return confirm('Are you sure you want to {{ $account->frozen ? 'unfreeze' : 'freeze' }} this account?');">
+                            @csrf
+                            <button type="submit"
+                                    class="btn btn-sm {{ $account->frozen ? 'btn-outline-success' : 'btn-outline-danger' }}">
+                                {{ $account->frozen ? 'Unfreeze Account' : 'Freeze Account' }}
+                            </button>
+                        </form>
+                    @endcan
+                </div>
             </div>
         </div>
     </div>
