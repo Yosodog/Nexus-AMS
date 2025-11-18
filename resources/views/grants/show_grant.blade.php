@@ -3,10 +3,17 @@
 @php use Illuminate\Support\Str; @endphp
 
 @section("content")
-    <div class="prose w-full max-w-none mb-6 text-center">
-        <h1 class="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-flex items-center justify-center gap-2">
-            {{ ucwords($grant->name) }}
-        </h1>
+    <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow mb-6">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide text-base-content/60">Grant program</p>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-flex items-center gap-2">
+                    {{ ucwords($grant->name) }}
+                </h1>
+                <p class="text-sm text-base-content/70">Review details and apply with your preferred account.</p>
+            </div>
+            <span class="badge badge-outline">{{ $grant->is_one_time ? 'One-time' : 'Reusable' }}</span>
+        </div>
     </div>
 
     {{-- Grant Overview --}}

@@ -4,13 +4,15 @@
 @inject('settings', 'App\Services\SettingService')
 
 @section('content')
-    <div class="container mx-auto">
+    <div class="container mx-auto space-y-6">
 
-        <x-utils.card>
-
-            <div class="flex items-center justify-between mb-4">
-                <h1 class="text-2xl font-semibold">War Aid Dashboard</h1>
-
+        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
+                    <h1 class="text-3xl font-bold leading-tight">War Aid Dashboard</h1>
+                    <p class="text-sm text-base-content/70">Request support, review active wars, and track past aid.</p>
+                </div>
                 <div class="tooltip" data-tip="{{ $settings::isWarAidEnabled() ? '' : 'War aid is disabled' }}">
                     <button
                             class="btn btn-primary"
@@ -24,8 +26,15 @@
                     </button>
                 </div>
             </div>
+        </div>
 
-            <h2 class="text-xl font-bold mb-2">Your Active Wars</h2>
+        <x-utils.card>
+
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold">Your active wars</h2>
+                <span class="badge badge-outline">{{ $wars->count() }} engagements</span>
+            </div>
+
             @if($wars->isEmpty())
                 <p class="text-gray-500">You have no active wars.</p>
             @else

@@ -3,16 +3,18 @@
         document.querySelectorAll('.deposit-request-btn').forEach(button => {
             button.addEventListener('click', function () {
                 let accountId = this.getAttribute('data-account-id');
-                let tooltip = this.parentElement.closest('.tooltip');
-                let originalTooltipText = tooltip.getAttribute("data-tip");
+                let tooltip = this.closest('.tooltip');
+                let originalTooltipText = tooltip ? tooltip.getAttribute("data-tip") : null;
 
                 // Disable button to prevent multiple clicks
                 this.disabled = true;
                 this.classList.add("opacity-50", "cursor-not-allowed");
 
                 // Add success class to tooltip
-                tooltip.classList.add("tooltip-success");
-                tooltip.setAttribute("data-tip", "Processing deposit...");
+                if (tooltip) {
+                    tooltip.classList.add("tooltip-success");
+                    tooltip.setAttribute("data-tip", "Processing deposit...");
+                }
 
                 // Step 1: Request CSRF token
                 fetch('/sanctum/csrf-cookie', {
@@ -41,16 +43,19 @@
                         })
                         .then(data => {
                             if (data.deposit_code) {
-                                // Update tooltip to success message
-                                tooltip.setAttribute("data-tip", "Deposit request sent!");
+                                if (tooltip) {
+                                    tooltip.setAttribute("data-tip", "Deposit request sent!");
+                                }
 
                                 // Show persistent toast with deposit code
                                 showToast(`Deposit request created!`, `Your deposit code is: ${data.deposit_code}`, data.deposit_code);
 
                                 // Reset tooltip after 3 seconds
                                 setTimeout(() => {
-                                    tooltip.classList.remove("tooltip-success");
-                                    tooltip.setAttribute("data-tip", originalTooltipText);
+                                    if (tooltip) {
+                                        tooltip.classList.remove("tooltip-success");
+                                        tooltip.setAttribute("data-tip", originalTooltipText);
+                                    }
                                     button.disabled = false;
                                     button.classList.remove("opacity-50", "cursor-not-allowed");
                                 }, 3000);
@@ -61,6 +66,8 @@
                         .catch(error => {
                             console.error('Error:', error);
                             alert('Failed to process deposit request. See console for details.');
+                            button.disabled = false;
+                            button.classList.remove("opacity-50", "cursor-not-allowed");
                         });
                 });
             });

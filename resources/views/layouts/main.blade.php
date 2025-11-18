@@ -8,7 +8,7 @@
     @vite('resources/js/app.js')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="flex flex-col bg-base-200/30 min-h-screen">
 
 @if($pwApiDown)
     <div class="bg-warning text-warning-content text-sm py-1 text-center w-full">
@@ -23,16 +23,19 @@
 
 <x-header/>
 
-<div class="container mx-auto py-8 flex-grow">
-    <div class="flex">
-        <main class="w-full">
-            @if (session('alert-message') || $errors->any())
-                <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}"/>
-            @endif
-            @yield('content')
-            <!-- Toast Notification -->
-            <div id="toast-container" class="toast toast-end hidden"></div>
-        </main>
+<div class="flex-grow relative">
+    <div class="absolute inset-0 bg-gradient-to-b from-primary/5 via-base-200/30 to-base-100 pointer-events-none"></div>
+    <div class="container max-w-7xl xl:max-w-6xl 2xl:max-w-[1400px] mx-auto px-4 py-8 relative">
+        <div class="flex">
+            <main class="w-full space-y-6">
+                @if (session('alert-message') || $errors->any())
+                    <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}"/>
+                @endif
+                @yield('content')
+                <!-- Toast Notification -->
+                <div id="toast-container" class="toast toast-end hidden"></div>
+            </main>
+        </div>
     </div>
 </div>
 
@@ -41,6 +44,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const themeToggle = document.getElementById("theme-toggle");
+        if (!themeToggle) return;
 
         // Load saved theme from local storage
         if (localStorage.getItem("theme") === "night") {

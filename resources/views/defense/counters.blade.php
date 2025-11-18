@@ -1,27 +1,30 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div class="max-w-7xl xl:max-w-6xl 2xl:max-w-[1400px] mx-auto px-4 py-6 space-y-6">
 
         {{-- Target Nation Input --}}
-        <div class="form-control w-full sm:max-w-xs">
-            <label class="label">
-                <span class="label-text">Target Nation ID</span>
-            </label>
-            <div class="join w-full">
-                <input
-                        type="number"
-                        id="nationIdInput"
-                        placeholder="e.g. 123456"
-                        class="input input-bordered join-item w-full"
-                />
-                <button
-                        class="btn btn-primary join-item"
-                        onclick="redirectToNation()"
-                >
-                    Go
-                </button>
+        <div class="rounded-2xl bg-base-100 border border-base-300 p-4 shadow-sm flex flex-wrap items-center gap-3">
+            <div class="flex-1 min-w-[220px]">
+                <label class="label">
+                    <span class="label-text font-semibold">Target Nation ID</span>
+                </label>
+                <div class="join w-full">
+                    <input
+                            type="number"
+                            id="nationIdInput"
+                            placeholder="e.g. 123456"
+                            class="input input-bordered join-item w-full"
+                    />
+                    <button
+                            class="btn btn-primary join-item"
+                            onclick="redirectToNation()"
+                    >
+                        Go
+                    </button>
+                </div>
             </div>
+            <p class="text-sm text-base-content/70">Jump directly to counter matches for any nation in one step.</p>
         </div>
 
         <script>

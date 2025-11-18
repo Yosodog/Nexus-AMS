@@ -1,27 +1,44 @@
 @extends('layouts.main')
 
 @section("content")
-    @include("accounts.components.account_overview")
+    <div class="mx-auto space-y-8">
+        @php
+            $totalCash = $accounts->sum('money');
+        @endphp
 
-    <div class="divider"></div>
+        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow-md">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-base-content/60">Banking workspace</p>
+                    <h1 class="text-2xl font-bold">Manage your accounts</h1>
+                    <p class="text-sm text-base-content/70">Transfer, request deposits, and keep balances tidy.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <div class="rounded-xl bg-primary/10 border border-primary/30 px-4 py-3 text-primary">
+                        <p class="text-xs uppercase">Total cash</p>
+                        <p class="text-xl font-bold">${{ number_format($totalCash, 2) }}</p>
+                    </div>
+                    <div class="rounded-xl bg-base-200 border border-base-300 px-4 py-3">
+                        <p class="text-xs uppercase text-base-content/70">Accounts</p>
+                        <p class="text-xl font-bold">{{ $accounts->count() }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="grid grid-cols-2 gap-6">
-        <div>
-            @include("accounts.components.create")
+        @include("accounts.components.account_overview")
+
+        <div class="space-y-6">
+            @include("accounts.components.transfer")
+            @include("accounts.components.direct_deposit")
+            <div class="grid gap-6 md:grid-cols-2">
+                @include("accounts.components.create")
+                @include("accounts.components.delete")
+            </div>
         </div>
-        <div>
-            @include("accounts.components.delete")
-        </div>
+
+        @include("accounts.components.deposit_js")
     </div>
-
-    <div class="divider"></div>
-
-    @include("accounts.components.transfer")
-    @include("accounts.components.deposit_js")
-
-    <div class="divider"></div>
-
-    @include("accounts.components.direct_deposit")
 @endsection
 
 @push('scripts')

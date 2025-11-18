@@ -1,11 +1,19 @@
 @php use App\Services\PWHelperService; @endphp
-<x-utils.card title="Accounts" extraClasses="mb-2">
-    <div class="overflow-x-auto">
+@php
+    $resourceList = PWHelperService::resources();
+    $totals = collect($resourceList)->mapWithKeys(fn($res) => [$res => $accounts->sum($res)]);
+@endphp
+<x-utils.card title="Your accounts" extraClasses="mb-2">
+    <div class="flex items-center justify-between mb-3 text-sm text-base-content/70">
+        <p>Snapshot of balances across every account with quick deposit requests.</p>
+        <span class="badge badge-outline">{{ $accounts->count() }} active</span>
+    </div>
+    <div class="overflow-x-auto rounded-xl border border-base-300">
         <table class="table w-full table-zebra">
-            <thead>
+            <thead class="bg-base-200 text-sm">
             <tr>
-                <th class="text-left">Account Name</th>
-                @foreach (PWHelperService::resources() as $resource)
+                <th class="text-left">Account</th>
+                @foreach ($resourceList as $resource)
                     <th class="text-left">{{ ucfirst($resource) }}</th>
                 @endforeach
             </tr>
@@ -13,16 +21,17 @@
             <tbody>
             @foreach($accounts as $account)
                 <tr class="hover">
-                    <td>
-                        <a href="{{ route("accounts.view", ["accounts" => $account]) }}"
-                           class="link link-primary">{{ $account->name }}</a>
-                        <div class="tooltip" data-tip="Click to request a deposit">
-                            <button class="deposit-request-btn relative" data-account-id="{{ $account->id }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke-width="1.5" stroke="currentColor"
-                                     class="size-6 text-blue-500 hover:text-blue-700 cursor-pointer">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                          d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+                    <td class="font-semibold flex items-center gap-2">
+                        <a href="{{ route('accounts.view', ['accounts' => $account]) }}"
+                           class="link link-primary">
+                            {{ $account->name }}
+                        </a>
+
+                        <div class="tooltip" data-tip="Generate deposit code">
+                            <button class="btn btn-square btn-ghost btn-xs deposit-request-btn"
+                                    data-account-id="{{ $account->id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
                                 </svg>
                             </button>
                         </div>
@@ -34,6 +43,14 @@
                 </tr>
             @endforeach
             </tbody>
+            <tfoot class="bg-base-200">
+            <tr>
+                <th>Totals</th>
+                @foreach ($resourceList as $resource)
+                    <th>{{ $resource === 'money' ? '$' : '' }}{{ number_format($totals[$resource] ?? 0, 2) }}</th>
+                @endforeach
+            </tr>
+            </tfoot>
         </table>
     </div>
 </x-utils.card>

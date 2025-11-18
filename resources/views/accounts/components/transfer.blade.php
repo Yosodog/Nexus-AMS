@@ -1,12 +1,16 @@
 @php use App\Services\PWHelperService; @endphp
-<x-utils.card title="Transfer" extraClasses="mb-2">
-    <form method="POST" action="/accounts/transfer">
-        @csrf <!-- Include CSRF token if using Laravel -->
+<x-utils.card title="Transfer funds & resources" extraClasses="mb-2">
+    <p class="text-sm text-base-content/70 mb-4">Move balances between accounts, pay down loans, or send directly to your nation.</p>
+    <form method="POST" action="/accounts/transfer" class="space-y-4">
+        @csrf
 
-        <!-- From Account Selection -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <!-- From/To Selection -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-control">
-                <label for="tran_from" class="label font-semibold">From</label>
+                <label for="tran_from" class="label font-semibold">
+                    <span class="label-text">From</span>
+                    <span class="label-text-alt text-base-content/60" id="fromSummary">Available balance</span>
+                </label>
                 <select class="select select-bordered w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
@@ -21,9 +25,11 @@
                 </select>
             </div>
 
-            <!-- To Account Selection -->
             <div class="form-control">
-                <label for="tran_to" class="label font-semibold">To</label>
+                <label for="tran_to" class="label font-semibold">
+                    <span class="label-text">To</span>
+                    <span class="label-text-alt text-base-content/60">Select loan to pay only money</span>
+                </label>
                 <select class="select select-bordered w-full" name="to" id="tran_to" required
                         onchange="handleToSelectionChange()">
                     <optgroup label="Nation">
@@ -48,19 +54,19 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
-            @foreach(PWHelperService::resources() as $resource)
-                <div class="form-control">
-                    <label for="{{ $resource }}" class="label font-semibold">
-                        {{ ucfirst($resource) }}
-                        <span class="badge badge-info ml-2">
-                    @if($resource === 'money')
-                                $
-                            @endif
-                    <span id="{{ $resource }}Avail">0.00</span>
-                </span>
-                    </label>
-                    <input
+        <div class="rounded-xl border border-base-300 p-4 bg-base-200/50">
+            <div class="flex items-center justify-between mb-3 text-sm">
+                <p class="font-semibold">Resources to move</p>
+                <span class="text-base-content/70">Caps update with your selected source</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
+                @foreach(PWHelperService::resources() as $resource)
+                    <div class="form-control">
+                        <label for="{{ $resource }}" class="label font-semibold">
+                            {{ ucfirst($resource) }}
+                            <span class="badge badge-ghost ml-2" id="{{ $resource }}Avail">0.00</span>
+                        </label>
+                        <input
                             type="number"
                             class="input input-bordered"
                             name="{{ $resource }}"
@@ -68,14 +74,15 @@
                             value="0"
                             step="any"
                             min="0"
-                    >
-                </div>
-            @endforeach
+                        >
+                    </div>
+                @endforeach
+            </div>
         </div>
 
-        <!-- Submit Button -->
-        <div class="mt-6">
-            <button type="submit" class="btn btn-primary btn-block">Transfer</button>
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p class="text-sm text-base-content/70">Need a fresh deposit code? Use the Deposit button on the accounts table above.</p>
+            <button type="submit" class="btn btn-primary">Transfer now</button>
         </div>
     </form>
 </x-utils.card>
@@ -137,6 +144,10 @@
     function handleFromSelectionChange() {
         const fromSelect = document.getElementById('tran_from');
         const selectedOption = fromSelect.options[fromSelect.selectedIndex];
+        const summary = document.getElementById('fromSummary');
+        if (summary && selectedOption) {
+            summary.textContent = selectedOption.textContent.trim();
+        }
 
         // Get all resource values from the selected option
         const resources = {
