@@ -8,118 +8,44 @@ use Opcodes\LogViewer\Logs\Log;
 class SubLog extends Log
 {
     public static string $name = 'Subscription Service';
-
-    /**
-     * This tells LogViewer to use SubLogLevel to interpret level strings.
-     */
     public static string $levelClass = SubLogLevel::class;
 
-    /**
-     * Match every line in the log.
-     */
-    public static string $regex = '/^(?<message>.+)$/m';
+    public static string $regex =
+        '/^(?<datetime>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?<level>[A-Z]+)\s+(?<message>[^|]+?)(?:\s*\|\s*(?<meta>.*))?$/m';
 
     public static array $columns = [
         ['label' => 'Time', 'data_path' => 'datetime'],
-        ['label' => 'Type', 'data_path' => 'level'],       // now level is the type string
-        ['label' => 'Details', 'data_path' => 'message'],
+        ['label' => 'Level', 'data_path' => 'level'],
+        ['label' => 'Message', 'data_path' => 'message'],
+        ['label' => 'Model', 'data_path' => 'context.model'],
+        ['label' => 'Event', 'data_path' => 'context.event'],
     ];
 
     public function fillMatches(array $matches = []): void
     {
-        $message = trim($matches['message'] ?? '');
+        // Timestamp
+        $this->datetime = Carbon::parse($matches['datetime']);
 
-        // REQUIRED: Carbon instance
-        $this->datetime = Carbon::now();
-        $this->message = $message;
+        // Message
+        $this->message = trim($matches['message']);
 
-        // Default
-        $type = 'info';
+        // Level
+        $this->level = strtolower($matches['level']);
 
-        // ------------------------------------------------------------
-        // 1. Received channel
-        // ------------------------------------------------------------
-        if (preg_match('/Received channel (?<channel>\S+) for (?<event>[\w:]+) \(attempt (?<attempt>\d+)\)/',
-            $message, $m)) {
+        // Metadata parsing
+        $metaString = $matches['meta'] ?? '';
+        $context = [];
 
-            // Split into resource + action
-            [$resource, $action] = explode(':', $m['event']);
+        if ($metaString) {
+            preg_match_all('/(\w+)=("[^"]+"|\S+)/', $metaString, $pairs, PREG_SET_ORDER);
 
-            // Create / Delete get promoted to top-level types
-            if ($action === 'create') {
-                $type = 'create';
-            } elseif ($action === 'delete') {
-                $type = 'delete';
-            } else {
-                $type = 'received-channel';
+            foreach ($pairs as $pair) {
+                $key = $pair[1];
+                $val = trim($pair[2], '"');
+                $context[$key] = $val;
             }
-
-            $this->context = [
-                'type' => $type,
-                'resource' => $resource,
-                'action' => $action,
-                'channel' => $m['channel'],
-                'attempt' => (int) $m['attempt'],
-            ];
-
-            $this->level = $type;
-
-            return;
         }
 
-        // ------------------------------------------------------------
-        // 2. Successfully subscribed
-        // ------------------------------------------------------------
-        if (preg_match('/Successfully subscribed to channel: (?<channel>\S+)/', $message, $m)) {
-
-            $type = 'subscribed';
-
-            $this->context = [
-                'type' => $type,
-                'channel' => $m['channel'],
-            ];
-
-            $this->level = $type;
-
-            return;
-        }
-
-        // ------------------------------------------------------------
-        // 3. Successfully sent update
-        // ------------------------------------------------------------
-        if (preg_match('/Successfully sent update for (?<model>\w+) \((?<count>\d+) records\)/', $message, $m)) {
-
-            $type = 'update-sent';
-
-            $this->context = [
-                'type' => $type,
-                'model' => $m['model'],
-                'count' => (int) $m['count'],
-            ];
-
-            $this->level = $type;
-
-            return;
-        }
-
-        // ------------------------------------------------------------
-        // 4. Startup / Config / Shutdown / Misc
-        // ------------------------------------------------------------
-        if (str_contains($message, 'Starting subscription service')) {
-            $type = 'startup';
-        } elseif (str_contains($message, 'SIGTERM received')) {
-            $type = 'shutdown';
-        } elseif (str_contains($message, 'Snapshots disabled')) {
-            $type = 'config';
-        } elseif (str_contains($message, 'Connected to Pusher')) {
-            $type = 'pusher-connected';
-        }
-
-        $this->context = [
-            'type' => $type,
-        ];
-
-        // Assign type STRING — NOT an object
-        $this->level = $type;
+        $this->context = $context;
     }
 }

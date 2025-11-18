@@ -23,6 +23,9 @@ class SubLogLevel implements LevelInterface
     public static function caseValues(): array
     {
         return [
+            'info',
+            'warn',
+            'error',
             'startup',
             'shutdown',
             'received-channel',
@@ -30,7 +33,6 @@ class SubLogLevel implements LevelInterface
             'update-sent',
             'pusher-connected',
             'config',
-            'info',
             'create',
             'delete',
         ];
@@ -50,16 +52,15 @@ class SubLogLevel implements LevelInterface
     public function getClass(): LevelClass
     {
         return match ($this->value) {
+            'error' => LevelClass::danger(),
+            'warn'  => LevelClass::warning(),
+            'info'  => LevelClass::info(),
+
             'startup',
             'subscribed',
             'update-sent',
             'pusher-connected',
             'create' => LevelClass::success(),
-
-            'received-channel',
-            'info' => LevelClass::info(),
-
-            'config' => LevelClass::warning(),
 
             'delete',
             'shutdown' => LevelClass::danger(),
