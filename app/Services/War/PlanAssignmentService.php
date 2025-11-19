@@ -92,12 +92,18 @@ class PlanAssignmentService
             ->get()
             ->groupBy('war_plan_target_id');
 
+        $targetAssignmentAverages = $existingAssignments->map(static function (SupportCollection $assignments) {
+            return $assignments->avg('match_score');
+        });
+
         $friendlySquadMatrix = $this->buildSquadMatrix($plan);
 
         $friendlyAssignmentCounts = $plan->assignments()
             ->select('friendly_nation_id', DB::raw('count(*) as total'))
             ->groupBy('friendly_nation_id')
             ->pluck('total', 'friendly_nation_id');
+
+        $friendlyProfiles = $this->buildFriendlyProfiles($friendlies, $friendlyAssignmentCounts);
 
         $results = collect();
 
@@ -121,9 +127,10 @@ class PlanAssignmentService
             $candidates = $this->scoreFriendlyCandidates(
                 plan: $plan,
                 target: $target,
-                friendlies: $friendlies,
+                friendlyProfiles: $friendlyProfiles,
                 preservedFriendlyIds: $preservedFriendlyIds,
-                assignmentCounts: $friendlyAssignmentCounts
+                assignmentCounts: $friendlyAssignmentCounts,
+                existingAverage: $targetAssignmentAverages[$target->id] ?? null
             );
 
             $selected = $this->selectCohesiveAssignments(
@@ -139,11 +146,15 @@ class PlanAssignmentService
             // Delete unlocked assignments not in the final list.
             $targetAssignments
                 ->filter(fn (WarPlanAssignment $assignment) => ! in_array($assignment->friendly_nation_id, $finalFriendlyIds, true))
-                ->each(function (WarPlanAssignment $assignment) {
+                ->each(function (WarPlanAssignment $assignment) use (&$friendlyAssignmentCounts) {
                     if ($assignment->is_locked || $assignment->is_overridden) {
                         return;
                     }
+                    $friendlyId = $assignment->friendly_nation_id;
                     $assignment->delete();
+                    if ($friendlyId !== null) {
+                        $this->decrementAssignmentCount($friendlyAssignmentCounts, (int) $friendlyId);
+                    }
                 });
 
             foreach ($selected as $candidate) {
@@ -185,40 +196,56 @@ class PlanAssignmentService
      *
      * @param  array<int>  $preservedFriendlyIds
      * @param  SupportCollection<int, int>  $assignmentCounts
+     * @param  SupportCollection<int, array{
+     *     friendly: Nation,
+     *     available_slots: int,
+     *     assignment_load: int,
+     *     max_assignments: int,
+     *     offensive_wars: int,
+     *     defensive_wars: int
+     * }>  $friendlyProfiles
      */
     protected function scoreFriendlyCandidates(
         WarPlan $plan,
         \App\Models\WarPlanTarget $target,
-        Collection $friendlies,
+        SupportCollection $friendlyProfiles,
         array $preservedFriendlyIds,
-        SupportCollection $assignmentCounts
+        SupportCollection $assignmentCounts,
+        ?float $existingAverage = null
     ): SupportCollection {
-        $available = $friendlies
-            ->reject(function (Nation $nation) use ($preservedFriendlyIds) {
-                return in_array($nation->id, $preservedFriendlyIds, true);
-            })
-            ->values();
+        if (! $target->nation) {
+            return collect();
+        }
+
+        $available = $friendlyProfiles
+            ->reject(function (array $profile, int $friendlyId) use ($preservedFriendlyIds) {
+                return in_array($friendlyId, $preservedFriendlyIds, true);
+            });
 
         $squadTolerance = $plan->squad_cohesion_tolerance;
-        $existingAverage = $target->assignments()
-            ->avg('match_score');
-
         $cohesionReference = $existingAverage !== null ? $existingAverage / 100 : 0.5;
 
-        $candidates = $available->map(function (Nation $friendly) use ($target, $assignmentCounts, $squadTolerance, $cohesionReference) {
-            if (! $target->nation || ! $this->matchService->canAttack($friendly, $target->nation)) {
+        $candidates = $available->map(function (array $profile, int $friendlyId) use (
+            $target,
+            $assignmentCounts,
+            $squadTolerance,
+            $cohesionReference
+        ) {
+            $friendly = $profile['friendly'];
+
+            if (! $this->matchService->canAttack($friendly, $target->nation)) {
                 return null;
             }
 
-            $availableSlots = $this->calculateAvailableSlots($friendly);
-            $currentAssignments = $assignmentCounts[$friendly->id] ?? 0;
+            $currentAssignments = $assignmentCounts[$friendlyId] ?? 0;
+            $availableSlots = $profile['available_slots'];
             $effectiveSlots = $availableSlots - $currentAssignments;
 
             if ($effectiveSlots <= 0) {
                 return null;
             }
 
-            $existingOffensive = (int) ($friendly->offensive_wars_count ?? 0);
+            $existingOffensive = $profile['offensive_wars'] ?? (int) ($friendly->offensive_wars_count ?? 0);
             $remainingOffensive = 6 - ($existingOffensive + $currentAssignments);
 
             if ($remainingOffensive <= 0) {
@@ -228,7 +255,7 @@ class PlanAssignmentService
             $context = [
                 'available_slots' => max(0, $effectiveSlots),
                 'assignment_load' => $currentAssignments,
-                'max_assignments' => max(1, min($this->maxAssignmentsFor($friendly), $remainingOffensive)),
+                'max_assignments' => max(1, min($profile['max_assignments'], $remainingOffensive)),
                 'cohesion_reference' => $cohesionReference,
                 'cohesion_tolerance' => $squadTolerance,
                 'enemy_tps' => $target->target_priority_score,
@@ -252,7 +279,7 @@ class PlanAssignmentService
 
             $penalizedScore = max(0, $match['score']
                 - ($existingOffensive + $currentAssignments) * $offPenalty
-                - (($friendly->defensive_wars_count ?? 0) * $defPenalty));
+                - (($profile['defensive_wars'] ?? ($friendly->defensive_wars_count ?? 0)) * $defPenalty));
 
             if ($penalizedScore <= 0) {
                 return null;
@@ -490,7 +517,7 @@ class PlanAssignmentService
     /**
      * Estimate available slots by subtracting ongoing wars.
      */
-    protected function calculateAvailableSlots(Nation $friendly): int
+    protected function calculateAvailableSlots(Nation $friendly, int $activeWars): int
     {
         $base = config('war.slot_caps.default_offensive', 3);
 
@@ -503,14 +530,16 @@ class PlanAssignmentService
             }
         }
 
-        $activeWars = War::query()
-            ->where(function ($query) use ($friendly) {
-                $query->where('att_id', $friendly->id)->orWhere('def_id', $friendly->id);
-            })
-            ->whereNull('end_date')
-            ->count();
-
         return max(0, $base - $activeWars);
+    }
+
+    /**
+     * Safely decrement assignment count tracking for a friendly nation.
+     */
+    protected function decrementAssignmentCount(SupportCollection &$assignmentCounts, int $friendlyId): void
+    {
+        $current = (int) ($assignmentCounts[$friendlyId] ?? 0);
+        $assignmentCounts[$friendlyId] = max(0, $current - 1);
     }
 
     /**
@@ -557,5 +586,85 @@ class PlanAssignmentService
             });
 
         return $matrix;
+    }
+
+    /**
+     * Build cached friendly profiles so slot math and war counts are reused across targets.
+     *
+     * @param  SupportCollection<int, int>  $assignmentCounts
+     * @return SupportCollection<int, array{
+     *     friendly: Nation,
+     *     available_slots: int,
+     *     assignment_load: int,
+     *     max_assignments: int,
+     *     offensive_wars: int,
+     *     defensive_wars: int
+     * }>
+     */
+    protected function buildFriendlyProfiles(Collection $friendlies, SupportCollection $assignmentCounts): SupportCollection
+    {
+        $friendliesById = $friendlies->keyBy('id');
+        $activeWarCounts = $this->activeWarCounts($friendliesById->keys());
+
+        return $friendliesById->map(function (Nation $friendly) use ($assignmentCounts, $activeWarCounts) {
+            $friendlyId = $friendly->id;
+            $assignmentLoad = (int) ($assignmentCounts[$friendlyId] ?? 0);
+            $activeWars = (int) ($activeWarCounts[$friendlyId] ?? 0);
+
+            return [
+                'friendly' => $friendly,
+                'available_slots' => $this->calculateAvailableSlots($friendly, $activeWars),
+                'assignment_load' => $assignmentLoad,
+                'max_assignments' => $this->maxAssignmentsFor($friendly),
+                'offensive_wars' => (int) ($friendly->offensive_wars_count ?? 0),
+                'defensive_wars' => (int) ($friendly->defensive_wars_count ?? 0),
+            ];
+        });
+    }
+
+    /**
+     * Cache and return active war counts for the provided nation IDs.
+     *
+     * @param  SupportCollection<int, int>  $friendlyIds
+     * @return array<int, int>
+     */
+    protected function activeWarCounts(SupportCollection $friendlyIds): array
+    {
+        $ids = $friendlyIds->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        $cache = $this->cacheFactory->store();
+        $cacheKey = 'war:active_wars:'.md5($ids->join(','));
+
+        return $cache->remember(
+            $cacheKey,
+            (int) config('war.cache.active_war_counts_ttl', 60),
+            function () use ($ids) {
+                $attCounts = War::query()
+                    ->whereNull('end_date')
+                    ->whereIn('att_id', $ids)
+                    ->selectRaw('att_id as nation_id, COUNT(*) as total')
+                    ->groupBy('att_id')
+                    ->pluck('total', 'nation_id');
+
+                $defCounts = War::query()
+                    ->whereNull('end_date')
+                    ->whereIn('def_id', $ids)
+                    ->selectRaw('def_id as nation_id, COUNT(*) as total')
+                    ->groupBy('def_id')
+                    ->pluck('total', 'nation_id');
+
+                $counts = [];
+
+                foreach ($ids as $id) {
+                    $counts[$id] = (int) (($attCounts[$id] ?? 0) + ($defCounts[$id] ?? 0));
+                }
+
+                return $counts;
+            }
+        );
     }
 }

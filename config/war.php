@@ -217,6 +217,7 @@ TPL,
     */
     'cache' => [
         'active_enemy_alliances_ttl' => 300,
+        'active_war_counts_ttl' => 60,
         'live_feed_ttl' => 90,
         'lock_timeout' => 10,
         'lock_release_after' => 30,
