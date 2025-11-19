@@ -7,6 +7,63 @@
         @endforeach
     </datalist>
 
+    @php
+        $targetCount = $targets->count();
+        $assignmentCount = $assignments->count();
+        $preferredTargetsPerNation = min(
+            max(1, $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
+        $defensiveCap = (int) config('war.slot_caps.default_defensive', 3);
+        $preferredAssignmentsPerTarget = ($targetCount > 0 && $allFriendlies->count() > 0)
+            ? (int) min(
+                $defensiveCap,
+                max(1, ceil(($allFriendlies->count() * $preferredTargetsPerNation) / $targetCount))
+            )
+            : 0;
+        $preferredSlotsTotal = $allFriendlies->count() > 0 ? $preferredTargetsPerNation * $allFriendlies->count() : 0;
+        $coverage = $preferredSlotsTotal > 0 ? round(min(100, ($assignmentCount / $preferredSlotsTotal) * 100)) : null;
+        $lockedCount = $assignments->where('is_locked', true)->count();
+        $enemyCount = $targets->unique('nation_id')->count();
+        $assignedFriendlyIds = $assignments->pluck('friendly_nation_id')->filter()->unique();
+        $unassignedFriendlies = $allFriendlies->whereNotIn('id', $assignedFriendlyIds);
+
+        $friendlyCityTotal = (int) $allFriendlies->sum(function ($nation) {
+            return (int) ($nation->num_cities ?? 0);
+        });
+        $enemyCityTotal = (int) $targets->pluck('nation')->filter()->sum(function ($nation) {
+            return (int) ($nation->num_cities ?? 0);
+        });
+        $friendlyCityAvg = $allFriendlies->avg('num_cities');
+        $enemyCityAvg = $targets->pluck('nation')->filter()->avg('num_cities');
+
+        $friendlyMilTotals = [
+            'soldiers' => $allFriendlies->sum(fn ($nation) => (int) optional($nation->military)->soldiers),
+            'tanks' => $allFriendlies->sum(fn ($nation) => (int) optional($nation->military)->tanks),
+            'aircraft' => $allFriendlies->sum(fn ($nation) => (int) optional($nation->military)->aircraft),
+            'ships' => $allFriendlies->sum(fn ($nation) => (int) optional($nation->military)->ships),
+        ];
+        $enemyMilTotals = [
+            'soldiers' => $targets->pluck('nation')->filter()->sum(fn ($nation) => (int) optional($nation->military)->soldiers),
+            'tanks' => $targets->pluck('nation')->filter()->sum(fn ($nation) => (int) optional($nation->military)->tanks),
+            'aircraft' => $targets->pluck('nation')->filter()->sum(fn ($nation) => (int) optional($nation->military)->aircraft),
+            'ships' => $targets->pluck('nation')->filter()->sum(fn ($nation) => (int) optional($nation->military)->ships),
+        ];
+
+        $friendlyCaps = [
+            'soldiers' => 15000 * max(1, $friendlyCityTotal),
+            'tanks' => 1250 * max(1, $friendlyCityTotal),
+            'aircraft' => 75 * max(1, $friendlyCityTotal),
+            'ships' => 15 * max(1, $friendlyCityTotal),
+        ];
+        $enemyCaps = [
+            'soldiers' => 15000 * max(1, $enemyCityTotal),
+            'tanks' => 1250 * max(1, $enemyCityTotal),
+            'aircraft' => 75 * max(1, $enemyCityTotal),
+            'ships' => 15 * max(1, $enemyCityTotal),
+        ];
+    @endphp
+
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row mb-3 align-items-center">
@@ -25,11 +82,65 @@
                     <a href="{{ route('admin.war-room') }}" class="btn btn-outline-secondary btn-sm">Back to War Room</a>
                 </div>
             </div>
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <div class="card shadow-none border h-100">
+                        <div class="card-body py-3">
+                            <div class="text-muted small">Targets</div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="h5 mb-0">{{ $enemyCount }}</span>
+                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Enemy nations tracked with TPS">
+                                    <i class="bi bi-bullseye"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card shadow-none border h-100">
+                        <div class="card-body py-3">
+                            <div class="text-muted small">Assign coverage</div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="h5 mb-0">{{ $coverage !== null ? $coverage.'%' : 'n/a' }}</span>
+                                <span class="badge text-bg-primary" data-bs-toggle="tooltip" title="Assignments / preferred slots">
+                                    {{ $assignmentCount }} / {{ $preferredSlotsTotal }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card shadow-none border h-100">
+                        <div class="card-body py-3">
+                            <div class="text-muted small">Locked slots</div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="h5 mb-0">{{ $lockedCount }}</span>
+                                <span class="badge text-bg-success" data-bs-toggle="tooltip" title="Locked or overridden assignments remain untouched">
+                                    Safe
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card shadow-none border h-100">
+                        <div class="card-body py-3">
+                            <div class="text-muted small">Preferred wars / nation</div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="h5 mb-0">{{ $preferredTargetsPerNation }}</span>
+                                <span class="badge text-bg-info" data-bs-toggle="tooltip" title="Activity window drives readiness weighting">
+                                    {{ $plan->activity_window_hours }}h
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <div class="col-12 col-xxl-4">
+        <div class="col-12 col-xl-5">
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Plan Options</h5>
@@ -45,11 +156,11 @@
                         </dd>
 
                         <dt class="col-7">
-                            Preferred / Target
+                            Preferred targets / nation
                             <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
-                               title="How many of our nations should be mapped to each enemy by default."></i>
+                               title="Offensive wars we aim to give each friendly before applying slot caps."></i>
                         </dt>
-                        <dd class="col-5 text-end">{{ $plan->preferred_nations_per_target }}</dd>
+                        <dd class="col-5 text-end">{{ $preferredTargetsPerNation }}</dd>
 
                         <dt class="col-7">
                             Max Squad Size
@@ -101,9 +212,9 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Preferred / target</label>
-                            <input type="number" name="preferred_nations_per_target" class="form-control" min="1" max="10"
-                                   value="{{ old('preferred_nations_per_target', $plan->preferred_nations_per_target) }}">
+                            <label class="form-label">Preferred targets / nation</label>
+                            <input type="number" name="preferred_targets_per_nation" class="form-control" min="1" max="6"
+                                   value="{{ old('preferred_targets_per_nation', $plan->preferred_targets_per_nation) }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Max squad size</label>
@@ -132,11 +243,7 @@
                         </div>
                     </form>
                 </div>
-        </div>
-    </div>
-
-        <div class="col-12 col-xxl-4">
-            @include('admin.war-room.partials.score-guide')
+            </div>
         </div>
 
         <div class="col-12 col-xl-4">
@@ -209,7 +316,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-4">
+        <div class="col-12 col-xl-3">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Automation &amp; Notifications</h5>
@@ -262,6 +369,58 @@
         </div>
     </div>
 
+    {{-- Quick assign modal --}}
+    <div class="modal fade" id="quickAssignModal" tabindex="-1" aria-labelledby="quickAssignModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quickAssignModalLabel">Quick assign</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{{ route('admin.war-plans.assignments.manual', $plan) }}">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Friendly nation</label>
+                            <input type="text" class="form-control" name="friendly_nation_id" id="quickAssignFriendly" readonly>
+                            <div class="form-text" id="quickAssignFriendlyName"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Target</label>
+                            <select name="war_plan_target_id" class="form-select" required>
+                                @php
+                                    $targetOptions = $targets->filter(function ($target) use ($preferredAssignmentsPerTarget) {
+                                        $enemy = $target->nation;
+                                        if (! $enemy || ($enemy->vacation_mode_turns ?? 0) > 0) {
+                                            return false;
+                                        }
+                                        $assignedCount = $target->assignments_count ?? $target->assignments->count();
+                                        return $preferredAssignmentsPerTarget === 0 || $assignedCount < $preferredAssignmentsPerTarget;
+                                    });
+                                @endphp
+                                @foreach ($targetOptions as $targetOption)
+                                    <option value="{{ $targetOption->id }}">
+                                        {{ $targetOption->nation?->leader_name ?? 'Unknown' }}
+                                        (TPS {{ number_format($targetOption->target_priority_score ?? 0, 1) }})
+                                        • Slots {{ ($targetOption->assignments_count ?? $targetOption->assignments->count()) }} / {{ $preferredAssignmentsPerTarget ?: '-' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Match score (optional)</label>
+                            <input type="number" name="match_score" class="form-control" min="0" max="100" placeholder="50">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4 mt-1">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -285,31 +444,35 @@
                         <button class="btn btn-sm btn-outline-primary" type="submit">Add target</button>
                     </form>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped align-middle mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Enemy</th>
-                                <th>Alliance</th>
-                                <th>TPS</th>
-                                <th>Assigned</th>
-                                <th>War type</th>
-                                <th>Recent activity</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @forelse ($targets as $target)
+                    <div class="card-body p-0">
+                        <div class="table-responsive" id="targets-table">
+                            <table class="table table-striped table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Enemy</th>
+                                    <th>Alliance</th>
+                                    <th>TPS</th>
+                                    <th>Slots</th>
+                                    <th>Status</th>
+                                    <th>Activity</th>
+                                    <th>War type</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse ($targets as $target)
+                                    @php
+                                        $enemyNation = $target->nation;
+                                    @endphp
+                                    @if ($enemyNation && ($enemyNation->vacation_mode_turns ?? 0) > 0)
+                                        @continue
+                                    @endif
                                 @php
                                     $candidateList = $topCandidates[$target->id] ?? [];
-                                @endphp
-                                @php
-                                    $enemyNation = $target->nation;
                                     $enemyAlliance = $enemyNation?->alliance;
                                     $enemyMilitary = $enemyNation?->military;
                                     $assignedCount = $target->assignments_count ?? $target->assignments->count();
-                                    $preferredSlots = max(1, $plan->preferred_nations_per_target);
+                                    $preferredSlots = max(1, $preferredAssignmentsPerTarget);
                                     $assignedBadgeClass = $assignedCount >= $preferredSlots ? 'text-bg-danger' : 'text-bg-success';
                                 @endphp
                                 <tr>
@@ -346,17 +509,39 @@
                                             {{ $assignedCount }} / {{ $preferredSlots }}
                                         </span>
                                     </td>
+                                    <td>
+                                        @if ($enemyNation)
+                                            @if ($enemyNation->vacation_mode_turns > 0)
+                                                <span class="badge text-bg-warning" data-bs-toggle="tooltip" title="In vacation mode">VM</span>
+                                            @endif
+                                            @if ($enemyNation->beige_turns > 0)
+                                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="On beige">{{ $enemyNation->beige_turns }} beige</span>
+                                            @endif
+                                            @if (($enemyNation->offensive_wars_count ?? 0) + ($enemyNation->defensive_wars_count ?? 0) > 0)
+                                                <span class="badge text-bg-info" data-bs-toggle="tooltip" title="Active wars">
+                                                    Wars {{ ($enemyNation->offensive_wars_count ?? 0) }} / {{ ($enemyNation->defensive_wars_count ?? 0) }}
+                                                </span>
+                                            @endif
+                                            @if ($enemyNation->offensive_wars_count == 0 && $enemyNation->defensive_wars_count == 0 && $enemyNation->beige_turns == 0 && $enemyNation->vacation_mode_turns == 0)
+                                                <span class="text-muted small">No flags</span>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">Unknown</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        {{ optional($enemyNation?->accountProfile?->last_active)->diffForHumans() ?? 'Unknown' }}
+                                    </td>
                                     <td style="width: 180px;">
                                         <form method="post" action="{{ route('admin.war-plans.targets.update-war-type', [$plan, $target]) }}">
                                             @csrf
-                                            <select class="form-select form-select-sm" name="preferred_war_type" onchange="this.form.submit()">
+                                            <select class="form-select form-select-sm" name="preferred_war_type" onchange="this.form.submit()" data-bs-toggle="tooltip" title="Preferred declaration for this enemy">
                                                 @foreach ($warTypes as $value => $label)
                                                     <option value="{{ $value }}" @selected($target->preferred_war_type === $value)>{{ $label }}</option>
                                                 @endforeach
                                             </select>
                                         </form>
                                     </td>
-                                    <td>{{ optional($target->nation->latestSignIn?->created_at)->diffForHumans() ?? 'Unknown' }}</td>
                                     <td class="text-end">
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#meta-{{ $target->id }}">
@@ -375,7 +560,7 @@
                                     </td>
                                 </tr>
                                 <tr class="collapse" id="meta-{{ $target->id }}">
-                                    <td colspan="7" class="bg-body-tertiary">
+                                    <td colspan="8" class="bg-body-tertiary">
                                         <pre class="mb-0 small text-muted">{{ json_encode($target->meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                                     </td>
                                 </tr>
@@ -513,12 +698,17 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Assignments &amp; squads</h5>
-                    <small class="text-muted">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h5 class="card-title mb-0">Assignments &amp; squads</h5>
+                            <small class="text-muted">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
+                        </div>
+                        <a href="#assignments-table" class="btn btn-sm btn-outline-secondary">Jump to table</a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped align-middle mb-0">
+                        <table class="table table-striped table-hover align-middle mb-0">
                             <thead class="table-light">
                             <tr>
                                 <th>Target</th>
@@ -542,7 +732,7 @@
                                     $friendlyMilitary = $friendly?->military;
                                     $stats = $friendlyStats->get($assignment->friendly_nation_id);
                                     $assignmentLoad = $stats['assignment_load'] ?? 0;
-                                    $maxAssignments = $stats['max_assignments'] ?? max(1, $plan->preferred_nations_per_target);
+                                    $maxAssignments = $stats['max_assignments'] ?? max(1, $preferredTargetsPerNation);
                                     $collapseId = 'assignment-meta-'.$assignment->id;
                                 @endphp
                                 <tr>
@@ -594,19 +784,33 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <div class="progress flex-grow-1" style="height: 8px;" aria-label="Match strength">
+                                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ min(100, $assignment->match_score) }}%"
+                                                     aria-valuenow="{{ $assignment->match_score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
                                             <span class="badge text-bg-info">{{ number_format($assignment->match_score, 1) }}</span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1">
                                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="false" aria-controls="{{ $collapseId }}">
                                                 Details
                                             </button>
+                                            @if ($assignment->is_overridden)
+                                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Manual override">Manual</span>
+                                            @endif
+                                            @if ($assignment->is_locked)
+                                                <span class="badge text-bg-success" data-bs-toggle="tooltip" title="Locked assignment">Locked</span>
+                                            @endif
                                         </div>
-                                        @if ($assignment->is_overridden)
-                                            <span class="badge text-bg-secondary mt-1" data-bs-toggle="tooltip" title="Manual override">
-                                                Manual
-                                            </span>
-                                        @endif
                                     </td>
-                                    <td><span class="badge text-bg-light text-uppercase">{{ $assignment->status }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <span class="badge text-bg-light text-uppercase">{{ $assignment->status }}</span>
+                                            @if (($friendly->beige_turns ?? 0) > 0)
+                                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Friendly on beige">Beige</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td class="text-end">
                                         <form method="post" action="{{ route('admin.war-plans.assignments.destroy', [$plan, $assignment]) }}"
                                               onsubmit="return confirm('Remove this assignment?');">
@@ -616,7 +820,7 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <tr class="collapse" id="{{ $collapseId }}">
+                            <tr class="collapse" id="{{ $collapseId }}">
                                     <td colspan="9" class="bg-body-tertiary">
                                         @include('admin.war-room.partials.match-breakdown', ['meta' => $assignment->meta ?? []])
                                     </td>
@@ -695,6 +899,173 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex flex-column flex-lg-row align-items-lg-center gap-3">
+                    <div>
+                        <h5 class="card-title mb-0">Comparative Stats</h5>
+                        <small class="text-muted">Quick glance at friendly vs enemy scale and militarization.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold d-flex justify-content-between">
+                                <span>Cities</span>
+                                <span class="text-muted small">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
+                            </h6>
+                            <div class="progress" style="height: 10px;" aria-label="Cities share">
+                                @php
+                                    $cityTotal = max(1, $friendlyCityTotal + $enemyCityTotal);
+                                    $friendlyCityPct = round(($friendlyCityTotal / $cityTotal) * 100, 1);
+                                @endphp
+                                <div class="progress-bar bg-primary" style="width: {{ $friendlyCityPct }}%" data-bs-toggle="tooltip" title="Friendly avg {{ number_format($friendlyCityAvg ?? 0, 1) }} | Enemy avg {{ number_format($enemyCityAvg ?? 0, 1) }}"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold d-flex justify-content-between">
+                                <span>Force Readiness</span>
+                                <span class="text-muted small">By unit type</span>
+                            </h6>
+                            @foreach (['soldiers' => 'Soldiers', 'tanks' => 'Tanks', 'aircraft' => 'Aircraft', 'ships' => 'Ships'] as $unitKey => $label)
+                                @php
+                                    $friendlyVal = $friendlyMilTotals[$unitKey] ?? 0;
+                                    $enemyVal = $enemyMilTotals[$unitKey] ?? 0;
+                                    $totalUnits = $friendlyVal + $enemyVal;
+                                    if ($totalUnits <= 0) {
+                                        $friendlyPct = 50;
+                                        $enemyPct = 50;
+                                    } else {
+                                        $friendlyPct = round(($friendlyVal / $totalUnits) * 100, 1);
+                                        $enemyPct = round(100 - $friendlyPct, 1);
+                                    }
+                                @endphp
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>{{ $label }}</span>
+                                        <span class="text-muted">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" style="width: {{ $friendlyPct }}%" data-bs-toggle="tooltip" title="Friendly {{ number_format($friendlyVal) }} units ({{ $friendlyPct }}% share)"></div>
+                                        <div class="progress-bar bg-danger" style="width: {{ $enemyPct }}%" data-bs-toggle="tooltip" title="Enemy {{ number_format($enemyVal) }} units ({{ $enemyPct }}% share)"></div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">Average Cities</h6>
+                            <p class="mb-1"><span class="badge text-bg-primary">Friendly {{ number_format($friendlyCityAvg ?? 0, 1) }}</span></p>
+                            <p class="mb-1"><span class="badge text-bg-danger">Enemy {{ number_format($enemyCityAvg ?? 0, 1) }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">Assignments Coverage</h6>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" style="width: {{ $coverage ?? 0 }}%" data-bs-toggle="tooltip" title="Assignments {{ $assignmentCount }} / Desired {{ $preferredSlotsTotal ?? 0 }}"></div>
+                            </div>
+                            <small class="text-muted">
+                                Remaining gap: {{ $preferredSlotsTotal > 0 ? max(0, $preferredSlotsTotal - $assignmentCount).' slots' : 'n/a' }}.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script>
+            const quickAssignModal = document.getElementById('quickAssignModal');
+            if (quickAssignModal) {
+                quickAssignModal.addEventListener('show.bs.modal', event => {
+                    const button = event.relatedTarget;
+                    const friendlyId = button?.getAttribute('data-friendly') || '';
+                    const friendlyName = button?.getAttribute('data-friendly-name') || '';
+                    const idField = quickAssignModal.querySelector('#quickAssignFriendly');
+                    const nameField = quickAssignModal.querySelector('#quickAssignFriendlyName');
+                    if (idField) {
+                        idField.value = friendlyId;
+                    }
+                    if (nameField) {
+                        nameField.textContent = friendlyName;
+                    }
+                });
+            }
+        </script>
+    @endpush
+
+    <div class="row g-4 mt-1">
+        <div class="col-12 col-xl-8">
+            @if ($unassignedFriendlies->isNotEmpty())
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Unassigned friendlies</h5>
+                        <small class="text-muted">No current target — fill gaps manually if needed.</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" id="assignments-table">
+                            <table class="table table-striped table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Nation</th>
+                                    <th>Alliance</th>
+                                    <th>Wars</th>
+                                    <th>Activity</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($unassignedFriendlies as $friendly)
+                                    <tr>
+                                        <td>
+                                            <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" class="fw-semibold">
+                                                {{ $friendly->leader_name }}
+                                            </a>
+                                            <div class="small text-muted">{{ $friendly->nation_name }}</div>
+                                            <div class="small">Cities {{ $friendly->num_cities ?? 0 }} • Score {{ number_format($friendly->score ?? 0, 2) }}</div>
+                                        </td>
+                                        <td>
+                                            @if ($friendly->alliance)
+                                                <span class="d-inline-flex align-items-center gap-1">
+                                                    <i class="bi bi-people-fill text-muted"></i>
+                                                    <a href="https://politicsandwar.com/alliance/id={{ $friendly->alliance->id }}" target="_blank">
+                                                        {{ $friendly->alliance->name }}
+                                                    </a>
+                                                </span>
+                                                <div class="small text-muted">{{ $friendly->alliance->acronym }}</div>
+                                            @else
+                                                <span class="text-muted">No alliance</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive">
+                                                {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
+                                            </span>
+                                        </td>
+                                        <td>{{ optional($friendly->accountProfile?->last_active)->diffForHumans() ?? 'Unknown' }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#quickAssignModal"
+                                                    data-friendly="{{ $friendly->id }}"
+                                                    data-friendly-name="{{ $friendly->leader_name }}">
+                                                Assign
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+        <div class="col-12 col-xl-4">
+            @include('admin.war-room.partials.score-guide')
         </div>
     </div>
 

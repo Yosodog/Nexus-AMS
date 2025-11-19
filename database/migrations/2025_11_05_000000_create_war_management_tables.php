@@ -19,8 +19,8 @@ return new class extends Migration
             $table->string('plan_type')->default(config('war.plan_defaults.plan_type', 'ordinary'));
             $table->enum('status', ['planning', 'active', 'archived'])->default('planning')->index();
             $table->json('options')->nullable();
-            $table->unsignedTinyInteger('preferred_nations_per_target')
-                ->default((int) config('war.plan_defaults.preferred_nations_per_target', 3));
+            $table->unsignedTinyInteger('preferred_targets_per_nation')
+                ->default((int) config('war.plan_defaults.preferred_targets_per_nation', 2));
             $table->unsignedTinyInteger('max_squad_size')
                 ->default((int) config('war.squads.max_size', 3));
             $table->unsignedTinyInteger('squad_cohesion_tolerance')

@@ -7,10 +7,12 @@ use App\Models\War;
 use App\Models\WarPlan;
 use App\Models\WarPlanAssignment;
 use App\Models\WarPlanSquad;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -87,28 +89,47 @@ class PlanAssignmentService
         Collection $friendlies,
         bool $respectLocks
     ): Collection {
+        $targets->loadMissing(['nation.military', 'nation.accountProfile']);
+        $friendlies->loadMissing(['military', 'latestSignIn', 'accountProfile']);
+
         $existingAssignments = $plan->assignments()
             ->with(['friendlyNation', 'target'])
             ->get()
             ->groupBy('war_plan_target_id');
 
-        $targetAssignmentAverages = $existingAssignments->map(static function (SupportCollection $assignments) {
-            return $assignments->avg('match_score');
-        });
+        $preferredTargetsPerNation = min(
+            max(1, (int) $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
+        $preferredAssignmentsPerTarget = $this->preferredAssignmentsPerTarget(
+            friendlyCount: $friendlies->count(),
+            targetCount: $targets->count(),
+            preferredTargetsPerNation: $preferredTargetsPerNation
+        );
 
         $friendlySquadMatrix = $this->buildSquadMatrix($plan);
+
+        $activityWindowHours = $this->activityWindowHours($plan);
 
         $friendlyAssignmentCounts = $plan->assignments()
             ->select('friendly_nation_id', DB::raw('count(*) as total'))
             ->groupBy('friendly_nation_id')
             ->pluck('total', 'friendly_nation_id');
 
-        $friendlyProfiles = $this->buildFriendlyProfiles($friendlies, $friendlyAssignmentCounts);
+        $friendlyProfiles = $this->buildFriendlyProfiles($plan, $friendlies, $friendlyAssignmentCounts);
+        $friendlyStrength = $this->buildFriendlyStrength($friendlies, $activityWindowHours);
+        $friendlyStrengthRanks = $friendlyStrength['ranks'];
+        $friendlyActivityFlags = $friendlyStrength['active_flags'];
+
+        $enemyThreatRanks = $this->buildEnemyThreatRanks($targets);
 
         $results = collect();
+        $targetAssignmentsMap = [];
+        $targetOpenings = [];
 
         foreach ($targets->sortByDesc('target_priority_score') as $target) {
             $targetAssignments = $existingAssignments->get($target->id, collect());
+            $existingAverage = $targetAssignments->avg('match_score');
 
             $preserved = $respectLocks
                 ? $targetAssignments->filter(fn (WarPlanAssignment $assignment) => $assignment->is_locked || $assignment->is_overridden || $assignment->status !== 'proposed')
@@ -116,7 +137,7 @@ class PlanAssignmentService
 
             $preservedFriendlyIds = $preserved->pluck('friendly_nation_id')->all();
 
-            $needed = max(0, $plan->preferred_nations_per_target - $preserved->count());
+            $needed = max(0, $preferredAssignmentsPerTarget - $preserved->count());
 
             if ($needed === 0) {
                 $results = $results->merge($preserved);
@@ -130,7 +151,10 @@ class PlanAssignmentService
                 friendlyProfiles: $friendlyProfiles,
                 preservedFriendlyIds: $preservedFriendlyIds,
                 assignmentCounts: $friendlyAssignmentCounts,
-                existingAverage: $targetAssignmentAverages[$target->id] ?? null
+                existingAverage: $existingAverage,
+                friendlyStrengthRanks: $friendlyStrengthRanks,
+                enemyThreatRank: $enemyThreatRanks[$target->id] ?? 0.0,
+                activityWindowHours: $activityWindowHours
             );
 
             $selected = $this->selectCohesiveAssignments(
@@ -142,6 +166,8 @@ class PlanAssignmentService
             );
 
             $finalFriendlyIds = array_merge($preservedFriendlyIds, $selected->pluck('friendly.id')->all());
+            $targetAssignmentsMap[$target->id] = $finalFriendlyIds;
+            $targetOpenings[$target->id] = max(0, $preferredAssignmentsPerTarget - count($finalFriendlyIds));
 
             // Delete unlocked assignments not in the final list.
             $targetAssignments
@@ -186,6 +212,24 @@ class PlanAssignmentService
             $results = $results->merge($preserved);
         }
 
+        $additionalAssignments = $this->fillActiveFriendlies(
+            $plan,
+            $targets,
+            $friendlies,
+            $friendlyProfiles,
+            $friendlyStrengthRanks,
+            $enemyThreatRanks,
+            $friendlyAssignmentCounts,
+            $friendlySquadMatrix,
+            $targetAssignmentsMap,
+            $targetOpenings,
+            $activityWindowHours,
+            $respectLocks,
+            $friendlyActivityFlags
+        );
+
+        $results = $results->merge($additionalAssignments);
+
         $this->rebuildSquads($plan, $respectLocks);
 
         return $plan->assignments()->with(['friendlyNation', 'target', 'squad'])->get();
@@ -204,6 +248,7 @@ class PlanAssignmentService
      *     offensive_wars: int,
      *     defensive_wars: int
      * }>  $friendlyProfiles
+     * @param  array<int, float>  $friendlyStrengthRanks
      */
     protected function scoreFriendlyCandidates(
         WarPlan $plan,
@@ -211,7 +256,10 @@ class PlanAssignmentService
         SupportCollection $friendlyProfiles,
         array $preservedFriendlyIds,
         SupportCollection $assignmentCounts,
-        ?float $existingAverage = null
+        ?float $existingAverage = null,
+        array $friendlyStrengthRanks = [],
+        float $enemyThreatRank = 0.0,
+        int $activityWindowHours = 72
     ): SupportCollection {
         if (! $target->nation) {
             return collect();
@@ -229,7 +277,10 @@ class PlanAssignmentService
             $target,
             $assignmentCounts,
             $squadTolerance,
-            $cohesionReference
+            $cohesionReference,
+            $friendlyStrengthRanks,
+            $enemyThreatRank,
+            $activityWindowHours
         ) {
             $friendly = $profile['friendly'];
 
@@ -246,7 +297,8 @@ class PlanAssignmentService
             }
 
             $existingOffensive = $profile['offensive_wars'] ?? (int) ($friendly->offensive_wars_count ?? 0);
-            $remainingOffensive = 6 - ($existingOffensive + $currentAssignments);
+            $offensiveCap = (int) config('war.slot_caps.default_offensive', 6);
+            $remainingOffensive = $offensiveCap - ($existingOffensive + $currentAssignments);
 
             if ($remainingOffensive <= 0) {
                 return null;
@@ -260,6 +312,9 @@ class PlanAssignmentService
                 'cohesion_tolerance' => $squadTolerance,
                 'enemy_tps' => $target->target_priority_score,
                 'evaluation_mode' => 'auto',
+                'friendly_strength_rank' => $friendlyStrengthRanks[$friendlyId] ?? 0.0,
+                'enemy_threat_rank' => $enemyThreatRank,
+                'activity_window_hours' => $activityWindowHours,
             ];
 
             $match = $this->matchService->evaluate($friendly, $target->nation, $context);
@@ -317,6 +372,9 @@ class PlanAssignmentService
             return collect();
         }
 
+        $strictMode = config('war.squads.strict_mode', true);
+        $allowPartialFallback = config('war.squads.allow_partial_fallback', true);
+
         $prioritySquadMembers = $preservedAssignments
             ->flatMap(fn (WarPlanAssignment $assignment) => $squadMatrix[$assignment->friendly_nation_id] ?? [$assignment->friendly_nation_id])
             ->unique()
@@ -335,35 +393,67 @@ class PlanAssignmentService
         $selectedIds = $preservedFriendlyIds;
         $candidatesById = $ordered->keyBy(fn ($candidate) => $candidate['friendly']->id);
 
-        foreach ($ordered as $candidate) {
-            if ($selected->count() >= $needed) {
-                break;
-            }
+        $groupScores = [];
 
+        foreach ($ordered as $candidate) {
             $friendlyId = $candidate['friendly']->id;
 
             if (in_array($friendlyId, $selectedIds, true)) {
                 continue;
             }
 
-            $groupIds = $squadMatrix[$friendlyId] ?? [$friendlyId];
-            $groupIds = array_values(array_filter($groupIds, function ($id) use ($selectedIds, $candidatesById) {
-                return ! in_array($id, $selectedIds, true) && $candidatesById->has($id);
-            }));
+            $eligibleGroup = array_values(array_filter(
+                $squadMatrix[$friendlyId] ?? [$friendlyId],
+                fn ($id) => ! in_array($id, $selectedIds, true) && $candidatesById->has($id)
+            ));
 
-            if (empty($groupIds)) {
+            if (empty($eligibleGroup)) {
                 continue;
+            }
+
+            $groupKey = implode('-', $eligibleGroup);
+
+            if (isset($groupScores[$groupKey])) {
+                continue;
+            }
+
+            $scores = array_map(fn ($id) => $candidatesById->get($id)['match']['score'], $eligibleGroup);
+            $avgScore = array_sum($scores) / max(1, count($scores));
+            $variancePenalty = (max($scores) - min($scores)) * 0.05;
+            $bonus = array_intersect($eligibleGroup, $prioritySquadMembers) ? 1 : 0;
+
+            $groupScores[$groupKey] = [
+                'members' => $eligibleGroup,
+                'score' => $avgScore - $variancePenalty + $bonus,
+                'size' => count($eligibleGroup),
+            ];
+        }
+
+        $groupQueue = collect($groupScores)->sort(function (array $left, array $right) {
+            if ($left['score'] === $right['score']) {
+                return $right['size'] <=> $left['size'];
+            }
+
+            return $right['score'] <=> $left['score'];
+        });
+
+        foreach ($groupQueue as $group) {
+            if ($selected->count() >= $needed) {
+                break;
             }
 
             $remainingSlots = $needed - $selected->count();
 
-            if (count($groupIds) > $remainingSlots) {
-                // Squad does not fit entirely; fall back to the initiating nation to avoid splitting another squad.
-                $groupIds = [$friendlyId];
+            if ($strictMode && $group['size'] > $remainingSlots) {
+                continue;
             }
 
-            foreach ($groupIds as $id) {
-                if (! $candidatesById->has($id)) {
+            if ($group['size'] > $remainingSlots) {
+                continue;
+            }
+
+            foreach ($group['members'] as $id) {
+                if (! $candidatesById->has($id) || in_array($id, $selectedIds, true)) {
                     continue;
                 }
 
@@ -371,12 +461,339 @@ class PlanAssignmentService
                 $selectedIds[] = $id;
 
                 if ($selected->count() >= $needed) {
-                    break 2;
+                    break;
+                }
+            }
+        }
+
+        if ($selected->count() < $needed) {
+            foreach ($ordered as $candidate) {
+                if ($selected->count() >= $needed) {
+                    break;
+                }
+
+                $friendlyId = $candidate['friendly']->id;
+
+                if (in_array($friendlyId, $selectedIds, true)) {
+                    continue;
+                }
+
+                $groupIds = array_values(array_filter(
+                    $squadMatrix[$friendlyId] ?? [$friendlyId],
+                    fn ($id) => ! in_array($id, $selectedIds, true) && $candidatesById->has($id)
+                ));
+
+                if (empty($groupIds)) {
+                    continue;
+                }
+
+                $remainingSlots = $needed - $selected->count();
+
+                if (count($groupIds) > $remainingSlots) {
+                    if (! $allowPartialFallback) {
+                        continue;
+                    }
+
+                    $groupIds = collect($groupIds)
+                        ->sortByDesc(fn ($id) => $candidatesById->get($id)['match']['score'])
+                        ->take($remainingSlots)
+                        ->all();
+                }
+
+                foreach ($groupIds as $id) {
+                    if ($selected->count() >= $needed) {
+                        break;
+                    }
+
+                    if (! $candidatesById->has($id) || in_array($id, $selectedIds, true)) {
+                        continue;
+                    }
+
+                    $selected->push($candidatesById->get($id));
+                    $selectedIds[] = $id;
                 }
             }
         }
 
         return $selected->values();
+    }
+
+    /**
+     * Second-pass filler to keep active friendlies engaged on open targets without breaking cohesion.
+     *
+     * @param  array<int, float>  $friendlyStrengthRanks
+     * @param  array<int, float>  $enemyThreatRanks
+     * @param  array<int, array<int>>  $squadMatrix
+     * @param  array<int, array<int>>  $targetAssignmentsMap
+     * @param  array<int, int>  $targetOpenings
+     * @param  array<int, bool>  $friendlyActivityFlags
+     */
+    protected function fillActiveFriendlies(
+        WarPlan $plan,
+        Collection $targets,
+        Collection $friendlies,
+        SupportCollection $friendlyProfiles,
+        array $friendlyStrengthRanks,
+        array $enemyThreatRanks,
+        SupportCollection &$assignmentCounts,
+        array $squadMatrix,
+        array &$targetAssignmentsMap,
+        array &$targetOpenings,
+        int $activityWindowHours,
+        bool $respectLocks,
+        array $friendlyActivityFlags
+    ): SupportCollection {
+        $openTargets = $targets->filter(fn ($target) => ($targetOpenings[$target->id] ?? 0) > 0)
+            ->sortByDesc('target_priority_score');
+
+        if ($openTargets->isEmpty()) {
+            return collect();
+        }
+
+        $activeFriendlyIds = $friendlies
+            ->filter(fn (Nation $friendly) => $friendlyActivityFlags[$friendly->id] ?? false)
+            ->pluck('id')
+            ->all();
+
+        if (empty($activeFriendlyIds)) {
+            return collect();
+        }
+
+        $activeProfiles = $friendlyProfiles->only($activeFriendlyIds);
+        $additional = collect();
+
+        foreach ($openTargets as $target) {
+            $needed = $targetOpenings[$target->id] ?? 0;
+
+            if ($needed <= 0) {
+                continue;
+            }
+
+            $preservedAssignments = $plan->assignments()
+                ->where('war_plan_target_id', $target->id)
+                ->get()
+                ->filter(fn (WarPlanAssignment $assignment) => ! $respectLocks || $assignment->is_locked || $assignment->is_overridden || $assignment->status !== 'proposed');
+
+            $preservedFriendlyIds = $targetAssignmentsMap[$target->id] ?? [];
+
+            $candidates = $this->scoreFriendlyCandidates(
+                plan: $plan,
+                target: $target,
+                friendlyProfiles: $activeProfiles,
+                preservedFriendlyIds: $preservedFriendlyIds,
+                assignmentCounts: $assignmentCounts,
+                existingAverage: $target->assignments()->avg('match_score'),
+                friendlyStrengthRanks: $friendlyStrengthRanks,
+                enemyThreatRank: $enemyThreatRanks[$target->id] ?? 0.0,
+                activityWindowHours: $activityWindowHours
+            );
+
+            $selected = $this->selectCohesiveAssignments(
+                candidates: $candidates,
+                needed: $needed,
+                preservedFriendlyIds: $preservedFriendlyIds,
+                squadMatrix: $squadMatrix,
+                preservedAssignments: $preservedAssignments
+            );
+
+            foreach ($selected as $candidate) {
+                $friendly = $candidate['friendly'];
+                $match = $candidate['match'];
+
+                /** @var WarPlanAssignment $assignment */
+                $assignment = WarPlanAssignment::query()->updateOrCreate(
+                    [
+                        'war_plan_id' => $plan->id,
+                        'war_plan_target_id' => $target->id,
+                        'friendly_nation_id' => $friendly->id,
+                    ],
+                    [
+                        'match_score' => $match['score'],
+                        'meta' => $match['meta'],
+                        'status' => 'proposed',
+                        'is_overridden' => false,
+                        'is_locked' => false,
+                    ]
+                );
+
+                $assignmentCounts[$friendly->id] = ($assignmentCounts[$friendly->id] ?? 0) + 1;
+                $targetAssignmentsMap[$target->id] = array_values(array_unique(array_merge(
+                    $targetAssignmentsMap[$target->id] ?? [],
+                    [$friendly->id]
+                )));
+                $targetOpenings[$target->id] = max(0, ($targetOpenings[$target->id] ?? 0) - 1);
+
+                $additional->push($assignment);
+            }
+        }
+
+        return $additional;
+    }
+
+    protected function preferredAssignmentsPerTarget(int $friendlyCount, int $targetCount, int $preferredTargetsPerNation): int
+    {
+        if ($friendlyCount <= 0 || $targetCount <= 0) {
+            return 0;
+        }
+
+        $desiredAssignments = $friendlyCount * max(1, $preferredTargetsPerNation);
+        $defensiveCap = (int) config('war.slot_caps.default_defensive', 3);
+
+        return (int) min(
+            $defensiveCap,
+            max(1, ceil($desiredAssignments / $targetCount))
+        );
+    }
+
+    protected function buildFriendlyStrength(Collection $friendlies, int $activityWindowHours): array
+    {
+        $avgCities = max(1, (float) ($friendlies->avg('num_cities') ?? 1));
+
+        $scores = [];
+        $activityFactors = [];
+        $activeFlags = [];
+
+        foreach ($friendlies as $friendly) {
+            $activity = $this->recentActivityFromWindow($friendly->accountProfile?->last_active, $activityWindowHours);
+            $activityFactors[$friendly->id] = $activity['value'];
+            $activeFlags[$friendly->id] = $activity['hours_ago'] <= $activityWindowHours;
+
+            $composition = $this->militaryCompositionScore($friendly);
+            $cityFactor = $this->cityStrengthFactor($friendly->num_cities ?? 0, $avgCities);
+            $mmrFactor = $this->normalizeValue($friendly->latestSignIn?->mmr_score ?? 0, 100);
+
+            $scores[$friendly->id] = round(
+                (0.35 * $composition) + (0.25 * $cityFactor) + (0.25 * $activity['value']) + (0.15 * $mmrFactor),
+                4
+            );
+        }
+
+        return [
+            'scores' => $scores,
+            'ranks' => $this->normalizeRanks($scores),
+            'activity_factors' => $activityFactors,
+            'active_flags' => $activeFlags,
+        ];
+    }
+
+    /**
+     * @return array<int, float>
+     */
+    protected function buildEnemyThreatRanks(Collection $targets): array
+    {
+        $scores = [];
+
+        foreach ($targets as $target) {
+            $scores[$target->id] = (float) ($target->target_priority_score ?? 0);
+        }
+
+        return $this->normalizeRanks($scores, true);
+    }
+
+    /**
+     * @param  array<int, float>  $scores
+     * @return array<int, float>
+     */
+    protected function normalizeRanks(array $scores, bool $useSpread = false): array
+    {
+        if (empty($scores)) {
+            return [];
+        }
+
+        $values = array_values($scores);
+        $max = max($values);
+        $min = min($values);
+        $range = $max - $min;
+
+        $ranks = [];
+
+        foreach ($scores as $key => $score) {
+            if ($useSpread && $range > 0) {
+                $ranks[$key] = round(max(0, ($score - $min) / $range), 4);
+
+                continue;
+            }
+
+            $ranks[$key] = $max > 0 ? round(max(0, $score) / $max, 4) : 0.0;
+        }
+
+        return $ranks;
+    }
+
+    protected function recentActivityFromWindow(?CarbonInterface $lastSeen, int $activityWindowHours): array
+    {
+        $halfLife = max(1, $activityWindowHours / 2);
+        $maxHours = max($activityWindowHours * 2, $activityWindowHours + 12);
+        $hoursAgo = $lastSeen ? $lastSeen->diffInHours(Carbon::now()) : ($activityWindowHours + 1);
+        $hoursAgo = min($maxHours, max(0, $hoursAgo));
+
+        $factor = pow(0.5, $hoursAgo / $halfLife);
+
+        return [
+            'value' => round($factor, 4),
+            'hours_ago' => (int) $hoursAgo,
+        ];
+    }
+
+    protected function militaryCompositionScore(Nation $nation): float
+    {
+        $numCities = max(1, $nation->num_cities ?? 1);
+        $military = $nation->military;
+
+        if (! $military) {
+            return 0.25;
+        }
+
+        $caps = [
+            'soldiers' => 15_000 * $numCities,
+            'tanks' => 1_250 * $numCities,
+            'ships' => 15 * $numCities,
+            'aircraft' => 75 * $numCities,
+        ];
+
+        $weights = [
+            'soldiers' => 0.1,
+            'ships' => 0.25,
+            'tanks' => 0.3,
+            'aircraft' => 0.35,
+        ];
+
+        $totals = [
+            'soldiers' => $military->soldiers ?? 0,
+            'tanks' => $military->tanks ?? 0,
+            'ships' => $military->ships ?? 0,
+            'aircraft' => $military->aircraft ?? 0,
+        ];
+
+        $score = 0.0;
+
+        foreach ($weights as $unit => $weight) {
+            $score += $weight * $this->normalizeValue($totals[$unit] ?? 0, $caps[$unit] ?? 1);
+        }
+
+        return round(min(1, $score), 4);
+    }
+
+    protected function cityStrengthFactor(int $friendlyCities, float $averageCities): float
+    {
+        $ratio = $averageCities <= 0 ? 0.0 : ($friendlyCities / $averageCities);
+        $factor = $ratio / (1 + $ratio);
+
+        return round(max(0, min(1, $factor)), 4);
+    }
+
+    protected function activityWindowHours(WarPlan $plan): int
+    {
+        return max(1, $plan->activity_window_hours ?? config('war.plan_defaults.activity_window_hours', 72));
+    }
+
+    protected function normalizeValue(float|int $value, float $cap): float
+    {
+        if ($cap <= 0) {
+            return 0.0;
+        }
+
+        return round(min(1, max(0, $value) / $cap), 4);
     }
 
     /**
@@ -515,11 +932,11 @@ class PlanAssignmentService
     }
 
     /**
-     * Estimate available slots by subtracting ongoing wars.
+     * Estimate available offensive slots by subtracting active offensive wars.
      */
-    protected function calculateAvailableSlots(Nation $friendly, int $activeWars): int
+    protected function calculateAvailableSlots(Nation $friendly, int $activeOffensiveWars): int
     {
-        $base = config('war.slot_caps.default_offensive', 3);
+        $base = (int) config('war.slot_caps.default_offensive', 6);
 
         $projects = method_exists($friendly, 'getProjectsAttribute') ? $friendly->projects : [];
         $projectModifiers = config('war.slot_caps.project_modifiers', []);
@@ -530,7 +947,7 @@ class PlanAssignmentService
             }
         }
 
-        return max(0, $base - $activeWars);
+        return max(0, $base - $activeOffensiveWars);
     }
 
     /**
@@ -547,7 +964,7 @@ class PlanAssignmentService
      */
     protected function maxAssignmentsFor(Nation $friendly): int
     {
-        $base = (int) config('war.slot_caps.default_offensive', 3);
+        $base = (int) config('war.slot_caps.default_offensive', 6);
 
         if ($friendly->alliance_position === 'LEADER') {
             $base = max(1, $base - 1);
@@ -601,32 +1018,37 @@ class PlanAssignmentService
      *     defensive_wars: int
      * }>
      */
-    protected function buildFriendlyProfiles(Collection $friendlies, SupportCollection $assignmentCounts): SupportCollection
+    protected function buildFriendlyProfiles(WarPlan $plan, Collection $friendlies, SupportCollection $assignmentCounts): SupportCollection
     {
         $friendliesById = $friendlies->keyBy('id');
         $activeWarCounts = $this->activeWarCounts($friendliesById->keys());
+        $planPreference = min(
+            max(1, (int) $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
 
-        return $friendliesById->map(function (Nation $friendly) use ($assignmentCounts, $activeWarCounts) {
+        return $friendliesById->map(function (Nation $friendly) use ($assignmentCounts, $activeWarCounts, $planPreference) {
             $friendlyId = $friendly->id;
             $assignmentLoad = (int) ($assignmentCounts[$friendlyId] ?? 0);
-            $activeWars = (int) ($activeWarCounts[$friendlyId] ?? 0);
+            $friendlyCounts = $activeWarCounts[$friendlyId] ?? ['offensive' => 0, 'defensive' => 0];
+            $availableSlots = $this->calculateAvailableSlots($friendly, $friendlyCounts['offensive']);
 
             return [
                 'friendly' => $friendly,
-                'available_slots' => $this->calculateAvailableSlots($friendly, $activeWars),
+                'available_slots' => min($availableSlots, $planPreference),
                 'assignment_load' => $assignmentLoad,
-                'max_assignments' => $this->maxAssignmentsFor($friendly),
-                'offensive_wars' => (int) ($friendly->offensive_wars_count ?? 0),
-                'defensive_wars' => (int) ($friendly->defensive_wars_count ?? 0),
+                'max_assignments' => min($this->maxAssignmentsFor($friendly), $planPreference),
+                'offensive_wars' => (int) ($friendlyCounts['offensive'] ?? $friendly->offensive_wars_count ?? 0),
+                'defensive_wars' => (int) ($friendlyCounts['defensive'] ?? $friendly->defensive_wars_count ?? 0),
             ];
         });
     }
 
     /**
-     * Cache and return active war counts for the provided nation IDs.
+     * Cache and return active offensive/defensive war counts for the provided nation IDs.
      *
      * @param  SupportCollection<int, int>  $friendlyIds
-     * @return array<int, int>
+     * @return array<int, array{offensive:int, defensive:int}>
      */
     protected function activeWarCounts(SupportCollection $friendlyIds): array
     {
@@ -660,7 +1082,10 @@ class PlanAssignmentService
                 $counts = [];
 
                 foreach ($ids as $id) {
-                    $counts[$id] = (int) (($attCounts[$id] ?? 0) + ($defCounts[$id] ?? 0));
+                    $counts[$id] = [
+                        'offensive' => (int) ($attCounts[$id] ?? 0),
+                        'defensive' => (int) ($defCounts[$id] ?? 0),
+                    ];
                 }
 
                 return $counts;

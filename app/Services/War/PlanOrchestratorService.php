@@ -40,7 +40,7 @@ class PlanOrchestratorService
      *     friendly_alliances?:array<int,int>,
      *     enemy_alliances?:array<int,int>,
      *     options?:array<string,mixed>,
-     *     preferred_nations_per_target?:int,
+     *     preferred_targets_per_nation?:int,
      *     max_squad_size?:int,
      *     squad_cohesion_tolerance?:int,
      *     activity_window_hours?:int,
@@ -257,7 +257,7 @@ class PlanOrchestratorService
     {
         $defaults = [
             'plan_type' => config('war.plan_defaults.plan_type', 'ordinary'),
-            'preferred_nations_per_target' => config('war.plan_defaults.preferred_nations_per_target', 3),
+            'preferred_targets_per_nation' => config('war.plan_defaults.preferred_targets_per_nation', 2),
             'max_squad_size' => config('war.squads.max_size', 3),
             'squad_cohesion_tolerance' => config('war.squads.cohesion_tolerance', 10),
             'activity_window_hours' => config('war.plan_defaults.activity_window_hours', 72),
@@ -267,6 +267,15 @@ class PlanOrchestratorService
         $payload = $existing
             ? array_merge($defaults, $existing->only(array_keys($defaults)), $attributes)
             : array_merge($defaults, $attributes);
+
+        if (array_key_exists('preferred_nations_per_target', $attributes) && ! array_key_exists('preferred_targets_per_nation', $attributes)) {
+            $payload['preferred_targets_per_nation'] = (int) $attributes['preferred_nations_per_target'];
+        }
+
+        $payload['preferred_targets_per_nation'] = min(
+            max(1, (int) ($payload['preferred_targets_per_nation'] ?? $defaults['preferred_targets_per_nation'])),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
 
         $payload['plan_type'] = $this->sanitizeWarType($payload['plan_type'] ?? $defaults['plan_type']);
 

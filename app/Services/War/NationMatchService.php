@@ -26,7 +26,10 @@ class NationMatchService
      *     cohesion_reference?:float,
      *     cohesion_tolerance?:int,
      *     enemy_tps?:float,
-     *     evaluation_mode?:string
+     *     evaluation_mode?:string,
+     *     friendly_strength_rank?:float,
+     *     enemy_threat_rank?:float,
+     *     activity_window_hours?:int
      * } $context
      * @return array{score: float, meta: array<string, mixed>}
      */
@@ -34,6 +37,9 @@ class NationMatchService
     {
         $weights = config('war.nation_match.weights', []);
         $mode = $context['evaluation_mode'] ?? 'auto';
+        $friendlyStrengthRank = max(0.0, (float) ($context['friendly_strength_rank'] ?? 0.0));
+        $enemyThreatRank = max(0.0, (float) ($context['enemy_threat_rank'] ?? 0.0));
+        $activityWindowHours = (int) ($context['activity_window_hours'] ?? config('war.plan_defaults.activity_window_hours', 72));
 
         $mmrCompliance = $this->mmrCompliance($friendly);
         $meta = [
@@ -74,7 +80,7 @@ class NationMatchService
         $score += $relativeEntry['impact'];
         $meta['factors']['relative_power'] = $relativeEntry;
 
-        $recentActivity = $this->recentActivityFactor($friendly->latestSignIn?->created_at);
+        $recentActivity = $this->recentActivityFactor($friendly->accountProfile?->last_active, $activityWindowHours);
         $recentEntry = $this->factorEntry('recent_activity', $recentActivity['value'], $weights, $recentActivity['reason']);
         $score += $recentEntry['impact'];
         $meta['factors']['recent_activity'] = $recentEntry;
@@ -87,7 +93,6 @@ class NationMatchService
         $score += $assignmentEntry['impact'];
         $meta['factors']['assignment_load_penalty'] = $assignmentEntry;
 
-        $mmrCompliance = $this->mmrCompliance($friendly);
         $mmrEntry = $this->factorEntry('mmr_compliance', $mmrCompliance['value'], $weights, $mmrCompliance['reason']);
         $score += $mmrEntry['impact'];
         $meta['factors']['mmr_compliance'] = $mmrEntry;
@@ -121,6 +126,21 @@ class NationMatchService
         $score += $tpsEntry['impact'];
         $meta['factors']['tps_bias'] = $tpsEntry;
 
+        $pairFit = $this->pairingBalance($friendlyStrengthRank, $enemyThreatRank);
+        $pairEntry = $this->factorEntry('strong_vs_strong', $pairFit['value'], $weights, $pairFit['reason']);
+        $score += $pairEntry['impact'];
+        $meta['factors']['strong_vs_strong'] = $pairEntry;
+
+        $dominance = $this->dominanceBonus($friendlyStrengthRank, $enemyThreatRank);
+        $dominanceEntry = $this->factorEntry('dominance', $dominance['value'], $weights, $dominance['reason']);
+        $score += $dominanceEntry['impact'];
+        $meta['factors']['dominance'] = $dominanceEntry;
+
+        $beigePenalty = $this->friendlyBeigePenalty($friendly);
+        $beigeEntry = $this->factorEntry('friendly_beige_penalty', $beigePenalty['value'], $weights, $beigePenalty['reason']);
+        $score += $beigeEntry['impact'];
+        $meta['factors']['friendly_beige_penalty'] = $beigeEntry;
+
         $preCap = max(0, min(100, $score));
         $cap = $relativePower['cap'] ?? 100;
         $bounded = min($preCap, $cap);
@@ -133,6 +153,10 @@ class NationMatchService
         ];
         $meta['bounded'] = round($bounded, 2);
         $meta['relative_power_details'] = $relativePower['details'] ?? [];
+        $meta['rank_context'] = [
+            'friendly_strength_rank' => $friendlyStrengthRank,
+            'enemy_threat_rank' => $enemyThreatRank,
+        ];
 
         return [
             'score' => round($bounded, 2),
@@ -191,10 +215,10 @@ class NationMatchService
         $score = 0.0;
         foreach ($weights as $unit => $weight) {
             $cap = match ($unit) {
-                'soldiers' => 6_000 * max(1, $friendly->num_cities),
-                'tanks' => 500 * max(1, $friendly->num_cities),
-                'aircraft' => 60 * max(1, $friendly->num_cities),
-                'ships' => 16 * max(1, $friendly->num_cities),
+                'soldiers' => 15_000 * max(1, $friendly->num_cities),
+                'tanks' => 1_250 * max(1, $friendly->num_cities),
+                'aircraft' => 75 * max(1, $friendly->num_cities),
+                'ships' => 15 * max(1, $friendly->num_cities),
                 default => 10,
             };
             $score += $weight * $this->normalize($totals[$unit], $cap);
@@ -226,37 +250,27 @@ class NationMatchService
         ];
     }
 
-    protected function recentActivityFactor(?CarbonInterface $lastSeen): array
+    protected function recentActivityFactor(?CarbonInterface $lastSeen, ?int $activityWindowHours = null): array
     {
-        if (! $lastSeen) {
-            return [
-                'value' => 0.4,
-                'reason' => 'No recent login captured; defaulting to neutral 0.4.',
-            ];
-        }
+        $window = $activityWindowHours ?? config('war.plan_defaults.activity_window_hours', 72);
+        $halfLife = max(1, $window / 2);
+        $maxHours = max($window * 2, $window + 12);
+        $assumed = ! $lastSeen;
+        $hoursAgo = $lastSeen ? $lastSeen->diffInHours(Carbon::now()) : ($window + 1);
+        $hoursAgo = min($maxHours, max(0, $hoursAgo));
 
-        $hoursAgo = $lastSeen->diffInHours(Carbon::now());
-
-        if ($hoursAgo <= 12) {
-            return [
-                'value' => 1.0,
-                'reason' => sprintf('Active %d hour(s) ago; full credit inside 12h window.', $hoursAgo),
-            ];
-        }
-
-        if ($hoursAgo >= 72) {
-            return [
-                'value' => 0.2,
-                'reason' => sprintf('Inactive %d hour(s); floor value applied beyond 72h.', $hoursAgo),
-            ];
-        }
-
-        // Linear decay between 12h and 72h.
-        $factor = 1 - (($hoursAgo - 12) / 60);
+        $factor = pow(0.5, $hoursAgo / $halfLife);
 
         return [
-            'value' => round(max(0.2, $factor), 4),
-            'reason' => sprintf('Last login %d hour(s) ago; linear decay across 12–72h.', $hoursAgo),
+            'value' => round($factor, 4),
+            'reason' => sprintf(
+                $assumed
+                    ? 'No recent login captured; assuming %d hour(s) ago with %.1f hour half-life (window %dh).'
+                    : 'Last active %d hour(s) ago with %.1f hour half-life (window %dh).',
+                $hoursAgo,
+                $halfLife,
+                $window
+            ),
         ];
     }
 
@@ -318,20 +332,57 @@ class NationMatchService
 
     protected function colorPenalty(string $friendlyColor, string $enemyColor): array
     {
-        if ($friendlyColor === '' || $enemyColor === '') {
+        return [
+            'value' => 0.5,
+            'reason' => 'Colour parity ignored for targeting; beige/vacation status drives priority.',
+        ];
+    }
+
+    protected function pairingBalance(float $friendlyRank, float $enemyRank): array
+    {
+        if ($friendlyRank <= 0 && $enemyRank <= 0) {
             return [
-                'value' => 0.5,
-                'reason' => 'Colour data missing; neutral penalty applied.',
+                'value' => 0.0,
+                'reason' => 'No strength/threat ranks available; skipping pair-fit bonus.',
             ];
         }
 
-        $sameColor = strcasecmp($friendlyColor, $enemyColor) === 0;
+        $fit = max(0, 1 - abs($friendlyRank - $enemyRank));
 
         return [
-            'value' => $sameColor ? 0.2 : 0.8,
-            'reason' => $sameColor
-                ? sprintf('Both nations on %s colour — encourage diversification.', strtoupper($friendlyColor))
-                : sprintf('Different colours (%s vs %s) keep colour bonuses intact.', strtoupper($friendlyColor), strtoupper($enemyColor)),
+            'value' => round($fit, 4),
+            'reason' => sprintf(
+                'Pair fit between friendly %.2f and enemy %.2f (closer alignment is better).',
+                $friendlyRank,
+                $enemyRank
+            ),
+        ];
+    }
+
+    protected function dominanceBonus(float $friendlyRank, float $enemyRank): array
+    {
+        $delta = max(0, $friendlyRank - $enemyRank);
+
+        return [
+            'value' => round($delta, 4),
+            'reason' => sprintf(
+                'Dominance delta %.2f (friendly %.2f minus threat %.2f).',
+                $delta,
+                $friendlyRank,
+                $enemyRank
+            ),
+        ];
+    }
+
+    protected function friendlyBeigePenalty(Nation $friendly): array
+    {
+        $beigeTurns = (int) ($friendly->beige_turns ?? 0);
+
+        return [
+            'value' => $beigeTurns > 0 ? 1.0 : 0.0,
+            'reason' => $beigeTurns > 0
+                ? sprintf('Friendly nation is on beige for %d turn(s); prefer alternatives.', $beigeTurns)
+                : 'Friendly nation is not on beige.',
         ];
     }
 

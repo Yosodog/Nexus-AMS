@@ -239,11 +239,11 @@
                                    value="{{ old('activity_window_hours', config('war.plan_defaults.activity_window_hours', 72)) }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Preferred Nations per Target
-                                <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="How many of our nations should be assigned to each enemy by default."></i>
+                            <label class="form-label">Preferred Targets per Nation
+                                <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip" title="Desired offensive wars per friendly before slot caps and active wars are applied."></i>
                             </label>
-                            <input type="number" class="form-control" name="preferred_nations_per_target" min="1" max="10"
-                                   value="{{ old('preferred_nations_per_target', config('war.plan_defaults.preferred_nations_per_target', 3)) }}">
+                            <input type="number" class="form-control" name="preferred_targets_per_nation" min="1" max="6"
+                                   value="{{ old('preferred_targets_per_nation', config('war.plan_defaults.preferred_targets_per_nation', 2)) }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Max Squad Size

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $plan_type
  * @property string $status
  * @property array|null $options
- * @property int $preferred_nations_per_target
+ * @property int $preferred_targets_per_nation
  * @property int $max_squad_size
  * @property int $squad_cohesion_tolerance
  * @property int $activity_window_hours
