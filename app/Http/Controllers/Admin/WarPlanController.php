@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -621,7 +622,7 @@ class WarPlanController extends Controller
             return [[], collect(), collect()];
         }
 
-        $plan->loadMissing(['targets.assignments', 'targets.nation', 'assignments']);
+        $plan->loadMissing(['targets.assignments', 'targets.nation', 'targets.nation.military', 'assignments']);
 
         $friendlyStats = $this->prepareFriendlyStats($friendlies, $plan->assignments);
 
@@ -790,27 +791,35 @@ class WarPlanController extends Controller
             return [];
         }
 
-        $attCounts = War::query()
-            ->whereNull('end_date')
-            ->whereIn('att_id', $ids)
-            ->selectRaw('att_id as nation_id, COUNT(*) as total')
-            ->groupBy('att_id')
-            ->pluck('total', 'nation_id');
+        $cacheKey = 'war:plan:active_wars:'.md5($ids->join(','));
 
-        $defCounts = War::query()
-            ->whereNull('end_date')
-            ->whereIn('def_id', $ids)
-            ->selectRaw('def_id as nation_id, COUNT(*) as total')
-            ->groupBy('def_id')
-            ->pluck('total', 'nation_id');
+        return Cache::remember(
+            $cacheKey,
+            (int) config('war.cache.active_war_counts_ttl', 60),
+            function () use ($ids) {
+                $attCounts = War::query()
+                    ->whereNull('end_date')
+                    ->whereIn('att_id', $ids)
+                    ->selectRaw('att_id as nation_id, COUNT(*) as total')
+                    ->groupBy('att_id')
+                    ->pluck('total', 'nation_id');
 
-        $counts = [];
+                $defCounts = War::query()
+                    ->whereNull('end_date')
+                    ->whereIn('def_id', $ids)
+                    ->selectRaw('def_id as nation_id, COUNT(*) as total')
+                    ->groupBy('def_id')
+                    ->pluck('total', 'nation_id');
 
-        foreach ($ids as $id) {
-            $counts[$id] = (int) (($attCounts[$id] ?? 0) + ($defCounts[$id] ?? 0));
-        }
+                $counts = [];
 
-        return $counts;
+                foreach ($ids as $id) {
+                    $counts[$id] = (int) (($attCounts[$id] ?? 0) + ($defCounts[$id] ?? 0));
+                }
+
+                return $counts;
+            }
+        );
     }
 
     /**
