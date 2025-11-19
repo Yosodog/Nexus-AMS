@@ -15,7 +15,7 @@ class MainBankService
 {
     private const CACHE_KEY = 'offshores:main:balances';
 
-    private const CACHE_TTL_MINUTES = 30;
+    private const CACHE_TTL_MINUTES = 360;
 
     private int $mainAllianceId;
 
@@ -55,7 +55,11 @@ class MainBankService
      */
     public function getCachedSnapshot(): array
     {
-        $snapshot = Cache::get(self::CACHE_KEY);
+        $snapshot = Cache::remember(
+            self::CACHE_KEY,
+            now()->addMinutes(self::CACHE_TTL_MINUTES),
+            fn () => $this->buildSnapshot()
+        );
 
         return $this->normalizeSnapshot($snapshot);
     }
