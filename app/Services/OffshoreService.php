@@ -16,7 +16,7 @@ use Throwable;
 
 class OffshoreService
 {
-    private const CACHE_TTL_MINUTES = 30;
+    private const CACHE_TTL_MINUTES = 360;
 
     public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
 
@@ -46,6 +46,7 @@ class OffshoreService
 
         $this->syncGuardrails($offshore, $guardrails);
         $this->clearCaches($offshore);
+        $this->refreshBalances($offshore, true);
 
         return $offshore->fresh('guardrails');
     }
@@ -121,7 +122,11 @@ class OffshoreService
      */
     public function getCachedSnapshot(Offshore $offshore): array
     {
-        $snapshot = Cache::get($this->balancesCacheKey($offshore));
+        $snapshot = Cache::remember(
+            $this->balancesCacheKey($offshore),
+            now()->addMinutes(self::CACHE_TTL_MINUTES),
+            fn () => $this->buildSnapshot($offshore)
+        );
 
         return $this->normalizeSnapshot($snapshot);
     }
