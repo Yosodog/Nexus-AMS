@@ -67,7 +67,18 @@ class WarPlanController extends Controller
         $friendliesQuery = Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
             ->orderBy('leader_name')
-            ->select(['id', 'leader_name', 'nation_name', 'alliance_id', 'score', 'offensive_wars_count', 'defensive_wars_count', 'color']);
+            ->with(['military'])
+            ->select([
+                'id',
+                'leader_name',
+                'nation_name',
+                'alliance_id',
+                'score',
+                'offensive_wars_count',
+                'defensive_wars_count',
+                'color',
+                'num_cities',
+            ]);
 
         $warTypes = config('war.war_types', []);
 
@@ -217,7 +228,7 @@ class WarPlanController extends Controller
      *   "schema_version": 1,
      *   "metadata": {"id": int, "name": string, "plan_type": string, "status": string, "exported_at": ISO8601},
      *   "options": {
-     *     "preferred_nations_per_target": int,
+     *     "preferred_targets_per_nation": int,
      *     "activity_window_hours": int,
      *     "max_squad_size": int,
      *     "squad_cohesion_tolerance": int,
@@ -252,7 +263,7 @@ class WarPlanController extends Controller
                 'exported_at' => now()->toIso8601String(),
             ],
             'options' => [
-                'preferred_nations_per_target' => $plan->preferred_nations_per_target,
+                'preferred_targets_per_nation' => $plan->preferred_targets_per_nation,
                 'activity_window_hours' => $plan->activity_window_hours,
                 'max_squad_size' => $plan->max_squad_size,
                 'squad_cohesion_tolerance' => $plan->squad_cohesion_tolerance,
@@ -334,7 +345,9 @@ class WarPlanController extends Controller
         $orchestrator->updatePlan($plan, [
             'name' => $payload['metadata']['name'] ?? $plan->name,
             'plan_type' => $payload['metadata']['plan_type'] ?? $plan->plan_type,
-            'preferred_nations_per_target' => $payload['options']['preferred_nations_per_target'] ?? $plan->preferred_nations_per_target,
+            'preferred_targets_per_nation' => $payload['options']['preferred_targets_per_nation']
+                ?? $payload['options']['preferred_nations_per_target']
+                ?? $plan->preferred_targets_per_nation,
             'activity_window_hours' => $payload['options']['activity_window_hours'] ?? $plan->activity_window_hours,
             'max_squad_size' => $payload['options']['max_squad_size'] ?? $plan->max_squad_size,
             'squad_cohesion_tolerance' => $payload['options']['squad_cohesion_tolerance'] ?? $plan->squad_cohesion_tolerance,
@@ -396,7 +409,8 @@ class WarPlanController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:120'],
             'plan_type' => ['nullable', Rule::in(array_keys(config('war.war_types', [])))],
-            'preferred_nations_per_target' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'preferred_targets_per_nation' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'preferred_nations_per_target' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:6'],
             'activity_window_hours' => ['nullable', 'integer', 'min:12', 'max:240'],
             'max_squad_size' => ['nullable', 'integer', 'min:1', 'max:10'],
             'squad_cohesion_tolerance' => ['nullable', 'integer', 'min:1', 'max:50'],
@@ -413,6 +427,12 @@ class WarPlanController extends Controller
         if (array_key_exists('plan_type', $data) && $data['plan_type'] !== null) {
             $data['plan_type'] = strtolower($data['plan_type']);
         }
+
+        if (! array_key_exists('preferred_targets_per_nation', $data) && array_key_exists('preferred_nations_per_target', $data)) {
+            $data['preferred_targets_per_nation'] = $data['preferred_nations_per_target'];
+        }
+
+        unset($data['preferred_nations_per_target']);
 
         $data['friendly_alliances'] = array_filter($data['friendly_alliances'] ?? []);
         $data['enemy_alliances'] = array_filter($data['enemy_alliances'] ?? []);
@@ -624,7 +644,7 @@ class WarPlanController extends Controller
 
         $plan->loadMissing(['targets.assignments', 'targets.nation', 'targets.nation.military', 'assignments']);
 
-        $friendlyStats = $this->prepareFriendlyStats($friendlies, $plan->assignments);
+        $friendlyStats = $this->prepareFriendlyStats($plan, $friendlies, $plan->assignments);
 
         if ($friendlyStats->isEmpty() || $plan->targets->isEmpty()) {
             return [[], $friendlyStats->map(fn ($stat) => $stat['friendly'])->sortBy('leader_name')->values(), $friendlyStats];
@@ -720,20 +740,29 @@ class WarPlanController extends Controller
         return [$recommendations, $allFriendlies, $friendlyStats];
     }
 
-    protected function prepareFriendlyStats(Collection $friendlies, Collection $assignments): Collection
+    protected function prepareFriendlyStats(WarPlan $plan, Collection $friendlies, Collection $assignments): Collection
     {
         $assignmentCounts = $assignments->groupBy('friendly_nation_id')->map->count();
         $activeWarCounts = $this->activeWarCounts($friendlies->pluck('id'));
+        $planPreference = min(
+            max(1, (int) $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
 
-        return $friendlies->mapWithKeys(function (Nation $friendly) use ($assignmentCounts, $activeWarCounts) {
+        return $friendlies->mapWithKeys(function (Nation $friendly) use ($assignmentCounts, $activeWarCounts, $planPreference) {
             $friendlyId = $friendly->id;
             $assignmentLoad = (int) ($assignmentCounts[$friendlyId] ?? 0);
-            $availableSlots = $this->calculateAvailableSlotsForNation($friendly, $activeWarCounts[$friendlyId] ?? 0);
-            $maxAssignments = $this->maxAssignmentsForNation($friendly);
+            $friendlyCounts = $activeWarCounts[$friendlyId] ?? ['offensive' => 0, 'defensive' => 0];
+            $availableSlots = min($this->calculateAvailableSlotsForNation($friendly, $friendlyCounts['offensive']), $planPreference);
+            $maxAssignments = min($this->maxAssignmentsForNation($friendly), $planPreference);
             $remainingSlots = max(0, $availableSlots - $assignmentLoad);
-            $offensiveWars = (int) ($friendly->offensive_wars_count ?? 0);
-            $defensiveWars = (int) ($friendly->defensive_wars_count ?? 0);
-            $remainingOffensive = max(0, 6 - ($offensiveWars + $assignmentLoad));
+            $offensiveWars = (int) ($friendlyCounts['offensive'] ?? $friendly->offensive_wars_count ?? 0);
+            $defensiveWars = (int) ($friendlyCounts['defensive'] ?? $friendly->defensive_wars_count ?? 0);
+            $offensiveCap = (int) config('war.slot_caps.default_offensive', 6);
+            $remainingOffensive = max(0, min(
+                $planPreference - $assignmentLoad,
+                $offensiveCap - ($offensiveWars + $assignmentLoad)
+            ));
 
             return [$friendlyId => [
                 'friendly' => $friendly,
@@ -748,9 +777,9 @@ class WarPlanController extends Controller
         });
     }
 
-    protected function calculateAvailableSlotsForNation(Nation $friendly, int $activeWars): int
+    protected function calculateAvailableSlotsForNation(Nation $friendly, int $activeOffensiveWars): int
     {
-        $base = (int) config('war.slot_caps.default_offensive', 3);
+        $base = (int) config('war.slot_caps.default_offensive', 6);
         $modifiers = config('war.slot_caps.project_modifiers', []);
 
         $projects = [];
@@ -769,12 +798,12 @@ class WarPlanController extends Controller
             }
         }
 
-        return max(0, $base - $activeWars);
+        return max(0, $base - $activeOffensiveWars);
     }
 
     protected function maxAssignmentsForNation(Nation $friendly): int
     {
-        $base = (int) config('war.slot_caps.default_offensive', 3);
+        $base = (int) config('war.slot_caps.default_offensive', 6);
 
         if (in_array($friendly->alliance_position, ['LEADER', 'HEIR'], true)) {
             return max(1, $base - 1);
@@ -814,7 +843,10 @@ class WarPlanController extends Controller
                 $counts = [];
 
                 foreach ($ids as $id) {
-                    $counts[$id] = (int) (($attCounts[$id] ?? 0) + ($defCounts[$id] ?? 0));
+                    $counts[$id] = [
+                        'offensive' => (int) ($attCounts[$id] ?? 0),
+                        'defensive' => (int) ($defCounts[$id] ?? 0),
+                    ];
                 }
 
                 return $counts;

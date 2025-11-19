@@ -2,11 +2,12 @@
 
 namespace App\Services\War;
 
+use App\Models\Nation;
+use App\Models\NationAccount;
 use App\Models\War;
 use App\Models\WarPlan;
 use App\Models\WarPlanTarget;
 use App\Services\AllianceMembershipService;
-use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,15 +25,10 @@ use Throwable;
  */
 class TargetPriorityService
 {
-    private readonly float $activityHalfLifeHours;
-
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly CacheFactory $cacheFactory
-    ) {
-        $decayDays = (int) config('war.target_priority.decay.full_decay_days', 14);
-        $this->activityHalfLifeHours = max(1, $decayDays * 24 / 2); // Rationale: keep steep drop after specified window.
-    }
+    ) {}
 
     /**
      * Calculate and persist TPS for the provided enemies.
@@ -43,14 +39,32 @@ class TargetPriorityService
      */
     public function computeAndStore(WarPlan $plan, Collection $enemies, Collection $friendlyPool): Collection
     {
+        $enemies->loadMissing(['accountProfile', 'military']);
+        $friendlyPool->loadMissing(['military', 'latestSignIn']);
+
         $results = collect();
 
         $cache = $this->cacheFactory->store();
         $ttl = (int) config('war.target_priority.default_ttl', 600);
         $lockSeconds = (int) config('war.plan_defaults.lock_ttl', 30);
 
-        $averageCities = max(1, (int) round($enemies->avg('num_cities') ?: 1));
-        $friendlyPerTargetBaseline = max(1, $plan->preferred_nations_per_target);
+        $averageEnemyCities = max(1, (float) ($enemies->avg('num_cities') ?? 1));
+        $averageFriendlyCities = max(
+            1,
+            (float) ($friendlyPool->avg('num_cities') ?? $averageEnemyCities)
+        );
+        $preferredTargetsPerNation = min(
+            max(1, (int) $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
+        $friendlyPerTargetBaseline = $enemies->count() > 0
+            ? max(1, (int) ceil(($friendlyPool->count() * $preferredTargetsPerNation) / $enemies->count()))
+            : $preferredTargetsPerNation;
+        $friendlyPerTargetBaseline = min(
+            (int) config('war.slot_caps.default_defensive', 3),
+            $friendlyPerTargetBaseline
+        );
+        $activityWindowHours = $this->activityWindowHours($plan);
 
         $membershipIds = $this->membershipService->getAllianceIds();
 
@@ -71,8 +85,10 @@ class TargetPriorityService
                             plan: $plan,
                             enemy: $enemy,
                             membershipIds: $membershipIds->all(),
-                            averageCities: $averageCities,
-                            scarcityRatio: $friendlyAvailabilityRatio
+                            averageEnemyCities: $averageEnemyCities,
+                            averageFriendlyCities: $averageFriendlyCities,
+                            scarcityRatio: $friendlyAvailabilityRatio,
+                            activityWindowHours: $activityWindowHours
                         );
 
                         $cache->put($cacheKey, $payload, $ttl);
@@ -91,8 +107,10 @@ class TargetPriorityService
                         $plan,
                         $enemy,
                         $membershipIds->all(),
-                        $averageCities,
-                        $friendlyAvailabilityRatio
+                        $averageEnemyCities,
+                        $averageFriendlyCities,
+                        $friendlyAvailabilityRatio,
+                        $activityWindowHours
                     );
                 } finally {
                     try {
@@ -132,13 +150,16 @@ class TargetPriorityService
      */
     protected function buildPayload(
         WarPlan $plan,
-        \App\Models\Nation $enemy,
+        Nation $enemy,
         array $membershipIds,
-        int $averageCities,
-        float $scarcityRatio
+        float $averageEnemyCities,
+        float $averageFriendlyCities,
+        float $scarcityRatio,
+        int $activityWindowHours
     ): array {
         $weights = collect(config('war.target_priority.weights', []));
         $strategicAdjustments = config('war.target_priority.strategic_adjustments', []);
+        $unitWeights = config('war.target_priority.unit_weights', []);
 
         $positionScores = [
             'LEADER' => 1.0,
@@ -161,13 +182,21 @@ class TargetPriorityService
         $meta['factors']['alliance_position'] = $positionFactor;
         $score += $weights->get('alliance_position', 0) * $positionFactor * 100;
 
-        $cityScale = min(1.5, $enemy->num_cities / max(1, $averageCities));
-        $meta['factors']['city_scale'] = $cityScale;
-        $score += $weights->get('city_scale', 0) * min(1, $cityScale) * 100;
+        $citySize = $this->citySizeFactor($enemy->num_cities ?? 0, $averageEnemyCities);
+        $meta['factors']['city_size'] = $citySize;
+        $score += $weights->get('city_size', 0) * $citySize * 100;
 
-        $recentActivityFactor = $this->recentActivityFactor($enemy->latestSignIn?->created_at);
+        $cityAdvantage = $this->cityAdvantageFactor($enemy->num_cities ?? 0, $averageFriendlyCities);
+        $meta['factors']['city_advantage'] = $cityAdvantage;
+        $score += $weights->get('city_advantage', 0) * $cityAdvantage * 100;
+
+        $recentActivityFactor = $this->planAwareRecentActivityFactor($activityWindowHours, $enemy->accountProfile);
         $meta['factors']['recent_activity'] = $recentActivityFactor;
         $score += $weights->get('recent_activity', 0) * $recentActivityFactor * 100;
+
+        $composition = $this->militaryCompositionFactor($enemy, $unitWeights);
+        $meta['factors']['military_composition'] = $composition;
+        $score += $weights->get('military_composition', 0) * $composition * 100;
 
         $militaryOutput = $this->normalize($enemy->total_infrastructure_destroyed ?? 0, 1_000_000);
         $meta['factors']['military_output'] = $militaryOutput;
@@ -215,22 +244,83 @@ class TargetPriorityService
         ];
     }
 
-    /**
-     * Transform recent activity timestamp into decay factor between 0 and 1.
-     */
-    protected function recentActivityFactor(?CarbonInterface $lastSeen): float
+    protected function planAwareRecentActivityFactor(int $activityWindowHours, ?NationAccount $account): float
     {
-        if (! $lastSeen) {
-            return 0.25; // Assume low readiness when unknown.
-        }
-
-        $hoursAgo = max(0, $lastSeen->diffInHours(Carbon::now()));
-
-        $halfLife = $this->activityHalfLifeHours;
+        $halfLife = max(1, $activityWindowHours / 2);
+        $maxHours = max($activityWindowHours * 2, $activityWindowHours + 12);
+        $lastSeen = $account?->last_active ?? Carbon::now()->subHours($activityWindowHours + 1);
+        $hoursAgo = min($maxHours, max(0, $lastSeen->diffInHours(Carbon::now())));
 
         $factor = pow(0.5, $hoursAgo / $halfLife);
 
         return round($factor, 4);
+    }
+
+    protected function militaryCompositionFactor(Nation $enemy, array $unitWeights): float
+    {
+        $numCities = max(1, $enemy->num_cities ?? 1);
+        $military = $enemy->military;
+
+        if (! $military) {
+            return 0.3;
+        }
+
+        $caps = [
+            'soldiers' => 15_000 * $numCities,
+            'tanks' => 1_250 * $numCities,
+            'ships' => 15 * $numCities,
+            'aircraft' => 75 * $numCities,
+        ];
+
+        $weights = array_merge([
+            'soldiers' => 0.1,
+            'ships' => 0.25,
+            'tanks' => 0.3,
+            'aircraft' => 0.35,
+        ], $unitWeights);
+
+        $totals = [
+            'soldiers' => $military->soldiers ?? 0,
+            'tanks' => $military->tanks ?? 0,
+            'ships' => $military->ships ?? 0,
+            'aircraft' => $military->aircraft ?? 0,
+        ];
+
+        $score = 0.0;
+
+        foreach ($weights as $unit => $weight) {
+            $cap = $caps[$unit] ?? 1;
+            $score += $weight * $this->normalize($totals[$unit] ?? 0, $cap);
+        }
+
+        return round(min(1, $score), 4);
+    }
+
+    protected function citySizeFactor(int $enemyCities, float $averageEnemyCities): float
+    {
+        $sizeRatio = ($averageEnemyCities <= 0) ? 0.0 : ($enemyCities / $averageEnemyCities);
+        $sizeFactor = $sizeRatio / (1 + $sizeRatio);
+
+        return round(max(0, min(1, $sizeFactor)), 4);
+    }
+
+    protected function cityAdvantageFactor(int $enemyCities, float $averageFriendlyCities): float
+    {
+        $delta = $enemyCities - $averageFriendlyCities;
+
+        if ($delta <= 0) {
+            return 0.0;
+        }
+
+        $softness = max(3, $averageFriendlyCities / 2);
+        $advantageFactor = $delta / ($delta + $softness);
+
+        return round(max(0, min(1, $advantageFactor)), 4);
+    }
+
+    protected function activityWindowHours(WarPlan $plan): int
+    {
+        return max(1, $plan->activity_window_hours ?? config('war.plan_defaults.activity_window_hours', 72));
     }
 
     /**

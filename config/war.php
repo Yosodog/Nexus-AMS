@@ -29,7 +29,7 @@ return [
     |
     */
     'slot_caps' => [
-        'default_offensive' => 3,
+        'default_offensive' => 6,
         'default_defensive' => 3,
         'project_modifiers' => [
             'space_program' => 1, // TODO make this accurate
@@ -53,23 +53,31 @@ return [
     'target_priority' => [
         'weights' => [
             'alliance_position' => 0.18,
-            'city_scale' => 0.15,
-            'recent_activity' => 0.12,
-            'military_output' => 0.18,
-            'scarcity' => 0.12,
-            'strategic_flags' => 0.1,
-            'wars_won' => 0.05,
-            'infrastructure_destroyed' => 0.1,
+            'city_size' => 0.12,
+            'city_advantage' => 0.12,
+            'recent_activity' => 0.15,
+            'military_composition' => 0.16,
+            'strategic_flags' => 0.17,
+            'scarcity' => 0.04,
+            'military_output' => 0.03,
+            'wars_won' => 0.02,
+            'infrastructure_destroyed' => 0.01,
         ],
         'decay' => [
             'recent_activity_hours' => 72,
             'full_decay_days' => 14,
         ],
+        'unit_weights' => [
+            'soldiers' => 0.1,
+            'ships' => 0.25,
+            'tanks' => 0.3,
+            'aircraft' => 0.35,
+        ],
         'strategic_adjustments' => [
-            'at_war_with_us' => 6,
+            'at_war_with_us' => 12,
             'declared_recently' => 5,
-            'vacation_mode' => -20,
-            'beige' => -12,
+            'vacation_mode' => -250,
+            'beige' => -300,
         ],
         'bounded_range' => [0, 100],
         'default_ttl' => 600,
@@ -90,16 +98,19 @@ return [
     'nation_match' => [
         'weights' => [
             // Relative power deliberately dominates so bad matchups bottom out.
-            'relative_power' => 0.3,
-            'availability' => 0.15,
-            'military_effectiveness' => 0.15,
-            'city_advantage' => 0.1,
+            'relative_power' => 0.25,
+            'availability' => 0.12,
+            'military_effectiveness' => 0.12,
+            'city_advantage' => 0.08,
             'recent_activity' => 0.1,
-            'assignment_load_penalty' => -0.1,
+            'assignment_load_penalty' => -0.08,
             'mmr_compliance' => 0.05,
-            'cohesion_bonus' => 0.07,
-            'color_penalty' => -0.04,
+            'cohesion_bonus' => 0.05,
+            'color_penalty' => 0.0,
             'tps_bias' => 0.02,
+            'strong_vs_strong' => 0.12,
+            'dominance' => 0.06,
+            'friendly_beige_penalty' => -0.1,
         ],
         'cohesion' => [
             'preferred_delta' => 10,
@@ -125,12 +136,15 @@ return [
             'military_effectiveness' => 'Weighted readiness across soldiers, armor, aircraft, ships, missiles, and nukes relative to city caps.',
             'city_advantage' => 'Smooth curve comparing friendly vs enemy cities; leans into parity while rewarding slight advantages.',
             'relative_power' => 'Composite parity floor using score, city count, and estimated military strength; low parity caps the whole match.',
-            'recent_activity' => 'Linearly decays from 12h to 72h last login to favour active players.',
+            'recent_activity' => 'Plan-window exponential decay using the activity window half-life to favour active players.',
             'assignment_load_penalty' => 'Scales penalties as you accumulate assignments versus your allowed max.',
             'mmr_compliance' => 'Normalised MMR score to favour members with track record; defaults to 0.5 when unknown.',
             'cohesion_bonus' => 'Keeps squads together by rewarding similar readiness versus squad reference.',
-            'color_penalty' => 'Discourages colour-locked wars that would cost colour bonuses.',
+            'color_penalty' => 'Colour ignored for targeting; beige/vacation status are prioritised instead.',
             'tps_bias' => 'Light nudge honouring target priority so planners see top targets first, scaled by parity.',
+            'strong_vs_strong' => 'Aligns our strongest nations against the enemy’s highest-threat nations to open wars decisively.',
+            'dominance' => 'Rewards matches where our strength rank edges the target’s threat rank.',
+            'friendly_beige_penalty' => 'Penalty when the friendly nation is on beige to avoid burning protection unless the match is exceptional.',
         ],
     ],
 
@@ -143,6 +157,8 @@ return [
         'max_size' => 3,
         'cohesion_tolerance' => 10,
         'label_prefix' => 'Squad',
+        'strict_mode' => true,
+        'allow_partial_fallback' => true,
     ],
 
     /*
@@ -152,7 +168,7 @@ return [
     */
     'plan_defaults' => [
         'plan_type' => 'ordinary',
-        'preferred_nations_per_target' => 3,
+        'preferred_targets_per_nation' => 2,
         'activity_window_hours' => 72,
         'suppress_counters_when_active' => true,
         'lock_ttl' => 30,
