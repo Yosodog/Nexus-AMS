@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\WarPlanController;
 use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
+use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\DiscordVerifiedMiddleware;
+use App\Http\Middleware\EnsureUserIsVerified;
 use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
@@ -46,3 +50,11 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
 Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(function () {
     Route::post('/verify', [DiscordVerificationController::class, 'verify']);
 });
+
+Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
+    ->prefix('v1/war-plans')
+    ->group(function () {
+        Route::get('/{plan}/targets', [WarPlanController::class, 'targetsData'])->name('api.admin.war-plans.targets');
+        Route::get('/{plan}/assignments', [WarPlanController::class, 'assignmentsData'])->name('api.admin.war-plans.assignments');
+        Route::get('/{plan}/friendlies', [WarPlanController::class, 'friendliesData'])->name('api.admin.war-plans.friendlies');
+    });

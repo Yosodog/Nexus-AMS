@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\AutoGeneratePlanAssignmentsJob;
 use App\Jobs\RecomputePlanTPSJob;
 use App\Models\Nation;
+use App\Models\NationMilitary;
 use App\Models\War;
 use App\Models\WarPlan;
 use App\Models\WarPlanAlliance;
@@ -18,6 +19,7 @@ use App\Services\War\NationMatchService;
 use App\Services\War\NotificationService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -45,55 +47,59 @@ class WarPlanController extends Controller
 
         $feedFilters = $request->only(['minutes', 'hours', 'attack_types', 'scope']);
 
-        $plan->load([
-            'friendlyAlliances.alliance',
-            'enemyAlliances.alliance',
-            'targets.nation.alliance',
-            'targets.nation.military',
-            'targets.assignments',
-            'assignments.friendlyNation.alliance',
-            'assignments.friendlyNation.military',
-            'assignments.target.nation.alliance',
-            'assignments.target.nation.military',
-            'assignments.squad',
-        ]);
+        $plan->load(['friendlyAlliances.alliance', 'enemyAlliances.alliance']);
 
-        $friendlyAllianceIds = $plan->friendlyAlliances->pluck('alliance_id')->filter();
+        $friendlyAllianceIds = $this->resolveFriendlyAllianceIds($plan, $membershipService);
+        $friendliesQuery = $this->buildFriendliesQuery($friendlyAllianceIds);
 
-        if ($friendlyAllianceIds->isEmpty()) {
-            $friendlyAllianceIds = $membershipService->getAllianceIds();
-        }
+        $targetsCount = $plan->targets()->count();
+        $assignmentQuery = $plan->assignments();
+        $assignmentCount = (clone $assignmentQuery)->count();
+        $lockedCount = (clone $assignmentQuery)->where('is_locked', true)->count();
+        $enemyCount = $plan->targets()->distinct('nation_id')->count('nation_id');
+        $friendlyCount = (clone $friendliesQuery)->count();
 
-        $friendliesQuery = Nation::query()
-            ->whereIn('alliance_id', $friendlyAllianceIds)
-            ->orderBy('leader_name')
-            ->with(['military'])
-            ->select([
-                'id',
-                'leader_name',
-                'nation_name',
-                'alliance_id',
-                'score',
-                'offensive_wars_count',
-                'defensive_wars_count',
-                'color',
-                'num_cities',
-            ]);
+        $preferredTargetsPerNation = min(
+            max(1, $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
+        $preferredAssignmentsPerTarget = $this->calculatePreferredAssignmentsPerTarget(
+            $targetsCount,
+            $friendlyCount,
+            $plan
+        );
+        $preferredSlotsTotal = $friendlyCount * $preferredTargetsPerNation;
+        $coverage = $preferredSlotsTotal > 0 ? round(min(100, ($assignmentCount / $preferredSlotsTotal) * 100)) : null;
+
+        $friendlyCityStats = $this->cityStatsForFriendlies($friendlyAllianceIds);
+        $enemyNationIds = $plan->targets()->pluck('nation_id');
+        $enemyCityStats = $this->cityStatsForNationIds($enemyNationIds);
+
+        $friendlyMilTotals = $this->militaryTotalsForAlliances($friendlyAllianceIds);
+        $enemyMilTotals = $this->militaryTotalsForNationIds($enemyNationIds);
 
         $warTypes = config('war.war_types', []);
 
-        [$topCandidates, $allFriendlies, $friendlyStats] = $this->recommendAssignments($plan, $friendliesQuery);
-
         return view('admin.war-room.plan', [
             'plan' => $plan,
-            'targets' => $plan->targets()->with(['nation.alliance', 'nation.military', 'assignments'])->withCount('assignments')->orderByDesc('target_priority_score')->get(),
-            'assignments' => $plan->assignments()->with(['friendlyNation.alliance', 'friendlyNation.military', 'target.nation.alliance', 'target.nation.military', 'squad'])->orderByDesc('match_score')->get(),
             'liveFeed' => $liveFeed->forPlan($plan, $feedFilters),
             'feedFilters' => $feedFilters,
-            'topCandidates' => $topCandidates,
-            'allFriendlies' => $allFriendlies,
-            'friendlyStats' => $friendlyStats,
             'warTypes' => $warTypes,
+            'targetCount' => $targetsCount,
+            'assignmentCount' => $assignmentCount,
+            'lockedCount' => $lockedCount,
+            'enemyCount' => $enemyCount,
+            'preferredTargetsPerNation' => $preferredTargetsPerNation,
+            'preferredAssignmentsPerTarget' => $preferredAssignmentsPerTarget,
+            'preferredSlotsTotal' => $preferredSlotsTotal,
+            'coverage' => $coverage,
+            'friendlyCityTotal' => $friendlyCityStats['total'],
+            'enemyCityTotal' => $enemyCityStats['total'],
+            'friendlyCityAvg' => $friendlyCityStats['avg'],
+            'enemyCityAvg' => $enemyCityStats['avg'],
+            'friendlyMilTotals' => $friendlyMilTotals,
+            'enemyMilTotals' => $enemyMilTotals,
+            'friendlyCount' => $friendlyCount,
         ]);
     }
 
@@ -625,6 +631,84 @@ class WarPlanController extends Controller
             ->with('alert-message', 'Assignment removed.');
     }
 
+    public function targetsData(
+        WarPlan $plan,
+        AllianceMembershipService $membershipService
+    ): JsonResponse {
+        $this->authorize('view-wars');
+
+        $friendliesQuery = $this->buildFriendliesQuery(
+            $this->resolveFriendlyAllianceIds($plan, $membershipService)
+        );
+        $friendlyCount = (clone $friendliesQuery)->count();
+
+        [$candidateMap] = $this->recommendAssignments($plan, $friendliesQuery);
+
+        $targets = $plan->targets()
+            ->with([
+                'nation.alliance',
+                'nation.military',
+                'nation.accountProfile',
+            ])
+            ->withCount('assignments')
+            ->orderByDesc('target_priority_score')
+            ->get();
+
+        return response()->json([
+            'targets' => $targets,
+            'candidate_map' => $candidateMap,
+            'preferred_assignments_per_target' => $this->calculatePreferredAssignmentsPerTarget(
+                $targets->count(),
+                $friendlyCount,
+                $plan
+            ),
+        ]);
+    }
+
+    public function assignmentsData(WarPlan $plan): JsonResponse
+    {
+        $this->authorize('view-wars');
+
+        $assignments = $plan->assignments()
+            ->with([
+                'friendlyNation.alliance',
+                'friendlyNation.military',
+                'friendlyNation.accountProfile',
+                'target.nation.alliance',
+                'target.nation.military',
+                'squad',
+            ])
+            ->orderByDesc('match_score')
+            ->get();
+
+        return response()->json(['assignments' => $assignments]);
+    }
+
+    public function friendliesData(
+        WarPlan $plan,
+        AllianceMembershipService $membershipService
+    ): JsonResponse {
+        $this->authorize('view-wars');
+
+        $friendliesQuery = $this->buildFriendliesQuery(
+            $this->resolveFriendlyAllianceIds($plan, $membershipService)
+        );
+
+        $friendlies = $friendliesQuery
+            ->with(['military', 'latestSignIn', 'alliance', 'accountProfile'])
+            ->get();
+
+        $assignments = $plan->assignments()->get();
+        $friendlyStats = $this->prepareFriendlyStats($plan, $friendlies, $assignments);
+        $assignmentFriendlyIds = $assignments->pluck('friendly_nation_id')->filter()->unique();
+
+        return response()->json([
+            'friendlies' => $friendlies,
+            'friendly_stats' => $this->transformFriendlyStats($friendlyStats),
+            'unassigned' => $friendlies->whereNotIn('id', $assignmentFriendlyIds)->values(),
+        ]);
+    }
+
     /**
      * Generate recommended friendlies per target along with helper stats for the view.
      *
@@ -852,6 +936,157 @@ class WarPlanController extends Controller
                 return $counts;
             }
         );
+    }
+
+    protected function resolveFriendlyAllianceIds(
+        WarPlan $plan,
+        AllianceMembershipService $membershipService
+    ): Collection {
+        $friendlyAllianceIds = $plan->friendlyAlliances->pluck('alliance_id')->filter();
+
+        if ($friendlyAllianceIds->isEmpty()) {
+            $friendlyAllianceIds = $membershipService->getAllianceIds();
+        }
+
+        return $friendlyAllianceIds->unique()->values();
+    }
+
+    protected function buildFriendliesQuery(Collection $friendlyAllianceIds): Builder
+    {
+        return Nation::query()
+            ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->orderBy('leader_name')
+            ->select([
+                'id',
+                'leader_name',
+                'nation_name',
+                'alliance_id',
+                'score',
+                'offensive_wars_count',
+                'defensive_wars_count',
+                'color',
+                'num_cities',
+                'projects',
+                'project_bits',
+                'alliance_position',
+                'alliance_position_id',
+                'vacation_mode_turns',
+                'beige_turns',
+            ]);
+    }
+
+    protected function calculatePreferredAssignmentsPerTarget(
+        int $targetCount,
+        int $friendlyCount,
+        WarPlan $plan
+    ): int {
+        if ($targetCount === 0 || $friendlyCount === 0) {
+            return 0;
+        }
+
+        $defensiveCap = (int) config('war.slot_caps.default_defensive', 3);
+        $preferredTargetsPerNation = min(
+            max(1, $plan->preferred_targets_per_nation),
+            (int) config('war.slot_caps.default_offensive', 6)
+        );
+
+        return (int) min(
+            $defensiveCap,
+            max(1, ceil(($friendlyCount * $preferredTargetsPerNation) / $targetCount))
+        );
+    }
+
+    protected function cityStatsForFriendlies(Collection $friendlyAllianceIds): array
+    {
+        $baseQuery = Nation::query()->when($friendlyAllianceIds->isNotEmpty(), function (Builder $query) use ($friendlyAllianceIds) {
+            $query->whereIn('alliance_id', $friendlyAllianceIds);
+        });
+
+        $count = (clone $baseQuery)->count();
+
+        $stats = (clone $baseQuery)
+            ->selectRaw('SUM(num_cities) as total_cities, AVG(num_cities) as avg_cities')
+            ->first();
+
+        return [
+            'count' => $count,
+            'total' => (int) ($stats->total_cities ?? 0),
+            'avg' => $stats->avg_cities !== null ? (float) $stats->avg_cities : null,
+        ];
+    }
+
+    protected function cityStatsForNationIds(Collection $nationIds): array
+    {
+        if ($nationIds->isEmpty()) {
+            return ['count' => 0, 'total' => 0, 'avg' => null];
+        }
+
+        $stats = Nation::query()
+            ->whereIn('id', $nationIds)
+            ->selectRaw('COUNT(*) as total_count, SUM(num_cities) as total_cities, AVG(num_cities) as avg_cities')
+            ->first();
+
+        return [
+            'count' => (int) ($stats->total_count ?? 0),
+            'total' => (int) ($stats->total_cities ?? 0),
+            'avg' => $stats->avg_cities !== null ? (float) $stats->avg_cities : null,
+        ];
+    }
+
+    protected function militaryTotalsForAlliances(Collection $friendlyAllianceIds): array
+    {
+        if ($friendlyAllianceIds->isEmpty()) {
+            return ['soldiers' => 0, 'tanks' => 0, 'aircraft' => 0, 'ships' => 0];
+        }
+
+        $totals = Nation::query()
+            ->join('nation_military', 'nation_military.nation_id', '=', 'nations.id')
+            ->whereIn('nations.alliance_id', $friendlyAllianceIds)
+            ->selectRaw('SUM(nation_military.soldiers) as soldiers, SUM(nation_military.tanks) as tanks, SUM(nation_military.aircraft) as aircraft, SUM(nation_military.ships) as ships')
+            ->first();
+
+        return [
+            'soldiers' => (int) ($totals->soldiers ?? 0),
+            'tanks' => (int) ($totals->tanks ?? 0),
+            'aircraft' => (int) ($totals->aircraft ?? 0),
+            'ships' => (int) ($totals->ships ?? 0),
+        ];
+    }
+
+    protected function militaryTotalsForNationIds(Collection $nationIds): array
+    {
+        if ($nationIds->isEmpty()) {
+            return ['soldiers' => 0, 'tanks' => 0, 'aircraft' => 0, 'ships' => 0];
+        }
+
+        $totals = NationMilitary::query()
+            ->whereIn('nation_id', $nationIds)
+            ->selectRaw('SUM(soldiers) as soldiers, SUM(tanks) as tanks, SUM(aircraft) as aircraft, SUM(ships) as ships')
+            ->first();
+
+        return [
+            'soldiers' => (int) ($totals->soldiers ?? 0),
+            'tanks' => (int) ($totals->tanks ?? 0),
+            'aircraft' => (int) ($totals->aircraft ?? 0),
+            'ships' => (int) ($totals->ships ?? 0),
+        ];
+    }
+
+    protected function transformFriendlyStats(Collection $friendlyStats): array
+    {
+        return $friendlyStats
+            ->map(fn (array $stat, int $friendlyId) => [
+                'friendly_nation_id' => $friendlyId,
+                'assignment_load' => $stat['assignment_load'],
+                'available_slots' => $stat['available_slots'],
+                'remaining_slots' => $stat['remaining_slots'],
+                'max_assignments' => $stat['max_assignments'],
+                'offensive_wars' => $stat['offensive_wars'],
+                'defensive_wars' => $stat['defensive_wars'],
+                'remaining_offensive_capacity' => $stat['remaining_offensive_capacity'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
