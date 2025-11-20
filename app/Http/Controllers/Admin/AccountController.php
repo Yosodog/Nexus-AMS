@@ -219,7 +219,7 @@ class AccountController extends Controller
      */
     public function adjustBalance(Request $request)
     {
-        $this->authorize('edit-accounts');
+        $this->authorize('manage-accounts');
 
         $request->validate([
             'money' => 'nullable|numeric',
@@ -238,6 +238,10 @@ class AccountController extends Controller
         ]);
 
         $account = AccountService::getAccountById($request->input('accountId'));
+
+        if ($account->nation_id === Auth::user()->nation_id) {
+            abort(403, 'You cannot edit your own account');
+        }
 
         $data = [];
 
