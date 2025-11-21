@@ -29,7 +29,7 @@ class LoansController extends Controller
     public function apply(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric',
+            'amount' => 'required|numeric|min:100000',
             'account_id' => 'required|exists:accounts,id',
             'term_weeks' => 'required|integer|min:1|max:52',
         ]);
@@ -92,7 +92,7 @@ class LoansController extends Controller
         $request->validate([
             'loan_id' => 'required|exists:loans,id',
             'account_id' => 'required|exists:accounts,id',
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.01',
         ]);
 
         $loan = Loan::findOrFail($request->loan_id);

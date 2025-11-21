@@ -36,7 +36,7 @@
                         <input type="number"
                                name="amount"
                                id="amount"
-                               min="0.01"
+                               min="100000"
                                step="0.01"
                                required
                                placeholder="Enter loan amount"
