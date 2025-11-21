@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\Fortify\LoginResponse;
 use App\Broadcasting\PWMessageChannel;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Logs\CronLog;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController as FortifyPasswordResetLinkController;
 use Opcodes\LogViewer\Facades\LogViewer;
 
@@ -99,5 +101,7 @@ class AppServiceProvider extends ServiceProvider
 
         LogViewer::extend('cron', CronLog::class);
         LogViewer::extend('sublog', SubLog::class);
+
+        $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
     }
 }
