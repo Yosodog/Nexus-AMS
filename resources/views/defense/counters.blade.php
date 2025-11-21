@@ -117,7 +117,7 @@
         @endif
 
         {{-- Nation Table --}}
-        <x-utils.card :title="$target ? 'Matching Nation' : 'All Alliance Nation'">
+        <x-utils.card :title="$target ? 'Matching Nation' : 'All Alliance Nations'">
             <div class="overflow-x-auto">
                 <table class="table w-full">
                     <thead>
