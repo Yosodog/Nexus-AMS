@@ -15,6 +15,7 @@ use App\Services\CityGrantService;
 use App\Services\GrantService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
+use App\Services\SelfApprovalGuard;
 use App\Services\WarAidService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +28,8 @@ class ManualDisbursementController extends Controller
 
     public function __construct(
         protected LoanService $loanService,
-        protected WarAidService $warAidService
+        protected WarAidService $warAidService,
+        protected SelfApprovalGuard $selfApprovalGuard
     ) {}
 
     public function sendGrant(Request $request): RedirectResponse
@@ -39,6 +41,11 @@ class ManualDisbursementController extends Controller
             'nation_id' => 'required|exists:nations,id',
             'account_id' => 'required|exists:accounts,id',
         ]);
+
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: (int) $data['nation_id'],
+            context: 'send a grant to your own nation'
+        );
 
         $grant = Grants::findOrFail($data['grant_id']);
         $nation = Nation::findOrFail($data['nation_id']);
@@ -70,6 +77,11 @@ class ManualDisbursementController extends Controller
             'grant_amount' => 'nullable|integer|min:1',
         ]);
 
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: (int) $data['nation_id'],
+            context: 'send a city grant to your own nation'
+        );
+
         $cityGrant = CityGrant::findOrFail($data['city_grant_id']);
         $nation = Nation::findOrFail($data['nation_id']);
         $account = $this->validateAccountForNation((int) $data['account_id'], $nation);
@@ -100,6 +112,11 @@ class ManualDisbursementController extends Controller
             'interest_rate' => 'required|numeric|min:0|max:100',
             'term_weeks' => 'required|integer|min:1|max:52',
         ]);
+
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: (int) $data['nation_id'],
+            context: 'approve or send a loan to your own nation'
+        );
 
         $nation = Nation::findOrFail($data['nation_id']);
         $account = $this->validateAccountForNation((int) $data['account_id'], $nation);
@@ -135,6 +152,11 @@ class ManualDisbursementController extends Controller
             'note' => 'nullable|string|max:255',
             ...$resourceRules,
         ]);
+
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: (int) $data['nation_id'],
+            context: 'send war aid to your own nation'
+        );
 
         $resources = collect(PWHelperService::resources())
             ->mapWithKeys(fn ($resource) => [$resource => (int) ($data[$resource] ?? 0)])

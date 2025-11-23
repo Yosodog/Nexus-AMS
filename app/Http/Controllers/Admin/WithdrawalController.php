@@ -9,6 +9,7 @@ use App\Notifications\WithdrawalDeniedNotification;
 use App\Services\AccountService;
 use App\Services\PendingRequestsService;
 use App\Services\PWHelperService;
+use App\Services\SelfApprovalGuard;
 use App\Services\SettingService;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Gate;
 
 class WithdrawalController extends Controller
 {
+    public function __construct(private SelfApprovalGuard $selfApprovalGuard) {}
+
     /**
      * @throws AuthorizationException
      */
@@ -72,6 +75,11 @@ class WithdrawalController extends Controller
     {
         Gate::authorize('manage-accounts');
 
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: $transaction->nation_id,
+            context: 'approve your own withdrawal request'
+        );
+
         if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
             return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
@@ -101,6 +109,11 @@ class WithdrawalController extends Controller
     public function deny(Request $request, Transaction $transaction): RedirectResponse
     {
         Gate::authorize('manage-accounts');
+
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: $transaction->nation_id,
+            context: 'deny your own withdrawal request'
+        );
 
         if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
             return redirect()->route('admin.accounts.dashboard')->with([

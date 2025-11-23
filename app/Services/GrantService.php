@@ -86,6 +86,11 @@ class GrantService
 
     public static function approveGrant(GrantApplication $application): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $application->nation_id,
+            context: 'approve your own grant request'
+        );
+
         $grant = $application->grant;
         $account = Account::findOrFail($application->account_id);
         $adminId = Auth::id();
@@ -115,6 +120,11 @@ class GrantService
 
     public static function denyGrant(GrantApplication $application): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $application->nation_id,
+            context: 'deny your own grant request'
+        );
+
         $application->update([
             'status' => 'denied',
             'denied_at' => now(),
