@@ -7,6 +7,9 @@ use App\Models\AuditResult;
 use App\Models\AuditRule;
 use App\Models\City;
 use App\Models\Nation;
+use App\Nel\CityNelHelper;
+use App\Nel\MathNelHelper;
+use App\Nel\NationNelHelper;
 use App\Nel\NelEngine;
 use App\Services\AllianceMembershipService;
 use Illuminate\Support\Collection;
@@ -20,6 +23,9 @@ class AuditService
         private readonly NationAuditMapper $nationAuditMapper,
         private readonly CityAuditMapper $cityAuditMapper,
         private readonly AllianceMembershipService $membershipService,
+        private readonly NationNelHelper $nationNelHelper,
+        private readonly CityNelHelper $cityNelHelper,
+        private readonly MathNelHelper $mathNelHelper,
     ) {}
 
     public function runAllEnabledRules(): void
@@ -94,7 +100,11 @@ class AuditService
         ?int $cityId,
     ): void {
         try {
-            $result = $this->nelEngine->evaluate($rule->expression, $variables, helpers: []);
+            $result = $this->nelEngine->evaluate(
+                $rule->expression,
+                $variables,
+                helpers: $this->helperBindingsFor($targetType)
+            );
         } catch (Throwable $exception) {
             Log::error('Audit rule evaluation failed', [
                 'rule_id' => $rule->id,
@@ -158,6 +168,26 @@ class AuditService
             'nation_id' => $nationId,
             'city_id' => $cityId,
         ])->delete();
+    }
+
+    /**
+     * @return array<string, callable>
+     */
+    private function helperBindingsFor(AuditTargetType $targetType): array
+    {
+        $helpers = [
+            ...$this->mathNelHelper->bindings(),
+            ...$this->nationNelHelper->bindings(),
+        ];
+
+        if ($targetType === AuditTargetType::City) {
+            $helpers = [
+                ...$helpers,
+                ...$this->cityNelHelper->bindings(),
+            ];
+        }
+
+        return $helpers;
     }
 
     public function getNationViolations(Nation $nation): Collection

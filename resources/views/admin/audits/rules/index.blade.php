@@ -11,10 +11,16 @@
                     <p class="text-muted mb-0">Create, update, and retire NEL-powered checks.</p>
                 </div>
                 <div class="col-auto">
-                    <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i>
-                        New Rule
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.audits.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Back to overview
+                        </a>
+                        <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            New Rule
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

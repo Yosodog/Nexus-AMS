@@ -201,6 +201,67 @@ city.powered == true || city.nuclear_power &gt; 0</code></pre>
     </div>
 
     <div class="row g-3 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-semibold">
+                    Nation Helpers
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong><code>nation.has_project(name)</code></strong><br>Checks whether the nation owns a specific project.</p>
+                    <p class="mb-3">Projects are matched using the Politics &amp; War project list built into <code>PWHelperService::projects()</code>.</p>
+                    <div class="mb-3">
+                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <pre class="bg-body-secondary p-3 rounded small mb-2"><code>nation.has_project("Iron Dome")
+nation.has_project("Urban Planning") &amp;&amp; !nation.has_project("Advanced Pirate Economy")</code></pre>
+                    </div>
+                    <p class="text-secondary small mb-0">This helper reads the binary <code>project_bits</code> string right-to-left, where index 0 is the rightmost bit.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-semibold">
+                    City Helpers
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong><code>city.improvements_count()</code></strong><br>Returns the total count of all city improvements (power, mines, refineries, factories, hangars, drydocks, etc.).</p>
+                    <div class="mb-3">
+                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <pre class="bg-body-secondary p-3 rounded small mb-2"><code>city.improvements_count() &gt;= 35
+city.improvements_count() == city.num_cities * 3 // per-city target example</code></pre>
+                    </div>
+                    <p class="text-secondary small mb-0">Counts the individual improvement slots on the city, treating missing values as zero.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-semibold">
+                    Math Helpers
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong><code>math.floor_to_multiple(value, multiple)</code></strong><br>Rounds a number down to the nearest multiple.</p>
+                    <div class="mb-3">
+                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <pre class="bg-body-secondary p-3 rounded small mb-2"><code>// Slot alignment (1 slot per 50 infra)
+math.floor_to_multiple(city.infrastructure, 50) / 50 &gt;= city.improvements_count()
+
+// Round down a score to the nearest hundred
+math.floor_to_multiple(nation.score, 100)</code></pre>
+                    </div>
+                    <p class="text-secondary small mb-0">Throws an error if <code>multiple</code> is zero.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header fw-semibold">
@@ -210,7 +271,7 @@ city.powered == true || city.nuclear_power &gt; 0</code></pre>
                     <ul class="mb-3">
                         <li>Rules are parsed on save; syntax errors return inline validation.</li>
                         <li>Unknown variables (e.g., <code>nation.foo</code>) throw errors during evaluation; keep names exact.</li>
-                        <li>No helper functions are registered yet—callable helpers will be added in future releases.</li>
+                        <li>Helpers like <code>nation.has_project(...)</code> are registered server-side; unknown helpers throw an error.</li>
                     </ul>
                     <div class="alert alert-warning mb-0">
                         <i class="bi bi-exclamation-triangle me-1"></i>

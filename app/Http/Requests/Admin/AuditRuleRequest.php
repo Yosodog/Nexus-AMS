@@ -4,6 +4,9 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\AuditPriority;
 use App\Enums\AuditTargetType;
+use App\Nel\CityNelHelper;
+use App\Nel\MathNelHelper;
+use App\Nel\NationNelHelper;
 use App\Nel\NelParser;
 use App\Nel\NelValidator;
 use App\Services\Audit\AuditVariableRegistry;
@@ -68,11 +71,35 @@ class AuditRuleRequest extends FormRequest
                     if ($targetType !== null) {
                         $allowed = app(AuditVariableRegistry::class)->allowedFor($targetType);
                         app(NelValidator::class)->assertAllowedIdentifiers($expression, $allowed);
+                        app(NelValidator::class)->assertAllowedFunctions(
+                            $expression,
+                            $this->allowedHelpersFor($targetType)
+                        );
                     }
                 } catch (Throwable $exception) {
                     $validator->errors()->add('expression', 'NEL syntax error: '.$exception->getMessage());
                 }
             },
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function allowedHelpersFor(AuditTargetType $targetType): array
+    {
+        $helpers = [
+            ...app(MathNelHelper::class)->functionNames(),
+            ...app(NationNelHelper::class)->functionNames(),
+        ];
+
+        if ($targetType === AuditTargetType::City) {
+            $helpers = [
+                ...$helpers,
+                ...app(CityNelHelper::class)->functionNames(),
+            ];
+        }
+
+        return $helpers;
     }
 }

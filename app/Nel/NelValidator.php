@@ -34,6 +34,23 @@ final class NelValidator
     }
 
     /**
+     * @param  array<int, string>  $allowedFunctions
+     *
+     * @throws NelSyntaxException
+     */
+    public function assertAllowedFunctions(string $expression, array $allowedFunctions): void
+    {
+        $ast = $this->parser->parse($expression);
+        $functions = $this->collectFunctions($ast);
+
+        foreach ($functions as $function) {
+            if (! in_array($function, $allowedFunctions, true)) {
+                throw new NelSyntaxException("Unknown helper referenced: {$function}");
+            }
+        }
+    }
+
+    /**
      * @return array<int, string>
      */
     private function collectIdentifiers(ExpressionNode $node): array
@@ -68,6 +85,38 @@ final class NelValidator
             }
 
             return $collected;
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function collectFunctions(ExpressionNode $node): array
+    {
+        if ($node instanceof FunctionCallNode) {
+            $collected = [$node->name];
+
+            foreach ($node->arguments as $argument) {
+                $collected = [
+                    ...$collected,
+                    ...$this->collectFunctions($argument),
+                ];
+            }
+
+            return $collected;
+        }
+
+        if ($node instanceof UnaryOpNode) {
+            return $this->collectFunctions($node->operand);
+        }
+
+        if ($node instanceof BinaryOpNode) {
+            return [
+                ...$this->collectFunctions($node->left),
+                ...$this->collectFunctions($node->right),
+            ];
         }
 
         return [];

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RunAuditsJob;
 use App\Models\AuditResult;
 use App\Models\AuditRule;
 use App\Notifications\AuditViolationSummaryNotification;
@@ -71,10 +72,10 @@ class AuditController extends Controller
 
     public function run(): RedirectResponse
     {
-        $this->auditService->runAllEnabledRules();
+        RunAuditsJob::dispatch();
 
         return redirect()->route('admin.audits.index')->with([
-            'alert-message' => 'Audit run started. Violations will reflect current data shortly.',
+            'alert-message' => 'Audit run queued. Violations will refresh after processing.',
             'alert-type' => 'success',
         ]);
     }
