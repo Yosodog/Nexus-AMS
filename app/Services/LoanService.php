@@ -71,6 +71,11 @@ class LoanService
      */
     public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $loan->nation_id,
+            context: 'approve your own loan request'
+        );
+
         $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
             // Update the loan details
             $loan->update([
@@ -108,6 +113,11 @@ class LoanService
 
     public function denyLoan(Loan $loan, Nation $nation): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $loan->nation_id,
+            context: 'deny your own loan request'
+        );
+
         $loan->update(['status' => 'denied']);
 
         $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));

@@ -45,6 +45,11 @@ class WarAidService
 
     public function approveAidRequest(WarAidRequest $request, array $adjusted): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $request->nation_id,
+            context: 'approve your own war aid request'
+        );
+
         $resources = $this->extractResources($adjusted);
 
         $updatedRequest = DB::transaction(function () use ($request, $adjusted, $resources) {
@@ -103,6 +108,11 @@ class WarAidService
 
     public function denyAidRequest(WarAidRequest $request): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $request->nation_id,
+            context: 'deny your own war aid request'
+        );
+
         $request->update([
             'status' => 'denied',
             'denied_at' => now(),

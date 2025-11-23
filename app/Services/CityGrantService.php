@@ -79,6 +79,11 @@ class CityGrantService
      */
     public static function approveGrant(CityGrantRequest $request): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $request->nation_id,
+            context: 'approve your own city grant request'
+        );
+
         // Fetch the recipient account
         $account = Account::findOrFail($request->account_id);
         $adminId = Auth::id();
@@ -110,6 +115,11 @@ class CityGrantService
      */
     public static function denyGrant(CityGrantRequest $request): void
     {
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $request->nation_id,
+            context: 'deny your own city grant request'
+        );
+
         $request->update([
             'status' => 'denied',
             'denied_at' => now(),
