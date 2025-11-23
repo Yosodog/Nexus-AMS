@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
+use App\Http\Controllers\Admin\NelDocsController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RecruitmentController;
@@ -379,6 +380,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/recruitment/test', [RecruitmentController::class, 'sendTest'])->name(
             'admin.recruitment.test'
         )->middleware(BlockWhenPWDown::class);
+
+        Route::get('/nel', NelDocsController::class)->name('admin.nel.docs');
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
         Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(

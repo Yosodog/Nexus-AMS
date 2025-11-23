@@ -204,6 +204,15 @@
                 </li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.nel.docs') }}"
+                                icon="bi bi-braces-asterisk"
+                                permission="view-diagnostic-info"
+                                :active="request()->routeIs('admin.nel.docs')">
+                        NEL Docs
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.customization.index') }}"
                                 icon="bi bi-palette"
                                 permission="manage-custom-pages"
