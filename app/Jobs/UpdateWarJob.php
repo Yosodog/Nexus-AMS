@@ -14,6 +14,8 @@ class UpdateWarJob implements ShouldQueue
 {
     use InteractsWithQueue, Queueable;
 
+    public $timeout = 5;
+
     public function __construct(public array $warsData) {}
 
     public function handle(): void

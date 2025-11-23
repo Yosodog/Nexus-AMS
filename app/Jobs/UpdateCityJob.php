@@ -15,6 +15,8 @@ class UpdateCityJob implements ShouldQueue
 {
     use Queueable;
 
+    public $timeout = 5;
+
     public array $citiesData;
 
     public array $skips = ['nuke_date'];

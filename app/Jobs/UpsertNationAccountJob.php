@@ -14,6 +14,8 @@ class UpsertNationAccountJob implements ShouldQueue
 {
     use InteractsWithQueue, Queueable;
 
+    public $timeout = 5;
+
     public function __construct(public array $accounts) {}
 
     public function handle(): void

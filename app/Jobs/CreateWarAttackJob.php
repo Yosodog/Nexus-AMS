@@ -17,6 +17,8 @@ class CreateWarAttackJob implements ShouldQueue
 {
     use Batchable, InteractsWithQueue, Queueable;
 
+    public $timeout = 5;
+
     public function __construct(public array $warAttacks) {}
 
     public function handle(): void

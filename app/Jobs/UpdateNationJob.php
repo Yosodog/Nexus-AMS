@@ -19,6 +19,8 @@ class UpdateNationJob implements ShouldQueue
 
     public array $nationsData;
 
+    public $timeout = 5;
+
     /**
      * Create a new job instance.
      */
