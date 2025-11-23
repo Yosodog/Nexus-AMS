@@ -279,6 +279,11 @@ class Nation extends Model
         return $this->belongsTo(Alliance::class, 'alliance_id', 'id');
     }
 
+    public function cities(): HasMany
+    {
+        return $this->hasMany(City::class, 'nation_id');
+    }
+
     /**
      * @return HasMany
      */

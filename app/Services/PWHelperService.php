@@ -50,6 +50,17 @@ class PWHelperService
         'Nuclear Launch Facility' => 1 << 38,
     ];
 
+    /**
+     * @return array<int, string>
+     */
+    public static function projects(): array
+    {
+        $projects = self::PROJECTS;
+        asort($projects);
+
+        return array_keys($projects);
+    }
+
     public static function getNationProjects(int $projectBits): array
     {
         $ownedProjects = [];

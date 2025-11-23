@@ -46,6 +46,12 @@ Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);
 // Military sign in
 Schedule::command('military:sign-in')->dailyAt('12:10')->when($whenPWUp);
 
+// Audits
+Schedule::command('audits:run')
+    ->everyFifteenMinutes()
+    ->runInBackground()
+    ->withoutOverlapping(10);
+
 // Recruitment
 Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($whenPWUp);
 

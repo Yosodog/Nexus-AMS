@@ -187,12 +187,13 @@ final class NelParser
         }
 
         if ($this->match(TokenType::IDENTIFIER)) {
-            $token = $this->previous();
+            $segments = $this->collectIdentifierSegments($this->previous());
+
             if ($this->check(TokenType::LPAREN)) {
-                return $this->finishFunctionCall($token);
+                return $this->finishFunctionCall($segments);
             }
 
-            return $this->finishIdentifierPath($token);
+            return new IdentifierNode($segments);
         }
 
         if ($this->match(TokenType::LPAREN)) {
@@ -206,7 +207,10 @@ final class NelParser
         throw new NelSyntaxException('Unexpected token '.$token->type.' at position '.$token->position);
     }
 
-    private function finishIdentifierPath(Token $firstIdentifier): IdentifierNode
+    /**
+     * @return array<int, string>
+     */
+    private function collectIdentifierSegments(Token $firstIdentifier): array
     {
         $segments = [$firstIdentifier->value];
 
@@ -215,10 +219,13 @@ final class NelParser
             $segments[] = $segmentToken->value;
         }
 
-        return new IdentifierNode($segments);
+        return $segments;
     }
 
-    private function finishFunctionCall(Token $nameToken): FunctionCallNode
+    /**
+     * @param  array<int, string>  $segments
+     */
+    private function finishFunctionCall(array $segments): FunctionCallNode
     {
         $this->consume(TokenType::LPAREN, 'Expected "(" after function name');
         $arguments = [];
@@ -231,7 +238,7 @@ final class NelParser
 
         $this->consume(TokenType::RPAREN, 'Expected ")" after function arguments');
 
-        return new FunctionCallNode($nameToken->value, $arguments);
+        return new FunctionCallNode(implode('.', $segments), $arguments);
     }
 
     private function match(string $type): bool

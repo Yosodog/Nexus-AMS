@@ -3,6 +3,8 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AllianceFinanceController;
+use App\Http\Controllers\Admin\AuditController as AdminAuditController;
+use App\Http\Controllers\Admin\AuditRuleController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\CustomizationController;
@@ -28,6 +30,7 @@ use App\Http\Controllers\Admin\WarPlanController as AdminWarPlanController;
 use App\Http\Controllers\Admin\WarRoomController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\ApplyPageController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
@@ -107,6 +110,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/loans/repay', [UserLoansController::class, 'repay'])->name('loans.repay')
         ->middleware(BlockWhenPWDown::class);
 
+    // Audits
+    Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
     /***** Defense Routes *****/
     Route::prefix('defense')->middleware(['auth'])->group(function () {
         // Counters
@@ -160,6 +166,19 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('admin.roles.edit');
         Route::put('/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
+
+        // Audits
+        Route::get('/audits', [AdminAuditController::class, 'index'])->name('admin.audits.index');
+        Route::get('/audits/rules', [AuditRuleController::class, 'index'])->name('admin.audits.rules.index');
+        Route::get('/audits/rules/create', [AuditRuleController::class, 'create'])->name('admin.audits.rules.create');
+        Route::post('/audits/rules', [AuditRuleController::class, 'store'])->name('admin.audits.rules.store');
+        Route::get('/audits/rules/{auditRule}/edit', [AuditRuleController::class, 'edit'])->name('admin.audits.rules.edit');
+        Route::put('/audits/rules/{auditRule}', [AuditRuleController::class, 'update'])->name('admin.audits.rules.update');
+        Route::delete('/audits/rules/{auditRule}', [AuditRuleController::class, 'destroy'])->name('admin.audits.rules.destroy');
+        Route::get('/audits/rules/{auditRule}/violations', [AdminAuditController::class, 'violations'])
+            ->name('admin.audits.rules.violations');
+        Route::post('/audits/run', [AdminAuditController::class, 'run'])->name('admin.audits.run');
+        Route::post('/audits/notify', [AdminAuditController::class, 'notify'])->name('admin.audits.notify');
 
         // Account
         Route::get('/accounts', [AccountController::class, 'dashboard'])->name('admin.accounts.dashboard');
