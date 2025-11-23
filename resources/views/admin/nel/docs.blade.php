@@ -243,4 +243,113 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
             </div>
         </div>
     </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm" x-data="projectBitsGenerator({{ Illuminate\Support\Js::from($projects) }})">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">Project Bits Generator</div>
+                        <small class="text-secondary">Toggle PW projects to compute the project_bits integer in real time.</small>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Project bulk actions">
+                        <button type="button" class="btn btn-outline-primary" @click="selectAll">Select All</button>
+                        <button type="button" class="btn btn-outline-secondary" @click="clearAll">Clear All</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="text-secondary text-uppercase small">Project</th>
+                                        <th scope="col" class="text-secondary text-uppercase small text-end">Bit Value</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <template x-for="([name, bit], index) in Object.entries(projects)" :key="name">
+                                        <tr>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" :id="'project-'+index" :value="name" x-model="selected">
+                                                    <label class="form-check-label" :for="'project-'+index" x-text="name"></label>
+                                                </div>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" x-text="bit.toString()"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">Bit Integer</span>
+                                <input type="text" class="form-control" :value="bitsString" readonly>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">Binary</span>
+                                <input type="text" class="form-control font-monospace" :value="binaryString" readonly>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">Selected</span>
+                                <input type="text" class="form-control" :value="selected.length ? selected.join(', ') : 'None'" readonly>
+                            </div>
+                            <div class="border rounded p-3 bg-body-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-semibold">Selected Projects</span>
+                                    <span class="badge bg-primary-subtle text-primary-emphasis" x-text="selected.length + ' / ' + Object.keys(projects).length"></span>
+                                </div>
+                                <template x-if="selected.length">
+                                    <ul class="list-group list-group-flush">
+                                        <template x-for="name in selected" :key="name">
+                                            <li class="list-group-item py-1" x-text="name"></li>
+                                        </template>
+                                    </ul>
+                                </template>
+                                <p class="text-secondary mb-0" x-show="!selected.length">No projects selected.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.2/dist/cdn.min.js" defer></script>
+        <script>
+            function projectBitsGenerator(projects) {
+                const normalizedProjects = Object.fromEntries(
+                    Object.entries(projects).map(([name, bit]) => [name, BigInt(bit)])
+                );
+
+                return {
+                    projects: normalizedProjects,
+                    selected: [],
+                    selectAll() {
+                        this.selected = Object.keys(this.projects);
+                    },
+                    clearAll() {
+                        this.selected = [];
+                    },
+                    get bits() {
+                        return this.selected.reduce((total, name) => total | (this.projects[name] ?? 0n), 0n);
+                    },
+                    get bitsString() {
+                        return this.bits.toString();
+                    },
+                    get binaryString() {
+                        const value = this.bits;
+
+                        return value ? value.toString(2) : '0';
+                    },
+                };
+            }
+        </script>
+    @endpush
 @endsection
