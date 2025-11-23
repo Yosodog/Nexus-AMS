@@ -19,11 +19,15 @@ class CityController extends Controller
         $cities = City::query()
             ->with([
                 'nation' => fn ($query) => $query
-                    ->select('id', 'nation_name', 'leader_name', 'alliance_id', 'vacation_mode_turns')
+                    ->select('id', 'nation_name', 'leader_name', 'alliance_id', 'alliance_position', 'vacation_mode_turns')
                     ->with(['alliance:id,name,acronym']),
             ])
             ->whereHas('nation', function ($query) use ($membershipService) {
                 $query->whereIn('alliance_id', $membershipService->getAllianceIds())
+                    ->where(function ($query) {
+                        $query->whereNull('alliance_position')
+                            ->orWhere('alliance_position', '!=', 'APPLICANT');
+                    })
                     ->where(function ($query) {
                         $query->whereNull('vacation_mode_turns')
                             ->orWhere('vacation_mode_turns', '<=', 0);
