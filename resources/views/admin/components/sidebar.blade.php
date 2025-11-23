@@ -183,7 +183,7 @@
                     </x-nav.link>
                 </li>
 
-                <li class="nav-header">System</li>
+                <li class="nav-header">Internal Affairs</li>
 
                 <li class="nav-item">
                     <x-nav.link href="{{ route('admin.recruitment.index') }}"
@@ -193,6 +193,18 @@
                         Recruitment
                     </x-nav.link>
                 </li>
+
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.audits.index') }}"
+                                icon="bi bi-shield-check"
+                                permission="view-diagnostic-info"
+                                :active="request()->routeIs('admin.audits.*')">
+                        Audits
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-header">System</li>
+
 
                 <li class="nav-item">
                     <x-nav.link href="{{ route('admin.settings') }}"
