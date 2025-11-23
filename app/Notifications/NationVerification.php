@@ -45,7 +45,7 @@ class NationVerification extends Notification implements ShouldQueue
             'message' => 'Welcome to '.env(
                 'APP_NAME'
             )."! \n\nPlease verify your account by clicking the link below:\n\n".
-                "[link=".route('verify', ['code' => $this->verification_code])."]Click here to verify![/link]".
+                '[link='.route('verify', ['code' => $this->verification_code]).']Click here to verify![/link]'.
                 "\n\nYour verification code: {$this->verification_code}",
         ];
     }
