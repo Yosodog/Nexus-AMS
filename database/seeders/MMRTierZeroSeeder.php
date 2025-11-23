@@ -12,7 +12,7 @@ class MMRTierZeroSeeder extends Seeder
      */
     public function run(): void
     {
-        MMRTier::updateOrCreate(
+        MMRTier::firstOrCreate(
             ['city_count' => 0],
             [
                 'money' => 0,
