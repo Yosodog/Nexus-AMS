@@ -177,7 +177,7 @@ class CityGrantController
             'city_number' => $validated['city_number'],
             'grant_amount' => $validated['grant_amount'],
             'enabled' => $validated['enabled'],
-            'description' => $validated['description'] ?? "",
+            'description' => $validated['description'] ?? '',
             'requirements' => json_encode([
                 'required_projects' => $selectedProjects,
                 'project_bits' => $projectBits,
