@@ -12,6 +12,7 @@ use App\Nel\MathNelHelper;
 use App\Nel\NationNelHelper;
 use App\Nel\NelEngine;
 use App\Services\AllianceMembershipService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -40,9 +41,10 @@ class AuditService
         $cityRules = $rules->where('target_type', AuditTargetType::City);
         $allianceIds = $this->membershipService->getAllianceIds()->all();
 
+        $this->clearIneligibleViolations($allianceIds);
+
         if ($nationRules->isNotEmpty()) {
-            Nation::query()
-                ->whereIn('alliance_id', $allianceIds)
+            $this->activeMemberNationQuery($allianceIds)
                 ->with(['resources', 'military', 'accountProfile', 'latestSignIn'])
                 ->chunkById(200, function (Collection $nations) use ($nationRules): void {
                     $nations->each(function (Nation $nation) use ($nationRules): void {
@@ -53,8 +55,8 @@ class AuditService
 
         if ($cityRules->isNotEmpty()) {
             City::query()
-                ->whereHas('nation', function ($query) use ($allianceIds): void {
-                    $query->whereIn('alliance_id', $allianceIds);
+                ->whereHas('nation', function (Builder $query) use ($allianceIds): void {
+                    $this->applyMemberConstraints($query, $allianceIds);
                 })
                 ->with(['nation'])
                 ->chunkById(200, function (Collection $cities) use ($cityRules): void {
@@ -188,6 +190,56 @@ class AuditService
         }
 
         return $helpers;
+    }
+
+    /**
+     * @param  array<int, int>  $allianceIds
+     */
+    protected function activeMemberNationQuery(array $allianceIds): Builder
+    {
+        return $this->applyMemberConstraints(Nation::query(), $allianceIds);
+    }
+
+    /**
+     * @param  array<int, int>  $allianceIds
+     */
+    protected function applyMemberConstraints(Builder $query, array $allianceIds): Builder
+    {
+        return $query
+            ->whereIn('alliance_id', $allianceIds)
+            ->where(function (Builder $query): void {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
+            ->where(function (Builder $query): void {
+                $query->whereNull('vacation_mode_turns')
+                    ->orWhere('vacation_mode_turns', '<=', 0);
+            });
+    }
+
+    /**
+     * @param  array<int, int>  $allianceIds
+     */
+    protected function clearIneligibleViolations(array $allianceIds): void
+    {
+        $ineligibleNationIds = Nation::query()
+            ->whereIn('alliance_id', $allianceIds)
+            ->where(function (Builder $query): void {
+                $query->where('alliance_position', 'APPLICANT')
+                    ->orWhere(function (Builder $query): void {
+                        $query->whereNotNull('vacation_mode_turns')
+                            ->where('vacation_mode_turns', '>', 0);
+                    });
+            })
+            ->pluck('id');
+
+        if ($ineligibleNationIds->isEmpty()) {
+            return;
+        }
+
+        AuditResult::query()
+            ->whereIn('nation_id', $ineligibleNationIds)
+            ->delete();
     }
 
     public function getNationViolations(Nation $nation): Collection
