@@ -232,6 +232,28 @@ class SettingService
         self::setValue('mmr_assistant_enabled', (int) $enabled);
     }
 
+    public static function getMMRResourceWeights(): array
+    {
+        $raw = self::getValue('mmr_resource_weights');
+
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+
+            if (is_array($decoded)) {
+                return collect($decoded)
+                    ->map(fn ($weight) => (float) $weight)
+                    ->toArray();
+            }
+        }
+
+        return [];
+    }
+
+    public static function setMMRResourceWeights(array $weights): void
+    {
+        self::setValue('mmr_resource_weights', json_encode($weights));
+    }
+
     public static function getWithdrawMaxDailyCount(): int
     {
         $value = self::getValue('withdraw_max_daily_count');

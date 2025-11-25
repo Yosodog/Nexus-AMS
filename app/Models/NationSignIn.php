@@ -22,6 +22,7 @@ class NationSignIn extends Model
      */
     protected $fillable = [
         'nation_id',
+        'mmr_score',
         'num_cities',
         'score',
         'wars_won',
@@ -74,6 +75,7 @@ class NationSignIn extends Model
 
     protected $casts = [
         'created_at' => 'datetime',
+        'mmr_score' => 'integer',
     ];
 
     public function nation(): BelongsTo

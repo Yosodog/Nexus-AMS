@@ -37,6 +37,7 @@ class MMRController extends Controller
         $this->authorize('view-mmr');
 
         $tiers = MMRTier::orderBy('city_count')->get();
+        $weights = $service->getResourceWeights();
 
         $nations = Nation::with('latestSignIn')
             ->whereIn('alliance_id', $membershipService->getAllianceIds())
@@ -47,7 +48,7 @@ class MMRController extends Controller
             return [$nation->id => $service->evaluate($nation, $nation->latestSignIn)];
         });
 
-        return view('admin.mmr.index', compact('tiers', 'nations', 'evaluations'));
+        return view('admin.mmr.index', compact('tiers', 'nations', 'evaluations', 'weights'));
     }
 
     /**
@@ -199,6 +200,43 @@ class MMRController extends Controller
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'MMR Assistant settings updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function updateWeights(Request $request, MMRService $service): RedirectResponse
+    {
+        $this->authorize('manage-mmr');
+
+        $weights = [];
+
+        foreach ($service->getResourceFields() as $resource) {
+            $value = $request->input("weights.{$resource}");
+
+            if (! is_numeric($value) || $value < 0) {
+                return back()
+                    ->withInput()
+                    ->withErrors(["weights.{$resource}" => 'Weight must be a non-negative number.']);
+            }
+
+            $weights[$resource] = round((float) $value, 2);
+        }
+
+        $total = array_sum($weights);
+
+        if (abs($total - 100) > 0.01) {
+            return back()
+                ->withInput()
+                ->withErrors(['weights' => 'Weights must add up to 100%. Current total: '.number_format($total, 2).'%.']);
+        }
+
+        SettingService::setMMRResourceWeights($weights);
+
+        return redirect()->route('admin.mmr.index')->with([
+            'alert-message' => 'Resource weightings updated.',
             'alert-type' => 'success',
         ]);
     }

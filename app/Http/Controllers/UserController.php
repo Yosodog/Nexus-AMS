@@ -68,7 +68,6 @@ class UserController extends Controller
             ['nation' => $nation],
             $dashboardService->getDashboardData($nation),
             [
-                'mmrScore' => 0,
                 'grantTotal' => 0,
                 'loanTotal' => 0,
             ]
