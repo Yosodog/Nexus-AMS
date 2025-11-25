@@ -17,6 +17,16 @@ class HomeController extends Controller
         $appName = config('app.name', 'Nexus AMS');
         $allianceName = $alliance?->name ?? $appName;
 
+        $activeNationQuery = $alliance?->nations()
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
+            ->where(function ($query) {
+                $query->whereNull('vacation_mode_turns')
+                    ->orWhere('vacation_mode_turns', '<=', 0);
+            });
+
         $homeContent = [
             'headline' => SettingService::getHomepageHeadline($allianceName),
             'tagline' => SettingService::getHomepageTagline($allianceName),
@@ -25,9 +35,9 @@ class HomeController extends Controller
         ];
 
         $publicStats = [
-            'members' => $alliance?->nations()->count(),
+            'members' => $activeNationQuery?->count(),
             'score' => $alliance?->score,
-            'avgScore' => $alliance?->average_score,
+            'avgScore' => $activeNationQuery?->avg('score'),
             'rank' => $alliance?->rank,
             'color' => $alliance?->color,
             'flag' => $alliance?->flag,
