@@ -9,6 +9,8 @@ use Illuminate\Support\Collection;
 
 class NationDashboardService
 {
+    public function __construct(protected MMRService $mmrService) {}
+
     /**
      * Get all dashboard data for a given nation.
      */
@@ -17,13 +19,33 @@ class NationDashboardService
         $signIns = $nation->signIns()->latest('created_at')->take(30)->get()->reverse();
         $accountIds = $nation->accounts()->pluck('id');
         $taxes = $this->getRecentTaxes($nation);
+        $latestSignIn = $signIns->last();
+        $evaluation = $latestSignIn
+            ? $this->mmrService->evaluate($nation, $latestSignIn)
+            : [
+                'mmr_score' => 0,
+                'resource_breakdown' => [],
+                'weights' => $this->mmrService->getResourceWeights(),
+                'tier' => null,
+                'meets_unit_requirements' => false,
+                'meets_resource_requirements' => false,
+            ];
 
         return [
-            'latestSignIn' => $signIns->last(),
+            'latestSignIn' => $latestSignIn,
             'recentTransactions' => $this->getRecentTransactions($accountIds),
             'nationAge' => now()->diffInDays($nation->created_at),
             'scorePerCity' => $nation->num_cities > 0 ? round($nation->score / $nation->num_cities, 2) : 0,
             'taxTotal' => $taxes->sum(fn ($g) => $g->sum('money')),
+            'mmrScore' => $evaluation['mmr_score'] ?? 0,
+            'mmrResourceBreakdown' => $evaluation['resource_breakdown'] ?? [],
+            'mmrWeights' => $evaluation['weights'] ?? $this->mmrService->getResourceWeights(),
+            'mmrTier' => $evaluation['tier'],
+            'mmrUnitRequirements' => $evaluation['tier']
+                ? $this->mmrService->buildUnitRequirements($evaluation['tier'], $nation->num_cities)
+                : [],
+            'mmrUnitsMet' => $evaluation['meets_unit_requirements'] ?? false,
+            'mmrResourcesMet' => $evaluation['meets_resource_requirements'] ?? false,
             'scoreChart' => $this->buildScoreChart($signIns),
             'militaryChart' => $this->buildMultiSeriesChart($signIns, [
                 'fields' => ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes'],

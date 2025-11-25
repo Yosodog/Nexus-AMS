@@ -41,12 +41,23 @@
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-xl bg-primary/10 p-4 border border-primary/30">
                     <div class="flex items-center justify-between">
-                        <p class="text-sm font-semibold text-primary">MMR health</p>
-                        <span class="badge badge-sm {{ $mmrScore < 50 ? 'badge-error' : 'badge-success' }}">{{ $mmrScore ?? 0 }}%</span>
+                        <div>
+                            <p class="text-sm font-semibold text-primary">MMR health</p>
+                            <p class="text-xs text-primary/70">Tier {{ $mmrTier->city_count ?? 0 }} requirements</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-sm {{ $mmrResourcesMet ? 'badge-success' : 'badge-warning' }}">{{ $mmrResourcesMet ? 'Resources covered' : 'Resources low' }}</span>
+                            <span class="badge badge-sm {{ $mmrUnitsMet ? 'badge-success' : 'badge-warning' }}">{{ $mmrUnitsMet ? 'Units ready' : 'Units low' }}</span>
+                            <span class="badge badge-sm {{ ($mmrScore ?? 0) < 50 ? 'badge-error' : 'badge-success' }}">{{ $mmrScore ?? 0 }}%</span>
+                        </div>
                     </div>
                     <progress class="progress progress-primary w-full mt-2" value="{{ $mmrScore ?? 0 }}" max="100"></progress>
                     <p class="text-xs mt-2 text-base-content/70">
-                        {{ $mmrScore < 50 ? 'You need to get more resources to meet MMR' : 'Good job! Keep on stockpiling resources as necessary.' }}
+                        @if($mmrResourcesMet && $mmrUnitsMet)
+                            Good job! You are meeting current MMR expectations.
+                        @else
+                            Top off the gaps below to hit full compliance for your tier.
+                        @endif
                     </p>
                 </div>
                 <div class="rounded-xl bg-base-100 p-4 border border-base-300 shadow-sm">
@@ -68,11 +79,11 @@
                     </div>
                 </div>
             </div>
-            @if ($mmrScore < 50)
-                <div class="alert alert-error shadow-sm">
+            @if (! $mmrResourcesMet)
+                <div class="alert alert-warning shadow-sm">
                     <div>
-                        <h3 class="font-semibold">Low MMR detected</h3>
-                        <p class="text-sm">Ensure you are maintaining enough resources to meet MMR.</p>
+                        <h3 class="font-semibold">Resource gap detected</h3>
+                        <p class="text-sm">Keep at least the required resources for Tier {{ $mmrTier->city_count ?? 0 }} to reach 100%.</p>
                     </div>
                 </div>
             @endif
@@ -96,8 +107,13 @@
 
         {{-- Comparison Tables --}}
         <div class="grid gap-6 lg:grid-cols-2">
-            <x-user.resource-comparison :nation="$nation" />
-            <x-user.military-comparison :nation="$nation" />
+            <x-user.resource-comparison :resources="$mmrResourceBreakdown" :weights="$mmrWeights" />
+            <x-user.military-comparison
+                :nation="$nation"
+                :latestSignIn="$latestSignIn"
+                :requirements="$mmrUnitRequirements"
+                :meets="$mmrUnitsMet"
+            />
         </div>
 
         {{-- Nation Charts --}}

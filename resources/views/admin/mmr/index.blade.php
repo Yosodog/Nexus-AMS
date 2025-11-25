@@ -19,19 +19,24 @@
     <div class="app-content">
         <div class="container-fluid">
             @php
-                $resourceFields = ['money', 'steel', 'aluminum', 'munitions', 'uranium', 'food', 'gasoline'];
-                            $unitFields = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
+                $mmrService = app(\App\Services\MMRService::class);
+                $resourceFields = $mmrService->getResourceFields();
+                $unitFields = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
+                $weightTotal = array_sum($weights ?? []);
             @endphp
 
             {{-- Section: Tier Definitions --}}
             <div class="mb-4">
                 <h4 class="fw-semibold">Defined MMR Tiers</h4>
-                <p class="text-muted mb-2">Each city count tier defines the minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
+                <p class="text-muted mb-2">Each city count tier defines the per-city minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
             </div>
 
             <div class="card mb-5">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Tier Configuration</h5>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="card-title mb-0">Tier Configuration</h5>
+                        <span class="badge bg-info-subtle text-info-emphasis">Values are per city</span>
+                    </div>
                 </div>
                 <div class="card-body table-responsive">
                     <form method="POST" action="{{ route('admin.mmr.updateAll') }}">
@@ -95,6 +100,63 @@
                     </div>
 
                     <small class="text-muted d-block mt-2">Tier 0 is the default fallback and cannot be deleted.</small>
+                </div>
+            </div>
+
+            {{-- Section: Resource Weighting --}}
+            <div class="card mb-5">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">Resource Weighting</h5>
+                        <small class="text-muted">Weights must total 100% and control how the MMR score is calculated.</small>
+                    </div>
+                    <span class="badge bg-light text-dark">Current total: {{ number_format($weightTotal, 2) }}%</span>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('admin.mmr.weights.update') }}">
+                        @csrf
+                        @error('weights')
+                        <div class="alert alert-warning" role="alert">
+                            {{ $message }}
+                        </div>
+                        @enderror
+
+                        <div class="row g-3">
+                            @foreach($resourceFields as $resource)
+                                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                                    <label class="form-label text-capitalize d-flex justify-content-between align-items-center">
+                                        <span>{{ $resource }}</span>
+                                        <span class="text-muted small">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number"
+                                               name="weights[{{ $resource }}]"
+                                               class="form-control @error("weights.{$resource}") is-invalid @enderror mmr-weight-input"
+                                               step="0.01"
+                                               min="0"
+                                               value="{{ old("weights.{$resource}", $weights[$resource] ?? 0) }}"
+                                               aria-label="{{ ucfirst($resource) }} weight" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    @error("weights.{$resource}")
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="text-muted small">
+                                Adjust weights to emphasize specific resources. The live total updates as you type.
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fw-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-sliders me-1"></i> Save Weights
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -198,7 +260,7 @@
             {{-- Section: Resource Table --}}
             <div class="mb-3">
                 <h4 class="fw-semibold">Member Resource Totals</h4>
-                <p class="text-muted mb-2">Resources include both on-hand and banked values at the time of the last sign-in. Red cells indicate members below their required minimums.</p>
+                <p class="text-muted mb-2">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
             </div>
 
             <div class="card mb-4">
@@ -218,7 +280,7 @@
                         @foreach($nations as $nation)
                             @php
                                 $eval = $evaluations[$nation->id] ?? null;
-                                $tier = app(\App\Services\MMRService::class)->getTierForNation($nation);
+                                $tier = $mmrService->getTierForNation($nation);
                                 $signIn = $nation->latestSignIn;
                             @endphp
                             <tr>
@@ -231,21 +293,40 @@
                                 @foreach($resourceFields as $resource)
                                     @php
                                         $have = $signIn->$resource;
-                                        $required = $tier->$resource;
+                                        $required = $tier->$resource * $nation->num_cities;
                                         $meets = $have >= $required;
                                     @endphp
                                     <td @class([
                                         'bg-danger-subtle text-danger-emphasis' => !$meets,
                                         'text-muted' => $required === 0
                                     ])>
-                                        <span data-bs-toggle="tooltip" title="Required: {{ number_format($required) }}">
+                                        <span data-bs-toggle="tooltip" title="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)">
                                             {{ number_format($have) }}
                                         </span>
                                     </td>
                                 @endforeach
                                 <td>
                                     @if($eval)
-                                        <span class="fw-semibold">{{ $eval['mmr_score'] }}%</span>
+                                        @php
+                                            $score = $eval['mmr_score'] ?? 0;
+                                            $resourceMet = $eval['meets_resource_requirements'] ?? false;
+                                            $unitMet = $eval['meets_unit_requirements'] ?? false;
+                                            $barClass = $score >= 90 ? 'bg-success' : ($score >= 70 ? 'bg-warning' : 'bg-danger');
+                                        @endphp
+                                        <div class="d-flex flex-column gap-1">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-semibold">{{ $score }}%</span>
+                                                <span class="badge {{ $resourceMet ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis' }}">
+                                                    Resources {{ $resourceMet ? 'OK' : 'Low' }}
+                                                </span>
+                                                <span class="badge {{ $unitMet ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis' }}">
+                                                    Units {{ $unitMet ? 'OK' : 'Low' }}
+                                                </span>
+                                            </div>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar {{ $barClass }}" role="progressbar" style="width: {{ min($score, 100) }}%" aria-valuenow="{{ $score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
                                     @else
                                         <span class="text-muted">N/A</span>
                                     @endif
@@ -279,16 +360,8 @@
                         @foreach($nations as $nation)
                             @php
                                 $signIn = $nation->latestSignIn;
-                                $tier = app(\App\Services\MMRService::class)->getTierForNation($nation);
-                                $required = [
-                                    'soldiers' => $tier->barracks * 3000 * $nation->num_cities,
-                                    'tanks' => $tier->factories * 250 * $nation->num_cities,
-                                    'aircraft' => $tier->hangars * 15 * $nation->num_cities,
-                                    'ships' => $tier->drydocks * 5 * $nation->num_cities,
-                                    'missiles' => $tier->missiles * $nation->num_cities,
-                                    'nukes' => $tier->nukes,
-                                    'spies' => $tier->spies,
-                                ];
+                                $tier = $mmrService->getTierForNation($nation);
+                                $required = $mmrService->buildUnitRequirements($tier, $nation->num_cities);
                             @endphp
                             <tr>
                                 <td>
@@ -346,6 +419,24 @@
             pageLength: 50,
             responsive: true
         });
+
+        const weightInputs = document.querySelectorAll('.mmr-weight-input');
+        const weightTotal = document.getElementById('mmrWeightTotal');
+        const updateWeightTotal = () => {
+            const total = Array.from(weightInputs).reduce((sum, input) => {
+                const value = parseFloat(input.value);
+
+                return sum + (isNaN(value) ? 0 : value);
+            }, 0);
+
+            if (weightTotal) {
+                weightTotal.textContent = `Total: ${total.toFixed(2)}%`;
+                weightTotal.classList.toggle('text-danger', Math.abs(total - 100) > 0.01);
+            }
+        };
+
+        weightInputs.forEach(input => input.addEventListener('input', updateWeightTotal));
+        updateWeightTotal();
     </script>
 
     <script>

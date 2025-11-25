@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
-use App\GraphQL\Models\Nation;
+use App\GraphQL\Models\Nation as GraphQLNation;
+use App\Models\Nation as NationModel;
 use App\Models\NationSignIn;
 
 class SignInService
 {
-    public function snapshotNation(Nation $nation): void
+    public function __construct(public MMRService $mmrService) {}
+
+    public function snapshotNation(GraphQLNation $nation): int
     {
         $accounts = AccountService::getAccountsByNid($nation->id);
 
@@ -21,7 +24,7 @@ class SignInService
             $combined[$field] = $nationValue + $accountValue;
         }
 
-        NationSignIn::create([
+        $payload = [
             'nation_id' => $nation->id,
             'num_cities' => $nation->num_cities,
             'score' => $nation->score,
@@ -69,6 +72,16 @@ class SignInService
             'aluminum' => $combined['aluminum'],
             'food' => $combined['food'],
             'credits' => $nation->credits, // stays as-is
-        ]);
+        ];
+
+        $eloquentNation = NationModel::find($nation->id) ?? new NationModel(['id' => $nation->id]);
+        $eloquentNation->num_cities = $nation->num_cities;
+
+        $evaluation = $this->mmrService->evaluate($eloquentNation, new NationSignIn($payload));
+        $payload['mmr_score'] = $evaluation['mmr_score'];
+
+        NationSignIn::create($payload);
+
+        return (int) $payload['mmr_score'];
     }
 }
