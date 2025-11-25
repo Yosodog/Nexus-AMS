@@ -5,13 +5,6 @@
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center">
                 <h3 class="mb-0">Minimum Military Requirements</h3>
-                <form method="POST" action="{{ route('admin.mmr.store') }}" class="d-flex align-items-center gap-2">
-                    @csrf
-                    <input type="number" name="city_count" class="form-control form-control-sm" placeholder="City Count" min="1" required style="width:120px">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Add New Tier
-                    </button>
-                </form>
             </div>
         </div>
     </div>
@@ -21,6 +14,7 @@
             @php
                 $mmrService = app(\App\Services\MMRService::class);
                 $resourceFields = $mmrService->getResourceFields();
+                $readinessFields = ['barracks', 'factories', 'hangars', 'drydocks', 'missiles', 'nukes', 'spies'];
                 $unitFields = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
                 $weightTotal = array_sum($weights ?? []);
             @endphp
@@ -31,6 +25,101 @@
                 <p class="text-muted mb-2">Each city count tier defines the per-city minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
             </div>
 
+            <div class="row g-3 mb-4">
+                <div class="col-lg-7">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="card-title mb-0">Create a New Tier</h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Add the city count you need, then set resource and readiness minimums in the table.</p>
+
+                            <form method="POST" action="{{ route('admin.mmr.store') }}" class="row g-3 align-items-end">
+                                @csrf
+                                <div class="col-sm-6 col-md-5">
+                                    <label for="city_count" class="form-label mb-1">City count</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-buildings"></i></span>
+                                        <input type="number"
+                                               id="city_count"
+                                               name="city_count"
+                                               class="form-control"
+                                               placeholder="e.g. 15"
+                                               min="1"
+                                               required>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+                                        <i class="bi bi-plus-circle me-1"></i> Add Tier
+                                    </button>
+                                    <a href="#tier-config-table" class="btn btn-sm btn-outline-secondary" title="Jump to configuration">
+                                        <i class="bi bi-arrow-down-short"></i>
+                                    </a>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center gap-2 text-muted small">
+                                        <i class="bi bi-lightbulb-fill text-warning"></i>
+                                        <span>Use the grouped table below to enter expected resources and readiness for each tier.</span>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="card-title mb-0">Tier housekeeping</h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <p class="text-muted mb-2">Remove tiers you no longer use. Tier 0 is protected.</p>
+                                </div>
+                            </div>
+
+                            {{-- Tier Deletion --}}
+                            <form method="POST"
+                                  action="{{ route('admin.mmr.destroy') }}"
+                                  class="row g-2 align-items-end"
+                                  onsubmit="return confirm('Are you sure you want to delete this tier?')">
+                                @csrf
+                                @method('DELETE')
+                                <div class="col-12">
+                                    <label class="form-label mb-1" for="tier_id">Select tier to delete</label>
+                                    <select name="tier_id" id="tier_id" class="form-select form-select-sm" required>
+                                        <option disabled selected value="">Choose a city count</option>
+                                        @foreach($tiers as $tier)
+                                            @if($tier->city_count !== 0)
+                                                <option value="{{ $tier->id }}">City Count: {{ $tier->city_count }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-12 d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash me-1"></i> Delete Tier
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="mt-3 p-2 bg-body-tertiary rounded">
+                                <div class="d-flex align-items-start gap-2 text-muted small">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>Tier 0 is the default fallback and cannot be deleted.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card mb-5">
                 <div class="card-header">
                     <div class="d-flex align-items-center justify-content-between">
@@ -38,68 +127,106 @@
                         <span class="badge bg-info-subtle text-info-emphasis">Values are per city</span>
                     </div>
                 </div>
-                <div class="card-body table-responsive">
+                <div class="card-body table-responsive" id="tier-config-table">
                     <form method="POST" action="{{ route('admin.mmr.updateAll') }}">
                         @csrf
-                        <table class="table table-bordered table-striped align-middle table-hover">
-                            <thead class="table-light">
-                            <tr>
-                                <th>City Count</th>
-                                @foreach(array_merge($resourceFields, ['barracks', 'factories', 'hangars', 'drydocks', 'missiles', 'nukes', 'spies']) as $field)
-                                    <th>{{ ucfirst($field) }}</th>
-                                @endforeach
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($tiers as $tier)
-                                <tr>
-                                    <td class="fw-bold bg-light">{{ $tier->city_count }}</td>
-                                    @foreach(array_merge($resourceFields, ['barracks', 'factories', 'hangars', 'drydocks', 'missiles', 'nukes', 'spies']) as $field)
-                                        <td>
-                                            <input type="number"
-                                                   name="tiers[{{ $tier->id }}][{{ $field }}]"
-                                                   value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                   class="form-control form-control-sm @error("tiers.{$tier->id}.{$field}") is-invalid @enderror"
-                                                   min="0"
-                                            >
-                                            @error("tiers.{$tier->id}.{$field}")
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 text-muted small">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                                <span>Numbers are minimum expectations per tier. Empty values default to 0.</span>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-save me-1"></i> Save all tiers
+                            </button>
+                        </div>
 
-                        <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div class="accordion" id="tierAccordion">
+                            @foreach($tiers as $tier)
+                                <div class="accordion-item mb-3 border-0 shadow-sm">
+                                    <h2 class="accordion-header" id="heading{{ $tier->id }}">
+                                        <button class="accordion-button {{ !$loop->first ? 'collapsed' : '' }}" type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#collapse{{ $tier->id }}"
+                                                aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
+                                                aria-controls="collapse{{ $tier->id }}">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <span class="badge bg-primary-subtle text-primary-emphasis fs-6">{{ $tier->city_count }}</span>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-semibold">City count {{ $tier->city_count }}</span>
+                                                    <small class="text-muted">Configure per-city resource minimums and readiness</small>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ $tier->id }}" class="accordion-collapse collapse {{ $loop->first ? 'show' : '' }}"
+                                         aria-labelledby="heading{{ $tier->id }}" data-bs-parent="#tierAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row g-4">
+                                                <div class="col-12">
+                                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                                        <span class="fw-semibold">Resource minimums</span>
+                                                        <span class="badge bg-light text-dark">Per city</span>
+                                                    </div>
+                                                    <div class="row g-3">
+                                                        @foreach($resourceFields as $field)
+                                                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                                                                <label class="form-label text-capitalize">{{ $field }}</label>
+                                                                <input type="number"
+                                                                       name="tiers[{{ $tier->id }}][{{ $field }}]"
+                                                                       value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
+                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
+                                                                       min="0"
+                                                                       inputmode="numeric"
+                                                                       placeholder="{{ ucfirst($field) }}">
+                                                                @error("tiers.{$tier->id}.{$field}")
+                                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                                @enderror
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12">
+                                                    <hr class="my-3">
+                                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                                        <span class="fw-semibold">Readiness per city</span>
+                                                        <span class="badge bg-light text-dark">Buildings &amp; slots</span>
+                                                    </div>
+                                                    <div class="row g-3">
+                                                        @foreach($readinessFields as $field)
+                                                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                                                                <label class="form-label text-capitalize">{{ $field }}</label>
+                                                                <input type="number"
+                                                                       name="tiers[{{ $tier->id }}][{{ $field }}]"
+                                                                       value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
+                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
+                                                                       min="0"
+                                                                       inputmode="numeric"
+                                                                       placeholder="{{ ucfirst($field) }}">
+                                                                @error("tiers.{$tier->id}.{$field}")
+                                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                                @enderror
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                            <div class="d-flex align-items-center gap-2 text-muted small">
+                                <i class="bi bi-shield-check text-success"></i>
+                                <span>Changes save everything at once—review before submitting.</span>
+                            </div>
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-save me-1"></i> Save All Tiers
+                                <i class="bi bi-save me-1"></i> Save all tiers
                             </button>
                         </div>
                     </form>
-
-                    {{-- Tier Deletion --}}
-                    <div class="d-flex justify-content-end align-items-center mt-2">
-                        <form method="POST" action="{{ route('admin.mmr.destroy') }}" class="d-flex align-items-center gap-2"
-                              onsubmit="return confirm('Are you sure you want to delete this tier?')">
-                            @csrf
-                            @method('DELETE')
-                            <select name="tier_id" class="form-select form-select-sm w-auto" required>
-                                <option disabled selected value="">Delete a Tier</option>
-                                @foreach($tiers as $tier)
-                                    @if($tier->city_count !== 0)
-                                        <option value="{{ $tier->id }}">City Count: {{ $tier->city_count }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-trash me-1"></i> Delete
-                            </button>
-                        </form>
-                    </div>
-
-                    <small class="text-muted d-block mt-2">Tier 0 is the default fallback and cannot be deleted.</small>
                 </div>
             </div>
 
@@ -128,7 +255,7 @@
                                         <span>{{ $resource }}</span>
                                         <span class="text-muted small">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
                                     </label>
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group">
                                         <input type="number"
                                                name="weights[{{ $resource }}]"
                                                class="form-control @error("weights.{$resource}") is-invalid @enderror mmr-weight-input"
@@ -249,7 +376,7 @@
                                 <div class="input-group" style="width: 300px;">
                                     <span class="input-group-text">Set all surcharges to</span>
                                     <input type="number" id="setAllSurcharge" class="form-control" step="0.01" min="0">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="applySurchargeToAll()">Apply</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="applySurchargeToAll">Apply</button>
                                 </div>
                             </div>
                         </form>
@@ -404,66 +531,59 @@
 
 @push('scripts')
     <script>
-        // Bootstrap tooltips
-        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-            new bootstrap.Tooltip(el);
-        });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                new bootstrap.Tooltip(el);
+            });
 
-        // DataTables with default of 50 entries
-        new DataTable('#mmrResourceTable', {
-            pageLength: 50,
-            responsive: true
-        });
+            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+                new bootstrap.Popover(el);
+            });
 
-        new DataTable('#mmrMilitaryTable', {
-            pageLength: 50,
-            responsive: true
-        });
+            new DataTable('#mmrResourceTable', {
+                pageLength: 50,
+                responsive: true
+            });
 
-        const weightInputs = document.querySelectorAll('.mmr-weight-input');
-        const weightTotal = document.getElementById('mmrWeightTotal');
-        const updateWeightTotal = () => {
-            const total = Array.from(weightInputs).reduce((sum, input) => {
-                const value = parseFloat(input.value);
+            new DataTable('#mmrMilitaryTable', {
+                pageLength: 50,
+                responsive: true
+            });
 
-                return sum + (isNaN(value) ? 0 : value);
-            }, 0);
+            const weightInputs = document.querySelectorAll('.mmr-weight-input');
+            const weightTotal = document.getElementById('mmrWeightTotal');
 
-            if (weightTotal) {
-                weightTotal.textContent = `Total: ${total.toFixed(2)}%`;
-                weightTotal.classList.toggle('text-danger', Math.abs(total - 100) > 0.01);
+            const updateWeightTotal = () => {
+                const total = Array.from(weightInputs).reduce((sum, input) => {
+                    const value = parseFloat(input.value);
+
+                    return sum + (isNaN(value) ? 0 : value);
+                }, 0);
+
+                if (weightTotal) {
+                    weightTotal.textContent = `Total: ${total.toFixed(2)}%`;
+                    weightTotal.classList.toggle('text-danger', Math.abs(total - 100) > 0.01);
+                }
+            };
+
+            weightInputs.forEach(input => input.addEventListener('input', updateWeightTotal));
+            updateWeightTotal();
+
+            const surchargeApplyButton = document.getElementById('applySurchargeToAll');
+            const surchargeInput = document.getElementById('setAllSurcharge');
+
+            if (surchargeApplyButton && surchargeInput) {
+                surchargeApplyButton.addEventListener('click', () => {
+                    const value = parseFloat(surchargeInput.value);
+                    if (isNaN(value)) {
+                        return;
+                    }
+
+                    document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
+                        input.value = value.toFixed(2);
+                    });
+                });
             }
-        };
-
-        weightInputs.forEach(input => input.addEventListener('input', updateWeightTotal));
-        updateWeightTotal();
-    </script>
-
-    <script>
-        function applySurchargeToAll() {
-            const value = parseFloat(document.getElementById('setAllSurcharge').value);
-            if (isNaN(value)) return;
-
-            document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
-                input.value = value.toFixed(2);
-            });
-        }
-    </script>
-
-    <script>
-        // Bootstrap popover for info icon
-        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-            new bootstrap.Popover(el);
         });
-
-        // Set all surcharge tool
-        function applySurchargeToAll() {
-            const value = parseFloat(document.getElementById('setAllSurcharge').value);
-            if (isNaN(value)) return;
-
-            document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
-                input.value = value.toFixed(2);
-            });
-        }
     </script>
 @endpush
