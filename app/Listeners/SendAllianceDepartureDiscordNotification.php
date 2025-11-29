@@ -3,8 +3,10 @@
 namespace App\Listeners;
 
 use App\Enums\AlliancePositionEnum;
+use App\Enums\DiscordQueueStatus;
 use App\Events\NationAllianceChanged;
 use App\Models\Alliance;
+use App\Models\DiscordQueue;
 use App\Notifications\AllianceDepartureDiscordNotification;
 use App\Notifications\Channels\DiscordQueueChannel;
 use App\Services\AllianceMembershipService;
@@ -26,6 +28,10 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
      */
     public function handle(NationAllianceChanged $event): void
     {
+        if (! $event->changedAlliance()) {
+            return;
+        }
+
         if (! $event->oldAllianceId
             || ! $this->membershipService->contains($event->oldAllianceId)
             || $this->membershipService->contains($event->newAllianceId)
@@ -48,6 +54,15 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
         $previousAlliance = Alliance::find($event->oldAllianceId);
         $nation = $event->nation->loadMissing('alliance');
 
+        if ($this->hasRecentQueuedDeparture($nation->id)) {
+            Log::info('Alliance departure alert skipped due to recent queued job', [
+                'nation_id' => $nation->id,
+                'old_alliance_id' => $event->oldAllianceId,
+            ]);
+
+            return;
+        }
+
         try {
             Notification::route(DiscordQueueChannel::class, 'discord-bot')
                 ->notify(new AllianceDepartureDiscordNotification(
@@ -62,5 +77,15 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    protected function hasRecentQueuedDeparture(int $nationId): bool
+    {
+        return DiscordQueue::query()
+            ->where('action', 'ALLIANCE_DEPARTURE')
+            ->where('status', DiscordQueueStatus::Pending)
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->whereJsonContains('payload->nation->id', $nationId)
+            ->exists();
     }
 }
