@@ -46,6 +46,8 @@ class SettingsController extends Controller
             'allianceBatch' => $allianceBatch,
             'warBatch' => $warBatch,
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
+            'discordDepartureChannelId' => SettingService::getDiscordAllianceDepartureChannelId(),
+            'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
         ]);
@@ -129,6 +131,27 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $required ? 'Discord verification is now required.' : 'Discord verification is now optional.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateDiscordDeparture(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $validated = $request->validate([
+            'discord_alliance_departure_enabled' => ['required', 'boolean'],
+            'discord_alliance_departure_channel_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $enabled = (bool) $validated['discord_alliance_departure_enabled'];
+        $channelId = $validated['discord_alliance_departure_channel_id'] ?? null;
+
+        SettingService::setDiscordAllianceDepartureEnabled($enabled);
+        SettingService::setDiscordAllianceDepartureChannelId($channelId);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Discord alliance departure settings updated.',
             'alert-type' => 'success',
         ]);
     }

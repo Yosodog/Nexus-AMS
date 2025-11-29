@@ -160,6 +160,42 @@
         <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Discord Alliance Departures</span>
+                    <span class="badge {{ $discordDepartureEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                        {{ $discordDepartureEnabled ? 'Enabled' : 'Disabled' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Send a Discord alert when a non-applicant leaves any alliance in our membership group.
+                        Defaults to the war alert channel if left blank.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.discord.departure') }}">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="discordAllianceDepartureChannelId" class="form-label">Channel ID</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="discordAllianceDepartureChannelId"
+                                   name="discord_alliance_departure_channel_id"
+                                   value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}"
+                                   placeholder="e.g. 123456789012345678">
+                            <small class="text-muted">Leave blank to reuse the war alert channel.</small>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="discord_alliance_departure_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="discordAllianceDepartureEnabled"
+                                   name="discord_alliance_departure_enabled" value="1" @checked($discordDepartureEnabled)>
+                            <label class="form-check-label" for="discordAllianceDepartureEnabled">Enable departure alerts</label>
+                        </div>
+                        <button class="btn btn-primary">Save Discord Departure Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Auto Withdraw</span>
                     <span class="badge {{ $autoWithdrawEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
                         {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
