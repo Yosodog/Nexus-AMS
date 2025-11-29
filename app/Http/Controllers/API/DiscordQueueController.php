@@ -56,13 +56,24 @@ class DiscordQueueController extends Controller
     {
         $data = $request->validate([
             'status' => ['required', Rule::in([DiscordQueueStatus::Complete->value, DiscordQueueStatus::Failed->value])],
-            'available_at' => ['nullable', 'date'],
         ]);
 
-        $command->fill([
-            'status' => $data['status'],
-            'available_at' => $data['available_at'] ?? $command->available_at,
-        ])->save();
+        if ($data['status'] === DiscordQueueStatus::Complete->value) {
+            $command->update([
+                'status' => DiscordQueueStatus::Complete,
+            ]);
+        } else {
+            $attempts = $command->attempts + 1;
+            $nextDelayMinutes = $attempts <= 3 ? max(1, $attempts) : null;
+            $status = $attempts > 3 ? DiscordQueueStatus::Failed : DiscordQueueStatus::Pending;
+            $availableAt = $nextDelayMinutes ? now()->addMinutes($nextDelayMinutes) : $command->available_at;
+
+            $command->update([
+                'status' => $status,
+                'attempts' => $attempts,
+                'available_at' => $availableAt,
+            ]);
+        }
 
         return response()->json([
             'data' => [
