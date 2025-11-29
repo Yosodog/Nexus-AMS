@@ -74,13 +74,27 @@ class TargetPriorityService
 
         foreach ($enemies as $enemy) {
             $cacheKey = $this->cacheKey($plan->id, $enemy->id);
+            $lock = $cache->lock("lock:{$cacheKey}", $lockSeconds);
+            $payload = null;
 
-            $payload = $cache->get($cacheKey);
-            if (! $payload) {
-                $lock = $cache->lock("lock:{$cacheKey}", $lockSeconds);
+            try {
+                $lock->block($lockSeconds, function () use (
+                    &$payload,
+                    &$results,
+                    $cache,
+                    $cacheKey,
+                    $ttl,
+                    $plan,
+                    $enemy,
+                    $membershipIds,
+                    $averageEnemyCities,
+                    $averageFriendlyCities,
+                    $friendlyAvailabilityRatio,
+                    $activityWindowHours
+                ) {
+                    $payload = $cache->get($cacheKey);
 
-                try {
-                    if ($lock->get()) {
+                    if (! $payload) {
                         $payload = $this->buildPayload(
                             plan: $plan,
                             enemy: $enemy,
@@ -92,54 +106,65 @@ class TargetPriorityService
                         );
 
                         $cache->put($cacheKey, $payload, $ttl);
-                    } else {
-                        $lock->block($lockSeconds, function () use (&$payload, $cache, $cacheKey) {
-                            $payload = $cache->get($cacheKey);
-                        });
                     }
-                } catch (LockTimeoutException $exception) {
-                    Log::warning('TPS lock acquisition timed out', [
-                        'plan_id' => $plan->id,
-                        'nation_id' => $enemy->id,
-                        'message' => $exception->getMessage(),
-                    ]);
-                    $payload = $this->buildPayload(
-                        $plan,
-                        $enemy,
-                        $membershipIds->all(),
-                        $averageEnemyCities,
-                        $averageFriendlyCities,
-                        $friendlyAvailabilityRatio,
-                        $activityWindowHours
-                    );
-                } finally {
-                    try {
-                        $lock->release();
-                    } catch (Throwable) {
-                        // Lock already released.
-                    }
+
+                    $targetModel = $this->persistTarget($plan, $enemy, $payload, Carbon::now());
+                    $results->push($targetModel);
+                });
+            } catch (LockTimeoutException $exception) {
+                Log::warning('TPS lock acquisition timed out', [
+                    'plan_id' => $plan->id,
+                    'nation_id' => $enemy->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                $payload ??= $this->buildPayload(
+                    $plan,
+                    $enemy,
+                    $membershipIds->all(),
+                    $averageEnemyCities,
+                    $averageFriendlyCities,
+                    $friendlyAvailabilityRatio,
+                    $activityWindowHours
+                );
+
+                $targetModel = $this->persistTarget($plan, $enemy, $payload, Carbon::now());
+                $results->push($targetModel);
+            } finally {
+                try {
+                    $lock->release();
+                } catch (Throwable) {
+                    // Lock already released.
                 }
             }
-
-            $targetModel = WarPlanTarget::query()->firstOrNew([
-                'war_plan_id' => $plan->id,
-                'nation_id' => $enemy->id,
-            ]);
-
-            if (! $targetModel->exists && ! $targetModel->preferred_war_type) {
-                $targetModel->preferred_war_type = $plan->plan_type;
-            }
-
-            $targetModel->fill([
-                'target_priority_score' => $payload['score'],
-                'meta' => $payload['meta'],
-                'computed_at' => Carbon::now(),
-            ])->save();
-
-            $results->push($targetModel);
         }
 
         return new Collection($results->all());
+    }
+
+    /**
+     * Persist target row with the computed payload.
+     *
+     * @param  array{score: float, meta: array<string, mixed>}  $payload
+     */
+    protected function persistTarget(WarPlan $plan, Nation $enemy, array $payload, Carbon $computedAt): WarPlanTarget
+    {
+        $targetModel = WarPlanTarget::query()->firstOrNew([
+            'war_plan_id' => $plan->id,
+            'nation_id' => $enemy->id,
+        ]);
+
+        if (! $targetModel->exists && ! $targetModel->preferred_war_type) {
+            $targetModel->preferred_war_type = $plan->plan_type;
+        }
+
+        $targetModel->fill([
+            'target_priority_score' => $payload['score'],
+            'meta' => $payload['meta'],
+            'computed_at' => $computedAt,
+        ])->save();
+
+        return $targetModel;
     }
 
     /**
