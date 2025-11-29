@@ -422,9 +422,9 @@ class WarPlanController extends Controller
             'squad_cohesion_tolerance' => ['nullable', 'integer', 'min:1', 'max:50'],
             'suppress_counters_when_active' => ['nullable', 'boolean'],
             'friendly_alliances' => ['nullable', 'array'],
-            'friendly_alliances.*' => ['integer'],
+            'friendly_alliances.*' => ['integer', 'distinct', 'exists:alliances,id'],
             'enemy_alliances' => ['nullable', 'array'],
-            'enemy_alliances.*' => ['integer'],
+            'enemy_alliances.*' => ['integer', 'distinct', 'exists:alliances,id'],
             'options' => ['nullable', 'array'],
         ];
 
@@ -502,7 +502,7 @@ class WarPlanController extends Controller
         $this->authorize('manage-war-room');
 
         $data = $request->validate([
-            'alliance_id' => ['required', 'integer', 'min:1'],
+            'alliance_id' => ['required', 'integer', 'min:1', 'exists:alliances,id'],
             'role' => ['required', Rule::in(['friendly', 'enemy'])],
         ]);
 
