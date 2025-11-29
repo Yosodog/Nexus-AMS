@@ -324,6 +324,104 @@ class SettingService
         self::setValue('mmr_resource_weights', json_encode($weights));
     }
 
+    public static function isApplicationsEnabled(): bool
+    {
+        $value = self::getValue('applications_enabled');
+
+        if (is_null($value)) {
+            self::setApplicationsEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setApplicationsEnabled(bool $enabled): void
+    {
+        self::setValue('applications_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getApplicationsApprovedPositionId(): int
+    {
+        $value = self::getValue('applications_approved_position_id');
+
+        if (is_null($value) || ! is_numeric($value)) {
+            self::setApplicationsApprovedPositionId(0);
+
+            return 0;
+        }
+
+        return (int) $value;
+    }
+
+    public static function setApplicationsApprovedPositionId(int $positionId): void
+    {
+        self::setValue('applications_approved_position_id', $positionId);
+    }
+
+    public static function getApplicationsDiscordApplicantRoleId(): string
+    {
+        return self::getStringSetting('applications_discord_applicant_role_id', '');
+    }
+
+    public static function setApplicationsDiscordApplicantRoleId(?string $roleId): void
+    {
+        self::setValue('applications_discord_applicant_role_id', $roleId ?? '');
+    }
+
+    public static function getApplicationsDiscordIaRoleId(): string
+    {
+        return self::getStringSetting('applications_discord_ia_role_id', '');
+    }
+
+    public static function setApplicationsDiscordIaRoleId(?string $roleId): void
+    {
+        self::setValue('applications_discord_ia_role_id', $roleId ?? '');
+    }
+
+    public static function getApplicationsDiscordMemberRoleId(): string
+    {
+        return self::getStringSetting('applications_discord_member_role_id', '');
+    }
+
+    public static function setApplicationsDiscordMemberRoleId(?string $roleId): void
+    {
+        self::setValue('applications_discord_member_role_id', $roleId ?? '');
+    }
+
+    public static function getApplicationsDiscordInterviewCategoryId(): string
+    {
+        return self::getStringSetting('applications_discord_interview_category_id', '');
+    }
+
+    public static function setApplicationsDiscordInterviewCategoryId(?string $categoryId): void
+    {
+        self::setValue('applications_discord_interview_category_id', $categoryId ?? '');
+    }
+
+    public static function getApplicationsApprovalAnnouncementChannelId(): string
+    {
+        return self::getStringSetting('applications_approval_announcement_channel_id', '');
+    }
+
+    public static function setApplicationsApprovalAnnouncementChannelId(?string $channelId): void
+    {
+        self::setValue('applications_approval_announcement_channel_id', $channelId ?? '');
+    }
+
+    public static function getApplicationsApprovalMessageTemplate(): string
+    {
+        $default = 'Welcome to the alliance! A new member has been approved.';
+
+        return self::getStringSetting('applications_approval_message_template', $default);
+    }
+
+    public static function setApplicationsApprovalMessageTemplate(string $template): void
+    {
+        self::setValue('applications_approval_message_template', $template);
+    }
+
     public static function getWithdrawMaxDailyCount(): int
     {
         $value = self::getValue('withdraw_max_daily_count');

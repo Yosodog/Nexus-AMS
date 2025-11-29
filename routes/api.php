@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\WarPlanController;
 use App\Http\Controllers\API\AccountController;
+use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
 use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\RaidFinderController;
@@ -52,6 +53,11 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/verify', [DiscordVerificationController::class, 'verify']);
     Route::get('/queue', [DiscordQueueController::class, 'index']);
     Route::post('/queue/{command}/status', [DiscordQueueController::class, 'update']);
+    Route::post('/applications', [DiscordApplicationController::class, 'store']);
+    Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
+    Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
+    Route::post('/applications/approve', [DiscordApplicationController::class, 'approve']);
+    Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
 });
 
 Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])

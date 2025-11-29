@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AllianceFinanceController;
+use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\AuditController as AdminAuditController;
 use App\Http\Controllers\Admin\AuditRuleController;
 use App\Http\Controllers\Admin\CityController;
@@ -397,6 +398,17 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name(
             'admin.raids.top-cap.update'
+        );
+
+        Route::get('/applications', [AdminApplicationController::class, 'index'])->name('admin.applications.index');
+        Route::post('/applications/settings', [AdminApplicationController::class, 'updateSettings'])->name(
+            'admin.applications.settings'
+        );
+        Route::get('/applications/{application}', [AdminApplicationController::class, 'show'])->name(
+            'admin.applications.show'
+        );
+        Route::post('/applications/{application}/cancel', [AdminApplicationController::class, 'cancel'])->name(
+            'admin.applications.cancel'
         );
 
         Route::get('/recruitment', [RecruitmentController::class, 'index'])->name('admin.recruitment.index');
