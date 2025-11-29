@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WarCounter;
 use App\Models\WarPlan;
+use App\Services\SettingService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -34,7 +36,29 @@ class WarRoomController extends Controller
             'planStatus' => $planStatus,
             'counterSearch' => $activeCounterSearch,
             'planSearch' => $planSearch,
+            'discordWarChannelId' => SettingService::getDiscordWarAlertChannelId(),
+            'discordWarAlertsEnabled' => SettingService::isDiscordWarAlertEnabled(),
         ]);
+    }
+
+    /**
+     * Update the Discord channel used for war alerts.
+     */
+    public function updateDiscordChannel(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-war-room');
+
+        $data = $request->validate([
+            'channel_id' => ['nullable', 'string', 'max:190'],
+            'enabled' => ['nullable', 'boolean'],
+        ]);
+
+        SettingService::setDiscordWarAlertChannelId($data['channel_id'] ?? '');
+        SettingService::setDiscordWarAlertEnabled($request->boolean('enabled'));
+
+        return back()
+            ->with('alert-type', 'success')
+            ->with('alert-message', 'Discord war alert channel updated.');
     }
 
     /**

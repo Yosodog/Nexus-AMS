@@ -150,6 +150,26 @@ class SettingService
         self::setValue('dd_fallback_tax_id', $DDTaxID);
     }
 
+    public static function getDiscordWarAlertChannelId(): string
+    {
+        return (string) (self::getValue('discord_war_alert_channel_id') ?? '');
+    }
+
+    public static function setDiscordWarAlertChannelId(?string $channelId): void
+    {
+        self::setValue('discord_war_alert_channel_id', $channelId ?? '');
+    }
+
+    public static function isDiscordWarAlertEnabled(): bool
+    {
+        return (bool) (self::getValue('discord_war_alert_enabled') ?? false);
+    }
+
+    public static function setDiscordWarAlertEnabled(bool $enabled): void
+    {
+        self::setValue('discord_war_alert_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getLastNationSyncBatchId(): string
     {
         return self::getLastManualNationSyncBatchId();
