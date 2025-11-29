@@ -84,14 +84,27 @@
     function showToast(title, message, depositCode) {
         let toastContainer = document.getElementById('toast-container');
 
+        if (!toastContainer) {
+            return;
+        }
+
+        toastContainer.classList.remove('hidden');
+
         let toast = document.createElement('div');
-        toast.className = "alert alert-success flex items-center gap-3 p-4 rounded-lg shadow-lg";
+        toast.className = "alert alert-success shadow-lg pointer-events-auto w-full sm:w-[28rem] max-w-full";
+
+        let content = document.createElement('div');
+        content.className = "flex flex-col sm:flex-row sm:items-start gap-3 w-full";
 
         let textContainer = document.createElement('div');
-        textContainer.innerHTML = `<strong>${title}</strong><br>${message}`;
+        textContainer.className = "flex-1 text-sm space-y-1 break-words";
+        textContainer.innerHTML = `<div class="font-semibold">${title}</div><div>${message}</div>`;
+
+        let actions = document.createElement('div');
+        actions.className = "flex flex-col sm:flex-row gap-2 w-full sm:w-auto";
 
         let copyButton = document.createElement('button');
-        copyButton.className = "btn btn-sm btn-outline ml-2";
+        copyButton.className = "btn btn-sm btn-outline w-full sm:w-auto";
         copyButton.innerText = "Copy Code";
         copyButton.addEventListener('click', function () {
             copyToClipboard(depositCode);
@@ -102,7 +115,7 @@
         });
 
         let closeButton = document.createElement('button');
-        closeButton.className = "btn btn-sm btn-error ml-2";
+        closeButton.className = "btn btn-sm btn-ghost text-base-content border border-base-300 w-full sm:w-auto";
         closeButton.innerText = "Dismiss";
         closeButton.addEventListener('click', function () {
             toast.remove();
@@ -111,12 +124,15 @@
             }
         });
 
-        toast.appendChild(textContainer);
-        toast.appendChild(copyButton);
-        toast.appendChild(closeButton);
+        actions.appendChild(copyButton);
+        actions.appendChild(closeButton);
+
+        content.appendChild(textContainer);
+        content.appendChild(actions);
+
+        toast.appendChild(content);
 
         toastContainer.appendChild(toast);
-        toastContainer.classList.remove('hidden');
     }
 
     // Function to copy text to clipboard

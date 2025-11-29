@@ -33,7 +33,11 @@
                 @endif
                 @yield('content')
                 <!-- Toast Notification -->
-                <div id="toast-container" class="toast toast-end hidden"></div>
+                <div
+                    id="toast-container"
+                    class="toast toast-center toast-bottom sm:toast-end fixed bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:bottom-6 sm:translate-x-0 px-4 sm:px-0 z-50 hidden pointer-events-none flex flex-col gap-3 w-full sm:w-auto"
+                    aria-live="polite"
+                ></div>
             </main>
         </div>
     </div>
