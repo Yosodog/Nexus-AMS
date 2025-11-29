@@ -78,6 +78,24 @@ class SettingService
         self::setValue('require_discord_verification', $required ? 1 : 0);
     }
 
+    public static function isAutoWithdrawEnabled(): bool
+    {
+        $value = self::getValue('auto_withdraw_enabled');
+
+        if (is_null($value)) {
+            self::setAutoWithdrawEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setAutoWithdrawEnabled(bool $enabled): void
+    {
+        self::setValue('auto_withdraw_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getTopRaidable(): int
     {
         $value = self::getValue('raid_top_alliance_cap');

@@ -11,6 +11,7 @@ use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
 use App\Services\AccountService;
+use App\Services\AutoWithdrawService;
 use App\Services\DirectDepositService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
@@ -30,70 +31,28 @@ class AccountsController extends Controller
 {
     protected LoanService $loanService;
 
-    public function __construct(LoanService $loanService)
+    public function __construct(LoanService $loanService, protected AutoWithdrawService $autoWithdrawService)
     {
         $this->loanService = $loanService;
     }
 
     public function index()
     {
-        $nationId = Auth::user()->nation_id;
-        $accounts = AccountService::getAccountsByNid($nationId);
+        $context = $this->buildDashboardContext();
 
-        if ($accounts->count() === 0) {
-            return redirect()->route('accounts.create');
+        if ($context instanceof RedirectResponse) {
+            return $context;
         }
 
-        $activeLoans = Loan::where('nation_id', $nationId)
-            ->where('status', 'approved')
-            ->where('remaining_balance', '>', 0)
-            ->get();
+        $nationId = Auth::user()->nation_id;
 
-        $ddService = app(DirectDepositService::class);
-
-        // MMR Assistant
-        $config = MMRConfig::where('nation_id', $nationId)->first();
-        $settings = MMRSetting::orderBy('resource')->get()->keyBy('resource');
-        $resources = PWHelperService::resources(false);
-        $mmrEnabled = SettingService::getMMRAssistantEnabled();
-
-        $lastTaxRecord = DirectDepositLog::where('nation_id', $nationId)
-            ->latest('created_at')
-            ->first();
-
-        $afterTaxIncome = $lastTaxRecord?->money ?? 0;
-
-        $logsQuery = MMRAssistantPurchase::query()
-            ->where(function ($query) use ($config, $nationId) {
-                $query->whereHas('account', fn ($q) => $q->where('nation_id', $nationId));
-
-                if ($config?->account_id) {
-                    $query->orWhere('account_id', $config->account_id);
-                }
-            });
-
-        $logs = $logsQuery
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        $priceService = app(TradePriceService::class);
-        $mmrPrices = $priceService->get24hAverageWithSurcharge();
-
-        return view('accounts.index', [
-            'accounts' => $accounts,
-            'activeLoans' => $activeLoans,
-            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
-            'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
-            // MMR data
-            'mmrConfig' => $config,
-            'mmrSettings' => $settings,
-            'mmrResources' => $resources,
-            'mmrEnabled' => $mmrEnabled,
-            'mmrLogs' => $logs,
-            'mmrAfterTaxIncome' => $afterTaxIncome,
-            'mmrPrices' => $mmrPrices,
+        $context = array_merge($context, [
+            'autoWithdrawSettings' => $this->autoWithdrawService->getNationSettings($nationId)->keyBy('resource'),
+            'autoWithdrawResources' => PWHelperService::resources(false),
+            'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
         ]);
+
+        return view('accounts.index', $context);
     }
 
     /**
@@ -366,5 +325,107 @@ class AccountsController extends Controller
         return redirect()
             ->route('accounts')
             ->with('success', 'Account deleted!');
+    }
+
+    public function updateAutoWithdraw(Request $request): RedirectResponse
+    {
+        $nationId = Auth::user()->nation_id;
+        $resources = PWHelperService::resources(false);
+
+        $rules = [
+            'settings' => ['required', 'array'],
+        ];
+
+        foreach ($resources as $resource) {
+            $rules["settings.{$resource}.account_id"] = [
+                'required',
+                'integer',
+                Rule::exists('accounts', 'id')->where('nation_id', $nationId),
+            ];
+            $rules["settings.{$resource}.threshold"] = ['required', 'integer', 'min:0'];
+            $rules["settings.{$resource}.withdraw_amount"] = ['required', 'integer', 'min:0'];
+            $rules["settings.{$resource}.enabled"] = ['nullable', 'boolean'];
+        }
+
+        $validated = $request->validate($rules);
+
+        foreach ($resources as $resource) {
+            $resourceSettings = $validated['settings'][$resource];
+
+            $this->autoWithdrawService->updateSetting(
+                $nationId,
+                $resource,
+                (int) $resourceSettings['account_id'],
+                (int) $resourceSettings['threshold'],
+                (int) $resourceSettings['withdraw_amount'],
+                (bool) ($resourceSettings['enabled'] ?? false)
+            );
+        }
+
+        return redirect()
+            ->route('accounts')
+            ->with([
+                'alert-message' => 'Auto withdraw settings updated.',
+                'alert-type' => 'success',
+            ]);
+    }
+
+    protected function buildDashboardContext(): array|RedirectResponse
+    {
+        $nationId = Auth::user()->nation_id;
+        $accounts = AccountService::getAccountsByNid($nationId);
+
+        if ($accounts->count() === 0) {
+            return redirect()->route('accounts.create');
+        }
+
+        $activeLoans = Loan::where('nation_id', $nationId)
+            ->where('status', 'approved')
+            ->where('remaining_balance', '>', 0)
+            ->get();
+
+        $ddService = app(DirectDepositService::class);
+
+        $config = MMRConfig::where('nation_id', $nationId)->first();
+        $settings = MMRSetting::orderBy('resource')->get()->keyBy('resource');
+        $resources = PWHelperService::resources(false);
+        $mmrEnabled = SettingService::getMMRAssistantEnabled();
+
+        $lastTaxRecord = DirectDepositLog::where('nation_id', $nationId)
+            ->latest('created_at')
+            ->first();
+
+        $afterTaxIncome = $lastTaxRecord?->money ?? 0;
+
+        $logsQuery = MMRAssistantPurchase::query()
+            ->where(function ($query) use ($config, $nationId) {
+                $query->whereHas('account', fn ($q) => $q->where('nation_id', $nationId));
+
+                if ($config?->account_id) {
+                    $query->orWhere('account_id', $config->account_id);
+                }
+            });
+
+        $logs = $logsQuery
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        $priceService = app(TradePriceService::class);
+        $mmrPrices = $priceService->get24hAverageWithSurcharge();
+
+        return [
+            'accounts' => $accounts,
+            'activeLoans' => $activeLoans,
+            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
+            'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
+            'mmrConfig' => $config,
+            'mmrSettings' => $settings,
+            'mmrResources' => $resources,
+            'mmrEnabled' => $mmrEnabled,
+            'mmrLogs' => $logs,
+            'mmrAfterTaxIncome' => $afterTaxIncome,
+            'mmrPrices' => $mmrPrices,
+        ];
     }
 }
