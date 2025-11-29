@@ -424,6 +424,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/discord', [SettingsController::class, 'updateDiscordRequirement'])->name(
             'admin.settings.discord'
         );
+        Route::post('/settings/discord/departure', [SettingsController::class, 'updateDiscordDeparture'])->name(
+            'admin.settings.discord.departure'
+        );
         Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
         );

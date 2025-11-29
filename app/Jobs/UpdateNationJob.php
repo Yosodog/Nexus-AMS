@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\NationAllianceChanged;
 use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
 use Exception;
@@ -32,16 +33,22 @@ class UpdateNationJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle()
+    public function handle(): void
     {
         try {
             foreach ($this->nationsData as $nationData) {
                 $nationModel = new GraphQLNationModel;
                 $nationModel->buildWithJSON((object) $nationData);
 
+                $existingNation = Nation::withTrashed()->find($nationModel->id);
+                $oldAllianceId = $existingNation?->alliance_id;
+                $oldAlliancePosition = $existingNation?->alliance_position;
+
+                $updatedNation = null;
+
                 try {
                     // Attempt to update or create the nation
-                    Nation::updateFromAPI($nationModel);
+                    $updatedNation = Nation::updateFromAPI($nationModel);
                 } catch (UniqueConstraintViolationException $e) {
                     // Check if the nation exists but is soft deleted
                     $trashedNation = Nation::withTrashed()->find($nationModel->id);
@@ -51,13 +58,22 @@ class UpdateNationJob implements ShouldQueue
                         $trashedNation->restore();
 
                         // Retry the update now that the model is active
-                        Nation::updateFromAPI($nationModel);
+                        $updatedNation = Nation::updateFromAPI($nationModel);
                     } else {
                         // Re-throw the exception if it's not caused by a soft-deleted record
                         throw $e;
                     }
                 }
 
+                if ($updatedNation && $existingNation && $oldAllianceId !== $updatedNation->alliance_id) {
+                    event(new NationAllianceChanged(
+                        nation: $updatedNation,
+                        oldAllianceId: $oldAllianceId,
+                        oldAlliancePosition: $oldAlliancePosition,
+                        newAllianceId: $updatedNation->alliance_id,
+                        newAlliancePosition: $updatedNation->alliance_position
+                    ));
+                }
             }
         } catch (Exception $e) {
             Log::error('Failed to update nations', ['error' => $e->getMessage()]);

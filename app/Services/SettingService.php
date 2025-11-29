@@ -160,6 +160,22 @@ class SettingService
         self::setValue('discord_war_alert_channel_id', $channelId ?? '');
     }
 
+    public static function getDiscordAllianceDepartureChannelId(): string
+    {
+        $channelId = self::getValue('discord_alliance_departure_channel_id');
+
+        if (is_string($channelId) && $channelId !== '') {
+            return $channelId;
+        }
+
+        return self::getDiscordWarAlertChannelId();
+    }
+
+    public static function setDiscordAllianceDepartureChannelId(?string $channelId): void
+    {
+        self::setValue('discord_alliance_departure_channel_id', $channelId ?? '');
+    }
+
     public static function isDiscordWarAlertEnabled(): bool
     {
         return (bool) (self::getValue('discord_war_alert_enabled') ?? false);
@@ -168,6 +184,22 @@ class SettingService
     public static function setDiscordWarAlertEnabled(bool $enabled): void
     {
         self::setValue('discord_war_alert_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function isDiscordAllianceDepartureEnabled(): bool
+    {
+        $value = self::getValue('discord_alliance_departure_enabled');
+
+        if (is_null($value)) {
+            return self::isDiscordWarAlertEnabled();
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setDiscordAllianceDepartureEnabled(bool $enabled): void
+    {
+        self::setValue('discord_alliance_departure_enabled', $enabled ? 1 : 0);
     }
 
     public static function getLastNationSyncBatchId(): string

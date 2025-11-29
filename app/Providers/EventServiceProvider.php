@@ -4,10 +4,12 @@ namespace App\Providers;
 
 use App\Events\AllianceExpenseOccurred;
 use App\Events\AllianceIncomeOccurred;
+use App\Events\NationAllianceChanged;
 use App\Events\WarDeclared;
 use App\Listeners\CreateCounterOnWarDeclared;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
+use App\Listeners\SendAllianceDepartureDiscordNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -23,6 +25,9 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         WarDeclared::class => [
             CreateCounterOnWarDeclared::class,
+        ],
+        NationAllianceChanged::class => [
+            SendAllianceDepartureDiscordNotification::class,
         ],
         AllianceIncomeOccurred::class => [
             RecordAllianceIncome::class,
