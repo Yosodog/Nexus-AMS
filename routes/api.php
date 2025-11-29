@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\WarPlanController;
 use App\Http\Controllers\API\AccountController;
+use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
@@ -49,6 +50,8 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
 
 Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(function () {
     Route::post('/verify', [DiscordVerificationController::class, 'verify']);
+    Route::get('/queue', [DiscordQueueController::class, 'index']);
+    Route::post('/queue/{command}/status', [DiscordQueueController::class, 'update']);
 });
 
 Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
