@@ -86,6 +86,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         ->name('accounts.transfer')
         ->middleware(BlockWhenPWDown::class);
 
+    Route::post('/accounts/auto-withdraw', [AccountsController::class, 'updateAutoWithdraw'])
+        ->name('auto-withdraw.update');
+
     Route::get('/accounts/create', [AccountsController::class, 'createView'])->name('accounts.create');
     Route::post('/accounts/create', [AccountsController::class, 'create'])->name('accounts.create.post');
 
@@ -421,6 +424,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
+        );
+        Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
+            'admin.settings.auto-withdraw'
         );
 
         Route::prefix('mmr')->group(function () {

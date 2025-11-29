@@ -292,6 +292,11 @@ class Nation extends Model
         return $this->hasMany(Account::class, 'nation_id');
     }
 
+    public function autoWithdrawSettings(): HasMany
+    {
+        return $this->hasMany(AutoWithdrawSetting::class, 'nation_id');
+    }
+
     public function accountProfile(): HasOne
     {
         return $this->hasOne(NationAccount::class, 'nation_id');

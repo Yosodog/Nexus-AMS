@@ -157,5 +157,30 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Auto Withdraw</span>
+                    <span class="badge {{ $autoWithdrawEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                        {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Global toggle for the automatic withdrawal scheduler. Disabling keeps member settings intact but stops scheduled runs.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.auto-withdraw') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="auto_withdraw_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="autoWithdrawEnabled"
+                                   name="auto_withdraw_enabled" value="1" @checked($autoWithdrawEnabled)>
+                            <label class="form-check-label" for="autoWithdrawEnabled">Enable Auto Withdraw</label>
+                        </div>
+                        <button class="btn btn-primary">Save Auto Withdraw Setting</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection

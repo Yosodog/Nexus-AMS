@@ -46,6 +46,10 @@ Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);
 // Military sign in
 Schedule::command('military:sign-in')->dailyAt('12:10')->when($whenPWUp);
 
+// Auto withdraw. Run right before a turn change.
+Schedule::command('auto:withdraw')->everyOddHour('54')->runInBackground()
+    ->withoutOverlapping(10)->when($whenPWUp);
+
 // Audits
 Schedule::command('audits:run')
     ->everyFifteenMinutes()

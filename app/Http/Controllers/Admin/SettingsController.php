@@ -47,6 +47,7 @@ class SettingsController extends Controller
             'warBatch' => $warBatch,
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
             'homepageSettings' => $homepageSettings,
+            'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
         ]);
     }
 
@@ -156,6 +157,24 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Homepage content updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateAutoWithdraw(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-accounts');
+
+        $validated = $request->validate([
+            'auto_withdraw_enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['auto_withdraw_enabled'];
+
+        SettingService::setAutoWithdrawEnabled($enabled);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
             'alert-type' => 'success',
         ]);
     }
