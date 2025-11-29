@@ -186,6 +186,15 @@
                 <li class="nav-header">Internal Affairs</li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.applications.index') }}"
+                                icon="bi bi-people"
+                                permission="view-applications"
+                                :active="request()->routeIs('admin.applications.*')">
+                        Applications
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.recruitment.index') }}"
                                 icon="bi bi-envelope-paper"
                                 permission="view-recruitment"

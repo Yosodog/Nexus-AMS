@@ -23,6 +23,8 @@ return [
     'view-raids',
     'manage-raids',
     'view-diagnostic-info',
+    'view-applications',
+    'manage-applications',
     'view-recruitment',
     'manage-recruitment',
     'view-war-aid',
