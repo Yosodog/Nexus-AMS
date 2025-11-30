@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SpyCampaignController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
@@ -40,6 +41,7 @@ use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\RaidFinderController;
+use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
@@ -132,6 +134,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             'defense.raid-finder'
         )->middleware(BlockWhenPWDown::class);
     });
+    Route::get('/spy-ops', [SpyAssignmentController::class, 'index'])->name('spy.assignments');
     // Counters
 
     // Grants
@@ -361,6 +364,18 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::delete('/war-plans/{plan}/targets/{target}', [AdminWarPlanController::class, 'removeTarget'])->name('admin.war-plans.targets.destroy');
         Route::post('/war-plans/{plan}/assignments/manual', [AdminWarPlanController::class, 'storeManualAssignment'])->name('admin.war-plans.assignments.manual');
         Route::delete('/war-plans/{plan}/assignments/{assignment}', [AdminWarPlanController::class, 'removeAssignment'])->name('admin.war-plans.assignments.destroy');
+
+        // Spy Campaigns
+        Route::get('/spy-campaigns', [SpyCampaignController::class, 'index'])->name('admin.spy-campaigns.index');
+        Route::post('/spy-campaigns', [SpyCampaignController::class, 'store'])->name('admin.spy-campaigns.store');
+        Route::get('/spy-campaigns/{spyCampaign}', [SpyCampaignController::class, 'show'])->name('admin.spy-campaigns.show');
+        Route::put('/spy-campaigns/{spyCampaign}', [SpyCampaignController::class, 'update'])->name('admin.spy-campaigns.update');
+        Route::post('/spy-campaigns/{spyCampaign}/alliances', [SpyCampaignController::class, 'addAlliance'])->name('admin.spy-campaigns.alliances.store');
+        Route::delete('/spy-campaigns/{spyCampaign}/alliances/{spyCampaignAlliance}', [SpyCampaignController::class, 'removeAlliance'])->name('admin.spy-campaigns.alliances.destroy');
+        Route::post('/spy-campaigns/{spyCampaign}/rounds', [SpyCampaignController::class, 'addRound'])->name('admin.spy-campaigns.rounds.store');
+        Route::post('/spy-campaign-rounds/{spyRound}/generate', [SpyCampaignController::class, 'generate'])->name('admin.spy-campaigns.rounds.generate');
+        Route::post('/spy-campaign-rounds/{spyRound}/message', [SpyCampaignController::class, 'sendMessages'])->name('admin.spy-campaigns.rounds.message');
+        Route::get('/spy-campaign-rounds/{spyRound}', [SpyCampaignController::class, 'round'])->name('admin.spy-campaigns.rounds.show');
 
         Route::post('/war-counters', [AdminWarCounterController::class, 'store'])->name('admin.war-counters.store');
         Route::get('/war-counters/{counter}', [AdminWarCounterController::class, 'show'])->name('admin.war-counters.show');
