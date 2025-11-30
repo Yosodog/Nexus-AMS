@@ -5,6 +5,7 @@ use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
 use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
+use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
 use App\Http\Middleware\AdminMiddleware;
@@ -58,6 +59,7 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
     Route::post('/applications/approve', [DiscordApplicationController::class, 'approve']);
     Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
+    Route::post('/intel', [ApiIntelReportController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
