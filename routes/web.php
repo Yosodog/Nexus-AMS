@@ -45,6 +45,7 @@ use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
+use App\Http\Controllers\WarStatsController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\BlockWhenPWDown;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
@@ -133,6 +134,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/raid-finder', [RaidFinderController::class, 'index'])->name(
             'defense.raid-finder'
         )->middleware(BlockWhenPWDown::class);
+
+        Route::get('/war-stats', WarStatsController::class)->name('defense.war-stats');
     });
     Route::get('/spy-ops', [SpyAssignmentController::class, 'index'])->name('spy.assignments');
     // Counters
