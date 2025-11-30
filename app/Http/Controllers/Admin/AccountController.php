@@ -11,6 +11,8 @@ use App\Models\MMRAssistantPurchase;
 use App\Models\Transaction;
 use App\Services\AccountService;
 use App\Services\AllianceMembershipService;
+use App\Services\MainBankService;
+use App\Services\OffshoreService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WithdrawalLimitService;
@@ -79,6 +81,13 @@ class AccountController extends Controller
         $withdrawalLimits = WithdrawalLimitService::limits();
         $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
 
+        $mainBankSnapshot = app(MainBankService::class)->getCachedSnapshot();
+        $offshoreService = app(OffshoreService::class);
+        $offshoreSnapshots = $offshoreService->all()
+            ->mapWithKeys(fn ($offshore) => [
+                $offshore->id => $offshoreService->getCachedSnapshot($offshore),
+            ]);
+
         return view('admin.accounts.dashboard', [
             'accounts' => $accounts,
             'brackets' => $brackets,
@@ -92,6 +101,8 @@ class AccountController extends Controller
             'pendingWithdrawals' => $pendingWithdrawals,
             'withdrawalLimits' => $withdrawalLimits,
             'maxDailyWithdrawals' => $maxDailyWithdrawals,
+            'mainBankSnapshot' => $mainBankSnapshot,
+            'offshoreSnapshots' => $offshoreSnapshots,
         ]);
     }
 

@@ -1,8 +1,12 @@
 @php
     use App\Services\PWHelperService;
+    use Illuminate\Support\Carbon;
 
     $resourceList = PWHelperService::resources(false);
+    $resourceListWithMoney = PWHelperService::resources(true);
     $resourceTotals = collect($resourceList)
+        ->mapWithKeys(fn ($resource) => [$resource => $accounts->sum($resource)]);
+    $resourceTotalsWithMoney = collect($resourceListWithMoney)
         ->mapWithKeys(fn ($resource) => [$resource => $accounts->sum($resource)]);
     $topAccounts = $accounts->sortByDesc('money')->take(5);
     $activeAccounts = $accounts->filter(fn ($account) => $account->user)->count();
@@ -11,6 +15,49 @@
         ->groupBy(fn ($transaction) => $transaction->created_at->format('Y-m-d'))
         ->map->count()
         ->avg() ?? 0;
+
+    $mainBankSnapshot ??= ['balances' => [], 'cached_at' => null];
+    $offshoreSnapshots = ($offshoreSnapshots ?? collect()) instanceof \Illuminate\Support\Collection
+        ? $offshoreSnapshots
+        : collect($offshoreSnapshots);
+
+    $mainBankTotals = collect($resourceListWithMoney)
+        ->mapWithKeys(fn ($resource) => [$resource => (float) ($mainBankSnapshot['balances'][$resource] ?? 0)]);
+
+    $offshoreTotals = collect($resourceListWithMoney)
+        ->mapWithKeys(fn ($resource) => [
+            $resource => $offshoreSnapshots->sum(
+                fn ($snapshot) => (float) ($snapshot['balances'][$resource] ?? 0)
+            ),
+        ]);
+
+    $allianceResourceTotals = $mainBankTotals->mapWithKeys(
+        fn ($total, $resource) => [$resource => $total + ($offshoreTotals[$resource] ?? 0)]
+    );
+
+    $netResourcePositions = $allianceResourceTotals->mapWithKeys(
+        fn ($total, $resource) => [$resource => $total - ($resourceTotalsWithMoney[$resource] ?? 0)]
+    );
+
+    $accountsCash = (float) ($resourceTotalsWithMoney['money'] ?? 0);
+    $bankCash = (float) ($mainBankTotals['money'] ?? 0);
+    $offshoreCash = (float) ($offshoreTotals['money'] ?? 0);
+    $allianceCash = $bankCash + $offshoreCash;
+    $netCashPosition = $allianceCash - $accountsCash;
+    $coveragePercent = $accountsCash > 0 ? min(200, ($allianceCash / $accountsCash) * 100) : 100;
+
+    $mainBankCachedDisplay = $mainBankSnapshot['cached_at']
+        ? Carbon::parse($mainBankSnapshot['cached_at'])->diffForHumans()
+        : 'Not cached';
+
+    $offshoreCachedAt = $offshoreSnapshots
+        ->map(fn ($snapshot) => $snapshot['cached_at'] ?? null)
+        ->filter()
+        ->map(fn ($cachedAt) => Carbon::parse($cachedAt))
+        ->max();
+
+    $offshoreCachedDisplay = $offshoreCachedAt ? $offshoreCachedAt->diffForHumans() : 'Not cached';
+    $offshoreCount = $offshoreSnapshots->count();
 @endphp
 
 @extends('layouts.admin')
@@ -106,6 +153,119 @@
                         <p class="mb-0 small text-muted">No accounts available.</p>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Ownership snapshot --}}
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="text-uppercase text-muted small">Member Accounts</span>
+                            <h3 class="fw-bold mb-0">${{ number_format($accountsCash, 2) }}</h3>
+                            <p class="mb-0 text-muted small">{{ number_format($accounts->count()) }} accounts tracked</p>
+                        </div>
+                        <span class="badge text-bg-primary"><i class="bi bi-wallet2"></i></span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                        <span class="badge text-bg-light text-secondary border">Avg balance ${{ number_format($accounts->avg('money'), 2) }}</span>
+                        <span class="badge text-bg-light text-secondary border">{{ number_format($activeAccounts) }} assigned</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="text-uppercase text-muted small">Alliance Holdings</span>
+                            <h3 class="fw-bold mb-0">${{ number_format($allianceCash, 2) }}</h3>
+                            <p class="mb-0 text-muted small">Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}</p>
+                        </div>
+                        <span class="badge text-bg-info"><i class="bi bi-bank"></i></span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                        <span class="badge text-bg-light text-secondary border">Bank cache {{ $mainBankCachedDisplay }}</span>
+                        <span class="badge text-bg-light text-secondary border">{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="text-uppercase text-muted small">Alliance Cushion</span>
+                            <h3 class="fw-bold mb-0 {{ $netCashPosition >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
+                            </h3>
+                            <p class="mb-0 text-muted small">After covering member balances</p>
+                        </div>
+                        <span class="badge {{ $netCashPosition >= 0 ? 'text-bg-success' : 'text-bg-danger' }}">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {{ $coveragePercent >= 100 ? 'bg-success' : 'bg-warning' }}"
+                             role="progressbar"
+                             style="width: {{ min(100, max(0, $coveragePercent)) }}%;"
+                             aria-valuenow="{{ min(100, max(0, $coveragePercent)) }}"
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                        <span>Coverage {{ number_format($coveragePercent, 0) }}%</span>
+                        <span>{{ $netCashPosition >= 0 ? 'Surplus' : 'Shortfall' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <div>
+                <h5 class="mb-1">Resource Ownership</h5>
+                <p class="mb-0 text-muted small">Comparing member-held balances to alliance bank + offshores (cached).</p>
+            </div>
+            <span class="badge text-bg-light text-secondary border">Updated: Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Resource</th>
+                        <th class="text-end">Member Accounts</th>
+                        <th class="text-end">Alliance Holdings</th>
+                        <th class="text-end">Cushion</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($resourceListWithMoney as $resource)
+                        @php
+                            $accountTotal = $resourceTotalsWithMoney[$resource] ?? 0;
+                            $allianceTotal = $allianceResourceTotals[$resource] ?? 0;
+                            $net = $netResourcePositions[$resource] ?? 0;
+                            $isPositive = $net >= 0;
+                        @endphp
+                        <tr>
+                            <td class="text-capitalize">{{ $resource }}</td>
+                            <td class="text-end">{{ $resource === 'money' ? '$' : '' }}{{ number_format($accountTotal, 2) }}</td>
+                            <td class="text-end">{{ $resource === 'money' ? '$' : '' }}{{ number_format($allianceTotal, 2) }}</td>
+                            <td class="text-end">
+                                <span class="{{ $isPositive ? 'text-success' : 'text-danger' }}">
+                                    {{ $net >= 0 ? '+' : '' }}{{ $resource === 'money' ? '$' : '' }}{{ number_format($net, 2) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
