@@ -39,6 +39,7 @@ use App\Http\Controllers\DirectDepositController;
 use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\SpyAssignmentController;
@@ -136,6 +137,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         )->middleware(BlockWhenPWDown::class);
 
         Route::get('/war-stats', WarStatsController::class)->name('defense.war-stats');
+        Route::get('/intel', [IntelReportController::class, 'index'])->name('defense.intel');
+        Route::post('/intel', [IntelReportController::class, 'store'])->name('defense.intel.store');
     });
     Route::get('/spy-ops', [SpyAssignmentController::class, 'index'])->name('spy.assignments');
     // Counters
