@@ -34,4 +34,6 @@ return [
     'manage-mmr',
     'view-mmr',
     'manage-custom-pages',
+    'view-spies',
+    'manage-spies',
 ];

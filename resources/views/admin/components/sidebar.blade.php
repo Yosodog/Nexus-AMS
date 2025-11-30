@@ -147,6 +147,15 @@
                 </li>
 
                 <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.spy-campaigns.index') }}"
+                                icon="bi bi-eye"
+                                permission="view-spies"
+                                :active="request()->routeIs('admin.spy-campaigns.*')">
+                        Spy Campaigns
+                    </x-nav.link>
+                </li>
+
+                <li class="nav-item">
                     <x-nav.link href="{{ route('admin.wars') }}"
                                 icon="bi bi-speedometer"
                                 permission="view-wars"
