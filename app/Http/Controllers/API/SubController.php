@@ -59,7 +59,7 @@ class SubController extends Controller
         }
 
         // If it's a single nation update (not an array of nations), wrap it in an array
-        if (isset($nationUpdates['id'])) {
+        if (isset($nationCreate['id'])) {
             $nationCreate = [$nationCreate];
         }
 
@@ -81,7 +81,7 @@ class SubController extends Controller
 
         // If it's a single nation update (not an array of nations), wrap it in an array
         if (isset($nationDelete['id'])) {
-            $nationCreate = [$nationDelete];
+            $nationDelete = [$nationDelete];
         }
 
         foreach ($nationDelete as $del) {

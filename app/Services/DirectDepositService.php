@@ -12,6 +12,7 @@ use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\Nation;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -30,6 +31,11 @@ class DirectDepositService
     {
         if ($record->tax_id != $this->ddTaxId) {
             return $record; // Not a DD tax record
+        }
+
+        if (DirectDepositLog::where('bank_record_id', $record->id)->exists()) {
+            // Already processed; prevent duplicate credits on retries.
+            return $record;
         }
 
         $nation = Nation::find($record->sender_id);
@@ -83,22 +89,38 @@ class DirectDepositService
             $deposit['money'] = max(0.0, round($deposit['money'] - $mmrTotalSpend, 2));
         }
 
-        // Apply the reduced deposit to the DD account
-        foreach ($deposit as $resource => $amount) {
-            $ddAccount->{$resource} += $amount;
-        }
-        $ddAccount->save();
+        try {
+            DB::transaction(function () use ($nation, $record, $deposit, $originalDeposit, $mmrTotalSpend, $plan, $mmrAccount, $ddAccount) {
+                $lockedAccount = Account::whereKey($ddAccount->id)->lockForUpdate()->first();
 
-        // Log the DD event with the *original* after-tax values (so the player sees what they earned)
-        $log = DirectDepositLog::create([
-            'nation_id' => $nation->id,
-            'account_id' => $ddAccount->id,
-            'bank_record_id' => $record->id,
-            ...$originalDeposit,
-        ]);
+                if (! $lockedAccount) {
+                    throw new \RuntimeException("DD account {$ddAccount->id} not found for nation {$nation->id}");
+                }
 
-        if ($mmrTotalSpend > 0.0) {
-            $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
+                foreach ($deposit as $resource => $amount) {
+                    $lockedAccount->{$resource} += $amount;
+                }
+                $lockedAccount->save();
+
+                $log = DirectDepositLog::create([
+                    'nation_id' => $nation->id,
+                    'account_id' => $lockedAccount->id,
+                    'bank_record_id' => $record->id,
+                    ...$originalDeposit,
+                ]);
+
+                if ($mmrTotalSpend > 0.0) {
+                    $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
+                }
+            });
+        } catch (Throwable $exception) {
+            Log::warning('DirectDeposit: failed to persist deposit', [
+                'bank_record_id' => $record->id,
+                'nation_id' => $nation->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $record;
         }
 
         // Apply MMR plan: credit resources on the configured MMR account
