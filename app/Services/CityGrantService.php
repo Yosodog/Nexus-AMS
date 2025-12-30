@@ -24,9 +24,18 @@ class CityGrantService
 
     public static function createRequest(CityGrant $grant, int $nationId, int $accountId): CityGrantRequest
     {
+        $cityCostService = app(CityCostService::class);
+        $grantAmount = $cityCostService->calculateGrantAmount($grant);
+
+        if ($grantAmount === null) {
+            throw ValidationException::withMessages([
+                'Unable to calculate the city grant amount right now. Please try again later.',
+            ]);
+        }
+
         $request = CityGrantRequest::create([
             'city_number' => $grant->city_number,
-            'grant_amount' => $grant->grant_amount,
+            'grant_amount' => (int) round($grantAmount),
             'nation_id' => $nationId,
             'account_id' => $accountId,
             'status' => 'pending',
@@ -38,14 +47,10 @@ class CityGrantService
     }
 
     /**
-     * @return void
-     *
      * @throws ValidationException
      */
-    public static function validateEligibility(CityGrant $grant, Nation $nation)
+    public static function validateEligibility(CityGrant $grant, Nation $nation): void
     {
-        $requirements = $grant->requirements ?? [];
-
         // Make sure they don't have a pending city grant
         $pending = CityGrantRequest::where('nation_id', Auth::user()->nation_id)
             ->where('status', 'pending')

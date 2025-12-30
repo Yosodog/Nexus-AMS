@@ -43,6 +43,8 @@ Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
 // Taxes
 Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);
 
+Schedule::command('pw:sync-city-average')->dailyAt('00:05')->when($whenPWUp);
+
 // Military sign in
 Schedule::command('military:sign-in')->dailyAt('12:10')->when($whenPWUp);
 

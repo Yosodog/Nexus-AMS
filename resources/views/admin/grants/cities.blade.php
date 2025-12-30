@@ -91,8 +91,17 @@
                             <select name="city_grant_id" class="form-select" required>
                                 <option value="">Select a city grant</option>
                                 @foreach($grants as $grant)
+                                    @php
+                                        $computedAmount = $grantAmounts[$grant->id] ?? null;
+                                    @endphp
                                     <option value="{{ $grant->id }}" @selected(old('city_grant_id') == $grant->id)>
-                                        City #{{ $grant->city_number }} — ${{ number_format($grant->grant_amount) }}
+                                        City #{{ $grant->city_number }} —
+                                        @if ($computedAmount !== null)
+                                            ${{ number_format($computedAmount) }}
+                                        @else
+                                            Unavailable
+                                        @endif
+                                        ({{ number_format($grant->grant_amount) }}%)
                                     </option>
                                 @endforeach
                             </select>
@@ -116,7 +125,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Grant Amount Override (optional)</label>
                             <input type="number" name="grant_amount" class="form-control" min="1" value="{{ old('grant_amount') }}"
-                                   placeholder="Defaults to selected grant amount">
+                                   placeholder="Defaults to the calculated grant amount">
                         </div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
@@ -135,18 +144,28 @@
                 <thead>
                 <tr>
                     <th>City #</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Description</th>
-                    <th>Required Projects</th>
-                    <th>Actions</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Description</th>
+                        <th>Required Projects</th>
+                        <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach ($grants as $grant)
                     <tr>
                         <td>{{ $grant->city_number }}</td>
-                        <td>${{ number_format($grant->grant_amount) }}</td>
+                        <td>
+                            @php
+                                $computedAmount = $grantAmounts[$grant->id] ?? null;
+                            @endphp
+                            @if ($computedAmount !== null)
+                                ${{ number_format($computedAmount) }}
+                            @else
+                                Unavailable
+                            @endif
+                            <span class="text-muted">({{ number_format($grant->grant_amount) }}%)</span>
+                        </td>
                         <td>{{ $grant->enabled ? 'Enabled' : 'Disabled' }}</td>
                         <td>{{ $grant->description }}</td>
                         <td>
@@ -188,8 +207,8 @@
                             <input type="number" class="form-control" name="city_number" id="city_number" required>
                         </div>
                         <div class="mb-3">
-                            <label for="grant_amount" class="form-label">Grant Amount</label>
-                            <input type="number" class="form-control" name="grant_amount" id="grant_amount" required>
+                            <label for="grant_amount" class="form-label">Grant Percentage</label>
+                            <input type="number" class="form-control" name="grant_amount" id="grant_amount" min="1" step="1" required>
                         </div>
                         <div class="mb-3">
                             <label for="enabled" class="form-label">Status</label>
@@ -243,6 +262,7 @@
 
             document.getElementById('grantForm').reset();
             document.getElementById('grant_id').value = '';
+            document.getElementById('grant_amount').value = 100;
         }
     </script>
 @endsection

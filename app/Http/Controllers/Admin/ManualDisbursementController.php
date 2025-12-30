@@ -11,6 +11,7 @@ use App\Models\Grants;
 use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\WarAidRequest;
+use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\GrantService;
 use App\Services\LoanService;
@@ -86,9 +87,26 @@ class ManualDisbursementController extends Controller
         $nation = Nation::findOrFail($data['nation_id']);
         $account = $this->validateAccountForNation((int) $data['account_id'], $nation);
 
+        $cityCostService = app(CityCostService::class);
+        $cityNumber = (int) ($data['city_number'] ?? $cityGrant->city_number);
+        $grantAmount = $data['grant_amount']
+            ?? $cityCostService->calculateGrantAmountForCity(
+                $cityNumber,
+                $cityGrant->grant_amount,
+                $cityCostService->grantRequiresBureauOfDomesticAffairs($cityGrant),
+                $cityCostService->grantRequiresGovernmentSupportAgency($cityGrant)
+            );
+
+        if ($grantAmount === null) {
+            return back()->with([
+                'alert-message' => 'Unable to calculate the city grant amount right now. Please try again later.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         $grantRequest = CityGrantRequest::create([
-            'city_number' => $data['city_number'] ?? $cityGrant->city_number,
-            'grant_amount' => $data['grant_amount'] ?? $cityGrant->grant_amount,
+            'city_number' => $cityNumber,
+            'grant_amount' => (int) round($grantAmount),
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'status' => 'pending',
