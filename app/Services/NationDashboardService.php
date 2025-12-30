@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DirectDepositLog;
 use App\Models\Nation;
 use App\Models\Taxes;
 use App\Models\Transaction;
@@ -19,6 +20,7 @@ class NationDashboardService
         $signIns = $nation->signIns()->latest('created_at')->take(30)->get()->reverse();
         $accountIds = $nation->accounts()->pluck('id');
         $taxes = $this->getRecentTaxes($nation);
+        $afterTaxIncomeTotal = $this->getRecentAfterTaxIncomeTotal($nation);
         $latestSignIn = $signIns->last();
         $evaluation = $latestSignIn
             ? $this->mmrService->evaluate($nation, $latestSignIn)
@@ -37,6 +39,7 @@ class NationDashboardService
             'nationAge' => now()->diffInDays($nation->created_at),
             'scorePerCity' => $nation->num_cities > 0 ? round($nation->score / $nation->num_cities, 2) : 0,
             'taxTotal' => $taxes->sum(fn ($g) => $g->sum('money')),
+            'afterTaxIncomeTotal' => $afterTaxIncomeTotal,
             'mmrScore' => $evaluation['mmr_score'] ?? 0,
             'mmrResourceBreakdown' => $evaluation['resource_breakdown'] ?? [],
             'mmrWeights' => $evaluation['weights'] ?? $this->mmrService->getResourceWeights(),
@@ -87,6 +90,16 @@ class NationDashboardService
             ->latest('created_at')
             ->limit(5)
             ->get();
+    }
+
+    /**
+     * Get last 30 days of after-tax direct deposits (money only).
+     */
+    protected function getRecentAfterTaxIncomeTotal(Nation $nation): float
+    {
+        return (float) DirectDepositLog::where('nation_id', $nation->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->sum('money');
     }
 
     /**

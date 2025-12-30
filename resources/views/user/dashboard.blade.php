@@ -61,9 +61,9 @@
                     </p>
                 </div>
                 <div class="rounded-xl bg-base-100 p-4 border border-base-300 shadow-sm">
-                    <p class="text-sm font-semibold">Income after tax</p>
-                    <p class="text-2xl font-bold">${{ number_format($taxTotal ?? 0) }}</p>
-                    <p class="text-xs text-base-content/70">Based on current bracket and direct deposits.</p>
+                    <p class="text-sm font-semibold">Direct deposit received</p>
+                    <p class="text-2xl font-bold">${{ number_format($afterTaxIncomeTotal ?? 0) }}</p>
+                    <p class="text-xs text-base-content/70">Net cash deposited in the last 30 days after tax and MMR withholding.</p>
                 </div>
                 <div class="rounded-xl bg-base-100 p-4 border border-base-300 shadow-sm">
                     <p class="text-sm font-semibold">Support snapshot</p>
