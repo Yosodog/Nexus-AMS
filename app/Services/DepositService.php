@@ -6,6 +6,7 @@ use App\Exceptions\PWQueryFailedException;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DepositService
@@ -48,35 +49,38 @@ class DepositService
 
             // Step 4: Match deposit with a pending request
             $note = trim($record->note);
-            $depositRequest = DepositRequest::where('deposit_code', $note)
-                ->where('status', 'pending')
-                ->first();
+            DB::transaction(function () use ($note, $record, $allianceId) {
+                $depositRequest = DepositRequest::where('deposit_code', $note)
+                    ->lockForUpdate()
+                    ->first();
 
-            if (! $depositRequest) {
-                continue; // No matching request found
-            }
+                if (! $depositRequest || $depositRequest->status !== 'pending') {
+                    return;
+                }
 
-            $account = $depositRequest->account;
-            if (! $account) {
+                $account = Account::whereKey($depositRequest->account_id)->lockForUpdate()->first();
+                if (! $account) {
+                    self::setDepositCompleted($depositRequest);
+
+                    return;
+                }
+
+                if ($record->receiver_id != $allianceId) {
+                    self::setDepositCompleted($depositRequest);
+
+                    return;
+                }
+
+                // Step 5: Update the member's account balance using AccountService
+                AccountService::updateAccountBalanceFromBankRec($account, $record);
+
+                // Step 6: Mark deposit request as completed
+                $depositRequest->fulfilled_bank_record_id = $record->id;
                 self::setDepositCompleted($depositRequest);
 
-                continue; // Shouldn't happen, but just in case
-            }
-
-            if ($record->receiver_id != $allianceId) {
-                self::setDepositCompleted($depositRequest);
-
-                continue; // Also just in case
-            }
-
-            // Step 5: Update the member's account balance using AccountService
-            AccountService::updateAccountBalanceFromBankRec($account, $record);
-
-            // Step 6: Mark deposit request as completed
-            self::setDepositCompleted($depositRequest);
-
-            // Step 8: Log the transaction using TransactionService
-            TransactionService::createTransactionForDeposit($account, $record);
+                // Step 8: Log the transaction using TransactionService
+                TransactionService::createTransactionForDeposit($account, $record);
+            });
             // TODO send in-game message
         }
 

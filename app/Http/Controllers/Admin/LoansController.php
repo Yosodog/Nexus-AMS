@@ -69,7 +69,7 @@ class LoansController
         $request->validate([
             'amount' => 'required|numeric',
             'interest_rate' => 'required|numeric|min:0|max:100',
-            'term_weeks' => 'required|integer|min:0|max:52',
+            'term_weeks' => 'required|integer|min:1|max:52',
         ]);
 
         $this->loanService->approveLoan(

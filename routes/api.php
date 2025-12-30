@@ -16,7 +16,7 @@ use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });

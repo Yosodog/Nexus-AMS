@@ -455,7 +455,7 @@ class AccountService
             throw new \InvalidArgumentException("Invalid resource: $resource");
         }
 
-        return (int) self::where('nation_id', $nationId)
+        return (int) Account::where('nation_id', $nationId)
             ->sum($resource);
     }
 }
