@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\RecruitmentMessage;
 use App\Models\Setting;
+use Carbon\Carbon;
 
 class SettingService
 {
@@ -40,6 +41,30 @@ class SettingService
     public static function setLastScannedBankRecordId(int $id): void
     {
         self::setValue('last_bank_record_id', $id);
+    }
+
+    public static function getCityAverage(): ?float
+    {
+        $value = self::getValue('pw_city_average');
+
+        return $value === null ? null : (float) $value;
+    }
+
+    public static function setCityAverage(float $average): void
+    {
+        self::setValue('pw_city_average', $average);
+    }
+
+    public static function getCityAverageUpdatedAt(): ?Carbon
+    {
+        $value = self::getValue('pw_city_average_updated_at');
+
+        return $value ? Carbon::parse($value) : null;
+    }
+
+    public static function setCityAverageUpdatedAt(Carbon $timestamp): void
+    {
+        self::setValue('pw_city_average_updated_at', $timestamp->toIso8601String());
     }
 
     public static function isWarAidEnabled(): bool

@@ -5,29 +5,47 @@ namespace App\Http\Controllers;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\AccountService;
+use App\Services\CityCostService;
 use App\Services\CityGrantService;
+use App\Services\SettingService;
 use Exception;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class CityGrantController
 {
-    public function index()
+    public function index(): View
     {
         $nation = Auth::user()->nation;
         $grants = CityGrant::all();
         $accounts = $nation->accounts;
         $nextCityNumber = $nation->num_cities + 1;
         $grantRequests = CityGrantRequest::where('nation_id', $nation->id)->orderBy('created_at', 'desc')->get();
+        $cityCostService = app(CityCostService::class);
+        $cityAverage = $cityCostService->getTop20Average();
+        $cityAverageUpdatedAt = SettingService::getCityAverageUpdatedAt();
+        $grantAmounts = $grants->mapWithKeys(
+            fn (CityGrant $grant) => [$grant->id => $cityCostService->calculateGrantAmount($grant)]
+        );
 
-        return view('grants.city_grants', compact('grants', 'accounts', 'nextCityNumber', 'grantRequests'));
+        return view('grants.city_grants', compact(
+            'grants',
+            'accounts',
+            'nextCityNumber',
+            'grantRequests',
+            'grantAmounts',
+            'cityAverage',
+            'cityAverageUpdatedAt'
+        ));
     }
 
     /**
      * @return mixed
      */
-    public function request(Request $request)
+    public function request(Request $request): RedirectResponse
     {
         try {
             // First, ensure they own the account they're requesting for
@@ -47,10 +65,12 @@ class CityGrantController
             // If no exceptions were thrown, they are eligible, so create the request
             CityGrantService::createRequest($cityGrant, $nation->id, $account->id);
         } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
             return redirect()
                 ->route('grants.city')
                 ->with([
-                    'alert-message' => 'You are not eligible for this grant. '.$exception->getMessage(),
+                    'alert-message' => trim('You are not eligible for this grant. '.$details),
                     // TODO be more specific lol
                     'alert-type' => 'error',
                 ]);

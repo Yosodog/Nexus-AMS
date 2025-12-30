@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
+use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\PWHelperService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,7 @@ class CityGrantController
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
-    public function cityGrants()
+    public function cityGrants(): View
     {
         $this->authorize('view-city-grants');
 
@@ -29,6 +31,10 @@ class CityGrantController
             ->orderBy('updated_at', 'desc')
             ->get();
         $grants = CityGrant::all();
+        $cityCostService = app(CityCostService::class);
+        $grantAmounts = $grants->mapWithKeys(
+            fn (CityGrant $grant) => [$grant->id => $cityCostService->calculateGrantAmount($grant)]
+        );
 
         // Statistics for info boxes
         $totalApproved = CityGrantRequest::where('status', 'approved')->count();
@@ -42,6 +48,7 @@ class CityGrantController
                 'pendingRequests',
                 'previousRequests',
                 'grants',
+                'grantAmounts',
                 'totalApproved',
                 'totalDenied',
                 'pendingCount',
@@ -56,7 +63,7 @@ class CityGrantController
      * @return mixed
      * @throws AuthorizationException
      */
-    public function approveCityGrant(CityGrantRequest $grantRequest)
+    public function approveCityGrant(CityGrantRequest $grantRequest): RedirectResponse
     {
         $this->authorize('manage-city-grants');
 
@@ -82,7 +89,7 @@ class CityGrantController
      *
      * @throws AuthorizationException
      */
-    public function denyCityGrant(CityGrantRequest $grantRequest)
+    public function denyCityGrant(CityGrantRequest $grantRequest): RedirectResponse
     {
         $this->authorize('manage-city-grants');
 
@@ -104,17 +111,16 @@ class CityGrantController
 
     /**
      * @param  \Illuminate\Support\Facades\Request  $request
-     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
-    public function updateCityGrant(Request $request, CityGrant $city_grant)
+    public function updateCityGrant(Request $request, CityGrant $city_grant): RedirectResponse
     {
         $this->authorize('manage-city-grants');
 
         $validated = $request->validate([
             'city_number' => 'required|integer|min:1|unique:city_grants,city_number,'.$city_grant->id,
-            'grant_amount' => 'required|integer|min:1',
+            'grant_amount' => 'required|numeric|min:1',
             'enabled' => 'required|boolean',
             'description' => 'nullable|string|max:255',
             'projects' => 'array',
@@ -134,10 +140,10 @@ class CityGrantController
             'grant_amount' => $validated['grant_amount'],
             'enabled' => $validated['enabled'],
             'description' => $validated['description'],
-            'requirements' => json_encode([
+            'requirements' => [
                 'required_projects' => $selectedProjects,
                 'project_bits' => $projectBits,
-            ]),
+            ],
         ]);
 
         return redirect()->route('admin.grants.city')->with('alert-message', 'City grant updated successfully!')->with(
@@ -147,18 +153,16 @@ class CityGrantController
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function createCityGrant(Request $request)
+    public function createCityGrant(Request $request): RedirectResponse
     {
         // TODO this needs to be in the CityGrantService, not here.
         $this->authorize('manage-city-grants');
 
         $validated = $request->validate([
             'city_number' => 'required|integer|min:1|unique:city_grants,city_number',
-            'grant_amount' => 'required|integer|min:1',
+            'grant_amount' => 'required|numeric|min:1',
             'enabled' => 'required|boolean',
             'description' => 'nullable|string|max:255',
             'projects' => 'array',
@@ -178,10 +182,10 @@ class CityGrantController
             'grant_amount' => $validated['grant_amount'],
             'enabled' => $validated['enabled'],
             'description' => $validated['description'] ?? '',
-            'requirements' => json_encode([
+            'requirements' => [
                 'required_projects' => $selectedProjects,
                 'project_bits' => $projectBits,
-            ]),
+            ],
         ]);
 
         return redirect()->route('admin.grants.city')->with('alert-message', 'City grant created successfully!')->with(

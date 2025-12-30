@@ -2,9 +2,11 @@
 
 @section("content")
     @php
-        $nextCity = Auth::user()->nation->num_cities + 1;
+        $nextCity = $nextCityNumber;
         $approvedCount = $grantRequests->where('status', 'approved')->count();
         $pendingCount = $grantRequests->where('status', 'pending')->count();
+        $nextGrant = $grants->firstWhere('city_number', $nextCity);
+        $nextGrantAmount = $nextGrant ? ($grantAmounts[$nextGrant->id] ?? null) : null;
     @endphp
 
     <div class="mx-auto space-y-10">
@@ -30,6 +32,18 @@
                     </div>
                 </div>
             </div>
+            <div class="mt-4 text-xs text-base-content/60">
+                @if ($cityAverage !== null)
+                    Top 20% average cities: {{ number_format($cityAverage, 2) }}
+                    @if ($cityAverageUpdatedAt)
+                        • Updated {{ $cityAverageUpdatedAt->diffForHumans() }}
+                    @endif
+                @else
+                    <span class="text-warning">
+                        City cost data is temporarily unavailable. Grant amounts will update once the API refreshes.
+                    </span>
+                @endif
+            </div>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
@@ -43,6 +57,17 @@
                             </div>
                             <span class="badge badge-primary badge-outline">Fresh application</span>
                         </div>
+                        @if ($nextGrant)
+                            <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
+                                <span class="font-medium text-base-content">Estimated grant:</span>
+                                @if ($nextGrantAmount !== null)
+                                    ${{ number_format($nextGrantAmount) }}
+                                    <span class="text-base-content/60">({{ number_format($nextGrant->grant_amount) }}%)</span>
+                                @else
+                                    <span class="text-warning">Unavailable</span>
+                                @endif
+                            </div>
+                        @endif
 
                         <form method="POST" action="{{ route('grants.city.request') }}" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                             @csrf
@@ -60,10 +85,16 @@
                                 </select>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-full">
+                            <button type="submit" class="btn btn-primary w-full"
+                                    {{ $nextGrantAmount === null ? 'disabled' : '' }}>
                                 Request Grant
                             </button>
                         </form>
+                        @if ($nextGrantAmount === null)
+                            <p class="text-xs text-warning">
+                                Grant requests are paused until city cost data refreshes.
+                            </p>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -177,10 +208,17 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <div class="text-2xl font-extrabold text-primary">
-                                        ${{ number_format($grant->grant_amount) }}
+                                        @php
+                                            $computedAmount = $grantAmounts[$grant->id] ?? null;
+                                        @endphp
+                                        @if ($computedAmount !== null)
+                                            ${{ number_format($computedAmount) }}
+                                        @else
+                                            Unavailable
+                                        @endif
                                     </div>
                                     <div class="text-xs text-base-content/70 uppercase tracking-wide">
-                                        Grant Amount
+                                        Grant Amount ({{ number_format($grant->grant_amount) }}%)
                                     </div>
                                 </div>
                                 @if ($isEligible && !$isDisabled)
