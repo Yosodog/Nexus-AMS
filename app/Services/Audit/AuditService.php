@@ -223,12 +223,18 @@ class AuditService
     protected function clearIneligibleViolations(array $allianceIds): void
     {
         $ineligibleNationIds = Nation::query()
-            ->whereIn('alliance_id', $allianceIds)
-            ->where(function (Builder $query): void {
-                $query->where('alliance_position', 'APPLICANT')
-                    ->orWhere(function (Builder $query): void {
-                        $query->whereNotNull('vacation_mode_turns')
-                            ->where('vacation_mode_turns', '>', 0);
+            ->where(function (Builder $query) use ($allianceIds): void {
+                $query->whereNull('alliance_id')
+                    ->orWhereNotIn('alliance_id', $allianceIds)
+                    ->orWhere(function (Builder $query) use ($allianceIds): void {
+                        $query->whereIn('alliance_id', $allianceIds)
+                            ->where(function (Builder $query): void {
+                                $query->where('alliance_position', 'APPLICANT')
+                                    ->orWhere(function (Builder $query): void {
+                                        $query->whereNotNull('vacation_mode_turns')
+                                            ->where('vacation_mode_turns', '>', 0);
+                                    });
+                            });
                     });
             })
             ->pluck('id');
