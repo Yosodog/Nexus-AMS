@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class LoansController
@@ -137,36 +138,36 @@ class LoansController
     {
         $this->authorize('manage-loans');
 
-        // Define base validation rules
-        $rules = [
-            'interest_rate' => 'required|numeric|min:0|max:100',
-            'term_weeks' => 'required|integer|min:1|max:52',
-            'next_due_date' => 'required|date|after:today',
-            'remaining_balance' => 'required|numeric|min:0|max:'.$loan->amount,
-            // Ensure balance is not higher than loan amount
-        ];
+        DB::transaction(function () use ($request, $loan) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
 
-        // Only require amount if no payments exist
-        if (! $loan->payments()->exists()) {
-            $rules['amount'] = 'required|numeric|min:1';
-        }
+            $rules = [
+                'interest_rate' => 'required|numeric|min:0|max:100',
+                'term_weeks' => 'required|integer|min:1|max:52',
+                'next_due_date' => 'required|date|after:today',
+                'remaining_balance' => 'required|numeric|min:0|max:'.$lockedLoan->amount,
+            ];
 
-        $request->validate($rules);
+            if (! $lockedLoan->payments()->exists()) {
+                $rules['amount'] = 'required|numeric|min:1';
+            }
 
-        // Prevent changing loan amount if payments exist
-        if ($loan->payments()->exists() && $request->amount != $loan->amount) {
-            throw ValidationException::withMessages([
-                'amount' => 'Loan amount cannot be changed after payments have been made.',
+            $request->validate($rules);
+
+            if ($lockedLoan->payments()->exists() && $request->amount != $lockedLoan->amount) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Loan amount cannot be changed after payments have been made.',
+                ]);
+            }
+
+            $lockedLoan->update([
+                'amount' => $request->amount ?? $lockedLoan->amount,
+                'interest_rate' => $request->interest_rate,
+                'term_weeks' => $request->term_weeks,
+                'next_due_date' => $request->next_due_date,
+                'remaining_balance' => $request->remaining_balance,
             ]);
-        }
-
-        $loan->update([
-            'amount' => $request->amount ?? $loan->amount, // Keep existing amount if not provided
-            'interest_rate' => $request->interest_rate,
-            'term_weeks' => $request->term_weeks,
-            'next_due_date' => $request->next_due_date,
-            'remaining_balance' => $request->remaining_balance,
-        ]);
+        });
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan updated successfully! ✅')->with(
             'alert-type',

@@ -77,8 +77,10 @@ class LoanService
         );
 
         $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
             // Update the loan details
-            $loan->update([
+            $lockedLoan->update([
                 'interest_rate' => $interestRate,
                 'amount' => $amount,
                 'term_weeks' => $termWeeks,
@@ -88,7 +90,7 @@ class LoanService
             ]);
 
             // Fetch the recipient account
-            $account = Account::findOrFail($loan->account_id);
+            $account = Account::findOrFail($lockedLoan->account_id);
             $adminId = Auth::id();
             $ipAddress = Request::ip();
 
@@ -101,9 +103,9 @@ class LoanService
             AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress);
 
             // Send loan approval notification
-            $nation->notify(new LoanNotification($nation->id, $loan->fresh(), 'approved'));
+            $nation->notify(new LoanNotification($nation->id, $lockedLoan->fresh(), 'approved'));
 
-            return $loan;
+            return $lockedLoan;
         });
 
         app(PendingRequestsService::class)->flushCache();
@@ -118,7 +120,10 @@ class LoanService
             context: 'deny your own loan request'
         );
 
-        $loan->update(['status' => 'denied']);
+        DB::transaction(function () use ($loan) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $lockedLoan->update(['status' => 'denied']);
+        });
 
         $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));
 
@@ -139,8 +144,13 @@ class LoanService
 
             // If early payments fully cover this week's payment, skip it
             if ($earlyPayments >= $weeklyPayment) {
-                $loan->update(['next_due_date' => now()->addDays(7)]);
-                $nation->notify(new LoanNotification($loan->nation_id, $loan, 'early_payment_applied'));
+                DB::transaction(function () use ($loan) {
+                    $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+                    $lockedLoan->update(['next_due_date' => now()->addDays(7)]);
+                    $lockedLoan->nation->notify(
+                        new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied')
+                    );
+                });
 
                 continue;
             }
@@ -177,8 +187,11 @@ class LoanService
             }
 
             // If still not enough funds, mark as missed payment
-            $loan->update(['status' => 'missed']);
-            $nation->notify(new LoanNotification($loan->nation_id, $loan, 'missed_payment'));
+            DB::transaction(function () use ($loan) {
+                $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+                $lockedLoan->update(['status' => 'missed']);
+                $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'missed_payment'));
+            });
         }
     }
 
@@ -218,6 +231,8 @@ class LoanService
         $principalPaid = $amount - $interestPaid;
 
         $loanPayment = DB::transaction(function () use ($loan, $account, $amount, $principalPaid, $interestPaid) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
             // Deduct the payment from the account
             $adjustment = [
                 'money' => -$amount,
@@ -227,7 +242,7 @@ class LoanService
 
             // Log the loan payment
             $payment = LoanPayment::create([
-                'loan_id' => $loan->id,
+                'loan_id' => $lockedLoan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
                 'principal_paid' => $principalPaid,
@@ -235,17 +250,19 @@ class LoanService
             ]);
 
             // Update loan balance
-            $loan->update([
-                'remaining_balance' => max(0, $loan->remaining_balance - $principalPaid),
+            $lockedLoan->update([
+                'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
                 'next_due_date' => now()->addDays(7),
             ]);
 
             // Send loan payment success notification
-            $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'payment_success', $amount));
+            $lockedLoan->nation->notify(
+                new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'payment_success', $amount)
+            );
 
             // If the loan is fully paid, mark it as completed
-            if ($loan->remaining_balance <= 0) {
-                $this->markLoanAsPaid($loan);
+            if ($lockedLoan->remaining_balance <= 0) {
+                $this->markLoanAsPaid($lockedLoan);
             }
 
             return $payment;
@@ -259,13 +276,14 @@ class LoanService
     public function markLoanAsPaid(Loan $loan): void
     {
         DB::transaction(function () use ($loan) {
-            $loan->update([
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $lockedLoan->update([
                 'status' => 'paid',
                 'remaining_balance' => 0, // Always just ensure it's set to 0
             ]);
 
             // Notify the nation that the loan has been marked as paid
-            $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'paid'));
+            $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'paid'));
         });
     }
 
@@ -291,6 +309,8 @@ class LoanService
         }
 
         $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
             // Deduct the payment from the account
             $adjustment = [
                 'money' => -$amount,
@@ -305,7 +325,7 @@ class LoanService
 
             // Log the loan payment in loan_payments table
             $payment = LoanPayment::create([
-                'loan_id' => $loan->id,
+                'loan_id' => $lockedLoan->id,
                 'account_id' => $account->id,
                 'amount' => $amount,
                 'principal_paid' => $principalPaid,
@@ -314,16 +334,18 @@ class LoanService
             ]);
 
             // Reduce loan balance
-            $loan->update([
-                'remaining_balance' => max(0, $loan->remaining_balance - $principalPaid),
+            $lockedLoan->update([
+                'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
             ]);
 
             // Send loan payment success notification
-            $loan->nation->notify(new LoanNotification($loan->nation_id, $loan->fresh(), 'payment_success', $amount));
+            $lockedLoan->nation->notify(
+                new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'payment_success', $amount)
+            );
 
             // If the loan is fully paid, mark as completed
-            if ($loan->remaining_balance <= 0) {
-                $this->markLoanAsPaid($loan);
+            if ($lockedLoan->remaining_balance <= 0) {
+                $this->markLoanAsPaid($lockedLoan);
             }
 
             return [$payment, $interestPaid];
@@ -345,8 +367,13 @@ class LoanService
 
         // If early payments fully cover this week's payment, skip it
         if ($earlyPayments >= $weeklyPayment) {
-            $loan->update(['next_due_date' => now()->addDays(7)]);
-            $nation->notify(new LoanNotification($loan->nation_id, $loan, 'early_payment_applied'));
+            DB::transaction(function () use ($loan) {
+                $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+                $lockedLoan->update(['next_due_date' => now()->addDays(7)]);
+                $lockedLoan->nation->notify(
+                    new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied')
+                );
+            });
 
             return;
         }
@@ -383,8 +410,11 @@ class LoanService
         }
 
         // If still not enough funds, mark as missed payment
-        $loan->update(['status' => 'missed']);
-        $nation->notify(new LoanNotification($loan->nation_id, $loan, 'missed_payment'));
+        DB::transaction(function () use ($loan) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $lockedLoan->update(['status' => 'missed']);
+            $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'missed_payment'));
+        });
     }
 
     private function dispatchLoanInterestEvent(
