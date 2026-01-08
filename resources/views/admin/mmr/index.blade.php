@@ -294,6 +294,7 @@
 
                     {{-- Popover for global helper --}}
                     <i class="bi bi-info-circle-fill ms-2 text-muted"
+                       style="cursor: pointer;"
                        tabindex="0"
                        data-bs-toggle="popover"
                        data-bs-trigger="focus"
