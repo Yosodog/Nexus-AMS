@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\NelDocsController;
 use App\Http\Controllers\Admin\OffshoreController;
+use App\Http\Controllers\Admin\PayrollController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
@@ -340,6 +341,19 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         // Finance
         Route::get('/finance', [AllianceFinanceController::class, 'index'])->name('admin.finance.index');
         Route::get('/finance/export', [AllianceFinanceController::class, 'exportCsv'])->name('admin.finance.export');
+
+        // Payroll
+        Route::get('/payroll', [PayrollController::class, 'index'])->name('admin.payroll.index');
+        Route::post('/payroll/grades', [PayrollController::class, 'storeGrade'])->name('admin.payroll.grades.store');
+        Route::put('/payroll/grades/{payrollGrade}', [PayrollController::class, 'updateGrade'])
+            ->name('admin.payroll.grades.update');
+        Route::delete('/payroll/grades/{payrollGrade}', [PayrollController::class, 'destroyGrade'])
+            ->name('admin.payroll.grades.destroy');
+        Route::post('/payroll/members', [PayrollController::class, 'storeMember'])->name('admin.payroll.members.store');
+        Route::put('/payroll/members/{payrollMember}', [PayrollController::class, 'updateMember'])
+            ->name('admin.payroll.members.update');
+        Route::delete('/payroll/members/{payrollMember}', [PayrollController::class, 'destroyMember'])
+            ->name('admin.payroll.members.destroy');
 
         // Members
         Route::get('/members', [AdminMembersController::class, 'index'])->name('admin.members');

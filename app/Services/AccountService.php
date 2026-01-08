@@ -360,7 +360,7 @@ class AccountService
     {
         return Transaction::where('to_account_id', $account->id)
             ->orWhere('from_account_id', $account->id)
-            ->with('nation')
+            ->with(['nation', 'fromAccount', 'toAccount', 'payrollGrade'])
             ->orderBy('created_at', 'DESC')
             ->paginate($perPage);
     }

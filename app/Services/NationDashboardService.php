@@ -4,13 +4,14 @@ namespace App\Services;
 
 use App\Models\DirectDepositLog;
 use App\Models\Nation;
+use App\Models\PayrollMember;
 use App\Models\Taxes;
 use App\Models\Transaction;
 use Illuminate\Support\Collection;
 
 class NationDashboardService
 {
-    public function __construct(protected MMRService $mmrService) {}
+    public function __construct(protected MMRService $mmrService, protected PayrollService $payrollService) {}
 
     /**
      * Get all dashboard data for a given nation.
@@ -21,6 +22,7 @@ class NationDashboardService
         $accountIds = $nation->accounts()->pluck('id');
         $taxes = $this->getRecentTaxes($nation);
         $afterTaxIncomeTotal = $this->getRecentAfterTaxIncomeTotal($nation);
+        $payrollSummary = $this->getPayrollSummary($nation, $accountIds);
         $latestSignIn = $signIns->last();
         $evaluation = $latestSignIn
             ? $this->mmrService->evaluate($nation, $latestSignIn)
@@ -40,6 +42,7 @@ class NationDashboardService
             'scorePerCity' => $nation->num_cities > 0 ? round($nation->score / $nation->num_cities, 2) : 0,
             'taxTotal' => $taxes->sum(fn ($g) => $g->sum('money')),
             'afterTaxIncomeTotal' => $afterTaxIncomeTotal,
+            ...$payrollSummary,
             'mmrScore' => $evaluation['mmr_score'] ?? 0,
             'mmrResourceBreakdown' => $evaluation['resource_breakdown'] ?? [],
             'mmrWeights' => $evaluation['weights'] ?? $this->mmrService->getResourceWeights(),
@@ -100,6 +103,53 @@ class NationDashboardService
         return (float) DirectDepositLog::where('nation_id', $nation->id)
             ->where('created_at', '>=', now()->subDays(30))
             ->sum('money');
+    }
+
+    /**
+     * Payroll snapshot for the dashboard.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getPayrollSummary(Nation $nation, Collection $accountIds): array
+    {
+        $member = PayrollMember::query()
+            ->with('grade')
+            ->where('nation_id', $nation->id)
+            ->orderByDesc('is_active')
+            ->first();
+
+        $grade = $member?->grade;
+        $weeklyAmount = $grade?->weekly_amount ? (string) $grade->weekly_amount : null;
+        $dailyAmount = $weeklyAmount ? $this->payrollService->calculateDailyAmount($weeklyAmount) : null;
+        $isActive = $member?->is_active && $grade?->is_enabled;
+
+        $recentPayroll = Transaction::query()
+            ->where('transaction_type', 'payroll')
+            ->where(function ($query) use ($nation, $accountIds) {
+                $query->where('nation_id', $nation->id)
+                    ->orWhereIn('to_account_id', $accountIds);
+            })
+            ->latest('created_at')
+            ->limit(5)
+            ->get();
+
+        $monthTotal = (float) Transaction::query()
+            ->where('transaction_type', 'payroll')
+            ->where(function ($query) use ($nation, $accountIds) {
+                $query->where('nation_id', $nation->id)
+                    ->orWhereIn('to_account_id', $accountIds);
+            })
+            ->where('created_at', '>=', now()->subDays(30))
+            ->sum('money');
+
+        return [
+            'payrollMember' => $member,
+            'payrollGrade' => $grade,
+            'payrollDailyAmount' => $dailyAmount,
+            'payrollMonthlyTotal' => $monthTotal,
+            'payrollRecent' => $recentPayroll,
+            'payrollIsActive' => $isActive,
+        ];
     }
 
     /**

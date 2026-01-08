@@ -37,6 +37,11 @@ Schedule::command(ProcessDeposits::class)->everyMinute()->runInBackground()->whe
 // Loan
 Schedule::command('loans:process-payments')->dailyAt('00:15');
 
+// Payroll
+Schedule::command('payroll:run-daily')
+    ->dailyAt('00:30')
+    ->timezone('America/Chicago');
+
 // Other system stuff
 Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
 
