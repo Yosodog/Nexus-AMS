@@ -1,10 +1,45 @@
 @php
     use Carbon\Carbon;
-    use App\Models\Grants;use Illuminate\Support\Facades\Auth;
+    use App\Models\Grants;
+    use Illuminate\Support\Facades\Auth;
 
-    $enabledGrants = \Auth::check()
+    $enabledGrants = Auth::check()
         ? Grants::where('is_enabled', true)->orderBy('name')->get()
         : collect();
+
+    $nation = Auth::user()?->nation;
+
+    $abbreviateNumber = function (?float $value): string {
+        if ($value === null) {
+            return '-';
+        }
+
+        $absValue = abs($value);
+        $suffixes = [
+            1_000_000_000_000 => 'T',
+            1_000_000_000 => 'B',
+            1_000_000 => 'M',
+            1_000 => 'K',
+        ];
+
+        foreach ($suffixes as $threshold => $suffix) {
+            if ($absValue >= $threshold) {
+                return number_format($value / $threshold, 1).$suffix;
+            }
+        }
+
+        return number_format($value, 0);
+    };
+
+    $abbreviateCurrency = function (?float $value) use ($abbreviateNumber): string {
+        if ($value === null) {
+            return '-';
+        }
+
+        $formatted = $abbreviateNumber(abs($value));
+
+        return ($value < 0 ? '-$' : '$').$formatted;
+    };
 @endphp
 
 <nav class="app-header navbar navbar-expand bg-body">
@@ -56,38 +91,101 @@
         <ul class="navbar-nav ms-auto">
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <img src="{{ Auth::user()->nation->flag }}" class="user-image rounded-circle shadow"
+                    <img src="{{ $nation->flag }}" class="user-image rounded-circle shadow"
                          alt="Nation Flag" style="object-fit: cover;">
-                    <span class="d-none d-md-inline">{{ Auth::user()->nation->leader_name }}</span>
+                    <span class="d-none d-md-inline">{{ $nation->leader_name }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
-                    <li class="user-header text-bg-primary">
-                        <img src="{{ Auth::user()->nation->flag }}" class="rounded-circle shadow" alt="Nation Flag"
+                    <li class="user-header text-bg-primary bg-gradient">
+                        <img src="{{ $nation->flag }}" class="rounded-circle shadow" alt="Nation Flag"
                              style="object-fit: cover;">
                         <p>
-                            {{ Auth::user()->nation->leader_name }}
-                            — {{ Auth::user()->nation->alliance_position ?? 'Member' }}
+                            {{ $nation->leader_name }}
+                            <span class="d-block small opacity-75">{{ $nation->nation_name }}</span>
+                            <span class="badge text-bg-light text-uppercase me-1">{{ $nation->alliance_position ?? 'Member' }}</span>
                             <small>Member
-                                since {{ Carbon::now()->subDays(Auth::user()->nation->alliance_seniority)->toFormattedDateString() }}</small>
+                                since {{ Carbon::now()->subDays($nation->alliance_seniority)->toFormattedDateString() }}</small>
                         </p>
                     </li>
                     <li class="user-body">
-                        <div class="row">
-                            <div class="col-4 text-center">
-                                <span class="d-block text-muted">Cities</span>
-                                <strong>{{ Auth::user()->nation->num_cities }}</strong>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="border rounded text-center py-2 h-100">
+                                    <div class="text-muted small">Cities</div>
+                                    <div class="fw-semibold">{{ $nation->num_cities }}</div>
+                                </div>
                             </div>
-                            <div class="col-4 text-center">
-                                <span class="d-block text-muted">Score</span>
-                                <strong>{{ number_format(Auth::user()->nation->score, 2) }}</strong>
+                            <div class="col-4">
+                                <div class="border rounded text-center py-2 h-100">
+                                    <div class="text-muted small">Score</div>
+                                    <div class="fw-semibold">{{ number_format($nation->score, 2) }}</div>
+                                </div>
                             </div>
-                            <div class="col-4 text-center">
-                                <span class="d-block text-muted">Nation ID</span>
-                                <strong>{{ Auth::user()->nation_id }}</strong>
+                            <div class="col-4">
+                                <div class="border rounded text-center py-2 h-100">
+                                    <div class="text-muted small">Nation ID</div>
+                                    <div class="fw-semibold">{{ Auth::user()->nation_id }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge text-bg-secondary">
+                                    <i class="bi bi-shield-fill me-1"></i>
+                                    Defense {{ $nation->defensive_wars_count }}
+                                </span>
+                                <span class="badge text-bg-secondary">
+                                    <i class="bi bi-lightning-fill me-1"></i>
+                                    Offense {{ $nation->offensive_wars_count }}
+                                </span>
+                                <span class="badge text-bg-secondary">
+                                    <i class="bi bi-trophy-fill me-1"></i>
+                                    Wins {{ $nation->wars_won }}
+                                </span>
+                                <span class="badge text-bg-secondary">
+                                    <i class="bi bi-x-circle-fill me-1"></i>
+                                    Losses {{ $nation->wars_lost }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="border rounded text-center py-2 h-100">
+                                        <div class="text-muted small">Population</div>
+                                        <div class="fw-semibold">{{ $abbreviateNumber($nation->population) }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded text-center py-2 h-100">
+                                        <div class="text-muted small">GNI</div>
+                                        <div class="fw-semibold">{{ $abbreviateCurrency($nation->gross_national_income) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="list-group list-group-flush">
+                                <a href="{{ route('user.dashboard') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                    <i class="bi bi-speedometer2 me-2"></i>
+                                    <span>User Dashboard</span>
+                                    <span class="ms-auto text-muted small">View</span>
+                                </a>
+                                <a href="{{ route('admin.dashboard') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                    <i class="bi bi-layout-sidebar-inset-reverse me-2"></i>
+                                    <span>Admin Overview</span>
+                                    <span class="ms-auto text-muted small">Open</span>
+                                </a>
+                                <a href="{{ route('admin.members.show', Auth::user()->nation_id) }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                    <i class="bi bi-person-badge-fill me-2"></i>
+                                    <span>Member Profile</span>
+                                    <span class="ms-auto text-muted small">Details</span>
+                                </a>
                             </div>
                         </div>
                     </li>
                     <li class="user-footer">
+                        <a href="{{ route('user.dashboard') }}" class="btn btn-primary btn-flat">Dashboard</a>
                         <a href="{{ route('admin.members.show', Auth::user()->nation_id) }}"
                            class="btn btn-default btn-flat">Profile</a>
                         <a class="btn btn-default btn-flat float-end"
