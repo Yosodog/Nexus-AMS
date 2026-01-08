@@ -24,6 +24,12 @@
             pointer-events: none;
         }
 
+        .app-sidebar .sidebar-wrapper {
+            max-height: calc(100vh - 3.5rem);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
         @media (max-width: 767.98px) {
             .card-header.d-flex {
                 flex-wrap: wrap;

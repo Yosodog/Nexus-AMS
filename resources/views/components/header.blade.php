@@ -40,26 +40,30 @@
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
                         <li><a href="{{ route('audit.index') }}">Audits</a></li>
                         <li>
-                            <a>Grants</a>
-                            <ul class="p-2">
-                                <li><a href="{{ route("grants.city") }}">City Grants</a></li>
-                                @foreach ($enabledGrants as $grant)
-                                    <li>
-                                        <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
-                                    </li>
-                                @endforeach
-                            </ul>
+                            <details>
+                                <summary>Grants</summary>
+                                <ul class="p-2">
+                                    <li><a href="{{ route("grants.city") }}">City Grants</a></li>
+                                    @foreach ($enabledGrants as $grant)
+                                        <li>
+                                            <a href="{{ route('grants.show_grants', $grant->slug) }}">{{ ucwords($grant->name) }}</a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </details>
                         </li>
                         <li><a href="{{ route("loans.index") }}">Loans</a></li>
                         <li>
-                            <a>Defense</a>
-                            <ul class="p-2">
-                                <li><a href="{{ route("defense.counters") }}">Counter Finder</a></li>
-                                <li><a href="{{ route("defense.intel") }}">Intel Library</a></li>
-                                <li><a href="{{ route("defense.war-aid") }}">War Aid</a></li>
-                                <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
-                                <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
-                            </ul>
+                            <details>
+                                <summary>Defense</summary>
+                                <ul class="p-2">
+                                    <li><a href="{{ route("defense.counters") }}">Counter Finder</a></li>
+                                    <li><a href="{{ route("defense.intel") }}">Intel Library</a></li>
+                                    <li><a href="{{ route("defense.war-aid") }}">War Aid</a></li>
+                                    <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
+                                    <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
+                                </ul>
+                            </details>
                         </li>
                     </ul>
                 @elseif($user)
