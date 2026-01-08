@@ -107,7 +107,7 @@
     @if ($settings::isWarAidEnabled())
         {{-- Modal --}}
         <dialog id="aid-request-modal" class="modal">
-            <div class="modal-box w-11/12 max-w-5xl">
+            <div class="modal-box w-11/12 max-w-5xl max-h-[calc(100dvh-3rem)] overflow-y-auto">
                 <form method="POST" action="{{ route('defense.war-aid.store') }}">
                     @csrf
                     <h3 class="font-bold text-lg">Request War Aid</h3>

@@ -62,7 +62,7 @@
 
                 <div class="form-control w-full mb-4">
                     <label class="label font-semibold text-base-content" for="account_id">Select Bank Account</label>
-                    <select name="account_id" id="account_id" class="select select-bordered">
+                    <select name="account_id" id="account_id" class="select select-bordered w-full">
                         <option value="">-- Choose an account --</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }} (Balance:
@@ -75,7 +75,7 @@
                     @enderror
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-wide mt-2">
+                <button type="submit" class="btn btn-primary w-full sm:w-auto mt-2">
                     🎯 Apply for Grant
                 </button>
             </form>

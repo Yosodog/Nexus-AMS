@@ -23,6 +23,94 @@
             color: rgba(255, 255, 255, 0.4) !important;
             pointer-events: none;
         }
+
+        @media (max-width: 767.98px) {
+            .card-header.d-flex {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .table-responsive,
+            .dataTables_wrapper,
+            .card-body {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table.table,
+            table.dataTable {
+                width: 100%;
+            }
+
+            table.table th,
+            table.table td,
+            table.dataTable th,
+            table.dataTable td {
+                white-space: nowrap;
+            }
+
+            .modal {
+                padding: 0 !important;
+            }
+
+            .modal-open .modal {
+                overflow-y: auto;
+            }
+
+            .modal-dialog-scrollable {
+                height: 100%;
+                margin: 0;
+            }
+
+            .modal-dialog-scrollable .modal-content {
+                height: 100%;
+                border-radius: 0;
+            }
+
+            .modal-dialog-scrollable .modal-body {
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-y;
+            }
+
+            .modal-fullscreen-sm-down .modal-dialog {
+                margin: 0;
+            }
+
+            .modal-fullscreen-sm-down .modal-content {
+                height: 100dvh;
+            }
+
+            .modal-fullscreen-sm-down .modal-body {
+                max-height: calc(100dvh - 9rem);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .modal-fullscreen-sm-down .modal-footer {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter {
+                float: none;
+                text-align: left;
+                width: 100%;
+            }
+
+            .dataTables_wrapper .dataTables_filter input,
+            .dataTables_wrapper .dataTables_length select {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+
+            .dataTables_wrapper .dataTables_paginate {
+                float: none;
+                text-align: center;
+                margin-top: 0.75rem;
+            }
+        }
     </style>
 
     @stack('styles')

@@ -9,9 +9,9 @@
                     <h1 class="text-3xl font-bold">Raid Finder</h1>
                     <p class="text-sm text-base-content/70">Fetch fresh raid targets by nation ID and sort on the fly.</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <input id="nationId" type="number" class="input input-bordered w-40" x-model="nationId" placeholder="Nation ID"/>
-                    <button class="btn btn-primary" @click="loadRaids()">Refresh</button>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full sm:w-auto">
+                    <input id="nationId" type="number" class="input input-bordered w-full sm:w-40" x-model="nationId" placeholder="Nation ID"/>
+                    <button class="btn btn-primary w-full sm:w-auto" @click="loadRaids()">Refresh</button>
                 </div>
             </div>
         </div>

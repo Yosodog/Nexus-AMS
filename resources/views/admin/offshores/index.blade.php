@@ -362,7 +362,7 @@
     @if($canManageOffshores)
         {{-- Create Offshore Modal --}}
         <div class="modal fade" id="createOffshoreModal" tabindex="-1" aria-labelledby="createOffshoreModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
                 <div class="modal-content">
                     <form action="{{ route('admin.offshores.store') }}" method="POST" autocomplete="off">
                         @csrf
@@ -434,7 +434,7 @@
         {{-- Edit Modals --}}
         @foreach($offshores as $offshore)
             <div class="modal fade" id="editOffshoreModal-{{ $offshore->id }}" tabindex="-1" aria-labelledby="editOffshoreModalLabel-{{ $offshore->id }}" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
                     <div class="modal-content">
                         <form action="{{ route('admin.offshores.update', $offshore) }}" method="POST" autocomplete="off">
                             @csrf
@@ -515,7 +515,7 @@
 
         {{-- Manual Transfer Modal --}}
         <div class="modal fade" id="manualTransferModal" tabindex="-1" aria-labelledby="manualTransferModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
                 <div class="modal-content">
                     <form action="{{ route('admin.offshores.transfer') }}" method="POST" autocomplete="off">
                         @csrf
