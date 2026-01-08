@@ -135,6 +135,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.payroll.index') }}"
+                                icon="bi bi-cash-stack"
+                                permission="view_payroll"
+                                :active="request()->routeIs('admin.payroll.*')">
+                        Payroll
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">Defense</li>
 
                 <li class="nav-item">

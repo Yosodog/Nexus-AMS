@@ -107,6 +107,11 @@
                                     @else
                                         Nation #{{ $transaction->nation_id }}
                                     @endif
+                                @elseif($transaction->transaction_type === 'payroll')
+                                    <div class="text-base-content/70">Payroll</div>
+                                    @if($transaction->payrollGrade)
+                                        <div class="text-xs text-base-content/60">{{ $transaction->payrollGrade->name }}</div>
+                                    @endif
                                 @elseif($transaction->fromAccount)
                                     <a href="{{ route('accounts.view', $transaction->fromAccount->id) }}"
                                        class="link link-primary">

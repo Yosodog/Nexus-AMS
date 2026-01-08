@@ -87,6 +87,32 @@
                     </div>
                 </div>
             @endif
+
+            <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-semibold">Payroll</p>
+                            <span class="badge badge-sm {{ $payrollIsActive ? 'badge-success' : 'badge-ghost' }}">
+                                {{ $payrollIsActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
+                        @if($payrollMember && $payrollGrade)
+                            <p class="text-lg font-bold mt-1">{{ $payrollGrade->name }}</p>
+                            <p class="text-sm text-base-content/70">
+                                Weekly ${{ number_format((float) $payrollGrade->weekly_amount, 2) }} ·
+                                Daily ${{ number_format((float) $payrollDailyAmount, 2) }}
+                            </p>
+                        @else
+                            <p class="text-sm text-base-content/70 mt-1">You are not enrolled in payroll.</p>
+                        @endif
+                    </div>
+                    <div class="rounded-xl border border-base-200 bg-base-50/60 p-3 text-center md:min-w-[220px]">
+                        <p class="text-xs uppercase text-base-content/60">Last 30 days</p>
+                        <p class="text-2xl font-bold">${{ number_format($payrollMonthlyTotal ?? 0, 2) }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Stat Highlights --}}

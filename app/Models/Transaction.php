@@ -18,6 +18,7 @@ class Transaction extends Model
         'denied_at' => 'datetime',
         'refunded_at' => 'datetime',
         'offshore_fulfillment_details' => 'array',
+        'payroll_run_date' => 'date',
     ];
 
     /**
@@ -52,6 +53,16 @@ class Transaction extends Model
     public function deniedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'denied_by');
+    }
+
+    public function payrollGrade(): BelongsTo
+    {
+        return $this->belongsTo(PayrollGrade::class, 'payroll_grade_id');
+    }
+
+    public function payrollMember(): BelongsTo
+    {
+        return $this->belongsTo(PayrollMember::class, 'payroll_member_id');
     }
 
     public function setSent(): void
