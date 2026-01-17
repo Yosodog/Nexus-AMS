@@ -17,8 +17,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('loans', function (Blueprint $table) {
-            $table->dropForeign(['primary_account_id']);
-            $table->dropColumn(['primary_account_id', 'remaining_balance', 'next_due_date']);
+            $table->dropColumn(['remaining_balance', 'next_due_date']);
         });
     }
 };

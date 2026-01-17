@@ -343,7 +343,7 @@
 
             <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
                 <h3 class="text-lg font-bold mb-2">📊 How Interest is Calculated</h3>
-                <p class="text-sm">Loan interest is applied weekly, based on the principal amount borrowed. The formula used:</p>
+                <p class="text-sm">Loan interest is applied weekly based on the outstanding balance. The scheduled payment uses:</p>
                 <div class="mockup-code mt-3">
                     <pre data-prefix="$"><code>Weekly Payment = (Interest Rate × Principal) / (1 - (1 + Interest Rate)⁻ⁿ)</code></pre>
                 </div>
@@ -351,12 +351,12 @@
                     Where:
                 </p>
                 <ul class="list-disc ml-5 text-sm space-y-1">
-                    <li><strong>Principal</strong> = The amount borrowed.</li>
-                    <li><strong>Interest Rate</strong> = The admin-approved rate.</li>
+                    <li><strong>Principal</strong> = The original amount borrowed.</li>
+                    <li><strong>Interest Rate</strong> = The admin-approved weekly rate.</li>
                     <li><strong>n</strong> = Loan term in weeks.</li>
                 </ul>
                 <p class="mt-3 text-sm">
-                    Interest is charged weekly, meaning early payments can significantly reduce the total interest paid.
+                    Interest is charged weekly on the remaining balance, so early payments reduce how much interest is paid over time.
                 </p>
             </div>
 
@@ -367,7 +367,7 @@
                     <li><strong>First payment is due 7 days after approval.</strong></li>
                     <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.
                     </li>
-                    <li>If an early payment is made, the next minimum payment is reduced.</li>
+                    <li>If an early payment is made, the next minimum payment is reduced (future weeks stay on schedule).</li>
                     <li>Missed payments may result in late fees and increased interest.</li>
                 </ul>
             </div>

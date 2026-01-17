@@ -64,9 +64,13 @@ class Loan extends Model
         $loanService = app(LoanService::class); // Resolve the service
         $weeklyPayment = $loanService->calculateWeeklyPayment($this);
 
+        if (! $this->next_due_date) {
+            return $weeklyPayment;
+        }
+
         // Get total early payments made since last due date
         $earlyPayments = $this->payments()
-            ->where('payment_date', '>=', $this->next_due_date->subDays(7))
+            ->where('payment_date', '>=', $this->next_due_date->copy()->subDays(7))
             ->sum('amount');
 
         // If early payments cover the weekly payment, the next payment is $0

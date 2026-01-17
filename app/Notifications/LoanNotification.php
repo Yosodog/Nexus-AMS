@@ -90,9 +90,9 @@ class LoanNotification extends Notification implements ShouldQueue
             $subject = 'Loan Payment Adjusted!';
             $message = "Your early loan payment has been applied to this week's scheduled payment! 🎉\n\n"
                 ."Since you've already paid at least [b]$".number_format(
-                    $this->loan->remaining_balance,
+                    $this->paymentAmount ?? 0,
                     2
-                ).'[/b] this week, '
+                ).'[/b] toward this week, '
                 ."you owe nothing for this cycle.\n\n"
                 ."Your next payment will be due on [b]{$this->loan->next_due_date->format('M d, Y')}[/b].";
         }
