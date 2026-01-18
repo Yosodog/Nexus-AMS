@@ -87,6 +87,111 @@
                 </x-utils.card>
 
                 <x-utils.card>
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">API tokens</h2>
+                            <p class="text-sm text-base-content/70">Manage personal access tokens for API requests.</p>
+                        </div>
+                        <span class="badge badge-outline">
+                            {{ $apiTokens->isNotEmpty() ? $apiTokens->count().' tokens' : 'No tokens' }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-6">
+                        @if(session('api-token'))
+                            <div class="alert alert-success text-sm">
+                                <span>Your new token is ready. Save it now because we will not show it again.</span>
+                            </div>
+                            <div class="rounded-box bg-base-200 p-4 flex items-center justify-between gap-3">
+                                <div class="space-y-1">
+                                    <p class="text-xs text-base-content/70">New API token</p>
+                                    <p class="font-mono text-sm break-all">{{ session('api-token') }}</p>
+                                </div>
+                                <button type="button" class="btn btn-outline btn-primary" data-copy-token="{{ session('api-token') }}">
+                                    Copy
+                                </button>
+                            </div>
+                        @endif
+
+                        <div class="text-sm text-base-content/70">
+                            Use this token as a Bearer token in the Authorization header when calling the API.
+                        </div>
+
+                        <form method="POST" action="{{ route('user.settings.api-tokens.store') }}" class="space-y-4">
+                            @csrf
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="form-control">
+                                    <label class="label" for="token_name">
+                                        <span class="label-text font-medium">Token name</span>
+                                    </label>
+                                    <input type="text" id="token_name" name="name" value="{{ old('name') }}"
+                                           class="input input-bordered w-full" required>
+                                    @error('name') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="form-control">
+                                    <label class="label" for="token_expires_at">
+                                        <span class="label-text font-medium">Expires on</span>
+                                        <span class="label-text-alt text-base-content/60">Optional</span>
+                                    </label>
+                                    <input type="date" id="token_expires_at" name="expires_at"
+                                           value="{{ old('expires_at') }}" class="input input-bordered w-full">
+                                    @error('expires_at') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button class="btn btn-primary">Create token</button>
+                            </div>
+                        </form>
+
+                        <div class="divider">Existing tokens</div>
+
+                        @if($apiTokens->isEmpty())
+                            <p class="text-sm text-base-content/70">No API tokens created yet.</p>
+                        @else
+                            <div class="overflow-x-auto">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Created</th>
+                                            <th>Last used</th>
+                                            <th>Expires</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($apiTokens as $token)
+                                            <tr>
+                                                <td class="font-medium">{{ $token->name }}</td>
+                                                <td class="text-xs">{{ $token->created_at->diffForHumans() }}</td>
+                                                <td class="text-xs">{{ $token->last_used_at?->diffForHumans() ?? 'never' }}</td>
+                                                <td class="text-xs">{{ $token->expires_at?->format('Y-m-d') ?? 'never' }}</td>
+                                                <td>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        <form method="POST" action="{{ route('user.settings.api-tokens.regenerate', $token->id) }}">
+                                                            @csrf
+                                                            <input type="hidden" name="name" value="{{ $token->name }}">
+                                                            <input type="hidden" name="expires_at" value="{{ $token->expires_at?->toDateString() }}">
+                                                            <button class="btn btn-xs btn-outline">Regenerate</button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('user.settings.api-tokens.revoke', $token->id) }}">
+                                                            @csrf
+                                                            <button class="btn btn-xs btn-outline btn-error">Revoke</button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </x-utils.card>
+
+                <x-utils.card>
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
                             <h2 class="text-lg font-semibold">Security & access</h2>
@@ -201,10 +306,25 @@
                     const token = button.getAttribute('data-copy-token');
 
                     try {
-                        await navigator.clipboard.writeText(token);
+                        if (navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(token);
+                        } else {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = token;
+                            textarea.setAttribute('readonly', 'readonly');
+                            textarea.style.position = 'absolute';
+                            textarea.style.left = '-9999px';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                        }
+
                         const originalText = button.innerText;
                         button.innerText = 'Copied!';
-                        setTimeout(() => button.innerText = originalText, 1500);
+                        setTimeout(() => {
+                            button.innerText = originalText;
+                        }, 1500);
                     } catch (error) {
                         console.error('Could not copy token', error);
                     }

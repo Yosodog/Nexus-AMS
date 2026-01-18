@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreApiTokenRequest;
 use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
@@ -10,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -23,10 +25,14 @@ class UserController extends Controller
     {
         $user = Auth::user();
         $discordAccount = DiscordAccountService::getActiveAccount($user);
+        $apiTokens = $user->tokens()
+            ->latest('created_at')
+            ->get();
 
         return view('user.settings', [
             'user' => $user,
             'discordAccount' => $discordAccount,
+            'apiTokens' => $apiTokens,
             'discordVerificationToken' => $discordAccount ? null : DiscordAccountService::getOrCreateVerificationToken($user),
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
         ]);
@@ -60,6 +66,62 @@ class UserController extends Controller
         );
     }
 
+    public function storeApiToken(StoreApiTokenRequest $request): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $token = $user->createToken(
+            $request->input('name'),
+            ['*'],
+            $this->prepareTokenExpiration($request)
+        );
+
+        return redirect()
+            ->route('user.settings')
+            ->with('alert-message', 'API token created. Copy it now because it will only be shown once.')
+            ->with('alert-type', 'success')
+            ->with('api-token', $token->plainTextToken);
+    }
+
+    public function regenerateApiToken(StoreApiTokenRequest $request, int $tokenId): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $token = $user->tokens()
+            ->whereKey($tokenId)
+            ->firstOrFail();
+
+        $token->delete();
+
+        $newToken = $user->createToken(
+            $request->input('name'),
+            ['*'],
+            $this->prepareTokenExpiration($request)
+        );
+
+        return redirect()
+            ->route('user.settings')
+            ->with('alert-message', 'API token regenerated. Copy it now because it will only be shown once.')
+            ->with('alert-type', 'success')
+            ->with('api-token', $newToken->plainTextToken);
+    }
+
+    public function revokeApiToken(int $tokenId): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $token = $user->tokens()
+            ->whereKey($tokenId)
+            ->firstOrFail();
+
+        $token->delete();
+
+        return redirect()
+            ->route('user.settings')
+            ->with('alert-message', 'API token revoked.')
+            ->with('alert-type', 'success');
+    }
+
     public function dashboard(NationDashboardService $dashboardService): View
     {
         $nation = Auth::user()->nation;
@@ -72,5 +134,14 @@ class UserController extends Controller
                 'loanTotal' => 0,
             ]
         ));
+    }
+
+    private function prepareTokenExpiration(StoreApiTokenRequest $request): ?Carbon
+    {
+        if (! $request->filled('expires_at')) {
+            return null;
+        }
+
+        return Carbon::parse($request->input('expires_at'))->endOfDay();
     }
 }

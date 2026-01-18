@@ -44,6 +44,7 @@ Schedule::command('payroll:run-daily')
 
 // Other system stuff
 Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
+Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('23:30');
 Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOverlapping(1);
 
 // Taxes
