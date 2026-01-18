@@ -23,6 +23,20 @@
             </div>
         </div>
 
+        @if (! $loanPaymentsEnabled)
+            <div class="alert alert-warning shadow-md">
+                <div>
+                    <p class="font-semibold">Loan payments are paused.</p>
+                    <p class="text-sm">
+                        Required payments and interest are frozen. Due dates will shift forward when payments resume.
+                        @if ($loanPaymentsPausedAt)
+                            Paused since {{ $loanPaymentsPausedAt->format('M d, Y H:i') }}.
+                        @endif
+                    </p>
+                </div>
+            </div>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
             <x-utils.card title="Apply for a loan" extraClasses="shadow-lg">
                 <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
@@ -156,8 +170,20 @@
                                     <a href="{{ route('accounts.view', $loan->account->id) }}"
                                        class="link link-primary">{{ $loan->account->name }}</a>
                                 </td>
-                                <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
-                                <td>${{ number_format($loan->next_payment_due, 2) }}</td>
+                                <td>
+                                    @if ($loanPaymentsEnabled)
+                                        {{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}
+                                    @else
+                                        <span class="badge badge-warning">Paused</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($loanPaymentsEnabled)
+                                        ${{ number_format($loan->next_payment_due, 2) }}
+                                    @else
+                                        <span class="text-base-content/60">--</span>
+                                    @endif
+                                </td>
                             </tr>
 
                             @if (!$loan->payments->isEmpty())

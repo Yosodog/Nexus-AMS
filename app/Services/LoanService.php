@@ -130,8 +130,40 @@ class LoanService
         app(PendingRequestsService::class)->flushCache();
     }
 
+    public function shiftLoanDueDatesForPausedPeriod(Carbon $pausedAt, Carbon $resumedAt): int
+    {
+        $updated = 0;
+
+        Loan::query()
+            ->where('status', 'approved')
+            ->where('remaining_balance', '>', 0)
+            ->whereNotNull('next_due_date')
+            ->chunkById(200, function ($loans) use ($pausedAt, $resumedAt, &$updated) {
+                foreach ($loans as $loan) {
+                    $approvedAt = $loan->approved_at ? Carbon::parse($loan->approved_at) : null;
+                    $baseline = $approvedAt && $approvedAt->greaterThan($pausedAt) ? $approvedAt : $pausedAt;
+                    $days = $baseline->diffInDays($resumedAt);
+
+                    if ($days <= 0) {
+                        continue;
+                    }
+
+                    $loan->update([
+                        'next_due_date' => $loan->next_due_date->copy()->addDays($days),
+                    ]);
+                    $updated++;
+                }
+            });
+
+        return $updated;
+    }
+
     public function processWeeklyPayments(): void
     {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return;
+        }
+
         $today = now()->toDateString();
         $loans = Loan::where('status', 'approved')
             ->where('remaining_balance', '>', 0)
@@ -365,6 +397,10 @@ class LoanService
 
     public function processLoanPayment(Loan $loan): void
     {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return;
+        }
+
         $weeklyPayment = $this->calculateWeeklyPayment($loan);
         $nation = $loan->nation;
 

@@ -218,5 +218,36 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Loan Payments</span>
+                    <span class="badge {{ $loanPaymentsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
+                        {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Pause required loan payments during war or special events. When paused, scheduled deductions and
+                        interest are frozen, and due dates shift forward when payments resume.
+                    </p>
+                    @if (! $loanPaymentsEnabled && $loanPaymentsPausedAt)
+                        <div class="alert alert-warning py-2 px-3 small mb-3">
+                            Paused since {{ $loanPaymentsPausedAt->format('M d, Y H:i') }}.
+                        </div>
+                    @endif
+                    <form method="POST" action="{{ route('admin.settings.loan-payments') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="loan_payments_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="loanPaymentsEnabled"
+                                   name="loan_payments_enabled" value="1" @checked($loanPaymentsEnabled)>
+                            <label class="form-check-label" for="loanPaymentsEnabled">Enable Loan Payments</label>
+                        </div>
+                        <button class="btn btn-primary">Save Loan Payment Setting</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection

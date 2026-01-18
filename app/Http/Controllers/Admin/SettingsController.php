@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
@@ -50,6 +51,8 @@ class SettingsController extends Controller
             'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
+            'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
+            'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
         ]);
     }
 
@@ -198,6 +201,46 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateLoanPayments(Request $request, LoanService $loanService): RedirectResponse
+    {
+        $this->authorize('manage-loans');
+
+        $validated = $request->validate([
+            'loan_payments_enabled' => ['required', 'boolean'],
+        ]);
+
+        $wasEnabled = SettingService::isLoanPaymentsEnabled();
+        $enabled = (bool) $validated['loan_payments_enabled'];
+
+        if (! $enabled && $wasEnabled) {
+            SettingService::setLoanPaymentsPausedAt(now());
+        }
+
+        if ($enabled && ! $wasEnabled) {
+            $pausedAt = SettingService::getLoanPaymentsPausedAt();
+            $resumedAt = now();
+            $updatedCount = $pausedAt ? $loanService->shiftLoanDueDatesForPausedPeriod($pausedAt, $resumedAt) : 0;
+
+            SettingService::setLoanPaymentsPausedAt(null);
+
+            SettingService::setLoanPaymentsEnabled(true);
+
+            return redirect()->route('admin.settings')->with([
+                'alert-message' => $updatedCount > 0
+                    ? "Loan payments resumed. Adjusted due dates for {$updatedCount} active loans."
+                    : 'Loan payments resumed.',
+                'alert-type' => 'success',
+            ]);
+        }
+
+        SettingService::setLoanPaymentsEnabled($enabled);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $enabled ? 'Loan payments enabled.' : 'Loan payments paused.',
             'alert-type' => 'success',
         ]);
     }

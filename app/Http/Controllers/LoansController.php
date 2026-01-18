@@ -5,10 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\Loan;
 use App\Services\LoanService;
+use App\Services\SettingService;
 use Exception;
-use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,17 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 class LoansController extends Controller
 {
-    protected LoanService $loanService;
+    public function __construct(private LoanService $loanService) {}
 
-    public function __construct(LoanService $loanService)
-    {
-        $this->loanService = $loanService;
-    }
-
-    /**
-     * @return RedirectResponse
-     */
-    public function apply(Request $request)
+    public function apply(Request $request): RedirectResponse
     {
         $request->validate([
             'amount' => 'required|numeric|min:100000',
@@ -52,12 +43,11 @@ class LoansController extends Controller
         }
     }
 
-    /**
-     * @return Factory|View|Application|object
-     */
-    public function index()
+    public function index(): View
     {
         $nation = Auth::user()->nation;
+        $loanPaymentsEnabled = SettingService::isLoanPaymentsEnabled();
+        $loanPaymentsPausedAt = SettingService::getLoanPaymentsPausedAt();
 
         // Get only active loans (approved and not fully paid)
         $activeLoans = Loan::where('nation_id', $nation->id)
@@ -65,8 +55,8 @@ class LoansController extends Controller
             ->where('remaining_balance', '>', 0)
             ->with('payments')
             ->get()
-            ->map(function ($loan) {
-                $loan->next_payment_due = $loan->getNextPaymentDue(); // Add next minimum payment
+            ->map(function ($loan) use ($loanPaymentsEnabled) {
+                $loan->next_payment_due = $loanPaymentsEnabled ? $loan->getNextPaymentDue() : 0.0;
 
                 return $loan;
             });
@@ -79,15 +69,19 @@ class LoansController extends Controller
         // Fetch all accounts
         $accounts = $nation->accounts;
 
-        return view('loans.index', compact('activeLoans', 'loanHistory', 'accounts'));
+        return view('loans.index', compact(
+            'activeLoans',
+            'loanHistory',
+            'accounts',
+            'loanPaymentsEnabled',
+            'loanPaymentsPausedAt'
+        ));
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws ValidationException
      */
-    public function repay(Request $request)
+    public function repay(Request $request): RedirectResponse
     {
         $request->validate([
             'loan_id' => 'required|exists:loans,id',

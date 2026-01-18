@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\RecruitmentMessage;
 use App\Models\Setting;
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 
 class SettingService
 {
@@ -119,6 +119,40 @@ class SettingService
     public static function setAutoWithdrawEnabled(bool $enabled): void
     {
         self::setValue('auto_withdraw_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function isLoanPaymentsEnabled(): bool
+    {
+        $value = self::getValue('loan_payments_enabled');
+
+        if (is_null($value)) {
+            self::setLoanPaymentsEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setLoanPaymentsEnabled(bool $enabled): void
+    {
+        self::setValue('loan_payments_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getLoanPaymentsPausedAt(): ?Carbon
+    {
+        $value = self::getValue('loan_payments_paused_at');
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value);
+    }
+
+    public static function setLoanPaymentsPausedAt(?Carbon $timestamp): void
+    {
+        self::setValue('loan_payments_paused_at', $timestamp ? $timestamp->toIso8601String() : '');
     }
 
     public static function getTopRaidable(): int
