@@ -6,6 +6,7 @@ use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplication
 use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
+use App\Http\Controllers\API\MembersController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
 use App\Http\Middleware\AdminMiddleware;
@@ -24,6 +25,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, Di
     Route::get('/accounts', [AccountController::class, 'getUserAccounts']);
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
     Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show']);
+    Route::get('/members', [MembersController::class, 'index'])->middleware(AdminMiddleware::class);
 });
 
 Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function () {
