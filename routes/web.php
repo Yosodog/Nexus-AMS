@@ -83,6 +83,15 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
         'user.settings.update'
     );
+    Route::post('/user/settings/api-tokens', [UserController::class, 'storeApiToken'])->name(
+        'user.settings.api-tokens.store'
+    );
+    Route::post('/user/settings/api-tokens/{tokenId}/regenerate', [UserController::class, 'regenerateApiToken'])->name(
+        'user.settings.api-tokens.regenerate'
+    );
+    Route::post('/user/settings/api-tokens/{tokenId}/revoke', [UserController::class, 'revokeApiToken'])->name(
+        'user.settings.api-tokens.revoke'
+    );
 
     // User dashboard
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');

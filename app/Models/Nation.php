@@ -302,6 +302,11 @@ class Nation extends Model
         return $this->hasOne(NationAccount::class, 'nation_id');
     }
 
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class, 'nation_id', 'id');
+    }
+
     public function signIns(): HasMany
     {
         return $this->hasMany(NationSignIn::class, 'nation_id');
