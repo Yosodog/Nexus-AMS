@@ -113,8 +113,9 @@
                             </div>
                         @endif
 
-                        <div class="text-sm text-base-content/70">
-                            Use this token as a Bearer token in the Authorization header when calling the API.
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-base-content/70">
+                            <span>Use this token as a Bearer token in the Authorization header when calling the API.</span>
+                            <a href="{{ route('user.settings.api-docs') }}" class="link link-primary">View API documentation</a>
                         </div>
 
                         <form method="POST" action="{{ route('user.settings.api-tokens.store') }}" class="space-y-4">

@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\WarCounterController as AdminWarCounterController
 use App\Http\Controllers\Admin\WarPlanController as AdminWarPlanController;
 use App\Http\Controllers\Admin\WarRoomController;
 use App\Http\Controllers\Admin\WithdrawalController;
+use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
@@ -92,6 +93,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/user/settings/api-tokens/{tokenId}/revoke', [UserController::class, 'revokeApiToken'])->name(
         'user.settings.api-tokens.revoke'
     );
+    Route::get('/user/settings/api-docs', ApiDocsController::class)->name('user.settings.api-docs');
 
     // User dashboard
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
