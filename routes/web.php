@@ -482,6 +482,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
             'admin.settings.auto-withdraw'
         );
+        Route::post('/settings/loan-payments', [SettingsController::class, 'updateLoanPayments'])->name(
+            'admin.settings.loan-payments'
+        );
 
         Route::prefix('mmr')->group(function () {
             Route::get('/', [MMRController::class, 'index'])->name('admin.mmr.index');

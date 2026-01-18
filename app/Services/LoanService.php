@@ -10,6 +10,7 @@ use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\Nation;
 use App\Notifications\LoanNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
@@ -17,8 +18,6 @@ use Illuminate\Validation\ValidationException;
 
 class LoanService
 {
-    public function __construct() {}
-
     /**
      * @throws ValidationException
      */
@@ -83,6 +82,7 @@ class LoanService
             $lockedLoan->update([
                 'interest_rate' => $interestRate,
                 'amount' => $amount,
+                'remaining_balance' => $amount,
                 'term_weeks' => $termWeeks,
                 'status' => 'approved',
                 'approved_at' => now(),
@@ -130,10 +130,45 @@ class LoanService
         app(PendingRequestsService::class)->flushCache();
     }
 
+    public function shiftLoanDueDatesForPausedPeriod(Carbon $pausedAt, Carbon $resumedAt): int
+    {
+        $updated = 0;
+
+        Loan::query()
+            ->where('status', 'approved')
+            ->where('remaining_balance', '>', 0)
+            ->whereNotNull('next_due_date')
+            ->chunkById(200, function ($loans) use ($pausedAt, $resumedAt, &$updated) {
+                foreach ($loans as $loan) {
+                    $approvedAt = $loan->approved_at ? Carbon::parse($loan->approved_at) : null;
+                    $baseline = $approvedAt && $approvedAt->greaterThan($pausedAt) ? $approvedAt : $pausedAt;
+                    $days = $baseline->diffInDays($resumedAt);
+
+                    if ($days <= 0) {
+                        continue;
+                    }
+
+                    $loan->update([
+                        'next_due_date' => $loan->next_due_date->copy()->addDays($days),
+                    ]);
+                    $updated++;
+                }
+            });
+
+        return $updated;
+    }
+
     public function processWeeklyPayments(): void
     {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return;
+        }
+
         $today = now()->toDateString();
-        $loans = Loan::where('next_due_date', $today)->where('status', 'approved')->get();
+        $loans = Loan::where('status', 'approved')
+            ->where('remaining_balance', '>', 0)
+            ->whereDate('next_due_date', '<=', $today)
+            ->get();
 
         foreach ($loans as $loan) {
             $weeklyPayment = $this->calculateWeeklyPayment($loan);
@@ -144,11 +179,11 @@ class LoanService
 
             // If early payments fully cover this week's payment, skip it
             if ($earlyPayments >= $weeklyPayment) {
-                DB::transaction(function () use ($loan) {
+                DB::transaction(function () use ($loan, $weeklyPayment) {
                     $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                    $lockedLoan->update(['next_due_date' => now()->addDays(7)]);
+                    $lockedLoan->update(['next_due_date' => $this->calculateNextDueDate($lockedLoan)]);
                     $lockedLoan->nation->notify(
-                        new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied')
+                        new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied', $weeklyPayment)
                     );
                 });
 
@@ -200,7 +235,11 @@ class LoanService
      */
     public function calculateWeeklyPayment(Loan $loan): float
     {
-        $r = $loan->interest_rate / 100; // Convert interest rate to decimal
+        if (! $loan->term_weeks || $loan->term_weeks <= 0 || $loan->amount <= 0) {
+            return 0.0;
+        }
+
+        $r = ($loan->interest_rate ?? 0) / 100; // Convert weekly interest rate to decimal
         $P = $loan->amount;
         $n = $loan->term_weeks;
 
@@ -214,8 +253,12 @@ class LoanService
 
     private function getEarlyPaymentsSinceLastDue(Loan $loan): float
     {
+        if (! $loan->next_due_date) {
+            return 0.0;
+        }
+
         return $loan->payments()
-            ->where('payment_date', '>=', $loan->next_due_date->subDays(7))
+            ->where('payment_date', '>=', $loan->next_due_date->copy()->subDays(7))
             ->sum('amount');
     }
 
@@ -226,12 +269,10 @@ class LoanService
     {
         $this->ensureAccountNotFrozen($account);
 
-        $interestRate = $loan->interest_rate / 100;
-        $interestPaid = round($amount * $interestRate, 2);
-        $principalPaid = $amount - $interestPaid;
-
-        $loanPayment = DB::transaction(function () use ($loan, $account, $amount, $principalPaid, $interestPaid) {
+        $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            [$interestPaid, $principalPaid] = $this->splitPaymentAmount($lockedLoan, $amount);
 
             // Deduct the payment from the account
             $adjustment = [
@@ -252,7 +293,7 @@ class LoanService
             // Update loan balance
             $lockedLoan->update([
                 'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
-                'next_due_date' => now()->addDays(7),
+                'next_due_date' => $this->calculateNextDueDate($lockedLoan),
             ]);
 
             // Send loan payment success notification
@@ -269,7 +310,7 @@ class LoanService
         });
 
         if ($loanPayment) {
-            $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, $interestPaid);
+            $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, $loanPayment->interest_paid);
         }
     }
 
@@ -302,14 +343,14 @@ class LoanService
             throw ValidationException::withMessages(['account' => 'Insufficient funds in selected account.']);
         }
 
-        if ($amount > $loan->remaining_balance) {
-            throw ValidationException::withMessages(
-                ['amount' => 'You tried to pay more than what was left on the loan.']
-            );
-        }
-
         $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            if ($amount > $lockedLoan->remaining_balance) {
+                throw ValidationException::withMessages(
+                    ['amount' => 'You tried to pay more than what was left on the loan.']
+                );
+            }
 
             // Deduct the payment from the account
             $adjustment = [
@@ -318,10 +359,7 @@ class LoanService
             ];
             AccountService::adjustAccountBalance($account, $adjustment, Auth::user()->id, Request::ip());
 
-            // Calculate interest and principal paid
-            $interestRate = $loan->interest_rate / 100;
-            $interestPaid = round($amount * $interestRate, 2);
-            $principalPaid = $amount - $interestPaid;
+            [$interestPaid, $principalPaid] = $this->splitPaymentAmount($lockedLoan, $amount);
 
             // Log the loan payment in loan_payments table
             $payment = LoanPayment::create([
@@ -359,6 +397,10 @@ class LoanService
 
     public function processLoanPayment(Loan $loan): void
     {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return;
+        }
+
         $weeklyPayment = $this->calculateWeeklyPayment($loan);
         $nation = $loan->nation;
 
@@ -367,11 +409,11 @@ class LoanService
 
         // If early payments fully cover this week's payment, skip it
         if ($earlyPayments >= $weeklyPayment) {
-            DB::transaction(function () use ($loan) {
+            DB::transaction(function () use ($loan, $weeklyPayment) {
                 $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                $lockedLoan->update(['next_due_date' => now()->addDays(7)]);
+                $lockedLoan->update(['next_due_date' => $this->calculateNextDueDate($lockedLoan)]);
                 $lockedLoan->nation->notify(
-                    new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied')
+                    new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied', $weeklyPayment)
                 );
             });
 
@@ -383,7 +425,7 @@ class LoanService
 
         // Try to withdraw the reduced amount from the primary account
         $primaryAccount = $loan->account;
-        if ($primaryAccount && $primaryAccount->balance >= $amountDue) {
+        if ($primaryAccount && $primaryAccount->money >= $amountDue) {
             try {
                 $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
 
@@ -396,8 +438,8 @@ class LoanService
         // Try another account if the primary doesn't have enough funds
         $alternateAccount = $nation->accounts()
             ->where('frozen', false)
-            ->where('balance', '>=', $amountDue)
-            ->orderBy('balance', 'desc')
+            ->where('money', '>=', $amountDue)
+            ->orderBy('money', 'desc')
             ->first();
         if ($alternateAccount) {
             try {
@@ -415,6 +457,26 @@ class LoanService
             $lockedLoan->update(['status' => 'missed']);
             $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'missed_payment'));
         });
+    }
+
+    private function calculateNextDueDate(Loan $loan): Carbon
+    {
+        $baseDate = $loan->next_due_date ?? now();
+
+        return $baseDate->copy()->addDays(7);
+    }
+
+    /**
+     * @return array{0: float, 1: float}
+     */
+    private function splitPaymentAmount(Loan $loan, float $amount): array
+    {
+        $rate = ($loan->interest_rate ?? 0) / 100;
+        $interestDue = $rate > 0 ? round(max(0, $loan->remaining_balance) * $rate, 2) : 0.0;
+        $interestPaid = min($amount, $interestDue);
+        $principalPaid = max(0.0, $amount - $interestPaid);
+
+        return [$interestPaid, $principalPaid];
     }
 
     private function dispatchLoanInterestEvent(

@@ -23,6 +23,20 @@
             </div>
         </div>
 
+        @if (! $loanPaymentsEnabled)
+            <div class="alert alert-warning shadow-md">
+                <div>
+                    <p class="font-semibold">Loan payments are paused.</p>
+                    <p class="text-sm">
+                        Required payments and interest are frozen. Due dates will shift forward when payments resume.
+                        @if ($loanPaymentsPausedAt)
+                            Paused since {{ $loanPaymentsPausedAt->format('M d, Y H:i') }}.
+                        @endif
+                    </p>
+                </div>
+            </div>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
             <x-utils.card title="Apply for a loan" extraClasses="shadow-lg">
                 <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
@@ -156,8 +170,20 @@
                                     <a href="{{ route('accounts.view', $loan->account->id) }}"
                                        class="link link-primary">{{ $loan->account->name }}</a>
                                 </td>
-                                <td>{{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}</td>
-                                <td>${{ number_format($loan->next_payment_due, 2) }}</td>
+                                <td>
+                                    @if ($loanPaymentsEnabled)
+                                        {{ $loan->next_due_date ? $loan->next_due_date->format('M d, Y') : 'N/A' }}
+                                    @else
+                                        <span class="badge badge-warning">Paused</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($loanPaymentsEnabled)
+                                        ${{ number_format($loan->next_payment_due, 2) }}
+                                    @else
+                                        <span class="text-base-content/60">--</span>
+                                    @endif
+                                </td>
                             </tr>
 
                             @if (!$loan->payments->isEmpty())
@@ -343,7 +369,7 @@
 
             <div class="bg-base-200 p-6 rounded-lg shadow-md mt-4">
                 <h3 class="text-lg font-bold mb-2">📊 How Interest is Calculated</h3>
-                <p class="text-sm">Loan interest is applied weekly, based on the principal amount borrowed. The formula used:</p>
+                <p class="text-sm">Loan interest is applied weekly based on the outstanding balance. The scheduled payment uses:</p>
                 <div class="mockup-code mt-3">
                     <pre data-prefix="$"><code>Weekly Payment = (Interest Rate × Principal) / (1 - (1 + Interest Rate)⁻ⁿ)</code></pre>
                 </div>
@@ -351,12 +377,12 @@
                     Where:
                 </p>
                 <ul class="list-disc ml-5 text-sm space-y-1">
-                    <li><strong>Principal</strong> = The amount borrowed.</li>
-                    <li><strong>Interest Rate</strong> = The admin-approved rate.</li>
+                    <li><strong>Principal</strong> = The original amount borrowed.</li>
+                    <li><strong>Interest Rate</strong> = The admin-approved weekly rate.</li>
                     <li><strong>n</strong> = Loan term in weeks.</li>
                 </ul>
                 <p class="mt-3 text-sm">
-                    Interest is charged weekly, meaning early payments can significantly reduce the total interest paid.
+                    Interest is charged weekly on the remaining balance, so early payments reduce how much interest is paid over time.
                 </p>
             </div>
 
@@ -367,7 +393,7 @@
                     <li><strong>First payment is due 7 days after approval.</strong></li>
                     <li>Subsequent minimum payments are automatically deducted from the account you selected every 7 days.
                     </li>
-                    <li>If an early payment is made, the next minimum payment is reduced.</li>
+                    <li>If an early payment is made, the next minimum payment is reduced (future weeks stay on schedule).</li>
                     <li>Missed payments may result in late fees and increased interest.</li>
                 </ul>
             </div>

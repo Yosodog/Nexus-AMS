@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\LoanService;
+use App\Services\SettingService;
 use Illuminate\Console\Command;
 
 class ProcessLoanPayments extends Command
@@ -11,21 +12,23 @@ class ProcessLoanPayments extends Command
 
     protected $description = 'Processes all scheduled loan payments for today.';
 
-    protected LoanService $loanService;
-
-    public function __construct(LoanService $loanService)
+    public function __construct(private LoanService $loanService)
     {
         parent::__construct();
-        $this->loanService = $loanService;
     }
 
-    /**
-     * @return void
-     */
-    public function handle()
+    public function handle(): int
     {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            $this->info('Loan payments are currently paused.');
+
+            return self::SUCCESS;
+        }
+
         $this->info('Processing all due loan payments...');
         $this->loanService->processWeeklyPayments();
         $this->info('All due loan payments processed successfully!');
+
+        return self::SUCCESS;
     }
 }
