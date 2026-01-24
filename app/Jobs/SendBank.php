@@ -5,16 +5,20 @@ namespace App\Jobs;
 use App\Models\Transaction;
 use App\Services\BankService;
 use App\Services\OffshoreFulfillmentService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 
-class SendBank implements ShouldQueue
+class SendBank implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
     protected BankService $bankService;
 
     protected Transaction $transaction;
+
+    public int $uniqueFor = 300;
 
     /**
      * Create a new job instance.
@@ -25,26 +29,85 @@ class SendBank implements ShouldQueue
         $this->transaction = $transaction;
     }
 
+    public function uniqueId(): string
+    {
+        return 'withdrawal-'.$this->transaction->id;
+    }
+
     /**
      * Execute the job.
      */
     public function handle(OffshoreFulfillmentService $fulfillmentService): void
     {
-        // Attempt to top up the main bank before issuing the withdrawal mutation.
-        $result = $fulfillmentService->coverShortfall($this->transaction);
+        $transaction = DB::transaction(function () {
+            $transaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($this->transaction->id);
 
-        $this->transaction->recordOffshoreFulfillment($result);
+            if (! $transaction) {
+                return null;
+            }
+
+            if ($transaction->sent_at || $transaction->bank_record_id) {
+                return null;
+            }
+
+            if ($transaction->bank_processing_at) {
+                return null;
+            }
+
+            $transaction->bank_processing_at = now();
+            $transaction->save();
+
+            return $transaction;
+        });
+
+        if (! $transaction) {
+            return;
+        }
+
+        // Attempt to top up the main bank before issuing the withdrawal mutation.
+        $result = $fulfillmentService->coverShortfall($transaction);
+
+        $transaction->recordOffshoreFulfillment($result);
 
         if ($result->shouldSendWithdrawal()) {
             // Safe to proceed—the bank has either enough stock or was topped up successfully.
-            $this->bankService->sendWithdraw();
+            try {
+                $bankRecord = $this->bankService->sendWithdraw();
+            } catch (\Throwable $exception) {
+                DB::transaction(function () use ($transaction) {
+                    $lockedTransaction = Transaction::query()
+                        ->lockForUpdate()
+                        ->find($transaction->id);
 
-            $this->transaction->setSent();
+                    if (! $lockedTransaction || $lockedTransaction->sent_at) {
+                        return;
+                    }
+
+                    $lockedTransaction->bank_processing_at = null;
+                    $lockedTransaction->save();
+                });
+
+                throw $exception;
+            }
+
+            DB::transaction(function () use ($transaction, $bankRecord) {
+                $lockedTransaction = Transaction::query()
+                    ->lockForUpdate()
+                    ->find($transaction->id);
+
+                if (! $lockedTransaction || $lockedTransaction->sent_at || $lockedTransaction->bank_record_id) {
+                    return;
+                }
+
+                $lockedTransaction->setSent($bankRecord);
+            });
 
             return;
         }
 
         // Something prevented us from fulfilling automatically. Escalate to admins.
-        $this->transaction->markPendingAdminReview('Offshore fulfillment failed: '.$result->message);
+        $transaction->markPendingAdminReview('Offshore fulfillment failed: '.$result->message);
     }
 }

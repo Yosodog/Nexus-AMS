@@ -19,9 +19,12 @@ use App\Observers\OffshoreObserver;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -54,6 +57,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('account-transfers', function (Request $request) {
+            $key = $request->user()?->nation_id ?? $request->ip();
+
+            return Limit::perMinute(2)->by($key);
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });

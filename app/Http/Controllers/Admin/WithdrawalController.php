@@ -80,21 +80,34 @@ class WithdrawalController extends Controller
             context: 'approve your own withdrawal request'
         );
 
-        if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
+        $approvedTransaction = DB::transaction(function () use ($transaction) {
+            $lockedTransaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($transaction->id);
+
+            if (! $lockedTransaction
+                || ! $lockedTransaction->requires_admin_approval
+                || $lockedTransaction->approved_at
+                || $lockedTransaction->denied_at) {
+                return null;
+            }
+
+            $lockedTransaction->requires_admin_approval = false;
+            $lockedTransaction->approved_at = now();
+            $lockedTransaction->approved_by = auth()->id();
+            $lockedTransaction->save();
+
+            return $lockedTransaction;
+        });
+
+        if (! $approvedTransaction) {
             return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',
             ]);
         }
 
-        DB::transaction(function () use ($transaction) {
-            $transaction->requires_admin_approval = false;
-            $transaction->approved_at = now();
-            $transaction->approved_by = auth()->id();
-            $transaction->save();
-        });
-
-        AccountService::dispatchWithdrawal($transaction);
+        AccountService::dispatchWithdrawal($approvedTransaction);
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal approved and queued for processing.',
@@ -115,48 +128,64 @@ class WithdrawalController extends Controller
             context: 'deny your own withdrawal request'
         );
 
-        if (! $transaction->requires_admin_approval || $transaction->approved_at || $transaction->denied_at) {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $accountName = null;
+        $deniedTransaction = null;
+
+        $denied = DB::transaction(function () use ($transaction, $validated, &$accountName, &$deniedTransaction) {
+            $lockedTransaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($transaction->id);
+
+            if (! $lockedTransaction
+                || ! $lockedTransaction->requires_admin_approval
+                || $lockedTransaction->approved_at
+                || $lockedTransaction->denied_at) {
+                return false;
+            }
+
+            $account = AccountService::getAccountById($lockedTransaction->from_account_id);
+
+            $accountName = $account->name;
+
+            foreach (PWHelperService::resources() as $resource) {
+                $account->{$resource} += $lockedTransaction->{$resource};
+            }
+
+            $account->save();
+
+            $lockedTransaction->is_pending = false;
+            $lockedTransaction->requires_admin_approval = false;
+            $lockedTransaction->denied_at = now();
+            $lockedTransaction->denied_by = auth()->id();
+            $lockedTransaction->denial_reason = $validated['reason'];
+            $lockedTransaction->save();
+
+            $deniedTransaction = $lockedTransaction;
+
+            return true;
+        });
+
+        if (! $denied || ! $deniedTransaction) {
             return redirect()->route('admin.accounts.dashboard')->with([
                 'alert-message' => 'This withdrawal request is no longer pending.',
                 'alert-type' => 'error',
             ]);
         }
 
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:500'],
-        ]);
-
-        $accountName = null;
-
-        DB::transaction(function () use ($transaction, $validated, &$accountName) {
-            $account = AccountService::getAccountById($transaction->from_account_id);
-
-            $accountName = $account->name;
-
-            foreach (PWHelperService::resources() as $resource) {
-                $account->{$resource} += $transaction->{$resource};
-            }
-
-            $account->save();
-
-            $transaction->is_pending = false;
-            $transaction->requires_admin_approval = false;
-            $transaction->denied_at = now();
-            $transaction->denied_by = auth()->id();
-            $transaction->denial_reason = $validated['reason'];
-            $transaction->save();
-        });
-
-        $transaction->refresh();
-        $transaction->loadMissing('nation', 'fromAccount');
+        $deniedTransaction->refresh();
+        $deniedTransaction->loadMissing('nation', 'fromAccount');
 
         app(PendingRequestsService::class)->flushCache();
 
-        if ($transaction->nation) {
-            $transaction->nation->notify(new WithdrawalDeniedNotification(
-                nationId: $transaction->nation_id,
-                transaction: $transaction,
-                accountName: $accountName ?? $transaction->fromAccount?->name,
+        if ($deniedTransaction->nation) {
+            $deniedTransaction->nation->notify(new WithdrawalDeniedNotification(
+                nationId: $deniedTransaction->nation_id,
+                transaction: $deniedTransaction,
+                accountName: $accountName ?? $deniedTransaction->fromAccount?->name,
             ));
         }
 

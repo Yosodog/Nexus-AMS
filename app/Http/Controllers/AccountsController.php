@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
+use App\Http\Requests\TransferRequest;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
@@ -58,18 +59,13 @@ class AccountsController extends Controller
     /**
      * @return RedirectResponse
      */
-    public function transfer(Request $request)
+    public function transfer(TransferRequest $request)
     {
         // Check if this is a loan repayment
         if (str_starts_with($request->input('to'), 'loan_')) {
             $loanId = (int) substr($request->input('to'), 5);
 
             // First validate basic requirements
-            $request->validate([
-                'from' => 'required|integer|exists:accounts,id',
-                'money' => 'required|numeric|min:0.01',
-            ]);
-
             try {
                 $loan = Loan::findOrFail($loanId);
                 $account = Account::findOrFail($request->input('from'));
@@ -127,17 +123,6 @@ class AccountsController extends Controller
         }
 
         // Regular transfer logic
-        if ($request->input('to') == 'nation') {
-            $request->validate([
-                'from' => 'required|integer|exists:accounts,id',
-            ]);
-        } else {
-            $request->validate([
-                'from' => 'required|integer|exists:accounts,id',
-                'to' => 'required|integer|exists:accounts,id',
-            ]);
-        }
-
         $transfer = [];
 
         foreach (PWHelperService::resources() as $resource) {
@@ -145,21 +130,6 @@ class AccountsController extends Controller
         }
 
         try {
-            // Validate that at least one resource is being transferred
-            $hasResources = false;
-            foreach ($transfer as $amount) {
-                if ($amount > 0) {
-                    $hasResources = true;
-                    break;
-                }
-            }
-
-            if (! $hasResources) {
-                throw ValidationException::withMessages([
-                    'transfer' => ['You must transfer at least one resource with an amount greater than 0.'],
-                ]);
-            }
-
             // Get the source account and validate ownership
             $fromAccount = Account::findOrFail($request->input('from'));
             if ($fromAccount->nation_id !== Auth::user()->nation_id) {
