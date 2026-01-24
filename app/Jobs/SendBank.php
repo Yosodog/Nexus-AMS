@@ -10,7 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 
-class SendBank implements ShouldQueue, ShouldBeUnique
+class SendBank implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
