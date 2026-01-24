@@ -14,6 +14,7 @@ use App\Services\AllianceMembershipService;
 use App\Services\MainBankService;
 use App\Services\OffshoreService;
 use App\Services\PWHelperService;
+use App\Services\SelfApprovalGuard;
 use App\Services\SettingService;
 use App\Services\WithdrawalLimitService;
 use Closure;
@@ -23,11 +24,14 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request as RequestFacade;
 
 class AccountController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private SelfApprovalGuard $selfApprovalGuard) {}
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
@@ -180,21 +184,22 @@ class AccountController extends Controller
     {
         $this->authorize('manage-accounts');
 
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: $transaction->nation_id,
+            context: 'refund your own withdrawal request'
+        );
+
         if (! $transaction->isNationWithdrawal()) {
             abort(403, 'This transaction cannot be refunded.');
+        }
+
+        if ($transaction->denied_at) {
+            abort(403, 'Denied withdrawals cannot be refunded.');
         }
 
         if ($transaction->isRefunded()) {
             return back()->with([
                 'alert-message' => 'This transaction has already been refunded.',
-                'alert-type' => 'error',
-            ]);
-        }
-
-        $fromAccount = $transaction->fromAccount;
-        if (! $fromAccount) {
-            return back()->with([
-                'alert-message' => 'Original sender account not found.',
                 'alert-type' => 'error',
             ]);
         }
@@ -206,15 +211,61 @@ class AccountController extends Controller
 
         $adjustment['note'] = "Refund for Transaction #{$transaction->id}";
 
-        AccountService::adjustAccountBalance(
-            $fromAccount,
-            $adjustment,
-            auth()->id(),
-            RequestFacade::ip()
-        );
+        $result = DB::transaction(function () use ($transaction, $adjustment) {
+            $lockedTransaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($transaction->id);
 
-        $transaction->refunded_at = now();
-        $transaction->save();
+            if (! $lockedTransaction) {
+                return 'missing';
+            }
+
+            if ($lockedTransaction->denied_at) {
+                return 'denied';
+            }
+
+            if ($lockedTransaction->isRefunded()) {
+                return 'refunded';
+            }
+
+            $fromAccount = $lockedTransaction->fromAccount;
+            if (! $fromAccount) {
+                return 'account-missing';
+            }
+
+            AccountService::adjustAccountBalance(
+                $fromAccount,
+                $adjustment,
+                auth()->id(),
+                RequestFacade::ip()
+            );
+
+            $lockedTransaction->refunded_at = now();
+            $lockedTransaction->save();
+
+            return 'ok';
+        });
+
+        if ($result === 'refunded') {
+            return back()->with([
+                'alert-message' => 'This transaction has already been refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'account-missing') {
+            return back()->with([
+                'alert-message' => 'Original sender account not found.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'denied') {
+            return back()->with([
+                'alert-message' => 'Denied withdrawals cannot be refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return back()->with([
             'alert-message' => 'Refund successful.',

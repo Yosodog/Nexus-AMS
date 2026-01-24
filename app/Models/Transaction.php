@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\GraphQL\Models\BankRecord;
 use App\Services\OffshoreFulfillmentResult;
 use App\Services\PendingRequestsService;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,9 @@ class Transaction extends Model
         'approved_at' => 'datetime',
         'denied_at' => 'datetime',
         'refunded_at' => 'datetime',
+        'bank_processing_at' => 'datetime',
+        'sent_at' => 'datetime',
+        'bank_record_id' => 'int',
         'offshore_fulfillment_details' => 'array',
         'payroll_run_date' => 'date',
     ];
@@ -65,9 +69,16 @@ class Transaction extends Model
         return $this->belongsTo(PayrollMember::class, 'payroll_member_id');
     }
 
-    public function setSent(): void
+    public function setSent(?BankRecord $bankRecord = null): void
     {
         $this->is_pending = false;
+        $this->sent_at = now();
+        $this->bank_processing_at = null;
+
+        if ($bankRecord) {
+            $this->bank_record_id = $bankRecord->id;
+        }
+
         $this->save();
 
         app(PendingRequestsService::class)->flushCache();
@@ -85,6 +96,7 @@ class Transaction extends Model
     public function markPendingAdminReview(string $reason): void
     {
         $this->requires_admin_approval = true;
+        $this->bank_processing_at = null;
         // Preserve any existing reason while appending the new context for admins.
         $this->pending_reason = $this->pending_reason
             ? $this->pending_reason.' | '.$reason

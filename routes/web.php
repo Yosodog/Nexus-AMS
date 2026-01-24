@@ -102,7 +102,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts');
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
         ->name('accounts.transfer')
-        ->middleware(BlockWhenPWDown::class);
+        ->middleware([BlockWhenPWDown::class, 'throttle:account-transfers']);
 
     Route::post('/accounts/auto-withdraw', [AccountsController::class, 'updateAutoWithdraw'])
         ->name('auto-withdraw.update');

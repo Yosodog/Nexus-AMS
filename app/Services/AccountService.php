@@ -316,7 +316,7 @@ class AccountService
             throw new Exception('Unable to locate the source account for this withdrawal.');
         }
 
-        $bank = new BankService;
+        $bank = app(BankService::class);
         $bank->receiver = $transaction->nation_id;
         $bank->note = $transaction->note ?? ('Withdraw from '.$fromAccount->name);
 
@@ -394,34 +394,40 @@ class AccountService
         ?int $adminId,
         ?string $ipAddress
     ): ManualTransaction {
-        // Apply changes to account balance
-        foreach (PWHelperService::resources() as $resource) {
-            if (isset($adjustment[$resource])) {
-                $account->{$resource} += $adjustment[$resource];
+        return DB::transaction(function () use ($account, $adjustment, $adminId, $ipAddress) {
+            $lockedAccount = Account::query()
+                ->lockForUpdate()
+                ->findOrFail($account->id);
+
+            // Apply changes to account balance
+            foreach (PWHelperService::resources() as $resource) {
+                if (isset($adjustment[$resource])) {
+                    $lockedAccount->{$resource} += $adjustment[$resource];
+                }
             }
-        }
 
-        $account->save();
+            $lockedAccount->save();
 
-        // Log the manual transaction
-        return ManualTransaction::create([
-            'account_id' => $account->id,
-            'admin_id' => $adminId,
-            'money' => $adjustment['money'] ?? 0,
-            'coal' => $adjustment['coal'] ?? 0,
-            'oil' => $adjustment['oil'] ?? 0,
-            'uranium' => $adjustment['uranium'] ?? 0,
-            'lead' => $adjustment['lead'] ?? 0,
-            'iron' => $adjustment['iron'] ?? 0,
-            'bauxite' => $adjustment['bauxite'] ?? 0,
-            'gasoline' => $adjustment['gasoline'] ?? 0,
-            'munitions' => $adjustment['munitions'] ?? 0,
-            'steel' => $adjustment['steel'] ?? 0,
-            'aluminum' => $adjustment['aluminum'] ?? 0,
-            'food' => $adjustment['food'] ?? 0,
-            'note' => $adjustment['note'],
-            'ip_address' => $ipAddress,
-        ]);
+            // Log the manual transaction
+            return ManualTransaction::create([
+                'account_id' => $lockedAccount->id,
+                'admin_id' => $adminId,
+                'money' => $adjustment['money'] ?? 0,
+                'coal' => $adjustment['coal'] ?? 0,
+                'oil' => $adjustment['oil'] ?? 0,
+                'uranium' => $adjustment['uranium'] ?? 0,
+                'lead' => $adjustment['lead'] ?? 0,
+                'iron' => $adjustment['iron'] ?? 0,
+                'bauxite' => $adjustment['bauxite'] ?? 0,
+                'gasoline' => $adjustment['gasoline'] ?? 0,
+                'munitions' => $adjustment['munitions'] ?? 0,
+                'steel' => $adjustment['steel'] ?? 0,
+                'aluminum' => $adjustment['aluminum'] ?? 0,
+                'food' => $adjustment['food'] ?? 0,
+                'note' => $adjustment['note'],
+                'ip_address' => $ipAddress,
+            ]);
+        });
     }
 
     /**
