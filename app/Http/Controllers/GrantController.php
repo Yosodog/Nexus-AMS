@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Grants;
 use App\Http\Requests\ApplyGrantRequest;
+use App\Models\Grants;
 use App\Services\GrantService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;

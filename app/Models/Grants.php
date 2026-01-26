@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Grants extends Model
 {
     use SoftDeletes;
+
     /**
      * @var string
      */

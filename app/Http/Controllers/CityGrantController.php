@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCityGrantRequest;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
-use App\Http\Requests\StoreCityGrantRequest;
 use App\Services\AccountService;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
