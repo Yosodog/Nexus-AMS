@@ -12,6 +12,9 @@ class ManualTransaction extends Model
     protected $fillable = [
         'account_id',
         'admin_id',
+        'grant_application_id',
+        'city_grant_request_id',
+        'correlation_id',
         'money',
         'coal',
         'oil',
@@ -26,6 +29,14 @@ class ManualTransaction extends Model
         'food',
         'note',
         'ip_address',
+        'meta',
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'meta' => 'array',
     ];
 
     /**

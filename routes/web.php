@@ -164,11 +164,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/city', [UserCityGrantController::class, 'request'])->name(
             'grants.city.request'
         )
-            ->middleware(BlockWhenPWDown::class);
+            ->middleware([BlockWhenPWDown::class, 'throttle:grant-requests']);
 
         Route::get('{grant:slug}', [UserGrantController::class, 'show'])->name('grants.show_grants');
         Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply')
-            ->middleware(BlockWhenPWDown::class);
+            ->middleware([BlockWhenPWDown::class, 'throttle:grant-requests']);
     });
 });
 
@@ -495,6 +495,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/settings/loan-payments', [SettingsController::class, 'updateLoanPayments'])->name(
             'admin.settings.loan-payments'
+        );
+        Route::post('/settings/grants/approvals', [SettingsController::class, 'updateGrantApprovals'])->name(
+            'admin.settings.grants.approvals'
         );
 
         Route::prefix('mmr')->group(function () {

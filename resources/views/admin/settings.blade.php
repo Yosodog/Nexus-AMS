@@ -249,5 +249,31 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Grant Approvals</span>
+                    <span class="badge {{ $grantApprovalsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
+                        {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Emergency kill switch for grant and city grant approvals. Requests can still be submitted,
+                        but approvals are blocked until re-enabled.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.grants.approvals') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="grant_approvals_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="grantApprovalsEnabled"
+                                   name="grant_approvals_enabled" value="1" @checked($grantApprovalsEnabled)>
+                            <label class="form-check-label" for="grantApprovalsEnabled">Enable Grant Approvals</label>
+                        </div>
+                        <button class="btn btn-primary">Save Grant Approval Setting</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection

@@ -10,8 +10,11 @@ use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Nation;
 use App\Notifications\GrantNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class GrantService
@@ -21,9 +24,15 @@ class GrantService
      */
     public static function applyToGrant(Grants $grant, Nation $nation, int $accountId): GrantApplication
     {
-        self::validateEligibility($grant, $nation);
+        return DB::transaction(function () use ($grant, $nation, $accountId) {
+            Nation::query()
+                ->lockForUpdate()
+                ->findOrFail($nation->id);
 
-        return self::createApplication($grant, $nation->id, $accountId);
+            self::validateEligibility($grant, $nation);
+
+            return self::createApplication($grant, $nation->id, $accountId);
+        }, attempts: 3);
     }
 
     /**
@@ -31,6 +40,12 @@ class GrantService
      */
     public static function validateEligibility(Grants $grant, Nation $nation): void
     {
+        if (! $grant->is_enabled) {
+            throw ValidationException::withMessages([
+                'This grant is currently disabled.',
+            ]);
+        }
+
         // One-time grants: check if they've already been approved
         if ($grant->is_one_time) {
             $alreadyApproved = GrantApplication::where('nation_id', $nation->id)
@@ -77,6 +92,7 @@ class GrantService
             'nation_id' => $nationId,
             'account_id' => $accountId,
             'status' => 'pending',
+            'pending_key' => 1,
         ]);
 
         app(PendingRequestsService::class)->flushCache();
@@ -91,31 +107,103 @@ class GrantService
             context: 'approve your own grant request'
         );
 
-        $grant = $application->grant;
-        $account = Account::findOrFail($application->account_id);
-        $adminId = Auth::id();
-        $ipAddress = Request::ip();
+        DB::transaction(function () use ($application) {
+            $lockedApplication = GrantApplication::query()
+                ->lockForUpdate()
+                ->findOrFail($application->id);
 
-        $resources = PWHelperService::resources();
-        $adjustment = array_combine($resources, array_map(fn ($r) => $grant->$r, $resources));
-        $adjustment['note'] = "Grant '{$grant->name}' approved";
+            if ($lockedApplication->status !== 'pending') {
+                Log::warning('Grant approval skipped because status is not pending.', [
+                    'application_id' => $lockedApplication->id,
+                    'status' => $lockedApplication->status,
+                ]);
 
-        AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress);
+                return;
+            }
 
-        $application->update(
-            array_merge(
-                ['status' => 'approved', 'approved_at' => now()],
-                array_combine($resources, array_map(fn ($r) => $grant->$r, $resources))
-            )
-        );
+            if (! SettingService::isGrantApprovalsEnabled()) {
+                Log::warning('Grant approval blocked by global approvals kill switch.', [
+                    'application_id' => $lockedApplication->id,
+                ]);
 
-        $nation = $application->nation;
+                throw ValidationException::withMessages([
+                    'Grant approvals are currently paused.',
+                ]);
+            }
 
-        $nation->notify(new GrantNotification($application->nation_id, $application->fresh(), 'approved'));
+            $grant = $lockedApplication->grant;
 
-        self::dispatchGrantExpenseEvent($application->fresh(), $grant, $account);
+            if (! $grant->is_enabled) {
+                Log::warning('Grant approval blocked because grant is disabled.', [
+                    'application_id' => $lockedApplication->id,
+                    'grant_id' => $grant->id,
+                ]);
 
-        app(PendingRequestsService::class)->flushCache();
+                throw ValidationException::withMessages([
+                    'This grant is currently disabled.',
+                ]);
+            }
+
+            $account = Account::findOrFail($lockedApplication->account_id);
+
+            if ($account->nation_id !== $lockedApplication->nation_id) {
+                Log::error('Grant approval denied due to account ownership mismatch.', [
+                    'application_id' => $lockedApplication->id,
+                    'account_id' => $account->id,
+                    'account_nation_id' => $account->nation_id,
+                    'request_nation_id' => $lockedApplication->nation_id,
+                ]);
+
+                $lockedApplication->update([
+                    'status' => 'denied',
+                    'denied_at' => now(),
+                    'pending_key' => null,
+                ]);
+
+                $lockedApplication->nation->notify(
+                    new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'denied')
+                );
+
+                app(PendingRequestsService::class)->flushCache();
+
+                return;
+            }
+
+            $adminId = Auth::id();
+            $ipAddress = Request::ip();
+            $correlationId = (string) Str::uuid();
+
+            $resources = PWHelperService::resources();
+            $adjustment = array_combine($resources, array_map(fn ($r) => $grant->$r, $resources));
+            $adjustment['note'] = "Grant '{$grant->name}' approved";
+
+            AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress, [
+                'correlation_id' => $correlationId,
+                'grant_application_id' => $lockedApplication->id,
+                'grant_id' => $grant->id,
+            ]);
+
+            $lockedApplication->update(
+                array_merge(
+                    [
+                        'status' => 'approved',
+                        'approved_at' => now(),
+                        'pending_key' => null,
+                    ],
+                    array_combine($resources, array_map(fn ($r) => $grant->$r, $resources))
+                )
+            );
+
+            $nation = $lockedApplication->nation;
+
+            $nation->notify(new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'approved'));
+
+            self::dispatchGrantExpenseEvent($lockedApplication->fresh(), $grant, $account, $correlationId);
+
+            self::logApprovalAnomalies($lockedApplication, $grant);
+
+            app(PendingRequestsService::class)->flushCache();
+        }, attempts: 3);
     }
 
     public static function denyGrant(GrantApplication $application): void
@@ -128,6 +216,7 @@ class GrantService
         $application->update([
             'status' => 'denied',
             'denied_at' => now(),
+            'pending_key' => null,
         ]);
 
         $application->nation->notify(new GrantNotification($application->nation_id, $application, 'denied'));
@@ -146,7 +235,8 @@ class GrantService
     private static function dispatchGrantExpenseEvent(
         GrantApplication $application,
         Grants $grant,
-        Account $account
+        Account $account,
+        ?string $correlationId = null
     ): void {
         $financeData = new AllianceFinanceData(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
@@ -171,9 +261,55 @@ class GrantService
             meta: [
                 'grant_id' => $grant->id,
                 'application_id' => $application->id,
+                'correlation_id' => $correlationId,
             ]
         );
 
         event(new AllianceExpenseOccurred($financeData->toArray()));
+    }
+
+    private static function logApprovalAnomalies(GrantApplication $application, Grants $grant): void
+    {
+        $recentApprovals = GrantApplication::query()
+            ->where('nation_id', $application->nation_id)
+            ->where('status', 'approved')
+            ->where('approved_at', '>=', now()->subMinutes(5))
+            ->count();
+
+        if ($recentApprovals > 1) {
+            Log::warning('Multiple grant approvals detected in a short window.', [
+                'nation_id' => $application->nation_id,
+                'application_id' => $application->id,
+                'recent_approvals' => $recentApprovals,
+            ]);
+        }
+
+        $moneyThreshold = (int) config('grants.alert_thresholds.money', 0);
+
+        if ($moneyThreshold > 0 && (float) ($grant->money ?? 0) >= $moneyThreshold) {
+            Log::warning('Grant approval exceeds configured money alert threshold.', [
+                'application_id' => $application->id,
+                'grant_id' => $grant->id,
+                'money' => (float) ($grant->money ?? 0),
+                'threshold' => $moneyThreshold,
+            ]);
+        }
+
+        $resourceThreshold = (int) config('grants.alert_thresholds.resource', 0);
+
+        if ($resourceThreshold > 0) {
+            $exceeded = collect(PWHelperService::resources(false))
+                ->filter(fn ($resource) => (int) ($grant->{$resource} ?? 0) >= $resourceThreshold)
+                ->values();
+
+            if ($exceeded->isNotEmpty()) {
+                Log::warning('Grant approval exceeds configured resource alert threshold.', [
+                    'application_id' => $application->id,
+                    'grant_id' => $grant->id,
+                    'resources' => $exceeded->all(),
+                    'threshold' => $resourceThreshold,
+                ]);
+            }
+        }
     }
 }

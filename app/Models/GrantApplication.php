@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class GrantApplication extends Model
 {
+    use SoftDeletes;
     /**
      * @var string
      */
@@ -20,6 +22,7 @@ class GrantApplication extends Model
         'nation_id',
         'account_id',
         'status',
+        'pending_key',
         'approved_at',
         'denied_at',
         'money',

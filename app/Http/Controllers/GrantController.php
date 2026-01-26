@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Grants;
+use App\Http\Requests\ApplyGrantRequest;
 use App\Services\GrantService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 
@@ -19,6 +19,10 @@ class GrantController extends Controller
      */
     public function show(Grants $grant)
     {
+        if (! $grant->is_enabled) {
+            abort(404);
+        }
+
         $nation = Auth::user()->nation;
         $accounts = $nation->accounts ?? [];
 
@@ -33,17 +37,20 @@ class GrantController extends Controller
     /**
      * @return RedirectResponse
      */
-    public function apply(Request $request, Grants $grant)
+    public function apply(ApplyGrantRequest $request, Grants $grant)
     {
-        $request->validate([
-            'account_id' => ['required', 'integer'],
-        ]);
+        if (! $grant->is_enabled) {
+            return back()->with([
+                'alert-message' => 'This grant is currently disabled.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         $user = Auth::user();
         $nation = $user->nation;
 
         // Ensure the account belongs to the user's nation
-        $accountId = $request->input('account_id');
+        $accountId = (int) $request->validated('account_id');
         $ownsAccount = $nation->accounts()->where('id', $accountId)->exists();
 
         if (! $ownsAccount) {

@@ -392,12 +392,19 @@ class AccountService
         Account $account,
         array $adjustment,
         ?int $adminId,
-        ?string $ipAddress
+        ?string $ipAddress,
+        array $context = []
     ): ManualTransaction {
-        return DB::transaction(function () use ($account, $adjustment, $adminId, $ipAddress) {
+        return DB::transaction(function () use ($account, $adjustment, $adminId, $ipAddress, $context) {
             $lockedAccount = Account::query()
                 ->lockForUpdate()
                 ->findOrFail($account->id);
+
+            $beforeBalances = [];
+
+            foreach (PWHelperService::resources() as $resource) {
+                $beforeBalances[$resource] = (float) $lockedAccount->{$resource};
+            }
 
             // Apply changes to account balance
             foreach (PWHelperService::resources() as $resource) {
@@ -407,6 +414,17 @@ class AccountService
             }
 
             $lockedAccount->save();
+
+            $afterBalances = [];
+
+            foreach (PWHelperService::resources() as $resource) {
+                $afterBalances[$resource] = (float) $lockedAccount->{$resource};
+            }
+
+            $meta = array_merge($context, [
+                'before_balances' => $beforeBalances,
+                'after_balances' => $afterBalances,
+            ]);
 
             // Log the manual transaction
             return ManualTransaction::create([
@@ -426,6 +444,10 @@ class AccountService
                 'food' => $adjustment['food'] ?? 0,
                 'note' => $adjustment['note'],
                 'ip_address' => $ipAddress,
+                'grant_application_id' => $context['grant_application_id'] ?? null,
+                'city_grant_request_id' => $context['city_grant_request_id'] ?? null,
+                'correlation_id' => $context['correlation_id'] ?? null,
+                'meta' => $meta,
             ]);
         });
     }
