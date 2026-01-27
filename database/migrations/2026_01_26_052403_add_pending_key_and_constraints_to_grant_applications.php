@@ -15,8 +15,13 @@ return new class extends Migration
         Schema::table('grant_applications', function (Blueprint $table) {
             $table->unsignedBigInteger('nation_id')->change();
             $table->unsignedBigInteger('account_id')->change();
-            $table->unsignedTinyInteger('pending_key')->nullable()->after('status');
         });
+
+        if (! Schema::hasColumn('grant_applications', 'pending_key')) {
+            Schema::table('grant_applications', function (Blueprint $table) {
+                $table->unsignedTinyInteger('pending_key')->nullable()->after('status');
+            });
+        }
 
         $duplicates = DB::table('grant_applications')
             ->select('grant_id', 'nation_id', DB::raw('COUNT(*) as total'))
@@ -52,7 +57,6 @@ return new class extends Migration
             ->update(['pending_key' => 1]);
 
         Schema::table('grant_applications', function (Blueprint $table) {
-            $table->foreign('nation_id')->references('id')->on('nations')->noActionOnDelete();
             $table->foreign('account_id')->references('id')->on('accounts')->noActionOnDelete();
             $table->unique(['grant_id', 'nation_id', 'pending_key'], 'grant_applications_pending_unique');
         });
@@ -65,7 +69,6 @@ return new class extends Migration
     {
         Schema::table('grant_applications', function (Blueprint $table) {
             $table->dropUnique('grant_applications_pending_unique');
-            $table->dropForeign(['nation_id']);
             $table->dropForeign(['account_id']);
             $table->dropColumn('pending_key');
             $table->unsignedInteger('nation_id')->change();
