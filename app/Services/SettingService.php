@@ -139,6 +139,27 @@ class SettingService
         self::setValue('loan_payments_enabled', $enabled ? 1 : 0);
     }
 
+    /**
+     * Emergency toggle for grant and city grant approvals.
+     */
+    public static function isGrantApprovalsEnabled(): bool
+    {
+        $value = self::getValue('grant_approvals_enabled');
+
+        if (is_null($value)) {
+            self::setGrantApprovalsEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setGrantApprovalsEnabled(bool $enabled): void
+    {
+        self::setValue('grant_approvals_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getLoanPaymentsPausedAt(): ?Carbon
     {
         $value = self::getValue('loan_payments_paused_at');

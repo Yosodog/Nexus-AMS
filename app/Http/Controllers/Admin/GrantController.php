@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\StoreGrantRequest;
+use App\Http\Requests\Admin\UpdateGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Services\GrantService;
@@ -12,8 +14,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class GrantController
 {
@@ -57,30 +59,22 @@ class GrantController
      *
      * @throws AuthorizationException
      */
-    public function createGrant(Request $request)
+    public function createGrant(StoreGrantRequest $request)
     {
-        $this->authorize('manage-grants');
-
-        $validated = $request->validate([
-            'name' => 'required|string|unique:grants,name',
-            'description' => 'nullable|string',
-            'money' => 'nullable|numeric|min:0',
-            'is_enabled' => 'nullable|in:true,false,1,0,on,off',
-            'is_one_time' => 'nullable|in:true,false,1,0,on,off',
-        ]);
+        $validated = $request->validated();
 
         $grant = new Grants;
-        $grant->name = $request->input('name');
+        $grant->name = $validated['name'];
         $grant->slug = Str::slug($grant->name);
-        $grant->description = $request->input('description');
-        $grant->money = $request->input('money') ?? 0;
+        $grant->description = $validated['description'];
+        $grant->money = $validated['money'] ?? 0;
 
         foreach (PWHelperService::resources(false) as $resource) {
-            $grant->$resource = $request->input($resource, 0);
+            $grant->$resource = $validated[$resource] ?? 0;
         }
 
-        $grant->is_one_time = filter_var($request->input('is_one_time', false), FILTER_VALIDATE_BOOLEAN);
-        $grant->is_enabled = filter_var($request->input('is_enabled', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
 
         return redirect()->route('admin.grants')
@@ -93,29 +87,21 @@ class GrantController
      *
      * @throws AuthorizationException
      */
-    public function updateGrant(Grants $grant, Request $request)
+    public function updateGrant(Grants $grant, UpdateGrantRequest $request)
     {
-        $this->authorize('manage-grants');
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'name' => 'required|string|unique:grants,name,'.$grant->id,
-            'description' => 'nullable|string',
-            'money' => 'nullable|numeric|min:0',
-            'is_enabled' => 'nullable|in:true,false,1,0,on,off',
-            'is_one_time' => 'nullable|in:true,false,1,0,on,off',
-        ]);
-
-        $grant->name = $request->input('name');
+        $grant->name = $validated['name'];
         $grant->slug = Str::slug($grant->name);
-        $grant->description = $request->input('description');
-        $grant->money = $request->input('money') ?? 0;
+        $grant->description = $validated['description'];
+        $grant->money = $validated['money'] ?? 0;
 
         foreach (PWHelperService::resources(false) as $resource) {
-            $grant->$resource = $request->input($resource, 0);
+            $grant->$resource = $validated[$resource] ?? 0;
         }
 
-        $grant->is_one_time = filter_var($request->input('is_one_time', false), FILTER_VALIDATE_BOOLEAN);
-        $grant->is_enabled = filter_var($request->input('is_enabled', false), FILTER_VALIDATE_BOOLEAN);
+        $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
 
         return redirect()->route('admin.grants')
@@ -132,7 +118,23 @@ class GrantController
     {
         $this->authorize('manage-grants');
 
-        GrantService::approveGrant($application);
+        if ($application->status !== 'pending') {
+            return redirect()->back()->with([
+                'alert-message' => 'Grant application is not pending.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        try {
+            GrantService::approveGrant($application);
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return redirect()->back()->with([
+                'alert-message' => $details ?: 'Unable to approve this grant application.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return redirect()->back()
             ->with('alert-message', 'Grant approved and funds distributed.')

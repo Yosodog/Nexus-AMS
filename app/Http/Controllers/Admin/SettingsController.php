@@ -53,6 +53,7 @@ class SettingsController extends Controller
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
+            'grantApprovalsEnabled' => SettingService::isGrantApprovalsEnabled(),
         ]);
     }
 
@@ -241,6 +242,24 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Loan payments enabled.' : 'Loan payments paused.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateGrantApprovals(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-grants');
+
+        $validated = $request->validate([
+            'grant_approvals_enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['grant_approvals_enabled'];
+
+        SettingService::setGrantApprovalsEnabled($enabled);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $enabled ? 'Grant approvals enabled.' : 'Grant approvals paused.',
             'alert-type' => 'success',
         ]);
     }

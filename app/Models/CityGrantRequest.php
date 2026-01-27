@@ -16,6 +16,7 @@ class CityGrantRequest extends Model
         'nation_id',
         'account_id',
         'status',
+        'pending_key',
         'approved_at',
         'denied_at',
     ];

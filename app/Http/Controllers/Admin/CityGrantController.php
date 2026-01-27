@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\StoreCityGrantRequest;
+use App\Http\Requests\Admin\UpdateCityGrantRequest;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\CityCostService;
@@ -11,7 +13,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CityGrantController
 {
@@ -75,7 +77,16 @@ class CityGrantController
         }
 
         // Call service to approve grant
-        CityGrantService::approveGrant($grantRequest);
+        try {
+            CityGrantService::approveGrant($grantRequest);
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return redirect()->back()->with([
+                'alert-message' => $details ?: 'Unable to approve this city grant request.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return redirect()->back()->with([
             'alert-message' => "City Grant for City #{$grantRequest->city_number} approved and funds allocated.",
@@ -114,18 +125,9 @@ class CityGrantController
      *
      * @throws AuthorizationException
      */
-    public function updateCityGrant(Request $request, CityGrant $city_grant): RedirectResponse
+    public function updateCityGrant(UpdateCityGrantRequest $request, CityGrant $city_grant): RedirectResponse
     {
-        $this->authorize('manage-city-grants');
-
-        $validated = $request->validate([
-            'city_number' => 'required|integer|min:1|unique:city_grants,city_number,'.$city_grant->id,
-            'grant_amount' => 'required|numeric|min:1',
-            'enabled' => 'required|boolean',
-            'description' => 'nullable|string|max:255',
-            'projects' => 'array',
-            'projects.*' => 'string|in:'.implode(',', array_keys(PWHelperService::PROJECTS)),
-        ]);
+        $validated = $request->validated();
 
         // Convert selected projects to project bits
         $selectedProjects = $validated['projects'] ?? [];
@@ -155,19 +157,10 @@ class CityGrantController
     /**
      * @throws AuthorizationException
      */
-    public function createCityGrant(Request $request): RedirectResponse
+    public function createCityGrant(StoreCityGrantRequest $request): RedirectResponse
     {
         // TODO this needs to be in the CityGrantService, not here.
-        $this->authorize('manage-city-grants');
-
-        $validated = $request->validate([
-            'city_number' => 'required|integer|min:1|unique:city_grants,city_number',
-            'grant_amount' => 'required|numeric|min:1',
-            'enabled' => 'required|boolean',
-            'description' => 'nullable|string|max:255',
-            'projects' => 'array',
-            'projects.*' => 'string|in:'.implode(',', array_keys(PWHelperService::PROJECTS)),
-        ]);
+        $validated = $request->validated();
 
         // Convert selected projects to project bits
         $selectedProjects = $validated['projects'] ?? [];

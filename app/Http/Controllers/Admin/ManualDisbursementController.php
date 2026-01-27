@@ -57,9 +57,19 @@ class ManualDisbursementController extends Controller
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'status' => 'pending',
+            'pending_key' => 1,
         ]);
 
-        GrantService::approveGrant($application->fresh());
+        try {
+            GrantService::approveGrant($application->fresh());
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return back()->with([
+                'alert-message' => $details ?: 'Unable to send this grant manually.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return back()
             ->with('alert-message', "Grant '{$grant->name}' sent manually — validation checks bypassed.")
@@ -110,9 +120,19 @@ class ManualDisbursementController extends Controller
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'status' => 'pending',
+            'pending_key' => 1,
         ]);
 
-        CityGrantService::approveGrant($grantRequest);
+        try {
+            CityGrantService::approveGrant($grantRequest);
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return back()->with([
+                'alert-message' => $details ?: 'Unable to send this city grant manually.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return back()
             ->with('alert-message', "City grant for City #{$grantRequest->city_number} sent manually — validation checks bypassed.")

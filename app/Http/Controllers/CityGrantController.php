@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCityGrantRequest;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\AccountService;
@@ -11,8 +12,8 @@ use App\Services\SettingService;
 use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CityGrantController
@@ -20,7 +21,7 @@ class CityGrantController
     public function index(): View
     {
         $nation = Auth::user()->nation;
-        $grants = CityGrant::all();
+        $grants = CityGrant::where('enabled', true)->get();
         $accounts = $nation->accounts;
         $nextCityNumber = $nation->num_cities + 1;
         $grantRequests = CityGrantRequest::where('nation_id', $nation->id)->orderBy('created_at', 'desc')->get();
@@ -45,11 +46,12 @@ class CityGrantController
     /**
      * @return mixed
      */
-    public function request(Request $request): RedirectResponse
+    public function request(StoreCityGrantRequest $request): RedirectResponse
     {
         try {
             // First, ensure they own the account they're requesting for
-            $account = AccountService::getAccountById($request->input('account_id'));
+            $accountId = (int) $request->validated('account_id');
+            $account = AccountService::getAccountById($accountId);
 
             if ($account->nation_id != Auth::user()->nation_id) {
                 abort(403, "You don't own that account");
@@ -59,11 +61,8 @@ class CityGrantController
             $nation = Auth::user()->nation;
             $cityGrant = CityGrantService::findGrantWithCityNum($nation->num_cities + 1);
 
-            // Now validate that this nation is actually eligible
-            CityGrantService::validateEligibility($cityGrant, $nation);
-
             // If no exceptions were thrown, they are eligible, so create the request
-            CityGrantService::createRequest($cityGrant, $nation->id, $account->id);
+            CityGrantService::createRequest($cityGrant, $nation, $account->id);
         } catch (ValidationException $exception) {
             $details = collect($exception->errors())->flatten()->implode(' ');
 
@@ -75,11 +74,16 @@ class CityGrantController
                     'alert-type' => 'error',
                 ]);
         } catch (Exception $exception) {
+            Log::error('City grant request failed.', [
+                'nation_id' => Auth::user()?->nation_id,
+                'account_id' => $request->input('account_id'),
+                'exception' => $exception,
+            ]);
+
             return redirect()
                 ->route('grants.city')
                 ->with([
-                    'alert-message' => 'There was some kind of error when requesting your city grant. Please contact someone from the economics team.'
-                        .$exception->getMessage(), // TODO log this error
+                    'alert-message' => 'There was some kind of error when requesting your city grant. Please contact someone from the economics team.',
                     'alert-type' => 'error',
                 ]);
         }
