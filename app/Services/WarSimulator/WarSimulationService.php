@@ -18,8 +18,7 @@ final class WarSimulationService
         private GroundAttackSimulator $groundAttackSimulator,
         private AirstrikeSimulator $airstrikeSimulator,
         private NavalAttackSimulator $navalAttackSimulator,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

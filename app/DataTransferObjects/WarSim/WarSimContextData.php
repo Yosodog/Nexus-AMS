@@ -13,8 +13,7 @@ final class WarSimContextData
         public string $blockadeOwner,
         public bool $blitzActiveAttacker,
         public bool $blitzActiveDefender,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

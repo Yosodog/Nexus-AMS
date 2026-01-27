@@ -17,8 +17,7 @@ final class WarSimNationData
         public float $highestCityInfra,
         public int $highestCityPopulation,
         public ?float $avgInfra,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

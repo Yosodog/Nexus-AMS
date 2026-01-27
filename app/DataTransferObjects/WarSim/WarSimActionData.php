@@ -12,8 +12,7 @@ final class WarSimActionData
         public int $attackingAircraft,
         public string $target,
         public int $attackingShips,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

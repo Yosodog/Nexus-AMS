@@ -17,8 +17,7 @@ final class WarSimModifiers
         public float $defenderTankStrengthFactor,
         public float $attackerCasualtyFactor,
         public float $defenderCasualtyFactor,
-    ) {
-    }
+    ) {}
 
     public function lootMultiplier(): float
     {

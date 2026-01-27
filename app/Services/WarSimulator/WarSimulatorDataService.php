@@ -11,7 +11,6 @@ use Illuminate\Support\Collection;
 
 final class WarSimulatorDataService
 {
-
     /**
      * @return array<string, mixed>
      */

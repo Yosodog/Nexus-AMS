@@ -2,8 +2,8 @@
 
 namespace App\Services\WarSimulator\Simulators;
 
-use App\DataTransferObjects\WarSim\WarSimRequestData;
 use App\DataTransferObjects\WarSim\WarSimNationData;
+use App\DataTransferObjects\WarSim\WarSimRequestData;
 use App\Services\WarSimulator\Support\WarSimModifiers;
 use App\Services\WarSimulator\Support\WarSimRng;
 

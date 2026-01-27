@@ -11,8 +11,7 @@ final class WarSimRequestData
         public WarSimNationData $nationDefender,
         public WarSimContextData $context,
         public WarSimActionData $action,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

@@ -71,5 +71,4 @@ class RunWarSimulationRequest extends FormRequest
             'action.attacking_ships' => ['required_if:action.type,naval', 'integer', 'min:0'],
         ];
     }
-
 }
