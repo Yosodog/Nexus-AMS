@@ -61,6 +61,7 @@
                                     <li><a href="{{ route("defense.intel") }}">Intel Library</a></li>
                                     <li><a href="{{ route("defense.war-aid") }}">War Aid</a></li>
                                     <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
+                                    <li><a href="{{ route("defense.simulators") }}">War Simulators</a></li>
                                     <li><a href="{{ route("defense.raid-leaderboard") }}">Raid Leaderboard</a></li>
                                     <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
                                 </ul>
@@ -118,6 +119,7 @@
                                 <li><a href="{{ route("defense.intel") }}">Intel Library</a></li>
                                 <li><a href="{{ route("defense.war-aid") }}">War Aid</a></li>
                                 <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
+                                <li><a href="{{ route("defense.simulators") }}">War Simulators</a></li>
                                 <li><a href="{{ route("defense.raid-leaderboard") }}">Raid Leaderboard</a></li>
                                 <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
                             </ul>

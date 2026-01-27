@@ -49,6 +49,7 @@ use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
+use App\Http\Controllers\WarSimulatorController;
 use App\Http\Controllers\WarStatsController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\BlockWhenPWDown;
@@ -150,6 +151,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         )->middleware(BlockWhenPWDown::class);
 
         Route::get('/war-stats', WarStatsController::class)->name('defense.war-stats');
+        Route::get('/simulators', WarSimulatorController::class)->name('defense.simulators');
         Route::get('/raid-leaderboard', RaidingLeaderboardController::class)->name('defense.raid-leaderboard');
         Route::get('/intel', [IntelReportController::class, 'index'])->name('defense.intel');
         Route::post('/intel', [IntelReportController::class, 'store'])->name('defense.intel.store');

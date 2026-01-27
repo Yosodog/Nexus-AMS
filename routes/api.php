@@ -9,6 +9,7 @@ use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
 use App\Http\Controllers\API\MembersController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
+use App\Http\Controllers\API\WarSimulatorController as ApiWarSimulatorController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureUserIsVerified;
@@ -26,6 +27,13 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, Di
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
     Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show']);
     Route::get('/members', [MembersController::class, 'index'])->middleware([AdminMiddleware::class, 'can:view-members']);
+
+    Route::prefix('simulators')->group(function () {
+        Route::get('/war/defaults', [ApiWarSimulatorController::class, 'defaults']);
+        Route::get('/nations/{nationId}', [ApiWarSimulatorController::class, 'nation']);
+        Route::get('/wars/{warId}', [ApiWarSimulatorController::class, 'war']);
+        Route::post('/run', [ApiWarSimulatorController::class, 'run'])->middleware('throttle:war-simulations');
+    });
 });
 
 Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function () {
