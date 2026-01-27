@@ -104,6 +104,30 @@
                             </tr>
                             <tr>
                                 <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/simulators/war/defaults</td>
+                                <td class="text-sm">Load war simulator defaults (your nation + active wars).</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/simulators/nations/{nationId}</td>
+                                <td class="text-sm">Fetch a nation snapshot for simulator inputs.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/simulators/wars/{warId}</td>
+                                <td class="text-sm">Fetch war context + attacker/defender snapshots.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">POST</span></td>
+                                <td class="font-mono text-xs">/simulators/run</td>
+                                <td class="text-sm">Run a war simulation (ground/air/naval).</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
                                 <td class="font-mono text-xs">/members</td>
                                 <td class="text-sm">List alliance members with resources and discord context.</td>
                                 <td class="text-xs">Admin</td>
@@ -136,7 +160,7 @@
             <x-utils.card>
                 <div class="space-y-3">
                     <h3 class="text-lg font-semibold">Example request</h3>
-                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80">
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
                         <pre><code>curl -H "Authorization: Bearer YOUR_TOKEN" \
      -H "Accept: application/json" \
      {{ url('/api/v1/accounts') }}</code></pre>
@@ -148,13 +172,117 @@
             <x-utils.card>
                 <div class="space-y-3">
                     <h3 class="text-lg font-semibold">Deposit request response</h3>
-                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80">
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
                         <pre><code>{
     "message": "Deposit request created successfully.",
     "deposit_code": "ABC123"
 }</code></pre>
                     </div>
                     <p class="text-xs text-base-content/60">The deposit code stays the same while a request is pending.</p>
+                </div>
+            </x-utils.card>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-2">
+            <x-utils.card>
+                <div class="space-y-3">
+                    <h3 class="text-lg font-semibold">War simulator request</h3>
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
+                        <pre><code>POST {{ url('/api/v1/simulators/run') }}
+Authorization: Bearer YOUR_TOKEN
+Accept: application/json
+
+{
+  "iterations": 5000,
+  "seed": null,
+  "nation_attacker": {
+    "nation_id": 1234,
+    "soldiers": 50000,
+    "tanks": 2000,
+    "aircraft": 600,
+    "ships": 30,
+    "war_policy": "PIRATE",
+    "is_fortified": false,
+    "cities": 10,
+    "highest_city_infra": 1800,
+    "highest_city_population": 900000,
+    "avg_infra": 1700
+  },
+  "nation_defender": {
+    "nation_id": 5678,
+    "soldiers": 30000,
+    "tanks": 1200,
+    "aircraft": 400,
+    "ships": 20,
+    "war_policy": "MONEYBAGS",
+    "is_fortified": true,
+    "cities": 9,
+    "highest_city_infra": 1600,
+    "highest_city_population": 800000,
+    "avg_infra": 1550
+  },
+  "context": {
+    "war_type": "ORDINARY",
+    "attacker_policy": "PIRATE",
+    "defender_policy": "MONEYBAGS",
+    "air_superiority_owner": "none",
+    "ground_control_owner": "none",
+    "blockade_owner": "none",
+    "blitz_active_attacker": false,
+    "blitz_active_defender": false
+  },
+  "action": {
+    "type": "ground",
+    "attacking_soldiers": 50000,
+    "attacking_tanks": 2000,
+    "arm_soldiers_with_munitions": true
+  }
+}</code></pre>
+                    </div>
+                    <p class="text-xs text-base-content/60">The simulator is rate-limited; reduce iterations if you hit throttles.</p>
+                </div>
+            </x-utils.card>
+
+            <x-utils.card>
+                <div class="space-y-3">
+                    <h3 class="text-lg font-semibold">War simulator response</h3>
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
+                        <pre><code>{
+  "meta": {
+    "iterations": 5000,
+    "seed": null,
+    "generated_at": "2026-01-27T19:42:00Z",
+    "prices": {
+      "gasoline": 3200,
+      "munitions": 2600,
+      "steel": 3800,
+      "aluminum": 4200
+    }
+  },
+  "outcomes": {
+    "probabilities": {
+      "UF": 12.34,
+      "PV": 28.91,
+      "MS": 38.45,
+      "IT": 20.30
+    }
+  },
+  "metrics": {
+    "attacker_losses": { "soldiers": { "mean": 1234, "p10": 820, "p50": 1200, "p90": 1600 } },
+    "defender_losses": { "soldiers": { "mean": 2100, "p10": 1500, "p50": 2000, "p90": 2700 } },
+    "infra_destroyed": { "mean": 45.2, "p10": 20.1, "p50": 42.5, "p90": 70.8 },
+    "money_looted": { "mean": 1250000, "p10": 550000, "p50": 1100000, "p90": 1900000 },
+    "resources_consumed_attacker": { "gasoline": { "mean": 20 }, "munitions": { "mean": 30 } },
+    "resources_consumed_defender": { "gasoline": { "mean": 12 }, "munitions": { "mean": 18 } },
+    "cost_estimates": { "consumables_value": { "mean": 200000 }, "unit_losses_value": { "mean": 900000 } },
+    "cost_estimates_defender": { "consumables_value": { "mean": 120000 }, "unit_losses_value": { "mean": 700000 } }
+  },
+  "assumptions": [
+    "Each battle uses three RNG rolls with uniform 40%-100% force multipliers."
+  ]
+}</code></pre>
+                    </div>
+                    <p class="text-xs text-base-content/60">Response values are per simulated battle, not per war.</p>
                 </div>
             </x-utils.card>
         </div>

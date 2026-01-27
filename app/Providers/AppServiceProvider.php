@@ -74,6 +74,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('war-simulations', function (Request $request) {
+            $key = $request->user()?->nation_id ?? $request->ip();
+
+            return Limit::perMinute(20)->by($key);
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });
