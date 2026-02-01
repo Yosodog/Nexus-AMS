@@ -153,7 +153,7 @@ final readonly class MMRAssistantService
             nationId: $account->nation_id,
             accountId: $account->id,
             source: $log,
-            money: $totalSpend,
+            money: 0, // Will always be 0. The "cost" to the alliance are the resources. Income is the money
             coal: $resourceQuantities['coal'] ?? 0.0,
             oil: $resourceQuantities['oil'] ?? 0.0,
             uranium: $resourceQuantities['uranium'] ?? 0.0,
