@@ -40,6 +40,24 @@ class WarAidService
 
         app(PendingRequestsService::class)->flushCache();
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'war_aid',
+            action: 'war_aid_request_submitted',
+            outcome: 'success',
+            severity: 'info',
+            subject: $request,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $request->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $request->nation_id,
+                    'resources' => $this->extractResources($data),
+                ],
+            ],
+            message: 'War aid request submitted.'
+        );
+
         return $request;
     }
 
@@ -81,6 +99,24 @@ class WarAidService
         });
 
         if ($updatedRequest) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'war_aid',
+                action: 'war_aid_approved',
+                outcome: 'success',
+                severity: 'info',
+                subject: $updatedRequest,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $updatedRequest->account_id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $updatedRequest->nation_id,
+                        'resources' => $resources,
+                    ],
+                ],
+                message: 'War aid approved.'
+            );
+
             $this->dispatchWarAidExpenseEvent($updatedRequest, $resources);
         }
 
@@ -127,6 +163,23 @@ class WarAidService
         );
 
         app(PendingRequestsService::class)->flushCache();
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'war_aid',
+            action: 'war_aid_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $request,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $request->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $request->nation_id,
+                ],
+            ],
+            message: 'War aid denied.'
+        );
     }
 
     public function getNationAvailableResources(Nation $nation): array

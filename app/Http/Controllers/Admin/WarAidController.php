@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WarAidRequest;
+use App\Services\AuditLogger;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
@@ -18,6 +19,8 @@ use Illuminate\Http\Request;
 class WarAidController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * @return Factory|View|Application|object
@@ -86,6 +89,20 @@ class WarAidController extends Controller
 
         $currently = SettingService::isWarAidEnabled();
         SettingService::setWarAidEnabled(! $currently);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'war_aid_toggle',
+            context: [
+                'changes' => [
+                    'war_aid_enabled' => [
+                        'from' => $currently,
+                        'to' => ! $currently,
+                    ],
+                ],
+            ],
+            message: 'War aid toggle updated.'
+        );
 
         return back()->with([
             'alert-message' => 'War aid has been '.($currently ? 'disabled' : 'enabled').'.',

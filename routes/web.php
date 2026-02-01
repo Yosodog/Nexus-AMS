@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AllianceFinanceController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\AuditController as AdminAuditController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuditRuleController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
@@ -208,6 +209,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->name('admin.audits.rules.violations');
         Route::post('/audits/run', [AdminAuditController::class, 'run'])->name('admin.audits.run');
         Route::post('/audits/notify', [AdminAuditController::class, 'notify'])->name('admin.audits.notify');
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
 
         // Account
         Route::get('/accounts', [AccountController::class, 'dashboard'])->name('admin.accounts.dashboard');
@@ -503,6 +505,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/settings/grants/approvals', [SettingsController::class, 'updateGrantApprovals'])->name(
             'admin.settings.grants.approvals'
+        );
+        Route::post('/settings/audit-retention', [SettingsController::class, 'updateAuditRetention'])->name(
+            'admin.settings.audit-retention'
         );
 
         Route::prefix('mmr')->group(function () {

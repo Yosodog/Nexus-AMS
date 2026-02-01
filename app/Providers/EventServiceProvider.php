@@ -6,10 +6,16 @@ use App\Events\AllianceExpenseOccurred;
 use App\Events\AllianceIncomeOccurred;
 use App\Events\NationAllianceChanged;
 use App\Events\WarDeclared;
+use App\Listeners\AuditLogin;
+use App\Listeners\AuditLoginFailed;
+use App\Listeners\AuditLogout;
 use App\Listeners\CreateCounterOnWarDeclared;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -23,6 +29,15 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
+        Login::class => [
+            AuditLogin::class,
+        ],
+        Failed::class => [
+            AuditLoginFailed::class,
+        ],
+        Logout::class => [
+            AuditLogout::class,
+        ],
         WarDeclared::class => [
             CreateCounterOnWarDeclared::class,
         ],

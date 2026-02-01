@@ -230,6 +230,15 @@
                     </x-nav.link>
                 </li>
 
+                <li class="nav-item">
+                    <x-nav.link href="{{ route('admin.audit-logs.index') }}"
+                                icon="bi bi-clipboard-data"
+                                permission="view-diagnostic-info"
+                                :active="request()->routeIs('admin.audit-logs.*')">
+                        Audit Logs
+                    </x-nav.link>
+                </li>
+
                 <li class="nav-header">System</li>
 
 

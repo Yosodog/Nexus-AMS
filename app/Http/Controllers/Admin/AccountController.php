@@ -11,6 +11,7 @@ use App\Models\MMRAssistantPurchase;
 use App\Models\Transaction;
 use App\Services\AccountService;
 use App\Services\AllianceMembershipService;
+use App\Services\AuditLogger;
 use App\Services\MainBankService;
 use App\Services\OffshoreService;
 use App\Services\PWHelperService;
@@ -31,7 +32,10 @@ class AccountController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private SelfApprovalGuard $selfApprovalGuard) {}
+    public function __construct(
+        private SelfApprovalGuard $selfApprovalGuard,
+        private AuditLogger $auditLogger,
+    ) {}
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
@@ -154,6 +158,20 @@ class AccountController extends Controller
 
         $updated = AccountService::setFrozen($account, true);
 
+        if ($updated) {
+            $this->auditLogger->success(
+                category: 'finance',
+                action: 'account_frozen',
+                subject: $account,
+                context: [
+                    'related' => [
+                        ['type' => 'Nation', 'id' => (string) $account->nation_id, 'role' => 'owner'],
+                    ],
+                ],
+                message: 'Account frozen.'
+            );
+        }
+
         return back()->with([
             'alert-message' => $updated ? 'Account frozen successfully.' : 'Account is already frozen.',
             'alert-type' => $updated ? 'success' : 'info',
@@ -168,6 +186,20 @@ class AccountController extends Controller
         $this->authorize('manage-accounts');
 
         $updated = AccountService::setFrozen($account, false);
+
+        if ($updated) {
+            $this->auditLogger->success(
+                category: 'finance',
+                action: 'account_unfrozen',
+                subject: $account,
+                context: [
+                    'related' => [
+                        ['type' => 'Nation', 'id' => (string) $account->nation_id, 'role' => 'owner'],
+                    ],
+                ],
+                message: 'Account unfrozen.'
+            );
+        }
 
         return back()->with([
             'alert-message' => $updated ? 'Account unfrozen successfully.' : 'Account was not frozen.',
@@ -267,6 +299,28 @@ class AccountController extends Controller
             ]);
         }
 
+        if ($result === 'ok') {
+            $this->auditLogger->recordAfterCommit(
+                category: 'finance',
+                action: 'withdrawal_refunded',
+                outcome: 'success',
+                severity: 'info',
+                subject: $transaction,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $transaction->from_account_id, 'role' => 'from_account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $transaction->nation_id,
+                        'resources' => collect(PWHelperService::resources())
+                            ->mapWithKeys(fn ($resource) => [$resource => $transaction->{$resource}])
+                            ->all(),
+                    ],
+                ],
+                message: 'Withdrawal refunded.'
+            );
+        }
+
         return back()->with([
             'alert-message' => 'Refund successful.',
             'alert-type' => 'success',
@@ -315,6 +369,23 @@ class AccountController extends Controller
 
         AccountService::adjustAccountBalance($account, $data, Auth::id(), $request->ip());
 
+        $this->auditLogger->recordAfterCommit(
+            category: 'finance',
+            action: 'account_adjusted',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $account,
+            context: [
+                'related' => [
+                    ['type' => 'Nation', 'id' => (string) $account->nation_id, 'role' => 'owner'],
+                ],
+                'data' => [
+                    'adjustment' => $data,
+                ],
+            ],
+            message: 'Account balance adjusted.'
+        );
+
         return redirect()
             ->back()
             ->with([
@@ -337,8 +408,31 @@ class AccountController extends Controller
             'direct_deposit_fallback_tax_id' => 'required|integer|min:1',
         ]);
 
+        $previous = [
+            'direct_deposit_tax_id' => SettingService::getDirectDepositId(),
+            'direct_deposit_fallback_tax_id' => SettingService::getDirectDepositFallbackId(),
+        ];
+
         SettingService::setDirectDepositId($validated['direct_deposit_tax_id']);
         SettingService::setDirectDepositFallbackId($validated['direct_deposit_fallback_tax_id']);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'direct_deposit_settings_updated',
+            context: [
+                'changes' => [
+                    'direct_deposit_tax_id' => [
+                        'from' => $previous['direct_deposit_tax_id'],
+                        'to' => (int) $validated['direct_deposit_tax_id'],
+                    ],
+                    'direct_deposit_fallback_tax_id' => [
+                        'from' => $previous['direct_deposit_fallback_tax_id'],
+                        'to' => (int) $validated['direct_deposit_fallback_tax_id'],
+                    ],
+                ],
+            ],
+            message: 'Direct deposit settings updated.'
+        );
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Direct Deposit settings updated successfully.',
@@ -362,7 +456,17 @@ class AccountController extends Controller
         $defaults = array_fill_keys(PWHelperService::resources(), 10);
         $defaults['city_number'] = $request->input('city_number');
 
-        DirectDepositTaxBracket::create($defaults);
+        $bracket = DirectDepositTaxBracket::create($defaults);
+
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'direct_deposit_bracket_created',
+            subject: $bracket,
+            context: [
+                'data' => $defaults,
+            ],
+            message: 'Direct deposit tax bracket created.'
+        );
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Tax bracket created with default 10% rates.',
@@ -402,6 +506,18 @@ class AccountController extends Controller
         DirectDepositTaxBracket::whereIn('id', $request->input('selected'))
             ->update($rates);
 
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'direct_deposit_brackets_updated',
+            context: [
+                'data' => [
+                    'selected' => $request->input('selected'),
+                    'rates' => $rates,
+                ],
+            ],
+            message: 'Direct deposit tax brackets updated.'
+        );
+
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Selected brackets updated successfully.',
             'alert-type' => 'success',
@@ -425,6 +541,20 @@ class AccountController extends Controller
         $deleted = DirectDepositTaxBracket::whereIn('id', $request->input('selected'))
             ->where('city_number', '!=', 0)
             ->delete();
+
+        if ($deleted > 0) {
+            $this->auditLogger->success(
+                category: 'finance',
+                action: 'direct_deposit_brackets_deleted',
+                context: [
+                    'data' => [
+                        'selected' => $request->input('selected'),
+                        'deleted' => $deleted,
+                    ],
+                ],
+                message: 'Direct deposit tax brackets deleted.'
+            );
+        }
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => "$deleted bracket(s) deleted successfully.",

@@ -150,6 +150,27 @@ class ApplicationService
             'moderator_discord_id' => $moderatorDiscordId,
         ]);
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'applications',
+            action: 'application_approved',
+            outcome: 'success',
+            severity: 'info',
+            subject: $application,
+            context: [
+                'data' => [
+                    'nation_id' => $application->nation_id,
+                    'applicant_discord_id' => $application->discord_user_id,
+                    'moderator_discord_id' => $moderatorDiscordId,
+                ],
+            ],
+            message: 'Application approved.',
+            actorOverride: [
+                'type' => 'user',
+                'id' => $moderator->id,
+                'name' => $moderator->name,
+            ]
+        );
+
         return $application;
     }
 
@@ -196,6 +217,27 @@ class ApplicationService
             'moderator_discord_id' => $moderatorDiscordId,
         ]);
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'applications',
+            action: 'application_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $application,
+            context: [
+                'data' => [
+                    'nation_id' => $application->nation_id,
+                    'applicant_discord_id' => $application->discord_user_id,
+                    'moderator_discord_id' => $moderatorDiscordId,
+                ],
+            ],
+            message: 'Application denied.',
+            actorOverride: [
+                'type' => 'user',
+                'id' => $moderator->id,
+                'name' => $moderator->name,
+            ]
+        );
+
         return $application;
     }
 
@@ -232,6 +274,25 @@ class ApplicationService
             'nation_id' => $application->nation_id,
             'actor_id' => $actor->id,
         ]);
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'applications',
+            action: 'application_cancelled',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $application,
+            context: [
+                'data' => [
+                    'nation_id' => $application->nation_id,
+                ],
+            ],
+            message: 'Application cancelled.',
+            actorOverride: [
+                'type' => 'user',
+                'id' => $actor->id,
+                'name' => $actor->name,
+            ]
+        );
 
         return $application;
     }

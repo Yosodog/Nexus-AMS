@@ -55,6 +55,25 @@ class CityGrantService
 
             app(PendingRequestsService::class)->flushCache();
 
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'grants',
+                action: 'city_grant_request_submitted',
+                outcome: 'success',
+                severity: 'info',
+                subject: $request,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $accountId, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $nation->id,
+                        'city_number' => $request->city_number,
+                        'grant_amount' => $request->grant_amount,
+                    ],
+                ],
+                message: 'City grant request submitted.'
+            );
+
             return $request;
         }, attempts: 3);
     }
@@ -108,7 +127,10 @@ class CityGrantService
             context: 'approve your own city grant request'
         );
 
-        DB::transaction(function () use ($request) {
+        $approvedRequest = null;
+        $deniedRequest = null;
+
+        DB::transaction(function () use ($request, &$approvedRequest, &$deniedRequest) {
             $lockedRequest = CityGrantRequest::query()
                 ->lockForUpdate()
                 ->findOrFail($request->id);
@@ -168,6 +190,8 @@ class CityGrantService
 
                 app(PendingRequestsService::class)->flushCache();
 
+                $deniedRequest = $lockedRequest->fresh();
+
                 return;
             }
 
@@ -201,7 +225,50 @@ class CityGrantService
             self::logApprovalAnomalies($lockedRequest);
 
             app(PendingRequestsService::class)->flushCache();
+
+            $approvedRequest = $lockedRequest->fresh();
         }, attempts: 3);
+
+        if ($approvedRequest) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'grants',
+                action: 'city_grant_approved',
+                outcome: 'success',
+                severity: 'info',
+                subject: $approvedRequest,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $approvedRequest->account_id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $approvedRequest->nation_id,
+                        'city_number' => $approvedRequest->city_number,
+                        'grant_amount' => $approvedRequest->grant_amount,
+                    ],
+                ],
+                message: 'City grant approved.'
+            );
+        }
+
+        if ($deniedRequest) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'grants',
+                action: 'city_grant_denied',
+                outcome: 'denied',
+                severity: 'warning',
+                subject: $deniedRequest,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $deniedRequest->account_id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $deniedRequest->nation_id,
+                        'reason' => 'account_mismatch',
+                    ],
+                ],
+                message: 'City grant denied.'
+            );
+        }
     }
 
     /**
@@ -223,6 +290,24 @@ class CityGrantService
         $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'grants',
+            action: 'city_grant_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $request,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $request->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $request->nation_id,
+                    'city_number' => $request->city_number,
+                ],
+            ],
+            message: 'City grant denied.'
+        );
     }
 
     /**

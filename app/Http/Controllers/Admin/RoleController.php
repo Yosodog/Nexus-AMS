@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use App\Services\AuditLogger;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,8 @@ use Illuminate\View\View;
 class RoleController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * @throws AuthorizationException
@@ -75,6 +78,10 @@ class RoleController extends Controller
             'permissions.*' => ['string', 'in:'.implode(',', config('permissions'))],
         ]);
 
+        $role->loadMissing('permissions');
+        $beforePermissions = $role->permissions->pluck('permission')->sort()->values()->all();
+        $beforeName = $role->name;
+
         $role->update(['name' => $validated['name']]);
 
         DB::table('role_permissions')->where('role_id', $role->id)->delete();
@@ -85,6 +92,35 @@ class RoleController extends Controller
                 'permission' => $permission,
             ]);
         }
+
+        $afterPermissions = collect($validated['permissions'] ?? [])->sort()->values()->all();
+        $changes = [];
+
+        if ($beforeName !== $role->name) {
+            $changes['name'] = [
+                'from' => $beforeName,
+                'to' => $role->name,
+            ];
+        }
+
+        if ($beforePermissions !== $afterPermissions) {
+            $changes['permissions'] = [
+                'from' => $beforePermissions,
+                'to' => $afterPermissions,
+            ];
+        }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'admin',
+            action: 'role_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $role,
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'Role updated.'
+        );
 
         return redirect()->route('admin.roles.index')->with([
             'alert-message' => 'Role updated successfully.',
@@ -116,6 +152,19 @@ class RoleController extends Controller
                 'permission' => $permission,
             ]);
         }
+
+        $this->auditLogger->success(
+            category: 'admin',
+            action: 'role_created',
+            subject: $role,
+            context: [
+                'data' => [
+                    'name' => $role->name,
+                    'permissions' => $validated['permissions'] ?? [],
+                ],
+            ],
+            message: 'Role created.'
+        );
 
         return redirect()->route('admin.roles.index')->with([
             'alert-message' => 'Role created successfully.',
@@ -149,9 +198,27 @@ class RoleController extends Controller
             ]);
         }
 
+        $role->loadMissing('permissions');
+        $permissions = $role->permissions->pluck('permission')->sort()->values()->all();
+
         DB::table('role_permissions')->where('role_id', $role->id)->delete();
         $role->users()->detach();
         $role->delete();
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'admin',
+            action: 'role_deleted',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $role,
+            context: [
+                'data' => [
+                    'name' => $role->name,
+                    'permissions' => $permissions,
+                ],
+            ],
+            message: 'Role deleted.'
+        );
 
         return redirect()->route('admin.roles.index')->with([
             'alert-message' => 'Role deleted successfully.',

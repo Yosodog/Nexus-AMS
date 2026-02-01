@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ApplicationSettingsRequest;
 use App\Models\Application;
 use App\Services\ApplicationService;
+use App\Services\AuditLogger;
 use App\Services\SettingService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -21,7 +22,10 @@ class ApplicationController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly ApplicationService $applicationService) {}
+    public function __construct(
+        private readonly ApplicationService $applicationService,
+        private readonly AuditLogger $auditLogger,
+    ) {}
 
     public function index(): Factory|View|LaravelApplication
     {
@@ -57,6 +61,16 @@ class ApplicationController extends Controller
     public function updateSettings(ApplicationSettingsRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $previous = [
+            'enabled' => SettingService::isApplicationsEnabled(),
+            'approved_position_id' => SettingService::getApplicationsApprovedPositionId(),
+            'discord_applicant_role_id' => SettingService::getApplicationsDiscordApplicantRoleId(),
+            'discord_ia_role_id' => SettingService::getApplicationsDiscordIaRoleId(),
+            'discord_member_role_id' => SettingService::getApplicationsDiscordMemberRoleId(),
+            'discord_interview_category_id' => SettingService::getApplicationsDiscordInterviewCategoryId(),
+            'approval_announcement_channel_id' => SettingService::getApplicationsApprovalAnnouncementChannelId(),
+            'approval_message_template' => SettingService::getApplicationsApprovalMessageTemplate(),
+        ];
 
         SettingService::setApplicationsEnabled($request->boolean('applications_enabled'));
         SettingService::setApplicationsApprovedPositionId((int) $validated['applications_approved_position_id']);
@@ -66,6 +80,36 @@ class ApplicationController extends Controller
         SettingService::setApplicationsDiscordInterviewCategoryId($validated['applications_discord_interview_category_id'] ?? null);
         SettingService::setApplicationsApprovalAnnouncementChannelId($validated['applications_approval_announcement_channel_id'] ?? null);
         SettingService::setApplicationsApprovalMessageTemplate($validated['applications_approval_message_template']);
+
+        $after = [
+            'enabled' => $request->boolean('applications_enabled'),
+            'approved_position_id' => (int) $validated['applications_approved_position_id'],
+            'discord_applicant_role_id' => $validated['applications_discord_applicant_role_id'] ?? null,
+            'discord_ia_role_id' => $validated['applications_discord_ia_role_id'] ?? null,
+            'discord_member_role_id' => $validated['applications_discord_member_role_id'] ?? null,
+            'discord_interview_category_id' => $validated['applications_discord_interview_category_id'] ?? null,
+            'approval_announcement_channel_id' => $validated['applications_approval_announcement_channel_id'] ?? null,
+            'approval_message_template' => $validated['applications_approval_message_template'],
+        ];
+        $changes = [];
+
+        foreach ($after as $field => $value) {
+            if ((string) ($previous[$field] ?? null) !== (string) $value) {
+                $changes[$field] = [
+                    'from' => $previous[$field] ?? null,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'application_settings_updated',
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'Application settings updated.'
+        );
 
         return redirect()
             ->route('admin.applications.index')

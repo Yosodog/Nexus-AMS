@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AllianceMembershipService;
+use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -19,6 +20,8 @@ use Illuminate\View\View;
 class UserController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * @throws AuthorizationException
@@ -179,6 +182,9 @@ class UserController extends Controller
             'roles.*' => ['exists:roles,id'],
         ]);
 
+        $before = $user->only(['name', 'email', 'is_admin', 'disabled', 'nation_id', 'verified_at']);
+        $beforeRoles = $user->roles()->pluck('roles.id')->sort()->values()->all();
+
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->is_admin = (bool) $validated['is_admin'];
@@ -199,6 +205,40 @@ class UserController extends Controller
             $user->roles()->sync($allowedRoles);
         }
 
+        $after = $user->fresh()->only(['name', 'email', 'is_admin', 'disabled', 'nation_id', 'verified_at']);
+        $afterRoles = $user->roles()->pluck('roles.id')->sort()->values()->all();
+        $changes = [];
+
+        foreach ($after as $field => $value) {
+            $beforeValue = $before[$field] ?? null;
+
+            if ((string) $beforeValue !== (string) $value) {
+                $changes[$field] = [
+                    'from' => $beforeValue,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        if ($beforeRoles !== $afterRoles) {
+            $changes['roles'] = [
+                'from' => $beforeRoles,
+                'to' => $afterRoles,
+            ];
+        }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'admin',
+            action: 'user_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $user,
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'User updated.'
+        );
+
         return redirect()->route('admin.users.index')->with([
             'alert-message' => 'User updated successfully.',
             'alert-type' => 'success',
@@ -217,6 +257,20 @@ class UserController extends Controller
         $message = $discordAccount
             ? 'Discord account unlinked for this user.'
             : 'No Discord account was linked for this user.';
+
+        if ($discordAccount) {
+            $this->auditLogger->success(
+                category: 'admin',
+                action: 'discord_unlinked',
+                subject: $user,
+                context: [
+                    'data' => [
+                        'discord_id' => $discordAccount->discord_id,
+                    ],
+                ],
+                message: 'Discord account unlinked.'
+            );
+        }
 
         return redirect()->route('admin.users.edit', $user)->with([
             'alert-message' => $message,

@@ -11,6 +11,7 @@ use App\Models\Grants;
 use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\WarAidRequest;
+use App\Services\AuditLogger;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\GrantService;
@@ -30,7 +31,8 @@ class ManualDisbursementController extends Controller
     public function __construct(
         protected LoanService $loanService,
         protected WarAidService $warAidService,
-        protected SelfApprovalGuard $selfApprovalGuard
+        protected SelfApprovalGuard $selfApprovalGuard,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     public function sendGrant(Request $request): RedirectResponse
@@ -70,6 +72,24 @@ class ManualDisbursementController extends Controller
                 'alert-type' => 'error',
             ]);
         }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'grants',
+            action: 'grant_disbursed_manual',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $application,
+            context: [
+                'related' => [
+                    ['type' => 'Grant', 'id' => (string) $grant->id, 'role' => 'grant'],
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nation->id,
+                ],
+            ],
+            message: 'Grant disbursed manually.'
+        );
 
         return back()
             ->with('alert-message', "Grant '{$grant->name}' sent manually — validation checks bypassed.")
@@ -134,6 +154,26 @@ class ManualDisbursementController extends Controller
             ]);
         }
 
+        $this->auditLogger->recordAfterCommit(
+            category: 'grants',
+            action: 'city_grant_disbursed_manual',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $grantRequest,
+            context: [
+                'related' => [
+                    ['type' => 'CityGrant', 'id' => (string) $cityGrant->id, 'role' => 'grant'],
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'city_number' => $grantRequest->city_number,
+                    'grant_amount' => $grantRequest->grant_amount,
+                ],
+            ],
+            message: 'City grant disbursed manually.'
+        );
+
         return back()
             ->with('alert-message', "City grant for City #{$grantRequest->city_number} sent manually — validation checks bypassed.")
             ->with('alert-type', 'success');
@@ -170,6 +210,26 @@ class ManualDisbursementController extends Controller
         ]);
 
         $this->loanService->approveLoan($loan, $data['amount'], $data['interest_rate'], $data['term_weeks'], $nation);
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_disbursed_manual',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $loan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'amount' => $data['amount'],
+                    'interest_rate' => $data['interest_rate'],
+                    'term_weeks' => $data['term_weeks'],
+                ],
+            ],
+            message: 'Loan disbursed manually.'
+        );
 
         return back()
             ->with('alert-message', 'Loan created and approved manually — eligibility checks bypassed.')
@@ -222,6 +282,25 @@ class ManualDisbursementController extends Controller
             ...$resources,
             'note' => $note,
         ]);
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'war_aid',
+            action: 'war_aid_disbursed_manual',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $aidRequest,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'resources' => $resources,
+                    'note' => $note,
+                ],
+            ],
+            message: 'War aid disbursed manually.'
+        );
 
         return back()
             ->with('alert-message', 'War aid dispatched manually — request queue bypassed.')

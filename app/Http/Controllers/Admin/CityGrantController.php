@@ -6,6 +6,7 @@ use App\Http\Requests\Admin\StoreCityGrantRequest;
 use App\Http\Requests\Admin\UpdateCityGrantRequest;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
+use App\Services\AuditLogger;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\PWHelperService;
@@ -18,6 +19,8 @@ use Illuminate\Validation\ValidationException;
 class CityGrantController
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
@@ -128,6 +131,7 @@ class CityGrantController
     public function updateCityGrant(UpdateCityGrantRequest $request, CityGrant $city_grant): RedirectResponse
     {
         $validated = $request->validated();
+        $before = $city_grant->only(['city_number', 'grant_amount', 'enabled', 'description', 'requirements']);
 
         // Convert selected projects to project bits
         $selectedProjects = $validated['projects'] ?? [];
@@ -147,6 +151,30 @@ class CityGrantController
                 'project_bits' => $projectBits,
             ],
         ]);
+
+        $after = $city_grant->fresh()->only(['city_number', 'grant_amount', 'enabled', 'description', 'requirements']);
+        $changes = [];
+
+        foreach ($after as $field => $value) {
+            if ((string) ($before[$field] ?? null) !== (string) $value) {
+                $changes[$field] = [
+                    'from' => $before[$field] ?? null,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'grants',
+            action: 'city_grant_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $city_grant,
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'City grant updated.'
+        );
 
         return redirect()->route('admin.grants.city')->with('alert-message', 'City grant updated successfully!')->with(
             'alert-type',
@@ -180,6 +208,16 @@ class CityGrantController
                 'project_bits' => $projectBits,
             ],
         ]);
+
+        $this->auditLogger->success(
+            category: 'grants',
+            action: 'city_grant_created',
+            subject: $cityGrant,
+            context: [
+                'data' => $cityGrant->only(['city_number', 'grant_amount', 'enabled', 'description', 'requirements']),
+            ],
+            message: 'City grant created.'
+        );
 
         return redirect()->route('admin.grants.city')->with('alert-message', 'City grant created successfully!')->with(
             'alert-type',

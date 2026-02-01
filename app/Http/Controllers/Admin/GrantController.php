@@ -6,6 +6,7 @@ use App\Http\Requests\Admin\StoreGrantRequest;
 use App\Http\Requests\Admin\UpdateGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Grants;
+use App\Services\AuditLogger;
 use App\Services\GrantService;
 use App\Services\PWHelperService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 class GrantController
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * @return Factory|View|Application|object
@@ -77,6 +80,16 @@ class GrantController
         $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
 
+        $this->auditLogger->success(
+            category: 'grants',
+            action: 'grant_created',
+            subject: $grant,
+            context: [
+                'data' => $grant->only(['name', 'slug', 'description', 'money', 'is_one_time', 'is_enabled']),
+            ],
+            message: 'Grant created.'
+        );
+
         return redirect()->route('admin.grants')
             ->with('alert-message', 'Grant created successfully.')
             ->with('alert-type', 'success');
@@ -90,6 +103,7 @@ class GrantController
     public function updateGrant(Grants $grant, UpdateGrantRequest $request)
     {
         $validated = $request->validated();
+        $before = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled']);
 
         $grant->name = $validated['name'];
         $grant->slug = Str::slug($grant->name);
@@ -103,6 +117,30 @@ class GrantController
         $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
+
+        $after = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled']);
+        $changes = [];
+
+        foreach ($after as $field => $value) {
+            if ((string) ($before[$field] ?? null) !== (string) $value) {
+                $changes[$field] = [
+                    'from' => $before[$field] ?? null,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'grants',
+            action: 'grant_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $grant,
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'Grant updated.'
+        );
 
         return redirect()->route('admin.grants')
             ->with('alert-message', 'Grant updated successfully.')

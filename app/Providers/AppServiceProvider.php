@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
+use App\Services\AuditLogger;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
@@ -42,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
+        $this->app->singleton(AuditLogger::class);
 
         $this->app->scoped('pw.health.view-data', function () {
             $status = Cache::get(PWHealthService::CACHE_KEY_STATUS);

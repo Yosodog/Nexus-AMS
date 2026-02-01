@@ -297,6 +297,26 @@ class AccountService
                 self::dispatchWithdrawal($transaction, $fromAccount);
             }
 
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'finance',
+                action: 'withdrawal_requested',
+                outcome: $evaluation['requires_approval'] ? 'pending' : 'success',
+                severity: $evaluation['requires_approval'] ? 'warning' : 'info',
+                subject: $transaction,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $fromAccountId, 'role' => 'from_account'],
+                    ],
+                    'data' => [
+                        'nation_id' => Auth::user()->nation_id,
+                        'resources' => $resources,
+                        'requires_approval' => $evaluation['requires_approval'],
+                        'pending_reason' => $evaluation['pending_reason'],
+                    ],
+                ],
+                message: 'Withdrawal requested.'
+            );
+
             return $transaction;
         } catch (Exception $e) {
             // Rollback in case of error

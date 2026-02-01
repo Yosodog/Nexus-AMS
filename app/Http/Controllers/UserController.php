@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreApiTokenRequest;
+use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
@@ -18,6 +19,8 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger) {}
+
     /**
      * @return Factory|View|Application|object
      */
@@ -51,14 +54,43 @@ class UserController extends Controller
             'password' => ['nullable', Password::defaults(), 'confirmed'],
         ]);
 
+        $before = $user->only(['name', 'email']);
+
         $user->name = $request->input('name');
         $user->email = $request->input('email');
 
+        $passwordChanged = false;
         if ($request->filled('password')) {
             $user->password = Hash::make($request->input('password'));
+            $passwordChanged = true;
         }
 
         $user->save();
+
+        $changes = [];
+        $after = $user->only(['name', 'email']);
+
+        foreach ($after as $field => $value) {
+            if ((string) ($before[$field] ?? null) !== (string) $value) {
+                $changes[$field] = [
+                    'from' => $before[$field] ?? null,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        $this->auditLogger->success(
+            category: 'account',
+            action: 'user_settings_updated',
+            subject: $user,
+            context: [
+                'changes' => $changes,
+                'data' => [
+                    'password_changed' => $passwordChanged,
+                ],
+            ],
+            message: 'User settings updated.'
+        );
 
         return redirect()->route('user.settings')->with('alert-message', 'Setting updated successfully!')->with(
             'alert-type',
@@ -74,6 +106,20 @@ class UserController extends Controller
             $request->input('name'),
             ['*'],
             $this->prepareTokenExpiration($request)
+        );
+
+        $this->auditLogger->success(
+            category: 'account',
+            action: 'api_token_created',
+            subject: $token->accessToken,
+            context: [
+                'data' => [
+                    'token_id' => $token->accessToken->id,
+                    'name' => $request->input('name'),
+                    'expires_at' => $token->accessToken->expires_at,
+                ],
+            ],
+            message: 'API token created.'
         );
 
         return redirect()
@@ -99,6 +145,21 @@ class UserController extends Controller
             $this->prepareTokenExpiration($request)
         );
 
+        $this->auditLogger->success(
+            category: 'account',
+            action: 'api_token_regenerated',
+            subject: $newToken->accessToken,
+            context: [
+                'data' => [
+                    'previous_token_id' => $tokenId,
+                    'token_id' => $newToken->accessToken->id,
+                    'name' => $request->input('name'),
+                    'expires_at' => $newToken->accessToken->expires_at,
+                ],
+            ],
+            message: 'API token regenerated.'
+        );
+
         return redirect()
             ->route('user.settings')
             ->with('alert-message', 'API token regenerated. Copy it now because it will only be shown once.')
@@ -115,6 +176,20 @@ class UserController extends Controller
             ->firstOrFail();
 
         $token->delete();
+
+        $this->auditLogger->success(
+            category: 'account',
+            action: 'api_token_revoked',
+            subject: $token,
+            context: [
+                'data' => [
+                    'token_id' => $tokenId,
+                    'name' => $token->name,
+                    'expires_at' => $token->expires_at,
+                ],
+            ],
+            message: 'API token revoked.'
+        );
 
         return redirect()
             ->route('user.settings')
