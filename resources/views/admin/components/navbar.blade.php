@@ -89,10 +89,18 @@
         </ul>
 
         <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-                <a href="#" class="nav-link theme-toggle-btn" role="button">
-                    <i class="bi bi-moon-fill"></i>
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link" data-bs-toggle="dropdown" role="button">
+                    <i class="bi bi-sun-fill theme-icon-active"></i>
                 </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" data-set-theme="light"><i class="bi bi-sun-fill me-2"></i>
+                            Light</a></li>
+                    <li><a class="dropdown-item" href="#" data-set-theme="night"><i class="bi bi-moon-fill me-2"></i>
+                            Dark</a></li>
+                    <li><a class="dropdown-item" href="#" data-set-theme="auto"><i class="bi bi-circle-half me-2"></i>
+                            Auto</a></li>
+                </ul>
             </li>
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
@@ -167,7 +175,8 @@
                                     <div class="border rounded text-center py-2 h-100">
                                         <div class="text-muted small">GNI</div>
                                         <div class="fw-semibold">
-                                            {{ $abbreviateCurrency($nation->gross_national_income) }}</div>
+                                            {{ $abbreviateCurrency($nation->gross_national_income) }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

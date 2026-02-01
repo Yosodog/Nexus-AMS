@@ -1,79 +1,116 @@
 <script>
     (function () {
-        // Function to set the theme
-        function setTheme(theme) {
-            const doc = document.documentElement;
+        const doc = document.documentElement;
+
+        // Public API
+        window.ThemeManager = {
+            setTheme: function (theme, persist = false) {
+                _setTheme(theme, persist);
+            },
+            resetTheme: function () {
+                localStorage.removeItem('theme');
+                const systemQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                _setTheme(systemQuery.matches ? 'night' : 'light', false);
+            },
+            getTheme: function () {
+                return doc.getAttribute('data-theme');
+            }
+        };
+
+        // Internal
+        function _setTheme(theme, persist = false) {
             if (theme === 'night') {
                 doc.setAttribute('data-theme', 'night'); // DaisyUI
                 doc.setAttribute('data-bs-theme', 'dark'); // Bootstrap/AdminLTE
-                localStorage.setItem('theme', 'night');
             } else {
                 doc.removeAttribute('data-theme'); // DaisyUI Default (light)
                 doc.removeAttribute('data-bs-theme'); // Bootstrap Default (light)
-                // Optionally explicitly set light if needed:
-                // doc.setAttribute('data-theme', 'light');
-                // doc.setAttribute('data-bs-theme', 'light');
-                localStorage.setItem('theme', 'light');
             }
-            updateToggles(theme === 'night');
+
+            if (persist) {
+                localStorage.setItem('theme', theme);
+            }
+
+            updateToggles(theme);
         }
 
-        // Function to update all toggle inputs/buttons
-        function updateToggles(isDark) {
-            // For Checkbox inputs (DaisyUI swap)
-            document.querySelectorAll('input[type="checkbox"]#theme-toggle').forEach(el => {
-                el.checked = isDark;
+        function updateToggles(activeTheme) {
+            // Update Icons on the toggles to reflect current state
+            document.querySelectorAll('.theme-icon-active').forEach(icon => {
+                // Remove all possible icons first
+                icon.classList.remove('bi-moon-fill', 'bi-sun-fill', 'bi-circle-half');
+
+                if (activeTheme === 'night') {
+                    icon.classList.add('bi-moon-fill');
+                } else {
+                    icon.classList.add('bi-sun-fill');
+                }
             });
 
-            // For custom buttons (AdminLTE) if we use a button with icon switching
-            document.querySelectorAll('.theme-toggle-btn').forEach(el => {
-                const icon = el.querySelector('i');
-                if (icon) {
-                    if (isDark) {
-                        icon.classList.remove('bi-moon-fill');
-                        icon.classList.add('bi-sun-fill');
-                    } else {
-                        icon.classList.remove('bi-sun-fill');
-                        icon.classList.add('bi-moon-fill');
-                    }
+            // Toggle visibility for specific SVG icons (Frontend)
+            const isDark = activeTheme === 'night';
+            document.querySelectorAll('.theme-icon-sun').forEach(el => {
+                if (isDark) {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                }
+            });
+            document.querySelectorAll('.theme-icon-moon').forEach(el => {
+                if (isDark) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Highlight active dropdown item
+            const stored = localStorage.getItem('theme');
+            const logicalState = stored ? stored : 'auto';
+
+            document.querySelectorAll('[data-set-theme]').forEach(el => {
+                const target = el.getAttribute('data-set-theme');
+                if (target === logicalState) {
+                    el.classList.add('active', 'bg-primary', 'text-primary-content');
+                } else {
+                    el.classList.remove('active', 'bg-primary', 'text-primary-content');
                 }
             });
         }
 
-        // 1. Init: Check localStorage or System Preference
+        // 1. Init
         const savedTheme = localStorage.getItem('theme');
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const systemQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-        if (savedTheme === 'night' || (!savedTheme && systemDark)) {
-            setTheme('night');
+        if (savedTheme) {
+            _setTheme(savedTheme, false);
         } else {
-            setTheme('light');
+            _setTheme(systemQuery.matches ? 'night' : 'light', false);
         }
 
-        // 2. Global Event Listener for Toggles (Delegation not strictly needed but good for dynamic content)
-        // We will attach listeners to specific known IDs/Classes after DOM Load just to be safe, 
-        // but this script runs in HEAD so we need to wait for DOMContentLoaded for binding events.
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Sync state again in case UI loaded with default unchecked
-            const currentTheme = localStorage.getItem('theme') || (systemDark ? 'night' : 'light');
-            updateToggles(currentTheme === 'night');
-
-            // Listener for DaisyUI Checkbox
-            const daisyToggle = document.getElementById('theme-toggle');
-            if (daisyToggle) {
-                daisyToggle.addEventListener('change', function () {
-                    setTheme(this.checked ? 'night' : 'light');
-                });
+        // 2. System Listener
+        systemQuery.addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                _setTheme(e.matches ? 'night' : 'light', false);
             }
+        });
 
-            // Listener for AdminLTE Buttons (Class-based for multiple instances if needed)
-            document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
-                btn.addEventListener('click', function (e) {
+        // 3. Bind Events (Dropdown items)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Re-run update to ensure classes are set after DOM load
+            const cur = doc.getAttribute('data-theme') || 'light';
+            updateToggles(cur);
+
+            // Bind clicks for any element with data-set-theme="light|night|auto"
+            document.querySelectorAll('[data-set-theme]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const current = localStorage.getItem('theme') || 'light';
-                    const next = current === 'night' ? 'light' : 'night';
-                    setTheme(next);
+                    const val = btn.getAttribute('data-set-theme');
+                    if (val === 'auto') {
+                        window.ThemeManager.resetTheme();
+                    } else {
+                        window.ThemeManager.setTheme(val, true);
+                    }
                 });
             });
         });
