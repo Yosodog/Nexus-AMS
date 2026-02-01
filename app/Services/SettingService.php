@@ -160,6 +160,18 @@ class SettingService
         self::setValue('grant_approvals_enabled', $enabled ? 1 : 0);
     }
 
+    public static function getFaviconPath(): ?string
+    {
+        $value = self::getValue('favicon_path');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public static function setFaviconPath(?string $path): void
+    {
+        self::setValue('favicon_path', $path ?? '');
+    }
+
     public static function getLoanPaymentsPausedAt(): ?Carbon
     {
         $value = self::getValue('loan_payments_paused_at');

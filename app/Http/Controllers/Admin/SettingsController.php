@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreFaviconRequest;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -11,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -260,6 +262,28 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Grant approvals enabled.' : 'Grant approvals paused.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateFavicon(StoreFaviconRequest $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $file = $request->file('favicon');
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        $path = $file->storeAs('branding', "favicon.{$extension}", 'public');
+
+        $previousPath = SettingService::getFaviconPath();
+
+        if ($previousPath && $previousPath !== $path && Storage::disk('public')->exists($previousPath)) {
+            Storage::disk('public')->delete($previousPath);
+        }
+
+        SettingService::setFaviconPath($path);
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Favicon updated.',
             'alert-type' => 'success',
         ]);
     }

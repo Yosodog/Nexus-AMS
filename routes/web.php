@@ -492,6 +492,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
         );
+        Route::post('/settings/favicon', [SettingsController::class, 'updateFavicon'])->name(
+            'admin.settings.favicon'
+        );
         Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
             'admin.settings.auto-withdraw'
         );

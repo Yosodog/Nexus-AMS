@@ -19,6 +19,7 @@ use App\Observers\OffshoreObserver;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
+use App\Services\SettingService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
@@ -119,6 +121,18 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('pendingRequests', $pendingRequests);
+        });
+
+        View::composer(['layouts.main', 'layouts.admin', 'admin.settings'], function ($view) {
+            $faviconPath = SettingService::getFaviconPath();
+            $faviconUrl = asset('favicon.ico');
+
+            if ($faviconPath && Storage::disk('public')->exists($faviconPath)) {
+                $faviconUrl = Storage::disk('public')->url($faviconPath);
+            }
+
+            $view->with('faviconUrl', $faviconUrl);
+            $view->with('faviconPath', $faviconPath);
         });
 
         LogViewer::auth(function ($request) {

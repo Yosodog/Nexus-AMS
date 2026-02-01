@@ -132,6 +132,50 @@
             </div>
         </div>
         <div class="col-lg-6">
+            @php
+                $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
+            @endphp
+            <div class="card shadow-sm {{ $canUploadFavicon ? '' : 'opacity-50' }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Favicon</span>
+                    <span class="badge text-bg-secondary">Branding</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Upload a square icon (PNG, ICO, SVG, or JPG) to update the browser favicon across the site.
+                    </p>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="border rounded bg-white d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <img src="{{ $faviconUrl }}" alt="Current favicon" class="img-fluid" style="max-width: 32px; max-height: 32px;">
+                        </div>
+                        <div class="small text-muted">
+                            Current favicon preview
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ route('admin.settings.favicon') }}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label" for="faviconUpload">Favicon file</label>
+                            <input type="file"
+                                   class="form-control"
+                                   id="faviconUpload"
+                                   name="favicon"
+                                   accept=".png,.ico,.svg,.jpg,.jpeg"
+                                   @disabled(! $canUploadFavicon)
+                                   required>
+                            <small class="text-muted">Recommended: 32x32 or 64x64.</small>
+                        </div>
+                        <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
+                        @if (! $canUploadFavicon)
+                            <div class="form-text text-muted mt-2">
+                                Requires the View Diagnostic permission.
+                            </div>
+                        @endif
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Discord Verification</span>
