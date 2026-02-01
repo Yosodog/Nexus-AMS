@@ -44,6 +44,25 @@ class LoanService
 
         app(PendingRequestsService::class)->flushCache();
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_application_submitted',
+            outcome: 'success',
+            severity: 'info',
+            subject: $loan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'amount' => $amount,
+                    'term_weeks' => $termLength,
+                ],
+            ],
+            message: 'Loan application submitted.'
+        );
+
         return $loan;
     }
 
@@ -110,6 +129,26 @@ class LoanService
 
         app(PendingRequestsService::class)->flushCache();
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_approved',
+            outcome: 'success',
+            severity: 'info',
+            subject: $updatedLoan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $updatedLoan->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $updatedLoan->nation_id,
+                    'amount' => $amount,
+                    'interest_rate' => $interestRate,
+                    'term_weeks' => $termWeeks,
+                ],
+            ],
+            message: 'Loan approved.'
+        );
+
         return $updatedLoan;
     }
 
@@ -128,6 +167,23 @@ class LoanService
         $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $loan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $loan->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $loan->nation_id,
+                ],
+            ],
+            message: 'Loan denied.'
+        );
     }
 
     public function shiftLoanDueDatesForPausedPeriod(Carbon $pausedAt, Carbon $resumedAt): int
@@ -310,6 +366,27 @@ class LoanService
         });
 
         if ($loanPayment) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'loans',
+                action: 'loan_payment_posted',
+                outcome: 'success',
+                severity: 'info',
+                subject: $loanPayment,
+                context: [
+                    'related' => [
+                        ['type' => 'Loan', 'id' => (string) $loan->id, 'role' => 'loan'],
+                        ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $loan->nation_id,
+                        'amount' => $loanPayment->amount,
+                        'principal_paid' => $loanPayment->principal_paid,
+                        'interest_paid' => $loanPayment->interest_paid,
+                    ],
+                ],
+                message: 'Loan payment posted.'
+            );
+
             $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, $loanPayment->interest_paid);
         }
     }
@@ -326,6 +403,23 @@ class LoanService
             // Notify the nation that the loan has been marked as paid
             $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'paid'));
         });
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_marked_paid',
+            outcome: 'success',
+            severity: 'info',
+            subject: $loan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $loan->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $loan->nation_id,
+                ],
+            ],
+            message: 'Loan marked as paid.'
+        );
     }
 
     /**
@@ -391,6 +485,29 @@ class LoanService
 
         if (is_array($loanPayment)) {
             [$paymentModel, $interestPaid] = $loanPayment;
+
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'loans',
+                action: 'loan_payment_posted',
+                outcome: 'success',
+                severity: 'info',
+                subject: $paymentModel,
+                context: [
+                    'related' => [
+                        ['type' => 'Loan', 'id' => (string) $loan->id, 'role' => 'loan'],
+                        ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $loan->nation_id,
+                        'amount' => $paymentModel->amount,
+                        'principal_paid' => $paymentModel->principal_paid,
+                        'interest_paid' => $paymentModel->interest_paid,
+                        'payment_type' => 'early',
+                    ],
+                ],
+                message: 'Loan payment posted.'
+            );
+
             $this->dispatchLoanInterestEvent($loan, $account, $paymentModel, (float) $interestPaid);
         }
     }

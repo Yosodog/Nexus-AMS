@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Loan;
+use App\Services\AuditLogger;
 use App\Services\LoanService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
@@ -21,9 +22,12 @@ class LoansController
 
     protected LoanService $loanService;
 
-    public function __construct(LoanService $loanService)
+    protected AuditLogger $auditLogger;
+
+    public function __construct(LoanService $loanService, AuditLogger $auditLogger)
     {
         $this->loanService = $loanService;
+        $this->auditLogger = $auditLogger;
     }
 
     /**
@@ -138,8 +142,12 @@ class LoansController
     {
         $this->authorize('manage-loans');
 
-        DB::transaction(function () use ($request, $loan) {
+        $changes = [];
+        $updatedLoan = null;
+
+        DB::transaction(function () use ($request, $loan, &$changes, &$updatedLoan) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $before = $lockedLoan->only(['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance']);
 
             $rules = [
                 'interest_rate' => 'required|numeric|min:0|max:100',
@@ -167,7 +175,38 @@ class LoansController
                 'next_due_date' => $request->next_due_date,
                 'remaining_balance' => $request->remaining_balance,
             ]);
+
+            $updatedLoan = $lockedLoan->fresh();
+
+            foreach (['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance'] as $field) {
+                $afterValue = $updatedLoan->{$field};
+                $beforeValue = $before[$field] ?? null;
+
+                if ((string) $beforeValue !== (string) $afterValue) {
+                    $changes[$field] = [
+                        'from' => $beforeValue,
+                        'to' => $afterValue,
+                    ];
+                }
+            }
         });
+
+        if ($updatedLoan) {
+            $this->auditLogger->recordAfterCommit(
+                category: 'loans',
+                action: 'loan_updated',
+                outcome: 'success',
+                severity: 'warning',
+                subject: $updatedLoan,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $updatedLoan->account_id, 'role' => 'account'],
+                    ],
+                    'changes' => $changes,
+                ],
+                message: 'Loan updated.'
+            );
+        }
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan updated successfully! ✅')->with(
             'alert-type',

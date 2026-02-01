@@ -319,5 +319,34 @@
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Audit Log Retention</span>
+                    <span class="badge text-bg-secondary">{{ $auditRetentionDays }} days</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Control how long audit log entries are retained before automatic pruning.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.audit-retention') }}">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label" for="auditRetentionDays">Retention (days)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="auditRetentionDays"
+                                   name="audit_log_retention_days"
+                                   min="1"
+                                   max="3650"
+                                   value="{{ old('audit_log_retention_days', $auditRetentionDays) }}"
+                                   required>
+                            <small class="text-muted">Use 1–3650 days (up to 10 years).</small>
+                        </div>
+                        <button class="btn btn-primary">Save Audit Retention</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection

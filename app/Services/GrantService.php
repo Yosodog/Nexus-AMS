@@ -97,6 +97,24 @@ class GrantService
 
         app(PendingRequestsService::class)->flushCache();
 
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'grants',
+            action: 'grant_application_submitted',
+            outcome: 'success',
+            severity: 'info',
+            subject: $application,
+            context: [
+                'related' => [
+                    ['type' => 'Grant', 'id' => (string) $grant->id, 'role' => 'grant'],
+                    ['type' => 'Account', 'id' => (string) $accountId, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $nationId,
+                ],
+            ],
+            message: 'Grant application submitted.'
+        );
+
         return $application;
     }
 
@@ -107,7 +125,10 @@ class GrantService
             context: 'approve your own grant request'
         );
 
-        DB::transaction(function () use ($application) {
+        $approvedApplication = null;
+        $deniedApplication = null;
+
+        DB::transaction(function () use ($application, &$approvedApplication, &$deniedApplication) {
             $lockedApplication = GrantApplication::query()
                 ->lockForUpdate()
                 ->findOrFail($application->id);
@@ -166,6 +187,8 @@ class GrantService
 
                 app(PendingRequestsService::class)->flushCache();
 
+                $deniedApplication = $lockedApplication->fresh();
+
                 return;
             }
 
@@ -203,7 +226,50 @@ class GrantService
             self::logApprovalAnomalies($lockedApplication, $grant);
 
             app(PendingRequestsService::class)->flushCache();
+
+            $approvedApplication = $lockedApplication->fresh();
         }, attempts: 3);
+
+        if ($approvedApplication) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'grants',
+                action: 'grant_application_approved',
+                outcome: 'success',
+                severity: 'info',
+                subject: $approvedApplication,
+                context: [
+                    'related' => [
+                        ['type' => 'Grant', 'id' => (string) $approvedApplication->grant_id, 'role' => 'grant'],
+                        ['type' => 'Account', 'id' => (string) $approvedApplication->account_id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $approvedApplication->nation_id,
+                    ],
+                ],
+                message: 'Grant application approved.'
+            );
+        }
+
+        if ($deniedApplication) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'grants',
+                action: 'grant_application_denied',
+                outcome: 'denied',
+                severity: 'warning',
+                subject: $deniedApplication,
+                context: [
+                    'related' => [
+                        ['type' => 'Grant', 'id' => (string) $deniedApplication->grant_id, 'role' => 'grant'],
+                        ['type' => 'Account', 'id' => (string) $deniedApplication->account_id, 'role' => 'account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $deniedApplication->nation_id,
+                        'reason' => 'account_mismatch',
+                    ],
+                ],
+                message: 'Grant application denied.'
+            );
+        }
     }
 
     public static function denyGrant(GrantApplication $application): void
@@ -222,6 +288,24 @@ class GrantService
         $application->nation->notify(new GrantNotification($application->nation_id, $application, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'grants',
+            action: 'grant_application_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $application,
+            context: [
+                'related' => [
+                    ['type' => 'Grant', 'id' => (string) $application->grant_id, 'role' => 'grant'],
+                    ['type' => 'Account', 'id' => (string) $application->account_id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $application->nation_id,
+                ],
+            ],
+            message: 'Grant application denied.'
+        );
     }
 
     /**

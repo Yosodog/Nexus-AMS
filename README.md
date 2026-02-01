@@ -40,6 +40,37 @@ if ($membership->contains($nation->alliance_id)) {
 The service merges the primary alliance ID with every enabled offshore and caches the result. When an offshore
 is toggled or its alliance changes, the membership cache is refreshed automatically.
 
+### Audit logging
+Use `App\Services\AuditLogger` to record security-sensitive or operational actions. The logger automatically
+captures request metadata (request id, IP, user agent) and the authenticated actor when available.
+
+Basic usage:
+
+```php
+app(\App\Services\AuditLogger::class)->record(
+    category: 'finance',
+    action: 'withdrawal_approved',
+    outcome: 'success',
+    severity: 'info',
+    subject: $transaction,
+    context: [
+        'related' => [
+            ['type' => 'Account', 'id' => (string) $transaction->from_account_id, 'role' => 'from_account'],
+        ],
+        'data' => [
+            'nation_id' => $transaction->nation_id,
+        ],
+    ],
+    message: 'Withdrawal approved.'
+);
+```
+
+Conventions:
+- Use `recordAfterCommit(...)` for changes wrapped in DB transactions.
+- Set `subject` to the primary model affected, and add related entities via the `related` array.
+- Use `changes` for before/after values and `data` for structured details (avoid secrets).
+- Keep messages short; never include passwords, API tokens, or full request payloads.
+
 ### Tech Stack:
 - **Backend:** Laravel (PHP 8.2+)
 - **Frontend:** Blade with Tailwind CSS (DaisyUI)

@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\WithdrawLimit;
 use App\Notifications\WithdrawalDeniedNotification;
 use App\Services\AccountService;
+use App\Services\AuditLogger;
 use App\Services\PendingRequestsService;
 use App\Services\PWHelperService;
 use App\Services\SelfApprovalGuard;
@@ -20,7 +21,10 @@ use Illuminate\Support\Facades\Gate;
 
 class WithdrawalController extends Controller
 {
-    public function __construct(private SelfApprovalGuard $selfApprovalGuard) {}
+    public function __construct(
+        private SelfApprovalGuard $selfApprovalGuard,
+        private AuditLogger $auditLogger,
+    ) {}
 
     /**
      * @throws AuthorizationException
@@ -40,6 +44,8 @@ class WithdrawalController extends Controller
         Gate::authorize('manage-accounts');
 
         $resources = PWHelperService::resources();
+        $previousLimits = WithdrawLimit::query()->pluck('daily_limit', 'resource')->toArray();
+        $previousMaxDaily = SettingService::getWithdrawMaxDailyCount();
         $rules = [
             'limits' => ['required', 'array'],
             'max_daily_withdrawals' => ['required', 'integer', 'min:0'],
@@ -61,6 +67,39 @@ class WithdrawalController extends Controller
         }
 
         SettingService::setWithdrawMaxDailyCount($validated['max_daily_withdrawals']);
+
+        $changes = [];
+        foreach ($resources as $resource) {
+            $before = $previousLimits[$resource] ?? 0;
+            $after = $validated['limits'][$resource] ?? 0;
+
+            if ((float) $before !== (float) $after) {
+                $changes["limits.{$resource}"] = [
+                    'from' => $before,
+                    'to' => $after,
+                ];
+            }
+        }
+
+        if ($previousMaxDaily !== (int) $validated['max_daily_withdrawals']) {
+            $changes['max_daily_withdrawals'] = [
+                'from' => $previousMaxDaily,
+                'to' => (int) $validated['max_daily_withdrawals'],
+            ];
+        }
+
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'withdrawal_limits_updated',
+            context: [
+                'changes' => $changes,
+                'data' => [
+                    'limits' => $validated['limits'],
+                    'max_daily_withdrawals' => (int) $validated['max_daily_withdrawals'],
+                ],
+            ],
+            message: 'Withdrawal limits updated.'
+        );
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal limits updated successfully.',
@@ -108,6 +147,28 @@ class WithdrawalController extends Controller
         }
 
         AccountService::dispatchWithdrawal($approvedTransaction);
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'finance',
+            action: 'withdrawal_approved',
+            outcome: 'success',
+            severity: 'info',
+            subject: $approvedTransaction,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $approvedTransaction->from_account_id, 'role' => 'from_account'],
+                ],
+                'data' => [
+                    'nation_id' => $approvedTransaction->nation_id,
+                    'resources' => PWHelperService::resources()
+                        ? collect(PWHelperService::resources())
+                            ->mapWithKeys(fn ($resource) => [$resource => $approvedTransaction->{$resource}])
+                            ->all()
+                        : [],
+                ],
+            ],
+            message: 'Withdrawal approved.'
+        );
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal approved and queued for processing.',
@@ -188,6 +249,27 @@ class WithdrawalController extends Controller
                 accountName: $accountName ?? $deniedTransaction->fromAccount?->name,
             ));
         }
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'finance',
+            action: 'withdrawal_denied',
+            outcome: 'denied',
+            severity: 'warning',
+            subject: $deniedTransaction,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $deniedTransaction->from_account_id, 'role' => 'from_account'],
+                ],
+                'data' => [
+                    'nation_id' => $deniedTransaction->nation_id,
+                    'reason' => $validated['reason'],
+                    'resources' => collect(PWHelperService::resources())
+                        ->mapWithKeys(fn ($resource) => [$resource => $deniedTransaction->{$resource}])
+                        ->all(),
+                ],
+            ],
+            message: 'Withdrawal denied.'
+        );
 
         return redirect()->route('admin.accounts.dashboard')->with([
             'alert-message' => 'Withdrawal request denied and funds returned to the account.',

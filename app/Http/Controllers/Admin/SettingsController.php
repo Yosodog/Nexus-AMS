@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Services\AuditLogger;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -17,6 +18,8 @@ use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger) {}
+
     /**
      * @throws AuthorizationException
      */
@@ -56,6 +59,7 @@ class SettingsController extends Controller
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
             'grantApprovalsEnabled' => SettingService::isGrantApprovalsEnabled(),
+            'auditRetentionDays' => SettingService::getAuditLogRetentionDays(),
         ]);
     }
 
@@ -127,6 +131,7 @@ class SettingsController extends Controller
     {
         $this->authorize('view-diagnostic-info');
 
+        $previous = SettingService::isDiscordVerificationRequired();
         $validated = $request->validate([
             'require_discord_verification' => ['required', 'boolean'],
         ]);
@@ -134,6 +139,20 @@ class SettingsController extends Controller
         $required = (bool) $validated['require_discord_verification'];
 
         SettingService::setDiscordVerificationRequired($required);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'discord_verification_requirement_updated',
+            context: [
+                'changes' => [
+                    'require_discord_verification' => [
+                        'from' => $previous,
+                        'to' => $required,
+                    ],
+                ],
+            ],
+            message: 'Discord verification requirement updated.'
+        );
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $required ? 'Discord verification is now required.' : 'Discord verification is now optional.',
@@ -145,6 +164,8 @@ class SettingsController extends Controller
     {
         $this->authorize('view-diagnostic-info');
 
+        $previousEnabled = SettingService::isDiscordAllianceDepartureEnabled();
+        $previousChannel = SettingService::getDiscordAllianceDepartureChannelId();
         $validated = $request->validate([
             'discord_alliance_departure_enabled' => ['required', 'boolean'],
             'discord_alliance_departure_channel_id' => ['nullable', 'string', 'max:255'],
@@ -156,6 +177,24 @@ class SettingsController extends Controller
         SettingService::setDiscordAllianceDepartureEnabled($enabled);
         SettingService::setDiscordAllianceDepartureChannelId($channelId);
 
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'discord_departure_settings_updated',
+            context: [
+                'changes' => [
+                    'discord_alliance_departure_enabled' => [
+                        'from' => $previousEnabled,
+                        'to' => $enabled,
+                    ],
+                    'discord_alliance_departure_channel_id' => [
+                        'from' => $previousChannel,
+                        'to' => $channelId,
+                    ],
+                ],
+            ],
+            message: 'Discord departure settings updated.'
+        );
+
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Discord alliance departure settings updated.',
             'alert-type' => 'success',
@@ -166,6 +205,12 @@ class SettingsController extends Controller
     {
         $this->authorize('view-diagnostic-info');
 
+        $previous = [
+            'home_headline' => SettingService::getHomepageHeadline(config('app.name', 'Nexus AMS')),
+            'home_tagline' => SettingService::getHomepageTagline(config('app.name', 'Nexus AMS')),
+            'home_about' => SettingService::getHomepageAbout(config('app.name', 'Nexus AMS')),
+            'home_highlights' => SettingService::getHomepageHighlights(),
+        ];
         $validated = $request->validate([
             'home_headline' => ['required', 'string', 'max:160'],
             'home_tagline' => ['required', 'string', 'max:240'],
@@ -184,6 +229,20 @@ class SettingsController extends Controller
 
         SettingService::setHomepageHighlights($highlights);
 
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'homepage_settings_updated',
+            context: [
+                'changes' => [
+                    'home_headline' => ['from' => $previous['home_headline'], 'to' => $validated['home_headline']],
+                    'home_tagline' => ['from' => $previous['home_tagline'], 'to' => $validated['home_tagline']],
+                    'home_about' => ['from' => $previous['home_about'], 'to' => $validated['home_about'] ?? ''],
+                    'home_highlights' => ['from' => $previous['home_highlights'], 'to' => $highlights],
+                ],
+            ],
+            message: 'Homepage settings updated.'
+        );
+
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Homepage content updated.',
             'alert-type' => 'success',
@@ -194,6 +253,7 @@ class SettingsController extends Controller
     {
         $this->authorize('manage-accounts');
 
+        $previous = SettingService::isAutoWithdrawEnabled();
         $validated = $request->validate([
             'auto_withdraw_enabled' => ['required', 'boolean'],
         ]);
@@ -201,6 +261,20 @@ class SettingsController extends Controller
         $enabled = (bool) $validated['auto_withdraw_enabled'];
 
         SettingService::setAutoWithdrawEnabled($enabled);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'auto_withdraw_toggle',
+            context: [
+                'changes' => [
+                    'auto_withdraw_enabled' => [
+                        'from' => $previous,
+                        'to' => $enabled,
+                    ],
+                ],
+            ],
+            message: 'Auto withdraw setting updated.'
+        );
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
@@ -212,6 +286,7 @@ class SettingsController extends Controller
     {
         $this->authorize('manage-loans');
 
+        $previous = SettingService::isLoanPaymentsEnabled();
         $validated = $request->validate([
             'loan_payments_enabled' => ['required', 'boolean'],
         ]);
@@ -232,6 +307,27 @@ class SettingsController extends Controller
 
             SettingService::setLoanPaymentsEnabled(true);
 
+            $this->auditLogger->success(
+                category: 'settings',
+                action: 'loan_payments_resumed',
+                context: [
+                    'changes' => [
+                        'loan_payments_enabled' => [
+                            'from' => $wasEnabled,
+                            'to' => true,
+                        ],
+                        'loan_payments_paused_at' => [
+                            'from' => $pausedAt?->toIso8601String(),
+                            'to' => null,
+                        ],
+                    ],
+                    'data' => [
+                        'adjusted_due_dates' => $updatedCount,
+                    ],
+                ],
+                message: 'Loan payments resumed.'
+            );
+
             return redirect()->route('admin.settings')->with([
                 'alert-message' => $updatedCount > 0
                     ? "Loan payments resumed. Adjusted due dates for {$updatedCount} active loans."
@@ -241,6 +337,20 @@ class SettingsController extends Controller
         }
 
         SettingService::setLoanPaymentsEnabled($enabled);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'loan_payments_toggle',
+            context: [
+                'changes' => [
+                    'loan_payments_enabled' => [
+                        'from' => $previous,
+                        'to' => $enabled,
+                    ],
+                ],
+            ],
+            message: 'Loan payment setting updated.'
+        );
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Loan payments enabled.' : 'Loan payments paused.',
@@ -252,6 +362,7 @@ class SettingsController extends Controller
     {
         $this->authorize('manage-grants');
 
+        $previous = SettingService::isGrantApprovalsEnabled();
         $validated = $request->validate([
             'grant_approvals_enabled' => ['required', 'boolean'],
         ]);
@@ -260,8 +371,54 @@ class SettingsController extends Controller
 
         SettingService::setGrantApprovalsEnabled($enabled);
 
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'grant_approvals_toggle',
+            context: [
+                'changes' => [
+                    'grant_approvals_enabled' => [
+                        'from' => $previous,
+                        'to' => $enabled,
+                    ],
+                ],
+            ],
+            message: 'Grant approvals setting updated.'
+        );
+
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Grant approvals enabled.' : 'Grant approvals paused.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateAuditRetention(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $previous = SettingService::getAuditLogRetentionDays();
+        $validated = $request->validate([
+            'audit_log_retention_days' => ['required', 'integer', 'min:1', 'max:3650'],
+        ]);
+
+        $updated = (int) $validated['audit_log_retention_days'];
+        SettingService::setAuditLogRetentionDays($updated);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'audit_retention_updated',
+            context: [
+                'changes' => [
+                    'audit_log_retention_days' => [
+                        'from' => $previous,
+                        'to' => $updated,
+                    ],
+                ],
+            ],
+            message: 'Audit log retention updated.'
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Audit log retention updated.',
             'alert-type' => 'success',
         ]);
     }
@@ -281,6 +438,20 @@ class SettingsController extends Controller
         }
 
         SettingService::setFaviconPath($path);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'favicon_updated',
+            context: [
+                'changes' => [
+                    'favicon_path' => [
+                        'from' => $previousPath,
+                        'to' => $path,
+                    ],
+                ],
+            ],
+            message: 'Favicon updated.'
+        );
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Favicon updated.',

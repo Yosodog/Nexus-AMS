@@ -160,6 +160,25 @@ class SettingService
         self::setValue('grant_approvals_enabled', $enabled ? 1 : 0);
     }
 
+    public static function getAuditLogRetentionDays(): int
+    {
+        $value = self::getValue('audit_log_retention_days');
+
+        if (is_null($value)) {
+            $default = (int) config('audit.retention_days_default', 180);
+            self::setAuditLogRetentionDays($default);
+
+            return $default;
+        }
+
+        return max(1, (int) $value);
+    }
+
+    public static function setAuditLogRetentionDays(int $days): void
+    {
+        self::setValue('audit_log_retention_days', max(1, $days));
+    }
+
     public static function getFaviconPath(): ?string
     {
         $value = self::getValue('favicon_path');

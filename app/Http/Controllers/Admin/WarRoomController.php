@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WarCounter;
 use App\Models\WarPlan;
+use App\Services\AuditLogger;
 use App\Services\SettingService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
  */
 class WarRoomController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger) {}
+
     /**
      * Render the War Room dashboard.
      */
@@ -48,6 +51,8 @@ class WarRoomController extends Controller
     {
         $this->authorize('manage-war-room');
 
+        $previousChannel = SettingService::getDiscordWarAlertChannelId();
+        $previousEnabled = SettingService::isDiscordWarAlertEnabled();
         $data = $request->validate([
             'channel_id' => ['nullable', 'string', 'max:190'],
             'enabled' => ['nullable', 'boolean'],
@@ -55,6 +60,24 @@ class WarRoomController extends Controller
 
         SettingService::setDiscordWarAlertChannelId($data['channel_id'] ?? '');
         SettingService::setDiscordWarAlertEnabled($request->boolean('enabled'));
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'war_alert_settings_updated',
+            context: [
+                'changes' => [
+                    'discord_war_alert_channel_id' => [
+                        'from' => $previousChannel,
+                        'to' => $data['channel_id'] ?? '',
+                    ],
+                    'discord_war_alert_enabled' => [
+                        'from' => $previousEnabled,
+                        'to' => $request->boolean('enabled'),
+                    ],
+                ],
+            ],
+            message: 'War alert settings updated.'
+        );
 
         return back()
             ->with('alert-type', 'success')

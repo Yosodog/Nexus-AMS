@@ -7,6 +7,7 @@ use App\Models\MMRSetting;
 use App\Models\MMRTier;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
+use App\Services\AuditLogger;
 use App\Services\MMRService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 class MMRController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * Display the MMR index page.
@@ -186,6 +189,9 @@ class MMRController extends Controller
     {
         $this->authorize('manage-mmr');
 
+        $previousEnabled = SettingService::getMMRAssistantEnabled();
+        $previousSettings = MMRSetting::query()->get()->keyBy('resource');
+
         SettingService::setMMRAssistantEnabled($request->input('enabled', false));
 
         foreach ($request->input('resources', []) as $resource => $data) {
@@ -197,6 +203,40 @@ class MMRController extends Controller
                 ]
             );
         }
+
+        $changes = [
+            'mmr_assistant_enabled' => [
+                'from' => $previousEnabled,
+                'to' => (bool) $request->input('enabled', false),
+            ],
+            'resources' => collect($request->input('resources', []))
+                ->mapWithKeys(function ($data, $resource) use ($previousSettings) {
+                    $previous = $previousSettings[$resource] ?? null;
+
+                    return [
+                        $resource => [
+                            'from' => $previous ? [
+                                'enabled' => (bool) $previous->enabled,
+                                'surcharge_pct' => (float) $previous->surcharge_pct,
+                            ] : null,
+                            'to' => [
+                                'enabled' => isset($data['enabled']),
+                                'surcharge_pct' => (float) ($data['surcharge_pct'] ?? 0),
+                            ],
+                        ],
+                    ];
+                })
+                ->all(),
+        ];
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'mmr_assistant_settings_updated',
+            context: [
+                'changes' => $changes,
+            ],
+            message: 'MMR assistant settings updated.'
+        );
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'MMR Assistant settings updated.',
@@ -211,6 +251,7 @@ class MMRController extends Controller
     {
         $this->authorize('manage-mmr');
 
+        $previousWeights = SettingService::getMMRResourceWeights();
         $weights = [];
 
         foreach ($service->getResourceFields() as $resource) {
@@ -234,6 +275,20 @@ class MMRController extends Controller
         }
 
         SettingService::setMMRResourceWeights($weights);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'mmr_resource_weights_updated',
+            context: [
+                'changes' => [
+                    'weights' => [
+                        'from' => $previousWeights,
+                        'to' => $weights,
+                    ],
+                ],
+            ],
+            message: 'MMR resource weights updated.'
+        );
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'Resource weightings updated.',
