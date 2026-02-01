@@ -5,13 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? env("APP_NAME") }}</title>
-    <script>
-        if (localStorage.getItem("theme") === "night" || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.setAttribute("data-theme", "night");
-        } else {
-            document.documentElement.removeAttribute("data-theme");
-        }
-    </script>
+    <x-theme-script />
     @vite('resources/css/app.css')
     @vite('resources/js/app.js')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -53,28 +47,7 @@
 
     <x-footer />
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const themeToggle = document.getElementById("theme-toggle");
-            if (!themeToggle) return;
 
-            // Load saved theme from local storage
-            if (localStorage.getItem("theme") === "night" || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                themeToggle.checked = true;
-            }
-
-            // Listen for toggle changes
-            themeToggle.addEventListener("change", function () {
-                if (this.checked) {
-                    document.documentElement.setAttribute("data-theme", "night");
-                    localStorage.setItem("theme", "night");
-                } else {
-                    document.documentElement.removeAttribute("data-theme");
-                    localStorage.setItem("theme", "light");
-                }
-            });
-        });
-    </script>
 
     <script src="//unpkg.com/alpinejs" defer></script>
 

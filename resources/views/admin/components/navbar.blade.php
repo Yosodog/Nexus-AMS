@@ -89,22 +89,29 @@
         </ul>
 
         <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+                <a href="#" class="nav-link theme-toggle-btn" role="button">
+                    <i class="bi bi-moon-fill"></i>
+                </a>
+            </li>
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <img src="{{ $nation->flag }}" class="user-image rounded-circle shadow"
-                         alt="Nation Flag" style="object-fit: cover;">
+                    <img src="{{ $nation->flag }}" class="user-image rounded-circle shadow" alt="Nation Flag"
+                        style="object-fit: cover;">
                     <span class="d-none d-md-inline">{{ $nation->leader_name }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
                     <li class="user-header text-bg-primary bg-gradient">
                         <img src="{{ $nation->flag }}" class="rounded-circle shadow" alt="Nation Flag"
-                             style="object-fit: cover;">
+                            style="object-fit: cover;">
                         <p>
                             {{ $nation->leader_name }}
                             <span class="d-block small opacity-75">{{ $nation->nation_name }}</span>
-                            <span class="badge text-bg-light text-uppercase me-1">{{ $nation->alliance_position ?? 'Member' }}</span>
+                            <span
+                                class="badge text-bg-light text-uppercase me-1">{{ $nation->alliance_position ?? 'Member' }}</span>
                             <small>Member
-                                since {{ Carbon::now()->subDays($nation->alliance_seniority)->toFormattedDateString() }}</small>
+                                since
+                                {{ Carbon::now()->subDays($nation->alliance_seniority)->toFormattedDateString() }}</small>
                         </p>
                     </li>
                     <li class="user-body">
@@ -159,24 +166,28 @@
                                 <div class="col-6">
                                     <div class="border rounded text-center py-2 h-100">
                                         <div class="text-muted small">GNI</div>
-                                        <div class="fw-semibold">{{ $abbreviateCurrency($nation->gross_national_income) }}</div>
+                                        <div class="fw-semibold">
+                                            {{ $abbreviateCurrency($nation->gross_national_income) }}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="mt-3">
                             <div class="list-group list-group-flush">
-                                <a href="{{ route('user.dashboard') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                <a href="{{ route('user.dashboard') }}"
+                                    class="list-group-item list-group-item-action d-flex align-items-center">
                                     <i class="bi bi-speedometer2 me-2"></i>
                                     <span>User Dashboard</span>
                                     <span class="ms-auto text-muted small">View</span>
                                 </a>
-                                <a href="{{ route('admin.dashboard') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                <a href="{{ route('admin.dashboard') }}"
+                                    class="list-group-item list-group-item-action d-flex align-items-center">
                                     <i class="bi bi-layout-sidebar-inset-reverse me-2"></i>
                                     <span>Admin Overview</span>
                                     <span class="ms-auto text-muted small">Open</span>
                                 </a>
-                                <a href="{{ route('admin.members.show', Auth::user()->nation_id) }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                                <a href="{{ route('admin.members.show', Auth::user()->nation_id) }}"
+                                    class="list-group-item list-group-item-action d-flex align-items-center">
                                     <i class="bi bi-person-badge-fill me-2"></i>
                                     <span>Member Profile</span>
                                     <span class="ms-auto text-muted small">Details</span>
@@ -187,9 +198,9 @@
                     <li class="user-footer">
                         <a href="{{ route('user.dashboard') }}" class="btn btn-primary btn-flat">Dashboard</a>
                         <a href="{{ route('admin.members.show', Auth::user()->nation_id) }}"
-                           class="btn btn-default btn-flat">Profile</a>
+                            class="btn btn-default btn-flat">Profile</a>
                         <a class="btn btn-default btn-flat float-end"
-                           onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">Logout</a>
+                            onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">Logout</a>
                     </li>
                 </ul>
             </li>
