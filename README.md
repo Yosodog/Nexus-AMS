@@ -1,27 +1,32 @@
 # Nexus AMS
 
-## 🚀 About Nexus AMS
-Nexus AMS (Alliance Management System) is an open-source web application designed for managing alliances in the game **Politics & War**. It provides powerful tools for alliance banking, war management, resource tracking, taxation, loans, recruitment, and more. It is intended to be a successor of BK Net, which is over 10 years old at this point, and be fully on par with features.
+## About Nexus AMS
+Nexus AMS (Alliance Management System) is an open-source web application for managing alliances in the game **Politics & War**. It provides tools for alliance banking, war management, resource tracking, taxation, loans, recruitment, and more. It is intended to be a successor to BK Net and reach feature parity.
 
-## ⚠️ Alpha Warning
+## Alpha Warning
 This project is currently in **Alpha** and is **not** production-ready. Expect breaking changes, incomplete features, and potential security risks. Use at your own risk!
 
-## 💡 Why PHP and Laravel?
-Nexus AMS is built using **PHP 8.2+** and **Laravel 12**, leveraging the framework’s robustness, scalability, and ease of development. Don't hate on PHP/Laravel, it's the best tool for this job. Fight me.
+## Why PHP and Laravel?
+Nexus AMS is built using **PHP 8.4+** and **Laravel 12**, leveraging the framework's robustness, scalability, and ease of development.
 
-## 🌍 Companion services and tooling
+## Companion services and tooling
 Nexus AMS ships alongside a few related projects:
 - [Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs): Node.js listener that consumes Politics & War GraphQL subscriptions and forwards live events (nations, alliances, wars) to the Nexus API instead of polling.
 - [Nexus AMS Discord Bot](https://github.com/Yosodog/Nexus-AMS-Discord): Discord bot scaffolding with slash-command support and a Nexus API client stub to extend coordination and verification workflows.
 - [Nexus-Setup](https://github.com/Yosodog/Nexus-Setup): Shell-based installer for provisioning a production-ready Nexus AMS + Subs stack on Ubuntu (Nginx, PHP, MySQL, Supervisor, and TLS) with one command.
 
-## 🛠️ How Nexus AMS Works
+## How Nexus AMS Works
 Nexus AMS is structured to be modular and scalable:
 
 ### Key Features (In current state):
-- **Alliance Banking:** Manage deposits, withdrawals, and transactions securely.
-- **Loans:** Manage loans and interest payments.
-- **City Grants:** Send and manage city grants.
+- **Alliance banking and finance:** Track deposits, withdrawals, and a unified finance ledger.
+- **Taxes and direct deposit:** Collect taxes, model brackets, and report intake across money and resources.
+- **Grants and loans:** Manage grant programs, applications, approvals, and scheduled loan payments.
+- **Alliance membership and offshores:** Treat primary and offshore alliances as one group for permissions and reporting.
+- **War room tooling:** Track wars, counters, and plans with alliance-aware filters.
+- **Audit logging and rules:** Record security-sensitive actions and configure audit rules and retention.
+- **Recruitment and applications:** Manage applicant pipelines and alliance onboarding data.
+- **War Simulators and Statistics:** Simulate wars and generate reports for alliance leaders, with leaderboards to encourage raiding.
 
 This application is supposed to help you manage your alliance, so expect a fully-fledged system eventually.
 
@@ -72,16 +77,16 @@ Conventions:
 - Keep messages short; never include passwords, API tokens, or full request payloads.
 
 ### Tech Stack:
-- **Backend:** Laravel (PHP 8.2+)
+- **Backend:** Laravel (PHP 8.4+)
 - **Frontend:** Blade with Tailwind CSS (DaisyUI)
 - **Database:** MySQL/PostgreSQL
 - **Subscriptions:** Node.js + GraphQL
 - **Admin Panel:** AdminLTE (Bootstrap 5)
 
-## 📥 Installation Guide
+## Installation Guide
 
 ### Prerequisites
-- **PHP 8.2+**
+- **PHP 8.4+**
 - **Composer**
 - **Node.js 18+**
 - **MySQL or PostgreSQL**
@@ -112,7 +117,7 @@ Conventions:
    ```sh
    php artisan migrate
    ```
-6. (Optional) Seed initial data:
+6. Seed initial data:
    ```sh
    php artisan db:seed
    ```
@@ -126,7 +131,7 @@ Conventions:
    ```
 > Prefer an automated production install? Use the [Nexus-Setup](https://github.com/Yosodog/Nexus-Setup) installer to provision Ubuntu with Nexus AMS, Nexus-AMS-Subs, TLS, Supervisor workers, and scheduler configuration in one run.
 
-## 🤝 Contributing
+## Contributing
 We welcome contributions! To get started:
 1. Fork the repository
 2. Clone your fork:
@@ -149,7 +154,7 @@ We welcome contributions! To get started:
 
 All pull requests should follow **PSR-12 coding standards** and include meaningful commit messages.
 
-## 🐞 Reporting Bugs & Suggesting Features
+## Reporting Bugs & Suggesting Features
 Found a bug? Have a feature request?
 - Open an issue on GitHub: [Nexus AMS Issues](https://github.com/Yosodog/Nexus-AMS/issues)
 - Clearly describe the problem, expected behavior, and steps to reproduce.
@@ -157,7 +162,7 @@ Found a bug? Have a feature request?
 
 Contributors are encouraged to discuss ideas before implementing major changes.
 
-## ❓ Need Help?
+## Need Help?
 For questions or support:
 - Contact **Yosodog** on Discord or open an issue on GitHub.
 
