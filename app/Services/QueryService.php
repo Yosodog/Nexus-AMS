@@ -193,9 +193,20 @@ class QueryService
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
                 try {
                     if ($response instanceof Response) {
+                        $this->sleepForRateLimitRemaining($response);
+
                         if ($response->status() === 429) {
-                            Log::warning('Rate limit hit, retrying in '.$delay.' seconds.');
-                            sleep($delay);
+                            $resetAfter = $this->getRateLimitResetAfter($response) ?? $delay;
+                            if ($retryCount >= $this->maxRetries) {
+                                Log::error('Rate limit retry limit reached.', [
+                                    'retryCount' => $retryCount,
+                                    'resetAfter' => $resetAfter,
+                                ]);
+                                throw new PWQueryFailedException('Rate limit retry limit reached.');
+                            }
+
+                            Log::warning('Rate limit hit, retrying in '.$resetAfter.' seconds.');
+                            sleep($resetAfter);
                             $retryCount++;
                             $delay *= 2;
 
@@ -218,6 +229,40 @@ class QueryService
                 }
             }
         );
+    }
+
+    protected function sleepForRateLimitRemaining(Response $response): void
+    {
+        $remaining = $response->header('X-RateLimit-Remaining');
+        if (! is_numeric($remaining) || (int) $remaining !== 0) {
+            return;
+        }
+
+        $resetAfter = $this->getRateLimitResetAfter($response);
+        if (is_null($resetAfter) || $resetAfter <= 0) {
+            return;
+        }
+
+        Log::warning('Rate limit exhausted, pausing for '.$resetAfter.' seconds.');
+        sleep($resetAfter);
+    }
+
+    protected function getRateLimitResetAfter(Response $response): ?int
+    {
+        $resetAfter = $response->header('X-RateLimit-Reset-After');
+        if (is_numeric($resetAfter)) {
+            return max(0, (int) ceil((float) $resetAfter));
+        }
+
+        $resetAt = $response->header('X-RateLimit-Reset');
+        if (is_numeric($resetAt)) {
+            $seconds = (int) $resetAt - now()->timestamp;
+            if ($seconds > 0) {
+                return $seconds;
+            }
+        }
+
+        return null;
     }
 
     /**
