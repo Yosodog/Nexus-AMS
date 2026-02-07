@@ -28,9 +28,8 @@
         }
 
         .app-sidebar .sidebar-wrapper {
-            max-height: calc(100vh - 3.5rem);
-            overflow-y: auto;
-            overflow-x: hidden;
+            max-height: none;
+            overflow: visible;
         }
 
         @media (max-width: 767.98px) {
