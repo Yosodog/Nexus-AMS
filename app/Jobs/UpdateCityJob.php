@@ -2,13 +2,18 @@
 
 namespace App\Jobs;
 
+use App\GraphQL\Models\City as CityGraphQL;
 use App\Models\City;
+use App\Models\Nation;
 use App\Services\CityQueryService;
+use App\Services\NationQueryService;
 use Exception;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class UpdateCityJob implements ShouldQueue
@@ -34,31 +39,73 @@ class UpdateCityJob implements ShouldQueue
      */
     public function handle(): void
     {
+        foreach ($this->citiesData as $cityData) {
+            $cityFromApi = null;
+            $nationId = $cityData['nation_id'] ?? null;
+
+            if (! $nationId) {
+                $cityFromApi = CityQueryService::getCityById($cityData['id']);
+                $nationId = $cityFromApi->nation_id ?? null;
+            }
+
+            try {
+                Cache::lock($this->lockKey($nationId ?? $cityData['id']), 30)->block(5, function () use (
+                    $cityData,
+                    $nationId,
+                    $cityFromApi
+                ): void {
+                    $this->ensureNationExists($nationId);
+                    $this->upsertCity($cityData, $cityFromApi);
+                });
+            } catch (LockTimeoutException $e) {
+                $this->release(10);
+
+                return;
+            } catch (Exception $e) {
+                Log::error('Failed to update cities', ['error' => $e->getMessage()]);
+            }
+        }
+    }
+
+    private function lockKey(int $nationId): string
+    {
+        return 'nation:create:'.$nationId;
+    }
+
+    private function ensureNationExists(?int $nationId): void
+    {
+        if (! $nationId) {
+            return;
+        }
+
+        if (Nation::query()->whereKey($nationId)->exists()) {
+            return;
+        }
+
+        $nationModel = NationQueryService::getNationById($nationId);
+        Nation::updateFromAPI($nationModel);
+    }
+
+    private function upsertCity(array $cityData, ?CityGraphQL $cityFromApi): void
+    {
         try {
-            foreach ($this->citiesData as $cityData) {
-                // Get the model from the DB
-                $cityModel = City::getById($cityData['id']);
+            $cityModel = City::getById($cityData['id']);
 
-                foreach ($cityData as $key => $data) {
-                    if (in_array($key, $this->skips)) { // Skip stuff that we don't store
-                        continue;
-                    }
-
-                    $cityModel->$key = $data ?? '';
+            foreach ($cityData as $key => $data) {
+                if (in_array($key, $this->skips)) {
+                    continue;
                 }
 
-                $cityModel->save();
+                $cityModel->$key = $data ?? '';
             }
+
+            $cityModel->save();
         } catch (ModelNotFoundException $e) {
-            // Model is not in the DB for some reason, so let's just create it
-            // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
-            // So we'll just query and add it as usual lol The nations job does things differently so this is not needed
-            $city = CityQueryService::getCityById($cityData['id']);
+            $city = $cityFromApi ?? CityQueryService::getCityById($cityData['id']);
+
             try {
                 City::updateFromAPI($city);
             } catch (UniqueConstraintViolationException $e) {
-                // If the city is "soft deleted" when it wasn't supposed to, try to restore it
-                // The DB will throw a Unique exception because it exists, but Laravel can't find it because it's soft deleted
                 $trashedCity = City::withTrashed()
                     ->find($city->id);
 
@@ -66,11 +113,9 @@ class UpdateCityJob implements ShouldQueue
                     $trashedCity->restore();
                     City::updateFromAPI($city);
                 } else {
-                    throw $e; // Something else is wrong
+                    throw $e;
                 }
             }
-        } catch (Exception $e) {
-            Log::error('Failed to update cities', ['error' => $e->getMessage()]);
         }
     }
 }

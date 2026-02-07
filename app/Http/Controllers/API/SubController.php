@@ -4,7 +4,6 @@ namespace App\Http\Controllers\API;
 
 use App\Events\WarDeclared;
 use App\Exceptions\PWQueryFailedException;
-use App\Exceptions\PWRateLimitHitException;
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
@@ -20,7 +19,6 @@ use App\Models\Nation;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\AllianceQueryService;
-use App\Services\CityQueryService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -165,9 +163,6 @@ class SubController extends Controller
 
     /**
      * @return JsonResponse
-     *
-     * @throws PWQueryFailedException
-     * @throws PWRateLimitHitException
      */
     public function createCity(Request $request)
     {
@@ -183,13 +178,9 @@ class SubController extends Controller
             $cityCreates = [$cityCreates];
         }
 
-        foreach ($cityCreates as $create) {
-            $city = CityQueryService::getCityById($create['id']);
+        UpdateCityJob::dispatch($cityCreates);
 
-            City::updateFromAPI($city);
-        }
-
-        return response()->json(['message' => 'City created successfully']);
+        return response()->json(['message' => 'City creation(s) queued for processing']);
     }
 
     /**

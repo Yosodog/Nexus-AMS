@@ -5,8 +5,10 @@ namespace App\Jobs;
 use App\Models\Nation;
 use App\Services\NationQueryService;
 use Exception;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class CreateNationJob implements ShouldQueue
@@ -30,15 +32,32 @@ class CreateNationJob implements ShouldQueue
      */
     public function handle(): void
     {
-        try {
-            foreach ($this->nationsData as $nationData) {
-                $nationModel = NationQueryService::getNationById($nationData['id']);
+        foreach ($this->nationsData as $nationData) {
+            $nationId = $nationData['id'] ?? null;
 
-                // Use updateFromAPI() to create the nation
-                Nation::updateFromAPI($nationModel);
+            if (! $nationId) {
+                continue;
             }
-        } catch (Exception $e) {
-            Log::error('Failed to create nations', ['error' => $e->getMessage()]);
+
+            try {
+                Cache::lock($this->lockKey($nationId), 30)->block(5, function () use ($nationId): void {
+                    $nationModel = NationQueryService::getNationById($nationId);
+
+                    // Use updateFromAPI() to create the nation
+                    Nation::updateFromAPI($nationModel);
+                });
+            } catch (LockTimeoutException $e) {
+                $this->release(10);
+
+                return;
+            } catch (Exception $e) {
+                Log::error('Failed to create nations', ['error' => $e->getMessage()]);
+            }
         }
+    }
+
+    private function lockKey(int $nationId): string
+    {
+        return 'nation:create:'.$nationId;
     }
 }
