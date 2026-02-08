@@ -505,8 +505,15 @@
 
             {{-- Section: Resource Table --}}
             <div class="mb-3">
-                <h4 class="fw-semibold">Member Resource Totals</h4>
-                <p class="text-muted mb-2">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h4 class="fw-semibold mb-0">Member Resource Totals</h4>
+                        <p class="text-muted mb-0">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="mmrExportCsv">
+                        <i class="bi bi-download me-1"></i> Export Resources + Units CSV
+                    </button>
+                </div>
             </div>
 
             <div class="card mb-4">
@@ -659,12 +666,12 @@
                 new bootstrap.Popover(el);
             });
 
-            new DataTable('#mmrResourceTable', {
+            const resourceTable = new DataTable('#mmrResourceTable', {
                 pageLength: 50,
                 responsive: true
             });
 
-            new DataTable('#mmrMilitaryTable', {
+            const militaryTable = new DataTable('#mmrMilitaryTable', {
                 pageLength: 50,
                 responsive: true
             });
@@ -719,6 +726,93 @@
                     bulkTierCheckboxes.forEach(input => {
                         input.checked = false;
                     });
+                });
+            }
+
+            const exportButton = document.getElementById('mmrExportCsv');
+
+            const stripHtml = (value) => {
+                if (value === null || value === undefined) {
+                    return '';
+                }
+
+                const div = document.createElement('div');
+                div.innerHTML = String(value);
+
+                return div.textContent.trim();
+            };
+
+            const formatCsvLine = (cells) => {
+                return cells.map(cell => {
+                    const text = String(cell ?? '');
+                    const escaped = text.replace(/"/g, '""');
+
+                    return `"${escaped}"`;
+                }).join(',');
+            };
+
+            const getTableSection = (tableId, dataTable) => {
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    return { headers: [], rows: [] };
+                }
+
+                const headers = Array.from(table.querySelectorAll('thead th')).map(th => stripHtml(th.innerHTML));
+                const rows = dataTable ? dataTable.rows({ search: 'applied' }).data().toArray() : [];
+                let dataRows = [];
+
+                if (rows.length > 0) {
+                    dataRows = rows.map(row => Array.from(row).map(cell => stripHtml(cell)));
+                } else {
+                    dataRows = Array.from(table.querySelectorAll('tbody tr')).map(row => {
+                        return Array.from(row.children).map(cell => stripHtml(cell.innerHTML));
+                    });
+                }
+
+                return { headers, rows: dataRows };
+            };
+
+            if (exportButton) {
+                exportButton.addEventListener('click', () => {
+                    const resourceSection = getTableSection('mmrResourceTable', resourceTable);
+                    const unitSection = getTableSection('mmrMilitaryTable', militaryTable);
+
+                    const combinedHeaders = [
+                        ...resourceSection.headers,
+                        ...unitSection.headers.slice(2),
+                    ];
+
+                    const unitRowMap = new Map();
+                    unitSection.rows.forEach(row => {
+                        const key = `${row[0]}::${row[1]}`;
+                        unitRowMap.set(key, row);
+                    });
+
+                    const combinedRows = resourceSection.rows.map(resourceRow => {
+                        const key = `${resourceRow[0]}::${resourceRow[1]}`;
+                        const unitRow = unitRowMap.get(key) ?? [];
+
+                        return [
+                            ...resourceRow,
+                            ...unitRow.slice(2),
+                        ];
+                    });
+
+                    const sections = [
+                        combinedHeaders,
+                        ...combinedRows,
+                    ];
+
+                    const csv = sections.map(formatCsvLine).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'mmr-resources-units.csv';
+                    link.click();
+
+                    URL.revokeObjectURL(url);
                 });
             }
         });
