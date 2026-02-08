@@ -37,7 +37,7 @@ class CityGrantController
         $previousRequests = CityGrantRequest::whereIn('status', ['approved', 'denied'])
             ->orderBy('updated_at', 'desc')
             ->get();
-        $grants = CityGrant::all();
+        $grants = CityGrant::orderBy('city_number')->get();
         $cityCostService = app(CityCostService::class);
         $grantAmounts = $grants->mapWithKeys(
             fn (CityGrant $grant) => [$grant->id => $cityCostService->calculateGrantAmount($grant)]
