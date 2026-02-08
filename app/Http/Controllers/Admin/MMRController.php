@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkEditMMRTiersRequest;
 use App\Models\MMRSetting;
 use App\Models\MMRTier;
 use App\Models\Nation;
@@ -178,6 +179,48 @@ class MMRController extends Controller
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'All tiers updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function bulkEditResources(BulkEditMMRTiersRequest $request, MMRService $service): RedirectResponse
+    {
+        $resourceFields = $service->getResourceFields();
+        $readinessFields = [
+            'barracks',
+            'factories',
+            'hangars',
+            'drydocks',
+            'missiles',
+            'nukes',
+            'spies',
+        ];
+        $allFields = array_merge($resourceFields, $readinessFields);
+        $updates = [];
+
+        foreach ($allFields as $field) {
+            $value = $request->input("resources.$field");
+
+            if ($value !== null && $value !== '') {
+                $updates[$field] = (int) $value;
+            }
+        }
+
+        if (empty($updates)) {
+            return redirect()->route('admin.mmr.index')->with([
+                'alert-message' => 'Provide at least one resource value to apply.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        $tierIds = $request->input('tier_ids', []);
+
+        MMRTier::query()
+            ->whereIn('id', $tierIds)
+            ->update($updates);
+
+        return redirect()->route('admin.mmr.index')->with([
+            'alert-message' => 'Selected tiers updated.',
             'alert-type' => 'success',
         ]);
     }
