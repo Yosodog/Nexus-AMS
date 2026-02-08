@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
+use App\Http\Controllers\Admin\MemberTransferController as AdminMemberTransferController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\NelDocsController;
 use App\Http\Controllers\Admin\OffshoreController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
@@ -107,6 +109,15 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('accounts/transfer', [AccountsController::class, 'transfer'])
         ->name('accounts.transfer')
         ->middleware([BlockWhenPWDown::class, 'throttle:account-transfers']);
+
+    Route::get('/accounts/member-transfer-search', [MemberTransferController::class, 'search'])
+        ->name('member-transfers.search');
+    Route::post('/accounts/member-transfers/{memberTransfer}/accept', [MemberTransferController::class, 'accept'])
+        ->name('member-transfers.accept');
+    Route::post('/accounts/member-transfers/{memberTransfer}/decline', [MemberTransferController::class, 'decline'])
+        ->name('member-transfers.decline');
+    Route::post('/accounts/member-transfers/{memberTransfer}/cancel', [MemberTransferController::class, 'cancel'])
+        ->name('member-transfers.cancel');
 
     Route::post('/accounts/auto-withdraw', [AccountsController::class, 'updateAutoWithdraw'])
         ->name('auto-withdraw.update');
@@ -194,6 +205,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/user/{user}/discord/unlink', [AdminUserController::class, 'unlinkDiscord'])->name(
             'admin.users.discord.unlink'
         );
+
+        Route::post('/member-transfers/{memberTransfer}/cancel', [AdminMemberTransferController::class, 'cancel'])
+            ->name('admin.member-transfers.cancel');
 
         // Roles
         Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
