@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\Loan;
+use App\Models\MemberTransfer;
 use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
@@ -15,6 +16,7 @@ use App\Services\AccountService;
 use App\Services\AutoWithdrawService;
 use App\Services\DirectDepositService;
 use App\Services\LoanService;
+use App\Services\MemberTransferService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\TradePriceService;
@@ -32,8 +34,11 @@ class AccountsController extends Controller
 {
     protected LoanService $loanService;
 
-    public function __construct(LoanService $loanService, protected AutoWithdrawService $autoWithdrawService)
-    {
+    public function __construct(
+        LoanService $loanService,
+        protected AutoWithdrawService $autoWithdrawService,
+        protected MemberTransferService $memberTransferService
+    ) {
         $this->loanService = $loanService;
     }
 
@@ -152,27 +157,36 @@ class AccountsController extends Controller
                 }
             }
 
-            // If transferring to another account, validate ownership
+            // If transferring to another account or member
             if ($request->input('to') !== 'nation') {
-                $toAccount = Account::findOrFail($request->input('to'));
-                if ($toAccount->nation_id !== Auth::user()->nation_id) {
-                    throw ValidationException::withMessages([
-                        'to' => ['You do not own the destination account.'],
-                    ]);
-                }
+                $toAccountId = (int) $request->input('to');
+                $toAccount = Account::findOrFail($toAccountId);
 
-                // Validate not transferring to the same account
                 if ($fromAccount->id === $toAccount->id) {
                     throw ValidationException::withMessages([
                         'to' => ['Cannot transfer resources to the same account.'],
                     ]);
                 }
 
-                AccountService::transferToAccount(
-                    $request->input('from'),
-                    $request->input('to'),
-                    $transfer
-                );
+                if ($toAccount->nation_id === Auth::user()->nation_id) {
+                    AccountService::transferToAccount(
+                        $request->input('from'),
+                        $toAccountId,
+                        $transfer
+                    );
+                } else {
+                    $this->memberTransferService->requestTransfer(
+                        Auth::user(),
+                        (int) $request->input('from'),
+                        $toAccountId,
+                        $transfer
+                    );
+
+                    return redirect()->back()->with([
+                        'alert-message' => 'Transfer request sent. Awaiting recipient approval.',
+                        'alert-type' => 'info',
+                    ]);
+                }
             } else {
                 $transaction = AccountService::transferToNation(
                     $request->input('from'),
@@ -384,6 +398,20 @@ class AccountsController extends Controller
         $priceService = app(TradePriceService::class);
         $mmrPrices = $priceService->get24hAverageWithSurcharge();
 
+        $incomingMemberTransfers = MemberTransfer::query()
+            ->where('status', MemberTransfer::STATUS_PENDING)
+            ->whereIn('to_account_id', $accounts->pluck('id'))
+            ->with(['fromAccount', 'toAccount', 'fromNation', 'toNation'])
+            ->latest('created_at')
+            ->get();
+
+        $outgoingMemberTransfers = MemberTransfer::query()
+            ->where('status', MemberTransfer::STATUS_PENDING)
+            ->where('from_nation_id', $nationId)
+            ->with(['fromAccount', 'toAccount', 'fromNation', 'toNation'])
+            ->latest('created_at')
+            ->get();
+
         return [
             'accounts' => $accounts,
             'activeLoans' => $activeLoans,
@@ -396,6 +424,8 @@ class AccountsController extends Controller
             'mmrLogs' => $logs,
             'mmrAfterTaxIncome' => $afterTaxIncome,
             'mmrPrices' => $mmrPrices,
+            'incomingMemberTransfers' => $incomingMemberTransfers,
+            'outgoingMemberTransfers' => $outgoingMemberTransfers,
         ];
     }
 }

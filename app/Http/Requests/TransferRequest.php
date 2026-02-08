@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Account;
+use App\Services\AllianceMembershipService;
 use App\Services\PWHelperService;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -96,6 +98,36 @@ class TransferRequest extends FormRequest
                             $resource,
                             'Loan repayments can only be made with money.'
                         );
+                    }
+                }
+            }
+
+            $to = $this->input('to');
+
+            if (is_numeric($to)) {
+                $fromAccountId = (int) $this->input('from');
+                $toAccountId = (int) $to;
+
+                if ($fromAccountId === $toAccountId) {
+                    $validator->errors()->add('to', 'Cannot transfer resources to the same account.');
+
+                    return;
+                }
+
+                $fromAccount = Account::query()->with('nation')->find($fromAccountId);
+                $toAccount = Account::query()->with('nation')->find($toAccountId);
+
+                if (! $fromAccount || ! $toAccount) {
+                    return;
+                }
+
+                if ($toAccount->nation_id !== $fromAccount->nation_id) {
+                    $membershipService = app(AllianceMembershipService::class);
+                    $fromAllianceId = $fromAccount->nation?->alliance_id;
+                    $toAllianceId = $toAccount->nation?->alliance_id;
+
+                    if (! $membershipService->contains($fromAllianceId) || ! $membershipService->contains($toAllianceId)) {
+                        $validator->errors()->add('to', 'Transfers are only allowed within your alliance.');
                     }
                 }
             }
