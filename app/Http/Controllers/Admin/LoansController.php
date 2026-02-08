@@ -50,6 +50,7 @@ class LoansController
         $activeLoans = Loan::where('status', 'approved')->with('nation')->get();
 
         $defaultLoanInterestRate = SettingService::getDefaultLoanInterestRate();
+        $loanApplicationsEnabled = SettingService::isLoanApplicationsEnabled();
 
         return view('admin.loans.index', compact(
             'totalApproved',
@@ -58,7 +59,8 @@ class LoansController
             'totalLoanedFunds',
             'pendingLoans',
             'activeLoans',
-            'defaultLoanInterestRate'
+            'defaultLoanInterestRate',
+            'loanApplicationsEnabled'
         ));
     }
 
@@ -116,6 +118,39 @@ class LoansController
 
         return redirect()->route('admin.loans')->with([
             'alert-message' => 'Default loan interest rate updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateLoanApplications(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-loans');
+
+        $request->validate([
+            'loan_applications_enabled' => 'required|boolean',
+        ]);
+
+        $previous = SettingService::isLoanApplicationsEnabled();
+        $enabled = $request->boolean('loan_applications_enabled');
+
+        SettingService::setLoanApplicationsEnabled($enabled);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'loan_applications_updated',
+            context: [
+                'changes' => [
+                    'loan_applications_enabled' => [
+                        'from' => $previous,
+                        'to' => $enabled,
+                    ],
+                ],
+            ],
+            message: 'Loan application availability updated.'
+        );
+
+        return redirect()->route('admin.loans')->with([
+            'alert-message' => 'Loan application availability updated.',
             'alert-type' => 'success',
         ]);
     }

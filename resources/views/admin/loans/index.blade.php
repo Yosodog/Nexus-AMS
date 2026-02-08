@@ -157,20 +157,50 @@
     @endcan
 
     @can('manage-loans')
-        <div class="card mt-4">
-            <div class="card-header">Default Loan Interest Rate</div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
-                    @csrf
-                    <label class="form-label" for="default_interest_rate">Default Interest Rate (%)</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" id="default_interest_rate"
-                               name="default_interest_rate" step="0.01" min="0" max="100" required
-                               value="{{ old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', '')) }}">
-                        <button class="btn btn-primary" type="submit">Update Default</button>
+        <div class="row g-3 mt-4">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">Default Loan Interest Rate</div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
+                            @csrf
+                            <label class="form-label" for="default_interest_rate">Default Interest Rate (%)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="default_interest_rate"
+                                       name="default_interest_rate" step="0.01" min="0" max="100" required
+                                       value="{{ old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', '')) }}">
+                                <button class="btn btn-primary" type="submit">Update Default</button>
+                            </div>
+                            <small class="text-muted d-block mt-2">Used to prefill approvals; each loan can still be adjusted.</small>
+                        </form>
                     </div>
-                    <small class="text-muted d-block mt-2">Used to prefill approvals; each loan can still be adjusted.</small>
-                </form>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Loan Applications</span>
+                        <span class="badge {{ $loanApplicationsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
+                            {{ $loanApplicationsEnabled ? 'Open' : 'Closed' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Control whether members can submit new loan applications. Existing loans can still be repaid, and
+                            manual disbursements remain available.
+                        </p>
+                        <form method="POST" action="{{ route('admin.loans.applications') }}">
+                            @csrf
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="loan_applications_enabled" value="0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="loanApplicationsEnabled"
+                                       name="loan_applications_enabled" value="1" @checked($loanApplicationsEnabled)>
+                                <label class="form-check-label" for="loanApplicationsEnabled">Accept New Loan Applications</label>
+                            </div>
+                            <button class="btn btn-primary">Save Loan Application Setting</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     @endcan
