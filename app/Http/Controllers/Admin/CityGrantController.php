@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\SendCityGrantReminderRequest;
 use App\Http\Requests\Admin\StoreCityGrantRequest;
 use App\Http\Requests\Admin\UpdateCityGrantRequest;
+use App\Jobs\SendCityGrantRemindersJob;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Services\AuditLogger;
@@ -223,5 +225,18 @@ class CityGrantController
             'alert-type',
             'success'
         );
+    }
+
+    public function sendReminders(SendCityGrantReminderRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $grantIds = array_values(array_unique($validated['grant_ids']));
+
+        SendCityGrantRemindersJob::dispatch($grantIds, $validated['message']);
+
+        return redirect()->route('admin.grants.city')->with([
+            'alert-message' => 'City grant reminders have been queued for delivery.',
+            'alert-type' => 'success',
+        ]);
     }
 }
