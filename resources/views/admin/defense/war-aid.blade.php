@@ -29,6 +29,10 @@
                     </div>
                     <div class="card-body">
                         @foreach ($pending as $req)
+                            @php
+                                $nation = $req->nation;
+                                $account = $req->account;
+                            @endphp
                             <div class="card mb-4 shadow-sm border">
                                 <div class="card-body">
 
@@ -39,13 +43,21 @@
 
                                         <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
                                             <div class="d-flex align-items-center gap-3">
-                                                <img src="{{ $req->nation->flag }}" alt="Flag" style="height: 30px;">
+                                                @if ($nation)
+                                                    <img src="{{ $nation->flag }}" alt="Flag" style="height: 30px;">
+                                                @else
+                                                    <div class="bg-secondary rounded" style="height: 30px; width: 45px;"></div>
+                                                @endif
                                                 <div>
-                                                    <h5 class="mb-1">{{ $req->nation->leader_name }}</h5>
+                                                    <h5 class="mb-1">{{ $nation?->leader_name ?? 'Unknown Nation' }}</h5>
                                                     <small class="text-muted">Account:
-                                                        <a href="{{ route('admin.accounts.view', $req->account_id) }}">
-                                                            {{ $req->account->name }}
-                                                        </a>
+                                                        @if ($account)
+                                                            <a href="{{ route('admin.accounts.view', $req->account_id) }}">
+                                                                {{ $account->name }}
+                                                            </a>
+                                                        @else
+                                                            <span>Unknown Account</span>
+                                                        @endif
                                                     </small><br>
                                                     <small class="text-muted">Note: {{ $req->note }}</small>
                                                 </div>
@@ -63,7 +75,7 @@
                                                            class="form-control form-control-sm"
                                                            min="0" value="{{ $req->$resource }}">
                                                     <small class="text-muted">
-                                                        Has: {{ number_format(($req->nation->resources->$resource ?? 0) + $req->nation->accounts->sum($resource)) }}
+                                                        Has: {{ number_format(($nation?->resources->$resource ?? 0) + ($nation?->accounts?->sum($resource) ?? 0)) }}
                                                     </small>
                                                 </div>
                                             @endforeach
@@ -147,17 +159,29 @@
                             </thead>
                             <tbody>
                             @forelse ($history as $req)
+                                @php
+                                    $nation = $req->nation;
+                                    $account = $req->account;
+                                @endphp
                                 <tr>
                                     <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}"
-                                           target="_blank">
-                                            {{ $req->nation->leader_name }}
-                                        </a>
+                                        @if ($nation)
+                                            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}"
+                                               target="_blank">
+                                                {{ $nation->leader_name }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">Unknown Nation</span>
+                                        @endif
                                     </td>
                                     <td>
-                                        <a href="{{ route('admin.accounts.view', $req->account_id) }}">
-                                            {{ $req->account->name }}
-                                        </a>
+                                        @if ($account)
+                                            <a href="{{ route('admin.accounts.view', $req->account_id) }}">
+                                                {{ $account->name }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">Unknown Account</span>
+                                        @endif
                                     </td>
                                     <td>{{ $req->note }}</td>
                                     <td>
