@@ -103,7 +103,7 @@ class MembersController extends Controller
 
     public function runInactivityCheck(): RedirectResponse
     {
-        $this->authorize('view-members');
+        $this->authorize('manage-accounts');
 
         Artisan::call('inactivity:check');
 
