@@ -53,9 +53,8 @@
                 <div class="space-y-3">
                     <select class="select select-bordered w-full h-12"
                             :class="destinationMode === 'alliance' ? 'hidden' : ''"
-                            :name="destinationMode === 'alliance' ? '' : 'to'"
-                            :required="destinationMode === 'standard'"
-                            :disabled="destinationMode === 'alliance'"
+                            name="to"
+                            required
                             id="tran_to"
                             onchange="handleToSelectionChange()">
                         <optgroup label="Nation">
@@ -77,9 +76,7 @@
                             </optgroup>
                         @endif
                     </select>
-                    <input type="hidden"
-                           :name="destinationMode === 'alliance' ? 'to' : ''"
-                           :value="destinationMode === 'alliance' ? selectedAccount : ''">
+                    <input type="hidden" id="alliance_to" name="" value="">
                     <div class="rounded-xl border border-base-300 bg-base-200/60 p-3"
                          x-show="destinationMode === 'alliance'" x-cloak>
                         <label class="label font-semibold">
@@ -209,9 +206,15 @@
             },
             selectAccount(id, nationName, accountName) {
                 const toSelect = document.getElementById('tran_to');
+                const allianceInput = document.getElementById('alliance_to');
+
                 if (toSelect) {
                     toSelect.value = id;
                     handleToSelectionChange();
+                }
+
+                if (allianceInput) {
+                    allianceInput.value = id;
                 }
 
                 this.selectedAccount = id;
@@ -222,9 +225,13 @@
                 this.selectedAccount = null;
                 this.selectedLabel = '';
                 const toSelect = document.getElementById('tran_to');
+                const allianceInput = document.getElementById('alliance_to');
                 if (toSelect) {
                     toSelect.value = 'nation';
                     handleToSelectionChange();
+                }
+                if (allianceInput) {
+                    allianceInput.value = '';
                 }
             },
             clearResults() {
@@ -233,8 +240,15 @@
             switchToAlliance() {
                 this.destinationMode = 'alliance';
                 const toSelect = document.getElementById('tran_to');
+                const allianceInput = document.getElementById('alliance_to');
                 if (toSelect) {
                     toSelect.value = '';
+                    toSelect.disabled = true;
+                    toSelect.required = false;
+                }
+                if (allianceInput) {
+                    allianceInput.name = 'to';
+                    allianceInput.value = '';
                 }
                 this.selectedAccount = null;
                 this.selectedLabel = '';
@@ -242,6 +256,16 @@
             },
             switchToStandard() {
                 this.destinationMode = 'standard';
+                const toSelect = document.getElementById('tran_to');
+                const allianceInput = document.getElementById('alliance_to');
+                if (toSelect) {
+                    toSelect.disabled = false;
+                    toSelect.required = true;
+                }
+                if (allianceInput) {
+                    allianceInput.name = '';
+                    allianceInput.value = '';
+                }
                 this.clearSelection();
             },
         };
