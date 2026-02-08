@@ -134,6 +134,19 @@ class SettingService
         return (bool) $value;
     }
 
+    public static function isLoanApplicationsEnabled(): bool
+    {
+        $value = self::getValue('loan_applications_enabled');
+
+        if (is_null($value)) {
+            self::setLoanApplicationsEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
     public static function getDefaultLoanInterestRate(): float
     {
         $value = self::getValue('loan_default_interest_rate');
@@ -155,6 +168,11 @@ class SettingService
     public static function setLoanPaymentsEnabled(bool $enabled): void
     {
         self::setValue('loan_payments_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function setLoanApplicationsEnabled(bool $enabled): void
+    {
+        self::setValue('loan_applications_enabled', $enabled ? 1 : 0);
     }
 
     /**

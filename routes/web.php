@@ -340,6 +340,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/loans/default-interest-rate', [LoansController::class, 'updateDefaultInterestRate'])->name(
             'admin.loans.default-interest-rate'
         );
+        Route::post('/loans/applications', [LoansController::class, 'updateLoanApplications'])->name(
+            'admin.loans.applications'
+        );
 
         Route::post('/loans/{Loan}/mark-paid', [LoansController::class, 'markAsPaid'])->name(
             'admin.loans.markPaid'

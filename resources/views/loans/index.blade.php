@@ -37,60 +37,78 @@
             </div>
         @endif
 
+        @if (! $loanApplicationsEnabled)
+            <div class="alert alert-warning shadow-md">
+                <div>
+                    <p class="font-semibold">Loan applications are currently closed.</p>
+                    <p class="text-sm">
+                        New requests are paused. You can still review your history and make payments on active loans.
+                    </p>
+                </div>
+            </div>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
             <x-utils.card title="Apply for a loan" extraClasses="shadow-lg">
-                <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
-                    @csrf
+                @if ($loanApplicationsEnabled)
+                    <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
+                        @csrf
 
-                    <div class="form-control">
-                        <label class="label" for="amount">
-                            <span class="label-text font-semibold">Loan amount</span>
-                            <span class="label-text-alt text-base-content/60">USD</span>
-                        </label>
-                        <input type="number"
-                               name="amount"
-                               id="amount"
-                               min="100000"
-                               step="0.01"
-                               required
-                               placeholder="Enter loan amount"
-                               class="input input-bordered w-full">
-                    </div>
+                        <div class="form-control">
+                            <label class="label" for="amount">
+                                <span class="label-text font-semibold">Loan amount</span>
+                                <span class="label-text-alt text-base-content/60">USD</span>
+                            </label>
+                            <input type="number"
+                                   name="amount"
+                                   id="amount"
+                                   min="100000"
+                                   step="0.01"
+                                   required
+                                   placeholder="Enter loan amount"
+                                   class="input input-bordered w-full">
+                        </div>
 
-                    <div class="form-control">
-                        <label class="label" for="account_id">
-                            <span class="label-text font-semibold">Deposit into account</span>
-                            <span class="label-text-alt text-base-content/60">Balance shown</span>
-                        </label>
-                        <select name="account_id" id="account_id" class="select select-bordered w-full">
-                            @foreach ($accounts as $account)
-                                <option value="{{ $account->id }}" data-balance="{{ $account->money }}">
-                                    {{ $account->name }} (Balance: ${{ number_format($account->money, 2) }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div class="form-control">
+                            <label class="label" for="account_id">
+                                <span class="label-text font-semibold">Deposit into account</span>
+                                <span class="label-text-alt text-base-content/60">Balance shown</span>
+                            </label>
+                            <select name="account_id" id="account_id" class="select select-bordered w-full">
+                                @foreach ($accounts as $account)
+                                    <option value="{{ $account->id }}" data-balance="{{ $account->money }}">
+                                        {{ $account->name }} (Balance: ${{ number_format($account->money, 2) }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="form-control">
-                        <label class="label" for="term_weeks">
-                            <span class="label-text font-semibold">Loan term (weeks)</span>
-                            <span class="label-text-alt text-base-content/60">1-52</span>
-                        </label>
-                        <input type="number"
-                               id="term_weeks"
-                               name="term_weeks"
-                               min="1"
-                               max="52"
-                               step="1"
-                               required
-                               placeholder="Enter term length (1-52 weeks)"
-                               class="input input-bordered w-full">
-                    </div>
+                        <div class="form-control">
+                            <label class="label" for="term_weeks">
+                                <span class="label-text font-semibold">Loan term (weeks)</span>
+                                <span class="label-text-alt text-base-content/60">1-52</span>
+                            </label>
+                            <input type="number"
+                                   id="term_weeks"
+                                   name="term_weeks"
+                                   min="1"
+                                   max="52"
+                                   step="1"
+                                   required
+                                   placeholder="Enter term length (1-52 weeks)"
+                                   class="input input-bordered w-full">
+                        </div>
 
-                    <button type="submit" class="btn btn-primary w-full">
-                        Apply for loan
-                    </button>
-                </form>
+                        <button type="submit" class="btn btn-primary w-full">
+                            Apply for loan
+                        </button>
+                    </form>
+                @else
+                    <p class="text-sm text-base-content/70">
+                        Applications are closed at the moment. Check back later or contact an admin if you need an
+                        urgent disbursement.
+                    </p>
+                @endif
             </x-utils.card>
 
             @if (!$activeLoans->isEmpty())

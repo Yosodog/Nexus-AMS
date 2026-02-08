@@ -19,6 +19,13 @@ class LoansController extends Controller
 
     public function apply(Request $request): RedirectResponse
     {
+        if (! SettingService::isLoanApplicationsEnabled()) {
+            return redirect()->back()->with('alert-message', 'Loan applications are currently closed.')->with(
+                'alert-type',
+                'error'
+            );
+        }
+
         $request->validate([
             'amount' => 'required|numeric|min:100000',
             'account_id' => 'required|exists:accounts,id',
@@ -48,6 +55,7 @@ class LoansController extends Controller
         $nation = Auth::user()->nation;
         $loanPaymentsEnabled = SettingService::isLoanPaymentsEnabled();
         $loanPaymentsPausedAt = SettingService::getLoanPaymentsPausedAt();
+        $loanApplicationsEnabled = SettingService::isLoanApplicationsEnabled();
 
         // Get only active loans (approved and not fully paid)
         $activeLoans = Loan::where('nation_id', $nation->id)
@@ -74,7 +82,8 @@ class LoansController extends Controller
             'loanHistory',
             'accounts',
             'loanPaymentsEnabled',
-            'loanPaymentsPausedAt'
+            'loanPaymentsPausedAt',
+            'loanApplicationsEnabled'
         ));
     }
 
