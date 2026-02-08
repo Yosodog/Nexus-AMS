@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\InactivityAction;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
+use App\Models\InactivityEvent;
 use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\NationSignIn;
@@ -16,11 +18,16 @@ class MemberStatsService
 
     public function getOverviewData(): array
     {
-        $nations = Nation::with(['resources', 'accounts', 'military'])
+        $nations = Nation::with(['resources', 'accounts', 'military', 'accountProfile'])
             ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
             ->get();
+
+        $openEvents = InactivityEvent::query()
+            ->whereNull('episode_ended_at')
+            ->get()
+            ->keyBy('nation_id');
 
         $maxTier = $nations->max('num_cities') ?? 0;
 
@@ -34,7 +41,21 @@ class MemberStatsService
             'totalCities' => $nations->sum('num_cities'),
             'cityTiers' => $cityTiers,
             'cityGrowthHistory' => $this->getCityGrowthHistory(),
-            'members' => $nations->map(fn ($nation) => $this->formatNation($nation)),
+            'members' => $nations->map(fn ($nation) => $this->formatNation($nation, $openEvents->get($nation->id))),
+            'inactivitySettings' => [
+                'enabled' => SettingService::isInactivityModeEnabled(),
+                'threshold_hours' => SettingService::getInactivityThresholdHours(),
+                'cooldown_hours' => SettingService::getInactivityCooldownHours(),
+                'actions' => SettingService::getInactivityActions(),
+                'discord_channel_id' => SettingService::getInactivityDiscordChannelId(),
+            ],
+            'inactivityActionOptions' => collect(InactivityAction::cases())
+                ->map(fn (InactivityAction $action) => [
+                    'value' => $action->value,
+                    'label' => $action->label(),
+                ])
+                ->values()
+                ->all(),
         ];
     }
 
@@ -48,7 +69,7 @@ class MemberStatsService
             ->toArray();
     }
 
-    protected function formatNation(Nation $nation): array
+    protected function formatNation(Nation $nation, ?InactivityEvent $event = null): array
     {
         $cities = $nation->num_cities;
         $max = [
@@ -101,6 +122,15 @@ class MemberStatsService
             'military_percent' => $militaryPercent,
             'military_current' => $current,
             'resources' => $resourceValues,
+            'is_inactive' => (bool) $event,
+            'inactive_since_at' => $event?->episode_started_at,
+            'last_pw_last_active_at' => $nation->accountProfile?->last_active,
+            'current_inactivity_event' => $event ? [
+                'episode_started_at' => $event->episode_started_at,
+                'last_notified_at' => $event->last_notified_at,
+                'dd_autoenrolled_at' => $event->dd_autoenrolled_at,
+                'dd_opted_out_at' => $event->dd_opted_out_at,
+            ] : null,
         ];
     }
 

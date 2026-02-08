@@ -385,6 +385,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         // Members
         Route::get('/members', [AdminMembersController::class, 'index'])->name('admin.members');
         Route::get('/members/{Nation}', [AdminMembersController::class, 'show'])->name('admin.members.show');
+        Route::post('/members/inactivity-settings', [AdminMembersController::class, 'updateInactivitySettings'])
+            ->name('admin.members.inactivity-settings');
+        Route::post('/members/inactivity-check', [AdminMembersController::class, 'runInactivityCheck'])
+            ->name('admin.members.inactivity-check');
 
         // War
         Route::get('/defense/wars', [AdminWarController::class, 'index'])->name('admin.wars');

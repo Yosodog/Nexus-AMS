@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\MMRConfig;
 use App\Services\DirectDepositService;
+use App\Services\InactivityModeService;
 use App\Services\PWHelperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +52,7 @@ class DirectDepositController extends Controller
         $nation = Auth::user()->nation;
 
         $this->directDepositService->disenroll($nation);
+        app(InactivityModeService::class)->recordDirectDepositOptOut($nation);
 
         return back()->with([
             'alert-message' => 'You have been disenrolled from Direct Deposit.',
