@@ -38,4 +38,6 @@ return [
     'manage-custom-pages',
     'view-spies',
     'manage-spies',
+    'view-market',
+    'manage-market',
 ];

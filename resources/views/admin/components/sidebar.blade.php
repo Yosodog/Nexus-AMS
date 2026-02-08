@@ -88,6 +88,7 @@
                     </x-nav.link>
                 </li>
 
+
                 <li class="nav-item {{ $grantsActive ? 'menu-open' : '' }}">
                     <a href="#" class="nav-link {{ $grantsActive ? 'active' : '' }}">
                         <i class="bi bi-houses-fill"></i>
@@ -181,6 +182,14 @@
                                         permission="view_payroll"
                                         :active="request()->routeIs('admin.payroll.*')">
                                 Payroll
+                            </x-nav.link>
+                        </li>
+                        <li class="nav-item">
+                            <x-nav.link href="{{ route('admin.market.index') }}"
+                                        icon="bi bi-shop-window ms-3"
+                                        permission="view-market"
+                                        :active="request()->routeIs('admin.market.*')">
+                                Alliance Market
                             </x-nav.link>
                         </li>
                     </ul>
