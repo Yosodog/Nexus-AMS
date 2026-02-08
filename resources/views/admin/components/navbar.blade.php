@@ -59,6 +59,10 @@
                     <a href="{{ route('accounts') }}" class="nav-link">Accounts</a>
                 </li>
 
+                <li class="nav-item d-none d-md-block">
+                    <a href="{{ route('audit.index') }}" class="nav-link">Audits</a>
+                </li>
+
                 <li class="nav-item dropdown d-none d-md-block">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Grants</a>
                     <ul class="dropdown-menu">
@@ -81,7 +85,11 @@
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Defense</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('defense.counters') }}">Counter Finder</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.intel') }}">Intel Library</a></li>
                         <li><a class="dropdown-item" href="{{ route('defense.war-aid') }}">War Aid</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.war-stats') }}">War Stats</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.simulators') }}">War Simulators</a></li>
+                        <li><a class="dropdown-item" href="{{ route('defense.raid-leaderboard') }}">Raid Leaderboard</a></li>
                         <li><a class="dropdown-item" href="{{ route('defense.raid-finder') }}">Raid Finder</a></li>
                     </ul>
                 </li>
