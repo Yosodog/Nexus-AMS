@@ -297,6 +297,131 @@ class SettingService
         self::setValue('dd_fallback_tax_id', $DDTaxID);
     }
 
+    public static function isDirectDepositEnabled(): bool
+    {
+        return self::getDirectDepositId() > 0;
+    }
+
+    public static function isInactivityModeEnabled(): bool
+    {
+        $value = self::getValue('inactivity_mode_enabled');
+
+        if (is_null($value)) {
+            self::setInactivityModeEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setInactivityModeEnabled(bool $enabled): void
+    {
+        self::setValue('inactivity_mode_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getInactivityThresholdHours(): int
+    {
+        $value = self::getValue('inactivity_threshold_hours');
+
+        if (is_null($value)) {
+            self::setInactivityThresholdHours(72);
+
+            return 72;
+        }
+
+        return max(1, (int) $value);
+    }
+
+    public static function setInactivityThresholdHours(int $hours): void
+    {
+        self::setValue('inactivity_threshold_hours', max(1, $hours));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getInactivityActions(): array
+    {
+        $value = self::getValue('inactivity_actions');
+
+        if (is_null($value)) {
+            self::setInactivityActions([]);
+
+            return [];
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded, 'is_string'));
+            }
+        }
+
+        if (is_array($value)) {
+            return array_values(array_filter($value, 'is_string'));
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<int, string>  $actions
+     */
+    public static function setInactivityActions(array $actions): void
+    {
+        $actions = array_values(array_filter($actions, 'is_string'));
+
+        self::setValue('inactivity_actions', json_encode($actions));
+    }
+
+    public static function getInactivityCooldownHours(): int
+    {
+        $value = self::getValue('inactivity_notification_cooldown_hours');
+
+        if (is_null($value)) {
+            self::setInactivityCooldownHours(24);
+
+            return 24;
+        }
+
+        return max(1, (int) $value);
+    }
+
+    public static function setInactivityCooldownHours(int $hours): void
+    {
+        self::setValue('inactivity_notification_cooldown_hours', max(1, $hours));
+    }
+
+    public static function getInactivityDiscordChannelId(): string
+    {
+        return (string) (self::getValue('inactivity_discord_channel_id') ?? '');
+    }
+
+    public static function setInactivityDiscordChannelId(?string $channelId): void
+    {
+        self::setValue('inactivity_discord_channel_id', $channelId ?? '');
+    }
+
+    public static function isInactivityRepeatNotificationsEnabled(): bool
+    {
+        $value = self::getValue('inactivity_repeat_notifications_enabled');
+
+        if (is_null($value)) {
+            self::setInactivityRepeatNotificationsEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setInactivityRepeatNotificationsEnabled(bool $enabled): void
+    {
+        self::setValue('inactivity_repeat_notifications_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getDiscordWarAlertChannelId(): string
     {
         return (string) (self::getValue('discord_war_alert_channel_id') ?? '');

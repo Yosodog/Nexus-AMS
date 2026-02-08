@@ -292,6 +292,11 @@ class Nation extends Model
         return $this->hasMany(Account::class, 'nation_id');
     }
 
+    public function directDepositEnrollment(): HasOne
+    {
+        return $this->hasOne(DirectDepositEnrollment::class, 'nation_id');
+    }
+
     public function autoWithdrawSettings(): HasMany
     {
         return $this->hasMany(AutoWithdrawSetting::class, 'nation_id');

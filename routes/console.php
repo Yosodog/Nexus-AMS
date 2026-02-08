@@ -56,6 +56,13 @@ Schedule::command('pw:sync-city-average')->dailyAt('00:05')->when($whenPWUp);
 // Military sign in
 Schedule::command('military:sign-in')->dailyAt('12:10')->when($whenPWUp);
 
+// Inactivity checks
+Schedule::command('inactivity:check')
+    ->hourly()
+    ->runInBackground()
+    ->withoutOverlapping(55)
+    ->when($whenPWUp);
+
 // Auto withdraw. Run right before a turn change.
 Schedule::command('auto:withdraw')->everyOddHour('54')->runInBackground()
     ->withoutOverlapping(10)->when($whenPWUp);
