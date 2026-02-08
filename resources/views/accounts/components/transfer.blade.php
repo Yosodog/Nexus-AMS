@@ -245,6 +245,7 @@
                     toSelect.value = '';
                     toSelect.disabled = true;
                     toSelect.required = false;
+                    handleToSelectionChange();
                 }
                 if (allianceInput) {
                     allianceInput.name = 'to';
