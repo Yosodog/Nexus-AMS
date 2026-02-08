@@ -333,6 +333,6 @@ class MarketService
             ];
         }
 
-        MarketResource::query()->insert($payload);
+        MarketResource::query()->insertOrIgnore($payload);
     }
 }
