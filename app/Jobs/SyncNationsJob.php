@@ -447,6 +447,9 @@ class SyncNationsJob implements ShouldQueue
             return null;
         }
         $data = $this->mapValues($nation, self::RESOURCE_COLUMNS);
+        if ($data['credits'] === null) {
+            $data['credits'] = 0;
+        }
         $data['nation_id'] = $nation['id'];
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
