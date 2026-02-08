@@ -30,6 +30,7 @@
                         <ul tabindex="0"
                             class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
                             <li><a href="{{ route("accounts") }}">Accounts</a></li>
+                            <li><a href="{{ route('market.index') }}">Market</a></li>
                             <li><a href="{{ route('audit.index') }}">Audits</a></li>
                             <li>
                                 <details>
@@ -81,6 +82,7 @@
                 @if ($showMemberNavigation)
                     <ul class="menu menu-horizontal px-1 z-50">
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
+                        <li><a href="{{ route('market.index') }}">Market</a></li>
                         <li><a href="{{ route('audit.index') }}">Audits</a></li>
                         <li>
                             <details class="relative">

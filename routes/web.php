@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
+use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\NelDocsController;
@@ -44,6 +45,7 @@ use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\MarketController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
 use App\Http\Controllers\SpyAssignmentController;
@@ -115,6 +117,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/accounts/delete', [AccountsController::class, 'delete'])->name('accounts.delete.post');
 
     Route::get('/accounts/{accounts}', [AccountsController::class, 'viewAccount'])->name('accounts.view');
+
+    // Alliance Market
+    Route::get('/market', [MarketController::class, 'index'])->name('market.index');
+    Route::post('/market/sell', [MarketController::class, 'sell'])->name('market.sell');
 
     // Direct Deposit
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')
@@ -219,6 +225,15 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         );
         Route::post('/accounts/{account}/freeze', [AccountController::class, 'freeze'])->name(
             'admin.accounts.freeze'
+        );
+
+        // Alliance Market
+        Route::get('/market', [AdminMarketController::class, 'index'])->name('admin.market.index');
+        Route::post('/market/resource/{marketResource}/toggle', [AdminMarketController::class, 'toggle'])->name(
+            'admin.market.resource.toggle'
+        );
+        Route::post('/market/resource/{marketResource}/update', [AdminMarketController::class, 'update'])->name(
+            'admin.market.resource.update'
         );
         Route::post('/accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name(
             'admin.accounts.unfreeze'
