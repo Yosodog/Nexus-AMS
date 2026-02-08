@@ -526,6 +526,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             Route::delete('/destroy', [MMRController::class, 'destroy'])->name('admin.mmr.destroy');
             Route::post('/{tier}/update', [MMRController::class, 'update'])->name('admin.mmr.update');
             Route::post('/update-all', [MMRController::class, 'updateAll'])->name('admin.mmr.updateAll');
+            Route::post('/bulk-edit-resources', [MMRController::class, 'bulkEditResources'])->name('admin.mmr.bulk-edit-resources');
             Route::post('/update-weights', [MMRController::class, 'updateWeights'])->name('admin.mmr.weights.update');
             Route::post('/update-mmr-assistant-settings', [MMRController::class, 'updateAssistantSettings'])->name('admin.mmr.assistant.update');
         });

@@ -230,6 +230,124 @@
                 </div>
             </div>
 
+            <div class="card mb-5">
+                <div class="card-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="card-title mb-0">Bulk Edit Tier Resources</h5>
+                        <span class="badge bg-primary-subtle text-primary-emphasis">Per city updates</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('admin.mmr.bulk-edit-resources') }}" class="row g-4">
+                        @csrf
+
+                        <div class="col-12 col-lg-4">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-semibold">Select tiers</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkSelectAll">Select all</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkClearAll">Clear</button>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($tiers as $tier)
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input mmr-bulk-tier"
+                                               type="checkbox"
+                                               name="tier_ids[]"
+                                               id="bulk-tier-{{ $tier->id }}"
+                                               value="{{ $tier->id }}"
+                                               @checked(in_array($tier->id, old('tier_ids', [])))>
+                                        <label class="form-check-label" for="bulk-tier-{{ $tier->id }}">
+                                            <span class="badge bg-primary-subtle text-primary-emphasis">{{ $tier->city_count }}</span>
+                                            <span class="text-muted small ms-1">cities</span>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                            @error('tier_ids')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                            @enderror
+                            @error('tier_ids.*')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                            @enderror
+                            <div class="text-muted small mt-3">
+                                Choose one or more city-count tiers to update together.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-8">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-semibold">Per-city minimums</span>
+                                <span class="text-muted small">Leave blank to keep current values</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="fw-semibold">Resources</span>
+                                        <span class="badge bg-light text-dark">Per city</span>
+                                    </div>
+                                    <div class="row g-3">
+                                        @foreach($resourceFields as $field)
+                                            <div class="col-12 col-md-6 col-xl-4">
+                                                <label class="form-label text-capitalize">{{ $field }}</label>
+                                                <input type="number"
+                                                       name="resources[{{ $field }}]"
+                                                       value="{{ old("resources.{$field}") }}"
+                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
+                                                       min="0"
+                                                       inputmode="numeric"
+                                                       placeholder="Leave blank">
+                                                @error("resources.{$field}")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <hr class="my-2">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="fw-semibold">Readiness</span>
+                                        <span class="badge bg-light text-dark">Buildings &amp; slots</span>
+                                    </div>
+                                    <div class="row g-3">
+                                        @foreach($readinessFields as $field)
+                                            <div class="col-12 col-md-6 col-xl-4">
+                                                <label class="form-label text-capitalize">{{ $field }}</label>
+                                                <input type="number"
+                                                       name="resources[{{ $field }}]"
+                                                       value="{{ old("resources.{$field}") }}"
+                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
+                                                       min="0"
+                                                       inputmode="numeric"
+                                                       placeholder="Leave blank">
+                                                @error("resources.{$field}")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                            @error('resources')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-start gap-2 text-muted small">
+                                <i class="bi bi-arrow-repeat"></i>
+                                <span>Filled fields replace per-city values on the selected tiers.</span>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2-circle me-1"></i> Apply Bulk Edit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             {{-- Section: Resource Weighting --}}
             <div class="card mb-5">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -582,6 +700,24 @@
 
                     document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
                         input.value = value.toFixed(2);
+                    });
+                });
+            }
+
+            const bulkTierCheckboxes = document.querySelectorAll('.mmr-bulk-tier');
+            const bulkSelectAll = document.getElementById('mmrBulkSelectAll');
+            const bulkClearAll = document.getElementById('mmrBulkClearAll');
+
+            if (bulkSelectAll && bulkClearAll && bulkTierCheckboxes.length > 0) {
+                bulkSelectAll.addEventListener('click', () => {
+                    bulkTierCheckboxes.forEach(input => {
+                        input.checked = true;
+                    });
+                });
+
+                bulkClearAll.addEventListener('click', () => {
+                    bulkTierCheckboxes.forEach(input => {
+                        input.checked = false;
                     });
                 });
             }
