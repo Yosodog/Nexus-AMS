@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\UpdateLoanDefaultInterestRateRequest;
 use App\Models\Loan;
 use App\Services\AuditLogger;
 use App\Services\LoanService;
+use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -47,17 +49,17 @@ class LoansController
         $pendingLoans = Loan::where('status', 'pending')->with('nation')->get();
         $activeLoans = Loan::where('status', 'approved')->with('nation')->get();
 
-        return view(
-            'admin.loans.index',
-            compact(
-                'totalApproved',
-                'totalDenied',
-                'pendingCount',
-                'totalLoanedFunds',
-                'pendingLoans',
-                'activeLoans'
-            )
-        );
+        $defaultLoanInterestRate = SettingService::getDefaultLoanInterestRate();
+
+        return view('admin.loans.index', compact(
+            'totalApproved',
+            'totalDenied',
+            'pendingCount',
+            'totalLoanedFunds',
+            'pendingLoans',
+            'activeLoans',
+            'defaultLoanInterestRate'
+        ));
     }
 
     /**
@@ -89,6 +91,33 @@ class LoansController
             'alert-type',
             'success'
         );
+    }
+
+    public function updateDefaultInterestRate(UpdateLoanDefaultInterestRateRequest $request): RedirectResponse
+    {
+        $previous = SettingService::getDefaultLoanInterestRate();
+        $rate = (float) $request->validated()['default_interest_rate'];
+
+        SettingService::setDefaultLoanInterestRate($rate);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'loan_default_interest_rate_updated',
+            context: [
+                'changes' => [
+                    'loan_default_interest_rate' => [
+                        'from' => $previous,
+                        'to' => $rate,
+                    ],
+                ],
+            ],
+            message: 'Default loan interest rate updated.'
+        );
+
+        return redirect()->route('admin.loans')->with([
+            'alert-message' => 'Default loan interest rate updated.',
+            'alert-type' => 'success',
+        ]);
     }
 
     /**

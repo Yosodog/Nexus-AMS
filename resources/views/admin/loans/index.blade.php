@@ -156,6 +156,25 @@
         </div>
     @endcan
 
+    @can('manage-loans')
+        <div class="card mt-4">
+            <div class="card-header">Default Loan Interest Rate</div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
+                    @csrf
+                    <label class="form-label" for="default_interest_rate">Default Interest Rate (%)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="default_interest_rate"
+                               name="default_interest_rate" step="0.01" min="0" max="100" required
+                               value="{{ old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', '')) }}">
+                        <button class="btn btn-primary" type="submit">Update Default</button>
+                    </div>
+                    <small class="text-muted d-block mt-2">Used to prefill approvals; each loan can still be adjusted.</small>
+                </form>
+            </div>
+        </div>
+    @endcan
+
     {{-- Approve Loan Modal --}}
     <div class="modal fade" id="approveLoanModal" tabindex="-1" aria-labelledby="approveLoanModalLabel"
          aria-hidden="true">
@@ -202,12 +221,16 @@
 
 @section("scripts")
     <script>
+        const defaultLoanInterestRate = {{ json_encode($defaultLoanInterestRate) }};
+
         function setApproveLoanData(loan) {
             document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
 
             document.getElementById('loan_id').value = loan.id;
             document.getElementById('approve_amount').value = loan.amount;
-            document.getElementById('approve_interest_rate').value = loan.interest_rate || '';
+            const interestRate = loan.interest_rate ?? defaultLoanInterestRate;
+            document.getElementById('approve_interest_rate').value =
+                interestRate !== null && interestRate !== undefined ? interestRate : '';
             document.getElementById('approve_term_weeks').value = loan.term_weeks;
         }
     </script>
