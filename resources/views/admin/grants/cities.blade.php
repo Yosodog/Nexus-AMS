@@ -1,13 +1,25 @@
-@php use App\Services\PWHelperService; @endphp
+@php
+    use App\Services\PWHelperService;
+
+    $defaultReminderMessage = 'You are eligible for a city grant to help cover the cost of your next city. '
+        .'If you are planning to expand soon, please submit an application so we can review it promptly.';
+@endphp
 @extends('layouts.admin')
 
 @section("content")
     <div class="app-content-header">
         <div class="container-fluid">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-sm-6">
                     <h3 class="mb-0">City Grant Management</h3>
                 </div>
+                @can('manage-city-grants')
+                    <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#grantReminderModal">
+                            Send City Grant Reminders
+                        </button>
+                    </div>
+                @endcan
             </div>
         </div>
     </div>
@@ -238,6 +250,92 @@
             </div>
         </div>
     </div>
+
+    @can('manage-city-grants')
+        {{-- City Grant Reminder Modal --}}
+        <div class="modal modal-lg fade" id="grantReminderModal" tabindex="-1" aria-labelledby="grantReminderModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="grantReminderModalLabel">Send City Grant Reminders</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="POST" action="{{ route('admin.grants.city.reminders') }}" id="grantReminderForm">
+                            @csrf
+
+                            @if ($errors->has('grant_ids') || $errors->has('message'))
+                                <div class="alert alert-danger">
+                                    @foreach ($errors->all() as $error)
+                                        <div>{{ $error }}</div>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            <div class="mb-3">
+                                <label class="form-label">City Grants to Check</label>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="setGrantReminderSelection(true)">
+                                        Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="setGrantReminderSelection(false)">
+                                        Select None
+                                    </button>
+                                </div>
+                                <div class="row">
+                                    @php
+                                        $selectedGrantIds = collect(old('grant_ids', $grants->where('enabled', true)->pluck('id')->all()))
+                                            ->map(fn ($id) => (int) $id)
+                                            ->all();
+                                    @endphp
+                                    @foreach ($grants->sortBy('city_number') as $grant)
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="grant_ids[]"
+                                                       value="{{ $grant->id }}"
+                                                       id="grant-reminder-{{ $grant->id }}"
+                                                       @checked(in_array($grant->id, $selectedGrantIds, true))>
+                                                <label class="form-check-label" for="grant-reminder-{{ $grant->id }}">
+                                                    City #{{ $grant->city_number }}
+                                                    @if (! $grant->enabled)
+                                                        <span class="text-muted">(Disabled)</span>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="grantReminderMessage">Admin Message</label>
+                            <div class="border rounded p-2 mb-2 small text-muted">
+                                <div>Hi {leader_name},</div>
+                                <div class="mt-2">[Your message below]</div>
+                                <div class="mt-2">
+                                    Please click [link={link to apply for city grants}]here[/here] to apply for a city grant
+                                </div>
+                            </div>
+                            <textarea class="form-control" rows="6" id="grantReminderMessage" name="message"
+                                      required>{{ old('message', $defaultReminderMessage) }}</textarea>
+                            <div class="form-text">
+                                We will automatically add a greeting and the application link after this message.
+                            </div>
+                            </div>
+
+                            <div class="modal-footer px-0">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Queue Reminders</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endcan
 @endsection
 
 @section("scripts")
@@ -264,5 +362,24 @@
             document.getElementById('grant_id').value = '';
             document.getElementById('grant_amount').value = 100;
         }
+
+        function setGrantReminderSelection(isChecked) {
+            const inputs = document.querySelectorAll('input[name="grant_ids[]"]');
+            inputs.forEach((input) => {
+                input.checked = isChecked;
+            });
+        }
+
+        @can('manage-city-grants')
+            @if ($errors->has('grant_ids') || $errors->has('message'))
+            document.addEventListener('DOMContentLoaded', () => {
+                const reminderModal = document.getElementById('grantReminderModal');
+                if (reminderModal) {
+                    const modal = new bootstrap.Modal(reminderModal);
+                    modal.show();
+                }
+            });
+            @endif
+        @endcan
     </script>
 @endsection

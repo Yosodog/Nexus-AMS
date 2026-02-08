@@ -292,6 +292,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             'admin.grants.city.create'
         );
 
+        Route::post('/grants/city/reminders', [CityGrantController::class, 'sendReminders'])->name(
+            'admin.grants.city.reminders'
+        );
+
         Route::post('/grants/city/approve/{CityGrantRequest}', [CityGrantController::class, 'approveCityGrant'])->name(
             'admin.grants.city.approve'
         );
