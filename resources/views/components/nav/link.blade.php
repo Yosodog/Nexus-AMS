@@ -14,14 +14,16 @@
     $classes .= !$canView ? ' disabled' : '';
 @endphp
 
-<a href="{{ $canView ? $href : '#' }}" {{ $attributes->merge(['class' => $classes]) }}>
-    @if($icon)
-        <i class="{{ $icon }}"></i>
-    @endif
-    <p class="d-flex align-items-center gap-2 w-100">
-        <span class="flex-grow-1">{{ $slot }}</span>
-        @if($badge)
-            <span class="{{ $badgeClass }}">{{ $badge }}</span>
+@if($canView)
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => $classes]) }}>
+        @if($icon)
+            <i class="{{ $icon }}"></i>
         @endif
-    </p>
-</a>
+        <p class="d-flex align-items-center gap-2 w-100">
+            <span class="flex-grow-1">{{ $slot }}</span>
+            @if($badge)
+                <span class="{{ $badgeClass }}">{{ $badge }}</span>
+            @endif
+        </p>
+    </a>
+@endif
