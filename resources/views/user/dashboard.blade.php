@@ -23,7 +23,7 @@
                             <span class="badge badge-outline">Score {{ number_format($nation->score, 2) }}</span>
                             <span class="badge badge-outline">{{ $nation->num_cities }} Cities</span>
                             @if($latestSignIn && $latestSignIn->created_at)
-                                <span class="badge badge-ghost">Last sync {{ $latestSignIn->created_at->diffForHumans() }}</span>
+                                <span class="badge badge-ghost">Last sync {{ $nation->updated_at->diffForHumans() }}</span>
                             @endif
                         </div>
                     </div>
