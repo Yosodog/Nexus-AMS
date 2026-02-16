@@ -21,6 +21,10 @@ class Nation
 
     public ?string $continent = null;
 
+    public ?string $war_policy = null;
+
+    public ?string $domestic_policy = null;
+
     public ?int $war_policy_turns = null;
 
     public ?int $domestic_policy_turns = null;
@@ -274,6 +278,8 @@ class Nation
         $this->nation_name = isset($json->nation_name) ? (string) $json->nation_name : null;
         $this->leader_name = isset($json->leader_name) ? (string) $json->leader_name : null;
         $this->continent = isset($json->continent) ? (string) $json->continent : null;
+        $this->war_policy = isset($json->war_policy) ? (string) $json->war_policy : null;
+        $this->domestic_policy = isset($json->domestic_policy) ? (string) $json->domestic_policy : null;
         $this->war_policy_turns = isset($json->war_policy_turns) ? (int) $json->war_policy_turns : null;
         $this->domestic_policy_turns = isset($json->domestic_policy_turns) ? (int) $json->domestic_policy_turns : null;
         $this->color = isset($json->color) ? (string) $json->color : null;

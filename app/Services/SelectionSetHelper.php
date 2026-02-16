@@ -19,9 +19,9 @@ class SelectionSetHelper
             'nation_name',
             'leader_name',
             'continent',
-            // 'war_policy', // WarPolicy class
+            'war_policy',
             'war_policy_turns',
-            // 'domestic_policy', // DomesticPolicy class
+            'domestic_policy',
             'domestic_policy_turns',
             'color',
             'num_cities',

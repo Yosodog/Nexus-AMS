@@ -78,6 +78,8 @@ class Nation extends Model
                 'nation_name',
                 'leader_name',
                 'continent',
+                'war_policy',
+                'domestic_policy',
                 'war_policy_turns',
                 'domestic_policy_turns',
                 'color',
@@ -131,6 +133,8 @@ class Nation extends Model
 
             $defaults = [
                 'alliance_position_id' => 0,
+                'war_policy' => 'ATTRITION',
+                'domestic_policy' => 'MANIFEST_DESTINY',
                 'war_policy_turns' => 0,
                 'domestic_policy_turns' => 0,
                 'num_cities' => 0,
