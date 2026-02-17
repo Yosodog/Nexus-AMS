@@ -3,12 +3,12 @@
 @section("content")
     @php
         $stats = $publicStats ?? [];
-        $headline = $homeContent['headline'] ?? ($allianceName ?? config('app.name', 'Nexus AMS'));
+        $headline = $homeContent['headline'] ?? ($allianceName ?? config('app.name'));
         $tagline = $homeContent['tagline'] ?? '';
         $about = $homeContent['about'] ?? '';
         $highlights = $homeContent['highlights'] ?? [];
         $highlights = is_array($highlights) ? $highlights : [];
-        $appLabel = $appName ?? config('app.name', 'Nexus AMS');
+        $appLabel = $appName ?? config('app.name');
 
         $metaStats = [
             [
@@ -122,7 +122,7 @@
                                 <div class="card bg-base-100 shadow-sm">
                                     <div class="card-body gap-2">
                                         <h3 class="card-title text-base">Admissions</h3>
-                                        <p class="text-sm text-base-content/70">Structured application powered by Nexus AMS to keep reviewers fast and fair.</p>
+                                        <p class="text-sm text-base-content/70">Structured application powered by {{ $appLabel }} to keep reviewers fast and fair.</p>
                                     </div>
                                 </div>
                                 <div class="card bg-base-100 shadow-sm">
@@ -175,7 +175,7 @@
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-secondary">Programs & culture</p>
                 <h2 class="text-3xl font-bold">Grow with clear expectations and real support.</h2>
                 <p class="max-w-3xl text-base text-base-content/80">
-                    From your first city grant to wartime coordination, we keep everything organized. Nexus AMS powers the workflows, while leaders keep the experience personal.
+                    From your first city grant to wartime coordination, we keep everything organized. {{ $appLabel }} powers the workflows, while leaders keep the experience personal.
                 </p>
             </div>
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -208,7 +208,7 @@
                             </div>
                             <h3 class="card-title text-lg">Economy</h3>
                         </div>
-                        <p class="text-base-content/80">Loans, grants, and infrastructure support tracked through Nexus AMS so nothing slips.</p>
+                        <p class="text-base-content/80">Loans, grants, and infrastructure support tracked through {{ $appLabel }} so nothing slips.</p>
                         <ul class="space-y-2 text-sm text-base-content/70">
                             <li class="flex items-center gap-2"><span class="badge badge-ghost badge-sm"></span> Transparent queues and approvals</li>
                             <li class="flex items-center gap-2"><span class="badge badge-ghost badge-sm"></span> Self-serve status updates</li>

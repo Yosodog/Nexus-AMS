@@ -7,7 +7,7 @@
         <div class="container-fluid">
             <div class="row align-items-center">
                 <div class="col-12 col-lg-8">
-                    <h3 class="mb-1">Nexus Expression Language (NEL)</h3>
+                    <h3 class="mb-1">{{ config('app.name') }} Expression Language (NEL)</h3>
                     <p class="text-secondary mb-0">
                         Define safe, predictable expressions for audits, grants, and MMR checks using dot-notation like
                         <code>nation.score</code> or <code>nation.military.soldiers</code>.

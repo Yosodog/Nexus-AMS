@@ -212,7 +212,7 @@
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div>
                         <h5 class="card-title mb-0">Discord War Alerts</h5>
-                        <small class="text-muted">Channel ID used for Nexus → Discord war alerts.</small>
+                        <small class="text-muted">Channel ID used for {{ config('app.name') }} → Discord war alerts.</small>
                     </div>
                 </div>
                 <div class="card-body">

@@ -841,7 +841,7 @@ class SettingService
         $value = self::getValue('recruitment_primary_subject');
 
         if (is_null($value) || $value === '') {
-            $appName = config('app.name', 'Nexus');
+            $appName = config('app.name');
             $default = $appName.' Recruitment';
             self::setRecruitmentPrimarySubject($default);
 
@@ -858,7 +858,7 @@ class SettingService
 
     public static function getRecruitmentPrimaryMessage(): string
     {
-        $appName = config('app.name', 'Nexus');
+        $appName = config('app.name');
         $default = '<p>Welcome to Politics &amp; War!</p>'
             ."<p>The team at {$appName} would love to help you get started. "
             .'Join our Discord and we can walk you through your first steps.</p>';
@@ -876,7 +876,7 @@ class SettingService
         $value = self::getValue('recruitment_follow_up_subject');
 
         if (is_null($value) || $value === '') {
-            $appName = config('app.name', 'Nexus');
+            $appName = config('app.name');
             $default = 'Checking in from '.$appName;
             self::setRecruitmentFollowUpSubject($default);
 
@@ -893,7 +893,7 @@ class SettingService
 
     public static function getRecruitmentFollowUpMessage(): string
     {
-        $appName = config('app.name', 'Nexus');
+        $appName = config('app.name');
         $default = '<p>Hey there! Just following up to see how your nation is progressing.</p>'
             ."<p>If you are still looking for an alliance, we'd love to have you at {$appName}.</p>";
 
@@ -931,7 +931,7 @@ class SettingService
 
     public static function getHomepageAbout(string $allianceName): string
     {
-        $appName = config('app.name', 'Nexus AMS');
+        $appName = config('app.name');
         $default = "{$allianceName} runs recruitment, economic programs, and defense with {$appName}. "
             .'Your experience stays transparent while leadership keeps operations secure.';
 

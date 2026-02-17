@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? env("APP_NAME") }}</title>
+    <title>{{ $title ?? config('app.name') }}</title>
     <link rel="icon" href="{{ $faviconUrl }}">
     <x-theme-script />
     @vite('resources/css/app.css')
@@ -16,7 +16,7 @@
 
     @if($pwApiDown)
         <div class="bg-warning text-warning-content text-sm py-1 text-center w-full">
-            Nexus has detected PW API issues. Functionality will be limited.
+            {{ config('app.name') }} has detected PW API issues. Functionality will be limited.
             @if(!empty($pwApiLastChecked))
                 <span class="opacity-75 ml-2">
                     (Last checked {{ \Carbon\Carbon::parse($pwApiLastChecked)->diffForHumans() }})

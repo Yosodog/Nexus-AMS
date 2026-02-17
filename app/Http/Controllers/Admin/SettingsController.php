@@ -37,7 +37,7 @@ class SettingsController extends Controller
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
         $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
 
-        $appName = config('app.name', 'Nexus AMS');
+        $appName = config('app.name');
         $homepageSettings = [
             'headline' => SettingService::getHomepageHeadline($appName),
             'tagline' => SettingService::getHomepageTagline($appName),
@@ -206,9 +206,9 @@ class SettingsController extends Controller
         $this->authorize('view-diagnostic-info');
 
         $previous = [
-            'home_headline' => SettingService::getHomepageHeadline(config('app.name', 'Nexus AMS')),
-            'home_tagline' => SettingService::getHomepageTagline(config('app.name', 'Nexus AMS')),
-            'home_about' => SettingService::getHomepageAbout(config('app.name', 'Nexus AMS')),
+            'home_headline' => SettingService::getHomepageHeadline(config('app.name')),
+            'home_tagline' => SettingService::getHomepageTagline(config('app.name')),
+            'home_about' => SettingService::getHomepageAbout(config('app.name')),
             'home_highlights' => SettingService::getHomepageHighlights(),
         ];
         $validated = $request->validate([

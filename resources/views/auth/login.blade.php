@@ -2,7 +2,7 @@
 
 @section("content")
     <x-utils.card title="Welcome back" extraClasses="mx-auto w-full max-w-md">
-        <p class="text-sm text-base-content/70">Sign in with your {{ env("APP_NAME") }} username to jump back into your dashboard.</p>
+        <p class="text-sm text-base-content/70">Sign in with your {{ config('app.name') }} username to jump back into your dashboard.</p>
 
         @if (session('status'))
             <div class="alert alert-success mb-4">

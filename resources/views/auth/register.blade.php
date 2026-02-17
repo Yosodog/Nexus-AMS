@@ -2,7 +2,7 @@
 
 @section("content")
     <x-utils.card title="Create your account" extraClasses="mx-auto w-full max-w-2xl">
-        <p class="mb-4 text-sm text-base-content/70">Join Nexus-AMS to manage your nation and alliance tools in one place. We’ll send a quick verification to confirm your nation.</p>
+        <p class="mb-4 text-sm text-base-content/70">Join {{ config('app.name') }} to manage your nation and alliance tools in one place. We’ll send a quick verification to confirm your nation.</p>
 
         @if ($errors->any())
             <div class="alert alert-error mb-4">

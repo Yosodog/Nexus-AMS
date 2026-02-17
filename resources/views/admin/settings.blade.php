@@ -25,7 +25,7 @@
         <div class="col-md-12">
             <div class="alert alert-light border">
                 <p class="mb-2">
-                    Nexus AMS typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.
+                    {{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.
                     However, these subscriptions are not guaranteed and may occasionally miss updates due to network or service disruptions.
                 </p>
                 <p class="mb-2">

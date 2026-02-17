@@ -14,7 +14,7 @@ class HomeController extends Controller
         $allianceId = $membershipService->getPrimaryAllianceId();
         $alliance = $allianceId ? Alliance::query()->find($allianceId) : null;
 
-        $appName = config('app.name', 'Nexus AMS');
+        $appName = config('app.name');
         $allianceName = $alliance?->name ?? $appName;
 
         $activeNationQuery = $alliance?->nations()

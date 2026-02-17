@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        $appName = config('app.name', 'Nexus');
+        $appName = config('app.name');
 
         $defaults = [
             'primary' => '<p>Welcome to Politics &amp; War!</p>'

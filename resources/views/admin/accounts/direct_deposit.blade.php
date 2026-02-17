@@ -29,7 +29,7 @@
                                    @cannot('manage-dd') disabled @endcannot required>
                             <div class="form-text">
                                 If a member unenrolls from Direct Deposit and their original in-game tax bracket cannot be restored,
-                                Nexus will assign them to this fallback bracket. It should be a valid in-game tax ID with standard rates.
+                                {{ config('app.name') }} will assign them to this fallback bracket. It should be a valid in-game tax ID with standard rates.
                             </div>
                         </div>
                     </div>

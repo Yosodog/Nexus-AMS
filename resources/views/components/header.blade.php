@@ -76,7 +76,7 @@
                     @endif
 
                 </div>
-                <a class="btn btn-ghost max-w-[8.5rem] truncate px-2 text-base sm:max-w-none sm:px-3 sm:text-xl" href="{{ route("home") }}">{{ env("APP_NAME") }}</a>
+                <a class="btn btn-ghost max-w-[8.5rem] truncate px-2 text-base sm:max-w-none sm:px-3 sm:text-xl" href="{{ route("home") }}">{{ config('app.name') }}</a>
             </div>
             {{-- End mobile nav and begin desktop nav --}}
             <div class="navbar-center hidden lg:absolute lg:left-1/2 lg:flex lg:-translate-x-1/2">

@@ -15,7 +15,7 @@
     @endphp
     <div class="sidebar-brand">
         <a href="{{ route('admin.dashboard') }}" class="brand-link">
-            <span class="brand-text fw-light">NexusAMS - Admin</span>
+            <span class="brand-text fw-light">{{ config('app.name') }} - Admin</span>
         </a>
     </div>
     <div class="sidebar-wrapper">
