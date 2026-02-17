@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\ProcessDeposits;
+use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Services\PWHealthService;
 use Illuminate\Support\Facades\Schedule;
 
@@ -80,3 +81,13 @@ Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($wh
 Schedule::command('sync:treaties')->hourlyAt('10')->when($whenPWUp);
 Schedule::command('trades:update')->hourlyAt('10')->when($whenPWUp);
 Schedule::command('rebuilding:refresh-estimates')->everyTwoHours()->withoutOverlapping(110);
+
+Schedule::job(new DispatchBeigeTurnAlertsJob('pre_turn'), 'sync')
+    ->everyOddHour(50)
+    ->withoutOverlapping(9)
+    ->when($whenPWUp);
+
+Schedule::job(new DispatchBeigeTurnAlertsJob('post_turn'), 'sync')
+    ->everyTwoHours(10)
+    ->withoutOverlapping(9)
+    ->when($whenPWUp);

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ApplicationController as AdminApplicationControll
 use App\Http\Controllers\Admin\AuditController as AdminAuditController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuditRuleController;
+use App\Http\Controllers\Admin\BeigeAlertController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
 use App\Http\Controllers\Admin\CustomizationController;
@@ -533,6 +534,17 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/defense/raids/top-cap', [RaidController::class, 'updateTopCap'])->name(
             'admin.raids.top-cap.update'
         );
+        Route::get('/defense/beige-alerts', [BeigeAlertController::class, 'index'])->name('admin.beige-alerts.index');
+        Route::post('/defense/beige-alerts/settings', [BeigeAlertController::class, 'updateSettings'])->name(
+            'admin.beige-alerts.settings'
+        );
+        Route::post('/defense/beige-alerts/alliances', [BeigeAlertController::class, 'storeAlliance'])->name(
+            'admin.beige-alerts.alliances.store'
+        );
+        Route::delete(
+            '/defense/beige-alerts/alliances/{beigeAlertAlliance}',
+            [BeigeAlertController::class, 'destroyAlliance']
+        )->name('admin.beige-alerts.alliances.destroy');
 
         Route::get('/applications', [AdminApplicationController::class, 'index'])->name('admin.applications.index');
         Route::post('/applications/settings', [AdminApplicationController::class, 'updateSettings'])->name(
