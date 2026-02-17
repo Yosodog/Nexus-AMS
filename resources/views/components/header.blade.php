@@ -16,7 +16,7 @@
 @endphp
 <div class="w-full bg-base-100">
     <div class="container mx-auto px-2 sm:px-4">
-        <div class="navbar gap-1 sm:gap-2">
+        <div class="navbar relative gap-1 sm:gap-2">
             <div class="navbar-start min-w-0 gap-1">
                 <div class="dropdown">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle shrink-0 text-base-content lg:hidden" aria-label="Open navigation">
@@ -79,7 +79,7 @@
                 <a class="btn btn-ghost max-w-[8.5rem] truncate px-2 text-base sm:max-w-none sm:px-3 sm:text-xl" href="{{ route("home") }}">{{ env("APP_NAME") }}</a>
             </div>
             {{-- End mobile nav and begin desktop nav --}}
-            <div class="navbar-center hidden lg:flex">
+            <div class="navbar-center hidden lg:absolute lg:left-1/2 lg:flex lg:-translate-x-1/2">
                 @if ($showMemberNavigation)
                     <ul class="menu menu-horizontal px-1 z-50">
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
