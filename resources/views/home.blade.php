@@ -44,7 +44,7 @@
 
     <div class="space-y-12">
         {{-- Hero --}}
-        <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 p-10 shadow-lg">
+        <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 p-6 shadow-lg sm:p-10">
             <div class="absolute inset-0 bg-gradient-to-b from-base-100/60 via-transparent to-base-100/60"></div>
             <div class="absolute -right-28 -top-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl"></div>
             <div class="relative grid gap-10 lg:grid-cols-2 lg:items-center">
@@ -170,7 +170,7 @@
         </section>
 
         {{-- Programs --}}
-        <section id="programs" class="rounded-3xl bg-base-200/60 p-8 shadow-inner space-y-6">
+        <section id="programs" class="rounded-3xl bg-base-200/60 p-5 shadow-inner space-y-6 sm:p-8">
             <div class="flex flex-col gap-2">
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-secondary">Programs & culture</p>
                 <h2 class="text-3xl font-bold">Grow with clear expectations and real support.</h2>
@@ -238,7 +238,7 @@
         </section>
 
         {{-- Toolkit --}}
-        <section class="rounded-3xl border border-base-300/80 bg-base-100 p-10 shadow-2xl space-y-6">
+        <section class="rounded-3xl border border-base-300/80 bg-base-100 p-6 shadow-2xl space-y-6 sm:p-10">
             <div class="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-center">
                 <div class="space-y-4">
                     <h3 class="text-3xl font-bold">Powered by {{ $appLabel }}</h3>

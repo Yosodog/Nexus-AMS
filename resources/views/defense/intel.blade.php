@@ -6,7 +6,7 @@
             <div class="card-body grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
                 <div class="lg:col-span-2 space-y-3">
                     <p class="text-xs uppercase tracking-[0.25em] text-primary-content/70">Defense • Shared Intel</p>
-                    <h1 class="text-4xl font-black">Alliance Intel Library</h1>
+                    <h1 class="text-3xl font-black sm:text-4xl">Alliance Intel Library</h1>
                     <p class="text-sm sm:text-base text-primary-content/80 max-w-3xl">
                         Drop spy reports, auto-parse the resource haul, and give everyone a searchable feed of the latest intel.
                         Filter by nation ID, check detection risk, and keep operations moving fast.

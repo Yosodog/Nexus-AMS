@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <x-utils.card title="Forgot Password" extraClasses="mx-auto w-96">
+    <x-utils.card title="Forgot Password" extraClasses="mx-auto w-full max-w-md">
         <p class="mb-4 text-sm text-base-content/70">
             Enter your nation ID and we will send an in-game message with a link to reset your password.
         </p>

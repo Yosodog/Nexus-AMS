@@ -10,7 +10,7 @@
                         <span class="badge badge-outline">User Access</span>
                         <span class="badge badge-outline">v1</span>
                     </div>
-                    <h1 class="text-4xl font-bold leading-tight">Nexus API reference</h1>
+                    <h1 class="text-3xl font-bold leading-tight sm:text-4xl">Nexus API reference</h1>
                     <p class="text-sm text-base-content/70 max-w-2xl">
                         Use your personal access token to read data and request deposits. Discord bot and
                         subscription endpoints are intentionally omitted from this page.

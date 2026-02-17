@@ -42,7 +42,7 @@
         </div>
 
         <!-- Right: Time -->
-        <div class="text-sm opacity-60 text-right">
+        <div class="text-left text-sm opacity-60 md:text-right">
             <p>Server time: {{ Carbon::now()->toDayDateTimeString() }}</p>
         </div>
     </div>

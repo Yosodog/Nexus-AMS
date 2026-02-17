@@ -2,7 +2,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="container mx-auto space-y-6" x-data="warSim()" x-init="init()">
+    <div class="mx-auto space-y-6" x-data="warSim()" x-init="init()">
         <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
@@ -382,6 +382,7 @@
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-success">Attacker Losses</h3>
+                            <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
@@ -404,9 +405,11 @@
                                 </template>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-error">Defender Losses</h3>
+                            <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
@@ -429,6 +432,7 @@
                                 </template>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
 
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
@@ -453,6 +457,7 @@
 
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Damage & Loot</h3>
+                            <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
@@ -487,9 +492,11 @@
                                 </tr>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Resources & Costs</h3>
+                            <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
@@ -526,9 +533,11 @@
                                 </tr>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         <div class="rounded-xl border border-base-300 p-4 space-y-3" x-show="results.metrics.improvement_destroy_chance">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Improvement Destroy Chance</h3>
+                            <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
@@ -549,6 +558,7 @@
                                 </tr>
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
 

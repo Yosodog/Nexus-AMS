@@ -1,11 +1,11 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="max-w-7xl xl:max-w-6xl 2xl:max-w-[1400px] mx-auto px-4 py-6 space-y-6">
+    <div class="mx-auto max-w-7xl space-y-6 px-0 py-2 sm:py-4 xl:max-w-6xl 2xl:max-w-[1400px]">
 
         {{-- Target Nation Input --}}
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-4 shadow-sm flex flex-wrap items-center gap-3">
-            <div class="flex-1 min-w-[220px]">
+        <div class="flex flex-col gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
+            <div class="w-full flex-1 min-w-0 sm:min-w-[220px]">
                 <label class="label">
                     <span class="label-text font-semibold">Target Nation ID</span>
                 </label>

@@ -4,7 +4,7 @@
 @inject('settings', 'App\Services\SettingService')
 
 @section('content')
-    <div class="container mx-auto space-y-6">
+    <div class="mx-auto space-y-6">
 
         <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -126,7 +126,7 @@
                         <textarea class="textarea textarea-bordered" name="note" required></textarea>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 mt-4">
+                    <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         @foreach(PWHelperService::resources() as $resource)
                             <div>
                                 <label class="label">{{ ucfirst($resource) }}</label>

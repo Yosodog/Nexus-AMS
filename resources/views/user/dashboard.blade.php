@@ -14,7 +14,7 @@
                     </div>
                     <div class="space-y-1">
                         <p class="text-xs uppercase tracking-wide text-base-content/60">Live overview</p>
-                        <h1 class="text-3xl font-bold leading-tight">
+                        <h1 class="break-words text-2xl font-bold leading-tight sm:text-3xl">
                             {{ $nation->leader_name }}
                             <span class="text-base-content/60 text-lg font-semibold">({{ $nation->nation_name }})</span>
                         </h1>

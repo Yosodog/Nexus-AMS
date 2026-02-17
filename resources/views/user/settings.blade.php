@@ -9,7 +9,7 @@
                     <span class="badge badge-outline">Security</span>
                     <span class="badge badge-outline">Integrations</span>
                 </div>
-                <h1 class="text-4xl font-bold leading-tight">Your settings hub</h1>
+                <h1 class="text-3xl font-bold leading-tight sm:text-4xl">Your settings hub</h1>
                 <p class="text-sm text-base-content/70 max-w-2xl">Update your profile, keep credentials fresh, and link external tools. Built to expand as we add new preferences.</p>
             </div>
             <div class="rounded-box bg-base-200/70 px-4 py-3 text-sm flex items-center gap-3">

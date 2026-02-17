@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    img,
+    video,
+    iframe,
+    canvas,
+    svg {
+        max-width: 100%;
+    }
+
+    img,
+    video,
+    iframe {
+        height: auto;
+    }
+}
+
+@layer utilities {
+    @media (max-width: 767.98px) {
+        main .join > * {
+            min-width: 0;
+        }
+
+        main .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        main .table :where(th, td) {
+            white-space: nowrap;
+        }
+
+        main pre,
+        main code {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+    }
+}

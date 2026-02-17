@@ -32,7 +32,35 @@
             overflow: visible;
         }
 
+        .app-content .container-fluid {
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+        }
+
         @media (max-width: 767.98px) {
+            .app-content .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .app-sidebar {
+                max-width: min(280px, 85vw);
+            }
+
+            .navbar-nav .dropdown-menu {
+                max-width: calc(100vw - 1rem);
+            }
+
+            .navbar-nav .user-menu .dropdown-menu {
+                min-width: 0;
+                width: calc(100vw - 1rem);
+            }
+
+            .navbar-nav .user-menu .user-header {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
             .card-header.d-flex {
                 flex-wrap: wrap;
                 gap: 0.5rem;

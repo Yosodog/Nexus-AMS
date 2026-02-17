@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="flex flex-col bg-base-200/30 min-h-screen">
+<body class="flex min-h-screen flex-col bg-base-200/30 overflow-x-hidden">
 
     @if($pwApiDown)
         <div class="bg-warning text-warning-content text-sm py-1 text-center w-full">
@@ -30,9 +30,9 @@
     <div class="flex-grow relative">
         <div class="absolute inset-0 bg-gradient-to-b from-primary/5 via-base-200/30 to-base-100 pointer-events-none">
         </div>
-        <div class="container max-w-7xl xl:max-w-6xl 2xl:max-w-[1400px] mx-auto px-4 py-8 relative">
+        <div class="container relative mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 xl:max-w-6xl 2xl:max-w-[1400px]">
             <div class="flex">
-                <main class="w-full space-y-6">
+                <main class="w-full min-w-0 space-y-6">
                     @if (session('alert-message') || $errors->any())
                         <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
                     @endif

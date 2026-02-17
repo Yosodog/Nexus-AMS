@@ -1,10 +1,10 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="max-w-6xl mx-auto px-4 py-6">
+    <div class="mx-auto max-w-6xl space-y-4">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h1 class="text-3xl font-bold text-primary">Spy Assignments</h1>
+                <h1 class="text-2xl font-bold text-primary sm:text-3xl">Spy Assignments</h1>
                 <p class="text-base-content/70">Your queued espionage targets and recommended safety levels.</p>
             </div>
             <div class="badge badge-info badge-lg">Live</div>

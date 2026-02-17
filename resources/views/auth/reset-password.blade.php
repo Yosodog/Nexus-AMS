@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <x-utils.card title="Reset Password" extraClasses="mx-auto w-96">
+    <x-utils.card title="Reset Password" extraClasses="mx-auto w-full max-w-md">
         <form method="post" action="{{ route('password.update') }}">
             @csrf
 

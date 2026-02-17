@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto px-4 py-6 space-y-6" x-data="raidFinder()" x-init="loadRaids()">
+    <div class="mx-auto space-y-6" x-data="raidFinder()" x-init="loadRaids()">
         <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
