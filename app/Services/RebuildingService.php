@@ -12,6 +12,7 @@ use App\Models\RebuildingIneligibility;
 use App\Models\RebuildingRequest;
 use App\Models\RebuildingTier;
 use App\Notifications\RebuildingNotification;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -138,7 +139,7 @@ class RebuildingService
     /**
      * @throws ValidationException
      */
-    public function submitRequest(Nation $nation, array $data): RebuildingRequest
+    private function createPendingRequest(Nation $nation, array $data): RebuildingRequest
     {
         $cycleId = $this->getCurrentCycleId();
 
@@ -176,12 +177,33 @@ class RebuildingService
             'target_infrastructure_snapshot' => $eligibility['tier']->target_infrastructure,
             'estimated_amount' => $eligibility['amount'],
             'status' => 'pending',
+            'pending_key' => 1,
             'note' => $data['note'] ?? null,
         ]);
 
         app(PendingRequestsService::class)->flushCache();
 
         return $request;
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function submitRequest(Nation $nation, array $data): RebuildingRequest
+    {
+        try {
+            return $this->createPendingRequest($nation, $data);
+        } catch (QueryException $exception) {
+            $sqlState = $exception->errorInfo[0] ?? null;
+
+            if ($sqlState === '23000') {
+                throw ValidationException::withMessages([
+                    'rebuilding' => 'You already have a pending rebuilding request.',
+                ]);
+            }
+
+            throw $exception;
+        }
     }
 
     /**
@@ -215,6 +237,7 @@ class RebuildingService
                 'approved_amount' => $approvedAmount,
                 'review_note' => $reviewNote,
                 'status' => 'approved',
+                'pending_key' => null,
                 'approved_at' => now(),
                 'approved_by' => auth()->id(),
             ]);
@@ -271,6 +294,7 @@ class RebuildingService
         $request->update([
             'review_note' => $reviewNote,
             'status' => 'denied',
+            'pending_key' => null,
             'denied_at' => now(),
             'denied_by' => auth()->id(),
         ]);
@@ -378,6 +402,7 @@ class RebuildingService
             ->where('status', 'pending')
             ->update([
                 'status' => 'expired',
+                'pending_key' => null,
                 'expired_at' => now(),
             ]);
 

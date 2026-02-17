@@ -195,7 +195,7 @@ class RebuildingController extends Controller
 
         RebuildingTier::query()->create([
             ...$request->validated(),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $request->boolean('is_active'),
             'requirements' => $request->validated('requirements', []),
         ]);
 
@@ -214,7 +214,7 @@ class RebuildingController extends Controller
 
         $tier->update([
             ...$request->validated(),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $request->boolean('is_active'),
             'requirements' => $request->validated('requirements', []),
         ]);
 

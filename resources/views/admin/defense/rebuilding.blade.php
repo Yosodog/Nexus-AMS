@@ -267,6 +267,7 @@
                             </div>
                         </div>
                         <div class="col-md-1 form-check mt-4">
+                            <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" class="form-check-input" name="is_active" value="1" checked>
                             <label class="form-check-label">Active</label>
                         </div>

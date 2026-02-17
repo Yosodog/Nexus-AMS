@@ -17,6 +17,7 @@ class RebuildingRequest extends Model
         'estimated_amount',
         'approved_amount',
         'status',
+        'pending_key',
         'note',
         'review_note',
         'approved_by',
