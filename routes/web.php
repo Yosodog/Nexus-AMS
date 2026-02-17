@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\NelDocsController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\PayrollController;
 use App\Http\Controllers\Admin\RaidController;
+use App\Http\Controllers\Admin\RebuildingController as AdminRebuildingControllerAlias;
 use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -46,10 +47,11 @@ use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LoansController as UserLoansController;
-use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\MarketController;
+use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
+use App\Http\Controllers\RebuildingController;
 use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
@@ -162,6 +164,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         // War aid
         Route::get('/waraid', [WarAidController::class, 'index'])->name('defense.war-aid');
         Route::post('/waraid', [WarAidController::class, 'store'])->name('defense.war-aid.store')
+            ->middleware(BlockWhenPWDown::class);
+        Route::get('/rebuilding', [RebuildingController::class, 'index'])->name('defense.rebuilding');
+        Route::post('/rebuilding', [RebuildingController::class, 'store'])->name('defense.rebuilding.store')
             ->middleware(BlockWhenPWDown::class);
 
         Route::get('/raid-finder', [RaidFinderController::class, 'index'])->name(
@@ -482,6 +487,40 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         )->name('admin.war-aid.deny')->middleware(BlockWhenPWDown::class);
         Route::post('/defense/waraid/toggle', [AdminWarAidControllerAlias::class, 'toggle'])->name(
             'admin.war-aid.toggle'
+        );
+        Route::get('/defense/rebuilding', [AdminRebuildingControllerAlias::class, 'index'])->name('admin.rebuilding.index');
+        Route::post('/defense/rebuilding/toggle', [AdminRebuildingControllerAlias::class, 'toggle'])->name(
+            'admin.rebuilding.toggle'
+        );
+        Route::post('/defense/rebuilding/tiers', [AdminRebuildingControllerAlias::class, 'storeTier'])->name(
+            'admin.rebuilding.tiers.store'
+        );
+        Route::put('/defense/rebuilding/tiers/{tier}', [AdminRebuildingControllerAlias::class, 'updateTier'])->name(
+            'admin.rebuilding.tiers.update'
+        );
+        Route::delete('/defense/rebuilding/tiers/{tier}', [AdminRebuildingControllerAlias::class, 'destroyTier'])->name(
+            'admin.rebuilding.tiers.destroy'
+        );
+        Route::patch(
+            '/defense/rebuilding/{RebuildingRequest}/approve',
+            [AdminRebuildingControllerAlias::class, 'approve']
+        )->name('admin.rebuilding.approve')->middleware(BlockWhenPWDown::class);
+        Route::patch(
+            '/defense/rebuilding/{RebuildingRequest}/deny',
+            [AdminRebuildingControllerAlias::class, 'deny']
+        )->name('admin.rebuilding.deny')->middleware(BlockWhenPWDown::class);
+        Route::post('/defense/rebuilding/ineligible', [AdminRebuildingControllerAlias::class, 'markIneligible'])->name(
+            'admin.rebuilding.ineligible.store'
+        );
+        Route::delete(
+            '/defense/rebuilding/ineligible/{ineligibilityId}',
+            [AdminRebuildingControllerAlias::class, 'clearIneligible']
+        )->name('admin.rebuilding.ineligible.destroy');
+        Route::post('/defense/rebuilding/refresh-estimates', [AdminRebuildingControllerAlias::class, 'refreshEstimates'])->name(
+            'admin.rebuilding.refresh-estimates'
+        );
+        Route::post('/defense/rebuilding/reset', [AdminRebuildingControllerAlias::class, 'resetCycle'])->name(
+            'admin.rebuilding.reset'
         );
 
         Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');

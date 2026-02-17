@@ -85,6 +85,66 @@ class SettingService
         self::setValue('war_aid_enabled', $enabled ? 1 : 0);
     }
 
+    public static function isRebuildingEnabled(): bool
+    {
+        $value = self::getValue('rebuilding_enabled');
+
+        if (is_null($value)) {
+            self::setRebuildingEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setRebuildingEnabled(bool $enabled): void
+    {
+        self::setValue('rebuilding_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getRebuildingCycleId(): int
+    {
+        $value = self::getValue('rebuilding_cycle_id');
+
+        if (is_null($value)) {
+            self::setValue('rebuilding_cycle_id', 1);
+
+            return 1;
+        }
+
+        return max(1, (int) $value);
+    }
+
+    public static function setRebuildingCycleId(int $cycleId): void
+    {
+        self::setValue('rebuilding_cycle_id', max(1, $cycleId));
+    }
+
+    public static function incrementRebuildingCycleId(): int
+    {
+        $next = self::getRebuildingCycleId() + 1;
+        self::setRebuildingCycleId($next);
+
+        return $next;
+    }
+
+    public static function getRebuildingLastEstimateRefreshAt(): ?Carbon
+    {
+        $value = self::getValue('rebuilding_last_estimate_refresh_at');
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value);
+    }
+
+    public static function setRebuildingLastEstimateRefreshAt(Carbon $timestamp): void
+    {
+        self::setValue('rebuilding_last_estimate_refresh_at', $timestamp->toIso8601String());
+    }
+
     public static function isDiscordVerificationRequired(): bool
     {
         $value = self::getValue('require_discord_verification');

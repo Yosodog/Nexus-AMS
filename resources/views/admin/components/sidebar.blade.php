@@ -4,10 +4,10 @@
         $pendingTotal = $pendingRequests['total'] ?? 0;
         $grantsPending = ($pendingCounts['city_grants'] ?? 0) + ($pendingCounts['grants'] ?? 0);
         $financePending = ($pendingCounts['withdrawals'] ?? 0);
-        $warsPending = ($pendingCounts['war_aid'] ?? 0);
+        $warsPending = ($pendingCounts['war_aid'] ?? 0) + ($pendingCounts['rebuilding'] ?? 0);
         $grantsActive = request()->routeIs('admin.grants.city', 'admin.grants');
         $financeActive = request()->routeIs('admin.offshores.*', 'admin.finance.*', 'admin.payroll.*');
-        $warsActive = request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.raids.*');
+        $warsActive = request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.rebuilding.*', 'admin.raids.*');
         $intakeActive = request()->routeIs('admin.applications.*', 'admin.recruitment.*');
         $auditsActive = request()->routeIs('admin.audits.*');
         $systemConfigActive = request()->routeIs('admin.settings', 'admin.nel.docs', 'admin.customization.*');
@@ -245,6 +245,16 @@
                                         :active="request()->routeIs('admin.war-aid')"
                                         :badge="($pendingCounts['war_aid'] ?? 0) > 0 ? $pendingCounts['war_aid'] : null">
                                 War Aid
+                            </x-nav.link>
+                        </li>
+
+                        <li class="nav-item">
+                            <x-nav.link href="{{ route('admin.rebuilding.index') }}"
+                                        icon="bi bi-hammer ms-3"
+                                        permission="view-rebuilding"
+                                        :active="request()->routeIs('admin.rebuilding.*')"
+                                        :badge="($pendingCounts['rebuilding'] ?? 0) > 0 ? $pendingCounts['rebuilding'] : null">
+                                Rebuilding
                             </x-nav.link>
                         </li>
 
