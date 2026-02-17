@@ -10,6 +10,7 @@ use App\Models\DepositRequest;
 use App\Models\GrantApplication;
 use App\Models\ManualTransaction;
 use App\Models\Nation;
+use App\Models\RebuildingRequest;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
@@ -88,6 +89,11 @@ class AccountService
         // Check if the account has pending war aid requests
         if (WarAidRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending war aid requests.');
+        }
+
+        // Check if the account has pending rebuilding requests
+        if (RebuildingRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
+            throw new UserErrorException('The account has pending rebuilding requests.');
         }
 
         // Check if the account has pending deposit requests

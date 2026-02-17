@@ -79,3 +79,4 @@ Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($wh
 // Treaty sync
 Schedule::command('sync:treaties')->hourlyAt('10')->when($whenPWUp);
 Schedule::command('trades:update')->hourlyAt('10')->when($whenPWUp);
+Schedule::command('rebuilding:refresh-estimates')->everyTwoHours()->withoutOverlapping(110);

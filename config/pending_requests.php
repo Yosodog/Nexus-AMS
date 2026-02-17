@@ -10,5 +10,6 @@ return [
         'grants' => 'manage-grants',
         'loans' => 'manage-loans',
         'war_aid' => 'manage-war-aid',
+        'rebuilding' => 'manage-rebuilding',
     ],
 ];

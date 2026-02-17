@@ -87,4 +87,77 @@ final class PWHealthService
     {
         return Cache::get(self::CACHE_KEY_LAST_ERROR);
     }
+
+    public function calcInfra(
+        float $start,
+        float $end,
+        bool $urban = false,
+        bool $cce = false,
+        bool $aec = false,
+        bool $gsa = false
+    ): float {
+        $value = $this->calcBaseInfra($start, $end);
+
+        $startingAmount = round($start, 2);
+        $endingAmount = round($end, 2);
+        $difference = $endingAmount - $startingAmount;
+
+        if ($difference <= 0) {
+            return $value;
+        }
+
+        $percentage = 1.0;
+        if ($cce) {
+            $percentage -= 0.05;
+        }
+        if ($aec) {
+            $percentage -= 0.05;
+        }
+        if ($gsa && $urban) {
+            $percentage -= 0.075;
+        } elseif ($urban) {
+            $percentage -= 0.05;
+        }
+
+        return $value * $percentage;
+    }
+
+    public function calcBaseInfra(float $start, float $end): float
+    {
+        $value = 0.0;
+
+        $startingAmount = round($start, 2);
+        $endingAmount = round($end, 2);
+        $difference = $endingAmount - $startingAmount;
+
+        if ($difference == 0.0) {
+            return $value;
+        }
+
+        if ($difference < 0) {
+            return 150 * $difference;
+        }
+
+        if ($difference > 100 && fmod($difference, 100) === 0.0) {
+            $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * 100;
+
+            return $value + $costOfChunk + $this->calcBaseInfra($startingAmount + 100, $endingAmount);
+        }
+
+        if ($difference > 100 && fmod($difference, 100) !== 0.0) {
+            $remainder = fmod($difference, 100);
+            $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * $remainder;
+
+            return $value + $costOfChunk + $this->calcBaseInfra($startingAmount + $remainder, $endingAmount);
+        }
+
+        $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * $difference;
+
+        return $value + $costOfChunk;
+    }
+
+    public function calculateInfrastructurePrice(float $amount): float
+    {
+        return (pow(abs($amount - 10), 2.2) / 710) + 300;
+    }
 }

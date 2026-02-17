@@ -51,6 +51,13 @@ return [
             'group' => 'war',
             'icon' => 'fa-solid fa-helmet-safety',
         ],
+        'rebuilding' => [
+            'label' => 'Rebuilding',
+            'direction' => 'expense',
+            'color' => 'secondary',
+            'group' => 'war',
+            'icon' => 'fa-solid fa-hammer',
+        ],
         'other' => [
             'label' => 'Miscellaneous',
             'direction' => 'expense',

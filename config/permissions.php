@@ -31,6 +31,8 @@ return [
     'manage-recruitment',
     'view-war-aid',
     'manage-war-aid',
+    'view-rebuilding',
+    'manage-rebuilding',
     'view-dd',
     'manage-dd',
     'manage-mmr',

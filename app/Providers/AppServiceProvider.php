@@ -12,6 +12,7 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
+use App\Models\RebuildingRequest;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
@@ -91,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
         Route::model('CityGrantRequest', CityGrantRequest::class);
         Route::model('Loan', Loan::class);
         Route::model('Nation', Nation::class);
+        Route::model('RebuildingRequest', RebuildingRequest::class);
         Route::model('WarAidRequest', WarAidRequest::class);
 
         Offshore::observe(OffshoreObserver::class);

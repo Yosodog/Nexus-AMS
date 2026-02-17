@@ -13,6 +13,7 @@ class PendingRequestsService
     public function __construct(
         private readonly LoanService $loanService,
         private readonly WarAidService $warAidService,
+        private readonly RebuildingService $rebuildingService,
     ) {}
 
     /**
@@ -56,6 +57,7 @@ class PendingRequestsService
             'grants' => GrantService::countPending(),
             'loans' => $this->loanService->countPending(),
             'war_aid' => $this->warAidService->countPending(),
+            'rebuilding' => $this->rebuildingService->countPending(),
         ];
     }
 
