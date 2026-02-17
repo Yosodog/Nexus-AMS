@@ -534,6 +534,34 @@ class SettingService
         self::setValue('discord_alliance_departure_enabled', $enabled ? 1 : 0);
     }
 
+    public static function isBeigeAlertsEnabled(): bool
+    {
+        $value = self::getValue('beige_alerts_enabled');
+
+        if (is_null($value)) {
+            self::setBeigeAlertsEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setBeigeAlertsEnabled(bool $enabled): void
+    {
+        self::setValue('beige_alerts_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getBeigeAlertsDiscordChannelId(): string
+    {
+        return (string) (self::getValue('beige_alerts_discord_channel_id') ?? '');
+    }
+
+    public static function setBeigeAlertsDiscordChannelId(?string $channelId): void
+    {
+        self::setValue('beige_alerts_discord_channel_id', $channelId ?? '');
+    }
+
     public static function getLastNationSyncBatchId(): string
     {
         return self::getLastManualNationSyncBatchId();

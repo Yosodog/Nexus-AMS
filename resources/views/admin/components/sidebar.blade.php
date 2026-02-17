@@ -7,7 +7,7 @@
         $warsPending = ($pendingCounts['war_aid'] ?? 0) + ($pendingCounts['rebuilding'] ?? 0);
         $grantsActive = request()->routeIs('admin.grants.city', 'admin.grants');
         $financeActive = request()->routeIs('admin.offshores.*', 'admin.finance.*', 'admin.payroll.*');
-        $warsActive = request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.rebuilding.*', 'admin.raids.*');
+        $warsActive = request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.rebuilding.*', 'admin.raids.*', 'admin.beige-alerts.*');
         $intakeActive = request()->routeIs('admin.applications.*', 'admin.recruitment.*');
         $auditsActive = request()->routeIs('admin.audits.*');
         $systemConfigActive = request()->routeIs('admin.settings', 'admin.nel.docs', 'admin.customization.*');
@@ -264,6 +264,15 @@
                                         permission="view-raids"
                                         :active="request()->routeIs('admin.raids.*')">
                                 Raids
+                            </x-nav.link>
+                        </li>
+
+                        <li class="nav-item">
+                            <x-nav.link href="{{ route('admin.beige-alerts.index') }}"
+                                        icon="bi bi-bell ms-3"
+                                        permission="view-raids"
+                                        :active="request()->routeIs('admin.beige-alerts.*')">
+                                Beige Alerts
                             </x-nav.link>
                         </li>
                     </ul>

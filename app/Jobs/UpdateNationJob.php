@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\NationAllianceChanged;
 use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
+use App\Services\BeigeAlertService;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -33,7 +34,7 @@ class UpdateNationJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(BeigeAlertService $beigeAlertService): void
     {
         try {
             foreach ($this->nationsData as $nationData) {
@@ -43,6 +44,7 @@ class UpdateNationJob implements ShouldQueue
                 $existingNation = Nation::withTrashed()->find($nationModel->id);
                 $oldAllianceId = $existingNation?->alliance_id;
                 $oldAlliancePosition = $existingNation?->alliance_position;
+                $previousBeigeTurns = $existingNation?->beige_turns;
 
                 $updatedNation = null;
 
@@ -73,6 +75,15 @@ class UpdateNationJob implements ShouldQueue
                         newAllianceId: $updatedNation->alliance_id,
                         newAlliancePosition: $updatedNation->alliance_position
                     ));
+                }
+
+                if ($updatedNation && $existingNation) {
+                    $beigeAlertService->maybeDispatchEarlyExitAlert(
+                        nationId: (int) $updatedNation->id,
+                        allianceId: $updatedNation->alliance_id,
+                        previousBeigeTurns: (int) $previousBeigeTurns,
+                        currentBeigeTurns: (int) $updatedNation->beige_turns,
+                    );
                 }
             }
         } catch (Exception $e) {
