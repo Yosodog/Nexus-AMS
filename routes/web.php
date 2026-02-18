@@ -443,6 +443,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/war-plans/{plan}/publish', [AdminWarPlanController::class, 'publish'])->name('admin.war-plans.publish');
         Route::get('/war-plans/{plan}/export', [AdminWarPlanController::class, 'export'])->name('admin.war-plans.export');
         Route::post('/war-plans/{plan}/import', [AdminWarPlanController::class, 'import'])->name('admin.war-plans.import');
+        Route::get('/war-plans/{plan}/targets/export-csv', [AdminWarPlanController::class, 'exportTargetsCsv'])->name('admin.war-plans.targets.export-csv');
+        Route::get('/war-plans/{plan}/assignments/export-csv', [AdminWarPlanController::class, 'exportAssignmentsCsv'])->name('admin.war-plans.assignments.export-csv');
         Route::post('/war-plans/{plan}/targets/{target}/war-type', [AdminWarPlanController::class, 'updateTargetWarType'])->name('admin.war-plans.targets.update-war-type');
         Route::post('/war-plans/{plan}/alliances', [AdminWarPlanController::class, 'addAlliance'])->name('admin.war-plans.alliances.store');
         Route::delete('/war-plans/{plan}/alliances/{alliance}', [AdminWarPlanController::class, 'removeAlliance'])->name('admin.war-plans.alliances.destroy');

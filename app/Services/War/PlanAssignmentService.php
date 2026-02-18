@@ -44,8 +44,12 @@ class PlanAssignmentService
         WarPlan $plan,
         Collection $targets,
         Collection $friendlies,
-        bool $respectLocks = true
-    ): Collection {
+        bool $respectLocks = true,
+        bool $hydrateAssignments = true,
+        bool $enableSecondPass = true,
+        bool $rebuildSquads = true,
+        bool $includeSignInData = true
+    ): SupportCollection {
         $assignments = collect();
         $lock = $this->cacheFactory->store()->lock("plan:{$plan->id}:assign", (int) config('war.plan_defaults.lock_ttl', 30));
 
@@ -55,10 +59,14 @@ class PlanAssignmentService
                 $targets,
                 $friendlies,
                 $respectLocks,
+                $hydrateAssignments,
+                $enableSecondPass,
+                $rebuildSquads,
+                $includeSignInData,
                 &$assignments
             ) {
-                $assignments = DB::transaction(function () use ($plan, $targets, $friendlies, $respectLocks) {
-                    return $this->runGeneration($plan, $targets, $friendlies, $respectLocks);
+                $assignments = DB::transaction(function () use ($plan, $targets, $friendlies, $respectLocks, $hydrateAssignments, $enableSecondPass, $rebuildSquads, $includeSignInData) {
+                    return $this->runGeneration($plan, $targets, $friendlies, $respectLocks, $hydrateAssignments, $enableSecondPass, $rebuildSquads, $includeSignInData);
                 });
             });
         } catch (LockTimeoutException $exception) {
@@ -87,13 +95,27 @@ class PlanAssignmentService
         WarPlan $plan,
         Collection $targets,
         Collection $friendlies,
-        bool $respectLocks
-    ): Collection {
+        bool $respectLocks,
+        bool $hydrateAssignments,
+        bool $enableSecondPass,
+        bool $rebuildSquads,
+        bool $includeSignInData
+    ): SupportCollection {
         $targets->loadMissing(['nation.military', 'nation.accountProfile']);
-        $friendlies->loadMissing(['military', 'latestSignIn', 'accountProfile']);
+        $friendlies->loadMissing($includeSignInData
+            ? ['military', 'latestSignIn', 'accountProfile']
+            : ['military', 'accountProfile']);
 
         $existingAssignments = $plan->assignments()
-            ->with(['friendlyNation', 'target'])
+            ->select([
+                'id',
+                'war_plan_target_id',
+                'friendly_nation_id',
+                'match_score',
+                'status',
+                'is_locked',
+                'is_overridden',
+            ])
             ->get()
             ->groupBy('war_plan_target_id');
 
@@ -123,7 +145,7 @@ class PlanAssignmentService
 
         $enemyThreatRanks = $this->buildEnemyThreatRanks($targets);
 
-        $results = collect();
+        $results = $hydrateAssignments ? collect() : null;
         $targetAssignmentsMap = [];
         $targetOpenings = [];
 
@@ -140,7 +162,9 @@ class PlanAssignmentService
             $needed = max(0, $preferredAssignmentsPerTarget - $preserved->count());
 
             if ($needed === 0) {
-                $results = $results->merge($preserved);
+                if ($hydrateAssignments) {
+                    $results = $results?->merge($preserved);
+                }
 
                 continue;
             }
@@ -205,32 +229,47 @@ class PlanAssignmentService
 
                 $friendlyAssignmentCounts[$friendly->id] = ($friendlyAssignmentCounts[$friendly->id] ?? 0) + 1;
 
-                $results->push($assignment);
+                if ($hydrateAssignments) {
+                    $results?->push($assignment);
+                }
             }
 
             // Include preserved assignments in results
-            $results = $results->merge($preserved);
+            if ($hydrateAssignments) {
+                $results = $results?->merge($preserved);
+            }
         }
 
-        $additionalAssignments = $this->fillActiveFriendlies(
-            $plan,
-            $targets,
-            $friendlies,
-            $friendlyProfiles,
-            $friendlyStrengthRanks,
-            $enemyThreatRanks,
-            $friendlyAssignmentCounts,
-            $friendlySquadMatrix,
-            $targetAssignmentsMap,
-            $targetOpenings,
-            $activityWindowHours,
-            $respectLocks,
-            $friendlyActivityFlags
-        );
+        if ($enableSecondPass) {
+            $additionalAssignments = $this->fillActiveFriendlies(
+                $plan,
+                $targets,
+                $friendlies,
+                $friendlyProfiles,
+                $friendlyStrengthRanks,
+                $enemyThreatRanks,
+                $friendlyAssignmentCounts,
+                $friendlySquadMatrix,
+                $targetAssignmentsMap,
+                $targetOpenings,
+                $activityWindowHours,
+                $respectLocks,
+                $friendlyActivityFlags,
+                $hydrateAssignments
+            );
 
-        $results = $results->merge($additionalAssignments);
+            if ($hydrateAssignments) {
+                $results = $results?->merge($additionalAssignments);
+            }
+        }
 
-        $this->rebuildSquads($plan, $respectLocks);
+        if ($rebuildSquads) {
+            $this->rebuildSquads($plan, $respectLocks);
+        }
+
+        if (! $hydrateAssignments) {
+            return collect();
+        }
 
         return $plan->assignments()->with(['friendlyNation', 'target', 'squad'])->get();
     }
@@ -541,7 +580,8 @@ class PlanAssignmentService
         array &$targetOpenings,
         int $activityWindowHours,
         bool $respectLocks,
-        array $friendlyActivityFlags
+        array $friendlyActivityFlags,
+        bool $hydrateAssignments
     ): SupportCollection {
         $openTargets = $targets->filter(fn ($target) => ($targetOpenings[$target->id] ?? 0) > 0)
             ->sortByDesc('target_priority_score');
@@ -560,7 +600,11 @@ class PlanAssignmentService
         }
 
         $activeProfiles = $friendlyProfiles->only($activeFriendlyIds);
-        $additional = collect();
+        $additional = $hydrateAssignments ? collect() : null;
+        $assignmentsByTarget = $plan->assignments()
+            ->select(['id', 'war_plan_target_id', 'friendly_nation_id', 'match_score', 'is_locked', 'is_overridden', 'status'])
+            ->get()
+            ->groupBy('war_plan_target_id');
 
         foreach ($openTargets as $target) {
             $needed = $targetOpenings[$target->id] ?? 0;
@@ -569,9 +613,8 @@ class PlanAssignmentService
                 continue;
             }
 
-            $preservedAssignments = $plan->assignments()
-                ->where('war_plan_target_id', $target->id)
-                ->get()
+            $targetAssignments = $assignmentsByTarget->get($target->id, collect());
+            $preservedAssignments = $targetAssignments
                 ->filter(fn (WarPlanAssignment $assignment) => ! $respectLocks || $assignment->is_locked || $assignment->is_overridden || $assignment->status !== 'proposed');
 
             $preservedFriendlyIds = $targetAssignmentsMap[$target->id] ?? [];
@@ -582,7 +625,7 @@ class PlanAssignmentService
                 friendlyProfiles: $activeProfiles,
                 preservedFriendlyIds: $preservedFriendlyIds,
                 assignmentCounts: $assignmentCounts,
-                existingAverage: $target->assignments()->avg('match_score'),
+                existingAverage: $targetAssignments->avg('match_score'),
                 friendlyStrengthRanks: $friendlyStrengthRanks,
                 enemyThreatRank: $enemyThreatRanks[$target->id] ?? 0.0,
                 activityWindowHours: $activityWindowHours
@@ -623,11 +666,16 @@ class PlanAssignmentService
                 )));
                 $targetOpenings[$target->id] = max(0, ($targetOpenings[$target->id] ?? 0) - 1);
 
-                $additional->push($assignment);
+                if ($hydrateAssignments) {
+                    $additional?->push($assignment);
+                }
+
+                $assignmentsByTarget[$target->id] = ($assignmentsByTarget[$target->id] ?? collect())
+                    ->push($assignment);
             }
         }
 
-        return $additional;
+        return $additional ?? collect();
     }
 
     protected function preferredAssignmentsPerTarget(int $friendlyCount, int $targetCount, int $preferredTargetsPerNation): int
@@ -900,30 +948,57 @@ class PlanAssignmentService
 
                 $friendlyPreferred[$assignment->friendly_nation_id] = $label;
                 $squadSizes[$label] = ($squadSizes[$label] ?? 0) + 1;
-
-                $meta = $squads[$label]->meta ?? [];
-                $meta['target_id'] = $targetId;
-                $squads[$label]->meta = $meta;
-                $squads[$label]->save();
             }
         }
 
-        // Update cohesion scores and clean up empty squads
+        // Persist target linkage once per squad instead of once per assignment.
+        $squadTargetMap = [];
+        foreach ($targetSquadPool as $targetId => $targetSquads) {
+            foreach ($targetSquads as $squad) {
+                $squadTargetMap[$squad->id] = $targetId;
+            }
+        }
+
+        foreach ($squads as $squad) {
+            if (! $squad->exists) {
+                continue;
+            }
+
+            $targetId = $squadTargetMap[$squad->id] ?? null;
+            if ($targetId === null) {
+                continue;
+            }
+
+            $meta = $squad->meta ?? [];
+            $meta['target_id'] = $targetId;
+            $squad->meta = $meta;
+            $squad->save();
+        }
+
+        // Update cohesion scores and clean up empty squads.
+        $squadAggregates = WarPlanAssignment::query()
+            ->where('war_plan_id', $plan->id)
+            ->whereNotNull('war_plan_squad_id')
+            ->selectRaw('war_plan_squad_id, COUNT(*) as total, AVG(match_score) as avg_score')
+            ->groupBy('war_plan_squad_id')
+            ->get()
+            ->keyBy('war_plan_squad_id');
+
         foreach ($squads as $label => $squad) {
             if (! $squad->exists) {
                 continue;
             }
 
-            $assignmentCount = $squad->assignments()->count();
-            if ($assignmentCount === 0) {
+            $aggregate = $squadAggregates->get($squad->id);
+            $assignmentCount = (int) ($aggregate->total ?? 0);
+            if ($assignmentCount <= 0) {
                 $squad->delete();
 
                 continue;
             }
 
-            $cohesion = $squad->assignments()->avg('match_score');
             $squad->forceFill([
-                'cohesion_score' => round($cohesion ?? 0, 2),
+                'cohesion_score' => round((float) ($aggregate->avg_score ?? 0), 2),
                 'meta' => array_merge($squad->meta ?? [], [
                     'last_updated' => now()->toIso8601String(),
                 ]),

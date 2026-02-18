@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Admin controller for managing war plans and detail view.
@@ -302,6 +303,171 @@ class WarPlanController extends Controller
         }
 
         return response()->json($payload);
+    }
+
+    public function exportTargetsCsv(WarPlan $plan): StreamedResponse
+    {
+        $this->authorize('view-wars');
+
+        $filename = sprintf('war-plan-%d-targets-%s.csv', $plan->id, now()->format('Ymd-His'));
+
+        $targets = $plan->targets()
+            ->with([
+                'nation:id,alliance_id,leader_name,nation_name,score,num_cities,vacation_mode_turns,beige_turns,offensive_wars_count,defensive_wars_count',
+                'nation.alliance:id,name,acronym',
+                'nation.accountProfile:nation_id,last_active',
+            ])
+            ->withCount('assignments')
+            ->orderByDesc('target_priority_score')
+            ->get();
+
+        return response()->streamDownload(function () use ($targets): void {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
+
+            fputcsv($handle, [
+                'target_id',
+                'nation_id',
+                'leader_name',
+                'nation_name',
+                'alliance_name',
+                'alliance_acronym',
+                'score',
+                'cities',
+                'tps',
+                'assignments_count',
+                'preferred_war_type',
+                'vacation_mode_turns',
+                'beige_turns',
+                'offensive_wars_count',
+                'defensive_wars_count',
+                'last_active',
+            ]);
+
+            foreach ($targets as $target) {
+                fputcsv($handle, [
+                    $target->id,
+                    $target->nation_id,
+                    $target->nation?->leader_name,
+                    $target->nation?->nation_name,
+                    $target->nation?->alliance?->name,
+                    $target->nation?->alliance?->acronym,
+                    $target->nation?->score,
+                    $target->nation?->num_cities,
+                    $target->target_priority_score,
+                    $target->assignments_count,
+                    $target->preferred_war_type,
+                    $target->nation?->vacation_mode_turns,
+                    $target->nation?->beige_turns,
+                    $target->nation?->offensive_wars_count,
+                    $target->nation?->defensive_wars_count,
+                    optional($target->nation?->accountProfile?->last_active)?->toIso8601String(),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function exportAssignmentsCsv(WarPlan $plan): StreamedResponse
+    {
+        $this->authorize('view-wars');
+
+        $filename = sprintf('war-plan-%d-assignments-%s.csv', $plan->id, now()->format('Ymd-His'));
+
+        $assignments = $plan->assignments()
+            ->with([
+                'target:id,war_plan_id,nation_id,target_priority_score,preferred_war_type',
+                'target.nation:id,alliance_id,leader_name,nation_name,score,num_cities',
+                'target.nation.alliance:id,name,acronym',
+                'friendlyNation:id,alliance_id,leader_name,nation_name,score,num_cities,offensive_wars_count,defensive_wars_count,beige_turns',
+                'friendlyNation.alliance:id,name,acronym',
+                'squad:id,war_plan_id,label,round,cohesion_score',
+            ])
+            ->orderBy('war_plan_target_id')
+            ->orderByDesc('match_score')
+            ->get();
+
+        return response()->streamDownload(function () use ($assignments): void {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
+
+            fputcsv($handle, [
+                'assignment_id',
+                'target_id',
+                'target_nation_id',
+                'target_leader_name',
+                'target_nation_name',
+                'target_alliance_name',
+                'target_alliance_acronym',
+                'target_tps',
+                'target_preferred_war_type',
+                'friendly_nation_id',
+                'friendly_leader_name',
+                'friendly_nation_name',
+                'friendly_alliance_name',
+                'friendly_alliance_acronym',
+                'friendly_score',
+                'friendly_cities',
+                'friendly_offensive_wars_count',
+                'friendly_defensive_wars_count',
+                'friendly_beige_turns',
+                'match_score',
+                'status',
+                'is_locked',
+                'is_overridden',
+                'squad_label',
+                'squad_round',
+                'squad_cohesion_score',
+                'created_at',
+                'updated_at',
+            ]);
+
+            foreach ($assignments as $assignment) {
+                fputcsv($handle, [
+                    $assignment->id,
+                    $assignment->war_plan_target_id,
+                    $assignment->target?->nation_id,
+                    $assignment->target?->nation?->leader_name,
+                    $assignment->target?->nation?->nation_name,
+                    $assignment->target?->nation?->alliance?->name,
+                    $assignment->target?->nation?->alliance?->acronym,
+                    $assignment->target?->target_priority_score,
+                    $assignment->target?->preferred_war_type,
+                    $assignment->friendly_nation_id,
+                    $assignment->friendlyNation?->leader_name,
+                    $assignment->friendlyNation?->nation_name,
+                    $assignment->friendlyNation?->alliance?->name,
+                    $assignment->friendlyNation?->alliance?->acronym,
+                    $assignment->friendlyNation?->score,
+                    $assignment->friendlyNation?->num_cities,
+                    $assignment->friendlyNation?->offensive_wars_count,
+                    $assignment->friendlyNation?->defensive_wars_count,
+                    $assignment->friendlyNation?->beige_turns,
+                    $assignment->match_score,
+                    $assignment->status,
+                    $assignment->is_locked ? '1' : '0',
+                    $assignment->is_overridden ? '1' : '0',
+                    $assignment->squad?->label,
+                    $assignment->squad?->round,
+                    $assignment->squad?->cohesion_score,
+                    optional($assignment->created_at)?->toIso8601String(),
+                    optional($assignment->updated_at)?->toIso8601String(),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**
@@ -642,13 +808,23 @@ class WarPlanController extends Controller
         );
         $friendlyCount = (clone $friendliesQuery)->count();
 
-        [$candidateMap] = $this->recommendAssignments($plan, $friendliesQuery);
-
         $targets = $plan->targets()
             ->with([
-                'nation.alliance',
-                'nation.military',
-                'nation.accountProfile',
+                'nation' => fn ($query) => $query->select([
+                    'id',
+                    'alliance_id',
+                    'leader_name',
+                    'nation_name',
+                    'score',
+                    'num_cities',
+                    'color',
+                    'vacation_mode_turns',
+                    'offensive_wars_count',
+                    'defensive_wars_count',
+                ]),
+                'nation.alliance:id,name,acronym',
+                'nation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+                'nation.accountProfile:nation_id,last_active',
             ])
             ->withCount('assignments')
             ->orderByDesc('target_priority_score')
@@ -656,7 +832,6 @@ class WarPlanController extends Controller
 
         return response()->json([
             'targets' => $targets,
-            'candidate_map' => $candidateMap,
             'preferred_assignments_per_target' => $this->calculatePreferredAssignmentsPerTarget(
                 $targets->count(),
                 $friendlyCount,
@@ -670,18 +845,73 @@ class WarPlanController extends Controller
         $this->authorize('view-wars');
 
         $assignments = $plan->assignments()
+            ->select([
+                'id',
+                'war_plan_id',
+                'war_plan_target_id',
+                'friendly_nation_id',
+                'war_plan_squad_id',
+                'match_score',
+                'status',
+                'is_overridden',
+                'is_locked',
+                'meta',
+                'created_at',
+                'updated_at',
+            ])
             ->with([
-                'friendlyNation.alliance',
-                'friendlyNation.military',
-                'friendlyNation.accountProfile',
-                'target.nation.alliance',
-                'target.nation.military',
-                'squad',
+                'friendlyNation' => fn ($query) => $query->select([
+                    'id',
+                    'alliance_id',
+                    'leader_name',
+                    'nation_name',
+                    'score',
+                    'num_cities',
+                    'color',
+                    'offensive_wars_count',
+                    'defensive_wars_count',
+                ]),
+                'friendlyNation.alliance:id,name,acronym',
+                'friendlyNation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+                'friendlyNation.accountProfile:nation_id,last_active',
+                'target:id,war_plan_id,nation_id,target_priority_score,preferred_war_type,meta,computed_at',
+                'target.nation:id,alliance_id,leader_name,nation_name,score,num_cities,color,vacation_mode_turns,offensive_wars_count,defensive_wars_count',
+                'target.nation.alliance:id,name,acronym',
+                'target.nation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+                'squad:id,war_plan_id,label,round,cohesion_score,meta',
             ])
             ->orderByDesc('match_score')
             ->get();
 
         return response()->json(['assignments' => $assignments]);
+    }
+
+    public function targetCandidatesData(
+        WarPlan $plan,
+        WarPlanTarget $target,
+        AllianceMembershipService $membershipService
+    ): JsonResponse {
+        $this->authorize('view-wars');
+
+        if ($target->war_plan_id !== $plan->id) {
+            abort(404);
+        }
+
+        $friendliesQuery = $this->buildFriendliesQuery(
+            $this->resolveFriendlyAllianceIds($plan, $membershipService)
+        );
+
+        $target->loadMissing([
+            'nation:id,alliance_id,leader_name,nation_name,score,num_cities,color,vacation_mode_turns,offensive_wars_count,defensive_wars_count',
+            'nation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+            'nation.accountProfile:nation_id,last_active',
+            'assignments:id,war_plan_id,war_plan_target_id,friendly_nation_id,war_plan_squad_id,match_score,status,is_overridden,is_locked,meta',
+        ]);
+
+        return response()->json([
+            'target_id' => $target->id,
+            'candidates' => $this->recommendAssignmentsForTarget($plan, $target, $friendliesQuery),
+        ]);
     }
 
     public function friendliesData(
@@ -698,7 +928,7 @@ class WarPlanController extends Controller
             ->with(['military', 'latestSignIn', 'alliance', 'accountProfile'])
             ->get();
 
-        $assignments = $plan->assignments()->get();
+        $assignments = $plan->assignments()->select(['id', 'friendly_nation_id'])->get();
         $friendlyStats = $this->prepareFriendlyStats($plan, $friendlies, $assignments);
         $assignmentFriendlyIds = $assignments->pluck('friendly_nation_id')->filter()->unique();
 
@@ -813,6 +1043,108 @@ class WarPlanController extends Controller
             ->values();
 
         return [$recommendations, $allFriendlies, $friendlyStats];
+    }
+
+    /**
+     * Build recommendation rows for a single target to avoid generating an entire target x friendly matrix.
+     *
+     * @return array<int, array{
+     *     friendly: Nation,
+     *     score: float,
+     *     recommended: bool,
+     *     assignment_load: int,
+     *     max_assignments: int,
+     *     available_slots: int
+     * }>
+     */
+    protected function recommendAssignmentsForTarget(WarPlan $plan, WarPlanTarget $target, Builder $friendliesQuery): array
+    {
+        $friendlies = $friendliesQuery
+            ->with([
+                'military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+                'latestSignIn' => fn ($query) => $query->select(
+                    'nation_sign_ins.id',
+                    'nation_sign_ins.nation_id',
+                    'nation_sign_ins.created_at',
+                    'nation_sign_ins.mmr_score'
+                ),
+                'alliance:id,name,acronym',
+            ])
+            ->get();
+
+        if ($friendlies->isEmpty() || ! $target->nation) {
+            return [];
+        }
+
+        $assignments = $plan->assignments()
+            ->select(['id', 'friendly_nation_id'])
+            ->get();
+        $friendlyStats = $this->prepareFriendlyStats($plan, $friendlies, $assignments);
+
+        if ($friendlyStats->isEmpty()) {
+            return [];
+        }
+
+        $matchService = app(NationMatchService::class);
+        $existingFriendlyIds = $target->assignments->pluck('friendly_nation_id')->all();
+
+        return $friendlyStats
+            ->reject(fn (array $stat, int $friendlyId) => in_array($friendlyId, $existingFriendlyIds, true))
+            ->map(function (array $stat) use ($matchService, $target, $plan) {
+                if (! $matchService->canAttack($stat['friendly'], $target->nation)) {
+                    return null;
+                }
+
+                $context = [
+                    'available_slots' => $stat['remaining_slots'],
+                    'assignment_load' => $stat['assignment_load'],
+                    'max_assignments' => max(1, min($stat['max_assignments'], $stat['remaining_offensive_capacity'])),
+                    'cohesion_reference' => 0.5,
+                    'cohesion_tolerance' => $plan->squad_cohesion_tolerance,
+                    'enemy_tps' => $target->target_priority_score,
+                    'evaluation_mode' => 'manual',
+                ];
+
+                $match = $matchService->evaluate($stat['friendly'], $target->nation, $context);
+
+                $relativeFactor = $match['meta']['factors']['relative_power'] ?? 0.0;
+                $relativePower = is_array($relativeFactor) ? ($relativeFactor['value'] ?? 0.0) : (float) $relativeFactor;
+                $relativeTuning = config('war.nation_match.relative_power', []);
+                $manualFloor = $relativeTuning['manual_floor'] ?? 0.05;
+                $hasCapacity = $stat['remaining_slots'] > 0 && $stat['remaining_offensive_capacity'] > 0;
+
+                $penalties = config('war.nation_match.penalties', []);
+                $offPenalty = $penalties['offensive_load'] ?? 4;
+                $defPenalty = $penalties['defensive_load'] ?? 6;
+
+                $score = max(0, $match['score']
+                    - ($stat['offensive_wars'] + $stat['assignment_load']) * $offPenalty
+                    - ($stat['defensive_wars'] * $defPenalty));
+
+                if ($score <= 0) {
+                    $score = round(max(0.5, $match['meta']['bounded'] ?? 0.5), 2);
+                }
+
+                return array_merge($stat, [
+                    'score' => round($score, 2),
+                    'recommended' => $hasCapacity && $relativePower >= $manualFloor,
+                ]);
+            })
+            ->filter(fn (?array $stat) => $stat !== null)
+            ->sortBy([
+                ['recommended', 'desc'],
+                ['score', 'desc'],
+            ])
+            ->values()
+            ->map(fn (array $stat) => [
+                'friendly' => $stat['friendly'],
+                'score' => $stat['score'],
+                'recommended' => (bool) ($stat['recommended'] ?? false),
+                'assignment_load' => $stat['assignment_load'],
+                'max_assignments' => $stat['max_assignments'],
+                'available_slots' => $stat['remaining_slots'],
+            ])
+            ->all();
     }
 
     protected function prepareFriendlyStats(WarPlan $plan, Collection $friendlies, Collection $assignments): Collection

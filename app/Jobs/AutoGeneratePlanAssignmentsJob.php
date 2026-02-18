@@ -68,8 +68,28 @@ class AutoGeneratePlanAssignmentsJob implements ShouldQueue
             $friendlyAllianceIds = $membershipService->getAllianceIds();
         }
 
+        $targetScores = $plan->targets
+            ->pluck('nation.score')
+            ->filter(fn ($score) => $score !== null)
+            ->map(fn ($score) => (float) $score)
+            ->values();
+
+        $minFriendlyScore = null;
+        $maxFriendlyScore = null;
+
+        if ($targetScores->isNotEmpty()) {
+            $lowestTargetScore = (float) $targetScores->min();
+            $highestTargetScore = (float) $targetScores->max();
+
+            // canAttack uses: target in [friendly*0.75, friendly*2.5] => friendly in [target/2.5, target/0.75]
+            $minFriendlyScore = max(0.0, $lowestTargetScore / 2.5);
+            $maxFriendlyScore = $highestTargetScore / 0.75;
+        }
+
         $friendlies = Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->when($minFriendlyScore !== null, fn ($query) => $query->where('score', '>=', $minFriendlyScore))
+            ->when($maxFriendlyScore !== null, fn ($query) => $query->where('score', '<=', $maxFriendlyScore))
             ->select([
                 'id',
                 'alliance_id',
@@ -85,10 +105,18 @@ class AutoGeneratePlanAssignmentsJob implements ShouldQueue
             ])
             ->with([
                 'military' => fn ($query) => $query->select('id', 'nation_id', 'soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes'),
-                'latestSignIn' => fn ($query) => $query->select('nation_sign_ins.id', 'nation_sign_ins.nation_id', 'nation_sign_ins.created_at', 'nation_sign_ins.mmr_score'),
             ])
             ->get();
 
-        $assignmentService->generate($plan, $plan->targets, $friendlies);
+        $assignmentService->generate(
+            $plan,
+            $plan->targets,
+            $friendlies,
+            respectLocks: true,
+            hydrateAssignments: false,
+            enableSecondPass: false,
+            rebuildSquads: false,
+            includeSignInData: false
+        );
     }
 }

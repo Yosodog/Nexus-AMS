@@ -76,6 +76,7 @@ Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedM
     ->prefix('v1/war-plans')
     ->group(function () {
         Route::get('/{plan}/targets', [WarPlanController::class, 'targetsData'])->name('api.admin.war-plans.targets');
+        Route::get('/{plan}/targets/{target}/candidates', [WarPlanController::class, 'targetCandidatesData'])->name('api.admin.war-plans.target-candidates');
         Route::get('/{plan}/assignments', [WarPlanController::class, 'assignmentsData'])->name('api.admin.war-plans.assignments');
         Route::get('/{plan}/friendlies', [WarPlanController::class, 'friendliesData'])->name('api.admin.war-plans.friendlies');
     });

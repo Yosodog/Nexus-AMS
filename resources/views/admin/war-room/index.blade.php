@@ -66,7 +66,13 @@
                             @forelse ($counters as $counter)
                                 <tr>
                                     <td>
-                                        <span class="fw-semibold">{{ $counter->aggressor->leader_name ?? 'Unknown' }}</span>
+                                        @if($counter->aggressor?->id)
+                                            <a href="https://politicsandwar.com/nation/id={{ $counter->aggressor->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">
+                                                {{ $counter->aggressor->leader_name ?? 'Unknown' }}
+                                            </a>
+                                        @else
+                                            <span class="fw-semibold">{{ $counter->aggressor->leader_name ?? 'Unknown' }}</span>
+                                        @endif
                                         <div class="small text-muted">{{ $counter->aggressor->nation_name ?? '—' }}</div>
                                     </td>
                                     <td>{{ $counter->aggressor->alliance->name ?? 'No Alliance' }}</td>

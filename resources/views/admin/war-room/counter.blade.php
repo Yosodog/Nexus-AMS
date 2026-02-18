@@ -9,14 +9,15 @@
         <div class="container-fluid">
             <div class="row mb-3 align-items-center">
                 <div class="col-sm-8">
-                    <h3 class="mb-0">Counter: 
+                    <h3 class="mb-0">Counter:
                         @if($counter->aggressor)
-                            <a href="https://politicsandwar.com/nation/id={{ $counter->aggressor->id }}" target="_blank">{{ $counter->aggressor->leader_name }}</a>
+                            <a href="https://politicsandwar.com/nation/id={{ $counter->aggressor->id }}" target="_blank" rel="noopener noreferrer">{{ $counter->aggressor->leader_name }}</a>
                         @else
                             Unknown Aggressor
                         @endif
                     </h3>
                     <div class="text-muted">Status: <span class="badge text-bg-primary text-uppercase">{{ $counter->status }}</span></div>
+                    <div class="small text-muted">Leader names open in Politics &amp; War for quick validation and targeting.</div>
                 </div>
                 <div class="col-sm-4 text-end">
                     <a href="{{ route('admin.war-room') }}" class="btn btn-outline-secondary btn-sm">Back to War Room</a>
@@ -158,7 +159,11 @@
                                 @endphp
                                 <tr>
                                     <td>
-                                        <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                        @if($friendly?->id)
+                                            <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
+                                        @else
+                                            <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                        @endif
                                         <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
                                     </td>
                                     <td>{{ $friendly?->alliance?->name ?? '—' }}</td>
@@ -242,7 +247,11 @@
                                         @php $friendlyMilitary = $friendly?->military @endphp
                                         <tr>
                                             <td>
-                                                <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                                @if($friendly?->id)
+                                                    <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
+                                                @else
+                                                    <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                                @endif
                                                 <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
                                             </td>
                                             <td>{{ $friendly?->alliance?->name ?? '—' }}</td>
@@ -284,35 +293,62 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="card shadow-sm h-100">
+                <div class="col-12 col-xl-7">
+                    <div class="card shadow-sm">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">Live Attacks</h5>
+                            <h5 class="card-title mb-0">War Attacks Involving Enemy Nation</h5>
                         </div>
-                        <div class="card-body">
-                            <form class="d-flex mb-3" method="get">
-                                <input type="number" class="form-control form-control-sm me-2" name="minutes" value="{{ request('minutes') }}" placeholder="Window (min)">
-                                <button class="btn btn-sm btn-outline-primary" type="submit">Apply</button>
-                            </form>
+                        <div class="card-body p-0">
+                            <div class="px-3 pt-3 small text-muted">
+                                Most recent 50 attacks where this aggressor was either the attacker or defender.
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-striped table-sm mb-0">
                                     <thead class="table-light">
                                     <tr>
                                         <th>Time</th>
-                                        <th>Opponent</th>
+                                        <th>Role</th>
+                                        <th>Attacker</th>
+                                        <th>Defender</th>
                                         <th>Type</th>
+                                        <th>War</th>
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    @forelse($liveFeed as $attack)
+                                    @forelse($enemyWarAttacks as $attack)
                                         <tr>
                                             <td>{{ optional($attack->date)->diffForHumans() }}</td>
-                                            <td>{{ $attack->att_id === $counter->aggressor_nation_id ? ($attack->defender->leader_name ?? $attack->def_id) : ($attack->attacker->leader_name ?? $attack->att_id) }}</td>
+                                            <td>
+                                                <span class="badge {{ $attack->att_id === $counter->aggressor_nation_id ? 'text-bg-warning' : 'text-bg-info' }}">
+                                                    {{ $attack->att_id === $counter->aggressor_nation_id ? 'Attacker' : 'Defender' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if($attack->attacker?->id)
+                                                    <a href="https://politicsandwar.com/nation/id={{ $attack->attacker->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->attacker->leader_name ?? $attack->att_id }}</a>
+                                                @else
+                                                    {{ $attack->att_id }}
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($attack->defender?->id)
+                                                    <a href="https://politicsandwar.com/nation/id={{ $attack->defender->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->defender->leader_name ?? $attack->def_id }}</a>
+                                                @else
+                                                    {{ $attack->def_id }}
+                                                @endif
+                                            </td>
                                             <td>{{ $attack->type?->name ?? $attack->type }}</td>
+                                            <td>
+                                                @if($attack->war_id)
+                                                    <a href="https://politicsandwar.com/nation/war/timeline/war={{ $attack->war_id }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Timeline</a>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="3" class="text-center py-3 text-muted">No attacks logged in window.</td>
+                                            <td colspan="6" class="text-center py-3 text-muted">No war attacks recorded for this enemy nation yet.</td>
                                         </tr>
                                     @endforelse
                                     </tbody>
@@ -321,25 +357,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Recent Aggressor Activity</h5>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                @forelse($recentAggressorAttacks as $attack)
-                                    <li class="list-group-item">
-                                        <div class="fw-semibold">{{ optional($attack->date)->diffForHumans() }}</div>
-                                        <div class="small text-muted">vs {{ $attack->att_id === $counter->aggressor_nation_id ? ($attack->defender->leader_name ?? $attack->def_id) : ($attack->attacker->leader_name ?? $attack->att_id) }} — {{ $attack->type?->name ?? $attack->type }}</div>
-                                    </li>
-                                @empty
-                                    <li class="list-group-item text-muted">No recent activity recorded.</li>
-                                @endforelse
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="card shadow-sm h-100 mt-4">
+                <div class="col-12 col-xl-5">
+                    <div class="card shadow-sm">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Last 30d Wars vs Us</h5>
                         </div>
@@ -367,11 +386,15 @@
                                             <td>{{ $isAggAtt ? 'Attacking' : 'Defending' }}</td>
                                             <td>
                                                 <div class="fw-semibold">
-                                                    <a href="https://politicsandwar.com/nation/id={{ $opponent->id }}" target="_blank">{{ $opponent->leader_name ?? $opponent->id }}</a>
+                                                    @if($opponent?->id)
+                                                        <a href="https://politicsandwar.com/nation/id={{ $opponent->id }}" target="_blank" rel="noopener noreferrer">{{ $opponent->leader_name ?? $opponent->id }}</a>
+                                                    @else
+                                                        —
+                                                    @endif
                                                 </div>
                                                 <div class="small text-muted">
                                                     @if($opAlliance)
-                                                        <a href="https://politicsandwar.com/alliance/id={{ $opAlliance->id }}" target="_blank">{{ $opAlliance->name }}</a>
+                                                        <a href="https://politicsandwar.com/alliance/id={{ $opAlliance->id }}" target="_blank" rel="noopener noreferrer">{{ $opAlliance->name }}</a>
                                                     @else
                                                         —
                                                     @endif
@@ -385,7 +408,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank" class="btn btn-sm btn-outline-primary">Timeline</a>
+                                                <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Timeline</a>
                                             </td>
                                         </tr>
                                     @empty

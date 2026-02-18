@@ -327,6 +327,13 @@
                             <label class="form-label">Friendly nation</label>
                             <input type="text" class="form-control" name="friendly_nation_id" id="quickAssignFriendly" :value="$store.warPlan.quickAssign?.id || ''" readonly>
                             <div class="form-text" id="quickAssignFriendlyName" x-text="$store.warPlan.quickAssign ? `${$store.warPlan.quickAssign.leader_name} (${$store.warPlan.quickAssign.nation_name})` : 'Select a friendly to assign'"></div>
+                            <a x-show="$store.warPlan.quickAssign?.id"
+                               :href="`https://politicsandwar.com/nation/id=${$store.warPlan.quickAssign?.id}`"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="small">
+                                Open nation in-game
+                            </a>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Target</label>
@@ -382,10 +389,13 @@
                             <input type="search" class="form-control" placeholder="Enemy, alliance, TPS, status" x-model.debounce.300ms="search">
                         </div>
                         <div class="d-flex align-items-center gap-2 ms-auto">
+                            <a href="{{ route('admin.war-plans.targets.export-csv', $plan) }}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-download me-1"></i> Export CSV
+                            </a>
                             <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchTargets">
                                 <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                             </button>
-                            <div class="d-flex align-items-center gap-2" x-show="loading && !error" x-cloak>
+                            <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -511,11 +521,9 @@
                                                 <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
                                             </form>
                                         </div>
-                                    </td>
-                                </tr>
-                                <tr x-show="isTargetMetaOpen(target.id)" x-transition x-cloak>
-                                    <td colspan="8" class="bg-body-tertiary">
-                                        <pre class="mb-0 small text-muted" x-text="prettyMeta(target.meta)"></pre>
+                                        <div class="mt-2 text-start" x-show="isTargetMetaOpen(target.id)" x-transition>
+                                            <pre class="mb-0 small text-muted" x-text="prettyMeta(target.meta)"></pre>
+                                        </div>
                                     </td>
                                 </tr>
                             </template>
@@ -529,7 +537,13 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="assignTargetModalLabel">
-                                    Manual assignments — <span x-text="activeTarget?.nation?.leader_name ?? `Nation #${activeTarget?.nation_id ?? ''}`"></span>
+                                    Manual assignments —
+                                    <template x-if="activeTarget?.nation?.id">
+                                        <a :href="`https://politicsandwar.com/nation/id=${activeTarget.nation.id}`" target="_blank" rel="noopener noreferrer" x-text="activeTarget.nation.leader_name"></a>
+                                    </template>
+                                    <template x-if="!activeTarget?.nation?.id">
+                                        <span x-text="`Nation #${activeTarget?.nation_id ?? ''}`"></span>
+                                    </template>
                                 </h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
@@ -551,15 +565,25 @@
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        <template x-if="!candidatesForActiveTarget().length">
+                                        <template x-if="candidatesLoading">
+                                            <tr>
+                                                <td colspan="8" class="text-center text-muted py-3">Loading candidates…</td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="!candidatesLoading && candidatesError">
+                                            <tr>
+                                                <td colspan="8" class="text-center text-danger py-3" x-text="candidatesError"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="!candidatesLoading && !candidatesError && !candidatesForActiveTarget().length">
                                             <tr>
                                                 <td colspan="8" class="text-center text-muted py-3">No friendlies are in war range right now.</td>
                                             </tr>
                                         </template>
-                                        <template x-for="candidate in candidatesForActiveTarget()" :key="candidate.friendly.id">
+                                        <template x-for="candidate in (candidatesLoading ? [] : candidatesForActiveTarget())" :key="candidate.friendly.id">
                                             <tr>
                                                 <td>
-                                                    <span class="fw-semibold" x-text="candidate.friendly.leader_name"></span>
+                                                    <a :href="`https://politicsandwar.com/nation/id=${candidate.friendly.id}`" target="_blank" rel="noopener noreferrer" class="fw-semibold" x-text="candidate.friendly.leader_name"></a>
                                                     <div class="small text-muted" x-text="candidate.friendly.nation_name"></div>
                                                 </td>
                                                 <td>
@@ -653,10 +677,13 @@
                             <small class="text-muted">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
+                            <a href="{{ route('admin.war-plans.assignments.export-csv', $plan) }}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-download me-1"></i> Export CSV
+                            </a>
                             <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchAssignments">
                                 <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                             </button>
-                            <div class="d-flex align-items-center gap-2" x-show="loading && !error" x-cloak>
+                            <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -782,6 +809,9 @@
                                             <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Manual override" x-show="assignment.is_overridden">Manual</span>
                                             <span class="badge text-bg-success" data-bs-toggle="tooltip" title="Locked assignment" x-show="assignment.is_locked">Locked</span>
                                         </div>
+                                        <div class="mt-2" x-show="isAssignmentMetaOpen(assignment.id)" x-transition>
+                                            <pre class="mb-0 small text-muted" x-text="prettyMeta(assignment.meta)"></pre>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
@@ -796,11 +826,6 @@
                                             @method('DELETE')
                                             <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
                                         </form>
-                                    </td>
-                                </tr>
-                                <tr x-show="isAssignmentMetaOpen(assignment.id)" x-transition x-cloak>
-                                    <td colspan="9" class="bg-body-tertiary">
-                                        <pre class="mb-0 small text-muted" x-text="prettyMeta(assignment.meta)"></pre>
                                     </td>
                                 </tr>
                             </template>
@@ -858,8 +883,20 @@
                             @forelse($liveFeed as $attack)
                                 <tr>
                                     <td>{{ optional($attack->date)->diffForHumans() }}</td>
-                                    <td>{{ $attack->attacker->leader_name ?? $attack->att_id }}</td>
-                                    <td>{{ $attack->defender->leader_name ?? $attack->def_id }}</td>
+                                    <td>
+                                        @if($attack->attacker?->id)
+                                            <a href="https://politicsandwar.com/nation/id={{ $attack->attacker->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->attacker->leader_name ?? $attack->att_id }}</a>
+                                        @else
+                                            {{ $attack->att_id }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($attack->defender?->id)
+                                            <a href="https://politicsandwar.com/nation/id={{ $attack->defender->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->defender->leader_name ?? $attack->def_id }}</a>
+                                        @else
+                                            {{ $attack->def_id }}
+                                        @endif
+                                    </td>
                                     <td>{{ $attack->type?->name ?? $attack->type }}</td>
                                     <td>{{ $attack->victor ?? 'Inconclusive' }}</td>
                                 </tr>
@@ -962,7 +999,7 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchFriendlies">
                             <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                         </button>
-                        <div class="d-flex align-items-center gap-2" x-show="loading && !error" x-cloak>
+                        <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                             <div class="spinner-border spinner-border-sm text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
@@ -1091,6 +1128,7 @@
             preferredAssignmentsPerTarget: {{ $preferredAssignmentsPerTarget }},
             routes: {
                 targets: "{{ route('api.admin.war-plans.targets', $plan) }}",
+                targetCandidates: "{{ route('api.admin.war-plans.target-candidates', [$plan, '__TARGET__']) }}",
                 assignments: "{{ route('api.admin.war-plans.assignments', $plan) }}",
                 friendlies: "{{ route('api.admin.war-plans.friendlies', $plan) }}",
                 updateTargetWarType: "{{ route('admin.war-plans.targets.update-war-type', [$plan, '__TARGET__']) }}",
@@ -1203,6 +1241,7 @@
                 preferredAssignmentsPerTarget: config.preferredAssignmentsPerTarget,
                 routes: {
                     targets: config.routes.targets,
+                    targetCandidates: (targetId) => config.routes.targetCandidates.replace('__TARGET__', targetId),
                     assignments: config.routes.assignments,
                     friendlies: config.routes.friendlies,
                     updateTargetWarType: (targetId) => config.routes.updateTargetWarType.replace('__TARGET__', targetId),
@@ -1263,6 +1302,8 @@
                 search: '',
                 targets: [],
                 activeTarget: null,
+                candidatesLoading: false,
+                candidatesError: null,
                 expandedTargets: {},
                 init() {
                     this.fetchTargets();
@@ -1282,7 +1323,7 @@
                         this.targets = data.targets || [];
                         Alpine.store('warPlan').setTargets(this.targets);
                         Alpine.store('warPlan').preferredAssignmentsPerTarget = data.preferred_assignments_per_target ?? Alpine.store('warPlan').preferredAssignmentsPerTarget;
-                        Alpine.store('warPlan').setCandidateMap(data.candidate_map || {});
+                        Alpine.store('warPlan').setCandidateMap({});
                         this.$nextTick(refreshTooltips);
                     } catch (e) {
                         this.error = 'Unable to load targets.';
@@ -1337,6 +1378,7 @@
                 },
                 setActiveTarget(target) {
                     this.activeTarget = target;
+                    this.fetchCandidatesForTarget(target?.id);
                 },
                 candidatesForActiveTarget() {
                     if (!this.activeTarget) {
@@ -1344,6 +1386,31 @@
                     }
 
                     return Alpine.store('warPlan').candidateMap?.[this.activeTarget.id] || [];
+                },
+                async fetchCandidatesForTarget(targetId) {
+                    if (!targetId) {
+                        return;
+                    }
+
+                    const existing = Alpine.store('warPlan').candidateMap?.[targetId];
+                    if (Array.isArray(existing)) {
+                        this.candidatesError = null;
+                        return;
+                    }
+
+                    this.candidatesLoading = true;
+                    this.candidatesError = null;
+
+                    try {
+                        const data = await httpGet(this.routes.targetCandidates(targetId));
+                        const candidateMap = {...(Alpine.store('warPlan').candidateMap || {})};
+                        candidateMap[targetId] = data.candidates || [];
+                        Alpine.store('warPlan').setCandidateMap(candidateMap);
+                    } catch (e) {
+                        this.candidatesError = 'Unable to load target candidates.';
+                    } finally {
+                        this.candidatesLoading = false;
+                    }
                 },
                 formatNumber,
                 prettyMeta,

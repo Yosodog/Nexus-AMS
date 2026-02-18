@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Nation;
+use App\Models\WarAttack;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
 use App\Services\AllianceMembershipService;
 use App\Services\War\CounterAssignmentService;
-use App\Services\War\LiveFeedQueryService;
 use App\Services\War\NotificationService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -31,15 +31,12 @@ class WarCounterController extends Controller
     public function show(
         Request $request,
         WarCounter $counter,
-        LiveFeedQueryService $liveFeed,
         AllianceMembershipService $membershipService,
         CounterAssignmentService $assignmentService
     ): View {
         $this->authorize('view-wars');
 
         $counter->load(['aggressor.alliance', 'aggressor.military', 'assignments.friendlyNation.alliance', 'assignments.friendlyNation.military']);
-
-        $feedFilters = $request->only(['minutes', 'hours', 'attack_types']);
 
         // Build candidate list from friendly alliances
         $friendlyAllianceIds = $membershipService->getAllianceIds();
@@ -75,12 +72,20 @@ class WarCounterController extends Controller
             ->limit(25)
             ->get();
 
+        $enemyWarAttacks = WarAttack::query()
+            ->with(['attacker.alliance', 'defender.alliance'])
+            ->where(function ($query) use ($counter) {
+                $query->where('att_id', $counter->aggressor_nation_id)
+                    ->orWhere('def_id', $counter->aggressor_nation_id);
+            })
+            ->latest('date')
+            ->limit(50)
+            ->get();
+
         return view('admin.war-room.counter', [
             'counter' => $counter,
             'assignments' => $counter->assignments()->with(['friendlyNation.alliance', 'friendlyNation.military'])->orderByDesc('match_score')->get(),
-            'liveFeed' => $liveFeed->forCounter($counter, $feedFilters),
-            'recentAggressorAttacks' => $liveFeed->recentForNation($counter->aggressor_nation_id),
-            'feedFilters' => $feedFilters,
+            'enemyWarAttacks' => $enemyWarAttacks,
             'candidates' => $candidates,
             'recentWarsAgainstUs' => $recentWarsAgainstUs,
         ]);
