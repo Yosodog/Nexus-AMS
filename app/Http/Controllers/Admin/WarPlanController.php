@@ -713,7 +713,7 @@ class WarPlanController extends Controller
      * Generate recommended friendlies per target along with helper stats for the view.
      *
      * @return array{
-     *     0: array<int, array<int, array{friendly: Nation, score: float, assignment_load: int, max_assignments: int, available_slots: int}>>,
+     *     0: array<int, array<int, array{friendly: Nation, score: float, recommended: bool, assignment_load: int, max_assignments: int, available_slots: int}>>,
      *     1: Collection<int, Nation>,
      *     2: Collection<int, array{friendly: Nation, assignment_load: int, available_slots: int, remaining_slots: int, max_assignments: int, offensive_wars: int, defensive_wars: int, remaining_offensive_capacity: int}>
      * }
@@ -746,17 +746,7 @@ class WarPlanController extends Controller
             $existingFriendlyIds = $target->assignments->pluck('friendly_nation_id')->all();
 
             $candidates = $friendlyStats
-                ->reject(function (array $stat, int $friendlyId) use ($existingFriendlyIds) {
-                    if (in_array($friendlyId, $existingFriendlyIds, true)) {
-                        return true;
-                    }
-
-                    if ($stat['remaining_slots'] <= 0) {
-                        return true;
-                    }
-
-                    return $stat['remaining_offensive_capacity'] <= 0;
-                })
+                ->reject(fn (array $stat, int $friendlyId) => in_array($friendlyId, $existingFriendlyIds, true))
                 ->map(function (array $stat) use ($matchService, $target, $plan) {
                     if (! $matchService->canAttack($stat['friendly'], $target->nation)) {
                         return null;
@@ -778,10 +768,7 @@ class WarPlanController extends Controller
                     $relativePower = is_array($relativeFactor) ? ($relativeFactor['value'] ?? 0.0) : (float) $relativeFactor;
                     $relativeTuning = config('war.nation_match.relative_power', []);
                     $manualFloor = $relativeTuning['manual_floor'] ?? 0.05;
-
-                    if ($relativePower < $manualFloor) {
-                        return null;
-                    }
+                    $hasCapacity = $stat['remaining_slots'] > 0 && $stat['remaining_offensive_capacity'] > 0;
 
                     $penalties = config('war.nation_match.penalties', []);
                     $offPenalty = $penalties['offensive_load'] ?? 4;
@@ -797,16 +784,20 @@ class WarPlanController extends Controller
 
                     return array_merge($stat, [
                         'score' => round($score, 2),
+                        'recommended' => $hasCapacity && $relativePower >= $manualFloor,
                         'match_meta' => $match['meta'],
                     ]);
                 })
-                ->filter(fn (?array $stat) => $stat !== null && $stat['score'] > 0)
-                ->sortByDesc('score')
-                ->take(10)
+                ->filter(fn (?array $stat) => $stat !== null)
+                ->sortBy([
+                    ['recommended', 'desc'],
+                    ['score', 'desc'],
+                ])
                 ->values()
                 ->map(fn (array $stat) => [
                     'friendly' => $stat['friendly'],
                     'score' => $stat['score'],
+                    'recommended' => (bool) ($stat['recommended'] ?? false),
                     'assignment_load' => $stat['assignment_load'],
                     'max_assignments' => $stat['max_assignments'],
                     'available_slots' => $stat['remaining_slots'],

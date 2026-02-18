@@ -110,7 +110,7 @@ class CounterAssignmentService
      * Compute ranked candidate friendlies for a counter using the same scoring engine.
      *
      * @param  Collection<int, Nation>  $friendlies
-     * @return SupportCollection<int, array{friendly:Nation, score:float, meta:array, available_slots:int, assignment_load:int, max_assignments:int}>
+     * @return SupportCollection<int, array{friendly:Nation, score:float, meta:array, available_slots:int, assignment_load:int, max_assignments:int, relative_power:float, recommended:bool}>
      */
     public function listCandidates(WarCounter $counter, Collection $friendlies): SupportCollection
     {
@@ -118,6 +118,10 @@ class CounterAssignmentService
 
         return $friendlies
             ->map(function (Nation $friendly) use ($counter) {
+                if (! $this->matchService->canAttack($friendly, $counter->aggressor)) {
+                    return null;
+                }
+
                 $availableSlots = $this->calculateAvailableSlots($friendly);
                 $context = [
                     'available_slots' => $availableSlots,
@@ -131,6 +135,7 @@ class CounterAssignmentService
 
                 $relativeFactor = $match['meta']['factors']['relative_power'] ?? 0.0;
                 $relativePower = is_array($relativeFactor) ? ($relativeFactor['value'] ?? 0.0) : (float) $relativeFactor;
+                $recommended = $relativePower >= $autoFloor && $availableSlots > 0;
 
                 return [
                     'friendly' => $friendly,
@@ -140,13 +145,14 @@ class CounterAssignmentService
                     'assignment_load' => $context['assignment_load'],
                     'max_assignments' => $context['max_assignments'],
                     'relative_power' => $relativePower,
+                    'recommended' => $recommended,
                 ];
             })
-            ->filter(function ($row) use ($autoFloor) {
-                // Consider nations in "range" when relative power meets auto floor and they have any slots.
-                return ($row['relative_power'] ?? 0) >= $autoFloor && ($row['available_slots'] ?? 0) > 0;
-            })
-            ->sortByDesc(fn ($row) => $row['score'])
+            ->filter()
+            ->sortBy([
+                ['recommended', 'desc'],
+                ['score', 'desc'],
+            ])
             ->values();
     }
 

@@ -534,8 +534,8 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <h6 class="fw-semibold">Suggested friendlies</h6>
-                                <p class="small text-muted">Top recommendations based on availability, load, and match score.</p>
+                                <h6 class="fw-semibold">In-range friendlies</h6>
+                                <p class="small text-muted">All nations in war range, sorted with recommended options first.</p>
                                 <div class="table-responsive mb-3">
                                     <table class="table table-sm align-middle">
                                         <thead class="table-light">
@@ -553,7 +553,7 @@
                                         <tbody>
                                         <template x-if="!candidatesForActiveTarget().length">
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted py-3">No recommended friendlies right now.</td>
+                                                <td colspan="8" class="text-center text-muted py-3">No friendlies are in war range right now.</td>
                                             </tr>
                                         </template>
                                         <template x-for="candidate in candidatesForActiveTarget()" :key="candidate.friendly.id">
@@ -597,6 +597,9 @@
                                                 <td>
                                                     <div class="d-flex align-items-center gap-2">
                                                         <span class="badge text-bg-info" x-text="formatNumber(candidate.score, 1)"></span>
+                                                        <span class="badge"
+                                                              :class="candidate.recommended ? 'text-bg-success' : 'text-bg-secondary'"
+                                                              x-text="candidate.recommended ? 'Recommended' : 'Manual only'"></span>
                                                     </div>
                                                 </td>
                                                 <td x-text="`${candidate.assignment_load} / ${candidate.max_assignments}`"></td>

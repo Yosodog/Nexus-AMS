@@ -9,8 +9,8 @@ class NationMatchService
 {
     public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
     {
-        $minScore = $target->score * 0.75;
-        $maxScore = $target->score * 2.5;
+        $minScore = $target->score / 2.5;
+        $maxScore = $target->score / 0.75;
 
         return collect($sourceNations)
             ->filter(fn (Nation $n) => $n->score >= $minScore && $n->score <= $maxScore)

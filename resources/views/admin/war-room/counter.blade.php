@@ -221,7 +221,7 @@
                     <div class="card shadow-sm mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">All Candidate Nations (In Range)</h5>
-                            <small class="text-muted">Browse and assign overrides as needed.</small>
+                            <small class="text-muted">All in-range nations, sorted with recommended options first.</small>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -257,7 +257,12 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <span class="badge text-bg-info">{{ number_format($row['score'] ?? 0, 1) }}</span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge text-bg-info">{{ number_format($row['score'] ?? 0, 1) }}</span>
+                                                    <span class="badge {{ ($row['recommended'] ?? false) ? 'text-bg-success' : 'text-bg-secondary' }}">
+                                                        {{ ($row['recommended'] ?? false) ? 'Recommended' : 'Manual only' }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <form method="post" action="{{ route('admin.war-counters.assignments.manual', $counter) }}" class="d-inline">
@@ -270,7 +275,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center py-4 text-muted">No candidates in range.</td>
+                                            <td colspan="6" class="text-center py-4 text-muted">No nations are in war range.</td>
                                         </tr>
                                     @endforelse
                                     </tbody>
