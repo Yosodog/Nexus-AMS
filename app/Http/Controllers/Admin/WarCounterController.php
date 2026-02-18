@@ -106,6 +106,7 @@ class WarCounterController extends Controller
             'aggressor_nation_id' => ['required', 'integer', 'exists:nations,id'],
             'team_size' => ['nullable', 'integer', 'min:1', 'max:10'],
             'war_declaration_type' => ['nullable', Rule::in($this->allowedWarTypes())],
+            'discord_forum_channel_id' => ['nullable', 'string', 'max:190'],
         ]);
 
         $existing = WarCounter::query()
@@ -132,6 +133,7 @@ class WarCounterController extends Controller
             'aggressor_nation_id' => $aggressor->id,
             'team_size' => $data['team_size'] ?? config('war.counters.default_team_size', 3),
             'war_declaration_type' => $this->sanitizeWarType($data['war_declaration_type'] ?? null),
+            'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
             'status' => 'draft',
         ]);
 
@@ -300,7 +302,6 @@ class WarCounterController extends Controller
 
         $channels = [
             'in_game' => $request->boolean('notify_in_game'),
-            'discord' => $request->boolean('notify_discord'),
             'create_room' => $request->boolean('notify_discord_room'),
         ];
 
@@ -308,11 +309,25 @@ class WarCounterController extends Controller
 
         $assignments = $counter->assignments()->with('friendlyNation')->get();
 
-        $notificationService->queueCounterFinalizedNotifications($counter, $assignments, $channels);
+        $result = $notificationService->queueCounterFinalizedNotifications($counter, $assignments, $channels);
+
+        $message = 'Counter finalized.';
+
+        if ($result['rooms_queued'] > 0) {
+            $message .= " {$result['rooms_queued']} Discord war room job(s) queued.";
+        }
+
+        if ($result['in_game_skipped'] > 0) {
+            $message .= ' In-game mail selected but not implemented yet.';
+        }
+
+        if ($result['skipped_no_forum']) {
+            $message .= ' No default/override forum ID is configured, so Discord war rooms were not queued.';
+        }
 
         return Redirect::back()
             ->with('alert-type', 'success')
-            ->with('alert-message', 'Counter finalized and notifications queued.');
+            ->with('alert-message', $message);
     }
 
     /**
@@ -336,6 +351,7 @@ class WarCounterController extends Controller
         $data = $request->validate([
             'war_declaration_type' => ['required', Rule::in($this->allowedWarTypes())],
             'team_size' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'discord_forum_channel_id' => ['nullable', 'string', 'max:190'],
         ]);
 
         $counter->update([
@@ -343,6 +359,7 @@ class WarCounterController extends Controller
             'team_size' => array_key_exists('team_size', $data) && $data['team_size'] !== null
                 ? (int) $data['team_size']
                 : $counter->team_size,
+            'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
         ]);
 
         return Redirect::back()

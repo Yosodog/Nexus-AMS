@@ -126,6 +126,9 @@
                         </dt>
                         <dd class="col-5 text-end">{{ $plan->activity_window_hours }}h</dd>
 
+                        <dt class="col-7">Discord forum override</dt>
+                        <dd class="col-5 text-end">{{ $plan->discord_forum_channel_id ?: 'Default' }}</dd>
+
                         <dt class="col-7">Suppress counters</dt>
                         <dd class="col-5 text-end">
                             @if ($plan->suppress_counters_when_active)
@@ -173,6 +176,14 @@
                             <label class="form-label">Activity window (h)</label>
                             <input type="number" name="activity_window_hours" class="form-control" min="12" max="240"
                                    value="{{ old('activity_window_hours', $plan->activity_window_hours) }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Discord forum override</label>
+                            <input type="text"
+                                   name="discord_forum_channel_id"
+                                   class="form-control"
+                                   placeholder="Use default from War Room settings"
+                                   value="{{ old('discord_forum_channel_id', $plan->discord_forum_channel_id) }}">
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
                             <div class="form-check form-switch">
@@ -293,13 +304,9 @@
                             <input class="form-check-input" type="checkbox" name="notify_in_game" value="1" id="notifyInGame">
                             <label class="form-check-label" for="notifyInGame">Send in-game mail</label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="notify_discord" value="1" id="notifyDiscord">
-                            <label class="form-check-label" for="notifyDiscord">Queue Discord intents</label>
-                        </div>
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="notify_discord_room" value="1" id="notifyDiscordRoom">
-                            <label class="form-check-label" for="notifyDiscordRoom">Suggest Discord war room</label>
+                            <label class="form-check-label" for="notifyDiscordRoom">Create Discord War Room</label>
                         </div>
                         <button class="btn btn-primary w-100" type="submit">Publish assignments</button>
                         <div class="d-flex gap-2 mt-3">
