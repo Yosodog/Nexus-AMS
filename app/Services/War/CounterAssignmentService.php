@@ -117,7 +117,7 @@ class CounterAssignmentService
         $autoFloor = (float) config('war.nation_match.relative_power.auto_floor', 0.18);
 
         return $friendlies
-            ->map(function (Nation $friendly) use ($counter) {
+            ->map(function (Nation $friendly) use ($counter, $autoFloor) {
                 if (! $this->matchService->canAttack($friendly, $counter->aggressor)) {
                     return null;
                 }
