@@ -41,6 +41,7 @@ class WarRoomController extends Controller
             'planSearch' => $planSearch,
             'discordWarChannelId' => SettingService::getDiscordWarAlertChannelId(),
             'discordWarAlertsEnabled' => SettingService::isDiscordWarAlertEnabled(),
+            'defaultWarRoomForumId' => SettingService::getDiscordWarRoomForumId(),
         ]);
     }
 
@@ -82,6 +83,39 @@ class WarRoomController extends Controller
         return back()
             ->with('alert-type', 'success')
             ->with('alert-message', 'Discord war alert channel updated.');
+    }
+
+    /**
+     * Update the default Discord forum used for war room thread creation.
+     */
+    public function updateDefaultWarRoomForum(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-war-room');
+
+        $previousForumId = SettingService::getDiscordWarRoomForumId();
+        $data = $request->validate([
+            'default_forum_channel_id' => ['nullable', 'string', 'max:190'],
+        ]);
+
+        SettingService::setDiscordWarRoomForumId($data['default_forum_channel_id'] ?? '');
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'war_room_forum_settings_updated',
+            context: [
+                'changes' => [
+                    'discord_war_room_forum_id' => [
+                        'from' => $previousForumId,
+                        'to' => $data['default_forum_channel_id'] ?? '',
+                    ],
+                ],
+            ],
+            message: 'War room forum settings updated.'
+        );
+
+        return back()
+            ->with('alert-type', 'success')
+            ->with('alert-message', 'Default Discord war room forum updated.');
     }
 
     /**

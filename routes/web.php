@@ -432,6 +432,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/war-room', [WarRoomController::class, 'index'])->name('admin.war-room');
         Route::post('/war-room/discord-channel', [WarRoomController::class, 'updateDiscordChannel'])
             ->name('admin.war-room.discord-channel');
+        Route::post('/war-room/default-forum', [WarRoomController::class, 'updateDefaultWarRoomForum'])
+            ->name('admin.war-room.default-forum');
 
         Route::post('/war-plans', [AdminWarPlanController::class, 'store'])->name('admin.war-plans.store');
         Route::get('/war-plans/{plan}', [AdminWarPlanController::class, 'show'])->name('admin.war-plans.show');

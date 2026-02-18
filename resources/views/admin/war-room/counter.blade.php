@@ -56,6 +56,9 @@
                         <dd class="col-6 text-end text-uppercase">
                             {{ config('war.war_types')[strtolower($counter->war_declaration_type ?? '')] ?? ucfirst($counter->war_declaration_type ?? 'Unknown') }}
                         </dd>
+
+                        <dt class="col-6">Discord Forum</dt>
+                        <dd class="col-6 text-end">{{ $counter->discord_forum_channel_id ?: 'Default' }}</dd>
                     </dl>
                     <div class="mt-3 small text-muted">
                         <div>Aggressor score {{ number_format($aggressor->score ?? 0, 2) }} • Cities {{ $aggressor->num_cities ?? 0 }}</div>
@@ -78,6 +81,14 @@
                             <div class="col-6">
                                 <label class="form-label mb-1">Team Size</label>
                                 <input type="number" class="form-control form-control-sm" name="team_size" min="1" max="10" value="{{ old('team_size', $counter->team_size) }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1">Discord forum override</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       name="discord_forum_channel_id"
+                                       placeholder="Use default from War Room settings"
+                                       value="{{ old('discord_forum_channel_id', $counter->discord_forum_channel_id) }}">
                             </div>
                         </div>
                         <button class="btn btn-sm btn-outline-primary w-100 mt-2" type="submit">Save Counter Settings</button>
@@ -104,15 +115,11 @@
                         @csrf
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="notify_in_game" value="1" id="counterNotifyInGame">
-                            <label class="form-check-label" for="counterNotifyInGame">Send in-game message</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="notify_discord" value="1" id="counterNotifyDiscord">
-                            <label class="form-check-label" for="counterNotifyDiscord">Queue Discord intent</label>
+                            <label class="form-check-label" for="counterNotifyInGame">Send in-game mail</label>
                         </div>
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="notify_discord_room" value="1" id="counterNotifyRoom">
-                            <label class="form-check-label" for="counterNotifyRoom">Suggest Discord room</label>
+                            <label class="form-check-label" for="counterNotifyRoom">Create Discord War Room</label>
                         </div>
                         <button class="btn btn-primary w-100" type="submit">Finalize Counter</button>
                     </form>

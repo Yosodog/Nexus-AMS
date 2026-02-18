@@ -492,6 +492,16 @@ class SettingService
         self::setValue('discord_war_alert_channel_id', $channelId ?? '');
     }
 
+    public static function getDiscordWarRoomForumId(): string
+    {
+        return (string) (self::getValue('discord_war_room_forum_id') ?? '');
+    }
+
+    public static function setDiscordWarRoomForumId(?string $channelId): void
+    {
+        self::setValue('discord_war_room_forum_id', $channelId ?? '');
+    }
+
     public static function getDiscordAllianceDepartureChannelId(): string
     {
         $channelId = self::getValue('discord_alliance_departure_channel_id');

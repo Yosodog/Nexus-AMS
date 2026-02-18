@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\CarbonInterface|null $activated_at
  * @property \Carbon\CarbonInterface|null $archived_at
  * @property \Carbon\CarbonInterface|null $assignments_published_at
+ * @property string|null $discord_forum_channel_id
  */
 class WarPlan extends Model
 {

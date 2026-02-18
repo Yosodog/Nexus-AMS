@@ -44,7 +44,8 @@ class PlanOrchestratorService
      *     max_squad_size?:int,
      *     squad_cohesion_tolerance?:int,
      *     activity_window_hours?:int,
-     *     suppress_counters_when_active?:bool
+     *     suppress_counters_when_active?:bool,
+     *     discord_forum_channel_id?:string|null
      * } $attributes
      *
      * @throws Throwable

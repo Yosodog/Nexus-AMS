@@ -255,6 +255,36 @@
                 </div>
             </div>
         </div>
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-0">Default War Room Forum</h5>
+                        <small class="text-muted">Forum channel ID used when plans/counters do not override it.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ route('admin.war-room.default-forum') }}" class="row g-3">
+                        @csrf
+                        <div class="col-12">
+                            <label for="default_forum_channel_id" class="form-label">Forum Channel ID</label>
+                            <input type="text"
+                                   id="default_forum_channel_id"
+                                   name="default_forum_channel_id"
+                                   class="form-control"
+                                   placeholder="e.g. 123456789012345678"
+                                   value="{{ old('default_forum_channel_id', $defaultWarRoomForumId) }}">
+                            <div class="form-text">This is used for war-plan and counter room creation when no override is set.</div>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i> Save Forum
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Create War Plan Modal --}}

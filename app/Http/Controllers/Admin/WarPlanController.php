@@ -212,7 +212,6 @@ class WarPlanController extends Controller
 
         $channels = [
             'in_game' => $request->boolean('notify_in_game'),
-            'discord' => $request->boolean('notify_discord'),
             'create_room' => $request->boolean('notify_discord_room'),
         ];
 
@@ -220,11 +219,25 @@ class WarPlanController extends Controller
 
         $assignments = $plan->assignments()->with(['friendlyNation', 'target.nation'])->get();
 
-        $notificationService->queuePlanPublishNotifications($plan, $assignments, $channels);
+        $result = $notificationService->queuePlanPublishNotifications($plan, $assignments, $channels);
+
+        $message = 'Assignments published.';
+
+        if ($result['rooms_queued'] > 0) {
+            $message .= " {$result['rooms_queued']} Discord war room job(s) queued.";
+        }
+
+        if ($result['in_game_skipped'] > 0) {
+            $message .= ' In-game mail selected but not implemented yet.';
+        }
+
+        if ($result['skipped_no_forum']) {
+            $message .= ' No default/override forum ID is configured, so Discord war rooms were not queued.';
+        }
 
         return Redirect::back()
             ->with('alert-type', 'success')
-            ->with('alert-message', 'Assignments published and notifications queued.');
+            ->with('alert-message', $message);
     }
 
     /**
@@ -587,6 +600,7 @@ class WarPlanController extends Controller
             'max_squad_size' => ['nullable', 'integer', 'min:1', 'max:10'],
             'squad_cohesion_tolerance' => ['nullable', 'integer', 'min:1', 'max:50'],
             'suppress_counters_when_active' => ['nullable', 'boolean'],
+            'discord_forum_channel_id' => ['nullable', 'string', 'max:190'],
             'friendly_alliances' => ['nullable', 'array'],
             'friendly_alliances.*' => ['integer', 'distinct', 'exists:alliances,id'],
             'enemy_alliances' => ['nullable', 'array'],
