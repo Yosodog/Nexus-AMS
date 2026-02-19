@@ -27,6 +27,9 @@ class BeigeEarlyExitDiscordNotification extends Notification
         return [DiscordQueueChannel::class];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toDiscordBot(object $notifiable): array
     {
         return [

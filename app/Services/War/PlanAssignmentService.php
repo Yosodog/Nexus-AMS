@@ -693,6 +693,9 @@ class PlanAssignmentService
         );
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function buildFriendlyStrength(Collection $friendlies, int $activityWindowHours): array
     {
         $avgCities = max(1, (float) ($friendlies->avg('num_cities') ?? 1));
@@ -768,6 +771,9 @@ class PlanAssignmentService
         return $ranks;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function recentActivityFromWindow(?CarbonInterface $lastSeen, int $activityWindowHours): array
     {
         $halfLife = max(1, $activityWindowHours / 2);

@@ -26,6 +26,9 @@ class RebuildingNotification extends Notification
         return ['pnw'];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toPNW(object $notifiable): array
     {
         if ($this->status === 'approved') {

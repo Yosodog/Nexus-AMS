@@ -19,11 +19,17 @@ class MMRService
         // nukes spies handled separately
     ];
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getResourceFields(): array
     {
         return self::RESOURCES;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getResourceWeights(): array
     {
         $stored = SettingService::getMMRResourceWeights();
@@ -58,6 +64,9 @@ class MMRService
         return $this->getTierForCityCount($nation->num_cities);
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function evaluate(Nation $nation, NationSignIn $signIn): array
     {
         $cityCount = (int) ($nation->num_cities ?? $signIn->num_cities ?? 0);
@@ -138,6 +147,9 @@ class MMRService
         return true;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function buildUnitRequirements(MMRTier $tier, int $cityCount): array
     {
         $requirements = [];
@@ -152,6 +164,9 @@ class MMRService
         return $requirements;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function normalizeWeights(array $weights): array
     {
         $normalized = [];
@@ -168,6 +183,9 @@ class MMRService
         return $normalized;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function defaultWeights(): array
     {
         $perResource = round(100 / count(self::RESOURCES), 2);

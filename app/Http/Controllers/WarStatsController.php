@@ -133,6 +133,9 @@ class WarStatsController extends Controller
         return $started->diffInMinutes($ended) / 60;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildUnitExchange(Collection $wars, int $nationId): array
     {
         $units = ['soldiers', 'tanks', 'aircraft', 'ships'];
@@ -159,6 +162,9 @@ class WarStatsController extends Controller
         return $exchange;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildUnitScoreExchange(array $unitExchange): array
     {
         $weights = [
@@ -181,6 +187,9 @@ class WarStatsController extends Controller
         return $score;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildResourceUsage(Collection $wars, int $nationId): array
     {
         $resources = [
@@ -203,6 +212,9 @@ class WarStatsController extends Controller
         return $usage;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildInfraExchange(Collection $wars, int $nationId): array
     {
         $exchange = [
@@ -223,6 +235,9 @@ class WarStatsController extends Controller
         return $exchange;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildImpactTimeline(Collection $wars, int $nationId): array
     {
         $grouped = $wars->sortBy('date')->groupBy(
@@ -250,6 +265,9 @@ class WarStatsController extends Controller
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildOpponentStories(Collection $wars, int $nationId): array
     {
         return $wars->map(function (War $war) use ($nationId) {

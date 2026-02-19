@@ -41,6 +41,9 @@ abstract class OffshoreRequest extends FormRequest
         return $this->user()?->can('manage-offshores') ?? false;
     }
 
+    /**
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         $nameRule = $this->isUpdate() ? ['sometimes', 'string', 'max:255'] : ['required', 'string', 'max:255'];
@@ -65,6 +68,9 @@ abstract class OffshoreRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function payload(): array
     {
         return collect($this->safe()->except(['guardrails']))

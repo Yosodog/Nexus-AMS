@@ -216,10 +216,11 @@ class NationDashboardService
         return $chart;
     }
 
-    /**ß
+    /**
      * Convert sign-in timestamps to label strings.
-     * @param Collection $signIns
-     * @return array
+     *
+     * @param  Collection<int, \App\Models\NationSignIn>  $signIns
+     * @return array<int, string>
      */
     protected function pluckDates(Collection $signIns): array
     {

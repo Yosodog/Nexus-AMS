@@ -248,11 +248,17 @@ class AuditService
             ->delete();
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function getNationViolations(Nation $nation): Collection
     {
         return $this->getNationViolationsById($nation->id);
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function getNationViolationsById(int $nationId): Collection
     {
         return AuditResult::query()

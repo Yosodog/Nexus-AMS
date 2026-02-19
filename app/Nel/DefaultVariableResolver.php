@@ -9,6 +9,10 @@ use ReflectionMethod;
 
 final class DefaultVariableResolver implements VariableResolver
 {
+    /**
+     * @param  array<int, string>  $pathSegments
+     * @return bool|int|float|string|array<mixed>|object|null
+     */
     public function resolve(array $root, array $pathSegments): mixed
     {
         $current = $root;

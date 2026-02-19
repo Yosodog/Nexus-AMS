@@ -16,6 +16,9 @@ class WarService
 
     public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getStats(): array
     {
         return cache()->remember('war_stats_summary', 300, function () {
@@ -55,6 +58,9 @@ class WarService
         });
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function getWarsLast30Days(): Collection
     {
         if ($this->cachedRecentWars) {
@@ -87,6 +93,9 @@ class WarService
         });
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function getActiveWars(): Collection
     {
         return $this->cachedActiveWars ??= War::with([
@@ -103,6 +112,9 @@ class WarService
             ->get();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getWarTypeDistribution(): array
     {
         return cache()->remember('war_type_distribution', 300, function () {
@@ -117,6 +129,9 @@ class WarService
         });
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getWarStartHistory(): array
     {
         return cache()->remember('war_start_history', 300, function () {
@@ -132,6 +147,9 @@ class WarService
         });
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getTopNationsWithActiveWars(int $limit = 5): array
     {
         return cache()->remember("top_nations_active_wars_{$limit}", 300, function () use ($limit) {
@@ -175,13 +193,16 @@ class WarService
         return $this->membershipIds()->contains((int) $war->def_alliance_id);
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     protected function membershipIds(): Collection
     {
         return $this->membershipIds ??= $this->membershipService->getAllianceIds();
     }
 
     /**
-     * @return array[]
+     * @return array<string, array{used: int|float}>
      */
     public function getResourceUsageSummary(): array
     {
@@ -207,6 +228,9 @@ class WarService
         });
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getDamageDealtVsTaken(): array
     {
         return cache()->remember('war_damage_dealt_vs_taken', 300, function () {
@@ -237,6 +261,9 @@ class WarService
         });
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function calculateDealtAndTaken(Collection $wars, string $attKey, string $defKey, bool $flip = false): array
     {
         return [
@@ -251,6 +278,9 @@ class WarService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getAggressorDefenderSplit(): array
     {
         return cache()->remember('war_aggressor_defender_split', 300, function () {
@@ -266,6 +296,9 @@ class WarService
         });
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getActiveWarsByNation(): array
     {
         $wars = $this->getActiveWars();

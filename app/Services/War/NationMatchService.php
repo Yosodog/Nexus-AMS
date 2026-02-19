@@ -230,6 +230,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function cityAdvantage(int $friendlyCities, int $enemyCities): array
     {
         $delta = $friendlyCities - $enemyCities;
@@ -250,6 +253,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function recentActivityFactor(?CarbonInterface $lastSeen, ?int $activityWindowHours = null): array
     {
         $window = $activityWindowHours ?? config('war.plan_defaults.activity_window_hours', 72);
@@ -274,6 +280,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function assignmentLoadPenalty(int $currentAssignments, int $maxAssignments): array
     {
         if ($maxAssignments <= 0) {
@@ -291,6 +300,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function mmrCompliance(Nation $friendly): array
     {
         $mmrScore = $friendly->latestSignIn?->mmr_score;
@@ -330,6 +342,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function colorPenalty(string $friendlyColor, string $enemyColor): array
     {
         return [
@@ -338,6 +353,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function pairingBalance(float $friendlyRank, float $enemyRank): array
     {
         if ($friendlyRank <= 0 && $enemyRank <= 0) {
@@ -359,6 +377,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function dominanceBonus(float $friendlyRank, float $enemyRank): array
     {
         $delta = max(0, $friendlyRank - $enemyRank);
@@ -374,6 +395,9 @@ class NationMatchService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function friendlyBeigePenalty(Nation $friendly): array
     {
         $beigeTurns = (int) ($friendly->beige_turns ?? 0);

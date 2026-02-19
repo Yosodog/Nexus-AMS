@@ -32,6 +32,9 @@ class OffshoreFulfillmentResult
         return in_array($this->status, [self::STATUS_FAILED, self::STATUS_TIMEOUT], true);
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toArray(): array
     {
         return [

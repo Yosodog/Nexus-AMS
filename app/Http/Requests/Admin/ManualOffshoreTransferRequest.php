@@ -13,6 +13,9 @@ class ManualOffshoreTransferRequest extends FormRequest
         return $this->user()?->can('manage-offshores') ?? false;
     }
 
+    /**
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
@@ -70,6 +73,9 @@ class ManualOffshoreTransferRequest extends FormRequest
             ->all();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function transferMeta(): array
     {
         return [

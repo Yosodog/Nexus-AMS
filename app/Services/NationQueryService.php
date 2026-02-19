@@ -64,13 +64,9 @@ class NationQueryService
         return $nation;
     }
 
-    /**ß
-     * @param array $arguments
-     * @param int $perPage
-     * @param bool $withCities
-     * @param bool $pagination
-     * @param bool $handlePagination
-     * @return Nations
+    /**
+     * @param  array<string, mixed>  $arguments
+     *
      * @throws ConnectionException
      * @throws PWQueryFailedException
      */

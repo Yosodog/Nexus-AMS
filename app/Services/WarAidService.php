@@ -123,6 +123,9 @@ class WarAidService
         app(PendingRequestsService::class)->flushCache();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function extractResources(array $data): array
     {
         return collect(PWHelperService::resources())
@@ -130,6 +133,9 @@ class WarAidService
             ->all();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function normalizeAidRequestData(array $data): array
     {
         $resources = collect(PWHelperService::resources())
@@ -182,6 +188,9 @@ class WarAidService
         );
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getNationAvailableResources(Nation $nation): array
     {
         try {

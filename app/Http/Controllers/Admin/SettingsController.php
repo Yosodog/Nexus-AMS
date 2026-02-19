@@ -459,6 +459,9 @@ class SettingsController extends Controller
         ]);
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildRollingScheduleContext(?Batch $batch): array
     {
         $stepSeconds = $batch?->options['step_seconds'] ?? null;

@@ -154,6 +154,9 @@ class Page extends Model
         }
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function snapshots(int $limit = 50): Collection
     {
         return $this->versions()

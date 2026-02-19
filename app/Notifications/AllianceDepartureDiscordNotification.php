@@ -26,6 +26,9 @@ class AllianceDepartureDiscordNotification extends Notification
         return [DiscordQueueChannel::class];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toDiscordBot(object $notifiable): array
     {
         return [
@@ -41,6 +44,9 @@ class AllianceDepartureDiscordNotification extends Notification
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function formatNation(Nation $nation): array
     {
         return [

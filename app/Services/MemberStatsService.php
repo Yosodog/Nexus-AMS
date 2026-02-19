@@ -16,6 +16,9 @@ class MemberStatsService
 {
     public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getOverviewData(): array
     {
         $nations = Nation::with(['resources', 'accounts', 'military', 'accountProfile'])
@@ -59,6 +62,9 @@ class MemberStatsService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function getCityGrowthHistory(): array
     {
         return NationSignIn::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
@@ -69,6 +75,9 @@ class MemberStatsService
             ->toArray();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function formatNation(Nation $nation, ?InactivityEvent $event = null): array
     {
         $cities = $nation->num_cities;

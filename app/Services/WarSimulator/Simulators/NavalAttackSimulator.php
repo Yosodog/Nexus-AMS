@@ -80,6 +80,9 @@ final class NavalAttackSimulator
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function emptyResult(): array
     {
         return [

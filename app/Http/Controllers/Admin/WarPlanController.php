@@ -1161,6 +1161,9 @@ class WarPlanController extends Controller
             ->all();
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     protected function prepareFriendlyStats(WarPlan $plan, Collection $friendlies, Collection $assignments): Collection
     {
         $assignmentCounts = $assignments->groupBy('friendly_nation_id')->map->count();
@@ -1233,6 +1236,9 @@ class WarPlanController extends Controller
         return $base;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function activeWarCounts(Collection $friendlyIds): array
     {
         $ids = $friendlyIds->filter()->unique()->values();
@@ -1333,6 +1339,9 @@ class WarPlanController extends Controller
         );
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function cityStatsForFriendlies(Collection $friendlyAllianceIds): array
     {
         $baseQuery = Nation::query()->when($friendlyAllianceIds->isNotEmpty(), function (Builder $query) use ($friendlyAllianceIds) {
@@ -1352,6 +1361,9 @@ class WarPlanController extends Controller
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function cityStatsForNationIds(Collection $nationIds): array
     {
         if ($nationIds->isEmpty()) {
@@ -1370,6 +1382,9 @@ class WarPlanController extends Controller
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function militaryTotalsForAlliances(Collection $friendlyAllianceIds): array
     {
         if ($friendlyAllianceIds->isEmpty()) {
@@ -1390,6 +1405,9 @@ class WarPlanController extends Controller
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function militaryTotalsForNationIds(Collection $nationIds): array
     {
         if ($nationIds->isEmpty()) {
@@ -1409,6 +1427,9 @@ class WarPlanController extends Controller
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function transformFriendlyStats(Collection $friendlyStats): array
     {
         return $friendlyStats

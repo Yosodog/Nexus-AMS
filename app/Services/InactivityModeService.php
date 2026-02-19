@@ -42,6 +42,9 @@ class InactivityModeService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function evaluate(): array
     {
         $now = now();

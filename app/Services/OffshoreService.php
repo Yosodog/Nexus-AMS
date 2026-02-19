@@ -20,6 +20,9 @@ class OffshoreService
 
     public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function all(bool $includeDisabled = false): Collection
     {
         $query = Offshore::query()
@@ -73,6 +76,9 @@ class OffshoreService
         return $offshore->guardrailFor($resource);
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getBalances(Offshore $offshore, bool $force = false): array
     {
         $cacheKey = $this->balancesCacheKey($offshore);
@@ -93,6 +99,9 @@ class OffshoreService
         return $this->normalizeSnapshot($snapshot)['balances'];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function refreshBalances(Offshore $offshore, bool $force = false): array
     {
         $cacheKey = $this->balancesCacheKey($offshore);
@@ -138,6 +147,9 @@ class OffshoreService
         $this->allianceMembershipService->refresh();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     protected function fetchLiveBalances(Offshore $offshore): array
     {
         $parameters = [];

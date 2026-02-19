@@ -14,6 +14,9 @@ abstract class CustomizationContentRequest extends FormRequest
         return $this->user()?->can('manage-custom-pages') ?? false;
     }
 
+    /**
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [

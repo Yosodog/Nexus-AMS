@@ -26,6 +26,9 @@ final class NelEvaluator
         return $this->evaluateNode($node, $context);
     }
 
+    /**
+     * @return bool|int|float|string|null
+     */
     private function evaluateNode(ExpressionNode $node, NelEvaluationContext $context): mixed
     {
         if ($node instanceof LiteralNode) {
@@ -51,6 +54,9 @@ final class NelEvaluator
         throw new NelEvaluationException('Unsupported expression node encountered.');
     }
 
+    /**
+     * @return bool|int|float|string|null
+     */
     private function evaluateUnary(UnaryOpNode $node, NelEvaluationContext $context): mixed
     {
         $value = $this->evaluateNode($node->operand, $context);
@@ -70,6 +76,9 @@ final class NelEvaluator
         throw new NelEvaluationException('Unknown unary operator '.$node->operator);
     }
 
+    /**
+     * @return bool|int|float|string|null
+     */
     private function evaluateBinary(BinaryOpNode $node, NelEvaluationContext $context): mixed
     {
         $operator = $node->operator;
@@ -173,6 +182,9 @@ final class NelEvaluator
         return $operator === '==' ? $result : ! $result;
     }
 
+    /**
+     * @return bool|int|float|string|null
+     */
     private function evaluateFunction(FunctionCallNode $node, NelEvaluationContext $context): mixed
     {
         if (! array_key_exists($node->name, $context->helpers)) {

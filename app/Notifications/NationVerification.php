@@ -37,6 +37,9 @@ class NationVerification extends Notification implements ShouldQueue
         return ['pnw'];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toPNW(object $notifiable): array
     {
         return [

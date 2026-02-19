@@ -226,6 +226,9 @@ class AuditLogger
         return $sanitized;
     }
 
+    /**
+     * @return string|array<mixed>|int|float|bool|null
+     */
     private function sanitizeContextValue(mixed $value): mixed
     {
         if (is_string($value)) {

@@ -126,6 +126,9 @@ final class GroundAttackSimulator
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function emptyResult(): array
     {
         return [

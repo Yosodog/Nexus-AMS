@@ -64,10 +64,9 @@ class CityGrantController
         );
     }
 
-    /**ß
-     * @param CityGrantRequest $request
+    /**
+     * Approve a pending city grant request.
      *
-     * @return mixed
      * @throws AuthorizationException
      */
     public function approveCityGrant(CityGrantRequest $grantRequest): RedirectResponse
@@ -100,8 +99,7 @@ class CityGrantController
     }
 
     /**
-     * @param  CityGrantRequest  $request
-     * @return mixed
+     * Deny a pending city grant request.
      *
      * @throws AuthorizationException
      */
@@ -126,8 +124,6 @@ class CityGrantController
     }
 
     /**
-     * @param  \Illuminate\Support\Facades\Request  $request
-     *
      * @throws AuthorizationException
      */
     public function updateCityGrant(UpdateCityGrantRequest $request, CityGrant $city_grant): RedirectResponse

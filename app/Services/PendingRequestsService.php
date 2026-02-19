@@ -49,6 +49,9 @@ class PendingRequestsService
         Cache::forget($this->cacheKey());
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function buildCounts(): array
     {
         return [
@@ -61,6 +64,9 @@ class PendingRequestsService
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function filterCountsForUser(User $user, array $rawCounts): array
     {
         $permissions = $this->permissionsMap();
@@ -83,6 +89,9 @@ class PendingRequestsService
             ->all();
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function permissionsMap(): array
     {
         return config('pending_requests.permissions', []);

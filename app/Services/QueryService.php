@@ -337,7 +337,7 @@ class QueryService
     }
 
     /**
-     * @return Collection
+     * @return Collection<int|string, mixed>
      *
      * @throws ConnectionException
      * @throws PWQueryFailedException

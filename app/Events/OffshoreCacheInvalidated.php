@@ -26,6 +26,9 @@ class OffshoreCacheInvalidated implements ShouldBroadcast
         return new Channel('offshores');
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function broadcastWith(): array
     {
         return [

@@ -35,9 +35,9 @@ class DepositCreated extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array
+     * @return array<string, mixed>
      */
-    public function toPNW(object $notifiable)
+    public function toPNW(object $notifiable): array
     {
         return [
             'nation_id' => $this->nation_id,

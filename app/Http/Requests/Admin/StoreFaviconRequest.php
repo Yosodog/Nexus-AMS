@@ -11,6 +11,9 @@ class StoreFaviconRequest extends FormRequest
         return $this->user()?->can('view-diagnostic-info') ?? false;
     }
 
+    /**
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [

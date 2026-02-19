@@ -17,11 +17,17 @@ class PasswordResetNotification extends Notification implements ShouldQueue
         $this->token = $token;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function via(object $notifiable): array
     {
         return ['pnw'];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toPNW(object $notifiable): array
     {
         $resetUrl = route('password.reset', [

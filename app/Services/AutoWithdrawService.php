@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\DB;
 
 class AutoWithdrawService
 {
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function getNationSettings(int $nationId): Collection
     {
         return AutoWithdrawSetting::query()

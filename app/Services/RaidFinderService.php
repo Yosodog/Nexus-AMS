@@ -17,6 +17,9 @@ class RaidFinderService
         protected AllianceMembershipService $membershipService,
     ) {}
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     public function findTargets(int $nationId): Collection
     {
         $ownNation = Nation::findOrFail($nationId);
@@ -96,6 +99,9 @@ class RaidFinderService
         return $targets->sortByDesc('value')->values();
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     private function queryRaidableNations(float $minScore, float $maxScore): Collection
     {
         $raidableAlliances = $this->getRaidableAllianceIDs();
@@ -189,6 +195,9 @@ class RaidFinderService
         return $nationModels;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function getRaidableAllianceIDs(): array
     {
         $topN = SettingService::getTopRaidable(); // Admin configurable

@@ -96,6 +96,9 @@ class RaidLeaderboardService
         });
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     private function memberNations(): Collection
     {
         return Nation::query()

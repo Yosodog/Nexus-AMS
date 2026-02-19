@@ -96,6 +96,9 @@ final class AirstrikeSimulator
         ];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     private function emptyResult(): array
     {
         return [

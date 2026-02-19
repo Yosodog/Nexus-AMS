@@ -32,6 +32,9 @@ class WarAidNotification extends Notification implements ShouldQueue
         return ['pnw'];
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function toPNW(object $notifiable): array
     {
         if ($this->status === 'approved') {

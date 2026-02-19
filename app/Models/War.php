@@ -74,6 +74,10 @@ class War extends Model
         return $this->belongsTo(Nation::class, 'def_id');
     }
 
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<War>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<War>
+     */
     public function scopeActive($query): mixed
     {
         return $query->where(fn ($q) => $q->whereNull('end_date')
