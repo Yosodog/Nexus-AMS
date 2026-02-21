@@ -37,4 +37,9 @@ return [
     'nexus_api_token' => env('NEXUS_API_TOKEN'),
     'discord_bot_key' => env('DISCORD_BOT_KEY'),
 
+    'pw' => [
+        'api_key' => env('PW_API_KEY'),
+        'api_url' => env('PW_API_URL', 'https://api.politicsandwar.com/graphql'),
+    ],
+
 ];
