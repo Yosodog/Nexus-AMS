@@ -19,9 +19,9 @@ class QueryService
 
     public int $maxRetries = 5;
 
-    protected ?string $apiKey;
+    protected ?string $apiKey = null;
 
-    protected ?string $endpoint;
+    protected ?string $endpoint = null;
 
     protected ?string $mutationKey = null;
 
