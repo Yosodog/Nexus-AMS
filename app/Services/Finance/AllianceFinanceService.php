@@ -120,15 +120,20 @@ final class AllianceFinanceService
      */
     public function getEntries(CarbonInterface $from, CarbonInterface $to, array $filters = []): Collection
     {
-        return $this->rangeQuery($from, $to, $filters)
+        $entries = $this->rangeQuery($from, $to, $filters)
             ->with([
                 'nation:id,nation_name,leader_name',
                 'account:id,name',
-                'source',
             ])
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
+
+        $entries
+            ->filter(fn (AllianceFinanceEntry $entry) => $entry->sourceClass() !== null)
+            ->load('source');
+
+        return $entries;
     }
 
     private function persist(AllianceFinanceData $data, string $direction): AllianceFinanceEntry

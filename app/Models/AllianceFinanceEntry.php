@@ -80,6 +80,34 @@ class AllianceFinanceEntry extends Model
         return $this->morphTo();
     }
 
+    public function sourceClass(): ?string
+    {
+        if (! $this->source_type) {
+            return null;
+        }
+
+        $class = Model::getActualClassNameForMorph($this->source_type);
+
+        if (! class_exists($class)) {
+            return null;
+        }
+
+        if (! is_subclass_of($class, Model::class)) {
+            return null;
+        }
+
+        return $class;
+    }
+
+    public function resolvedSource(): ?Model
+    {
+        if (! $this->sourceClass()) {
+            return null;
+        }
+
+        return $this->source;
+    }
+
     /**
      * Determine if the entry represents income.
      */

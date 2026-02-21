@@ -158,7 +158,7 @@
                                             @php
                                                 $category = $categories[$entry->category] ?? null;
                                                 $categoryColor = $category['color'] ?? 'secondary';
-                                                $source = $entry->source;
+                                                $source = $entry->resolvedSource();
                                                 $sourceLabel = $entry->source_type ? class_basename($entry->source_type) . ' #' . $entry->source_id : null;
                                                 $sourceLink = null;
 
