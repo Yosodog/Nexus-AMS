@@ -29,33 +29,53 @@ class QueryService
 
     public function __construct(?string $apiKey = null, ?string $mutationKey = null)
     {
-        $this->apiKey = $apiKey ?? $this->getAPIKey();
-        $this->mutationKey = $mutationKey ?? $this->getMutationKey();
-        $this->endpoint = $this->buildEndpoint();
+        $this->apiKey = $apiKey;
+        $this->mutationKey = $mutationKey;
     }
 
     /**
      * @throws Exception
      */
-    protected function getAPIKey(): string
+    protected function apiKey(): string
     {
-        $apiKey = config("services.pw.api_key");
+        if (! blank($this->apiKey)) {
+            return $this->apiKey;
+        }
 
-        if (blank($apiKey)) {
+        $key = config('services.pw.api_key');
+
+        if (blank($key)) {
+            // Throw only when the service is actually USED to call the API.
             throw new Exception('Env value PW_API_KEY not set');
         }
 
-        return $apiKey;
+        return $this->apiKey = $key;
     }
 
-    protected function getMutationKey(): ?string
+    protected function mutationKey(): ?string
     {
-        return env('PW_API_MUTATION_KEY');
+        if ($this->mutationKey !== null) {
+            return $this->mutationKey;
+        }
+
+        // Use config(), not env()
+        return $this->mutationKey = config('services.pw.mutation_key');
     }
 
-    protected function buildEndpoint(): string
+    protected function endpoint(): string
     {
-        return 'https://api.politicsandwar.com/graphql?api_key='.$this->apiKey;
+        if (! blank($this->endpoint)) {
+            return $this->endpoint;
+        }
+
+        $base = config('services.pw.endpoint', 'https://api.politicsandwar.com/graphql');
+
+        // only now do we require apiKey()
+        $this->endpoint = rtrim($base, '?').'?' . http_build_query([
+                'api_key' => $this->apiKey(),
+            ]);
+
+        return $this->endpoint;
     }
 
     /**
@@ -131,8 +151,8 @@ class QueryService
     protected function getHeaders(): array
     {
         return array_filter([
-            'X-Bot-Key' => $this->mutationKey,
-            'X-Api-Key' => $this->apiKey,
+            'X-Bot-Key' => $this->mutationKey(),
+            'X-Api-Key' => $this->apiKey(),
         ], fn ($value) => ! is_null($value));
     }
 
@@ -187,7 +207,7 @@ class QueryService
         array $headers = []
     ): PromiseInterface {
         return Http::async()->withHeaders($headers)->post(
-            $this->endpoint,
+            $this->endpoint(),
             ['query' => $query, 'variables' => $variables]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {

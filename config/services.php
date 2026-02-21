@@ -39,7 +39,8 @@ return [
 
     'pw' => [
         'api_key' => env('PW_API_KEY'),
-        'api_url' => env('PW_API_URL', 'https://api.politicsandwar.com/graphql'),
+        'mutation_key' => env('PW_API_MUTATION_KEY'),
+        'endpoint' => env('PW_API_ENDPOINT', 'https://api.politicsandwar.com/graphql'),
     ],
 
 ];
