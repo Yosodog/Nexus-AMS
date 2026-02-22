@@ -3,6 +3,7 @@
 use App\Console\Commands\ProcessDeposits;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Services\PWHealthService;
+use App\Services\SettingService;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('pw:health-check')->everyMinute();
@@ -48,6 +49,18 @@ Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
 Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('23:30');
 Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOverlapping(1);
 Schedule::command('audit:prune')->dailyAt('01:15');
+
+// Backups
+Schedule::command('backup:run --only-to-disk=s3')
+    ->everySixHours()
+    ->runInBackground()
+    ->withoutOverlapping(360)
+    ->when(fn () => SettingService::isBackupsEnabled());
+Schedule::command('backup:clean')
+    ->dailyAt('02:20')
+    ->runInBackground()
+    ->withoutOverlapping(120)
+    ->when(fn () => SettingService::isBackupsEnabled());
 
 // Taxes
 Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);

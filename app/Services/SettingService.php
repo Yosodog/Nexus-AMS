@@ -176,9 +176,27 @@ class SettingService
         return (bool) $value;
     }
 
+    public static function isBackupsEnabled(): bool
+    {
+        $value = self::getValue('backups_enabled');
+
+        if (is_null($value)) {
+            self::setBackupsEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
     public static function setAutoWithdrawEnabled(bool $enabled): void
     {
         self::setValue('auto_withdraw_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function setBackupsEnabled(bool $enabled): void
+    {
+        self::setValue('backups_enabled', $enabled ? 1 : 0);
     }
 
     public static function isLoanPaymentsEnabled(): bool

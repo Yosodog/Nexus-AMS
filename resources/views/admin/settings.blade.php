@@ -265,6 +265,31 @@
         <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Backups</span>
+                    <span class="badge {{ $backupsEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                        {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Run application + database backups every 6 hours. Backups are stored in AWS S3 only.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.backups') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="backups_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="backupsEnabled"
+                                   name="backups_enabled" value="1" @checked($backupsEnabled)>
+                            <label class="form-check-label" for="backupsEnabled">Enable Backups</label>
+                        </div>
+                        <button class="btn btn-primary">Save Backup Setting</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Loan Payments</span>
                     <span class="badge {{ $loanPaymentsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
                         {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
