@@ -76,14 +76,14 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
             $event,
             $previousAlliance,
             $channelId
-        ): void {
+        ): bool {
             if ($this->hasRecentQueuedDeparture($nation->id, $event->oldAllianceId)) {
                 Log::info('Alliance departure alert skipped due to recent queued job', [
                     'nation_id' => $nation->id,
                     'old_alliance_id' => $event->oldAllianceId,
                 ]);
 
-                return;
+                return true;
             }
 
             try {
@@ -100,6 +100,8 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
                     'message' => $exception->getMessage(),
                 ]);
             }
+
+            return true;
         });
 
         if (! $lockAcquired) {
