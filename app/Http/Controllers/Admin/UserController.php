@@ -190,7 +190,10 @@ class UserController extends Controller
         $user->is_admin = (bool) $validated['is_admin'];
         $user->disabled = filter_var($validated['disabled'], FILTER_VALIDATE_BOOLEAN);
         $user->nation_id = $validated['nation_id'] ?? null;
-        $user->verified_at = $validated['verified_at'] ? now() : null;
+
+        if (array_key_exists('verified_at', $validated)) {
+            $user->verified_at = filled($validated['verified_at']) ? now() : null;
+        }
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
