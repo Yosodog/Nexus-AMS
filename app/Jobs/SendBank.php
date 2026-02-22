@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Transaction;
+use App\Notifications\WithdrawalSentNotification;
 use App\Services\BankService;
 use App\Services\OffshoreFulfillmentService;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -103,6 +104,18 @@ class SendBank implements ShouldBeUnique, ShouldQueue
 
                 $lockedTransaction->setSent($bankRecord);
             });
+
+            $sentTransaction = Transaction::query()
+                ->with(['nation', 'fromAccount'])
+                ->find($transaction->id);
+
+            if ($sentTransaction && $sentTransaction->nation) {
+                $sentTransaction->nation->notify(new WithdrawalSentNotification(
+                    nationId: $sentTransaction->nation_id,
+                    transaction: $sentTransaction,
+                    accountName: $sentTransaction->fromAccount?->name,
+                ));
+            }
 
             return;
         }
