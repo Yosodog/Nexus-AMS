@@ -71,9 +71,9 @@ class QueryService
         $base = config('services.pw.endpoint', 'https://api.politicsandwar.com/graphql');
 
         // only now do we require apiKey()
-        $this->endpoint = rtrim($base, '?').'?' . http_build_query([
-                'api_key' => $this->apiKey(),
-            ]);
+        $this->endpoint = rtrim($base, '?').'?'.http_build_query([
+            'api_key' => $this->apiKey(),
+        ]);
 
         return $this->endpoint;
     }
