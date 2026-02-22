@@ -32,8 +32,17 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                 $entry->isSlowQuery();
         });
 
-        Telescope::avatar(function (string $id, string $email) {
-            return User::find($id)->nation->flag;
+        Telescope::avatar(function (?string $id, ?string $email) {
+            $fallbackAvatar = sprintf(
+                'https://www.gravatar.com/avatar/%s?d=mp',
+                md5(strtolower(trim((string) $email)))
+            );
+
+            if (is_null($id)) {
+                return $fallbackAvatar;
+            }
+
+            return User::find($id)?->nation?->flag ?? $fallbackAvatar;
         });
     }
 
