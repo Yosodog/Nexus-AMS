@@ -39,11 +39,12 @@
                                    name="primary_subject"
                                    class="form-control @error('primary_subject') is-invalid @enderror"
                                    value="{{ old('primary_subject', $primarySubject) }}"
-                                   maxlength="255"
+                                   maxlength="50"
                                    required>
                             @error('primary_subject')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <div class="form-text">Maximum 50 characters (in-game limit).</div>
                         </div>
 
                         <div class="mb-4">
@@ -77,11 +78,12 @@
                                    name="follow_up_subject"
                                    class="form-control @error('follow_up_subject') is-invalid @enderror"
                                    value="{{ old('follow_up_subject', $followUpSubject) }}"
-                                   maxlength="255"
+                                   maxlength="50"
                                    required>
                             @error('follow_up_subject')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <div class="form-text">Maximum 50 characters (in-game limit).</div>
                         </div>
 
                         <div class="mb-4">

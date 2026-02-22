@@ -63,9 +63,9 @@ class RecruitmentController
         ];
 
         $validated = $request->validate([
-            'primary_subject' => ['required', 'string', 'max:255'],
+            'primary_subject' => ['required', 'string', 'max:50'],
             'primary_message' => ['required', 'string'],
-            'follow_up_subject' => ['required', 'string', 'max:255'],
+            'follow_up_subject' => ['required', 'string', 'max:50'],
             'follow_up_message' => ['required', 'string'],
         ]);
 
