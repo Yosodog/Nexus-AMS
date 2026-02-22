@@ -48,6 +48,10 @@ class AutoPickCounterAssignmentsJob implements ShouldQueue
 
         $friendlies = Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->get();
 
         $assignmentService->proposeAssignments($counter, $friendlies);

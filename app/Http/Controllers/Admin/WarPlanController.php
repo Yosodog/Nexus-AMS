@@ -1298,6 +1298,10 @@ class WarPlanController extends Controller
     {
         return Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->orderBy('leader_name')
             ->select([
                 'id',
@@ -1346,6 +1350,9 @@ class WarPlanController extends Controller
     {
         $baseQuery = Nation::query()->when($friendlyAllianceIds->isNotEmpty(), function (Builder $query) use ($friendlyAllianceIds) {
             $query->whereIn('alliance_id', $friendlyAllianceIds);
+        })->where(function (Builder $query) {
+            $query->whereNull('alliance_position')
+                ->orWhere('alliance_position', '!=', 'APPLICANT');
         });
 
         $count = (clone $baseQuery)->count();
@@ -1394,6 +1401,10 @@ class WarPlanController extends Controller
         $totals = Nation::query()
             ->join('nation_military', 'nation_military.nation_id', '=', 'nations.id')
             ->whereIn('nations.alliance_id', $friendlyAllianceIds)
+            ->where(function ($query) {
+                $query->whereNull('nations.alliance_position')
+                    ->orWhere('nations.alliance_position', '!=', 'APPLICANT');
+            })
             ->selectRaw('SUM(nation_military.soldiers) as soldiers, SUM(nation_military.tanks) as tanks, SUM(nation_military.aircraft) as aircraft, SUM(nation_military.ships) as ships')
             ->first();
 

@@ -36,7 +36,10 @@ class CounterFinderController extends Controller
 
             $ourNations = Nation::with('military')
                 ->whereIn('alliance_id', $membershipService->getAllianceIds())
-                ->where('alliance_position', '!=', 'APPLICANT')
+                ->where(function ($query) {
+                    $query->whereNull('alliance_position')
+                        ->orWhere('alliance_position', '!=', 'APPLICANT');
+                })
                 ->where('vacation_mode_turns', 0)
                 ->get();
 
@@ -57,6 +60,10 @@ class CounterFinderController extends Controller
             // No target provided, just list all of our nations
             $nations = Nation::with('military')
                 ->whereIn('alliance_id', $membershipService->getAllianceIds())
+                ->where(function ($query) {
+                    $query->whereNull('alliance_position')
+                        ->orWhere('alliance_position', '!=', 'APPLICANT');
+                })
                 ->get();
         }
 

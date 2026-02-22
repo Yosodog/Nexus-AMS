@@ -117,6 +117,7 @@ class CounterAssignmentService
         $autoFloor = (float) config('war.nation_match.relative_power.auto_floor', 0.18);
 
         return $friendlies
+            ->reject(fn (Nation $friendly) => strtoupper((string) $friendly->alliance_position) === 'APPLICANT')
             ->map(function (Nation $friendly) use ($counter, $autoFloor) {
                 if (! $this->matchService->canAttack($friendly, $counter->aggressor)) {
                     return null;
@@ -267,6 +268,7 @@ class CounterAssignmentService
         $preservedIds = $preserved->pluck('friendly_nation_id')->all();
 
         $candidates = $friendlies
+            ->reject(fn (Nation $nation) => strtoupper((string) $nation->alliance_position) === 'APPLICANT')
             ->reject(fn (Nation $nation) => in_array($nation->id, $preservedIds, true))
             ->map(function (Nation $friendly) use ($counter) {
                 $availableSlots = $this->calculateAvailableSlots($friendly);

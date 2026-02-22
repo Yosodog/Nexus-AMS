@@ -75,6 +75,10 @@ class RecomputePlanTPSJob implements ShouldQueue
             ->when($friendlyAllianceIds->isNotEmpty(), function ($query) use ($friendlyAllianceIds) {
                 $query->whereIn('alliance_id', $friendlyAllianceIds);
             })
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->get();
 
         $targets = $targetPriorityService->computeAndStore($plan, $enemies, $friendlies);

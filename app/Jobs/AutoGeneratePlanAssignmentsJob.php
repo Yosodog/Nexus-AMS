@@ -88,6 +88,10 @@ class AutoGeneratePlanAssignmentsJob implements ShouldQueue
 
         $friendlies = Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->when($minFriendlyScore !== null, fn ($query) => $query->where('score', '>=', $minFriendlyScore))
             ->when($maxFriendlyScore !== null, fn ($query) => $query->where('score', '<=', $maxFriendlyScore))
             ->select([

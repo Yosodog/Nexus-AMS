@@ -42,6 +42,10 @@ class WarCounterController extends Controller
         $friendlyAllianceIds = $membershipService->getAllianceIds();
         $friendlies = Nation::query()
             ->whereIn('alliance_id', $friendlyAllianceIds)
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->with(['military', 'latestSignIn', 'alliance'])
             ->get();
 
@@ -156,6 +160,10 @@ class WarCounterController extends Controller
 
         $friendlies = Nation::query()
             ->whereIn('alliance_id', $membershipService->getAllianceIds())
+            ->where(function ($query) {
+                $query->whereNull('alliance_position')
+                    ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
             ->get();
 
         $assignmentService->proposeAssignments($counter, $friendlies);

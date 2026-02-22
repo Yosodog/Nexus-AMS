@@ -101,6 +101,10 @@ class PlanAssignmentService
         bool $rebuildSquads,
         bool $includeSignInData
     ): SupportCollection {
+        $friendlies = $friendlies
+            ->reject(fn (Nation $friendly) => strtoupper((string) $friendly->alliance_position) === 'APPLICANT')
+            ->values();
+
         $targets->loadMissing(['nation.military', 'nation.accountProfile']);
         $friendlies->loadMissing($includeSignInData
             ? ['military', 'latestSignIn', 'accountProfile']
