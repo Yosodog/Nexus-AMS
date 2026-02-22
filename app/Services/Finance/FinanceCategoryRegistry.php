@@ -43,11 +43,19 @@ final class FinanceCategoryRegistry
 
     public function label(string $key): string
     {
-        return (string) ($this->get($key)['label'] ?? $key);
+        if (! $this->exists($key)) {
+            return $key;
+        }
+
+        return (string) ($this->categories[$key]['label'] ?? $key);
     }
 
     public function color(string $key): string
     {
-        return (string) ($this->get($key)['color'] ?? 'secondary');
+        if (! $this->exists($key)) {
+            return 'secondary';
+        }
+
+        return (string) ($this->categories[$key]['color'] ?? 'secondary');
     }
 }

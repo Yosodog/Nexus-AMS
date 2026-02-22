@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 final class AllianceFinanceService
@@ -139,7 +140,12 @@ final class AllianceFinanceService
     private function persist(AllianceFinanceData $data, string $direction): AllianceFinanceEntry
     {
         if (! $this->categories->exists($data->category)) {
-            throw new InvalidArgumentException("Unknown finance category [{$data->category}]");
+            Log::warning('Unknown finance category encountered when persisting finance entry.', [
+                'category' => $data->category,
+                'direction' => $direction,
+                'source_type' => $data->sourceType(),
+                'source_id' => $data->sourceId(),
+            ]);
         }
 
         $meta = $data->meta;
