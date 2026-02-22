@@ -118,6 +118,54 @@
             </div>
         </div>
     </div>
+
+    <div class="card mt-2 mb-4">
+        <div class="card-header">Account Overview</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Status</th>
+                        @foreach(\App\Services\PWHelperService::resources() as $resource)
+                            <th>{{ ucfirst($resource) }}</th>
+                        @endforeach
+                        <th>Last Updated</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @forelse($memberAccounts as $account)
+                        <tr>
+                            <td>
+                                <a href="{{ route('admin.accounts.view', $account['id']) }}" class="fw-semibold text-decoration-none">
+                                    {{ $account['name'] ?: 'Account #' . $account['id'] }}
+                                </a>
+                                <div class="text-muted small">#{{ $account['id'] }}</div>
+                            </td>
+                            <td>
+                                <span class="badge {{ $account['frozen'] ? 'text-bg-danger' : 'text-bg-success' }}">
+                                    {{ $account['frozen'] ? 'Frozen' : 'Active' }}
+                                </span>
+                            </td>
+                            <td>${{ number_format((float) $account['resources']['money'], 2) }}</td>
+                            @foreach(\App\Services\PWHelperService::resources(false) as $resource)
+                                <td>{{ number_format((float) $account['resources'][$resource], 2) }}</td>
+                            @endforeach
+                            <td>{{ $account['updated_at']?->format('Y-m-d H:i') ?? 'N/A' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ count(\App\Services\PWHelperService::resources()) + 3 }}" class="text-center text-muted py-4">
+                                No accounts found for this nation.
+                            </td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')

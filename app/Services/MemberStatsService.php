@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InactivityAction;
+use App\Models\Account;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\InactivityEvent;
@@ -228,6 +229,21 @@ class MemberStatsService
             ])
             ->values();
 
+        $memberAccounts = Account::query()
+            ->where('nation_id', $nationId)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Account $account) => [
+                'id' => $account->id,
+                'name' => $account->name,
+                'frozen' => (bool) $account->frozen,
+                'resources' => collect(PWHelperService::resources())
+                    ->mapWithKeys(fn (string $resource) => [$resource => (float) ($account->$resource ?? 0.0)])
+                    ->all(),
+                'updated_at' => $account->updated_at,
+            ])
+            ->values();
+
         return [
             'nation' => $nation,
             'lastScore' => $lastScore,
@@ -244,6 +260,7 @@ class MemberStatsService
             'recentTaxes' => $recentTaxes,
 
             'resourceSignInHistory' => $resourceSignInHistory,
+            'memberAccounts' => $memberAccounts,
         ];
     }
 }
