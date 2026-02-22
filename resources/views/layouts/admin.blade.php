@@ -45,6 +45,13 @@
 
             .app-sidebar {
                 max-width: min(280px, 85vw);
+                height: 100dvh;
+            }
+
+            .app-sidebar .sidebar-wrapper {
+                max-height: calc(100dvh - 57px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .navbar-nav .dropdown-menu {
