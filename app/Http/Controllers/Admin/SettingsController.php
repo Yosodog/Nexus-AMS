@@ -56,6 +56,7 @@ class SettingsController extends Controller
             'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
+            'backupsEnabled' => SettingService::isBackupsEnabled(),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
             'grantApprovalsEnabled' => SettingService::isGrantApprovalsEnabled(),
@@ -278,6 +279,39 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateBackups(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $previous = SettingService::isBackupsEnabled();
+        $validated = $request->validate([
+            'backups_enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['backups_enabled'];
+
+        SettingService::setBackupsEnabled($enabled);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'backups_toggle',
+            context: [
+                'changes' => [
+                    'backups_enabled' => [
+                        'from' => $previous,
+                        'to' => $enabled,
+                    ],
+                ],
+            ],
+            message: 'Backups setting updated.'
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $enabled ? 'Backups enabled.' : 'Backups disabled.',
             'alert-type' => 'success',
         ]);
     }
