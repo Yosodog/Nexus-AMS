@@ -134,6 +134,12 @@
                             </tr>
                             <tr>
                                 <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/trade-prices/average-24h</td>
+                                <td class="text-sm">Return the last 24 hours of average trade prices.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
                                 <td class="font-mono text-xs">/war-plans/{plan}/targets</td>
                                 <td class="text-sm">Target list plus recommended assignment data.</td>
                                 <td class="text-xs">Admin</td>
