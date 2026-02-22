@@ -20,6 +20,10 @@ class SelfApprovalGuard
             return;
         }
 
+        if ($user->can('bypass-self-restrictions')) {
+            return;
+        }
+
         $matchesNation = $requestNationId !== null && $user->nation_id !== null && $user->nation_id === $requestNationId;
         $matchesUser = $requestUserId !== null && $user->id === $requestUserId;
 

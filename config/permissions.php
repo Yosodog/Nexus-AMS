@@ -3,6 +3,7 @@
 return [
     'view-users',
     'edit-users',
+    'bypass-self-restrictions',
     'view-roles',
     'edit-roles',
     'view-city-grants',

@@ -355,9 +355,11 @@ class AccountController extends Controller
 
         $account = AccountService::getAccountById($request->input('accountId'));
 
-        if ($account->nation_id === Auth::user()->nation_id) {
-            abort(403, 'You cannot edit your own account');
-        }
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: $account->nation_id,
+            requestUserId: $account->user_id,
+            context: 'edit your own account'
+        );
 
         $data = [];
 
