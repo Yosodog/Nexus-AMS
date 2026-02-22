@@ -170,7 +170,7 @@ class CounterAssignmentService
     ): Collection {
         $lock = $this->cacheFactory->store()->lock("counter:{$counter->id}:assign", (int) config('war.counters.lock_ttl', 30));
 
-        $assignments = collect();
+        $assignments = new Collection;
 
         try {
             $lock->block((int) config('war.cache.lock_timeout', 10), function () use (
