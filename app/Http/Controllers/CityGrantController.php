@@ -21,10 +21,16 @@ class CityGrantController
     public function index(): View
     {
         $nation = Auth::user()->nation;
-        $grants = CityGrant::where('enabled', true)->get();
+        $grants = CityGrant::query()
+            ->where('enabled', true)
+            ->orderBy('city_number')
+            ->get();
         $accounts = $nation->accounts;
         $nextCityNumber = $nation->num_cities + 1;
-        $grantRequests = CityGrantRequest::where('nation_id', $nation->id)->orderBy('created_at', 'desc')->get();
+        $grantRequests = CityGrantRequest::where('nation_id', $nation->id)
+            ->orderByDesc('city_number')
+            ->orderBy('created_at', 'desc')
+            ->get();
         $cityCostService = app(CityCostService::class);
         $cityAverage = $cityCostService->getTop20Average();
         $cityAverageUpdatedAt = SettingService::getCityAverageUpdatedAt();
