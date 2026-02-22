@@ -3,7 +3,6 @@
 namespace App\Listeners;
 
 use App\Enums\AlliancePositionEnum;
-use App\Enums\DiscordQueueStatus;
 use App\Events\NationAllianceChanged;
 use App\Models\Account;
 use App\Models\Alliance;
@@ -16,6 +15,7 @@ use App\Services\Discord\DiscordQueueService;
 use App\Services\SettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -71,39 +71,61 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
 
         $previousAlliance = Alliance::find($event->oldAllianceId);
 
-        if ($this->hasRecentQueuedDeparture($nation->id)) {
-            Log::info('Alliance departure alert skipped due to recent queued job', [
+        $lockAcquired = Cache::lock($this->departureLockKey($nation->id, $event->oldAllianceId), 30)->get(function () use (
+            $nation,
+            $event,
+            $previousAlliance,
+            $channelId
+        ): bool {
+            if ($this->hasRecentQueuedDeparture($nation->id, $event->oldAllianceId)) {
+                Log::info('Alliance departure alert skipped due to recent queued job', [
+                    'nation_id' => $nation->id,
+                    'old_alliance_id' => $event->oldAllianceId,
+                ]);
+
+                return true;
+            }
+
+            try {
+                Notification::route(DiscordQueueChannel::class, 'discord-bot')
+                    ->notify(new AllianceDepartureDiscordNotification(
+                        nation: $nation,
+                        previousAlliance: $previousAlliance,
+                        channelId: $channelId
+                    ));
+            } catch (Throwable $exception) {
+                Log::error('Failed to queue alliance departure Discord alert', [
+                    'nation_id' => $nation->id,
+                    'old_alliance_id' => $event->oldAllianceId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+
+            return true;
+        });
+
+        if (! $lockAcquired) {
+            Log::info('Alliance departure alert skipped due to overlapping lock', [
                 'nation_id' => $nation->id,
                 'old_alliance_id' => $event->oldAllianceId,
-            ]);
-
-            return;
-        }
-
-        try {
-            Notification::route(DiscordQueueChannel::class, 'discord-bot')
-                ->notify(new AllianceDepartureDiscordNotification(
-                    nation: $nation,
-                    previousAlliance: $previousAlliance,
-                    channelId: $channelId
-                ));
-        } catch (Throwable $exception) {
-            Log::error('Failed to queue alliance departure Discord alert', [
-                'nation_id' => $nation->id,
-                'old_alliance_id' => $event->oldAllianceId,
-                'message' => $exception->getMessage(),
+                'lock_key' => $this->departureLockKey($nation->id, $event->oldAllianceId),
             ]);
         }
     }
 
-    protected function hasRecentQueuedDeparture(int $nationId): bool
+    protected function hasRecentQueuedDeparture(int $nationId, int $oldAllianceId): bool
     {
         return DiscordQueue::query()
             ->where('action', 'ALLIANCE_DEPARTURE')
-            ->where('status', DiscordQueueStatus::Pending)
             ->where('created_at', '>=', now()->subMinutes(5))
             ->whereJsonContains('payload->nation->id', $nationId)
+            ->whereJsonContains('payload->previous_alliance->id', $oldAllianceId)
             ->exists();
+    }
+
+    protected function departureLockKey(int $nationId, int $oldAllianceId): string
+    {
+        return "discord:alliance-departure:{$nationId}:{$oldAllianceId}";
     }
 
     protected function cleanupNexusAccess(Nation $nation): void
