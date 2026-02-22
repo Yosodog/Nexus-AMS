@@ -44,12 +44,13 @@ class TaxService
 
             // Process DD. If the tax_id matches the DD tax ID, then it will process the DD and return what is left for taxes.
             $record = $ddService->process($record);
+            $recordedAt = self::parseApiTimestamp($record->date);
 
             try {
-                $taxModel = DB::transaction(function () use ($record) {
+                $taxModel = DB::transaction(function () use ($record, $recordedAt) {
                     return Taxes::create([
                         'id' => $record->id, // Use PW tax record ID as our primary key
-                        'date' => $record->date,
+                        'date' => $recordedAt,
                         'sender_id' => $record->sender_id,
                         'receiver_id' => $record->receiver_id,
                         'receiver_type' => $record->receiver_type,
@@ -115,6 +116,11 @@ class TaxService
         }
 
         return (int) ($query->max('id') ?? 0);
+    }
+
+    protected static function parseApiTimestamp(string $timestamp): Carbon
+    {
+        return Carbon::parse($timestamp, 'UTC')->utc();
     }
 
     protected static function recordDailyTaxIncome(string $date): void

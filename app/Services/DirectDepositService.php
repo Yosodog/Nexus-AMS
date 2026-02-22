@@ -89,8 +89,10 @@ class DirectDepositService
             $deposit['money'] = max(0.0, round($deposit['money'] - $mmrTotalSpend, 2));
         }
 
+        $recordedAt = Carbon::parse($record->date, 'UTC')->utc();
+
         try {
-            DB::transaction(function () use ($nation, $record, $deposit, $originalDeposit, $mmrTotalSpend, $plan, $mmrAccount, $ddAccount) {
+            DB::transaction(function () use ($nation, $record, $deposit, $originalDeposit, $mmrTotalSpend, $plan, $mmrAccount, $ddAccount, $recordedAt) {
                 $lockedAccount = Account::whereKey($ddAccount->id)->lockForUpdate()->first();
 
                 if (! $lockedAccount) {
@@ -102,12 +104,14 @@ class DirectDepositService
                 }
                 $lockedAccount->save();
 
-                $log = DirectDepositLog::create([
+                $log = new DirectDepositLog([
                     'nation_id' => $nation->id,
                     'account_id' => $lockedAccount->id,
                     'bank_record_id' => $record->id,
                     ...$originalDeposit,
                 ]);
+                $log->forceFill(['created_at' => $recordedAt]);
+                $log->save();
 
                 if ($mmrTotalSpend > 0.0) {
                     $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
