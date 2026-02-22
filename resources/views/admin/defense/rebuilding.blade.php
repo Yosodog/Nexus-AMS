@@ -365,7 +365,17 @@
                             <tbody>
                             @forelse($ineligible as $entry)
                                 <tr>
-                                    <td>{{ $entry->nation?->leader_name ?? ('Nation #'.$entry->nation_id) }}</td>
+                                    <td>
+                                        @if ($entry->nation)
+                                            <a href="https://politicsandwar.com/nation/id={{ $entry->nation->id }}"
+                                               target="_blank" rel="noopener noreferrer">
+                                                {{ $entry->nation->leader_name ?? ('Nation #'.$entry->nation->id) }}
+                                            </a>
+                                            <div class="small text-muted">{{ $entry->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                        @else
+                                            <span class="text-muted">{{ 'Nation #'.$entry->nation_id }}</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $entry->reason ?: '-' }}</td>
                                     <td>
                                         <form method="POST" action="{{ route('admin.rebuilding.ineligible.destroy', $entry->id) }}">
@@ -394,7 +404,17 @@
                             <div class="border rounded p-3 mb-3">
                                 <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
                                     <div>
-                                        <strong>{{ $req->nation?->leader_name ?? ('Nation #'.$req->nation_id) }}</strong>
+                                        @if ($req->nation)
+                                            <strong>
+                                                <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}"
+                                                   target="_blank" rel="noopener noreferrer">
+                                                    {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
+                                                </a>
+                                            </strong>
+                                            <div class="small text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                        @else
+                                            <strong>{{ 'Nation #'.$req->nation_id }}</strong>
+                                        @endif
                                         <div class="small text-muted">
                                             Account: {{ $req->account?->name ?? 'Unknown' }} |
                                             Cities: {{ $req->city_count_snapshot }} |
@@ -461,7 +481,17 @@
                             <tbody>
                             @forelse($history as $req)
                                 <tr>
-                                    <td>{{ $req->nation?->leader_name ?? ('Nation #'.$req->nation_id) }}</td>
+                                    <td>
+                                        @if ($req->nation)
+                                            <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}"
+                                               target="_blank" rel="noopener noreferrer">
+                                                {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
+                                            </a>
+                                            <div class="small text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                        @else
+                                            <span class="text-muted">{{ 'Nation #'.$req->nation_id }}</span>
+                                        @endif
+                                    </td>
                                     <td><span class="badge bg-{{ $req->status === 'approved' ? 'success' : ($req->status === 'denied' ? 'danger' : 'secondary') }}">{{ ucfirst($req->status) }}</span></td>
                                     <td>${{ number_format((float) $req->estimated_amount) }}</td>
                                     <td>${{ number_format((float) ($req->approved_amount ?? 0)) }}</td>

@@ -51,7 +51,19 @@
                     <tbody>
                     @foreach ($pendingLoans as $loan)
                         <tr>
-                            <td>{{ $loan->nation?->nation_name ?? 'Unknown Nation' }}</td>
+                            <td>
+                                @if ($loan->nation)
+                                    <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
+                                       target="_blank" rel="noopener noreferrer">
+                                        {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
+                                    </a>
+                                    <div class="small text-muted">
+                                        {{ $loan->nation->nation_name ?? 'Unknown Nation' }}
+                                    </div>
+                                @else
+                                    <span class="text-muted">Unknown Nation</span>
+                                @endif
+                            </td>
                             <td>${{ number_format($loan->amount) }}</td>
                             <td>{{ $loan->term_weeks }}</td>
                             <td>{{ $loan->created_at->format('M d, Y') }}</td>
@@ -97,7 +109,19 @@
                     <tbody>
                     @foreach ($activeLoans as $loan)
                         <tr>
-                            <td>{{ $loan->nation?->nation_name ?? 'Unknown Nation' }}</td>
+                            <td>
+                                @if ($loan->nation)
+                                    <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
+                                       target="_blank" rel="noopener noreferrer">
+                                        {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
+                                    </a>
+                                    <div class="small text-muted">
+                                        {{ $loan->nation->nation_name ?? 'Unknown Nation' }}
+                                    </div>
+                                @else
+                                    <span class="text-muted">Unknown Nation</span>
+                                @endif
+                            </td>
                             <td>${{ number_format($loan->amount) }}</td>
                             <td>{{ number_format($loan->interest_rate, 2) }}%</td>
                             <td>{{ $loan->term_weeks }}</td>

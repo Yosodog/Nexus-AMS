@@ -49,7 +49,21 @@
                                                     <div class="bg-secondary rounded" style="height: 30px; width: 45px;"></div>
                                                 @endif
                                                 <div>
-                                                    <h5 class="mb-1">{{ $nation?->leader_name ?? 'Unknown Nation' }}</h5>
+                                                    <h5 class="mb-1">
+                                                        @if ($nation)
+                                                            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}"
+                                                               target="_blank" rel="noopener noreferrer">
+                                                                {{ $nation->leader_name ?? ('Nation #'.$nation->id) }}
+                                                            </a>
+                                                        @else
+                                                            Unknown Nation
+                                                        @endif
+                                                    </h5>
+                                                    @if ($nation)
+                                                        <div class="small text-muted mb-1">
+                                                            {{ $nation->nation_name ?? 'Unknown Nation' }}
+                                                        </div>
+                                                    @endif
                                                     <small class="text-muted">Account:
                                                         @if ($account)
                                                             <a href="{{ route('admin.accounts.view', $req->account_id) }}">
@@ -167,9 +181,10 @@
                                     <td>
                                         @if ($nation)
                                             <a href="https://politicsandwar.com/nation/id={{ $nation->id }}"
-                                               target="_blank">
-                                                {{ $nation->leader_name }}
+                                               target="_blank" rel="noopener noreferrer">
+                                                {{ $nation->leader_name ?? ('Nation #'.$nation->id) }}
                                             </a>
+                                            <div class="small text-muted">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
                                         @else
                                             <span class="text-muted">Unknown Nation</span>
                                         @endif

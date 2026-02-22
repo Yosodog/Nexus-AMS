@@ -539,7 +539,19 @@
                                     <td>{{ $transaction->created_at?->format('M d, Y H:i') }}</td>
                                     <td>{{ $transaction->fromAccount?->user?->name ?? 'Unknown User' }}</td>
                                     <td>{{ $transaction->fromAccount?->name ?? 'Unknown Account' }}</td>
-                                    <td>{{ $transaction->nation?->nation_name ?? 'Unknown Nation' }}</td>
+                                    <td>
+                                        @if ($transaction->nation)
+                                            <a href="https://politicsandwar.com/nation/id={{ $transaction->nation->id }}"
+                                               target="_blank" rel="noopener noreferrer">
+                                                {{ $transaction->nation->leader_name ?? ('Nation #'.$transaction->nation->id) }}
+                                            </a>
+                                            <div class="small text-muted">
+                                                {{ $transaction->nation->nation_name ?? 'Unknown Nation' }}
+                                            </div>
+                                        @else
+                                            <span class="text-muted">Unknown Nation</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <ul class="mb-0 ps-3">
                                             @foreach(PWHelperService::resources() as $resource)

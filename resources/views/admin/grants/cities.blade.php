@@ -65,7 +65,19 @@
                     @foreach ($pendingRequests as $request)
                         <tr>
                             <td>{{ $request->city_number }}</td>
-                            <td>{{ $request->nation->nation_name }}</td>
+                            <td>
+                                @if ($request->nation)
+                                    <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}"
+                                       target="_blank" rel="noopener noreferrer">
+                                        {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
+                                    </a>
+                                    <div class="small text-muted">
+                                        {{ $request->nation->nation_name ?? 'Unknown Nation' }}
+                                    </div>
+                                @else
+                                    <span class="text-muted">Unknown Nation</span>
+                                @endif
+                            </td>
                             <td>${{ number_format($request->grant_amount) }}</td>
                             <td>{{ $request->created_at->format('M d, Y') }}</td>
                             <td>
