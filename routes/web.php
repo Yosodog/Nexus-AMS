@@ -610,6 +610,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/audit-retention', [SettingsController::class, 'updateAuditRetention'])->name(
             'admin.settings.audit-retention'
         );
+        Route::post('/settings/account-inactivity-auto-disable', [SettingsController::class, 'updateUserInactivityAutoDisable'])->name(
+            'admin.settings.account-inactivity-auto-disable'
+        );
 
         Route::prefix('mmr')->group(function () {
             Route::get('/', [MMRController::class, 'index'])->name('admin.mmr.index');

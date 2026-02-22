@@ -61,6 +61,8 @@ class SettingsController extends Controller
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
             'grantApprovalsEnabled' => SettingService::isGrantApprovalsEnabled(),
             'auditRetentionDays' => SettingService::getAuditLogRetentionDays(),
+            'userInactivityAutoDisableEnabled' => SettingService::isUserInactivityAutoDisableEnabled(),
+            'userInactivityAutoDisableDays' => SettingService::getUserInactivityAutoDisableDays(),
         ]);
     }
 
@@ -453,6 +455,48 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Audit log retention updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateUserInactivityAutoDisable(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-accounts');
+
+        $previousEnabled = SettingService::isUserInactivityAutoDisableEnabled();
+        $previousDays = SettingService::getUserInactivityAutoDisableDays();
+
+        $validated = $request->validate([
+            'user_inactivity_auto_disable_enabled' => ['required', 'boolean'],
+            'user_inactivity_auto_disable_days' => ['required', 'integer', 'min:1', 'max:3650'],
+        ]);
+
+        $enabled = (bool) $validated['user_inactivity_auto_disable_enabled'];
+        $days = (int) $validated['user_inactivity_auto_disable_days'];
+
+        SettingService::setUserInactivityAutoDisableEnabled($enabled);
+        SettingService::setUserInactivityAutoDisableDays($days);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'user_inactivity_auto_disable_updated',
+            context: [
+                'changes' => [
+                    'user_inactivity_auto_disable_enabled' => [
+                        'from' => $previousEnabled,
+                        'to' => $enabled,
+                    ],
+                    'user_inactivity_auto_disable_days' => [
+                        'from' => $previousDays,
+                        'to' => $days,
+                    ],
+                ],
+            ],
+            message: 'User inactivity auto-disable settings updated.'
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'User inactivity auto-disable settings updated.',
             'alert-type' => 'success',
         ]);
     }
