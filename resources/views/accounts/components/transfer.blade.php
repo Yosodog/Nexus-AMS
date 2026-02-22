@@ -342,7 +342,7 @@
             lead: Number(selectedOption.dataset.lead),
             iron: Number(selectedOption.dataset.iron),
             bauxite: Number(selectedOption.dataset.bauxite),
-            gas: Number(selectedOption.dataset.gas),
+            gasoline: Number(selectedOption.dataset.gasoline),
             munitions: Number(selectedOption.dataset.munitions),
             steel: Number(selectedOption.dataset.steel),
             aluminum: Number(selectedOption.dataset.aluminum),
