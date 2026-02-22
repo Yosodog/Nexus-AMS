@@ -8,6 +8,8 @@ use Illuminate\Support\Carbon;
 
 class SettingService
 {
+    private const RECRUITMENT_SUBJECT_MAX_LENGTH = 50;
+
     public static function getLastScannedBankRecordId(): int
     {
         $id = self::getValue('last_bank_record_id');
@@ -873,15 +875,22 @@ class SettingService
             $default = $appName.' Recruitment';
             self::setRecruitmentPrimarySubject($default);
 
-            return $default;
+            return self::normalizeRecruitmentSubject($default);
         }
 
-        return (string) $value;
+        $subject = (string) $value;
+        $normalized = self::normalizeRecruitmentSubject($subject);
+
+        if ($normalized !== $subject) {
+            self::setValue('recruitment_primary_subject', $normalized);
+        }
+
+        return $normalized;
     }
 
     public static function setRecruitmentPrimarySubject(string $subject): void
     {
-        self::setValue('recruitment_primary_subject', $subject);
+        self::setValue('recruitment_primary_subject', self::normalizeRecruitmentSubject($subject));
     }
 
     public static function getRecruitmentPrimaryMessage(): string
@@ -908,15 +917,22 @@ class SettingService
             $default = 'Checking in from '.$appName;
             self::setRecruitmentFollowUpSubject($default);
 
-            return $default;
+            return self::normalizeRecruitmentSubject($default);
         }
 
-        return (string) $value;
+        $subject = (string) $value;
+        $normalized = self::normalizeRecruitmentSubject($subject);
+
+        if ($normalized !== $subject) {
+            self::setValue('recruitment_follow_up_subject', $normalized);
+        }
+
+        return $normalized;
     }
 
     public static function setRecruitmentFollowUpSubject(string $subject): void
     {
-        self::setValue('recruitment_follow_up_subject', $subject);
+        self::setValue('recruitment_follow_up_subject', self::normalizeRecruitmentSubject($subject));
     }
 
     public static function getRecruitmentFollowUpMessage(): string
@@ -931,6 +947,13 @@ class SettingService
     public static function setRecruitmentFollowUpMessage(string $message): void
     {
         self::setRecruitmentMessage('follow_up', $message);
+    }
+
+    private static function normalizeRecruitmentSubject(string $subject): string
+    {
+        $trimmed = trim($subject);
+
+        return mb_substr($trimmed, 0, self::RECRUITMENT_SUBJECT_MAX_LENGTH);
     }
 
     public static function getHomepageHeadline(string $allianceName): string
