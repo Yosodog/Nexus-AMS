@@ -275,6 +275,42 @@ class SettingService
         self::setValue('audit_log_retention_days', max(1, $days));
     }
 
+    public static function isUserInactivityAutoDisableEnabled(): bool
+    {
+        $value = self::getValue('user_inactivity_auto_disable_enabled');
+
+        if (is_null($value)) {
+            self::setUserInactivityAutoDisableEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setUserInactivityAutoDisableEnabled(bool $enabled): void
+    {
+        self::setValue('user_inactivity_auto_disable_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getUserInactivityAutoDisableDays(): int
+    {
+        $value = self::getValue('user_inactivity_auto_disable_days');
+
+        if (is_null($value)) {
+            self::setUserInactivityAutoDisableDays(90);
+
+            return 90;
+        }
+
+        return max(1, (int) $value);
+    }
+
+    public static function setUserInactivityAutoDisableDays(int $days): void
+    {
+        self::setValue('user_inactivity_auto_disable_days', max(1, $days));
+    }
+
     public static function getFaviconPath(): ?string
     {
         $value = self::getValue('favicon_path');

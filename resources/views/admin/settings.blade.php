@@ -296,6 +296,45 @@
         <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Account Inactivity Auto-Disable</span>
+                    <span class="badge {{ $userInactivityAutoDisableEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                        {{ $userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Automatically disable user accounts when there has been no activity for the configured number of days.
+                        Activity is based on each user's <code>last_active_at</code> timestamp.
+                    </p>
+                    <form method="POST" action="{{ route('admin.settings.account-inactivity-auto-disable') }}">
+                        @csrf
+                        <div class="form-check form-switch mb-3">
+                            <input type="hidden" name="user_inactivity_auto_disable_enabled" value="0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="userInactivityAutoDisableEnabled"
+                                   name="user_inactivity_auto_disable_enabled" value="1"
+                                   @checked(old('user_inactivity_auto_disable_enabled', $userInactivityAutoDisableEnabled))>
+                            <label class="form-check-label" for="userInactivityAutoDisableEnabled">Enable automatic account disabling</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="userInactivityAutoDisableDays">Inactivity threshold (days)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="userInactivityAutoDisableDays"
+                                   name="user_inactivity_auto_disable_days"
+                                   min="1"
+                                   max="3650"
+                                   value="{{ old('user_inactivity_auto_disable_days', $userInactivityAutoDisableDays) }}"
+                                   required>
+                            <small class="text-muted">Default is 90 days (about 3 months).</small>
+                        </div>
+                        <button class="btn btn-primary">Save Inactivity Auto-Disable</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Grant Approvals</span>
                     <span class="badge {{ $grantApprovalsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
                         {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
