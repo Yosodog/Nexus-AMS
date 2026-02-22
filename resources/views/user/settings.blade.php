@@ -118,6 +118,20 @@
                             <a href="{{ route('user.settings.api-docs') }}" class="link link-primary">View API documentation</a>
                         </div>
 
+                        <div class="rounded-box border border-base-200/60 bg-base-200/40 p-4">
+                            <div class="flex items-start gap-3">
+                                <div class="mt-1 h-2 w-2 rounded-full bg-info/70"></div>
+                                <div class="space-y-1">
+                                    <p class="text-sm font-semibold">BK Banking userscript</p>
+                                    <p class="text-xs text-base-content/70">Adds a subtle resource bar under the existing PW bar to show your account values.</p>
+                                    <a href="https://greasyfork.org/en/scripts/407208-bk-banking"
+                                       class="link link-primary text-sm" target="_blank" rel="noopener noreferrer">
+                                        Get the script on Greasy Fork
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                         <form method="POST" action="{{ route('user.settings.api-tokens.store') }}" class="space-y-4">
                             @csrf
                             <div class="grid gap-4 md:grid-cols-2">
