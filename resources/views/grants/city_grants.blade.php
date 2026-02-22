@@ -11,10 +11,8 @@
         $nextGrant = $grants->firstWhere('city_number', $nextCity);
         $nextGrantAmount = $nextGrant ? ($grantAmounts[$nextGrant->id] ?? null) : null;
 
-        $hasPendingNextCity = $grantRequests
-            ->where('city_number', $nextCity)
-            ->where('status', 'pending')
-            ->isNotEmpty();
+        $pendingRequest = $grantRequests->firstWhere('status', 'pending');
+        $hasPendingRequest = $pendingRequest !== null;
 
         $grantsCompletedCount = $grants->where('city_number', '<', $nextCity)->count();
         $grantsTotalCount = $grants->count();
@@ -97,10 +95,10 @@
                             </div>
                             <span @class([
                                 'badge badge-outline text-xs',
-                                'badge-warning' => $hasPendingNextCity,
-                                'badge-primary' => ! $hasPendingNextCity,
+                                'badge-warning' => $hasPendingRequest,
+                                'badge-primary' => ! $hasPendingRequest,
                             ])>
-                                {{ $hasPendingNextCity ? 'Already pending' : 'Ready to submit' }}
+                                {{ $hasPendingRequest ? 'Already pending' : 'Ready to submit' }}
                             </span>
                         </div>
 
@@ -148,9 +146,9 @@
                             <button
                                 type="submit"
                                 class="btn btn-primary w-full"
-                                @disabled($nextGrantAmount === null || $hasPendingNextCity)
+                                @disabled($nextGrantAmount === null || $hasPendingRequest)
                             >
-                                {{ $hasPendingNextCity ? 'Request Pending' : 'Request Grant' }}
+                                {{ $hasPendingRequest ? 'Request Pending' : 'Request Grant' }}
                             </button>
                         </form>
 
@@ -160,9 +158,9 @@
                             </div>
                         @endif
 
-                        @if ($hasPendingNextCity)
+                        @if ($hasPendingRequest)
                             <div class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-content/80">
-                                A request for City #{{ $nextCity }} is already pending. Wait for a decision before submitting another.
+                                You already have a pending request for City #{{ $pendingRequest->city_number }}. Wait for a decision before submitting another.
                             </div>
                         @endif
                     </div>
@@ -189,7 +187,7 @@
                             </li>
                             <li class="flex items-start gap-2">
                                 <span class="mt-1 h-2 w-2 rounded-full bg-warning"></span>
-                                <span>Only one pending request per city should be active at a time.</span>
+                                <span>Only one pending city grant request may be active at a time.</span>
                             </li>
                         </ul>
                         <div class="divider my-1"></div>
