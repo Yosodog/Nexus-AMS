@@ -272,7 +272,7 @@ class Nation extends Model
 
     public static function getNationById(int $nation_id): Nation
     {
-        return self::where('nation_id', $nation_id)->firstOrFail();
+        return self::query()->findOrFail($nation_id);
     }
 
     /**
