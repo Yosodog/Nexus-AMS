@@ -113,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('pwApiLastChecked', $pwHealthData['checkedAt']);
         });
 
-        View::composer(['layouts.main', 'layouts.admin', 'components.header', 'admin.components.sidebar'], function ($view) {
+        View::composer(['layouts.main', 'layouts.admin', 'admin.components.sidebar'], function ($view) {
             $user = auth()->user();
             $pendingRequests = [
                 'counts' => [],

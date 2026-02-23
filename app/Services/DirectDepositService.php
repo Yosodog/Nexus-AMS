@@ -151,8 +151,10 @@ class DirectDepositService
      */
     public function getApplicableBracket(Nation $nation): ?DirectDepositTaxBracket
     {
-        return DirectDepositTaxBracket::where('city_number', $nation->num_cities)->first()
-            ?? DirectDepositTaxBracket::where('city_number', 0)->first();
+        return DirectDepositTaxBracket::query()
+            ->whereIn('city_number', [(int) $nation->num_cities, 0])
+            ->orderByRaw('city_number = ? desc', [(int) $nation->num_cities])
+            ->first();
     }
 
     /**

@@ -381,18 +381,21 @@ class AccountsController extends Controller
 
         $afterTaxIncome = $lastTaxRecord?->money ?? 0;
 
-        $logsQuery = MMRAssistantPurchase::query()
-            ->where(function ($query) use ($config, $nationId) {
-                $query->whereHas('account', fn ($q) => $q->where('nation_id', $nationId));
+        $mmrAccountIds = $accounts->pluck('id');
 
-                if ($config?->account_id) {
-                    $query->orWhere('account_id', $config->account_id);
-                }
-            });
+        if ($config?->account_id) {
+            $mmrAccountIds->push((int) $config->account_id);
+        }
+
+        $logsQuery = MMRAssistantPurchase::query()
+            ->whereIn('account_id', $mmrAccountIds->unique()->values()->all());
 
         $logs = $logsQuery
+            ->with([
+                'account' => fn ($query) => $query->withTrashed()->select('id', 'name'),
+            ])
             ->orderByDesc('created_at')
-            ->paginate(10)
+            ->simplePaginate(10)
             ->withQueryString();
 
         $priceService = app(TradePriceService::class);
