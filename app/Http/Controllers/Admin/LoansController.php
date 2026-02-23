@@ -14,7 +14,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -41,26 +41,60 @@ class LoansController
     {
         $this->authorize('view-loans');
 
-        $totalApproved = Loan::where('status', 'approved')->count();
+        $totalApproved = Loan::whereIn('status', ['approved', 'missed'])->count();
         $totalDenied = Loan::where('status', 'denied')->count();
         $pendingCount = Loan::where('status', 'pending')->count();
-        $totalLoanedFunds = Loan::where('status', 'approved')->sum('amount');
+        $totalLoanedFunds = Loan::whereIn('status', ['approved', 'missed'])->sum('amount');
 
         $pendingLoans = Loan::where('status', 'pending')->with('nation')->get();
-        $activeLoans = Loan::where('status', 'approved')->with('nation')->get();
+        $activeLoans = Loan::whereIn('status', ['approved', 'missed'])
+            ->with(['nation', 'payments'])
+            ->get()
+            ->map(function (Loan $loan) {
+                $loan->current_amount_due = $this->loanService->calculateCurrentAmountDue($loan);
+                $cycleProgress = $this->loanService->getCurrentCycleProgress($loan);
+                $loan->cycle_paid = $cycleProgress['paid_this_cycle'];
+                $loan->cycle_remaining = $cycleProgress['remaining_to_scheduled'];
+                $loan->cycle_start = $cycleProgress['cycle_start'];
+                $loan->cycle_end = $cycleProgress['cycle_end'];
+                $fullPreview = $this->loanService->previewPaymentBreakdown(
+                    $loan,
+                    (float) $loan->remaining_balance + (float) $loan->accrued_interest_due + 999999999
+                );
+                $loan->effective_interest_due_now = (float) $fullPreview['interest'];
+                $loan->total_owed_now = round((float) $loan->remaining_balance + (float) $loan->effective_interest_due_now, 2);
+                $loan->days_to_due = $loan->next_due_date
+                    ? now()->startOfDay()->diffInDays($loan->next_due_date->copy()->startOfDay(), false)
+                    : null;
+
+                return $loan;
+            });
+
+        $portfolioStats = [
+            'active_count' => $activeLoans->count(),
+            'missed_count' => $activeLoans->where('status', 'missed')->count(),
+            'outstanding_principal' => (float) $activeLoans->sum('remaining_balance'),
+            'past_due_total' => (float) $activeLoans->sum('past_due_amount'),
+            'accrued_interest_total' => (float) $activeLoans->sum('effective_interest_due_now'),
+            'current_due_total' => (float) $activeLoans->sum('current_amount_due'),
+            'total_payoff_now' => (float) $activeLoans->sum('total_owed_now'),
+        ];
 
         $defaultLoanInterestRate = SettingService::getDefaultLoanInterestRate();
         $loanApplicationsEnabled = SettingService::isLoanApplicationsEnabled();
+        $loanPaymentsEnabled = SettingService::isLoanPaymentsEnabled();
 
         return view('admin.loans.index', compact(
             'totalApproved',
             'totalDenied',
             'pendingCount',
             'totalLoanedFunds',
+            'portfolioStats',
             'pendingLoans',
             'activeLoans',
             'defaultLoanInterestRate',
-            'loanApplicationsEnabled'
+            'loanApplicationsEnabled',
+            'loanPaymentsEnabled'
         ));
     }
 
@@ -85,8 +119,7 @@ class LoansController
             $loan,
             $request->amount,
             $request->interest_rate,
-            $request->term_weeks,
-            Auth::user()->nation
+            $request->term_weeks
         );
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan approved successfully! ✅')->with(
@@ -166,7 +199,7 @@ class LoansController
     {
         $this->authorize('manage-loans');
 
-        $this->loanService->denyLoan($loan, Auth::user()->nation);
+        $this->loanService->denyLoan($loan);
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan denied ❌')->with(
             'alert-type',
@@ -185,12 +218,46 @@ class LoansController
     {
         $this->authorize('view-loans');
 
-        $loan->load('payments'); // Load payments
+        $loan->load(['payments.account', 'nation']);
         $loanService = app(LoanService::class);
+        $cycleProgress = $loanService->getCurrentCycleProgress($loan);
+        $nextMinimumPayment = $loanService->calculateCurrentAmountDue($loan);
+        $nextPaymentPreview = $loanService->previewPaymentBreakdown(
+            $loan,
+            $nextMinimumPayment > 0
+                ? $nextMinimumPayment
+                : min(
+                    $loanService->calculateWeeklyPayment($loan),
+                    (float) $loan->remaining_balance + (float) $loan->accrued_interest_due
+                )
+        );
+        $fullPayoffPreview = $loanService->previewPaymentBreakdown(
+            $loan,
+            (float) $loan->remaining_balance + (float) $loan->accrued_interest_due + 999999999
+        );
+        $approvedAt = $loan->approved_at ? Carbon::parse($loan->approved_at) : null;
+        $weeksElapsed = $approvedAt
+            ? max(0, (int) floor($approvedAt->diffInDays(now()) / 7))
+            : 0;
+        $payments = $loan->payments;
+        $totals = [
+            'paid_total' => (float) $payments->sum('amount'),
+            'paid_principal' => (float) $payments->sum('principal_paid'),
+            'paid_interest' => (float) $payments->sum('interest_paid'),
+        ];
+        $amortizationSchedule = $loanService->buildAmortizationSchedule($loan);
 
         return view('admin.loans.view', [
             'loan' => $loan,
-            'nextMinimumPayment' => $loanService->calculateWeeklyPayment($loan), // Calculate next min payment
+            'nextMinimumPayment' => $nextMinimumPayment,
+            'scheduledWeeklyPayment' => $loanService->calculateWeeklyPayment($loan),
+            'nextPaymentPreview' => $nextPaymentPreview,
+            'fullPayoffPreview' => $fullPayoffPreview,
+            'cycleProgress' => $cycleProgress,
+            'weeksElapsed' => $weeksElapsed,
+            'totals' => $totals,
+            'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
+            'amortizationSchedule' => $amortizationSchedule,
         ]);
     }
 
@@ -211,6 +278,7 @@ class LoansController
 
         DB::transaction(function () use ($request, $loan, &$changes, &$updatedLoan) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $hasPayments = $lockedLoan->payments()->exists();
             $before = $lockedLoan->only(['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance']);
 
             $rules = [
@@ -220,24 +288,35 @@ class LoansController
                 'remaining_balance' => 'required|numeric|min:0|max:'.$lockedLoan->amount,
             ];
 
-            if (! $lockedLoan->payments()->exists()) {
+            if (! $hasPayments) {
                 $rules['amount'] = 'required|numeric|min:1';
             }
 
             $request->validate($rules);
 
-            if ($lockedLoan->payments()->exists() && $request->amount != $lockedLoan->amount) {
+            if ($hasPayments) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Loan amount cannot be changed after payments have been made.',
+                    'loan' => 'This loan has payment history and is now immutable. To change terms or balances, mark this loan paid and issue a replacement loan with corrected values.',
                 ]);
             }
 
+            $updatedAmount = (float) ($request->amount ?? $lockedLoan->amount);
+            $updatedInterestRate = (float) $request->interest_rate;
+            $updatedTermWeeks = (int) $request->term_weeks;
+
+            $scheduledPaymentModel = new Loan([
+                'amount' => $updatedAmount,
+                'interest_rate' => $updatedInterestRate,
+                'term_weeks' => $updatedTermWeeks,
+            ]);
+
             $lockedLoan->update([
-                'amount' => $request->amount ?? $lockedLoan->amount,
-                'interest_rate' => $request->interest_rate,
-                'term_weeks' => $request->term_weeks,
+                'amount' => $updatedAmount,
+                'interest_rate' => $updatedInterestRate,
+                'term_weeks' => $updatedTermWeeks,
                 'next_due_date' => $request->next_due_date,
                 'remaining_balance' => $request->remaining_balance,
+                'scheduled_weekly_payment' => $this->loanService->calculateWeeklyPayment($scheduledPaymentModel),
             ]);
 
             $updatedLoan = $lockedLoan->fresh();

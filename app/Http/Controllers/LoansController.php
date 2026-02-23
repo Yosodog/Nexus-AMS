@@ -59,12 +59,34 @@ class LoansController extends Controller
 
         // Get only active loans (approved and not fully paid)
         $activeLoans = Loan::where('nation_id', $nation->id)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'missed'])
             ->where('remaining_balance', '>', 0)
-            ->with('payments')
+            ->with(['payments.account', 'account'])
             ->get()
             ->map(function ($loan) use ($loanPaymentsEnabled) {
-                $loan->next_payment_due = $loanPaymentsEnabled ? $loan->getNextPaymentDue() : 0.0;
+                $loan->scheduled_weekly_payment = $this->loanService->calculateWeeklyPayment($loan);
+                $loan->next_payment_due = $loanPaymentsEnabled
+                    ? $this->loanService->calculateCurrentAmountDue($loan)
+                    : 0.0;
+                $previewAmount = $loan->next_payment_due > 0
+                    ? $loan->next_payment_due
+                    : min(
+                        $loan->scheduled_weekly_payment,
+                        (float) $loan->remaining_balance + (float) $loan->accrued_interest_due
+                    );
+                $loan->next_payment_preview = $this->loanService->previewPaymentBreakdown($loan, $previewAmount);
+                $fullPreview = $this->loanService->previewPaymentBreakdown(
+                    $loan,
+                    (float) $loan->remaining_balance + (float) $loan->accrued_interest_due + 999999999
+                );
+                $cycleProgress = $this->loanService->getCurrentCycleProgress($loan);
+                $loan->paid_this_cycle = $cycleProgress['paid_this_cycle'];
+                $loan->remaining_to_scheduled = $cycleProgress['remaining_to_scheduled'];
+                $loan->cycle_start = $cycleProgress['cycle_start'];
+                $loan->cycle_end = $cycleProgress['cycle_end'];
+                $loan->effective_interest_due_now = $fullPreview['interest'];
+                $loan->total_owed_now = round((float) $loan->remaining_balance + (float) $loan->effective_interest_due_now, 2);
+                $loan->amortization_schedule = $this->loanService->buildAmortizationSchedule($loan);
 
                 return $loan;
             });
