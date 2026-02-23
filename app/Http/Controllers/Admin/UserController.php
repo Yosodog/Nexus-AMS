@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
-use App\Models\TrustedDevice;
 use App\Models\Transaction;
+use App\Models\TrustedDevice;
 use App\Models\User;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
