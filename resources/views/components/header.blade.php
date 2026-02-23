@@ -17,7 +17,7 @@
 <div class="relative z-50 w-full bg-base-100">
     <div class="container mx-auto px-2 sm:px-4">
         <div class="navbar relative gap-1 sm:gap-2">
-            <div class="navbar-start min-w-0 gap-1">
+            <div class="navbar-start min-w-0 gap-1 lg:w-auto lg:flex-1">
                 <div class="dropdown">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle shrink-0 text-base-content lg:hidden" aria-label="Open navigation">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -79,16 +79,16 @@
                 <a class="btn btn-ghost max-w-[8.5rem] truncate px-2 text-base sm:max-w-none sm:px-3 sm:text-xl" href="{{ route("home") }}">{{ config('app.name') }}</a>
             </div>
             {{-- End mobile nav and begin desktop nav --}}
-            <div class="navbar-center hidden lg:absolute lg:left-1/2 lg:flex lg:-translate-x-1/2">
+            <div class="navbar-center hidden lg:flex lg:min-w-0 lg:flex-1 lg:justify-center">
                 @if ($showMemberNavigation)
-                    <ul class="menu menu-horizontal px-1 z-50">
+                    <ul class="menu menu-horizontal z-50 flex-nowrap whitespace-nowrap px-1">
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
                         <li><a href="{{ route('market.index') }}">Market</a></li>
                         <li><a href="{{ route('audit.index') }}">Audits</a></li>
                         <li>
                             <details class="relative">
                                 <summary
-                                    class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                    class="cursor-pointer px-3 py-2 text-base-content hover:bg-base-200 rounded-md transition">
                                     Grants
                                 </summary>
                                 <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[60]">
@@ -106,7 +106,7 @@
                         <li>
                             <details class="relative">
                                 <summary
-                                    class="cursor-pointer px-4 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                    class="cursor-pointer px-3 py-2 text-base-content hover:bg-base-200 rounded-md transition">
                                     Defense
                                 </summary>
                                 <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[60]">
@@ -123,16 +123,16 @@
                         </li>
                     </ul>
                 @elseif($user)
-                    <ul class="menu menu-horizontal px-1">
+                    <ul class="menu menu-horizontal flex-nowrap whitespace-nowrap px-1">
                         <li><a href="{{ route('apply.show') }}">Apply</a></li>
                     </ul>
                 @else
-                    <ul class="menu menu-horizontal px-1">
+                    <ul class="menu menu-horizontal flex-nowrap whitespace-nowrap px-1">
                         <li><a href="{{ route('apply.show') }}">Apply</a></li>
                     </ul>
                 @endif
             </div>
-            <div class="navbar-end shrink-0 gap-1 sm:gap-2">
+            <div class="navbar-end shrink-0 gap-1 sm:gap-2 lg:w-auto lg:flex-1">
                 <!-- Theme Dropdown -->
                 <div class="dropdown dropdown-end">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle">

@@ -19,6 +19,31 @@
 }
 
 @layer utilities {
+    main .badge {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    main .badge.badge-nowrap {
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    @media (max-width: 1279.98px) {
+        main .badge {
+            height: auto;
+            min-height: 1.5rem;
+            padding: 0.25rem 0.55rem;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            text-align: center;
+            line-height: 1.2;
+            flex-shrink: 1;
+        }
+    }
+
     @media (max-width: 767.98px) {
         main .join > * {
             min-width: 0;

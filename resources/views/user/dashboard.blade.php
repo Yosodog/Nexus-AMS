@@ -6,13 +6,13 @@
         {{-- Overview --}}
         <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-md space-y-6">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-start gap-4">
+                    <div class="flex min-w-0 items-start gap-4">
                     <div class="avatar">
                         <div class="w-20 rounded-lg border border-base-300">
                             <img src="{{ $nation->flag ?? 'https://politicsandwar.com/img/flags/default.png' }}" alt="Nation flag" />
                         </div>
                     </div>
-                    <div class="space-y-1">
+                        <div class="min-w-0 space-y-1">
                         <p class="text-xs uppercase tracking-wide text-base-content/60">Live overview</p>
                         <h1 class="break-words text-2xl font-bold leading-tight sm:text-3xl">
                             {{ $nation->leader_name }}
@@ -40,12 +40,12 @@
 
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-xl bg-primary/10 p-4 border border-primary/30">
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <p class="text-sm font-semibold text-primary">MMR health</p>
                             <p class="text-xs text-primary/70">Tier {{ $mmrTier->city_count ?? 0 }} requirements</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center justify-end gap-2">
                             <span class="badge badge-sm {{ $mmrResourcesMet ? 'badge-success' : 'badge-warning' }}">{{ $mmrResourcesMet ? 'Resources covered' : 'Resources low' }}</span>
                             <span class="badge badge-sm {{ $mmrUnitsMet ? 'badge-success' : 'badge-warning' }}">{{ $mmrUnitsMet ? 'Units ready' : 'Units low' }}</span>
                             <span class="badge badge-sm {{ ($mmrScore ?? 0) < 50 ? 'badge-error' : 'badge-success' }}">{{ $mmrScore ?? 0 }}%</span>
@@ -91,7 +91,7 @@
             <div class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <p class="text-sm font-semibold">Payroll</p>
                             <span class="badge badge-sm {{ $payrollIsActive ? 'badge-success' : 'badge-ghost' }}">
                                 {{ $payrollIsActive ? 'Active' : 'Inactive' }}
@@ -132,7 +132,7 @@
         </div>
 
         {{-- Comparison Tables --}}
-        <div class="grid gap-6 lg:grid-cols-2">
+        <div class="grid gap-6 xl:grid-cols-2">
             <x-user.resource-comparison :resources="$mmrResourceBreakdown" :weights="$mmrWeights" />
             <x-user.military-comparison
                 :nation="$nation"
@@ -145,41 +145,41 @@
         {{-- Nation Charts --}}
         <div class="card bg-base-100 shadow border border-base-300">
             <div class="card-body space-y-4">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                     <h3 class="card-title">Nation charts</h3>
                     <p class="text-sm text-base-content/70">Live snapshots from your synced data.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="rounded-xl border border-base-200 p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 class="font-semibold">Score history</h4>
                             <span class="badge badge-ghost">Trend</span>
                         </div>
                         <canvas id="scoreChart" class="w-full h-64"></canvas>
                     </div>
                     <div class="rounded-xl border border-base-200 p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 class="font-semibold">Tax revenue</h4>
                             <span class="badge badge-ghost">Money</span>
                         </div>
                         <canvas id="moneyTaxChart" class="w-full h-64"></canvas>
                     </div>
                     <div class="md:col-span-2 rounded-xl border border-base-200 p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 class="font-semibold">Resource tax revenue</h4>
                             <span class="badge badge-ghost">Stacked</span>
                         </div>
                         <canvas id="resourceTaxChart" class="w-full h-64"></canvas>
                     </div>
                     <div class="md:col-span-2 rounded-xl border border-base-200 p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 class="font-semibold">Military units over time</h4>
                             <span class="badge badge-ghost">Inventory</span>
                         </div>
                         <canvas id="militaryChart" class="w-full h-64"></canvas>
                     </div>
                     <div class="md:col-span-2 rounded-xl border border-base-200 p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 class="font-semibold">Resource holdings over time</h4>
                             <span class="badge badge-ghost">Stores</span>
                         </div>
@@ -192,7 +192,7 @@
         {{-- Recent Transactions --}}
         <div class="card bg-base-100 shadow border border-base-300">
             <div class="card-body">
-                <div class="flex items-center justify-between mb-2">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <h3 class="card-title">Recent transactions</h3>
                     <a href="{{ route('accounts') }}" class="btn btn-sm btn-ghost">Open accounts</a>
                 </div>
