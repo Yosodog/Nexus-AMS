@@ -17,29 +17,35 @@ class WithdrawalLimitService
     public static function evaluate(int $nationId, array $requestedResources): array
     {
         $limits = self::limits();
-        $transactions = Transaction::query()
+        $resources = PWHelperService::resources();
+        $sumClauses = collect($resources)
+            ->map(fn (string $resource) => "COALESCE(SUM(`{$resource}`), 0) AS `{$resource}`")
+            ->implode(', ');
+
+        $totals = Transaction::query()
+            ->selectRaw("COUNT(*) AS daily_count, {$sumClauses}")
             ->where('nation_id', $nationId)
             ->where('transaction_type', 'withdrawal')
             ->where('created_at', '>=', Carbon::now()->subDay())
             ->where('requires_admin_approval', false)
-            ->get();
+            ->first();
 
         $exceededResources = [];
-        foreach (PWHelperService::resources() as $resource) {
+        foreach ($resources as $resource) {
             $limitValue = $limits[$resource]->daily_limit ?? null;
             $requested = (float) ($requestedResources[$resource] ?? 0);
             if (is_null($limitValue) || $limitValue <= 0 || $requested <= 0) {
                 continue;
             }
 
-            $currentTotal = (float) $transactions->sum($resource);
+            $currentTotal = (float) ($totals?->{$resource} ?? 0);
             if (($currentTotal + $requested) > $limitValue + 0.00001) {
                 $exceededResources[] = $resource;
             }
         }
 
         $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
-        $dailyCount = $transactions->count();
+        $dailyCount = (int) ($totals?->daily_count ?? 0);
         $countLimitReached = $maxDailyWithdrawals > 0 && $dailyCount >= $maxDailyWithdrawals;
 
         $requiresApproval = $countLimitReached || ! empty($exceededResources);

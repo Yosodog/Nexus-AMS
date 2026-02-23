@@ -67,15 +67,10 @@ class TransactionService
 
     public static function hasPendingTransaction(int $nation_id): bool
     {
-        $transactions = Transaction::where('nation_id', $nation_id)
+        return Transaction::query()
+            ->where('nation_id', $nation_id)
             ->where('is_pending', true)
-            ->get();
-
-        if ($transactions->count() > 0) {
-            return true;
-        }
-
-        return false;
+            ->exists();
     }
 
     /**

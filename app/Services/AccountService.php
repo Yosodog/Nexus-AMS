@@ -102,12 +102,14 @@ class AccountService
         }
 
         // Check if the account has pending transactions (withdrawals or transfers)
-        $hasPendingTransactions = Transaction::where('is_pending', true)
-            ->where(function ($query) use ($account) {
-                $query->where('from_account_id', $account->id)
-                    ->orWhere('to_account_id', $account->id);
-            })
-            ->exists();
+        $hasPendingTransactions = Transaction::query()
+            ->where('is_pending', true)
+            ->where('from_account_id', $account->id)
+            ->exists()
+            || Transaction::query()
+                ->where('is_pending', true)
+                ->where('to_account_id', $account->id)
+                ->exists();
 
         if ($hasPendingTransactions) {
             throw new UserErrorException('The account has pending transactions.');
@@ -384,8 +386,11 @@ class AccountService
      */
     public static function getRelatedTransactions(Account $account, int $perPage = 50)
     {
-        return Transaction::where('to_account_id', $account->id)
-            ->orWhere('from_account_id', $account->id)
+        return Transaction::query()
+            ->where(function ($query) use ($account) {
+                $query->where('to_account_id', $account->id)
+                    ->orWhere('from_account_id', $account->id);
+            })
             ->with(['nation', 'fromAccount', 'toAccount', 'payrollGrade'])
             ->orderBy('created_at', 'DESC')
             ->paginate($perPage);
