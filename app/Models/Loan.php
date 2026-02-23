@@ -22,6 +22,7 @@ class Loan extends Model
         'account_id',
         'amount',
         'remaining_balance',
+        'weekly_interest_paid',
         'interest_rate',
         'term_weeks',
         'status',

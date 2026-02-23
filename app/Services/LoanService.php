@@ -237,7 +237,10 @@ class LoanService
             if ($earlyPayments >= $weeklyPayment) {
                 DB::transaction(function () use ($loan, $weeklyPayment) {
                     $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                    $lockedLoan->update(['next_due_date' => $this->calculateNextDueDate($lockedLoan)]);
+                    $lockedLoan->update([
+                        'next_due_date' => $this->calculateNextDueDate($lockedLoan),
+                        'weekly_interest_paid' => 0,
+                    ]);
                     $lockedLoan->nation->notify(
                         new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied', $weeklyPayment)
                     );
@@ -346,10 +349,11 @@ class LoanService
                 'interest_paid' => $interestPaid,
             ]);
 
-            // Update loan balance
+            // Update loan balance and reset weekly interest tracker for the new week
             $lockedLoan->update([
                 'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
                 'next_due_date' => $this->calculateNextDueDate($lockedLoan),
+                'weekly_interest_paid' => 0,
             ]);
 
             // Send loan payment success notification
@@ -465,9 +469,10 @@ class LoanService
                 'payment_date' => now(),
             ]);
 
-            // Reduce loan balance
+            // Reduce loan balance and track interest paid this week
             $lockedLoan->update([
                 'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
+                'weekly_interest_paid' => $lockedLoan->weekly_interest_paid + $interestPaid,
             ]);
 
             // Send loan payment success notification
@@ -512,70 +517,6 @@ class LoanService
         }
     }
 
-    public function processLoanPayment(Loan $loan): void
-    {
-        if (! SettingService::isLoanPaymentsEnabled()) {
-            return;
-        }
-
-        $weeklyPayment = $this->calculateWeeklyPayment($loan);
-        $nation = $loan->nation;
-
-        // Get total early payments since last due date
-        $earlyPayments = $this->getEarlyPaymentsSinceLastDue($loan);
-
-        // If early payments fully cover this week's payment, skip it
-        if ($earlyPayments >= $weeklyPayment) {
-            DB::transaction(function () use ($loan, $weeklyPayment) {
-                $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                $lockedLoan->update(['next_due_date' => $this->calculateNextDueDate($lockedLoan)]);
-                $lockedLoan->nation->notify(
-                    new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied', $weeklyPayment)
-                );
-            });
-
-            return;
-        }
-
-        // Reduce the weekly payment by early payments
-        $amountDue = max(0, $weeklyPayment - $earlyPayments);
-
-        // Try to withdraw the reduced amount from the primary account
-        $primaryAccount = $loan->account;
-        if ($primaryAccount && $primaryAccount->money >= $amountDue) {
-            try {
-                $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
-
-                return;
-            } catch (ValidationException $e) {
-                // Attempt alternate accounts if the primary account is frozen
-            }
-        }
-
-        // Try another account if the primary doesn't have enough funds
-        $alternateAccount = $nation->accounts()
-            ->where('frozen', false)
-            ->where('money', '>=', $amountDue)
-            ->orderBy('money', 'desc')
-            ->first();
-        if ($alternateAccount) {
-            try {
-                $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
-
-                return;
-            } catch (ValidationException $e) {
-                // Fall through to mark the payment as missed if alternate account is frozen
-            }
-        }
-
-        // If still not enough funds, mark as missed payment
-        DB::transaction(function () use ($loan) {
-            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-            $lockedLoan->update(['status' => 'missed']);
-            $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'missed_payment'));
-        });
-    }
-
     private function calculateNextDueDate(Loan $loan): Carbon
     {
         $baseDate = $loan->next_due_date ?? now();
@@ -589,8 +530,10 @@ class LoanService
     private function splitPaymentAmount(Loan $loan, float $amount): array
     {
         $rate = ($loan->interest_rate ?? 0) / 100;
-        $interestDue = $rate > 0 ? round(max(0, $loan->remaining_balance) * $rate, 2) : 0.0;
-        $interestPaid = min($amount, $interestDue);
+        $weeklyInterestDue = $rate > 0 ? round(max(0, $loan->remaining_balance) * $rate, 2) : 0.0;
+        $interestAlreadyPaid = (float) ($loan->weekly_interest_paid ?? 0.0);
+        $interestStillDue = max(0.0, $weeklyInterestDue - $interestAlreadyPaid);
+        $interestPaid = min($amount, $interestStillDue);
         $principalPaid = max(0.0, $amount - $interestPaid);
 
         return [$interestPaid, $principalPaid];
