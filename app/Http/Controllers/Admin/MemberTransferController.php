@@ -16,6 +16,8 @@ class MemberTransferController extends Controller
 
     public function cancel(MemberTransfer $memberTransfer): RedirectResponse
     {
+        $this->authorize('manage-accounts');
+
         try {
             $this->memberTransferService->cancelTransfer(Auth::user(), $memberTransfer, true);
 
