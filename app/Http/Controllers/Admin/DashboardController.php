@@ -120,7 +120,6 @@ class DashboardController extends Controller
         $latestSignIns = NationSignIn::query()
             ->joinSub($latestSignInsSub, 'latest_sign_ins', fn ($join) => $join->on('nation_sign_ins.id', '=', 'latest_sign_ins.id'))
             ->join('nations', 'nations.id', '=', 'nation_sign_ins.nation_id')
-            ->whereIn('nations.id', $memberNationIds)
             ->select([
                 'nation_sign_ins.id',
                 'nation_sign_ins.nation_id as nation_id',

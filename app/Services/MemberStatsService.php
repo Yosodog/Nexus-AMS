@@ -21,21 +21,42 @@ class MemberStatsService
      */
     public function getOverviewData(): array
     {
-        $nations = Nation::with(['resources', 'accounts', 'military', 'accountProfile'])
+        $nations = Nation::query()
+            ->select(['id', 'leader_name', 'nation_name', 'score', 'num_cities', 'update_tz'])
+            ->with([
+                'resources:nation_id,money,steel,gasoline,aluminum,munitions,uranium,food',
+                'military:nation_id,soldiers,tanks,aircraft,ships,spies',
+                'accountProfile:nation_id,last_active',
+            ])
             ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
             ->get();
 
+        $accountTotals = Account::query()
+            ->selectRaw('nation_id, SUM(money) as money, SUM(steel) as steel, SUM(gasoline) as gasoline, SUM(aluminum) as aluminum, SUM(munitions) as munitions, SUM(uranium) as uranium, SUM(food) as food')
+            ->whereIn('nation_id', $nations->pluck('id'))
+            ->groupBy('nation_id')
+            ->get()
+            ->keyBy('nation_id');
+
         $openEvents = InactivityEvent::query()
+            ->select([
+                'nation_id',
+                'episode_started_at',
+                'last_notified_at',
+                'dd_autoenrolled_at',
+                'dd_opted_out_at',
+            ])
             ->whereNull('episode_ended_at')
             ->get()
             ->keyBy('nation_id');
 
         $maxTier = $nations->max('num_cities') ?? 0;
+        $cityCountsByTier = $nations->countBy('num_cities');
 
         $cityTiers = collect(range(1, $maxTier))->mapWithKeys(fn ($tier) => [
-            $tier => $nations->where('num_cities', $tier)->count(),
+            $tier => (int) ($cityCountsByTier[$tier] ?? 0),
         ])->toArray();
 
         return [
@@ -44,7 +65,11 @@ class MemberStatsService
             'totalCities' => $nations->sum('num_cities'),
             'cityTiers' => $cityTiers,
             'cityGrowthHistory' => $this->getCityGrowthHistory(),
-            'members' => $nations->map(fn ($nation) => $this->formatNation($nation, $openEvents->get($nation->id))),
+            'members' => $nations->map(fn ($nation) => $this->formatNation(
+                $nation,
+                $openEvents->get($nation->id),
+                $accountTotals->get($nation->id)
+            )),
             'inactivitySettings' => [
                 'enabled' => SettingService::isInactivityModeEnabled(),
                 'threshold_hours' => SettingService::getInactivityThresholdHours(),
@@ -78,7 +103,7 @@ class MemberStatsService
     /**
      * @return array<int|string, mixed>
      */
-    protected function formatNation(Nation $nation, ?InactivityEvent $event = null): array
+    protected function formatNation(Nation $nation, ?InactivityEvent $event = null, ?object $accountTotals = null): array
     {
         $cities = $nation->num_cities;
         $max = [
@@ -109,8 +134,8 @@ class MemberStatsService
             'food',
         ];
 
-        $resourceValues = collect($resources)->mapWithKeys(function ($res) use ($nation) {
-            $accountTotal = $nation->accounts->sum($res);
+        $resourceValues = collect($resources)->mapWithKeys(function ($res) use ($nation, $accountTotals) {
+            $accountTotal = (float) ($accountTotals?->{$res} ?? 0);
             $inGame = optional($nation->resources)->$res ?? 0;
 
             return [
