@@ -67,10 +67,10 @@ class MemberStatsService
      */
     protected function getCityGrowthHistory(): array
     {
-        return NationSignIn::selectRaw('DATE(created_at) as date, SUM(num_cities) as total_cities')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->groupBy('date')
-            ->orderBy('date')
+        return NationSignIn::selectRaw('sign_in_day as date, SUM(num_cities) as total_cities')
+            ->where('sign_in_day', '>=', now()->subDays(30)->toDateString())
+            ->groupBy('sign_in_day')
+            ->orderBy('sign_in_day')
             ->pluck('total_cities', 'date')
             ->toArray();
     }
@@ -151,7 +151,10 @@ class MemberStatsService
         $nationId = $nation->id;
 
         // 1. Info Boxes
-        $lastSignIn = NationSignIn::where('nation_id', $nationId)->latest()->first();
+        $lastSignIn = NationSignIn::query()
+            ->where('nation_id', $nationId)
+            ->latest('created_at')
+            ->first(['score', 'num_cities']);
         $lastUpdatedAt = optional($nation)->updated_at;
         $lastScore = optional($lastSignIn)->score ?? $nation->score;
         $lastCities = optional($lastSignIn)->num_cities ?? $nation->cities;
@@ -160,7 +163,7 @@ class MemberStatsService
         $resourceHistory = NationSignIn::where('nation_id', $nationId)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
-            ->get()
+            ->get(['created_at', 'steel', 'aluminum', 'munitions', 'gasoline'])
             ->map(function ($row) {
                 return [
                     'date' => $row->created_at->format('Y-m-d'),
@@ -223,7 +226,7 @@ class MemberStatsService
         $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
             ->where('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at')
-            ->get()
+            ->get(['created_at', 'money', 'steel', 'aluminum', 'gasoline', 'munitions'])
             ->map(fn ($row) => [
                 'date' => $row->created_at->format('Y-m-d'),
                 'money' => $row->money,

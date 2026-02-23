@@ -18,7 +18,32 @@ class NationDashboardService
      */
     public function getDashboardData(Nation $nation): array
     {
-        $signIns = $nation->signIns()->latest('created_at')->take(30)->get()->reverse();
+        $signIns = $nation->signIns()
+            ->select([
+                'id',
+                'nation_id',
+                'created_at',
+                'num_cities',
+                'score',
+                'soldiers',
+                'tanks',
+                'aircraft',
+                'ships',
+                'missiles',
+                'nukes',
+                'spies',
+                'money',
+                'steel',
+                'aluminum',
+                'gasoline',
+                'munitions',
+                'uranium',
+                'food',
+            ])
+            ->latest('created_at')
+            ->take(30)
+            ->get()
+            ->reverse();
         $accountIds = $nation->accounts()->pluck('id');
         $taxes = $this->getRecentTaxes($nation);
         $afterTaxIncomeTotal = $this->getRecentAfterTaxIncomeTotal($nation);
