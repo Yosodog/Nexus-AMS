@@ -130,7 +130,7 @@ class TaxService
         )->implode(', ');
 
         $aggregate = Taxes::query()
-            ->whereDate('date', $date)
+            ->where('day', $date)
             ->selectRaw('COUNT(*) as records, '.$resourceSelects)
             ->first();
 

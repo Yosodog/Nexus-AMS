@@ -40,7 +40,7 @@ class NationDashboardService
             'recentTransactions' => $this->getRecentTransactions($accountIds),
             'nationAge' => now()->diffInDays($nation->created_at),
             'scorePerCity' => $nation->num_cities > 0 ? round($nation->score / $nation->num_cities, 2) : 0,
-            'taxTotal' => $taxes->sum(fn ($g) => $g->sum('money')),
+            'taxTotal' => $taxes->sum('money'),
             'afterTaxIncomeTotal' => $afterTaxIncomeTotal,
             ...$payrollSummary,
             'mmrScore' => $evaluation['mmr_score'] ?? 0,
@@ -74,11 +74,18 @@ class NationDashboardService
      */
     protected function getRecentTaxes(Nation $nation): Collection
     {
-        return Taxes::where('sender_id', $nation->id)
+        return Taxes::query()
+            ->selectRaw('day, SUM(money) AS money, SUM(steel) AS steel, SUM(aluminum) AS aluminum, SUM(gasoline) AS gasoline, SUM(munitions) AS munitions, SUM(uranium) AS uranium, SUM(food) AS food')
+            ->where('sender_id', $nation->id)
             ->where('date', '>=', now()->subDays(30))
-            ->orderBy('date')
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
-            ->groupBy(fn ($t) => $t->date->format('Y-m-d'));
+            ->map(function ($row) {
+                $row->day = (string) $row->day;
+
+                return $row;
+            });
     }
 
     /**
@@ -185,8 +192,8 @@ class NationDashboardService
     protected function buildMoneyTaxChart(Collection $taxes): array
     {
         return [
-            'labels' => $taxes->keys()->toArray(),
-            'data' => $taxes->map(fn ($day) => round($day->sum('money'), 2))->toArray(),
+            'labels' => $taxes->pluck('day')->toArray(),
+            'data' => $taxes->map(fn ($day) => round((float) $day->money, 2))->toArray(),
         ];
     }
 
@@ -196,7 +203,7 @@ class NationDashboardService
     protected function buildResourceTaxChart(array $resources, Collection $taxes): array
     {
         $chart = [
-            'labels' => $taxes->keys()->toArray(),
+            'labels' => $taxes->pluck('day')->toArray(),
             'resources' => [],
         ];
 
@@ -209,7 +216,7 @@ class NationDashboardService
 
         foreach ($taxes as $daily) {
             foreach ($resources as $res) {
-                $chart['resources'][$res]['data'][] = round($daily->sum($res), 2);
+                $chart['resources'][$res]['data'][] = round((float) ($daily->$res ?? 0), 2);
             }
         }
 

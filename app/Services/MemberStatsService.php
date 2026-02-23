@@ -11,7 +11,6 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\NationSignIn;
 use App\Models\Taxes;
-use Carbon\Carbon;
 
 class MemberStatsService
 {
@@ -178,42 +177,48 @@ class MemberStatsService
             ->orderBy('created_at')
             ->get(['created_at', 'score']);
 
-        $taxHistory = Taxes::where('sender_id', $nationId)
+        $taxHistory = Taxes::query()
+            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(gasoline) AS gasoline, SUM(aluminum) AS aluminum, SUM(munitions) AS munitions, SUM(uranium) AS uranium, SUM(food) AS food')
+            ->where('sender_id', $nationId)
             ->where('date', '>=', now()->subDays(365))
-            ->orderBy('date')
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
-            ->groupBy(fn ($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
-            ->map(function ($group, $date) {
+            ->map(function ($row) {
                 return [
-                    'date' => $date,
-                    'money' => $group->sum('money'),
-                    'steel' => $group->sum('steel'),
-                    'gasoline' => $group->sum('gasoline'),
-                    'aluminum' => $group->sum('aluminum'),
-                    'munitions' => $group->sum('munitions'),
-                    'uranium' => $group->sum('uranium'),
-                    'food' => $group->sum('food'),
+                    'date' => (string) $row->date,
+                    'money' => (float) ($row->money ?? 0),
+                    'steel' => (float) ($row->steel ?? 0),
+                    'gasoline' => (float) ($row->gasoline ?? 0),
+                    'aluminum' => (float) ($row->aluminum ?? 0),
+                    'munitions' => (float) ($row->munitions ?? 0),
+                    'uranium' => (float) ($row->uranium ?? 0),
+                    'food' => (float) ($row->food ?? 0),
                 ];
-            })->values();
+            })
+            ->values();
 
         // 5. Recent Requests
         $recentCityGrants = CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get();
         $recentCustomGrants = GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get();
         $recentLoans = Loan::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentTaxes = Taxes::where('sender_id', $nationId)
+        $recentTaxes = Taxes::query()
+            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(munitions) AS munitions, SUM(food) AS food')
+            ->where('sender_id', $nationId)
             ->where('date', '>=', now()->subDays(7))
-            ->orderBy('date')
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
-            ->groupBy(fn ($tax) => Carbon::parse($tax->date)->format('Y-m-d'))
-            ->map(function ($group, $date) {
+            ->map(function ($row) {
                 return [
-                    'date' => $date,
-                    'money' => $group->sum('money'),
-                    'steel' => $group->sum('steel'),
-                    'munitions' => $group->sum('munitions'),
-                    'food' => $group->sum('food'),
+                    'date' => (string) $row->date,
+                    'money' => (float) ($row->money ?? 0),
+                    'steel' => (float) ($row->steel ?? 0),
+                    'munitions' => (float) ($row->munitions ?? 0),
+                    'food' => (float) ($row->food ?? 0),
                 ];
-            })->values();
+            })
+            ->values();
 
         $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
             ->where('created_at', '>=', now()->subDays(30))

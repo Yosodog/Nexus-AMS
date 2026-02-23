@@ -248,6 +248,7 @@ class DashboardController extends Controller
             ->values();
 
         $chartWindowStart = $now->copy()->subDays(13)->startOfDay();
+        $chartWindowStartDay = $chartWindowStart->toDateString();
 
         $thisWeekStart = $now->copy()->subDays(6)->startOfDay();
         $lastWeekStart = $now->copy()->subDays(13)->startOfDay();
@@ -269,13 +270,13 @@ class DashboardController extends Controller
             : null;
 
         $taxBaseQuery = Taxes::query()
-            ->where('date', '>=', $chartWindowStart)
+            ->where('day', '>=', $chartWindowStartDay)
             ->whereIn('receiver_id', $memberAllianceIdList);
 
         $taxMoneyDaily = (clone $taxBaseQuery)
-            ->selectRaw('DATE(date) AS day, SUM(money) AS money')
-            ->groupBy(DB::raw('DATE(date)'))
-            ->orderBy(DB::raw('DATE(date)'))
+            ->selectRaw('day, SUM(money) AS money')
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
             ->map(fn ($row) => [
                 'day' => Carbon::parse($row->day)->format('M d'),
@@ -284,13 +285,13 @@ class DashboardController extends Controller
             ->values();
 
         $taxResourceDaily = (clone $taxBaseQuery)
-            ->selectRaw('DATE(date) AS day,
+            ->selectRaw('day,
                 SUM(steel) AS steel,
                 SUM(munitions) AS munitions,
                 SUM(aluminum) AS aluminum,
                 SUM(food) AS food')
-            ->groupBy(DB::raw('DATE(date)'))
-            ->orderBy(DB::raw('DATE(date)'))
+            ->groupBy('day')
+            ->orderBy('day')
             ->get()
             ->map(fn ($row) => [
                 'day' => Carbon::parse($row->day)->format('M d'),
