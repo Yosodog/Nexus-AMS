@@ -16,8 +16,10 @@ use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Notifications\DepositCreated;
 use Exception;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AccountService
@@ -135,44 +137,56 @@ class AccountService
         int $toAccountId,
         array $resources
     ): void {
-        // Start transaction to ensure data integrity
-        DB::beginTransaction();
-
         try {
-            $fromAccount = self::getAccountById($fromAccountId);
-            $toAccount = self::getAccountById($toAccountId);
+            $nationId = (int) Auth::user()->nation_id;
 
-            // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
-            self::validateTransfer(
-                $resources,
-                Auth::user()->nation_id,
-                $fromAccount,
-                $toAccount
+            Cache::lock("account-transfer:nation:{$nationId}", 15)
+                ->block(5, function () use ($resources, $nationId, $fromAccountId, $toAccountId): void {
+                    DB::beginTransaction();
+
+                    try {
+                        $fromAccount = self::getAccountById($fromAccountId);
+                        $toAccount = self::getAccountById($toAccountId);
+
+                        // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
+                        self::validateTransfer(
+                            $resources,
+                            $nationId,
+                            $fromAccount,
+                            $toAccount
+                        );
+
+                        // Perform the transfer
+                        foreach (PWHelperService::resources() as $res) {
+                            $fromAccount->$res -= $resources[$res];
+                            $toAccount->$res += $resources[$res];
+                        }
+
+                        // Save changes
+                        $fromAccount->save();
+                        $toAccount->save();
+
+                        TransactionService::createTransaction(
+                            $resources,
+                            $nationId,
+                            $fromAccountId,
+                            'transfer',
+                            $toAccountId,
+                            false
+                        );
+
+                        DB::commit();
+                    } catch (Exception $e) {
+                        // Rollback in case of error
+                        DB::rollBack();
+                        throw $e;
+                    }
+                });
+        } catch (LockTimeoutException) {
+            throw new UserErrorException(
+                'Another transfer is currently being processed for your nation. Please wait a moment and try again.'
             );
-
-            // Perform the transfer
-            foreach (PWHelperService::resources() as $res) {
-                $fromAccount->$res -= $resources[$res];
-                $toAccount->$res += $resources[$res];
-            }
-
-            // Save changes
-            $fromAccount->save();
-            $toAccount->save();
-
-            TransactionService::createTransaction(
-                $resources,
-                Auth::user()->nation_id,
-                $fromAccountId,
-                'transfer',
-                $toAccountId,
-                false
-            );
-
-            DB::commit();
         } catch (Exception $e) {
-            // Rollback in case of error
-            DB::rollBack();
             throw $e;
         }
     }
@@ -263,72 +277,84 @@ class AccountService
         int $nation_id,
         array $resources
     ): Transaction {
-        // Start transaction to ensure data integrity
-        DB::beginTransaction();
-
         try {
-            $fromAccount = self::getAccountById($fromAccountId);
+            $requestNationId = (int) Auth::user()->nation_id;
 
-            // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
-            self::validateTransfer(
-                $resources,
-                Auth::user()->nation_id,
-                $fromAccount
+            return Cache::lock("account-transfer:nation:{$requestNationId}", 15)
+                ->block(5, function () use ($fromAccountId, $nation_id, $resources, $requestNationId): Transaction {
+                    DB::beginTransaction();
+
+                    try {
+                        $fromAccount = self::getAccountById($fromAccountId);
+
+                        // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
+                        self::validateTransfer(
+                            $resources,
+                            $requestNationId,
+                            $fromAccount
+                        );
+
+                        $evaluation = WithdrawalLimitService::evaluate($nation_id, $resources);
+                        $note = 'Withdraw from '.$fromAccount->name;
+
+                        // Perform the transfer
+                        foreach (PWHelperService::resources() as $res) {
+                            $fromAccount->$res -= $resources[$res];
+                        }
+
+                        // Save changes
+                        $fromAccount->save();
+
+                        $transaction = TransactionService::createTransaction(
+                            $resources,
+                            $requestNationId,
+                            $fromAccountId,
+                            'withdrawal',
+                            null,
+                            true,
+                            $note,
+                            $evaluation['requires_approval'],
+                            $evaluation['pending_reason']
+                        );
+
+                        DB::commit(); // Commit before spawning the job. I'd rather it fail.
+
+                        if (! $evaluation['requires_approval']) {
+                            self::dispatchWithdrawal($transaction, $fromAccount);
+                        }
+
+                        app(AuditLogger::class)->recordAfterCommit(
+                            category: 'finance',
+                            action: 'withdrawal_requested',
+                            outcome: $evaluation['requires_approval'] ? 'pending' : 'success',
+                            severity: $evaluation['requires_approval'] ? 'warning' : 'info',
+                            subject: $transaction,
+                            context: [
+                                'related' => [
+                                    ['type' => 'Account', 'id' => (string) $fromAccountId, 'role' => 'from_account'],
+                                ],
+                                'data' => [
+                                    'nation_id' => $requestNationId,
+                                    'resources' => $resources,
+                                    'requires_approval' => $evaluation['requires_approval'],
+                                    'pending_reason' => $evaluation['pending_reason'],
+                                ],
+                            ],
+                            message: 'Withdrawal requested.'
+                        );
+
+                        return $transaction;
+                    } catch (Exception $e) {
+                        // Rollback in case of error
+                        DB::rollBack();
+                        throw $e;
+                    }
+                });
+        } catch (LockTimeoutException) {
+            throw new UserErrorException(
+                'Another transfer is currently being processed for your nation. Please wait a moment and try again.'
             );
-
-            $evaluation = WithdrawalLimitService::evaluate($nation_id, $resources);
-            $note = 'Withdraw from '.$fromAccount->name;
-
-            // Perform the transfer
-            foreach (PWHelperService::resources() as $res) {
-                $fromAccount->$res -= $resources[$res];
-            }
-
-            // Save changes
-            $fromAccount->save();
-
-            $transaction = TransactionService::createTransaction(
-                $resources,
-                Auth::user()->nation_id,
-                $fromAccountId,
-                'withdrawal',
-                null,
-                true,
-                $note,
-                $evaluation['requires_approval'],
-                $evaluation['pending_reason']
-            );
-
-            DB::commit(); // Commit before spawning the job. I'd rather it fail.
-
-            if (! $evaluation['requires_approval']) {
-                self::dispatchWithdrawal($transaction, $fromAccount);
-            }
-
-            app(AuditLogger::class)->recordAfterCommit(
-                category: 'finance',
-                action: 'withdrawal_requested',
-                outcome: $evaluation['requires_approval'] ? 'pending' : 'success',
-                severity: $evaluation['requires_approval'] ? 'warning' : 'info',
-                subject: $transaction,
-                context: [
-                    'related' => [
-                        ['type' => 'Account', 'id' => (string) $fromAccountId, 'role' => 'from_account'],
-                    ],
-                    'data' => [
-                        'nation_id' => Auth::user()->nation_id,
-                        'resources' => $resources,
-                        'requires_approval' => $evaluation['requires_approval'],
-                        'pending_reason' => $evaluation['pending_reason'],
-                    ],
-                ],
-                message: 'Withdrawal requested.'
-            );
-
-            return $transaction;
         } catch (Exception $e) {
-            // Rollback in case of error
-            DB::rollBack();
             throw $e;
         }
     }

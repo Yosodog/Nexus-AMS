@@ -53,6 +53,14 @@ class SendBank implements ShouldBeUnique, ShouldQueue
                 return null;
             }
 
+            if ($transaction->refunded_at || $transaction->denied_at) {
+                return null;
+            }
+
+            if ($transaction->requires_admin_approval || ! $transaction->is_pending) {
+                return null;
+            }
+
             if ($transaction->bank_processing_at) {
                 return null;
             }
@@ -82,15 +90,20 @@ class SendBank implements ShouldBeUnique, ShouldQueue
                         ->lockForUpdate()
                         ->find($transaction->id);
 
-                    if (! $lockedTransaction || $lockedTransaction->sent_at) {
+                    if (! $lockedTransaction
+                        || $lockedTransaction->sent_at
+                        || $lockedTransaction->bank_record_id) {
                         return;
                     }
 
-                    $lockedTransaction->bank_processing_at = null;
-                    $lockedTransaction->save();
+                    $lockedTransaction->markPendingAdminReview(
+                        'Automatic bank send failed. Manual review is required before retrying this withdrawal.'
+                    );
                 });
 
-                throw $exception;
+                report($exception);
+
+                return;
             }
 
             DB::transaction(function () use ($transaction, $bankRecord) {
