@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Exceptions\PWQueryFailedException;
 use App\Models\Account;
 use App\Models\DepositRequest;
+use App\Notifications\DepositCompletedNotification;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class DepositService
@@ -49,7 +51,9 @@ class DepositService
 
             // Step 4: Match deposit with a pending request
             $note = trim($record->note);
-            DB::transaction(function () use ($note, $record, $allianceId) {
+            $shouldSendConfirmation = false;
+            $depositedAccountName = null;
+            DB::transaction(function () use ($note, $record, $allianceId, &$shouldSendConfirmation, &$depositedAccountName) {
                 $depositRequest = DepositRequest::where('deposit_code', $note)
                     ->lockForUpdate()
                     ->first();
@@ -80,8 +84,24 @@ class DepositService
 
                 // Step 8: Log the transaction using TransactionService
                 TransactionService::createTransactionForDeposit($account, $record);
+
+                $shouldSendConfirmation = true;
+                $depositedAccountName = $account->name;
             });
-            // TODO send in-game message
+
+            if ($shouldSendConfirmation) {
+                $resourcePayload = [];
+                foreach (PWHelperService::resources() as $resource) {
+                    $resourcePayload[$resource] = (float) $record->{$resource};
+                }
+
+                Notification::route('pnw', 'pnw')
+                    ->notify(new DepositCompletedNotification(
+                        nationId: (int) $record->sender_id,
+                        accountName: $depositedAccountName,
+                        resources: $resourcePayload
+                    ));
+            }
         }
 
         // Now persist the data
