@@ -234,9 +234,8 @@ class AccountsController extends Controller
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts);
 
         $ddLogs = DirectDepositLog::where('account_id', $accounts->id)
-            ->latest()
+            ->latest('created_at')
             ->limit(50)
-            ->orderBy('created_at', 'DESC')
             ->get();
 
         return view('accounts.view', [
@@ -375,11 +374,10 @@ class AccountsController extends Controller
         $resources = PWHelperService::resources(false);
         $mmrEnabled = SettingService::getMMRAssistantEnabled();
 
-        $lastTaxRecord = DirectDepositLog::where('nation_id', $nationId)
+        $afterTaxIncome = (float) (DirectDepositLog::query()
+            ->where('nation_id', $nationId)
             ->latest('created_at')
-            ->first();
-
-        $afterTaxIncome = $lastTaxRecord?->money ?? 0;
+            ->value('money') ?? 0);
 
         $mmrAccountIds = $accounts->pluck('id');
 

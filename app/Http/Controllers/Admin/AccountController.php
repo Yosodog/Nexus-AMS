@@ -68,7 +68,7 @@ class AccountController extends Controller
             ->paginate(15, ['*'], 'tx_page')
             ->withQueryString()
             ->fragment('recent-transactions');
-        $directDepositLogs = DirectDepositLog::with(['nation', 'account'])
+        $directDepositLogs = DirectDepositLog::with(['account.user'])
             ->latest('created_at')
             ->paginate(10, ['*'], 'dd_page')
             ->withQueryString()
@@ -128,7 +128,7 @@ class AccountController extends Controller
 
         $transactions = AccountService::getRelatedTransactions($accounts, 500);
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts, 500);
-        $directDepositLogs = DirectDepositLog::with('nation')
+        $directDepositLogs = DirectDepositLog::query()
             ->where('account_id', $accounts->id)
             ->latest('created_at')
             ->paginate(10, ['*'], 'dd_page')
