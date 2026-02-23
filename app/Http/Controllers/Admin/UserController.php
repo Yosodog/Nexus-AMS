@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use App\Models\TrustedDevice;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
+use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -103,7 +105,12 @@ class UserController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.users.index', compact('users', 'stats', 'filters'));
+        $mfaRequirements = [
+            'all_users' => SettingService::isMfaRequiredForAllUsers(),
+            'admins' => SettingService::isMfaRequiredForAdmins(),
+        ];
+
+        return view('admin.users.index', compact('users', 'stats', 'filters', 'mfaRequirements'));
     }
 
     /**
@@ -197,6 +204,7 @@ class UserController extends Controller
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+            TrustedDevice::query()->where('user_id', $user->id)->delete();
         }
 
         $user->save();
@@ -278,6 +286,55 @@ class UserController extends Controller
         return redirect()->route('admin.users.edit', $user)->with([
             'alert-message' => $message,
             'alert-type' => $discordAccount ? 'success' : 'info',
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function updateMfaRequirements(Request $request): RedirectResponse
+    {
+        $this->authorize('edit-users');
+
+        $validated = $request->validate([
+            'require_mfa_all_users' => ['nullable', 'boolean'],
+            'require_mfa_admins' => ['nullable', 'boolean'],
+        ]);
+
+        $requireForAllUsers = (bool) ($validated['require_mfa_all_users'] ?? false);
+        $requireForAdmins = (bool) ($validated['require_mfa_admins'] ?? false);
+
+        $before = [
+            'require_mfa_all_users' => SettingService::isMfaRequiredForAllUsers(),
+            'require_mfa_admins' => SettingService::isMfaRequiredForAdmins(),
+        ];
+
+        SettingService::setMfaRequiredForAllUsers($requireForAllUsers);
+        SettingService::setMfaRequiredForAdmins($requireForAdmins);
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'admin',
+            action: 'mfa_requirements_updated',
+            outcome: 'success',
+            severity: 'warning',
+            context: [
+                'changes' => [
+                    'require_mfa_all_users' => [
+                        'from' => $before['require_mfa_all_users'],
+                        'to' => $requireForAllUsers,
+                    ],
+                    'require_mfa_admins' => [
+                        'from' => $before['require_mfa_admins'],
+                        'to' => $requireForAdmins,
+                    ],
+                ],
+            ],
+            message: 'MFA requirements updated.'
+        );
+
+        return redirect()->route('admin.users.index')->with([
+            'alert-message' => 'MFA requirements updated successfully.',
+            'alert-type' => 'success',
         ]);
     }
 }

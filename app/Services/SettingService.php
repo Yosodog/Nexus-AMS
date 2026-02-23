@@ -165,6 +165,42 @@ class SettingService
         self::setValue('require_discord_verification', $required ? 1 : 0);
     }
 
+    public static function isMfaRequiredForAllUsers(): bool
+    {
+        $value = self::getValue('require_mfa_all_users');
+
+        if (is_null($value)) {
+            self::setMfaRequiredForAllUsers(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setMfaRequiredForAllUsers(bool $required): void
+    {
+        self::setValue('require_mfa_all_users', $required ? 1 : 0);
+    }
+
+    public static function isMfaRequiredForAdmins(): bool
+    {
+        $value = self::getValue('require_mfa_admins');
+
+        if (is_null($value)) {
+            self::setMfaRequiredForAdmins(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setMfaRequiredForAdmins(bool $required): void
+    {
+        self::setValue('require_mfa_admins', $required ? 1 : 0);
+    }
+
     public static function isAutoWithdrawEnabled(): bool
     {
         $value = self::getValue('auto_withdraw_enabled');

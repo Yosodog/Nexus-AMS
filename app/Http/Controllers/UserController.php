@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreApiTokenRequest;
+use App\Models\TrustedDevice;
 use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
+use App\Services\TrustedDeviceService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
@@ -14,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -31,6 +34,13 @@ class UserController extends Controller
         $apiTokens = $user->tokens()
             ->latest('created_at')
             ->get();
+        $trustedDeviceService = app(TrustedDeviceService::class);
+        $currentTrustedTokenHash = $trustedDeviceService->currentTokenHashFromRequest(request());
+        $trustedDevices = $user->trustedDevices()
+            ->where('expires_at', '>', now())
+            ->latest('last_used_at')
+            ->latest('created_at')
+            ->get();
 
         return view('user.settings', [
             'user' => $user,
@@ -38,6 +48,10 @@ class UserController extends Controller
             'apiTokens' => $apiTokens,
             'discordVerificationToken' => $discordAccount ? null : DiscordAccountService::getOrCreateVerificationToken($user),
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
+            'mfaRequiredForAllUsers' => SettingService::isMfaRequiredForAllUsers(),
+            'mfaRequiredForAdmins' => SettingService::isMfaRequiredForAdmins(),
+            'trustedDevices' => $trustedDevices,
+            'currentTrustedTokenHash' => $currentTrustedTokenHash,
         ]);
     }
 
@@ -70,6 +84,7 @@ class UserController extends Controller
 
         if ($passwordChanged) {
             $user->tokens()->delete();
+            TrustedDevice::query()->where('user_id', $user->id)->delete();
         }
 
         $changes = [];
@@ -101,6 +116,76 @@ class UserController extends Controller
             'alert-type',
             'success'
         );
+    }
+
+    public function showMfaSecrets(): RedirectResponse
+    {
+        return redirect()
+            ->route('user.settings')
+            ->with('show-mfa-secrets', true);
+    }
+
+    public function revokeTrustedDevice(TrustedDevice $trustedDevice): RedirectResponse
+    {
+        $user = Auth::user();
+
+        if ($trustedDevice->user_id !== $user->id) {
+            abort(403);
+        }
+
+        $currentTrustedTokenHash = app(TrustedDeviceService::class)->currentTokenHashFromRequest(request());
+        $clearCurrentCookie = $currentTrustedTokenHash !== null
+            && hash_equals($trustedDevice->token_hash, $currentTrustedTokenHash);
+
+        $trustedDeviceId = $trustedDevice->id;
+        $trustedDevice->delete();
+
+        if ($clearCurrentCookie) {
+            Cookie::queue(Cookie::forget(TrustedDeviceService::COOKIE_NAME));
+        }
+
+        $this->auditLogger->success(
+            category: 'security',
+            action: 'trusted_device_revoked',
+            subject: $user,
+            context: [
+                'data' => [
+                    'trusted_device_id' => $trustedDeviceId,
+                    'revoked_current_browser' => $clearCurrentCookie,
+                ],
+            ],
+            message: 'Trusted device revoked.'
+        );
+
+        return redirect()
+            ->route('user.settings')
+            ->with('alert-message', 'Trusted device revoked.')
+            ->with('alert-type', 'success');
+    }
+
+    public function revokeAllTrustedDevices(): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $deletedCount = TrustedDevice::query()->where('user_id', $user->id)->delete();
+        Cookie::queue(Cookie::forget(TrustedDeviceService::COOKIE_NAME));
+
+        $this->auditLogger->success(
+            category: 'security',
+            action: 'trusted_devices_revoked_all',
+            subject: $user,
+            context: [
+                'data' => [
+                    'deleted_count' => $deletedCount,
+                ],
+            ],
+            message: 'All trusted devices revoked.'
+        );
+
+        return redirect()
+            ->route('user.settings')
+            ->with('alert-message', 'All trusted devices revoked.')
+            ->with('alert-type', 'success');
     }
 
     public function storeApiToken(StoreApiTokenRequest $request): RedirectResponse

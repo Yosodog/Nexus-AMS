@@ -10,6 +10,10 @@
             'alliance_member' => false,
             'verification' => 'any',
         ];
+        $mfaRequirements = $mfaRequirements ?? [
+            'all_users' => false,
+            'admins' => false,
+        ];
     @endphp
 
     <div class="app-content-header">
@@ -235,6 +239,58 @@
             <div class="card-footer bg-white d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-2">
                 <span class="text-muted small">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
                 {{ $users->onEachSide(1)->links() }}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header">
+                <h5 class="mb-1">Multi-factor authentication requirements</h5>
+                <span class="text-muted small">Use these toggles to enforce Fortify two-factor authentication enrollment.</span>
+            </div>
+            <div class="card-body border-top">
+                <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="row g-3 align-items-end">
+                    @csrf
+                    <div class="col-12 col-lg-5">
+                        <div class="form-check form-switch">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="require-mfa-all-users"
+                                name="require_mfa_all_users"
+                                value="1"
+                                @checked($mfaRequirements['all_users'])
+                            >
+                            <label class="form-check-label fw-semibold" for="require-mfa-all-users">
+                                Require MFA for all users
+                            </label>
+                        </div>
+                        <p class="text-muted small mb-0 mt-1">Default: off. Forces every authenticated user to enroll in MFA before using the app.</p>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <div class="form-check form-switch">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="require-mfa-admins"
+                                name="require_mfa_admins"
+                                value="1"
+                                @checked($mfaRequirements['admins'])
+                            >
+                            <label class="form-check-label fw-semibold" for="require-mfa-admins">
+                                Require MFA for admins
+                            </label>
+                        </div>
+                        <p class="text-muted small mb-0 mt-1">Default: off. Applies to administrator accounts even when the all-users toggle is off.</p>
+                    </div>
+                    <div class="col-12 col-lg-2 d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Save
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

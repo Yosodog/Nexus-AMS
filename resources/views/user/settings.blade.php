@@ -234,29 +234,188 @@
                 <x-utils.card>
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
-                            <h2 class="text-lg font-semibold">Security & access</h2>
-                            <p class="text-sm text-base-content/70">Stay confident your account is protected.</p>
+                            <h2 class="text-lg font-semibold">Multi-factor authentication</h2>
+                            <p class="text-sm text-base-content/70">Protect your account with a time-based one-time password and recovery codes.</p>
                         </div>
-                        <span class="badge badge-outline">Coming soon</span>
+                        <span class="badge badge-outline">
+                            {{ $user->hasEnabledTwoFactorAuthentication() ? 'Enabled' : 'Disabled' }}
+                        </span>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div class="rounded-box bg-base-200/70 p-4 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <p class="text-sm font-medium">Login activity</p>
-                                <span class="badge badge-sm">Soon</span>
-                            </div>
-                            <p class="text-xs text-base-content/70">We’ll list your recent devices and sign-ins here for quick reviews.</p>
-                            <button class="btn btn-sm btn-outline" disabled>View sessions</button>
+                    @if($mfaRequiredForAllUsers || ($mfaRequiredForAdmins && $user->is_admin))
+                        <div class="alert alert-warning mb-4">
+                            <span>MFA is required for your account by an administrator policy.</span>
                         </div>
-                        <div class="rounded-box bg-base-200/70 p-4 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <p class="text-sm font-medium">Recovery options</p>
-                                <span class="badge badge-sm">Soon</span>
-                            </div>
-                            <p class="text-xs text-base-content/70">Backup codes and safety contacts will appear here once available.</p>
-                            <button class="btn btn-sm btn-outline" disabled>Manage recovery</button>
+                    @endif
+
+                    @if (session('status') === 'two-factor-authentication-enabled')
+                        <div class="alert alert-info mb-4">
+                            <span>Finish MFA setup by scanning the QR code and confirming your authenticator code.</span>
                         </div>
+                    @endif
+
+                    @if (session('status') === 'two-factor-authentication-confirmed')
+                        <div class="alert alert-success mb-4">
+                            <span>MFA has been enabled for your account.</span>
+                        </div>
+                    @endif
+
+                    @if (session('status') === 'two-factor-authentication-disabled')
+                        <div class="alert alert-info mb-4">
+                            <span>MFA has been disabled for your account.</span>
+                        </div>
+                    @endif
+
+                    @php
+                        $isPendingMfaSetup = $user->two_factor_secret && ! $user->two_factor_confirmed_at;
+                        $shouldShowMfaSecrets = $isPendingMfaSetup || session('show-mfa-secrets', false);
+                    @endphp
+
+                    <div class="space-y-4">
+                        @if(! $user->hasEnabledTwoFactorAuthentication())
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                <p class="text-sm text-base-content/70">
+                                    Enable MFA to require a 6-digit code from your authenticator app when signing in.
+                                </p>
+                                <form method="POST" action="{{ url('/user/two-factor-authentication') }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-primary btn-sm">Enable MFA</button>
+                                </form>
+                            </div>
+                        @endif
+
+                        @if($user->two_factor_secret && ! $shouldShowMfaSecrets)
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                <p class="text-sm text-base-content/70">
+                                    QR code, setup key, and recovery codes are hidden by default.
+                                </p>
+                                <a href="{{ route('user.settings.mfa-secrets') }}" class="btn btn-outline btn-sm">
+                                    Reveal MFA secrets
+                                </a>
+                            </div>
+                        @endif
+
+                        @if($user->two_factor_secret && $shouldShowMfaSecrets)
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                @if(! $user->two_factor_confirmed_at)
+                                    <p class="text-sm font-medium">Scan this QR code, then confirm MFA with a valid code.</p>
+                                @else
+                                    <p class="text-sm font-medium">MFA is enabled. Keep this secret information private.</p>
+                                @endif
+
+                                <div class="overflow-auto">
+                                    {!! $user->twoFactorQrCodeSvg() !!}
+                                </div>
+
+                                <p class="text-xs text-base-content/70">
+                                    Setup key: <span class="font-mono">{{ decrypt($user->two_factor_secret) }}</span>
+                                </p>
+
+                                @if($user->two_factor_confirmed_at)
+                                    <p class="text-xs text-base-content/70">This sensitive data will be hidden again when you refresh this page.</p>
+                                @endif
+                            </div>
+                        @endif
+
+                        @if($user->two_factor_secret && ! $user->two_factor_confirmed_at)
+                            <form method="POST" action="{{ url('/user/confirmed-two-factor-authentication') }}" class="space-y-3">
+                                @csrf
+                                <div class="form-control max-w-sm">
+                                    <label class="label" for="two_factor_code">
+                                        <span class="label-text font-medium">Authenticator code</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="two_factor_code"
+                                        name="code"
+                                        class="input input-bordered"
+                                        inputmode="numeric"
+                                        autocomplete="one-time-code"
+                                        placeholder="123456"
+                                        required
+                                    >
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Confirm MFA</button>
+                            </form>
+                        @endif
+
+                        @if($user->hasEnabledTwoFactorAuthentication() && $shouldShowMfaSecrets)
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <p class="text-sm font-medium">Recovery codes</p>
+                                    <form method="POST" action="{{ url('/user/two-factor-recovery-codes') }}">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline btn-sm">Regenerate codes</button>
+                                    </form>
+                                </div>
+
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    @foreach($user->recoveryCodes() as $recoveryCode)
+                                        <code class="rounded bg-base-100 px-2 py-1 text-xs">{{ $recoveryCode }}</code>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @elseif($user->hasEnabledTwoFactorAuthentication())
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                <p class="text-sm text-base-content/70">Recovery codes are hidden until you reveal MFA secrets.</p>
+                                <a href="{{ route('user.settings.mfa-secrets') }}" class="btn btn-outline btn-sm">
+                                    Reveal recovery codes
+                                </a>
+                            </div>
+                        @endif
+
+                        @if($user->hasEnabledTwoFactorAuthentication())
+                            <div class="rounded-box bg-base-200/70 p-4 space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-medium">Trusted devices</p>
+                                        <p class="text-xs text-base-content/70">Trusted devices can skip MFA for 14 days.</p>
+                                    </div>
+                                    @if($trustedDevices->isNotEmpty())
+                                        <form method="POST" action="{{ route('user.settings.trusted-devices.revoke-all') }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline btn-error btn-sm">Revoke all</button>
+                                        </form>
+                                    @endif
+                                </div>
+
+                                @if($trustedDevices->isEmpty())
+                                    <p class="text-sm text-base-content/70">No trusted devices.</p>
+                                @else
+                                    <div class="space-y-2">
+                                        @foreach($trustedDevices as $trustedDevice)
+                                            <div class="rounded bg-base-100 p-3">
+                                                <div class="flex flex-wrap items-start justify-between gap-2">
+                                                    <div class="space-y-1">
+                                                        <p class="text-sm font-medium">
+                                                            {{ \Illuminate\Support\Str::limit($trustedDevice->user_agent ?? 'Unknown browser', 80) }}
+                                                        </p>
+                                                        <p class="text-xs text-base-content/70">
+                                                            Last used {{ $trustedDevice->last_used_at?->diffForHumans() ?? 'never' }}.
+                                                            Expires {{ $trustedDevice->expires_at->diffForHumans() }}.
+                                                        </p>
+                                                        @if($currentTrustedTokenHash && hash_equals($trustedDevice->token_hash, $currentTrustedTokenHash))
+                                                            <span class="badge badge-sm badge-primary">Current browser</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <form method="POST" action="{{ route('user.settings.trusted-devices.revoke', $trustedDevice) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-outline btn-error btn-xs">Revoke</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
+                            <form method="POST" action="{{ url('/user/two-factor-authentication') }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-outline btn-error btn-sm">Disable MFA</button>
+                            </form>
+                        @endif
                     </div>
                 </x-utils.card>
             </div>

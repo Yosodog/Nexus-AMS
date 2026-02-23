@@ -62,6 +62,7 @@ use App\Http\Controllers\WarStatsController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\BlockWhenPWDown;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
+use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
 
@@ -87,12 +88,21 @@ Route::middleware(['auth'])->group(function () {
     );
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class])->group(callback: function () {
+Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class])->group(callback: function () {
     // User settings
     Route::get('/user/settings', [UserController::class, 'settings'])->name('user.settings');
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
         'user.settings.update'
     );
+    Route::get('/user/settings/mfa-secrets', [UserController::class, 'showMfaSecrets'])
+        ->middleware('password.confirm')
+        ->name('user.settings.mfa-secrets');
+    Route::post('/user/settings/trusted-devices/{trustedDevice}/revoke', [UserController::class, 'revokeTrustedDevice'])
+        ->middleware('password.confirm')
+        ->name('user.settings.trusted-devices.revoke');
+    Route::post('/user/settings/trusted-devices/revoke-all', [UserController::class, 'revokeAllTrustedDevices'])
+        ->middleware('password.confirm')
+        ->name('user.settings.trusted-devices.revoke-all');
     Route::post('/user/settings/api-tokens', [UserController::class, 'storeApiToken'])->name(
         'user.settings.api-tokens.store'
     );
@@ -198,7 +208,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     });
 });
 
-Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
+Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class, AdminMiddleware::class])
     ->prefix('admin')
     ->group(function () {
         // Base routes
@@ -206,6 +216,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
         // Users
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::post('/users/mfa-requirements', [AdminUserController::class, 'updateMfaRequirements'])->name('admin.users.mfa-requirements');
         Route::get('/user/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
         Route::put('/user/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
         Route::post('/user/{user}/discord/unlink', [AdminUserController::class, 'unlinkDiscord'])->name(
