@@ -57,8 +57,9 @@ class LoanNotification extends Notification implements ShouldQueue
                 .'- Next due date: [b]'.($this->loan->next_due_date ? $this->loan->next_due_date->format(
                     'M d, Y'
                 ) : 'N/A')."[/b]\n"
+                .'- Scheduled weekly payment: [b]$'.number_format((float) $this->loan->scheduled_weekly_payment, 2)."[/b]\n"
                 ."- Funds have been deposited into your selected account.\n\n"
-                .'Make sure to [b]repay your loan on time[/b] to avoid penalties.';
+                .'Your payment amount follows weekly amortization (interest first, then principal).';
         } elseif ($this->status === 'denied') {
             $subject = 'Loan Denied';
             $message = 'Unfortunately, your loan request for [b]$'.number_format(
@@ -95,6 +96,16 @@ class LoanNotification extends Notification implements ShouldQueue
                 ).'[/b] toward this week, '
                 ."you owe nothing for this cycle.\n\n"
                 ."Your next payment will be due on [b]{$this->loan->next_due_date->format('M d, Y')}[/b].";
+        } elseif ($this->status === 'missed_payment') {
+            $subject = 'Loan Payment Missed';
+            $message = 'A scheduled loan payment was missed, and the amount due has rolled forward.'."\n\n"
+                .'[b]Current Amount Due:[/b] $'.number_format((float) ($this->paymentAmount ?? 0), 2)."\n"
+                .'[b]Past Due Amount:[/b] $'.number_format((float) $this->loan->past_due_amount, 2)."\n"
+                .'[b]Accrued Interest Due:[/b] $'.number_format((float) $this->loan->accrued_interest_due, 2)."\n\n"
+                .'Make a payment when possible to reduce accrued interest and principal.';
+        } else {
+            $subject = 'Loan Update';
+            $message = 'Your loan has been updated.';
         }
 
         return [

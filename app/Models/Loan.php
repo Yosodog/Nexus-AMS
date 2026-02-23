@@ -23,6 +23,9 @@ class Loan extends Model
         'amount',
         'remaining_balance',
         'weekly_interest_paid',
+        'scheduled_weekly_payment',
+        'past_due_amount',
+        'accrued_interest_due',
         'interest_rate',
         'term_weeks',
         'status',
@@ -32,6 +35,13 @@ class Loan extends Model
 
     protected $casts = [
         'next_due_date' => 'datetime',
+        'amount' => 'float',
+        'remaining_balance' => 'float',
+        'weekly_interest_paid' => 'float',
+        'scheduled_weekly_payment' => 'float',
+        'past_due_amount' => 'float',
+        'accrued_interest_due' => 'float',
+        'interest_rate' => 'float',
     ];
 
     /**
@@ -62,20 +72,9 @@ class Loan extends Model
 
     public function getNextPaymentDue(): float
     {
-        $loanService = app(LoanService::class); // Resolve the service
-        $weeklyPayment = $loanService->calculateWeeklyPayment($this);
+        $loanService = app(LoanService::class);
 
-        if (! $this->next_due_date) {
-            return $weeklyPayment;
-        }
-
-        // Get total early payments made since last due date
-        $earlyPayments = $this->payments()
-            ->where('payment_date', '>=', $this->next_due_date->copy()->subDays(7))
-            ->sum('amount');
-
-        // If early payments cover the weekly payment, the next payment is $0
-        return max(0, $weeklyPayment - $earlyPayments);
+        return $loanService->calculateCurrentAmountDue($this);
     }
 
     /**

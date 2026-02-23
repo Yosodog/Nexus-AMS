@@ -18,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoanService
 {
+    private const DAYS_PER_PAYMENT_CYCLE = 7;
+
     /**
      * @throws ValidationException
      */
@@ -32,7 +34,6 @@ class LoanService
 
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
-        // Create the loan record
         $loan = Loan::create([
             'nation_id' => $nation->id,
             'account_id' => $account->id,
@@ -40,6 +41,10 @@ class LoanService
             'term_weeks' => $termLength,
             'status' => 'pending',
             'remaining_balance' => $amount,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 0,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
         ]);
 
         app(PendingRequestsService::class)->flushCache();
@@ -74,30 +79,33 @@ class LoanService
         $validator = new NationEligibilityValidator($nation);
         $validator->validateAllianceMembership();
 
-        // Loan specific validation
-        if ($nation->id != $account->nation_id) {
+        if ($nation->id !== $account->nation_id) {
             throw ValidationException::withMessages([
                 'account_id' => "You don't own that account",
             ]);
         }
 
-        return true; // No exceptions thrown, so it's gonna return true that they're eligible
+        return true;
     }
 
-    /**
-     * Approves a loan, updates the account balance, and notifies the user.
-     */
-    public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks, Nation $nation): Loan
+    public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks): Loan
     {
         app(SelfApprovalGuard::class)->ensureNotSelf(
             requestNationId: $loan->nation_id,
             context: 'approve your own loan request'
         );
 
-        $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount, $nation) {
+        $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
 
-            // Update the loan details
+            if ($lockedLoan->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'loan' => 'Only pending loans can be approved.',
+                ]);
+            }
+
+            $scheduledPayment = $this->calculateWeeklyPaymentFromInputs($amount, $interestRate, $termWeeks);
+
             $lockedLoan->update([
                 'interest_rate' => $interestRate,
                 'amount' => $amount,
@@ -105,26 +113,26 @@ class LoanService
                 'term_weeks' => $termWeeks,
                 'status' => 'approved',
                 'approved_at' => now(),
-                'next_due_date' => now()->addDays(7), // First payment due in 7 days
+                'next_due_date' => now()->addDays(self::DAYS_PER_PAYMENT_CYCLE),
+                'weekly_interest_paid' => 0,
+                'scheduled_weekly_payment' => $scheduledPayment,
+                'past_due_amount' => 0,
+                'accrued_interest_due' => 0,
             ]);
 
-            // Fetch the recipient account
             $account = Account::findOrFail($lockedLoan->account_id);
             $adminId = Auth::id();
             $ipAddress = Request::ip();
 
-            // Adjust account balance (Deposit loan funds)
-            $adjustment = [
+            AccountService::adjustAccountBalance($account, [
                 'money' => $amount,
-                'note' => "Loan Approved: \${$amount} deposited (Term: {$termWeeks} weeks, Interest: {$interestRate}%)",
-            ];
+                'note' => "Loan Approved: \${$amount} deposited (Term: {$termWeeks} weeks, Weekly Interest: {$interestRate}%)",
+            ], $adminId, $ipAddress);
 
-            AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress);
+            $borrower = $lockedLoan->nation()->firstOrFail();
+            $borrower->notify(new LoanNotification($borrower->id, $lockedLoan->fresh(), 'approved'));
 
-            // Send loan approval notification
-            $nation->notify(new LoanNotification($nation->id, $lockedLoan->fresh(), 'approved'));
-
-            return $lockedLoan;
+            return $lockedLoan->fresh();
         });
 
         app(PendingRequestsService::class)->flushCache();
@@ -144,6 +152,7 @@ class LoanService
                     'amount' => $amount,
                     'interest_rate' => $interestRate,
                     'term_weeks' => $termWeeks,
+                    'scheduled_weekly_payment' => $updatedLoan->scheduled_weekly_payment,
                 ],
             ],
             message: 'Loan approved.'
@@ -152,19 +161,28 @@ class LoanService
         return $updatedLoan;
     }
 
-    public function denyLoan(Loan $loan, Nation $nation): void
+    public function denyLoan(Loan $loan): void
     {
         app(SelfApprovalGuard::class)->ensureNotSelf(
             requestNationId: $loan->nation_id,
             context: 'deny your own loan request'
         );
 
-        DB::transaction(function () use ($loan) {
+        $updatedLoan = DB::transaction(function () use ($loan) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedLoan->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'loan' => 'Only pending loans can be denied.',
+                ]);
+            }
+
             $lockedLoan->update(['status' => 'denied']);
+
+            return $lockedLoan->fresh();
         });
 
-        $nation->notify(new LoanNotification($nation->id, $loan, 'denied'));
+        $updatedLoan->nation->notify(new LoanNotification($updatedLoan->nation_id, $updatedLoan, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -191,7 +209,7 @@ class LoanService
         $updated = 0;
 
         Loan::query()
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'missed'])
             ->where('remaining_balance', '>', 0)
             ->whereNotNull('next_due_date')
             ->chunkById(200, function ($loans) use ($pausedAt, $resumedAt, &$updated) {
@@ -220,179 +238,226 @@ class LoanService
             return;
         }
 
-        $today = now()->toDateString();
-        $loans = Loan::where('status', 'approved')
+        $today = now()->startOfDay();
+
+        $loans = Loan::query()
+            ->whereIn('status', ['approved', 'missed'])
             ->where('remaining_balance', '>', 0)
-            ->whereDate('next_due_date', '<=', $today)
+            ->where(function ($query) use ($today) {
+                $query->where('past_due_amount', '>', 0)
+                    ->orWhere('accrued_interest_due', '>', 0)
+                    ->orWhereDate('next_due_date', '<=', $today->toDateString());
+            })
+            ->with(['nation.accounts', 'account'])
             ->get();
 
         foreach ($loans as $loan) {
-            $weeklyPayment = $this->calculateWeeklyPayment($loan);
-            $nation = $loan->nation;
+            $cyclesAccrued = 0;
 
-            // Get total early payments made since last due date
-            $earlyPayments = $this->getEarlyPaymentsSinceLastDue($loan);
+            $amountDue = DB::transaction(function () use ($loan, $today, &$cyclesAccrued) {
+                $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+                $cyclesAccrued = $this->accrueDueCycles($lockedLoan, $today);
 
-            // If early payments fully cover this week's payment, skip it
-            if ($earlyPayments >= $weeklyPayment) {
-                DB::transaction(function () use ($loan, $weeklyPayment) {
-                    $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                    $lockedLoan->update([
-                        'next_due_date' => $this->calculateNextDueDate($lockedLoan),
-                        'weekly_interest_paid' => 0,
-                    ]);
-                    $lockedLoan->nation->notify(
-                        new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'early_payment_applied', $weeklyPayment)
-                    );
-                });
+                $due = $this->calculateCurrentAmountDue($lockedLoan, $today, false);
 
+                if ($due <= 0 && $lockedLoan->status === 'missed') {
+                    $lockedLoan->update(['status' => 'approved']);
+                }
+
+                return $due;
+            });
+
+            if ($amountDue <= 0) {
                 continue;
             }
 
-            // Reduce the weekly payment by early payments
-            $amountDue = max(0, $weeklyPayment - $earlyPayments);
-
-            // Try to withdraw the reduced amount from the primary account
             $primaryAccount = $loan->account;
-            if ($primaryAccount && $primaryAccount->money >= $amountDue) {
-                try {
-                    $this->withdrawFromAccount($primaryAccount, $amountDue, $loan);
+            $paid = $primaryAccount ? $this->withdrawFromAccount($primaryAccount, $amountDue, $loan, true) : false;
 
-                    continue;
-                } catch (ValidationException $e) {
-                    // If the primary account is frozen, fall back to alternate options below
-                }
+            if (! $paid) {
+                $alternateAccount = $loan->nation
+                    ->accounts()
+                    ->where('frozen', false)
+                    ->where('id', '!=', $loan->account_id)
+                    ->orderBy('money', 'desc')
+                    ->get()
+                    ->first(function (Account $account) use ($amountDue, $loan) {
+                        return $account->money >= $amountDue && $this->withdrawFromAccount($account, $amountDue, $loan, true);
+                    });
+
+                $paid = $alternateAccount instanceof Account;
             }
 
-            // Try another account if the primary doesn't have enough funds
-            $alternateAccount = $nation->accounts()
-                ->where('frozen', false)
-                ->where('money', '>=', $amountDue)
-                ->orderBy('money', 'desc')
-                ->first();
-            if ($alternateAccount) {
-                try {
-                    $this->withdrawFromAccount($alternateAccount, $amountDue, $loan);
+            if (! $paid) {
+                DB::transaction(function () use ($loan, $cyclesAccrued) {
+                    $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+                    $lockedLoan->update(['status' => 'missed']);
 
-                    continue;
-                } catch (ValidationException $e) {
-                    // If the alternate account is frozen, treat like insufficient funds below
-                }
+                    if ($cyclesAccrued > 0) {
+                        $lockedLoan->nation->notify(
+                            new LoanNotification(
+                                $lockedLoan->nation_id,
+                                $lockedLoan->fresh(),
+                                'missed_payment',
+                                $this->calculateCurrentAmountDue($lockedLoan->fresh(), now()->startOfDay())
+                            )
+                        );
+                    }
+                });
             }
-
-            // If still not enough funds, mark as missed payment
-            DB::transaction(function () use ($loan) {
-                $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                $lockedLoan->update(['status' => 'missed']);
-                $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan, 'missed_payment'));
-            });
         }
     }
 
-    /**
-     * Calculates the weekly loan payment.
-     */
     public function calculateWeeklyPayment(Loan $loan): float
     {
-        if (! $loan->term_weeks || $loan->term_weeks <= 0 || $loan->amount <= 0) {
-            return 0.0;
-        }
-
-        $r = ($loan->interest_rate ?? 0) / 100; // Convert weekly interest rate to decimal
-        $P = $loan->amount;
-        $n = $loan->term_weeks;
-
-        // If interest rate is 0, return simple division
-        if ($r == 0) {
-            return round($P / $n, 2);
-        }
-
-        return round(($r * $P) / (1 - pow(1 + $r, -$n)), 2);
+        return $this->calculateWeeklyPaymentFromInputs(
+            (float) $loan->amount,
+            (float) ($loan->interest_rate ?? 0),
+            (int) ($loan->term_weeks ?? 0)
+        );
     }
 
-    private function getEarlyPaymentsSinceLastDue(Loan $loan): float
-    {
-        if (! $loan->next_due_date) {
+    public function calculateCurrentAmountDue(
+        Loan $loan,
+        ?Carbon $asOfDate = null,
+        bool $includeVirtualAccruals = true
+    ): float {
+        if (! SettingService::isLoanPaymentsEnabled()) {
             return 0.0;
         }
 
-        return $loan->payments()
-            ->where('payment_date', '>=', $loan->next_due_date->copy()->subDays(7))
-            ->sum('amount');
+        if ($loan->remaining_balance <= 0 || $loan->status === 'paid') {
+            return 0.0;
+        }
+
+        $asOf = ($asOfDate ?? now())->copy()->startOfDay();
+        $scheduledPayment = $this->calculateScheduledPayment($loan);
+        $virtualAdjustments = $includeVirtualAccruals
+            ? $this->calculateVirtualCycleAdjustments($loan, $asOf, $scheduledPayment)
+            : ['past_due_increment' => 0.0, 'accrued_interest_increment' => 0.0];
+
+        $pastDueAmount = max(0.0, (float) $loan->past_due_amount + (float) $virtualAdjustments['past_due_increment']);
+        $accruedInterestDue = max(
+            0.0,
+            (float) $loan->accrued_interest_due + (float) $virtualAdjustments['accrued_interest_increment']
+        );
+
+        $minimumDue = max($pastDueAmount, $accruedInterestDue);
+        $totalOwed = max(0.0, (float) $loan->remaining_balance + $accruedInterestDue);
+
+        return round(min($minimumDue, $totalOwed), 2);
     }
 
     /**
-     * Withdraw funds from an account and update the loan balance.
+     * @return array{amount: float, interest: float, principal: float, remaining_after: float, accrued_interest_after: float}
      */
-    private function withdrawFromAccount(Account $account, float $amount, Loan $loan): void
+    public function previewPaymentBreakdown(Loan $loan, float $amount, ?Carbon $asOfDate = null): array
     {
-        $this->ensureAccountNotFrozen($account);
+        $requested = round(max(0.0, $amount), 2);
+        $asOf = ($asOfDate ?? now())->copy()->startOfDay();
+        $virtualAdjustments = $this->calculateVirtualCycleAdjustments(
+            $loan,
+            $asOf,
+            $this->calculateScheduledPayment($loan)
+        );
 
-        $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
-            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+        $accruedInterestDue = max(
+            0.0,
+            (float) $loan->accrued_interest_due + (float) $virtualAdjustments['accrued_interest_increment']
+        );
 
-            [$interestPaid, $principalPaid] = $this->splitPaymentAmount($lockedLoan, $amount);
+        $totalOwed = max(0.0, (float) $loan->remaining_balance + $accruedInterestDue);
+        $appliedAmount = round(min($requested, $totalOwed), 2);
 
-            // Deduct the payment from the account
-            $adjustment = [
-                'money' => -$amount,
-                'note' => "Loan Payment: \${$amount} withdrawn",
-            ];
-            AccountService::adjustAccountBalance($account, $adjustment, null, null);
+        $interestPaid = round(min($appliedAmount, $accruedInterestDue), 2);
+        $principalPaid = round(max(0.0, $appliedAmount - $interestPaid), 2);
 
-            // Log the loan payment
-            $payment = LoanPayment::create([
-                'loan_id' => $lockedLoan->id,
-                'account_id' => $account->id,
-                'amount' => $amount,
-                'principal_paid' => $principalPaid,
-                'interest_paid' => $interestPaid,
-            ]);
+        return [
+            'amount' => $appliedAmount,
+            'interest' => $interestPaid,
+            'principal' => $principalPaid,
+            'remaining_after' => round(max(0.0, (float) $loan->remaining_balance - $principalPaid), 2),
+            'accrued_interest_after' => round(max(0.0, $accruedInterestDue - $interestPaid), 2),
+        ];
+    }
 
-            // Update loan balance and reset weekly interest tracker for the new week
-            $lockedLoan->update([
-                'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
-                'next_due_date' => $this->calculateNextDueDate($lockedLoan),
-                'weekly_interest_paid' => 0,
-            ]);
+    /**
+     * @return array<int, array{week: int, due_date: string|null, opening_balance: float, payment: float, interest: float, principal: float, closing_balance: float}>
+     */
+    public function buildAmortizationSchedule(Loan $loan): array
+    {
+        $principal = (float) $loan->amount;
+        $rate = ((float) ($loan->interest_rate ?? 0)) / 100;
+        $term = max(0, (int) ($loan->term_weeks ?? 0));
+        $scheduled = $this->calculateScheduledPayment($loan);
 
-            // Send loan payment success notification
-            $lockedLoan->nation->notify(
-                new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'payment_success', $amount)
-            );
+        if ($principal <= 0 || $term <= 0) {
+            return [];
+        }
 
-            // If the loan is fully paid, mark it as completed
-            if ($lockedLoan->remaining_balance <= 0) {
-                $this->markLoanAsPaid($lockedLoan);
+        $rows = [];
+        $balance = $principal;
+        $firstDueDate = $loan->approved_at
+            ? Carbon::parse($loan->approved_at)->startOfDay()->addDays(self::DAYS_PER_PAYMENT_CYCLE)
+            : null;
+
+        for ($week = 1; $week <= $term; $week++) {
+            if ($balance <= 0) {
+                break;
             }
 
-            return $payment;
-        });
+            $openingBalance = round($balance, 2);
+            $interest = round($rate > 0 ? $openingBalance * $rate : 0.0, 2);
+            $payment = round(min($scheduled, $openingBalance + $interest), 2);
+            $principalPaid = round(max(0.0, $payment - $interest), 2);
+            $closingBalance = round(max(0.0, $openingBalance - $principalPaid), 2);
 
-        if ($loanPayment) {
-            app(AuditLogger::class)->recordAfterCommit(
-                category: 'loans',
-                action: 'loan_payment_posted',
-                outcome: 'success',
-                severity: 'info',
-                subject: $loanPayment,
-                context: [
-                    'related' => [
-                        ['type' => 'Loan', 'id' => (string) $loan->id, 'role' => 'loan'],
-                        ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
-                    ],
-                    'data' => [
-                        'nation_id' => $loan->nation_id,
-                        'amount' => $loanPayment->amount,
-                        'principal_paid' => $loanPayment->principal_paid,
-                        'interest_paid' => $loanPayment->interest_paid,
-                    ],
-                ],
-                message: 'Loan payment posted.'
-            );
+            $rows[] = [
+                'week' => $week,
+                'due_date' => $firstDueDate ? $firstDueDate->copy()->addDays(($week - 1) * self::DAYS_PER_PAYMENT_CYCLE)->toDateString() : null,
+                'opening_balance' => $openingBalance,
+                'payment' => $payment,
+                'interest' => $interest,
+                'principal' => $principalPaid,
+                'closing_balance' => $closingBalance,
+            ];
 
-            $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, $loanPayment->interest_paid);
+            $balance = $closingBalance;
         }
+
+        return $rows;
+    }
+
+    /**
+     * @return array{paid_this_cycle: float, remaining_to_scheduled: float, cycle_start: string|null, cycle_end: string|null}
+     */
+    public function getCurrentCycleProgress(Loan $loan): array
+    {
+        if (! $loan->next_due_date) {
+            return [
+                'paid_this_cycle' => 0.0,
+                'remaining_to_scheduled' => 0.0,
+                'cycle_start' => null,
+                'cycle_end' => null,
+            ];
+        }
+
+        $cycleEnd = $loan->next_due_date->copy()->startOfDay();
+        $cycleStart = $cycleEnd->copy()->subDays(self::DAYS_PER_PAYMENT_CYCLE);
+        $scheduled = $this->calculateScheduledPayment($loan);
+
+        $paidThisCycle = (float) LoanPayment::query()
+            ->where('loan_id', $loan->id)
+            ->where('payment_date', '>=', $cycleStart)
+            ->where('payment_date', '<', $cycleEnd)
+            ->sum('amount');
+
+        return [
+            'paid_this_cycle' => round($paidThisCycle, 2),
+            'remaining_to_scheduled' => round(max(0.0, $scheduled - $paidThisCycle), 2),
+            'cycle_start' => $cycleStart->toDateString(),
+            'cycle_end' => $cycleEnd->toDateString(),
+        ];
     }
 
     public function markLoanAsPaid(Loan $loan): void
@@ -401,10 +466,12 @@ class LoanService
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
             $lockedLoan->update([
                 'status' => 'paid',
-                'remaining_balance' => 0, // Always just ensure it's set to 0
+                'remaining_balance' => 0,
+                'past_due_amount' => 0,
+                'accrued_interest_due' => 0,
+                'weekly_interest_paid' => 0,
             ]);
 
-            // Notify the nation that the loan has been marked as paid
             $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'paid'));
         });
 
@@ -435,68 +502,57 @@ class LoanService
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);
         }
 
-        $this->ensureAccountNotFrozen($account);
-
-        if ($account->money < $amount) {
-            throw ValidationException::withMessages(['account' => 'Insufficient funds in selected account.']);
+        if (! in_array($loan->status, ['approved', 'missed'], true)) {
+            throw ValidationException::withMessages(['loan_id' => 'This loan is not in a repayable state.']);
         }
 
-        $loanPayment = DB::transaction(function () use ($loan, $account, $amount) {
+        $this->ensureAccountNotFrozen($account);
+
+        $requestedAmount = round($amount, 2);
+
+        $loanPayment = DB::transaction(function () use ($loan, $account, $requestedAmount) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $lockedAccount = Account::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
 
-            if ($amount > $lockedLoan->remaining_balance) {
-                throw ValidationException::withMessages(
-                    ['amount' => 'You tried to pay more than what was left on the loan.']
-                );
+            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+                throw ValidationException::withMessages(['loan_id' => 'This loan is not in a repayable state.']);
             }
 
-            // Deduct the payment from the account
-            $adjustment = [
-                'money' => -$amount,
-                'note' => "Early Loan Payment: \${$amount} paid towards loan ID {$loan->id}",
-            ];
-            AccountService::adjustAccountBalance($account, $adjustment, Auth::user()->id, Request::ip());
+            $this->ensureAccountNotFrozen($lockedAccount);
 
-            [$interestPaid, $principalPaid] = $this->splitPaymentAmount($lockedLoan, $amount);
+            if (SettingService::isLoanPaymentsEnabled()) {
+                $this->accrueDueCycles($lockedLoan, now()->startOfDay());
+            }
 
-            // Log the loan payment in loan_payments table
-            $payment = LoanPayment::create([
-                'loan_id' => $lockedLoan->id,
-                'account_id' => $account->id,
-                'amount' => $amount,
-                'principal_paid' => $principalPaid,
-                'interest_paid' => $interestPaid,
-                'payment_date' => now(),
-            ]);
+            $maxPayable = round(max(0.0, (float) $lockedLoan->remaining_balance + (float) $lockedLoan->accrued_interest_due), 2);
 
-            // Reduce loan balance and track interest paid this week
-            $lockedLoan->update([
-                'remaining_balance' => max(0, $lockedLoan->remaining_balance - $principalPaid),
-                'weekly_interest_paid' => $lockedLoan->weekly_interest_paid + $interestPaid,
-            ]);
+            if ($requestedAmount > $maxPayable) {
+                throw ValidationException::withMessages([
+                    'amount' => 'You tried to pay more than what is currently owed on the loan.',
+                ]);
+            }
 
-            // Send loan payment success notification
-            $lockedLoan->nation->notify(
-                new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'payment_success', $amount)
+            if ($lockedAccount->money < $requestedAmount) {
+                throw ValidationException::withMessages(['account' => 'Insufficient funds in selected account.']);
+            }
+
+            return $this->applyPaymentAndRecord(
+                $lockedLoan,
+                $lockedAccount,
+                $requestedAmount,
+                "Loan Payment: \${$requestedAmount} paid toward loan ID {$lockedLoan->id}",
+                Auth::id(),
+                Request::ip()
             );
-
-            // If the loan is fully paid, mark as completed
-            if ($lockedLoan->remaining_balance <= 0) {
-                $this->markLoanAsPaid($lockedLoan);
-            }
-
-            return [$payment, $interestPaid];
         });
 
-        if (is_array($loanPayment)) {
-            [$paymentModel, $interestPaid] = $loanPayment;
-
+        if ($loanPayment) {
             app(AuditLogger::class)->recordAfterCommit(
                 category: 'loans',
                 action: 'loan_payment_posted',
                 outcome: 'success',
                 severity: 'info',
-                subject: $paymentModel,
+                subject: $loanPayment,
                 context: [
                     'related' => [
                         ['type' => 'Loan', 'id' => (string) $loan->id, 'role' => 'loan'],
@@ -504,39 +560,284 @@ class LoanService
                     ],
                     'data' => [
                         'nation_id' => $loan->nation_id,
-                        'amount' => $paymentModel->amount,
-                        'principal_paid' => $paymentModel->principal_paid,
-                        'interest_paid' => $paymentModel->interest_paid,
-                        'payment_type' => 'early',
+                        'amount' => $loanPayment->amount,
+                        'principal_paid' => $loanPayment->principal_paid,
+                        'interest_paid' => $loanPayment->interest_paid,
+                        'payment_type' => 'manual',
                     ],
                 ],
                 message: 'Loan payment posted.'
             );
 
-            $this->dispatchLoanInterestEvent($loan, $account, $paymentModel, (float) $interestPaid);
+            $this->dispatchLoanInterestEvent($loan, $account, $loanPayment, (float) $loanPayment->interest_paid);
         }
     }
 
-    private function calculateNextDueDate(Loan $loan): Carbon
+    private function withdrawFromAccount(Account $account, float $amount, Loan $loan, bool $isScheduled): bool
     {
-        $baseDate = $loan->next_due_date ?? now();
+        try {
+            $this->ensureAccountNotFrozen($account);
+        } catch (ValidationException) {
+            return false;
+        }
 
-        return $baseDate->copy()->addDays(7);
+        $payment = DB::transaction(function () use ($loan, $account, $amount, $isScheduled) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            $lockedAccount = Account::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
+
+            $this->ensureAccountNotFrozen($lockedAccount);
+
+            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+                return null;
+            }
+
+            if ($isScheduled) {
+                $this->accrueDueCycles($lockedLoan, now()->startOfDay());
+            }
+
+            $dueAmount = $isScheduled
+                ? $this->calculateCurrentAmountDue($lockedLoan, now()->startOfDay(), false)
+                : $amount;
+
+            $totalOwed = round(max(0.0, (float) $lockedLoan->remaining_balance + (float) $lockedLoan->accrued_interest_due), 2);
+            $amountToApply = round(min($amount, $dueAmount, $totalOwed), 2);
+
+            if ($amountToApply <= 0 || $lockedAccount->money < $amountToApply) {
+                return null;
+            }
+
+            return $this->applyPaymentAndRecord(
+                $lockedLoan,
+                $lockedAccount,
+                $amountToApply,
+                "Loan Payment: \${$amountToApply} withdrawn",
+                null,
+                null
+            );
+        });
+
+        if (! $payment instanceof LoanPayment) {
+            return false;
+        }
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_payment_posted',
+            outcome: 'success',
+            severity: 'info',
+            subject: $payment,
+            context: [
+                'related' => [
+                    ['type' => 'Loan', 'id' => (string) $loan->id, 'role' => 'loan'],
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'account'],
+                ],
+                'data' => [
+                    'nation_id' => $loan->nation_id,
+                    'amount' => $payment->amount,
+                    'principal_paid' => $payment->principal_paid,
+                    'interest_paid' => $payment->interest_paid,
+                    'payment_type' => 'automatic',
+                ],
+            ],
+            message: 'Loan payment posted.'
+        );
+
+        $this->dispatchLoanInterestEvent($loan, $account, $payment, (float) $payment->interest_paid);
+
+        return true;
+    }
+
+    private function applyPaymentAndRecord(
+        Loan $loan,
+        Account $account,
+        float $amount,
+        string $note,
+        ?int $actorId,
+        ?string $ipAddress
+    ): LoanPayment {
+        $interestPaid = round(min($amount, max(0.0, (float) $loan->accrued_interest_due)), 2);
+        $principalPaid = round(max(0.0, $amount - $interestPaid), 2);
+
+        AccountService::adjustAccountBalance($account, [
+            'money' => -$amount,
+            'note' => $note,
+        ], $actorId, $ipAddress);
+
+        $payment = LoanPayment::create([
+            'loan_id' => $loan->id,
+            'account_id' => $account->id,
+            'amount' => $amount,
+            'principal_paid' => $principalPaid,
+            'interest_paid' => $interestPaid,
+            'payment_date' => now(),
+        ]);
+
+        $remainingBalance = round(max(0.0, (float) $loan->remaining_balance - $principalPaid), 2);
+        $accruedInterestDue = round(max(0.0, (float) $loan->accrued_interest_due - $interestPaid), 2);
+        $pastDueAmount = round(max(0.0, (float) $loan->past_due_amount - $amount), 2);
+
+        $status = $remainingBalance <= 0 && $accruedInterestDue <= 0
+            ? 'paid'
+            : ($pastDueAmount > 0 || $accruedInterestDue > 0 ? 'missed' : 'approved');
+
+        $loan->update([
+            'remaining_balance' => $remainingBalance,
+            'accrued_interest_due' => $accruedInterestDue,
+            'past_due_amount' => $pastDueAmount,
+            'weekly_interest_paid' => 0,
+            'status' => $status,
+        ]);
+
+        $freshLoan = $loan->fresh();
+
+        $freshLoan->nation->notify(new LoanNotification($freshLoan->nation_id, $freshLoan, 'payment_success', $amount));
+
+        if ($status === 'paid') {
+            $freshLoan->nation->notify(new LoanNotification($freshLoan->nation_id, $freshLoan, 'paid'));
+        }
+
+        return $payment;
+    }
+
+    private function calculateWeeklyPaymentFromInputs(float $amount, float $interestRate, int $termWeeks): float
+    {
+        if ($termWeeks <= 0 || $amount <= 0) {
+            return 0.0;
+        }
+
+        $rate = $interestRate / 100;
+
+        if ($rate == 0.0) {
+            return round($amount / $termWeeks, 2);
+        }
+
+        return round(($rate * $amount) / (1 - pow(1 + $rate, -$termWeeks)), 2);
+    }
+
+    private function calculateScheduledPayment(Loan $loan): float
+    {
+        $configured = (float) ($loan->scheduled_weekly_payment ?? 0);
+
+        if ($configured > 0) {
+            return round($configured, 2);
+        }
+
+        return $this->calculateWeeklyPayment($loan);
+    }
+
+    private function calculateWeeklyInterest(float $remainingBalance, float $interestRate): float
+    {
+        $rate = $interestRate / 100;
+
+        if ($rate <= 0 || $remainingBalance <= 0) {
+            return 0.0;
+        }
+
+        return round($remainingBalance * $rate, 2);
     }
 
     /**
-     * @return array{0: float, 1: float}
+     * @return array{past_due_increment: float, accrued_interest_increment: float}
      */
-    private function splitPaymentAmount(Loan $loan, float $amount): array
+    private function calculateVirtualCycleAdjustments(Loan $loan, Carbon $asOfDate, float $scheduledPayment): array
     {
-        $rate = ($loan->interest_rate ?? 0) / 100;
-        $weeklyInterestDue = $rate > 0 ? round(max(0, $loan->remaining_balance) * $rate, 2) : 0.0;
-        $interestAlreadyPaid = (float) ($loan->weekly_interest_paid ?? 0.0);
-        $interestStillDue = max(0.0, $weeklyInterestDue - $interestAlreadyPaid);
-        $interestPaid = min($amount, $interestStillDue);
-        $principalPaid = max(0.0, $amount - $interestPaid);
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return ['past_due_increment' => 0.0, 'accrued_interest_increment' => 0.0];
+        }
 
-        return [$interestPaid, $principalPaid];
+        if (! $loan->next_due_date) {
+            return ['past_due_increment' => 0.0, 'accrued_interest_increment' => 0.0];
+        }
+
+        $dueDate = $loan->next_due_date->copy()->startOfDay();
+        if ($dueDate->greaterThan($asOfDate)) {
+            return ['past_due_increment' => 0.0, 'accrued_interest_increment' => 0.0];
+        }
+
+        $pastDueIncrement = 0.0;
+        $accruedInterestIncrement = 0.0;
+
+        while ($dueDate->lessThanOrEqualTo($asOfDate)) {
+            $cycleStart = $dueDate->copy()->subDays(self::DAYS_PER_PAYMENT_CYCLE);
+            $paidThisCycle = (float) LoanPayment::query()
+                ->where('loan_id', $loan->id)
+                ->where('payment_date', '>=', $cycleStart)
+                ->where('payment_date', '<', $dueDate)
+                ->sum('amount');
+
+            $cycleShortfall = max(0.0, $scheduledPayment - $paidThisCycle);
+            $cycleInterest = $this->calculateLockedCycleInterest($loan, $cycleStart, $asOfDate);
+
+            $pastDueIncrement += $cycleShortfall;
+            $accruedInterestIncrement += $cycleInterest;
+
+            $dueDate = $dueDate->copy()->addDays(self::DAYS_PER_PAYMENT_CYCLE);
+        }
+
+        return [
+            'past_due_increment' => round($pastDueIncrement, 2),
+            'accrued_interest_increment' => round($accruedInterestIncrement, 2),
+        ];
+    }
+
+    private function accrueDueCycles(Loan $loan, Carbon $asOfDate): int
+    {
+        if (! SettingService::isLoanPaymentsEnabled()) {
+            return 0;
+        }
+
+        if (! $loan->next_due_date || $loan->remaining_balance <= 0) {
+            return 0;
+        }
+
+        $cycles = 0;
+        $scheduled = $this->calculateScheduledPayment($loan);
+
+        while ($loan->next_due_date && $loan->next_due_date->copy()->startOfDay()->lessThanOrEqualTo($asOfDate)) {
+            $cycleEnd = $loan->next_due_date->copy()->startOfDay();
+            $cycleStart = $cycleEnd->copy()->subDays(self::DAYS_PER_PAYMENT_CYCLE);
+
+            $paidThisCycle = (float) LoanPayment::query()
+                ->where('loan_id', $loan->id)
+                ->where('payment_date', '>=', $cycleStart)
+                ->where('payment_date', '<', $cycleEnd)
+                ->sum('amount');
+
+            $interest = $this->calculateLockedCycleInterest($loan, $cycleStart, $asOfDate);
+            $cycleShortfall = max(0.0, $scheduled - $paidThisCycle);
+
+            $loan->accrued_interest_due = round((float) $loan->accrued_interest_due + $interest, 2);
+            $loan->past_due_amount = round((float) $loan->past_due_amount + $cycleShortfall, 2);
+            $loan->next_due_date = $loan->next_due_date->copy()->addDays(self::DAYS_PER_PAYMENT_CYCLE);
+            $loan->status = 'missed';
+            $loan->weekly_interest_paid = 0;
+
+            $cycles++;
+        }
+
+        if ($cycles > 0) {
+            $loan->save();
+        }
+
+        return $cycles;
+    }
+
+    private function calculateLockedCycleInterest(Loan $loan, Carbon $cycleStart, Carbon $asOfDate): float
+    {
+        $openingBalance = $this->calculateCycleOpeningBalance($loan, $cycleStart, $asOfDate);
+
+        return $this->calculateWeeklyInterest($openingBalance, (float) ($loan->interest_rate ?? 0));
+    }
+
+    private function calculateCycleOpeningBalance(Loan $loan, Carbon $cycleStart, Carbon $asOfDate): float
+    {
+        $principalPaidSinceCycleStart = (float) LoanPayment::query()
+            ->where('loan_id', $loan->id)
+            ->where('payment_date', '>=', $cycleStart)
+            ->where('payment_date', '<', $asOfDate)
+            ->sum('principal_paid');
+
+        return round(max(0.0, (float) $loan->remaining_balance + $principalPaidSinceCycleStart), 2);
     }
 
     private function dispatchLoanInterestEvent(
@@ -567,9 +868,6 @@ class LoanService
         event(new AllianceIncomeOccurred($financeData->toArray()));
     }
 
-    /**
-     * Count pending loan applications.
-     */
     public function countPending(): int
     {
         return Loan::where('status', 'pending')->count();

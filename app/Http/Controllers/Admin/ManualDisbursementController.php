@@ -209,7 +209,7 @@ class ManualDisbursementController extends Controller
             'status' => 'pending',
         ]);
 
-        $this->loanService->approveLoan($loan, $data['amount'], $data['interest_rate'], $data['term_weeks'], $nation);
+        $this->loanService->approveLoan($loan, $data['amount'], $data['interest_rate'], $data['term_weeks']);
 
         $this->auditLogger->recordAfterCommit(
             category: 'loans',

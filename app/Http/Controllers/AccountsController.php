@@ -82,6 +82,12 @@ class AccountsController extends Controller
                     ]);
                 }
 
+                if (! in_array($loan->status, ['approved', 'missed'], true)) {
+                    throw ValidationException::withMessages([
+                        'to' => ['This loan cannot currently receive repayments.'],
+                    ]);
+                }
+
                 // Validate account ownership
                 if ($account->nation_id !== Auth::user()->nation_id) {
                     throw ValidationException::withMessages([
@@ -363,7 +369,7 @@ class AccountsController extends Controller
         }
 
         $activeLoans = Loan::where('nation_id', $nationId)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'missed'])
             ->where('remaining_balance', '>', 0)
             ->get();
 

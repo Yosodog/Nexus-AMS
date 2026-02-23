@@ -11,6 +11,13 @@
         </div>
     </div>
 
+    @if (! $loanPaymentsEnabled)
+        <div class="alert alert-warning mt-3">
+            <i class="bi bi-pause-circle me-2"></i>
+            Loan payments are currently paused. Required due and weekly accrual are frozen until payments are resumed.
+        </div>
+    @endif
+
     {{-- Info Boxes --}}
     <div class="row">
         <div class="col-md-3">
@@ -27,7 +34,64 @@
         </div>
         <div class="col-md-3">
             <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Loaned Funds"
-                              :value="number_format($totalLoanedFunds)"/>
+                              :value="number_format($totalLoanedFunds, 2)"/>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-piggy-bank" bgColor="text-bg-info" title="Outstanding Principal"
+                              :value="number_format((float) $portfolioStats['outstanding_principal'], 2)"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-credit-card" bgColor="text-bg-secondary" title="Current Due (All Active)"
+                              :value="number_format((float) $portfolioStats['current_due_total'], 2)"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-exclamation-triangle" bgColor="text-bg-warning" title="Total Past Due"
+                              :value="number_format((float) $portfolioStats['past_due_total'], 2)"/>
+        </div>
+        <div class="col-md-3">
+            <x-admin.info-box icon="bi bi-percent" bgColor="text-bg-dark" title="Accrued Interest Due"
+                              :value="number_format((float) $portfolioStats['accrued_interest_total'], 2)"/>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">Operational Snapshot</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <div class="border rounded p-3 h-100">
+                        <p class="mb-1 fw-semibold">Portfolio Health</p>
+                        <p class="mb-1">Active loans: <strong>{{ $portfolioStats['active_count'] }}</strong></p>
+                        <p class="mb-1">Loans in missed status: <strong>{{ $portfolioStats['missed_count'] }}</strong></p>
+                        <p class="mb-0">Total payoff if closed now: <strong>${{ number_format((float) $portfolioStats['total_payoff_now'], 2) }}</strong></p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="border rounded p-3 h-100">
+                        <p class="mb-1 fw-semibold">Servicing Rules</p>
+                        <ul class="mb-0 ps-3">
+                            <li>Interest accrues weekly at cycle close, not daily.</li>
+                            <li>Cycle interest is locked to opening principal for that cycle.</li>
+                            <li>Payments apply to interest first, then principal.</li>
+                            <li>No penalty fees are added for missed cycles.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="border rounded p-3 h-100">
+                        <p class="mb-1 fw-semibold">Cycle Mechanics</p>
+                        <ul class="mb-0 ps-3">
+                            <li>Partial in-cycle payments reduce that cycle shortfall.</li>
+                            <li>Only unpaid shortfall rolls to past due at closeout.</li>
+                            <li>Early overpayment accelerates principal reduction.</li>
+                            <li>Manual disbursement bypasses borrower eligibility checks.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -94,21 +158,36 @@
             @if($activeLoans->isEmpty())
                 <p>No active loans.</p>
             @else
-                <table class="table table-striped">
+                <div class="table-responsive">
+                <table class="table table-striped table-sm align-middle">
                     <thead>
                     <tr>
+                        <th>Status</th>
                         <th>Nation</th>
-                        <th>Loan Amount</th>
+                        <th>Principal</th>
                         <th>Interest Rate</th>
-                        <th>Term (Weeks)</th>
-                        <th>Remaining Balance</th>
-                        <th>Next Payment Due</th>
+                        <th>Term</th>
+                        <th>Scheduled Weekly Payment</th>
+                        <th>Current Due</th>
+                        <th>Cycle Paid / Remaining</th>
+                        <th>Past Due</th>
+                        <th>Interest Due Now</th>
+                        <th>Total Owed Now</th>
+                        <th>Remaining Principal</th>
+                        <th>Next Due</th>
                         <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     @foreach ($activeLoans as $loan)
                         <tr>
+                            <td>
+                                @if ($loan->status === 'missed')
+                                    <span class="badge text-bg-warning">Missed</span>
+                                @else
+                                    <span class="badge text-bg-success">Approved</span>
+                                @endif
+                            </td>
                             <td>
                                 @if ($loan->nation)
                                     <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
@@ -122,20 +201,43 @@
                                     <span class="text-muted">Unknown Nation</span>
                                 @endif
                             </td>
-                            <td>${{ number_format($loan->amount) }}</td>
-                            <td>{{ number_format($loan->interest_rate, 2) }}%</td>
-                            <td>{{ $loan->term_weeks }}</td>
-                            <td>${{ number_format($loan->remaining_balance) }}</td>
-                            <td>{{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}</td>
+                            <td>${{ number_format((float) $loan->amount, 2) }}</td>
+                            <td>{{ number_format((float) $loan->interest_rate, 2) }}%</td>
+                            <td>{{ (int) $loan->term_weeks }} weeks</td>
+                            <td>${{ number_format((float) $loan->scheduled_weekly_payment, 2) }}</td>
+                            <td>${{ number_format((float) $loan->current_amount_due, 2) }}</td>
+                            <td>
+                                <div>${{ number_format((float) $loan->cycle_paid, 2) }}</div>
+                                <div class="small text-muted">remaining ${{ number_format((float) $loan->cycle_remaining, 2) }}</div>
+                            </td>
+                            <td>${{ number_format((float) $loan->past_due_amount, 2) }}</td>
+                            <td>${{ number_format((float) $loan->effective_interest_due_now, 2) }}</td>
+                            <td>${{ number_format((float) $loan->total_owed_now, 2) }}</td>
+                            <td>${{ number_format((float) $loan->remaining_balance, 2) }}</td>
+                            <td>
+                                <div>{{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}</div>
+                                @if (! is_null($loan->days_to_due))
+                                    <div class="small text-muted">
+                                        @if ($loan->days_to_due > 0)
+                                            in {{ $loan->days_to_due }} days
+                                        @elseif ($loan->days_to_due === 0)
+                                            due today
+                                        @else
+                                            {{ abs($loan->days_to_due) }} days past due date
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
                             <td>
                                 <a href="{{ route('admin.loans.view', $loan) }}" class="btn btn-primary btn-sm">
-                                    Edit Loan
+                                    View Loan
                                 </a>
                             </td>
                         </tr>
                     @endforeach
                     </tbody>
                 </table>
+                </div>
             @endif
         </div>
     </div>
