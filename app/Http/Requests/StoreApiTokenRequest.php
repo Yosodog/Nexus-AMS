@@ -24,6 +24,7 @@ class StoreApiTokenRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'expires_at' => ['nullable', 'date', 'after_or_equal:today'],
+            'current_password' => ['required', 'string', 'current_password:web'],
         ];
     }
 
@@ -37,6 +38,8 @@ class StoreApiTokenRequest extends FormRequest
             'name.max' => 'Token names may not be longer than 255 characters.',
             'expires_at.date' => 'Expiration must be a valid date.',
             'expires_at.after_or_equal' => 'Expiration must be today or later.',
+            'current_password.required' => 'Enter your current password to manage API tokens.',
+            'current_password.current_password' => 'The current password is incorrect.',
         ];
     }
 }

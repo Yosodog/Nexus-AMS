@@ -59,6 +59,15 @@
 
                         <div class="grid gap-4 md:grid-cols-2">
                             <div class="form-control">
+                                <label class="label" for="current_password">
+                                    <span class="label-text font-medium">Current password</span>
+                                    <span class="label-text-alt text-base-content/60">Required to change password</span>
+                                </label>
+                                <input type="password" id="current_password" name="current_password" class="input input-bordered w-full">
+                                @error('current_password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div class="form-control">
                                 <label class="label" for="password">
                                     <span class="label-text font-medium">New password</span>
                                     <span class="label-text-alt text-base-content/60">Leave blank to keep current</span>
@@ -153,6 +162,16 @@
                                            value="{{ old('expires_at') }}" class="input input-bordered w-full">
                                     @error('expires_at') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                                 </div>
+
+                                <div class="form-control">
+                                    <label class="label" for="token_current_password">
+                                        <span class="label-text font-medium">Current password</span>
+                                        <span class="label-text-alt text-base-content/60">Required</span>
+                                    </label>
+                                    <input type="password" id="token_current_password" name="current_password"
+                                           class="input input-bordered w-full" required>
+                                    @error('current_password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
+                                </div>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-3">
@@ -189,10 +208,16 @@
                                                             @csrf
                                                             <input type="hidden" name="name" value="{{ $token->name }}">
                                                             <input type="hidden" name="expires_at" value="{{ $token->expires_at?->toDateString() }}">
+                                                            <input type="password" name="current_password"
+                                                                   class="input input-xs input-bordered mb-1 w-36"
+                                                                   placeholder="Current password" required>
                                                             <button class="btn btn-xs btn-outline">Regenerate</button>
                                                         </form>
                                                         <form method="POST" action="{{ route('user.settings.api-tokens.revoke', $token->id) }}">
                                                             @csrf
+                                                            <input type="password" name="current_password"
+                                                                   class="input input-xs input-bordered mb-1 w-36"
+                                                                   placeholder="Current password" required>
                                                             <button class="btn btn-xs btn-outline btn-error">Revoke</button>
                                                         </form>
                                                     </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\PreventDisabledUsers;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UpdateLastActive;
 use App\Services\AuditLogger;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [
             UpdateLastActive::class,
             PreventDisabledUsers::class,
+            SecurityHeaders::class,
         ]);
         $middleware->appendToGroup('api', [
             PreventDisabledUsers::class,

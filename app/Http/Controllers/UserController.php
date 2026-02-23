@@ -52,6 +52,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:users,name,'.$user->id], // Ensure unique name
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id], // Ensure unique email
             'password' => ['nullable', Password::defaults(), 'confirmed'],
+            'current_password' => ['nullable', 'required_with:password', 'current_password:web'],
         ]);
 
         $before = $user->only(['name', 'email']);
@@ -66,6 +67,10 @@ class UserController extends Controller
         }
 
         $user->save();
+
+        if ($passwordChanged) {
+            $user->tokens()->delete();
+        }
 
         $changes = [];
         $after = $user->only(['name', 'email']);
@@ -167,8 +172,12 @@ class UserController extends Controller
             ->with('api-token', $newToken->plainTextToken);
     }
 
-    public function revokeApiToken(int $tokenId): RedirectResponse
+    public function revokeApiToken(Request $request, int $tokenId): RedirectResponse
     {
+        $request->validate([
+            'current_password' => ['required', 'string', 'current_password:web'],
+        ]);
+
         $user = Auth::user();
 
         $token = $user->tokens()
