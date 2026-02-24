@@ -2,6 +2,37 @@
 
 use Laravel\Sanctum\Sanctum;
 
+$appUrlHost = parse_url((string) env('APP_URL', ''), PHP_URL_HOST);
+
+$defaultStatefulDomains = [
+    'localhost',
+    'localhost:3000',
+    '127.0.0.1',
+    '127.0.0.1:8000',
+    '::1',
+    Sanctum::currentApplicationUrlWithPort(),
+    Sanctum::currentRequestHost(),
+];
+
+if (is_string($appUrlHost) && $appUrlHost !== '') {
+    $defaultStatefulDomains[] = $appUrlHost;
+
+    if (! str_starts_with($appUrlHost, 'www.')) {
+        $defaultStatefulDomains[] = "www.{$appUrlHost}";
+    }
+}
+
+$configuredStatefulDomains = array_values(array_filter(array_map(
+    static fn (string $domain): string => trim($domain),
+    explode(',', (string) env('SANCTUM_STATEFUL_DOMAINS', ''))
+)));
+
+$statefulDomains = $configuredStatefulDomains === []
+    ? $defaultStatefulDomains
+    : array_merge($configuredStatefulDomains, $defaultStatefulDomains);
+
+$statefulDomains = array_values(array_unique(array_filter($statefulDomains)));
+
 return [
 
     /*
@@ -15,18 +46,7 @@ return [
     |
     */
 
-    'stateful' => explode(
-        ',',
-        env(
-            'SANCTUM_STATEFUL_DOMAINS',
-            sprintf(
-                '%s%s',
-                'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-                Sanctum::currentApplicationUrlWithPort(),
-                env('APP_URL')
-            )
-        )
-    ),
+    'stateful' => $statefulDomains,
 
     /*
     |--------------------------------------------------------------------------
