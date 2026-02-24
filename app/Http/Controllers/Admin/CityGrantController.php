@@ -154,9 +154,14 @@ class CityGrantController
         $changes = [];
 
         foreach ($after as $field => $value) {
-            if ((string) ($before[$field] ?? null) !== (string) $value) {
+            $beforeValue = $before[$field] ?? null;
+            $valuesDiffer = is_array($beforeValue) || is_array($value)
+                ? $beforeValue != $value
+                : (string) $beforeValue !== (string) $value;
+
+            if ($valuesDiffer) {
                 $changes[$field] = [
-                    'from' => $before[$field] ?? null,
+                    'from' => $beforeValue,
                     'to' => $value,
                 ];
             }
