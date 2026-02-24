@@ -22,10 +22,17 @@ class InAllianceAndMember implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 1) {
+            $fail('That nation ID is invalid.');
+
+            return;
+        }
+
+        $nationId = (int) $value;
         $membershipService = $this->membershipService ?? app(AllianceMembershipService::class);
 
         try {
-            $nation = Nation::getNationById($value);
+            $nation = Nation::getNationById($nationId);
 
             if ($membershipService->contains($nation->alliance_id)) {
                 if ($nation->alliance_position === 'APPLICANT') {
@@ -39,7 +46,7 @@ class InAllianceAndMember implements ValidationRule
         }
 
         try {
-            $nation = NationQueryService::getNationById($value);
+            $nation = NationQueryService::getNationById($nationId);
         } catch (PWEntityDoesNotExist) {
             $fail('That nation does not exist');
 

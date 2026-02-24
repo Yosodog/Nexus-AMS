@@ -21,28 +21,35 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
-        Validator::make($input, [
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique(User::class, 'name'),
+        Validator::make(
+            $input,
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique(User::class, 'name'),
+                ],
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    Rule::unique(User::class),
+                ],
+                'password' => $this->passwordRules(),
+                'nation_id' => [
+                    'bail',
+                    'required',
+                    'integer',
+                    Rule::unique(User::class),
+                    new InAllianceAndMember,
+                ],
             ],
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique(User::class),
-            ],
-            'password' => $this->passwordRules(),
-            'nation_id' => [
-                'required',
-                'integer',
-                Rule::unique(User::class),
-                new InAllianceAndMember,
-            ],
-        ])->validate();
+            [
+                'nation_id.integer' => 'That nation ID is invalid.',
+            ]
+        )->validate();
 
         $user = User::create([
             'name' => $input['name'],
