@@ -253,7 +253,11 @@ class SubController extends Controller
             if ($membershipService->contains($create['att_alliance_id']) || $membershipService->contains(
                 $create['def_alliance_id']
             )) {
-                War::updateFromAPI((object) $create);
+                $war = War::updateFromAPI((object) $create);
+
+                if (! $war->wasRecentlyCreated) {
+                    continue;
+                }
 
                 // Fire WarDeclared event so listeners can react (e.g., auto-counter)
                 event(new WarDeclared(

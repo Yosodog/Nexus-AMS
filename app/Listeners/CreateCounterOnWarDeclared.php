@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Enums\AlliancePositionEnum;
 use App\Events\WarDeclared;
 use App\Jobs\AutoPickCounterAssignmentsJob;
+use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\WarCounter;
 use App\Notifications\Channels\DiscordQueueChannel;
@@ -102,36 +103,67 @@ class CreateCounterOnWarDeclared
             return;
         }
 
-        $attacker = Nation::query()->with(['alliance', 'military'])->find($event->attackerNationId);
-        $defender = Nation::query()->with(['alliance', 'military'])->find($event->defenderNationId);
+        $lockAcquired = $this->cacheFactory->store()->lock("discord:war-alert:{$event->warId}", 15)->get(function () use (
+            $event,
+            $counter,
+            $channelId
+        ): bool {
+            if ($this->hasRecentQueuedWarAlert($event->warId)) {
+                Log::info('Discord war alert skipped due to recent queued job', [
+                    'war_id' => $event->warId,
+                ]);
 
-        if (! $attacker || ! $defender) {
-            Log::warning('Discord war alert skipped: missing nation data', [
+                return true;
+            }
+
+            $attacker = Nation::query()->with(['alliance', 'military'])->find($event->attackerNationId);
+            $defender = Nation::query()->with(['alliance', 'military'])->find($event->defenderNationId);
+
+            if (! $attacker || ! $defender) {
+                Log::warning('Discord war alert skipped: missing nation data', [
+                    'war_id' => $event->warId,
+                    'attacker_nation_id' => $event->attackerNationId,
+                    'defender_nation_id' => $event->defenderNationId,
+                ]);
+
+                return true;
+            }
+
+            try {
+                Notification::route(DiscordQueueChannel::class, 'discord-bot')
+                    ->notify(new WarDeclaredDiscordNotification(
+                        $event->warId,
+                        $attacker,
+                        $defender,
+                        $counter,
+                        $channelId,
+                        Carbon::now()
+                    ));
+            } catch (Throwable $exception) {
+                Log::error('Failed to queue Discord war alert', [
+                    'war_id' => $event->warId,
+                    'attacker_nation_id' => $event->attackerNationId,
+                    'defender_nation_id' => $event->defenderNationId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+
+            return true;
+        });
+
+        if (! $lockAcquired) {
+            Log::info('Discord war alert skipped due to overlapping lock', [
                 'war_id' => $event->warId,
-                'attacker_nation_id' => $event->attackerNationId,
-                'defender_nation_id' => $event->defenderNationId,
-            ]);
-
-            return;
-        }
-
-        try {
-            Notification::route(DiscordQueueChannel::class, 'discord-bot')
-                ->notify(new WarDeclaredDiscordNotification(
-                    $event->warId,
-                    $attacker,
-                    $defender,
-                    $counter,
-                    $channelId,
-                    Carbon::now()
-                ));
-        } catch (Throwable $exception) {
-            Log::error('Failed to queue Discord war alert', [
-                'war_id' => $event->warId,
-                'attacker_nation_id' => $event->attackerNationId,
-                'defender_nation_id' => $event->defenderNationId,
-                'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    protected function hasRecentQueuedWarAlert(int $warId): bool
+    {
+        return DiscordQueue::query()
+            ->where('action', 'WAR_ALERT')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->whereJsonContains('payload->war_id', $warId)
+            ->exists();
     }
 }
