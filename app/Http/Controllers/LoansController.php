@@ -93,6 +93,7 @@ class LoansController extends Controller
 
         // Fetch all loans for history (pending, denied, and paid)
         $loanHistory = Loan::where('nation_id', $nation->id)
+            ->with('account')
             ->orderBy('created_at', 'desc')
             ->get();
 

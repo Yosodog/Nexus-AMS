@@ -518,7 +518,7 @@
                                                     <td>${{ number_format((float) $payment->amount, 2) }}</td>
                                                     <td>${{ number_format((float) $payment->interest_paid, 2) }}</td>
                                                     <td>${{ number_format((float) $payment->principal_paid, 2) }}</td>
-                                                    <td>{{ $payment->account->name ?? 'N/A' }}</td>
+                                                    <td>{{ $payment->account?->name ?? 'N/A' }}</td>
                                                 </tr>
                                             @endforeach
                                             </tbody>
@@ -590,9 +590,12 @@
                                 <td>${{ number_format((float) $loan->amount, 2) }}</td>
                                 <td>{{ $loan->term_weeks }}</td>
                                 <td>
-                                    @if($loan->account)
-                                        <a href="{{ route('accounts.view', $loan->account->id) }}"
-                                           class="link link-primary">{{ $loan->account->name }}</a>
+                                    @php($historyAccount = $loan->account)
+                                    @if ($historyAccount?->id)
+                                        <a href="{{ route('accounts.view', $historyAccount->id) }}"
+                                           class="link link-primary">{{ $historyAccount->name }}</a>
+                                    @elseif ($loan->account_id)
+                                        Account #{{ $loan->account_id }}
                                     @else
                                         N/A
                                     @endif
