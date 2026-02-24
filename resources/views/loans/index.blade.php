@@ -590,7 +590,9 @@
                                 <td>${{ number_format((float) $loan->amount, 2) }}</td>
                                 <td>{{ $loan->term_weeks }}</td>
                                 <td>
-                                    @php($historyAccount = $loan->account)
+                                    @php
+                                        $historyAccount = $loan->account;
+                                    @endphp
                                     @if ($historyAccount?->id)
                                         <a href="{{ route('accounts.view', $historyAccount->id) }}"
                                            class="link link-primary">{{ $historyAccount->name }}</a>
