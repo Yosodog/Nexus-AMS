@@ -3,9 +3,11 @@
 namespace App\Services\War;
 
 use App\Models\Nation;
+use App\Models\War;
 use App\Models\WarCounter;
 use App\Models\WarPlan;
 use App\Models\WarPlanAssignment;
+use App\Services\AllianceMembershipService;
 use App\Services\Discord\DiscordQueueService;
 use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -24,7 +26,10 @@ class NotificationService
 {
     private const DISCORD_WAR_ROOM_ACTION = 'WAR_ROOM_CREATE';
 
-    public function __construct(private readonly DiscordQueueService $discordQueueService) {}
+    public function __construct(
+        private readonly DiscordQueueService $discordQueueService,
+        private readonly AllianceMembershipService $membershipService
+    ) {}
 
     /**
      * Queue notifications for published plan assignments.
@@ -164,6 +169,17 @@ class NotificationService
         }
 
         $warType = (string) ($counter->war_declaration_type ?: config('war.plan_defaults.plan_type', 'ordinary'));
+        $counterReason = trim((string) ($counter->war_reason ?: $this->defaultCounterReason()));
+        $attackedNation = $this->resolveCounterAttackedNation($counter);
+        $assignedMembers = collect($this->buildAssignedMemberPayload($assignments));
+
+        if ($attackedNation) {
+            $attackedMemberPayload = $this->buildNationMemberPayload($attackedNation, null, 'defender');
+
+            if ($attackedMemberPayload && ! $assignedMembers->contains(fn (array $member) => (int) ($member['nation_id'] ?? 0) === $attackedNation->id)) {
+                $assignedMembers->push($attackedMemberPayload);
+            }
+        }
 
         $this->discordQueueService->enqueue(self::DISCORD_WAR_ROOM_ACTION, [
             'forum_channel_id' => $forumChannelId,
@@ -177,12 +193,15 @@ class NotificationService
                 'key' => $warType,
                 'label' => $this->warTypeLabel($warType),
             ],
-            'assigned_members' => $this->buildAssignedMemberPayload($assignments),
+            'reason' => $counterReason,
+            'attacked_member' => $attackedNation ? $this->buildNationMemberPayload($attackedNation, null, 'defender') : null,
+            'assigned_members' => $assignedMembers->values()->all(),
             'links' => $this->buildTargetLinks($counter->aggressor->id),
             'room_name_suggestion' => sprintf(
-                'counter-%d-%s',
+                'counter-%d-%s-%d',
                 $counter->id,
-                Str::of($counter->aggressor->leader_name ?: $counter->aggressor->nation_name ?: 'target')->slug('-')
+                Str::of($counter->aggressor->leader_name ?: $counter->aggressor->nation_name ?: 'target')->slug('-'),
+                $counter->aggressor->id
             ),
         ]);
 
@@ -250,27 +269,33 @@ class NotificationService
                     return null;
                 }
 
-                $discordId = $this->resolveNationDiscordId($friendly);
-
-                return [
-                    'nation_id' => $friendly->id,
-                    'leader_name' => $friendly->leader_name,
-                    'nation_name' => $friendly->nation_name,
-                    'match_score' => $assignment->match_score,
-                    'discord_id' => $discordId,
-                    'mention' => $discordId ? "<@{$discordId}>" : null,
-                    'score' => $friendly->score,
-                    'cities' => $friendly->num_cities,
-                    'offensive_wars' => $friendly->offensive_wars_count,
-                    'defensive_wars' => $friendly->defensive_wars_count,
-                    'links' => [
-                        'nation' => sprintf('https://politicsandwar.com/nation/id=%d', $friendly->id),
-                    ],
-                ];
+                return $this->buildNationMemberPayload($friendly, $assignment->match_score, 'counter');
             })
             ->filter()
             ->values()
             ->all();
+    }
+
+    protected function buildNationMemberPayload(Nation $nation, ?float $matchScore = null, string $role = 'counter'): ?array
+    {
+        $discordId = $this->resolveNationDiscordId($nation);
+
+        return [
+            'nation_id' => $nation->id,
+            'leader_name' => $nation->leader_name,
+            'nation_name' => $nation->nation_name,
+            'role' => $role,
+            'match_score' => $matchScore,
+            'discord_id' => $discordId,
+            'mention' => $discordId ? "<@{$discordId}>" : null,
+            'score' => $nation->score,
+            'cities' => $nation->num_cities,
+            'offensive_wars' => $nation->offensive_wars_count,
+            'defensive_wars' => $nation->defensive_wars_count,
+            'links' => [
+                'nation' => sprintf('https://politicsandwar.com/nation/id=%d', $nation->id),
+            ],
+        ];
     }
 
     protected function resolveNationDiscordId(Nation $nation): ?string
@@ -327,5 +352,34 @@ class NotificationService
     {
         return config('war.war_types')[strtolower($warType)]
             ?? Str::of($warType)->replace('_', ' ')->title()->toString();
+    }
+
+    protected function defaultCounterReason(): string
+    {
+        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
+        $allianceName = \App\Models\Alliance::query()->whereKey($primaryAllianceId)->value('name');
+
+        return sprintf('%s Counter', $allianceName ?: config('app.name', 'Alliance'));
+    }
+
+    protected function resolveCounterAttackedNation(WarCounter $counter): ?Nation
+    {
+        $friendlyAllianceIds = $this->membershipService->getAllianceIds()->filter()->values();
+
+        if ($friendlyAllianceIds->isEmpty()) {
+            return null;
+        }
+
+        $latestWar = War::query()
+            ->where('att_id', $counter->aggressor_nation_id)
+            ->whereIn('def_alliance_id', $friendlyAllianceIds->all())
+            ->latest('date')
+            ->with([
+                'defender.user.discordAccounts',
+                'defender.accountProfile',
+            ])
+            ->first();
+
+        return $latestWar?->defender;
     }
 }

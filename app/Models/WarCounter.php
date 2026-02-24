@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $team_size
  * @property string $war_declaration_type
  * @property string|null $discord_forum_channel_id
+ * @property string|null $war_reason
  * @property int|null $suppressed_by_plan_id
  * @property array|null $settings
  * @property \Carbon\CarbonInterface|null $finalized_at

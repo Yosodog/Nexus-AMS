@@ -4,6 +4,8 @@
     @php
         $aggressor = $counter->aggressor;
         $aggressorMilitary = $aggressor?->military;
+        $aggressorLastActive = $aggressor?->accountProfile?->last_active;
+        $resolvedWarReason = old('war_reason', $counter->war_reason ?: ($defaultWarReason ?? 'Counter'));
     @endphp
     <div class="app-content-header">
         <div class="container-fluid">
@@ -49,6 +51,9 @@
                         <dt class="col-6">Last War Declared</dt>
                         <dd class="col-6 text-end">{{ optional($counter->last_war_declared_at)->diffForHumans() ?? '—' }}</dd>
 
+                        <dt class="col-6">Last Activity</dt>
+                        <dd class="col-6 text-end">{{ $aggressorLastActive?->diffForHumans() ?? 'Unknown' }}</dd>
+
                         <dt class="col-6">Created</dt>
                         <dd class="col-6 text-end">{{ $counter->created_at->diffForHumans() }}</dd>
 
@@ -59,9 +64,13 @@
 
                         <dt class="col-6">Discord Forum</dt>
                         <dd class="col-6 text-end">{{ $counter->discord_forum_channel_id ?: 'Default' }}</dd>
+
+                        <dt class="col-6">Reason</dt>
+                        <dd class="col-6 text-end">{{ $counter->war_reason ?: ($defaultWarReason ?? 'Counter') }}</dd>
                     </dl>
                     <div class="mt-3 small text-muted">
                         <div>Aggressor score {{ number_format($aggressor->score ?? 0, 2) }} • Cities {{ $aggressor->num_cities ?? 0 }}</div>
+                        <div>Last active {{ $aggressorLastActive?->format('M j, Y g:i A') ?? 'Unknown' }}</div>
                         <div>Soldiers {{ number_format(optional($aggressorMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($aggressorMilitary)->tanks ?? 0) }}</div>
                         <div>Aircraft {{ number_format(optional($aggressorMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($aggressorMilitary)->ships ?? 0) }}</div>
                     </div>
@@ -89,6 +98,15 @@
                                        name="discord_forum_channel_id"
                                        placeholder="Use default from War Room settings"
                                        value="{{ old('discord_forum_channel_id', $counter->discord_forum_channel_id) }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1">War Reason</label>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       name="war_reason"
+                                       maxlength="255"
+                                       placeholder="e.g. Counter"
+                                       value="{{ $resolvedWarReason }}">
                             </div>
                         </div>
                         <button class="btn btn-sm btn-outline-primary w-100 mt-2" type="submit">Save Counter Settings</button>
@@ -149,7 +167,6 @@
                             <thead class="table-light">
                             <tr>
                                 <th>Friendly Nation</th>
-                                <th>Alliance</th>
                                 <th>Strength</th>
                                 <th>Wars</th>
                                 <th>Match Score</th>
@@ -163,6 +180,7 @@
                                     $friendly = $assignment->friendlyNation;
                                     $friendlyMilitary = $friendly?->military;
                                     $collapseId = 'counter-meta-'.$assignment->id;
+                                    $lastActiveAt = $friendly?->accountProfile?->last_active;
                                 @endphp
                                 <tr>
                                     <td>
@@ -173,7 +191,6 @@
                                         @endif
                                         <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
                                     </td>
-                                    <td>{{ $friendly?->alliance?->name ?? '—' }}</td>
                                     <td>
                                         <div class="small">Score {{ number_format($friendly->score ?? 0, 2) }} • Cities {{ $friendly->num_cities ?? 0 }}</div>
                                         <div class="small text-muted">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
@@ -186,6 +203,7 @@
                                     </td>
                                     <td>
                                         <span class="badge text-bg-info">{{ number_format($assignment->match_score, 1) }}</span>
+                                        <div class="small text-muted">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
                                     </td>
                                     <td>
                                         <span class="badge text-bg-light text-uppercase">{{ $assignment->status }}</span>
@@ -213,13 +231,13 @@
                                     </td>
                                 </tr>
                                 <tr class="collapse" id="{{ $collapseId }}">
-                                    <td colspan="7" class="bg-body-tertiary">
+                                    <td colspan="6" class="bg-body-tertiary">
                                         @include('admin.war-room.partials.match-breakdown', ['meta' => $assignment->meta ?? []])
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">No assignments proposed yet.</td>
+                                    <td colspan="6" class="text-center py-4 text-muted">No assignments proposed yet.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -235,13 +253,47 @@
                             <h5 class="card-title mb-0">All Candidate Nations (In Range)</h5>
                             <small class="text-muted">All in-range nations, sorted with recommended options first.</small>
                         </div>
+                        <div class="card-body border-bottom bg-body-tertiary">
+                            <div class="row g-2 align-items-end" id="candidate-filter-bar">
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label form-label-sm mb-1">Search</label>
+                                    <input type="search" class="form-control form-control-sm" id="candidate-filter-search" placeholder="Leader or nation">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm mb-1">Min Cities</label>
+                                    <input type="number" class="form-control form-control-sm" id="candidate-filter-min-cities" min="0" step="1" value="0">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm mb-1">Max Cities</label>
+                                    <input type="number" class="form-control form-control-sm" id="candidate-filter-max-cities" min="0" step="1" placeholder="Any">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm mb-1">Min Match Score</label>
+                                    <input type="number" class="form-control form-control-sm" id="candidate-filter-min-match-score" min="0" max="100" step="0.1" value="0">
+                                </div>
+                                <div class="col-6 col-md-1">
+                                    <label class="form-label form-label-sm mb-1">Active in</label>
+                                    <select class="form-select form-select-sm" id="candidate-filter-activity">
+                                        <option value="all">Any</option>
+                                        <option value="24">24h</option>
+                                        <option value="72">3d</option>
+                                        <option value="168">7d</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-12">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" id="candidate-filter-recommended">
+                                        <label class="form-check-label" for="candidate-filter-recommended">Recommended only</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-striped align-middle mb-0">
                                     <thead class="table-light">
                                     <tr>
                                         <th>Friendly Nation</th>
-                                        <th>Alliance</th>
                                         <th>Strength</th>
                                         <th>Wars</th>
                                         <th>Match Score</th>
@@ -250,9 +302,18 @@
                                     </thead>
                                     <tbody>
                                     @forelse($candidates ?? collect() as $row)
-                                        @php $friendly = $row['friendly'] @endphp
-                                        @php $friendlyMilitary = $friendly?->military @endphp
-                                        <tr>
+                                        @php
+                                            $friendly = $row['friendly'];
+                                            $friendlyMilitary = $friendly?->military;
+                                            $lastActiveAt = $friendly?->accountProfile?->last_active;
+                                            $searchBlob = strtolower(trim(($friendly?->leader_name ?? '').' '.($friendly?->nation_name ?? '')));
+                                        @endphp
+                                        <tr class="candidate-row"
+                                            data-search="{{ $searchBlob }}"
+                                            data-match-score="{{ (float) ($row['score'] ?? 0) }}"
+                                            data-cities="{{ (int) ($friendly->num_cities ?? 0) }}"
+                                            data-last-active="{{ $lastActiveAt?->timestamp ?? '' }}"
+                                            data-recommended="{{ ($row['recommended'] ?? false) ? '1' : '0' }}">
                                             <td>
                                                 @if($friendly?->id)
                                                     <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
@@ -261,7 +322,6 @@
                                                 @endif
                                                 <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
                                             </td>
-                                            <td>{{ $friendly?->alliance?->name ?? '—' }}</td>
                                             <td>
                                                 <div class="small">Score {{ number_format($friendly->score ?? 0, 2) }} • Cities {{ $friendly->num_cities ?? 0 }}</div>
                                                 <div class="small text-muted">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
@@ -279,6 +339,7 @@
                                                         {{ ($row['recommended'] ?? false) ? 'Recommended' : 'Manual only' }}
                                                     </span>
                                                 </div>
+                                                <div class="small text-muted">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
                                             </td>
                                             <td>
                                                 <form method="post" action="{{ route('admin.war-counters.assignments.manual', $counter) }}" class="d-inline">
@@ -290,10 +351,13 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center py-4 text-muted">No nations are in war range.</td>
+                                        <tr class="candidate-empty-row">
+                                            <td colspan="5" class="text-center py-4 text-muted">No nations are in war range.</td>
                                         </tr>
                                     @endforelse
+                                    <tr class="candidate-filter-empty d-none">
+                                        <td colspan="5" class="text-center py-4 text-muted">No candidates match the current filters.</td>
+                                    </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -333,6 +397,7 @@
                                             <td>
                                                 @if($attack->attacker?->id)
                                                     <a href="https://politicsandwar.com/nation/id={{ $attack->attacker->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->attacker->leader_name ?? $attack->att_id }}</a>
+                                                    <div class="small text-muted">Active {{ $attack->attacker?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                                 @else
                                                     {{ $attack->att_id }}
                                                 @endif
@@ -340,6 +405,7 @@
                                             <td>
                                                 @if($attack->defender?->id)
                                                     <a href="https://politicsandwar.com/nation/id={{ $attack->defender->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->defender->leader_name ?? $attack->def_id }}</a>
+                                                    <div class="small text-muted">Active {{ $attack->defender?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                                 @else
                                                     {{ $attack->def_id }}
                                                 @endif
@@ -406,6 +472,7 @@
                                                         —
                                                     @endif
                                                 </div>
+                                                <div class="small text-muted">Active {{ $opponent?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                             </td>
                                             <td>
                                                 @if($war->end_date)
@@ -433,3 +500,96 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (() => {
+            const nowTs = () => Math.floor(Date.now() / 1000);
+
+            const asNumber = (value) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+
+            const withinActivityWindow = (rowTs, windowHours) => {
+                if (!windowHours || windowHours === 'all') {
+                    return true;
+                }
+
+                const timestamp = asNumber(rowTs);
+                if (!timestamp) {
+                    return false;
+                }
+
+                const maxSeconds = asNumber(windowHours) * 3600;
+                return nowTs() - timestamp <= maxSeconds;
+            };
+
+            const initCandidateFilters = () => {
+                const rows = Array.from(document.querySelectorAll('.candidate-row'));
+                if (!rows.length) {
+                    return;
+                }
+
+                const search = document.getElementById('candidate-filter-search');
+                const minCities = document.getElementById('candidate-filter-min-cities');
+                const maxCities = document.getElementById('candidate-filter-max-cities');
+                const minMatchScore = document.getElementById('candidate-filter-min-match-score');
+                const activity = document.getElementById('candidate-filter-activity');
+                const recommendedOnly = document.getElementById('candidate-filter-recommended');
+                const emptyState = document.querySelector('.candidate-filter-empty');
+
+                const apply = () => {
+                    let visibleRows = 0;
+                    const query = (search?.value || '').trim().toLowerCase();
+                    const minCitiesValue = asNumber(minCities?.value || 0);
+                    const maxCitiesRaw = (maxCities?.value || '').trim();
+                    const hasMaxCities = maxCitiesRaw !== '';
+                    const maxCitiesValue = asNumber(maxCitiesRaw);
+                    const minMatchScoreValue = asNumber(minMatchScore?.value || 0);
+                    const activityValue = activity?.value || 'all';
+                    const onlyRecommended = Boolean(recommendedOnly?.checked);
+
+                    rows.forEach((row) => {
+                        const cityCount = asNumber(row.dataset.cities || 0);
+                        const matchesSearch = !query || (row.dataset.search || '').includes(query);
+                        const matchesMinCities = cityCount >= minCitiesValue;
+                        const matchesMaxCities = !hasMaxCities || cityCount <= maxCitiesValue;
+                        const matchesMatchScore = asNumber(row.dataset.matchScore || 0) >= minMatchScoreValue;
+                        const matchesActivity = withinActivityWindow(row.dataset.lastActive || '', activityValue);
+                        const matchesRecommended = !onlyRecommended || row.dataset.recommended === '1';
+                        const show = matchesSearch
+                            && matchesMinCities
+                            && matchesMaxCities
+                            && matchesMatchScore
+                            && matchesActivity
+                            && matchesRecommended;
+
+                        row.classList.toggle('d-none', !show);
+
+                        if (show) {
+                            visibleRows++;
+                        }
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('d-none', visibleRows !== 0);
+                    }
+                };
+
+                [search, minCities, maxCities, minMatchScore, activity, recommendedOnly].forEach((element) => {
+                    if (!element) {
+                        return;
+                    }
+
+                    element.addEventListener('input', apply);
+                    element.addEventListener('change', apply);
+                });
+
+                apply();
+            };
+
+            initCandidateFilters();
+        })();
+    </script>
+@endpush

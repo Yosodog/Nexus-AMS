@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alliance;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Models\WarCounter;
@@ -36,7 +37,14 @@ class WarCounterController extends Controller
     ): View {
         $this->authorize('view-wars');
 
-        $counter->load(['aggressor.alliance', 'aggressor.military', 'assignments.friendlyNation.alliance', 'assignments.friendlyNation.military']);
+        $counter->load([
+            'aggressor.alliance',
+            'aggressor.military',
+            'aggressor.accountProfile',
+            'assignments.friendlyNation.alliance',
+            'assignments.friendlyNation.military',
+            'assignments.friendlyNation.accountProfile',
+        ]);
 
         // Build candidate list from friendly alliances
         $friendlyAllianceIds = $membershipService->getAllianceIds();
@@ -46,7 +54,12 @@ class WarCounterController extends Controller
                 $query->whereNull('alliance_position')
                     ->orWhere('alliance_position', '!=', 'APPLICANT');
             })
+            ->where(function ($query) {
+                $query->whereNull('vacation_mode_turns')
+                    ->orWhere('vacation_mode_turns', '<=', 0);
+            })
             ->with(['military', 'latestSignIn', 'alliance'])
+            ->with('accountProfile')
             ->get();
 
         $candidates = $assignmentService->listCandidates($counter, $friendlies);
@@ -57,7 +70,7 @@ class WarCounterController extends Controller
 
         // Recent wars between aggressor and our alliances (last 30 days)
         $recentWarsAgainstUs = \App\Models\War::query()
-            ->with(['attacker.alliance', 'defender.alliance'])
+            ->with(['attacker.alliance', 'attacker.accountProfile', 'defender.alliance', 'defender.accountProfile'])
             ->where('date', '>=', now()->subDays(30))
             ->where(function ($q) use ($counter, $friendlyAllianceIds) {
                 $q->where(function ($q2) use ($counter, $friendlyAllianceIds) {
@@ -77,7 +90,7 @@ class WarCounterController extends Controller
             ->get();
 
         $enemyWarAttacks = WarAttack::query()
-            ->with(['attacker.alliance', 'defender.alliance'])
+            ->with(['attacker.alliance', 'attacker.accountProfile', 'defender.alliance', 'defender.accountProfile'])
             ->where(function ($query) use ($counter) {
                 $query->where('att_id', $counter->aggressor_nation_id)
                     ->orWhere('def_id', $counter->aggressor_nation_id);
@@ -88,10 +101,11 @@ class WarCounterController extends Controller
 
         return view('admin.war-room.counter', [
             'counter' => $counter,
-            'assignments' => $counter->assignments()->with(['friendlyNation.alliance', 'friendlyNation.military'])->orderByDesc('match_score')->get(),
+            'assignments' => $counter->assignments()->with(['friendlyNation.alliance', 'friendlyNation.military', 'friendlyNation.accountProfile'])->orderByDesc('match_score')->get(),
             'enemyWarAttacks' => $enemyWarAttacks,
             'candidates' => $candidates,
             'recentWarsAgainstUs' => $recentWarsAgainstUs,
+            'defaultWarReason' => $this->defaultWarReason($membershipService),
         ]);
     }
 
@@ -102,7 +116,8 @@ class WarCounterController extends Controller
      */
     public function store(
         Request $request,
-        PlanOrchestratorService $orchestrator
+        PlanOrchestratorService $orchestrator,
+        AllianceMembershipService $membershipService
     ): RedirectResponse {
         $this->authorize('manage-war-room');
 
@@ -111,6 +126,7 @@ class WarCounterController extends Controller
             'team_size' => ['nullable', 'integer', 'min:1', 'max:10'],
             'war_declaration_type' => ['nullable', Rule::in($this->allowedWarTypes())],
             'discord_forum_channel_id' => ['nullable', 'string', 'max:190'],
+            'war_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $existing = WarCounter::query()
@@ -138,6 +154,7 @@ class WarCounterController extends Controller
             'team_size' => $data['team_size'] ?? config('war.counters.default_team_size', 3),
             'war_declaration_type' => $this->sanitizeWarType($data['war_declaration_type'] ?? null),
             'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
+            'war_reason' => $this->sanitizeWarReason($data['war_reason'] ?? $this->defaultWarReason($membershipService)),
             'status' => 'draft',
         ]);
 
@@ -163,6 +180,10 @@ class WarCounterController extends Controller
             ->where(function ($query) {
                 $query->whereNull('alliance_position')
                     ->orWhere('alliance_position', '!=', 'APPLICANT');
+            })
+            ->where(function ($query) {
+                $query->whereNull('vacation_mode_turns')
+                    ->orWhere('vacation_mode_turns', '<=', 0);
             })
             ->get();
 
@@ -198,6 +219,12 @@ class WarCounterController extends Controller
             return Redirect::back()
                 ->with('alert-type', 'warning')
                 ->with('alert-message', 'Nation is not within friendly alliances.');
+        }
+
+        if ((int) ($friendly->vacation_mode_turns ?? 0) > 0) {
+            return Redirect::back()
+                ->with('alert-type', 'warning')
+                ->with('alert-message', 'Vacation mode nations cannot be assigned.');
         }
 
         $assignmentService->addManualAssignment($counter, $friendly, $data['match_score'] ?? null);
@@ -294,17 +321,34 @@ class WarCounterController extends Controller
         Request $request,
         WarCounter $counter,
         CounterAssignmentService $assignmentService,
-        NotificationService $notificationService
+        NotificationService $notificationService,
+        AllianceMembershipService $membershipService
     ): RedirectResponse {
         $this->authorize('manage-war-room');
 
         $settings = $request->validate([
             'war_declaration_type' => ['nullable', Rule::in($this->allowedWarTypes())],
+            'war_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if (array_key_exists('war_declaration_type', $settings)) {
+        if (array_key_exists('war_declaration_type', $settings) || array_key_exists('war_reason', $settings)) {
+            $updatePayload = [];
+
+            if (array_key_exists('war_declaration_type', $settings)) {
+                $updatePayload['war_declaration_type'] = $this->sanitizeWarType($settings['war_declaration_type']);
+            }
+
+            if (array_key_exists('war_reason', $settings)) {
+                $updatePayload['war_reason'] = $this->sanitizeWarReason($settings['war_reason'] ?? null)
+                    ?? $this->defaultWarReason($membershipService);
+            }
+
+            $counter->update($updatePayload);
+        }
+
+        if (! $counter->war_reason) {
             $counter->update([
-                'war_declaration_type' => $this->sanitizeWarType($settings['war_declaration_type']),
+                'war_reason' => $this->defaultWarReason($membershipService),
             ]);
         }
 
@@ -360,6 +404,7 @@ class WarCounterController extends Controller
             'war_declaration_type' => ['required', Rule::in($this->allowedWarTypes())],
             'team_size' => ['nullable', 'integer', 'min:1', 'max:10'],
             'discord_forum_channel_id' => ['nullable', 'string', 'max:190'],
+            'war_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $counter->update([
@@ -368,6 +413,7 @@ class WarCounterController extends Controller
                 ? (int) $data['team_size']
                 : $counter->team_size,
             'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
+            'war_reason' => $this->sanitizeWarReason($data['war_reason'] ?? null),
         ]);
 
         return Redirect::back()
@@ -393,5 +439,20 @@ class WarCounterController extends Controller
         return in_array($warType, $this->allowedWarTypes(), true)
             ? $warType
             : config('war.plan_defaults.plan_type', 'ordinary');
+    }
+
+    protected function sanitizeWarReason(?string $warReason): ?string
+    {
+        $warReason = trim((string) $warReason);
+
+        return $warReason !== '' ? $warReason : null;
+    }
+
+    protected function defaultWarReason(AllianceMembershipService $membershipService): string
+    {
+        $primaryAllianceId = $membershipService->getPrimaryAllianceId();
+        $allianceName = Alliance::query()->whereKey($primaryAllianceId)->value('name');
+
+        return sprintf('%s Counter', $allianceName ?: config('app.name', 'Alliance'));
     }
 }
