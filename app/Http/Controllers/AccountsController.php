@@ -231,7 +231,7 @@ class AccountsController extends Controller
     public function viewAccount(Account $accounts)
     {
         if ($accounts->nation_id != Auth::user()->nation_id) {
-            abort('403');
+            abort(403, "You don't own that account.");
         }
 
         $accounts->load('nation');
