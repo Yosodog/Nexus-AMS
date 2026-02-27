@@ -42,6 +42,7 @@ class WarRoomController extends Controller
             'discordWarChannelId' => SettingService::getDiscordWarAlertChannelId(),
             'discordWarAlertsEnabled' => SettingService::isDiscordWarAlertEnabled(),
             'defaultWarRoomForumId' => SettingService::getDiscordWarRoomForumId(),
+            'warRoomDefenseRoleId' => SettingService::getDiscordWarRoomDefenseRoleId(),
         ]);
     }
 
@@ -116,6 +117,39 @@ class WarRoomController extends Controller
         return back()
             ->with('alert-type', 'success')
             ->with('alert-message', 'Default Discord war room forum updated.');
+    }
+
+    /**
+     * Update the Discord defense role used when counter war rooms are created.
+     */
+    public function updateWarRoomDefenseRole(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-war-room');
+
+        $previousDefenseRoleId = SettingService::getDiscordWarRoomDefenseRoleId();
+        $data = $request->validate([
+            'defense_role_id' => ['nullable', 'string', 'max:190'],
+        ]);
+
+        SettingService::setDiscordWarRoomDefenseRoleId($data['defense_role_id'] ?? '');
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'war_room_defense_role_updated',
+            context: [
+                'changes' => [
+                    'discord_war_room_defense_role_id' => [
+                        'from' => $previousDefenseRoleId,
+                        'to' => $data['defense_role_id'] ?? '',
+                    ],
+                ],
+            ],
+            message: 'War room defense role updated.'
+        );
+
+        return back()
+            ->with('alert-type', 'success')
+            ->with('alert-message', 'War room defense role updated.');
     }
 
     /**

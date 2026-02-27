@@ -287,6 +287,39 @@
         </div>
     </div>
 
+    <div class="row g-4 mt-1">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-0">Counter Defense Role</h5>
+                        <small class="text-muted">Role ID pinged when a counter war room is created.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ route('admin.war-room.defense-role') }}" class="row g-3">
+                        @csrf
+                        <div class="col-12">
+                            <label for="defense_role_id" class="form-label">Defense Role ID</label>
+                            <input type="text"
+                                   id="defense_role_id"
+                                   name="defense_role_id"
+                                   class="form-control"
+                                   placeholder="e.g. 123456789012345678"
+                                   value="{{ old('defense_role_id', $warRoomDefenseRoleId) }}">
+                            <div class="form-text">Leave blank to skip role ping on counter room creation.</div>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i> Save Role
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Create War Plan Modal --}}
     <div class="modal fade" id="createWarPlanModal" tabindex="-1" aria-labelledby="createWarPlanModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">

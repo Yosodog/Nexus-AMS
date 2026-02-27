@@ -175,6 +175,7 @@ class NotificationService
         $warType = (string) ($counter->war_declaration_type ?: config('war.plan_defaults.plan_type', 'ordinary'));
         $counterReason = trim((string) ($counter->war_reason ?: $this->defaultCounterReason()));
         $attackedNation = $this->resolveCounterAttackedNation($counter);
+        $defenseRoleId = trim(SettingService::getDiscordWarRoomDefenseRoleId());
         $assignedMembers = collect($this->buildAssignedMemberPayload($assignments));
 
         if ($attackedNation) {
@@ -198,6 +199,7 @@ class NotificationService
                 'label' => $this->warTypeLabel($warType),
             ],
             'reason' => $counterReason,
+            'defense_role_id' => $defenseRoleId !== '' ? $defenseRoleId : null,
             'attacked_member' => $attackedNation ? $this->buildNationMemberPayload($attackedNation, null, 'defender') : null,
             'assigned_members' => $assignedMembers->values()->all(),
             'links' => $this->buildTargetLinks($counter->aggressor->id),
