@@ -121,7 +121,7 @@ class SpyCampaignController extends Controller
 
         $service->update($spyCampaign, $data);
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $spyCampaign)
             ->with('alert-type', 'success')
             ->with('alert-message', 'Campaign updated.');
     }
@@ -137,12 +137,13 @@ class SpyCampaignController extends Controller
 
         $service->addAlliance($spyCampaign, (int) $data['alliance_id'], SpyCampaignAllianceRole::from($data['role']));
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $spyCampaign)
             ->with('alert-type', 'success')
             ->with('alert-message', 'Alliance added.');
     }
 
     public function removeAlliance(
+        Request $request,
         SpyCampaign $spyCampaign,
         SpyCampaignAlliance $spyCampaignAlliance,
         SpyCampaignService $service
@@ -155,7 +156,7 @@ class SpyCampaignController extends Controller
 
         $service->removeAlliance($spyCampaignAlliance);
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $spyCampaign)
             ->with('alert-type', 'success')
             ->with('alert-message', 'Alliance removed.');
     }
@@ -172,18 +173,19 @@ class SpyCampaignController extends Controller
 
         $service->addRound($spyCampaign, $data);
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $spyCampaign)
             ->with('alert-type', 'success')
             ->with('alert-message', 'Round added.');
     }
 
-    public function generate(SpyRound $spyRound): RedirectResponse
+    public function generate(Request $request, SpyRound $spyRound): RedirectResponse
     {
         $this->authorize('manage-spies');
 
         GenerateSpyAssignmentsJob::dispatch($spyRound->id);
+        $campaign = $spyRound->campaign()->firstOrFail();
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $campaign)
             ->with('alert-type', 'info')
             ->with('alert-message', 'Assignment generation queued.');
     }
@@ -197,8 +199,9 @@ class SpyCampaignController extends Controller
         ]);
 
         SendSpyAssignmentsNotificationJob::dispatch($spyRound->id, $data['message']);
+        $campaign = $spyRound->campaign()->firstOrFail();
 
-        return Redirect::back()
+        return $this->redirectToCampaignWithTab($request, $campaign)
             ->with('alert-type', 'success')
             ->with('alert-message', 'Notifications queued.');
     }
@@ -245,5 +248,30 @@ class SpyCampaignController extends Controller
             'attackers' => $attackers,
             'defenders' => $defenders,
         ];
+    }
+
+    protected function redirectToCampaignWithTab(Request $request, SpyCampaign $spyCampaign): RedirectResponse
+    {
+        $parameters = ['spyCampaign' => $spyCampaign];
+        $activeTab = $this->resolveActiveTab($request);
+
+        if ($activeTab !== null) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return Redirect::route('admin.spy-campaigns.show', $parameters);
+    }
+
+    protected function resolveActiveTab(Request $request): ?string
+    {
+        $activeTab = $request->string('active_tab')->toString();
+
+        if ($activeTab === '') {
+            return null;
+        }
+
+        return in_array($activeTab, ['overview', 'rounds', 'alliances', 'settings'], true)
+            ? $activeTab
+            : null;
     }
 }

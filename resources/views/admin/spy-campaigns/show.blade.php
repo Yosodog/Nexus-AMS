@@ -1,6 +1,15 @@
 @extends('layouts.admin')
 
 @section('content')
+    @php
+        $allowedTabs = ['overview', 'rounds', 'alliances', 'settings'];
+        $requestedTab = request()->query('tab');
+        $oldTab = old('active_tab');
+        $activeTab = in_array($requestedTab, $allowedTabs, true)
+            ? $requestedTab
+            : (in_array($oldTab, $allowedTabs, true) ? $oldTab : 'overview');
+    @endphp
+
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
@@ -78,21 +87,21 @@
 
             <ul class="nav nav-tabs mb-3" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+                    <button class="nav-link {{ $activeTab === 'overview' ? 'active' : '' }}" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="rounds-tab" data-bs-toggle="tab" data-bs-target="#rounds" type="button" role="tab">Rounds</button>
+                    <button class="nav-link {{ $activeTab === 'rounds' ? 'active' : '' }}" id="rounds-tab" data-bs-toggle="tab" data-bs-target="#rounds" type="button" role="tab">Rounds</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="alliances-tab" data-bs-toggle="tab" data-bs-target="#alliances" type="button" role="tab">Alliances</button>
+                    <button class="nav-link {{ $activeTab === 'alliances' ? 'active' : '' }}" id="alliances-tab" data-bs-toggle="tab" data-bs-target="#alliances" type="button" role="tab">Alliances</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">Settings</button>
+                    <button class="nav-link {{ $activeTab === 'settings' ? 'active' : '' }}" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">Settings</button>
                 </li>
             </ul>
 
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="tab-pane fade {{ $activeTab === 'overview' ? 'show active' : '' }}" id="overview" role="tabpanel">
                     <div class="row g-3">
                         <div class="col-lg-7">
                             <div class="card shadow-sm h-100">
@@ -153,7 +162,7 @@
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="rounds" role="tabpanel">
+                <div class="tab-pane fade {{ $activeTab === 'rounds' ? 'show active' : '' }}" id="rounds" role="tabpanel">
                     <div class="card shadow-sm">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Rounds</h5>
@@ -227,7 +236,7 @@
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="alliances" role="tabpanel">
+                <div class="tab-pane fade {{ $activeTab === 'alliances' ? 'show active' : '' }}" id="alliances" role="tabpanel">
                     <div class="row g-3">
                         <div class="col-lg-6">
                             <div class="card shadow-sm h-100">
@@ -304,7 +313,7 @@
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="settings" role="tabpanel">
+                <div class="tab-pane fade {{ $activeTab === 'settings' ? 'show active' : '' }}" id="settings" role="tabpanel">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <form method="post" action="{{ route('admin.spy-campaigns.update', $campaign) }}" class="row g-3">
@@ -452,6 +461,49 @@
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.forEach((tooltipTriggerEl) => {
                 new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            const allowedTabs = @json($allowedTabs);
+            const defaultTab = @json($activeTab);
+            const forms = document.querySelectorAll('form');
+            const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"][data-bs-target]');
+
+            const sanitizeTab = (tab) => allowedTabs.includes(tab) ? tab : defaultTab;
+
+            const currentActiveTab = () => {
+                const activeButton = document.querySelector('button[data-bs-toggle="tab"].active');
+                const tabTarget = activeButton?.getAttribute('data-bs-target') ?? '';
+
+                if (!tabTarget.startsWith('#')) {
+                    return defaultTab;
+                }
+
+                return sanitizeTab(tabTarget.substring(1));
+            };
+
+            const syncActiveTabInput = (tab) => {
+                forms.forEach((form) => {
+                    let activeTabInput = form.querySelector('input[name="active_tab"]');
+
+                    if (!activeTabInput) {
+                        activeTabInput = document.createElement('input');
+                        activeTabInput.type = 'hidden';
+                        activeTabInput.name = 'active_tab';
+                        form.appendChild(activeTabInput);
+                    }
+
+                    activeTabInput.value = tab;
+                });
+            };
+
+            syncActiveTabInput(currentActiveTab());
+
+            tabButtons.forEach((tabButton) => {
+                tabButton.addEventListener('shown.bs.tab', (event) => {
+                    const tabTarget = event.target.getAttribute('data-bs-target') ?? '';
+                    const tab = tabTarget.startsWith('#') ? tabTarget.substring(1) : defaultTab;
+                    syncActiveTabInput(sanitizeTab(tab));
+                });
             });
         });
     </script>
