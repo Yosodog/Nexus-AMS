@@ -56,4 +56,12 @@ class WarCounter extends Model
     {
         return $this->hasMany(WarCounterAssignment::class);
     }
+
+    /**
+     * @return HasMany<WarCounterReimbursement>
+     */
+    public function reimbursements(): HasMany
+    {
+        return $this->hasMany(WarCounterReimbursement::class);
+    }
 }

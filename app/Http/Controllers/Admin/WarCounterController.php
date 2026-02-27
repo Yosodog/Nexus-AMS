@@ -2,20 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTransferObjects\AllianceFinanceData;
+use App\Events\AllianceExpenseOccurred;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\WarCounterReimbursementRequest;
+use App\Models\Account;
 use App\Models\Alliance;
+use App\Models\AllianceFinanceEntry;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
+use App\Models\WarCounterReimbursement;
+use App\Services\AccountService;
 use App\Services\AllianceMembershipService;
+use App\Services\AuditLogger;
 use App\Services\War\CounterAssignmentService;
+use App\Services\War\CounterReimbursementService;
 use App\Services\War\NotificationService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -33,7 +45,8 @@ class WarCounterController extends Controller
         Request $request,
         WarCounter $counter,
         AllianceMembershipService $membershipService,
-        CounterAssignmentService $assignmentService
+        CounterAssignmentService $assignmentService,
+        CounterReimbursementService $counterReimbursementService
     ): View {
         $this->authorize('view-wars');
 
@@ -99,6 +112,8 @@ class WarCounterController extends Controller
             ->limit(50)
             ->get();
 
+        $counterCosting = $counterReimbursementService->buildCostingSnapshot($counter, $friendlyAllianceIds);
+
         return view('admin.war-room.counter', [
             'counter' => $counter,
             'assignments' => $counter->assignments()->with(['friendlyNation.alliance', 'friendlyNation.military', 'friendlyNation.accountProfile'])->orderByDesc('match_score')->get(),
@@ -106,6 +121,8 @@ class WarCounterController extends Controller
             'candidates' => $candidates,
             'recentWarsAgainstUs' => $recentWarsAgainstUs,
             'defaultWarReason' => $this->defaultWarReason($membershipService),
+            'counterCosting' => $counterCosting,
+            'canManageAccounts' => Gate::allows('manage-accounts'),
         ]);
     }
 
@@ -380,6 +397,253 @@ class WarCounterController extends Controller
         return Redirect::back()
             ->with('alert-type', 'success')
             ->with('alert-message', $message);
+    }
+
+    /**
+     * Store a member reimbursement for an active counter.
+     *
+     * @throws AuthorizationException
+     */
+    public function storeReimbursement(
+        WarCounterReimbursementRequest $request,
+        WarCounter $counter,
+        AllianceMembershipService $membershipService,
+        CounterReimbursementService $counterReimbursementService,
+        AuditLogger $auditLogger
+    ): RedirectResponse {
+        $this->authorize('manage-war-room');
+        $this->authorize('manage-accounts');
+
+        if ($counter->status !== 'active') {
+            return Redirect::back()
+                ->with('alert-type', 'warning')
+                ->with('alert-message', 'Reimbursements are only available while a counter is active.')
+                ->withInput();
+        }
+
+        $costing = $counterReimbursementService->buildCostingSnapshot($counter, $membershipService->getAllianceIds());
+
+        $nationId = (int) $request->integer('nation_id');
+        $participant = $costing['participants_by_nation']->get($nationId);
+
+        if (! $participant) {
+            return Redirect::back()
+                ->with('alert-type', 'warning')
+                ->with('alert-message', 'Selected member is not currently involved in this counter.')
+                ->withInput();
+        }
+
+        $account = Account::query()->find($request->integer('account_id'));
+
+        if (! $account || (int) $account->nation_id !== $nationId) {
+            return Redirect::back()
+                ->with('alert-type', 'warning')
+                ->with('alert-message', 'The selected account does not belong to that member nation.')
+                ->withInput();
+        }
+
+        $resourceAdjustments = [
+            'gasoline' => round((float) $request->input('gasoline', 0), 2),
+            'munitions' => round((float) $request->input('munitions', 0), 2),
+            'steel' => round((float) $request->input('steel', 0), 2),
+            'aluminum' => round((float) $request->input('aluminum', 0), 2),
+        ];
+        $resourcesCost = round(
+            ($resourceAdjustments['gasoline'] * (float) ($costing['prices']['gasoline'] ?? 0))
+            + ($resourceAdjustments['munitions'] * (float) ($costing['prices']['munitions'] ?? 0))
+            + ($resourceAdjustments['steel'] * (float) ($costing['prices']['steel'] ?? 0))
+            + ($resourceAdjustments['aluminum'] * (float) ($costing['prices']['aluminum'] ?? 0)),
+            2
+        );
+        $unitLossCost = round((float) $request->input('unit_loss_cost', 0), 2);
+        $infraLossCost = round((float) $request->input('infra_loss_cost', 0), 2);
+        $totalCost = round($unitLossCost + $infraLossCost, 2);
+        $hasResourcePayout = collect($resourceAdjustments)->some(fn (float $amount) => $amount > 0);
+
+        if ($totalCost <= 0 && ! $hasResourcePayout) {
+            return Redirect::back()
+                ->with('alert-type', 'warning')
+                ->with('alert-message', 'Enter a money reimbursement amount or at least one resource amount.')
+                ->withInput();
+        }
+
+        $note = $this->sanitizeWarReason($request->input('note'));
+        $correlationId = (string) Str::uuid();
+        $transactionNote = sprintf('Counter reimbursement #%d for Nation #%d', $counter->id, $nationId);
+
+        if ($note) {
+            $transactionNote .= ' ('.$note.')';
+        }
+
+        $transactionNote = Str::limit($transactionNote, 255, '');
+
+        $meta = [
+            'counter_cost_snapshot' => [
+                'resource_usage' => $participant['resource_usage'] ?? [],
+                'reimbursed_resources' => $participant['reimbursed_resources'] ?? [],
+                'outstanding_resources' => $participant['outstanding_resources'] ?? [],
+                'total_resources_cost' => (float) ($participant['resources_cost'] ?? 0.0),
+                'total_unit_loss_cost' => (float) ($participant['unit_loss_cost'] ?? 0.0),
+                'total_infra_loss_cost' => (float) ($participant['infra_loss_cost'] ?? 0.0),
+                'total_cost' => (float) ($participant['total_cost'] ?? 0.0),
+                'default_unit_loss_cost' => (float) ($participant['outstanding_unit_loss_cost'] ?? 0.0),
+                'default_infra_loss_cost' => (float) ($participant['outstanding_infra_loss_cost'] ?? 0.0),
+                'default_total_cost' => (float) ($participant['outstanding_cost'] ?? 0.0),
+                'wars_count' => (int) ($participant['war_count'] ?? 0),
+                'active_wars_count' => (int) ($participant['active_war_count'] ?? 0),
+                'pricing' => $costing['prices'] ?? [],
+                'unit_pricing' => $costing['unit_prices'] ?? [],
+                'trade_price_as_of' => $costing['trade_price_as_of'] ?? null,
+            ],
+            'correlation_id' => $correlationId,
+        ];
+
+        /** @var WarCounterReimbursement $reimbursement */
+        $reimbursement = DB::transaction(function () use (
+            $counter,
+            $nationId,
+            $account,
+            $resourceAdjustments,
+            $resourcesCost,
+            $unitLossCost,
+            $infraLossCost,
+            $totalCost,
+            $note,
+            $request,
+            $correlationId,
+            $meta,
+            $transactionNote
+        ): WarCounterReimbursement {
+            $record = WarCounterReimbursement::query()->create([
+                'war_counter_id' => $counter->id,
+                'nation_id' => $nationId,
+                'account_id' => $account->id,
+                'reimbursed_by' => auth()->id(),
+                'gasoline' => $resourceAdjustments['gasoline'],
+                'munitions' => $resourceAdjustments['munitions'],
+                'steel' => $resourceAdjustments['steel'],
+                'aluminum' => $resourceAdjustments['aluminum'],
+                'resources_cost' => $resourcesCost,
+                'unit_loss_cost' => $unitLossCost,
+                'infra_loss_cost' => $infraLossCost,
+                'total_cost' => $totalCost,
+                'note' => $note,
+                'meta' => $meta,
+            ]);
+
+            $manualTransaction = AccountService::adjustAccountBalance(
+                $account,
+                [
+                    'money' => $totalCost,
+                    'gasoline' => $resourceAdjustments['gasoline'],
+                    'munitions' => $resourceAdjustments['munitions'],
+                    'steel' => $resourceAdjustments['steel'],
+                    'aluminum' => $resourceAdjustments['aluminum'],
+                    'note' => $transactionNote,
+                ],
+                auth()->id(),
+                $request->ip(),
+                [
+                    'correlation_id' => $correlationId,
+                    'war_counter_id' => $counter->id,
+                    'war_counter_reimbursement_id' => $record->id,
+                    'nation_id' => $nationId,
+                    'category_breakdown' => [
+                        'resource_amounts' => $resourceAdjustments,
+                        'resource_value_cost' => $resourcesCost,
+                        'resources_cost' => $resourcesCost,
+                        'unit_loss_cost' => $unitLossCost,
+                        'infra_loss_cost' => $infraLossCost,
+                        'money_total' => $totalCost,
+                    ],
+                ]
+            );
+
+            $record->update([
+                'manual_transaction_id' => $manualTransaction->id,
+            ]);
+
+            return $record->fresh(['nation', 'account', 'manualTransaction']);
+        });
+
+        event(new AllianceExpenseOccurred((new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'counter_reimbursement',
+            description: sprintf('Counter reimbursement for Nation #%d (Counter #%d)', $nationId, $counter->id),
+            date: now(),
+            nationId: $nationId,
+            accountId: $account->id,
+            source: $reimbursement,
+            money: $totalCost,
+            gasoline: $resourceAdjustments['gasoline'],
+            munitions: $resourceAdjustments['munitions'],
+            steel: $resourceAdjustments['steel'],
+            aluminum: $resourceAdjustments['aluminum'],
+            meta: [
+                'counter_id' => $counter->id,
+                'war_counter_reimbursement_id' => $reimbursement->id,
+                'resource_amounts' => $resourceAdjustments,
+                'resource_value_cost' => $resourcesCost,
+                'resources_cost' => $resourcesCost,
+                'unit_loss_cost' => $unitLossCost,
+                'infra_loss_cost' => $infraLossCost,
+                'correlation_id' => $correlationId,
+            ]
+        ))->toArray()));
+
+        $auditLogger->recordAfterCommit(
+            category: 'war_counter',
+            action: 'counter_reimbursement_recorded',
+            outcome: 'success',
+            severity: 'info',
+            subject: $reimbursement,
+            context: [
+                'related' => [
+                    ['type' => 'WarCounter', 'id' => (string) $counter->id, 'role' => 'counter'],
+                    ['type' => 'Nation', 'id' => (string) $nationId, 'role' => 'recipient'],
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'credited_account'],
+                ],
+                'data' => [
+                    'resource_amounts' => $resourceAdjustments,
+                    'resource_value_cost' => $resourcesCost,
+                    'resources_cost' => $resourcesCost,
+                    'unit_loss_cost' => $unitLossCost,
+                    'infra_loss_cost' => $infraLossCost,
+                    'total_cost' => $totalCost,
+                    'correlation_id' => $correlationId,
+                ],
+            ],
+            message: 'Counter reimbursement recorded.'
+        );
+
+        $auditLogger->recordAfterCommit(
+            category: 'finance',
+            action: 'counter_reimbursement_paid',
+            outcome: 'success',
+            severity: 'info',
+            subject: $reimbursement->manualTransaction,
+            context: [
+                'related' => [
+                    ['type' => 'WarCounterReimbursement', 'id' => (string) $reimbursement->id, 'role' => 'reimbursement_record'],
+                    ['type' => 'WarCounter', 'id' => (string) $counter->id, 'role' => 'counter'],
+                    ['type' => 'Account', 'id' => (string) $account->id, 'role' => 'credited_account'],
+                ],
+                'data' => [
+                    'nation_id' => $nationId,
+                    'money' => $totalCost,
+                    'gasoline' => $resourceAdjustments['gasoline'],
+                    'munitions' => $resourceAdjustments['munitions'],
+                    'steel' => $resourceAdjustments['steel'],
+                    'aluminum' => $resourceAdjustments['aluminum'],
+                    'correlation_id' => $correlationId,
+                ],
+            ],
+            message: 'Counter reimbursement paid into member account.'
+        );
+
+        return Redirect::back()
+            ->with('alert-type', 'success')
+            ->with('alert-message', 'Counter reimbursement saved and credited successfully.');
     }
 
     /**

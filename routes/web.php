@@ -487,6 +487,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/war-counters/{counter}/assignments/{assignment}/unassign', [AdminWarCounterController::class, 'unassign'])->name('admin.war-counters.assignments.unassign');
         Route::delete('/war-counters/{counter}/assignments/{assignment}', [AdminWarCounterController::class, 'removeAssignment'])->name('admin.war-counters.assignments.destroy');
         Route::post('/war-counters/{counter}/finalize', [AdminWarCounterController::class, 'finalize'])->name('admin.war-counters.finalize');
+        Route::post('/war-counters/{counter}/reimbursements', [AdminWarCounterController::class, 'storeReimbursement'])->name('admin.war-counters.reimbursements.store');
         Route::post('/war-counters/{counter}/archive', [AdminWarCounterController::class, 'archive'])->name('admin.war-counters.archive');
 
         // War Aid

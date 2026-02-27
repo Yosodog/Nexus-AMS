@@ -51,6 +51,13 @@ return [
             'group' => 'war',
             'icon' => 'fa-solid fa-helmet-safety',
         ],
+        'counter_reimbursement' => [
+            'label' => 'Counter Reimbursements',
+            'direction' => 'expense',
+            'color' => 'danger',
+            'group' => 'war',
+            'icon' => 'fa-solid fa-hand-holding-dollar',
+        ],
         'rebuilding' => [
             'label' => 'Rebuilding',
             'direction' => 'expense',

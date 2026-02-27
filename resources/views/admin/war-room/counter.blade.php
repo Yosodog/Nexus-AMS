@@ -6,6 +6,14 @@
         $aggressorMilitary = $aggressor?->military;
         $aggressorLastActive = $aggressor?->accountProfile?->last_active;
         $resolvedWarReason = old('war_reason', $counter->war_reason ?: ($defaultWarReason ?? 'Counter'));
+        $counterCosting = $counterCosting ?? [];
+        $counterCostSummary = $counterCosting['summary'] ?? [];
+        $counterCostWars = $counterCosting['wars'] ?? collect();
+        $counterCostParticipants = $counterCosting['participants'] ?? collect();
+        $counterRecentReimbursements = $counterCosting['recent_reimbursements'] ?? collect();
+        $tradePriceAsOf = $counterCosting['trade_price_as_of'] ?? null;
+        $canManageAccounts = $canManageAccounts ?? false;
+        $activeReimbursementNationId = (int) old('nation_id', 0);
     @endphp
     <div class="app-content-header">
         <div class="container-fluid">
@@ -497,6 +505,437 @@
                     </div>
                 </div>
             </div>
+
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">Counter Cost &amp; Reimbursements</h5>
+                        <small class="text-muted">
+                            Live war costs for this counter using attacker/defender direction correctly per member.
+                        </small>
+                    </div>
+                    <div class="text-end small text-muted">
+                        @if($tradePriceAsOf)
+                            24h average trade prices • as of {{ \Carbon\Carbon::parse($tradePriceAsOf)->format('M j, Y') }}
+                        @else
+                            24h average trade prices unavailable • values default to 0
+                        @endif
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if($counter->status !== 'active')
+                        <div class="alert alert-info mb-0">
+                            Counter reimbursements unlock when this counter is <strong>active</strong>. Finalize first, then this panel will track costs and payouts.
+                        </div>
+                    @else
+                        <div class="alert alert-secondary">
+                            <div class="fw-semibold mb-1">How costs are valued</div>
+                            <div class="small">
+                                Resources are reimbursed as actual amounts (gas, munitions, steel, aluminum). Money reimbursement is for unit + infra value only.
+                                Unit valuation uses: Soldiers $5, Tanks $60 + 0.5 steel, Aircraft $4,000 + 10 aluminum, Ships $50,000 + 30 steel.
+                            </div>
+                        </div>
+
+                        @if(! $canManageAccounts)
+                            <div class="alert alert-warning">
+                                You need the <strong>manage-accounts</strong> permission to issue reimbursements. Cost stats stay visible, but payout actions are disabled.
+                            </div>
+                        @endif
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Total Value (Units + Infra)</div>
+                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_counter_cost'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Value Reimbursed</div>
+                                    <div class="fw-semibold text-success">${{ number_format((float) ($counterCostSummary['total_reimbursed'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Value Outstanding</div>
+                                    <div class="fw-semibold text-warning">${{ number_format((float) ($counterCostSummary['outstanding_total'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Resource Burn</div>
+                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_resources_cost'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Unit Losses</div>
+                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_unit_loss_cost'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Infra Losses</div>
+                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_infra_loss_cost'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Wars Tracked</div>
+                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['war_count'] ?? 0)) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Active Wars</div>
+                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['active_war_count'] ?? 0)) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-xl-2">
+                                <div class="border rounded p-2 bg-body-tertiary">
+                                    <div class="small text-muted">Members Involved</div>
+                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['participant_count'] ?? 0)) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="mb-2">Wars vs Aggressor (Cost Per War)</h6>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-striped table-sm align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Started</th>
+                                    <th>Friendly Nation</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Resources Cost</th>
+                                    <th>Unit Loss Cost</th>
+                                    <th>Infra Loss Cost</th>
+                                    <th>Total</th>
+                                    <th>War</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse($counterCostWars as $warCost)
+                                    @php
+                                        $friendlyNation = $warCost['friendly_nation'] ?? null;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ optional($warCost['date'] ?? null)->diffForHumans() ?? '—' }}</td>
+                                        <td>
+                                            @if($friendlyNation?->id)
+                                                <a href="https://politicsandwar.com/nation/id={{ $friendlyNation->id }}" target="_blank" rel="noopener noreferrer">
+                                                    {{ $friendlyNation->leader_name ?? $friendlyNation->id }}
+                                                </a>
+                                            @else
+                                                —
+                                            @endif
+                                            <div class="small text-muted">{{ $friendlyNation?->nation_name ?? 'Unknown nation' }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ ($warCost['friendly_role'] ?? '') === 'attacker' ? 'text-bg-danger' : 'text-bg-primary' }}">
+                                                {{ ucfirst($warCost['friendly_role'] ?? 'unknown') }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ ($warCost['is_active'] ?? false) ? 'text-bg-success' : 'text-bg-secondary' }}">
+                                                {{ ($warCost['is_active'] ?? false) ? 'Active' : 'Ended' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            ${{ number_format((float) ($warCost['resources_cost'] ?? 0), 2) }}
+                                            <div class="small text-muted">
+                                                G {{ number_format((float) ($warCost['resources_used']['gasoline'] ?? 0), 2) }}
+                                                • M {{ number_format((float) ($warCost['resources_used']['munitions'] ?? 0), 2) }}
+                                                • S {{ number_format((float) ($warCost['resources_used']['steel'] ?? 0), 2) }}
+                                                • A {{ number_format((float) ($warCost['resources_used']['aluminum'] ?? 0), 2) }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            ${{ number_format((float) ($warCost['unit_loss_cost'] ?? 0), 2) }}
+                                            <div class="small text-muted">
+                                                S {{ number_format((int) ($warCost['unit_losses']['soldiers'] ?? 0)) }}
+                                                • T {{ number_format((int) ($warCost['unit_losses']['tanks'] ?? 0)) }}
+                                                • A {{ number_format((int) ($warCost['unit_losses']['aircraft'] ?? 0)) }}
+                                                • Sh {{ number_format((int) ($warCost['unit_losses']['ships'] ?? 0)) }}
+                                            </div>
+                                        </td>
+                                        <td>${{ number_format((float) ($warCost['infra_loss_cost'] ?? 0), 2) }}</td>
+                                        <td class="fw-semibold">${{ number_format((float) ($warCost['total_cost'] ?? 0), 2) }}</td>
+                                        <td>
+                                            <a href="https://politicsandwar.com/nation/war/timeline/war={{ $warCost['war_id'] ?? 0 }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                                                Timeline
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="text-center py-3 text-muted">No counter wars found yet for this aggressor window.</td>
+                                    </tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="mb-2">Reimburse Members</h6>
+                        <div class="small text-muted mb-2">
+                            Includes members actively involved in this counter, including the original defender when detected in counter wars.
+                        </div>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Member</th>
+                                    <th>Wars</th>
+                                    <th>Suggested Reimbursement</th>
+                                    <th>Deposit Account</th>
+                                    <th>Adjustable Reimbursement</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse($counterCostParticipants as $participant)
+                                    @php
+                                        $nation = $participant['nation'] ?? null;
+                                        $nationId = (int) ($participant['nation_id'] ?? 0);
+                                        $isActiveRow = $activeReimbursementNationId === $nationId;
+                                        $rowGasoline = (float) ($isActiveRow ? old('gasoline', $participant['outstanding_resources']['gasoline'] ?? 0) : ($participant['outstanding_resources']['gasoline'] ?? 0));
+                                        $rowMunitions = (float) ($isActiveRow ? old('munitions', $participant['outstanding_resources']['munitions'] ?? 0) : ($participant['outstanding_resources']['munitions'] ?? 0));
+                                        $rowSteel = (float) ($isActiveRow ? old('steel', $participant['outstanding_resources']['steel'] ?? 0) : ($participant['outstanding_resources']['steel'] ?? 0));
+                                        $rowAluminum = (float) ($isActiveRow ? old('aluminum', $participant['outstanding_resources']['aluminum'] ?? 0) : ($participant['outstanding_resources']['aluminum'] ?? 0));
+                                        $rowUnits = (float) ($isActiveRow ? old('unit_loss_cost', $participant['outstanding_unit_loss_cost'] ?? 0) : ($participant['outstanding_unit_loss_cost'] ?? 0));
+                                        $rowInfra = (float) ($isActiveRow ? old('infra_loss_cost', $participant['outstanding_infra_loss_cost'] ?? 0) : ($participant['outstanding_infra_loss_cost'] ?? 0));
+                                        $rowTotal = $rowUnits + $rowInfra;
+                                        $rowAccounts = $participant['accounts'] ?? collect();
+                                        $rowRecommendedAccountId = $participant['recommended_account_id'] ?? null;
+                                        $rowSelectedAccountId = (int) ($isActiveRow ? old('account_id', $rowRecommendedAccountId) : $rowRecommendedAccountId);
+                                        $rowCanSubmit = $canManageAccounts && $rowAccounts->isNotEmpty();
+                                        $rowTotalTargetId = 'reimbursement-total-'.$nationId;
+                                        $reimbursementFormId = 'counter-reimbursement-form-'.$nationId;
+                                    @endphp
+                                    <tr data-counter-reimbursement-row data-total-target="{{ $rowTotalTargetId }}">
+                                        <td>
+                                            @if($nation?->id)
+                                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">
+                                                    {{ $nation->leader_name ?? $nation->id }}
+                                                </a>
+                                            @else
+                                                <span class="fw-semibold">Nation #{{ $nationId }}</span>
+                                            @endif
+                                            <div class="small text-muted">{{ $nation?->nation_name ?? 'Unknown nation' }}</div>
+                                            <div class="small text-muted">
+                                                Already reimbursed: ${{ number_format((float) ($participant['reimbursed_total'] ?? 0), 2) }}
+                                                @if((int) ($participant['reimbursement_count'] ?? 0) > 0)
+                                                    • {{ (int) $participant['reimbursement_count'] }} payout(s)
+                                                @endif
+                                            </div>
+                                            <div class="small text-muted">
+                                                Resource reimbursed:
+                                                Gas {{ number_format((float) ($participant['reimbursed_resources']['gasoline'] ?? 0), 2) }}
+                                                • Mun {{ number_format((float) ($participant['reimbursed_resources']['munitions'] ?? 0), 2) }}
+                                                • Steel {{ number_format((float) ($participant['reimbursed_resources']['steel'] ?? 0), 2) }}
+                                                • Alum {{ number_format((float) ($participant['reimbursed_resources']['aluminum'] ?? 0), 2) }}
+                                            </div>
+                                            <div class="small text-muted">
+                                                Value outstanding: ${{ number_format((float) ($participant['outstanding_cost'] ?? 0), 2) }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">{{ number_format((int) ($participant['war_count'] ?? 0)) }} tracked</div>
+                                            <div class="small text-muted">{{ number_format((int) ($participant['active_war_count'] ?? 0)) }} active</div>
+                                        </td>
+                                        <td>
+                                            <div class="small fw-semibold">Resource Amounts (remaining)</div>
+                                            <div class="small text-muted">
+                                                Gas {{ number_format((float) ($participant['outstanding_resources']['gasoline'] ?? 0), 2) }}
+                                                • Mun {{ number_format((float) ($participant['outstanding_resources']['munitions'] ?? 0), 2) }}
+                                                • Steel {{ number_format((float) ($participant['outstanding_resources']['steel'] ?? 0), 2) }}
+                                                • Alum {{ number_format((float) ($participant['outstanding_resources']['aluminum'] ?? 0), 2) }}
+                                            </div>
+                                            <div class="small mt-1">Unit Value: ${{ number_format((float) ($participant['outstanding_unit_loss_cost'] ?? 0), 2) }}</div>
+                                            <div class="small">Infra Value: ${{ number_format((float) ($participant['outstanding_infra_loss_cost'] ?? 0), 2) }}</div>
+                                            <div class="small fw-semibold">Money Total: ${{ number_format((float) ($participant['outstanding_cost'] ?? 0), 2) }}</div>
+                                            <div class="small text-muted">Defaults use remaining amount per category/resource.</div>
+                                        </td>
+                                        <td>
+                                                <select name="account_id" class="form-select form-select-sm mb-2" form="{{ $reimbursementFormId }}" @disabled(! $rowCanSubmit)>
+                                                    @forelse($rowAccounts as $account)
+                                                        <option value="{{ $account->id }}" @selected($rowSelectedAccountId === (int) $account->id)>
+                                                            {{ $account->name }} @if($account->frozen) (Frozen) @endif
+                                                        </option>
+                                                    @empty
+                                                        <option value="">No accounts available</option>
+                                                    @endforelse
+                                                </select>
+                                                <div class="small text-muted">
+                                                    @if($rowAccounts->isEmpty())
+                                                        Member has no accounts to receive reimbursement.
+                                                    @else
+                                                        Choose which account receives the deposit.
+                                                    @endif
+                                                </div>
+                                        </td>
+                                        <td>
+                                            <div class="row g-2">
+                                                <div class="col-6 col-lg-3">
+                                                    <label class="form-label form-label-sm mb-1">Gasoline</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="gasoline"
+                                                           value="{{ number_format($rowGasoline, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-6 col-lg-3">
+                                                    <label class="form-label form-label-sm mb-1">Munitions</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="munitions"
+                                                           value="{{ number_format($rowMunitions, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-6 col-lg-3">
+                                                    <label class="form-label form-label-sm mb-1">Steel</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="steel"
+                                                           value="{{ number_format($rowSteel, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-6 col-lg-3">
+                                                    <label class="form-label form-label-sm mb-1">Aluminum</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="aluminum"
+                                                           value="{{ number_format($rowAluminum, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-12 col-lg-6">
+                                                    <label class="form-label form-label-sm mb-1">Unit Value ($)</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="unit_loss_cost"
+                                                           value="{{ number_format($rowUnits, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm counter-cost-input"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-12 col-lg-6">
+                                                    <label class="form-label form-label-sm mb-1">Infra Value ($)</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="infra_loss_cost"
+                                                           value="{{ number_format($rowInfra, 2, '.', '') }}"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           class="form-control form-control-sm counter-cost-input"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label form-label-sm mb-1">Admin Note (optional)</label>
+                                                    <input type="text"
+                                                           name="note"
+                                                           maxlength="255"
+                                                           class="form-control form-control-sm"
+                                                           value="{{ $isActiveRow ? old('note') : '' }}"
+                                                           placeholder="Optional override reason"
+                                                           form="{{ $reimbursementFormId }}"
+                                                           @disabled(! $rowCanSubmit)>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <form id="{{ $reimbursementFormId }}" method="post" action="{{ route('admin.war-counters.reimbursements.store', $counter) }}" class="d-none">
+                                                @csrf
+                                                <input type="hidden" name="nation_id" value="{{ $nationId }}">
+                                            </form>
+                                            <div class="small text-muted mb-1">Money reimbursement total</div>
+                                            <div class="fw-semibold mb-2" id="{{ $rowTotalTargetId }}">${{ number_format($rowTotal, 2) }}</div>
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-primary"
+                                                    form="{{ $reimbursementFormId }}"
+                                                    @disabled(! $rowCanSubmit)>
+                                                Reimburse
+                                            </button>
+                                            @if(! $canManageAccounts)
+                                                <div class="small text-warning mt-1">Needs manage-accounts</div>
+                                            @elseif($rowAccounts->isEmpty())
+                                                <div class="small text-warning mt-1">No destination account</div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-3 text-muted">No member cost records available yet.</td>
+                                    </tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="mb-2">Recent Reimbursements</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>When</th>
+                                    <th>Member</th>
+                                    <th>Account</th>
+                                    <th>Breakdown</th>
+                                    <th>Money</th>
+                                    <th>Admin</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse($counterRecentReimbursements as $reimbursement)
+                                    <tr>
+                                        <td>{{ optional($reimbursement->created_at)->diffForHumans() ?? '—' }}</td>
+                                        <td>
+                                            @if($reimbursement->nation?->id)
+                                                <a href="https://politicsandwar.com/nation/id={{ $reimbursement->nation->id }}" target="_blank" rel="noopener noreferrer">
+                                                    {{ $reimbursement->nation->leader_name ?? $reimbursement->nation->id }}
+                                                </a>
+                                            @else
+                                                Nation #{{ $reimbursement->nation_id }}
+                                            @endif
+                                        </td>
+                                        <td>{{ $reimbursement->account?->name ?? '—' }}</td>
+                                        <td class="small">
+                                            Gas {{ number_format((float) $reimbursement->gasoline, 2) }} •
+                                            Mun {{ number_format((float) $reimbursement->munitions, 2) }} •
+                                            Steel {{ number_format((float) $reimbursement->steel, 2) }} •
+                                            Alum {{ number_format((float) $reimbursement->aluminum, 2) }}
+                                            <div>Units ${{ number_format((float) $reimbursement->unit_loss_cost, 2) }} • Infra ${{ number_format((float) $reimbursement->infra_loss_cost, 2) }}</div>
+                                        </td>
+                                        <td class="fw-semibold">${{ number_format((float) $reimbursement->total_cost, 2) }}</td>
+                                        <td>{{ $reimbursement->reimbursedByUser?->name ?? 'System' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-3 text-muted">No reimbursements issued for this counter yet.</td>
+                                    </tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 @endsection
@@ -509,6 +948,15 @@
             const asNumber = (value) => {
                 const parsed = Number(value);
                 return Number.isFinite(parsed) ? parsed : 0;
+            };
+
+            const formatCurrency = (value) => {
+                const amount = Number.isFinite(value) ? value : 0;
+
+                return `$${amount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })}`;
             };
 
             const withinActivityWindow = (rowTs, windowHours) => {
@@ -589,7 +1037,36 @@
                 apply();
             };
 
+            const initReimbursementRows = () => {
+                const rows = Array.from(document.querySelectorAll('[data-counter-reimbursement-row]'));
+                if (!rows.length) {
+                    return;
+                }
+
+                rows.forEach((row) => {
+                    const totalTargetId = row.dataset.totalTarget || '';
+                    const totalTarget = totalTargetId ? document.getElementById(totalTargetId) : null;
+                    const inputs = Array.from(row.querySelectorAll('.counter-cost-input'));
+
+                    const apply = () => {
+                        const total = inputs.reduce((sum, input) => sum + asNumber(input.value), 0);
+
+                        if (totalTarget) {
+                            totalTarget.textContent = formatCurrency(total);
+                        }
+                    };
+
+                    inputs.forEach((input) => {
+                        input.addEventListener('input', apply);
+                        input.addEventListener('change', apply);
+                    });
+
+                    apply();
+                });
+            };
+
             initCandidateFilters();
+            initReimbursementRows();
         })();
     </script>
 @endpush
