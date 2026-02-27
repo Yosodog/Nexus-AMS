@@ -90,20 +90,21 @@ class CityGrantService
         }
 
         // Make sure they don't have a pending city grant
-        $pending = CityGrantRequest::where('nation_id', $nation->id)
+        $hasPending = CityGrantRequest::where('nation_id', $nation->id)
             ->where('status', 'pending')
-            ->get();
+            ->exists();
 
-        if ($pending->count() > 0) {
+        if ($hasPending) {
             throw ValidationException::withMessages(['You have a pending city grant.']);
         }
 
-        // Check to see if they've gotten this grant before
-        $gotten = CityGrantRequest::where('nation_id', $nation->id)
+        // Check to see if they've gotten this city tier before
+        $alreadyApprovedForCity = CityGrantRequest::where('nation_id', $nation->id)
+            ->where('city_number', $grant->city_number)
             ->where('status', 'approved')
-            ->get();
+            ->exists();
 
-        if ($gotten->count() > 0) {
+        if ($alreadyApprovedForCity) {
             throw ValidationException::withMessages(["You've already gotten that city grant"]);
         }
 
