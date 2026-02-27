@@ -23,6 +23,7 @@ class DiscordWarCounterArchiveRequest extends FormRequest
     {
         return [
             'war_counter_id' => ['required', 'integer', 'exists:war_counters,id'],
+            'moderator_discord_id' => ['required', 'string', 'max:100'],
         ];
     }
 }
