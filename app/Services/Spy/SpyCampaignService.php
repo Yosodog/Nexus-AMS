@@ -7,8 +7,10 @@ use App\Models\Alliance;
 use App\Models\SpyCampaign;
 use App\Models\SpyCampaignAlliance;
 use App\Models\SpyRound;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Manages spy campaign lifecycle and related records.
@@ -49,10 +51,42 @@ class SpyCampaignService
 
     public function addAlliance(SpyCampaign $campaign, int $allianceId, SpyCampaignAllianceRole $role): SpyCampaignAlliance
     {
-        return $campaign->alliances()->create([
-            'alliance_id' => $allianceId,
-            'role' => $role,
-        ]);
+        $existingAlliance = $campaign->alliances()
+            ->where('alliance_id', $allianceId)
+            ->first();
+
+        if ($existingAlliance !== null) {
+            $existingRole = $existingAlliance->role instanceof SpyCampaignAllianceRole
+                ? $existingAlliance->role->value
+                : (string) $existingAlliance->role;
+
+            if ($existingRole === $role->value) {
+                throw ValidationException::withMessages([
+                    'alliance_id' => 'That alliance is already in this campaign as '.$this->roleLabel($role->value).'.',
+                ]);
+            }
+
+            throw ValidationException::withMessages([
+                'alliance_id' => 'That alliance is already in this campaign as '.$this->roleLabel($existingRole).'. Remove it first to switch sides.',
+            ]);
+        }
+
+        try {
+            return $campaign->alliances()->create([
+                'alliance_id' => $allianceId,
+                'role' => $role,
+            ]);
+        } catch (QueryException $exception) {
+            $sqlState = $exception->errorInfo[0] ?? null;
+
+            if ($sqlState === '23000') {
+                throw ValidationException::withMessages([
+                    'alliance_id' => 'That alliance is already in this campaign.',
+                ]);
+            }
+
+            throw $exception;
+        }
     }
 
     public function removeAlliance(SpyCampaignAlliance $alliance): void
@@ -90,5 +124,14 @@ class SpyCampaignService
                 'role' => $validRole,
             ]);
         }
+    }
+
+    protected function roleLabel(string $role): string
+    {
+        return match ($role) {
+            SpyCampaignAllianceRole::ALLY->value => 'an ally',
+            SpyCampaignAllianceRole::ENEMY->value => 'an enemy',
+            default => $role,
+        };
     }
 }
