@@ -657,11 +657,15 @@ class WarCounterController extends Controller
     /**
      * Archive a counter.
      */
-    public function archive(WarCounter $counter, CounterAssignmentService $assignmentService): RedirectResponse
-    {
+    public function archive(
+        WarCounter $counter,
+        CounterAssignmentService $assignmentService,
+        NotificationService $notificationService
+    ): RedirectResponse {
         $this->authorize('manage-war-room');
 
         $assignmentService->archive($counter);
+        $notificationService->queueCounterArchivedRoomNotification($counter->refresh());
 
         return Redirect::route('admin.war-room')
             ->with('alert-type', 'success')

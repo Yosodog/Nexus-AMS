@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\WarPlanController;
 use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
+use App\Http\Controllers\API\Discord\WarCounterController as DiscordWarCounterController;
 use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
@@ -71,6 +72,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
     Route::post('/applications/approve', [DiscordApplicationController::class, 'approve']);
     Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
+    Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel']);
+    Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive']);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
 });
 

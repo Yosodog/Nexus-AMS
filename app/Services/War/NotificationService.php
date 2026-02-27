@@ -2,6 +2,8 @@
 
 namespace App\Services\War;
 
+use App\Enums\DiscordQueueStatus;
+use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\War;
 use App\Models\WarCounter;
@@ -25,6 +27,8 @@ use Illuminate\Support\Str;
 class NotificationService
 {
     private const DISCORD_WAR_ROOM_ACTION = 'WAR_ROOM_CREATE';
+
+    private const DISCORD_WAR_ROOM_ARCHIVE_ACTION = 'WAR_ROOM_ARCHIVE';
 
     public function __construct(
         private readonly DiscordQueueService $discordQueueService,
@@ -208,6 +212,48 @@ class NotificationService
         $result['rooms_queued'] = 1;
 
         return $result;
+    }
+
+    /**
+     * Queue a Discord war room archive command when a room was previously created.
+     */
+    public function queueCounterArchivedRoomNotification(WarCounter $counter): bool
+    {
+        $discordChannelId = trim((string) ($counter->discord_channel_id ?? ''));
+
+        if ($discordChannelId === '' && ! $this->hasCompletedCounterWarRoom($counter)) {
+            return false;
+        }
+
+        $this->discordQueueService->enqueue(self::DISCORD_WAR_ROOM_ARCHIVE_ACTION, [
+            'discord_channel_id' => $discordChannelId !== '' ? $discordChannelId : null,
+            'source' => [
+                'type' => 'war_counter',
+                'id' => $counter->id,
+                'url' => route('admin.war-counters.show', $counter),
+            ],
+            'archive' => [
+                'lock' => true,
+                'title_prefix' => '[Archived] ',
+            ],
+            'archived_at' => optional($counter->archived_at)->toIso8601String() ?? now()->toIso8601String(),
+        ]);
+
+        return true;
+    }
+
+    protected function hasCompletedCounterWarRoom(WarCounter $counter): bool
+    {
+        return DiscordQueue::query()
+            ->where('action', self::DISCORD_WAR_ROOM_ACTION)
+            ->where('status', DiscordQueueStatus::Complete)
+            ->whereJsonContains('payload->source->type', 'war_counter')
+            ->where(function ($query) use ($counter): void {
+                $query
+                    ->whereJsonContains('payload->source->id', $counter->id)
+                    ->orWhereJsonContains('payload->source->id', (string) $counter->id);
+            })
+            ->exists();
     }
 
     protected function resolveForumChannelId(?string $overrideForumId): string
