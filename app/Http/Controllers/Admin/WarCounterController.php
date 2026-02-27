@@ -374,9 +374,17 @@ class WarCounterController extends Controller
             'create_room' => $request->boolean('notify_discord_room'),
         ];
 
+        $assignedIds = $counter->assignments()
+            ->where('status', 'assigned')
+            ->pluck('id');
+
         $counter = $assignmentService->finalize($counter);
 
-        $assignments = $counter->assignments()->with('friendlyNation')->get();
+        $assignments = $counter->assignments()
+            ->whereIn('id', $assignedIds)
+            ->where('status', 'finalized')
+            ->with('friendlyNation')
+            ->get();
 
         $result = $notificationService->queueCounterFinalizedNotifications($counter, $assignments, $channels);
 
