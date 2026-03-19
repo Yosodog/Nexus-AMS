@@ -184,7 +184,63 @@
                 </div>
             </div>
 
-            <hr>
+            @if(isset($stuckTransactions) && $stuckTransactions->isNotEmpty())
+                <hr>
+
+                <div class="card border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h3 class="card-title text-warning">Stuck Pending Withdrawals</h3>
+                        <p class="mb-0 text-muted">Transactions that are still pending and require manual intervention.</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Nation</th>
+                                    <th>Pending Reason</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($stuckTransactions as $transaction)
+                                    <tr>
+                                        <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                                        <td>${{ number_format($transaction->money, 2) }}</td>
+                                        <td>
+                                            @if($transaction->nation)
+                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank">
+                                                    {{ $transaction->nation->nation_name }}
+                                                </a>
+                                            @elseif($transaction->nation_id)
+                                                Nation #{{ $transaction->nation_id }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
+                                        <td>{{ $transaction->pending_reason ?? 'Unspecified' }}</td>
+                                        <td>
+                                            @can('manage-accounts')
+                                                <form method="POST"
+                                                      action="{{ route('admin.accounts.transactions.unstuck_refund', $transaction) }}"
+                                                      onsubmit="return confirm('Unstick and refund this pending withdrawal?');">
+                                                    @csrf
+                                                    <button class="btn btn-sm btn-outline-danger">Unstick + Refund</button>
+                                                </form>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+            @endif
 
             <div class="card mt-4">
                 <div class="card-header">

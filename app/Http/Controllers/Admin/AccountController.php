@@ -128,6 +128,16 @@ class AccountController extends Controller
 
         $transactions = AccountService::getRelatedTransactions($accounts, 500);
         $manualTransactions = AccountService::getRelatedManualTransactions($accounts, 500);
+        $stuckTransactions = Transaction::query()
+            ->with(['nation', 'fromAccount', 'toAccount'])
+            ->where('from_account_id', $accounts->id)
+            ->where('transaction_type', 'withdrawal')
+            ->where('is_pending', true)
+            ->whereNull('sent_at')
+            ->whereNull('refunded_at')
+            ->whereNull('denied_at')
+            ->orderBy('created_at', 'asc')
+            ->get();
         $directDepositLogs = DirectDepositLog::query()
             ->where('account_id', $accounts->id)
             ->latest('created_at')
@@ -144,6 +154,7 @@ class AccountController extends Controller
             'account' => $accounts,
             'transactions' => $transactions,
             'manualTransactions' => $manualTransactions,
+            'stuckTransactions' => $stuckTransactions,
             'directDepositLogs' => $directDepositLogs,
             'mmrPurchases' => $mmrPurchases,
         ]);
@@ -272,6 +283,7 @@ class AccountController extends Controller
                 RequestFacade::ip()
             );
 
+            $lockedTransaction->is_pending = false;
             $lockedTransaction->refunded_at = now();
             $lockedTransaction->save();
 
@@ -323,6 +335,136 @@ class AccountController extends Controller
 
         return back()->with([
             'alert-message' => 'Refund successful.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function unstuckAndRefundTransaction(Transaction $transaction)
+    {
+        $this->authorize('manage-accounts');
+
+        $this->selfApprovalGuard->ensureNotSelf(
+            requestNationId: $transaction->nation_id,
+            context: 'unstick and refund a withdrawal'
+        );
+
+        if (! $transaction->isNationWithdrawal()) {
+            abort(403, 'This transaction cannot be unstuck/refunded.');
+        }
+
+        if ($transaction->sent_at) {
+            abort(403, 'A sent transaction cannot be unstuck/refunded.');
+        }
+
+        if ($transaction->isRefunded()) {
+            return back()->with([
+                'alert-message' => 'This transaction has already been refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        $adjustment = [];
+        foreach (PWHelperService::resources() as $resource) {
+            $adjustment[$resource] = $transaction->$resource;
+        }
+
+        $adjustment['note'] = "Unstuck refund for Transaction #{$transaction->id}";
+
+        $result = DB::transaction(function () use ($transaction, $adjustment) {
+            $lockedTransaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($transaction->id);
+
+            if (! $lockedTransaction) {
+                return 'missing';
+            }
+
+            if ($lockedTransaction->denied_at) {
+                return 'denied';
+            }
+
+            if ($lockedTransaction->isRefunded()) {
+                return 'refunded';
+            }
+
+            if ($lockedTransaction->sent_at) {
+                return 'sent';
+            }
+
+            $fromAccount = $lockedTransaction->fromAccount;
+            if (! $fromAccount) {
+                return 'account-missing';
+            }
+
+            AccountService::adjustAccountBalance(
+                $fromAccount,
+                $adjustment,
+                auth()->id(),
+                RequestFacade::ip()
+            );
+
+            $lockedTransaction->is_pending = false;
+            $lockedTransaction->refunded_at = now();
+            $lockedTransaction->save();
+
+            return 'ok';
+        });
+
+        if ($result === 'refunded') {
+            return back()->with([
+                'alert-message' => 'This transaction has already been refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'account-missing') {
+            return back()->with([
+                'alert-message' => 'Original sender account not found.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'denied') {
+            return back()->with([
+                'alert-message' => 'Denied withdrawals cannot be refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'sent') {
+            return back()->with([
+                'alert-message' => 'Sent withdrawals cannot be unstuck/refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'ok') {
+            $this->auditLogger->recordAfterCommit(
+                category: 'finance',
+                action: 'withdrawal_unstuck_refunded',
+                outcome: 'success',
+                severity: 'info',
+                subject: $transaction,
+                context: [
+                    'related' => [
+                        ['type' => 'Account', 'id' => (string) $transaction->from_account_id, 'role' => 'from_account'],
+                    ],
+                    'data' => [
+                        'nation_id' => $transaction->nation_id,
+                        'resources' => collect(PWHelperService::resources())
+                            ->mapWithKeys(fn ($resource) => [$resource => $transaction->{$resource}])
+                            ->all(),
+                    ],
+                ],
+                message: 'Stuck withdrawal refunded and marked resolved.'
+            );
+        }
+
+        return back()->with([
+            'alert-message' => 'Transaction unstuck and refunded successfully.',
             'alert-type' => 'success',
         ]);
     }
