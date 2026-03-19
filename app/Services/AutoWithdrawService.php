@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\PWRateLimitHitException;
+use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\AutoWithdrawSetting;
 use App\Models\Nation;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AutoWithdrawService
 {
@@ -44,6 +46,17 @@ class AutoWithdrawService
         }
 
         try {
+            try {
+                AccountService::ensureNotBlockaded($nation->id);
+            } catch (UserErrorException $e) {
+                Log::info('Auto withdraw skipped because nation is under blockade.', [
+                    'nation_id' => $nation->id,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return;
+            }
+
             $resources = $nation->resources;
             $now = Carbon::now();
 
