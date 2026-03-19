@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -15,14 +16,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $discord_username
  * @property string|null $discord_channel_id
  * @property ApplicationStatus $status
- * @property \Illuminate\Support\Carbon|null $approved_at
- * @property \Illuminate\Support\Carbon|null $denied_at
- * @property \Illuminate\Support\Carbon|null $cancelled_at
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $denied_at
+ * @property Carbon|null $cancelled_at
  * @property string|null $approved_by_discord_id
  * @property string|null $denied_by_discord_id
  * @property string|null $cancelled_by_discord_id
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Application extends Model
 {

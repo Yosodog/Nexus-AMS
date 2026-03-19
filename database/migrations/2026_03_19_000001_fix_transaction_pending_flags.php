@@ -2,7 +2,6 @@
 
 use App\Models\Transaction;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -16,7 +15,7 @@ return new class extends Migration
                     ->orWhereNotNull('denied_at');
             })
             ->update([
-                'is_pending' => false
+                'is_pending' => false,
             ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MMRAssistantPurchase extends Model
 {
@@ -46,7 +47,7 @@ class MMRAssistantPurchase extends Model
     public $table = 'mmr_assistant_purchases';
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function account()
     {

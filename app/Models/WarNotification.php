@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $event_type
  * @property array $payload
  * @property string $status
- * @property \Carbon\CarbonInterface|null $sent_at
+ * @property CarbonInterface|null $sent_at
  */
 class WarNotification extends Model
 {

@@ -10,6 +10,7 @@ use App\Models\Account;
 use App\Models\Alliance;
 use App\Models\AllianceFinanceEntry;
 use App\Models\Nation;
+use App\Models\War;
 use App\Models\WarAttack;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
@@ -82,7 +83,7 @@ class WarCounterController extends Controller
         $candidates = $candidates->reject(fn ($row) => in_array($row['friendly']->id, $existingIds, true))->values();
 
         // Recent wars between aggressor and our alliances (last 30 days)
-        $recentWarsAgainstUs = \App\Models\War::query()
+        $recentWarsAgainstUs = War::query()
             ->with(['attacker.alliance', 'attacker.accountProfile', 'defender.alliance', 'defender.accountProfile'])
             ->where('date', '>=', now()->subDays(30))
             ->where(function ($q) use ($counter, $friendlyAllianceIds) {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $preferred_war_type
  * @property float $target_priority_score
  * @property array|null $meta
- * @property \Carbon\CarbonInterface|null $computed_at
+ * @property CarbonInterface|null $computed_at
  */
 class WarPlanTarget extends Model
 {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\GraphQL\Models\War as WarGraphQL;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use stdClass;
@@ -75,8 +76,8 @@ class War extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<War>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<War>
+     * @param  Builder<War>  $query
+     * @return Builder<War>
      */
     public function scopeActive($query): mixed
     {

@@ -34,7 +34,7 @@ class WarDeclaredDiscordNotification extends Notification
      * @return array{
      *     action: string,
      *     channel_id: string,
-     *     available_at?: \Carbon\CarbonInterface,
+     *     available_at?: CarbonInterface,
      *     payload: array<string, mixed>
      * }
      */

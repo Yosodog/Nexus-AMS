@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,9 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $squad_cohesion_tolerance
  * @property int $activity_window_hours
  * @property bool $suppress_counters_when_active
- * @property \Carbon\CarbonInterface|null $activated_at
- * @property \Carbon\CarbonInterface|null $archived_at
- * @property \Carbon\CarbonInterface|null $assignments_published_at
+ * @property CarbonInterface|null $activated_at
+ * @property CarbonInterface|null $archived_at
+ * @property CarbonInterface|null $assignments_published_at
  * @property string|null $discord_forum_channel_id
  */
 class WarPlan extends Model

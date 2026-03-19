@@ -16,9 +16,9 @@ use Illuminate\Support\Carbon;
  * @property array $payload
  * @property DiscordQueueStatus $status
  * @property int $attempts
- * @property \Illuminate\Support\Carbon $available_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $available_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class DiscordQueue extends Model
 {

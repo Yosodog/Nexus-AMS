@@ -133,7 +133,7 @@ class SpyAssignmentBuilderService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, int>  $allianceIds
+     * @param  Collection<int, int>  $allianceIds
      * @return Collection<int, Nation>
      */
     protected function eligibleNations(Collection $allianceIds): Collection

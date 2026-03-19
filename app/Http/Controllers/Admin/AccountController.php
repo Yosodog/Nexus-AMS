@@ -21,6 +21,9 @@ use App\Services\WithdrawalLimitService;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,9 +41,9 @@ class AccountController extends Controller
     ) {}
 
     /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @return Factory|View|Application|object
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function dashboard()
     {
@@ -219,7 +222,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -539,7 +542,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -585,7 +588,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -619,7 +622,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -669,7 +672,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */

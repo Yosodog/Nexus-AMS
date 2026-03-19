@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Log;
 class AutoWithdrawService
 {
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function getNationSettings(int $nationId): Collection
     {

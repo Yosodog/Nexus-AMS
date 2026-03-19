@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\PWHealthService;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 readonly class BlockWhenPWDown
@@ -11,7 +12,7 @@ readonly class BlockWhenPWDown
     public function __construct(private PWHealthService $status) {}
 
     /**
-     * @return \Illuminate\Http\RedirectResponse|mixed
+     * @return RedirectResponse|mixed
      */
     public function handle(Request $request, Closure $next)
     {

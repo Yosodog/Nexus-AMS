@@ -15,7 +15,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Notifications\DepositCreated;
-use App\Services\WarQueryService;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;

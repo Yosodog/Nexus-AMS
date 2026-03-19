@@ -265,7 +265,7 @@ class WarPlanController extends Controller
      *   ]
      * }
      */
-    public function export(WarPlan $plan, Request $request): \Illuminate\Http\JsonResponse
+    public function export(WarPlan $plan, Request $request): JsonResponse
     {
         $this->authorize('view-wars');
 
@@ -1162,7 +1162,7 @@ class WarPlanController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     protected function prepareFriendlyStats(WarPlan $plan, Collection $friendlies, Collection $assignments): Collection
     {

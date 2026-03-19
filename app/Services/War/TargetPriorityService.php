@@ -33,8 +33,8 @@ class TargetPriorityService
     /**
      * Calculate and persist TPS for the provided enemies.
      *
-     * @param  Collection<int, \App\Models\Nation>  $enemies
-     * @param  Collection<int, \App\Models\Nation>  $friendlyPool
+     * @param  Collection<int, Nation>  $enemies
+     * @param  Collection<int, Nation>  $friendlyPool
      * @return Collection<int, WarPlanTarget>
      */
     public function computeAndStore(WarPlan $plan, Collection $enemies, Collection $friendlyPool): Collection

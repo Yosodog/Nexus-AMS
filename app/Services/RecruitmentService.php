@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWEntityDoesNotExist;
+use App\Exceptions\PWQueryFailedException;
+use App\Exceptions\PWRateLimitHitException;
+use App\GraphQL\Models\Nation;
 use App\Jobs\SendRecruitmentMessage;
 use App\Models\RecruitedNation;
 use Illuminate\Http\Client\ConnectionException;
@@ -96,8 +100,8 @@ class RecruitmentService
      *
      *
      * @throws ConnectionException
-     * @throws \App\Exceptions\PWQueryFailedException
-     * @throws \App\Exceptions\PWRateLimitHitException
+     * @throws PWQueryFailedException
+     * @throws PWRateLimitHitException
      */
     public function sendFollowUp(RecruitedNation $record): void
     {
@@ -110,7 +114,7 @@ class RecruitmentService
 
         try {
             $nation = NationQueryService::getNationById($record->nation_id);
-        } catch (\App\Exceptions\PWEntityDoesNotExist $e) {
+        } catch (PWEntityDoesNotExist $e) {
             Log::warning('Recruitment: nation missing during follow-up', [
                 'nation_id' => $record->nation_id,
             ]);
@@ -138,10 +142,10 @@ class RecruitmentService
     }
 
     /**
-     * @return Collection<int, \App\GraphQL\Models\Nation>
+     * @return Collection<int, Nation>
      *
      * @throws ConnectionException
-     * @throws \App\Exceptions\PWQueryFailedException
+     * @throws PWQueryFailedException
      */
     protected function fetchRecentNations(): Collection
     {

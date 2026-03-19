@@ -4,10 +4,11 @@ namespace Database\Factories;
 
 use App\Models\Nation;
 use App\Models\PayrollGrade;
+use App\Models\PayrollMember;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\PayrollMember>
+ * @extends Factory<PayrollMember>
  */
 class PayrollMemberFactory extends Factory
 {

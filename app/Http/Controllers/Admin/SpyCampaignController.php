@@ -7,6 +7,7 @@ use App\Enums\SpyOperationType;
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateSpyAssignmentsJob;
 use App\Jobs\SendSpyAssignmentsNotificationJob;
+use App\Models\SpyAssignment;
 use App\Models\SpyCampaign;
 use App\Models\SpyCampaignAlliance;
 use App\Models\SpyRound;
@@ -233,7 +234,7 @@ class SpyCampaignController extends Controller
     }
 
     /**
-     * @param  Collection<int, \App\Models\SpyAssignment>|null  $assignments
+     * @param  Collection<int, SpyAssignment>|null  $assignments
      */
     protected function buildSlotUsage(?Collection $assignments): array
     {

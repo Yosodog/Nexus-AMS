@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\PayrollGradeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PayrollGrade extends Model
 {
-    /** @use HasFactory<\Database\Factories\PayrollGradeFactory> */
+    /** @use HasFactory<PayrollGradeFactory> */
     use HasFactory;
 
     use SoftDeletes;

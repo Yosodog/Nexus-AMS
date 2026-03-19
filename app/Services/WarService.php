@@ -59,7 +59,7 @@ class WarService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function getWarsLast30Days(): Collection
     {
@@ -94,7 +94,7 @@ class WarService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function getActiveWars(): Collection
     {
@@ -194,7 +194,7 @@ class WarService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     protected function membershipIds(): Collection
     {

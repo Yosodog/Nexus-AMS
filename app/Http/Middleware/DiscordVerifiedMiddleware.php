@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\DiscordAccountService;
 use App\Services\SettingService;
 use Closure;
@@ -26,7 +27,7 @@ class DiscordVerifiedMiddleware
             return $next($request);
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user || ! $user->isVerified()) {

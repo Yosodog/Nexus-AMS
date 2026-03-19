@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\CityCostService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -12,14 +13,14 @@ return new class extends Migration
             ->value('value');
 
         if ($average === null) {
-            $refreshed = app(\App\Services\CityCostService::class)->refreshTop20Average();
+            $refreshed = app(CityCostService::class)->refreshTop20Average();
             $average = $refreshed ?? DB::table('settings')
                 ->where('key', 'pw_city_average')
                 ->value('value');
         }
 
         if ($average === null) {
-            throw new \RuntimeException('Missing pw_city_average setting. Run `php artisan pw:sync-city-average` before migrating.');
+            throw new RuntimeException('Missing pw_city_average setting. Run `php artisan pw:sync-city-average` before migrating.');
         }
 
         $top20Average = (float) $average;

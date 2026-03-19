@@ -24,7 +24,7 @@ final class PWHealthService
     public function checkAndCache(int $ttlSeconds = 600): bool
     {
         try {
-            $builder = (new \App\Services\GraphQLQueryBuilder)
+            $builder = (new GraphQLQueryBuilder)
                 ->setRootField('me')
                 ->addFields([
                     'requests',
@@ -32,7 +32,7 @@ final class PWHealthService
                     'key',
                     'permission_bits',
                 ])
-                ->addNestedField('nation', function (\App\Services\GraphQLQueryBuilder $b) {
+                ->addNestedField('nation', function (GraphQLQueryBuilder $b) {
                     $b->addFields(['leader_name']);
                 });
 

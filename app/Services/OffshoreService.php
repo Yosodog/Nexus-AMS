@@ -21,7 +21,7 @@ class OffshoreService
     public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function all(bool $includeDisabled = false): Collection
     {
