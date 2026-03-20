@@ -6,7 +6,6 @@ use App\DataTransferObjects\AllianceFinanceData;
 use App\Models\AllianceFinanceEntry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -50,7 +49,7 @@ final class AllianceFinanceService
             function () use ($from, $to, $filters) {
                 return $this->rangeQuery($from, $to, $filters)
                     ->selectRaw(
-                        'date, direction, SUM(`money`) as `money`, SUM(`coal`) as `coal`, SUM(`oil`) as `oil`, '.
+                        'date, direction, COUNT(*) as `entry_count`, SUM(`money`) as `money`, SUM(`coal`) as `coal`, SUM(`oil`) as `oil`, '.
                         'SUM(`uranium`) as `uranium`, SUM(`iron`) as `iron`, SUM(`bauxite`) as `bauxite`, SUM(`lead`) as `lead`, '.
                         'SUM(`gasoline`) as `gasoline`, SUM(`munitions`) as `munitions`, SUM(`steel`) as `steel`, SUM(`aluminum`) as `aluminum`, '.
                         'SUM(`food`) as `food`'
@@ -120,28 +119,59 @@ final class AllianceFinanceService
     /**
      * @param  array<string, mixed>  $filters
      */
-    public function paginateEntries(
-        CarbonInterface $from,
-        CarbonInterface $to,
-        array $filters = [],
-        int $perPage = 100
-    ): LengthAwarePaginator {
-        $entries = $this->entryQuery($from, $to, $filters)
-            ->paginate($perPage)
-            ->withQueryString();
-
-        $entries->getCollection()
-            ->filter(fn (AllianceFinanceEntry $entry) => $entry->sourceClass() !== null)
-            ->load('source');
-
-        return $entries;
-    }
-
     public function streamEntries(CarbonInterface $from, CarbonInterface $to, array $filters = []): LazyCollection
     {
         return $this->baseEntryQuery($from, $to, $filters)
             ->orderBy('id')
             ->lazyById(500, column: 'id');
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function getEntriesForDate(CarbonInterface $date, array $filters = []): Collection
+    {
+        $entries = $this->applyFilters(
+            AllianceFinanceEntry::query()->whereDate('date', $date->toDateString()),
+            $filters
+        )
+            ->select([
+                'id',
+                'date',
+                'created_at',
+                'direction',
+                'category',
+                'description',
+                'nation_id',
+                'account_id',
+                'source_type',
+                'source_id',
+                'money',
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food',
+            ])
+            ->with([
+                'nation:id,nation_name,leader_name',
+                'account:id,name',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $entries
+            ->filter(fn (AllianceFinanceEntry $entry) => $entry->sourceClass() !== null)
+            ->load('source');
+
+        return $entries;
     }
 
     private function baseEntryQuery(CarbonInterface $from, CarbonInterface $to, array $filters = []): Builder
@@ -175,14 +205,6 @@ final class AllianceFinanceService
                 'nation:id,nation_name,leader_name',
                 'account:id,name',
             ]);
-    }
-
-    private function entryQuery(CarbonInterface $from, CarbonInterface $to, array $filters = []): Builder
-    {
-        return $this->baseEntryQuery($from, $to, $filters)
-            ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->orderBy('id', 'desc');
     }
 
     private function persist(AllianceFinanceData $data, string $direction): AllianceFinanceEntry

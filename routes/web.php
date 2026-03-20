@@ -416,6 +416,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
         // Finance
         Route::get('/finance', [AllianceFinanceController::class, 'index'])->name('admin.finance.index');
+        Route::get('/finance/day/{date}', [AllianceFinanceController::class, 'dayDetails'])->name('admin.finance.day');
         Route::get('/finance/export', [AllianceFinanceController::class, 'exportCsv'])->name('admin.finance.export');
 
         // Payroll

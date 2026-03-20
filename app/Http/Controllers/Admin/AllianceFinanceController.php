@@ -14,12 +14,11 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\View\View as ViewResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class AllianceFinanceController extends Controller
 {
-    private const LEDGER_PER_PAGE = 100;
-
     /**
      * Display the ledger dashboard.
      */
@@ -35,7 +34,6 @@ final class AllianceFinanceController extends Controller
         $to = $filterBag['to'];
         $filters = $filterBag['filters'];
 
-        $entryPage = $financeService->paginateEntries($from, $to, $filters, self::LEDGER_PER_PAGE);
         $dailySummary = $financeService->getDailySummary($from, $to, $filters);
         $categoryBreakdown = $financeService->getDailyCategoryBreakdown($from, $to, $filters);
         $totals = $financeService->getTotals($from, $to, $filters);
@@ -44,10 +42,6 @@ final class AllianceFinanceController extends Controller
         $dailyNet = $this->buildDailyNet($dailySummary, $dateLabels);
         $bestDay = $dailyNet->sortByDesc('net')->first();
         $worstDay = $dailyNet->sortBy('net')->first();
-
-        $entriesByDate = collect($entryPage->items())
-            ->groupBy(fn (AllianceFinanceEntry $entry) => $entry->date->toDateString())
-            ->sortKeysDesc();
 
         $dailyTotals = $this->buildDailyTotals($dailySummary);
 
@@ -68,8 +62,7 @@ final class AllianceFinanceController extends Controller
             'selectedCategories' => $filterBag['selected_categories'],
             'from' => $from,
             'to' => $to,
-            'entriesByDate' => $entriesByDate,
-            'entryPage' => $entryPage,
+            'ledgerDates' => $dailyTotals->keys()->sortDesc()->values(),
             'dailyTotals' => $dailyTotals,
             'totals' => $totals,
             'netChart' => $netChart,
@@ -78,6 +71,24 @@ final class AllianceFinanceController extends Controller
             'bestDay' => $bestDay,
             'worstDay' => $worstDay,
             'exportUrl' => route('admin.finance.export', $request->query()),
+        ]);
+    }
+
+    public function dayDetails(
+        Request $request,
+        string $date,
+        AllianceFinanceService $financeService,
+        FinanceCategoryRegistry $categoryRegistry
+    ): ViewResponse {
+        Gate::authorize('view-financial-reports');
+
+        $filterBag = $this->resolveFilters($request, $categoryRegistry);
+        $selectedDate = Carbon::parse($date)->startOfDay();
+        $entries = $financeService->getEntriesForDate($selectedDate, $filterBag['filters']);
+
+        return view('admin.finance.partials.day-entries', [
+            'entries' => $entries,
+            'categories' => $categoryRegistry->all(),
         ]);
     }
 
@@ -267,8 +278,10 @@ final class AllianceFinanceController extends Controller
 
                 $income = $incomeRow ? (float) $incomeRow->money : 0.0;
                 $expense = $expenseRow ? (float) $expenseRow->money : 0.0;
+                $entryCount = (int) $rows->sum(fn ($row) => (int) ($row->entry_count ?? 0));
 
                 return [
+                    'entry_count' => $entryCount,
                     'income' => $income,
                     'expense' => $expense,
                     'net' => $income - $expense,

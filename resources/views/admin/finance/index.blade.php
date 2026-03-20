@@ -86,10 +86,10 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span class="fw-semibold">Daily Net Flow</span>
-                    <span class="badge bg-primary-subtle text-primary-emphasis">{{ $from->toFormattedDateString() }} – {{ $to->toFormattedDateString() }}</span>
+                    <span class="badge bg-primary-subtle text-primary-emphasis">{{ $from->toFormattedDateString() }} - {{ $to->toFormattedDateString() }}</span>
                 </div>
                 <div class="card-body">
-                    <canvas id="financeNetChart" height="220"></canvas>
+                    <div id="financeNetChart" class="w-100" style="min-height: 260px;"></div>
                 </div>
             </div>
         </div>
@@ -100,7 +100,7 @@
                     <span class="badge bg-secondary-subtle text-secondary-emphasis">Stacked by day</span>
                 </div>
                 <div class="card-body">
-                    <canvas id="financeCategoryChart" height="220"></canvas>
+                    <div id="financeCategoryChart" class="w-100" style="min-height: 260px;"></div>
                 </div>
             </div>
         </div>
@@ -110,15 +110,15 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Ledger</span>
             <span class="text-secondary small">
-                Showing {{ $entryPage->firstItem() ?? 0 }}-{{ $entryPage->lastItem() ?? 0 }} of {{ $entryPage->total() }} entries
+                {{ number_format((int) $dailyTotals->sum('entry_count')) }} entries across {{ $ledgerDates->count() }} days
             </span>
         </div>
         <div class="card-body">
             <div class="accordion" id="ledgerAccordion">
-                @forelse ($entriesByDate as $date => $items)
+                @forelse ($ledgerDates as $date)
                     @php
                         $accordionId = 'ledger-' . md5($date);
-                        $summary = $dailyTotals[$date] ?? ['income' => 0, 'expense' => 0, 'net' => 0];
+                        $summary = $dailyTotals[$date] ?? ['entry_count' => 0, 'income' => 0, 'expense' => 0, 'net' => 0];
                     @endphp
                     <div class="accordion-item mb-2 border">
                         <h2 class="accordion-header" id="heading-{{ $accordionId }}">
@@ -128,6 +128,7 @@
                                 <div class="d-flex flex-column flex-md-row w-100 justify-content-between">
                                     <span class="fw-semibold">{{ \Carbon\Carbon::parse($date)->toFormattedDateString() }}</span>
                                     <div class="d-flex flex-wrap gap-3">
+                                        <span class="badge text-bg-secondary">{{ number_format((int) $summary['entry_count']) }} entries</span>
                                         <span class="badge text-bg-success">Income: {{ $formatCurrency($summary['income']) }}</span>
                                         <span class="badge text-bg-danger">Expense: {{ $formatCurrency($summary['expense']) }}</span>
                                         <span class="badge text-bg-{{ $summary['net'] >= 0 ? 'primary' : 'warning' }}">Net: {{ $formatCurrency($summary['net']) }}</span>
@@ -137,90 +138,13 @@
                         </h2>
                         <div id="collapse-{{ $accordionId }}" class="accordion-collapse collapse"
                              aria-labelledby="heading-{{ $accordionId }}" data-bs-parent="#ledgerAccordion">
-                            <div class="accordion-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle mb-0">
-                                        <thead class="table-light">
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Direction</th>
-                                            <th>Category</th>
-                                            <th>Description</th>
-                                            <th class="text-end">Money</th>
-                                            @foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource)
-                                                <th class="text-end text-nowrap text-capitalize">{{ $resource }}</th>
-                                            @endforeach
-                                            <th>Nation</th>
-                                            <th>Account</th>
-                                            <th>Source</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @foreach ($items as $entry)
-                                            @php
-                                                $category = $categories[$entry->category] ?? null;
-                                                $categoryColor = $category['color'] ?? 'secondary';
-                                                $source = $entry->resolvedSource();
-                                                $sourceLabel = $entry->source_type ? class_basename($entry->source_type) . ' #' . $entry->source_id : null;
-                                                $sourceLink = null;
-
-                                                if ($source instanceof \App\Models\GrantApplication) {
-                                                    $sourceLink = route('admin.grants');
-                                                } elseif ($source instanceof \App\Models\CityGrantRequest) {
-                                                    $sourceLink = route('admin.grants.city');
-                                                } elseif ($source instanceof \App\Models\WarAidRequest) {
-                                                    $sourceLink = route('admin.war-aid');
-                                                } elseif ($source instanceof \App\Models\Taxes) {
-                                                    $sourceLink = route('admin.taxes');
-                                                } elseif ($source instanceof \App\Models\LoanPayment && $source->loan_id) {
-                                                    $sourceLink = route('admin.loans.view', ['Loan' => $source->loan_id]);
-                                                }
-                                            @endphp
-                                            <tr>
-                                                <td class="text-nowrap">{{ optional($entry->created_at)->format('H:i') ?? '—' }}</td>
-                                                <td>
-                                                    <span class="badge text-bg-{{ $entry->isIncome() ? 'success' : 'danger' }}">
-                                                        {{ ucfirst($entry->direction) }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge text-bg-{{ $categoryColor }}">
-                                                        {{ $category['label'] ?? ucfirst($entry->category) }}
-                                                    </span>
-                                                </td>
-                                                <td class="text-break" style="max-width: 220px;">{{ $entry->description ?? '—' }}</td>
-                                                <td class="text-end fw-semibold">{{ $formatCurrency($entry->money) }}</td>
-                                                @foreach (['coal','oil','uranium','iron','bauxite','lead','gasoline','munitions','steel','aluminum','food'] as $resource)
-                                                    <td class="text-end text-nowrap">{{ number_format($entry->$resource, 2) }}</td>
-                                                @endforeach
-                                                <td>
-                                                    @if ($entry->nation_id)
-                                                        <a href="https://politicsandwar.com/nation/id={{ $entry->nation_id }}" target="_blank" rel="noopener"
-                                                           class="text-decoration-none">
-                                                            {{ $entry->nation?->nation_name ?? 'Nation #'.$entry->nation_id }}
-                                                        </a>
-                                                    @else
-                                                        <span class="text-secondary">—</span>
-                                                    @endif
-                                                </td>
-                                                <td>{{ $entry->account?->name ?? '—' }}</td>
-                                                <td>
-                                                    @if ($sourceLabel)
-                                                        @if ($sourceLink)
-                                                            <a href="{{ $sourceLink }}" class="badge bg-dark-subtle text-dark-emphasis text-decoration-none">
-                                                                {{ $sourceLabel }}
-                                                            </a>
-                                                        @else
-                                                            <span class="badge bg-dark-subtle text-dark-emphasis">{{ $sourceLabel }}</span>
-                                                        @endif
-                                                    @else
-                                                        <span class="text-secondary">—</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
+                            <div class="accordion-body"
+                                 data-ledger-day
+                                 data-loaded="false"
+                                 data-url="{{ route('admin.finance.day', ['date' => $date] + request()->query()) }}">
+                                <div class="d-flex align-items-center gap-2 text-secondary">
+                                    <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                                    <span>Loading entries...</span>
                                 </div>
                             </div>
                         </div>
@@ -229,18 +153,11 @@
                     <p class="text-secondary mb-0">No ledger data for this range.</p>
                 @endforelse
             </div>
-
-            @if ($entryPage->hasPages())
-                <div class="mt-4">
-                    {{ $entryPage->links() }}
-                </div>
-            @endif
         </div>
     </div>
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const netData = @json($netChart);
@@ -256,110 +173,263 @@
                 dark: '#212529',
             };
 
-            const ctxNet = document.getElementById('financeNetChart');
-            if (ctxNet && netData.labels.length) {
-                new Chart(ctxNet, {
-                    type: 'line',
-                    data: {
-                        labels: netData.labels,
-                        datasets: [
-                            {
-                                label: 'Income',
-                                data: netData.income,
-                                borderColor: colorMap.success,
-                                backgroundColor: colorMap.success + '33',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                            {
-                                label: 'Expense',
-                                data: netData.expense,
-                                borderColor: colorMap.danger,
-                                backgroundColor: colorMap.danger + '33',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                            {
-                                label: 'Net',
-                                data: netData.net,
-                                borderColor: colorMap.primary,
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0.3,
-                            },
-                        ],
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: { mode: 'index', intersect: false },
-                        stacked: false,
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        const value = context.parsed.y ?? 0;
-                                        return `${context.dataset.label}: $${value.toLocaleString()}`;
-                                    },
-                                },
-                            },
-                        },
-                        scales: {
-                            y: {
-                                ticks: {
-                                    callback(value) {
-                                        return '$' + Number(value).toLocaleString();
-                                    },
-                                },
-                            },
-                        },
-                    },
-                });
-            }
+            const createSvgNode = (name, attributes = {}) => {
+                const node = document.createElementNS('http://www.w3.org/2000/svg', name);
 
-            const ctxCategory = document.getElementById('financeCategoryChart');
-            if (ctxCategory) {
-                const datasets = categoryDatasets.map(dataset => ({
-                    label: dataset.label,
-                    data: dataset.data,
-                    backgroundColor: colorMap[dataset.color] ?? colorMap.primary,
-                    stack: 'category',
+                Object.entries(attributes).forEach(([key, value]) => {
+                    node.setAttribute(key, value);
+                });
+
+                return node;
+            };
+
+            const formatMoney = (value) => '$' + Number(value).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            });
+
+            const renderNetChart = () => {
+                const container = document.getElementById('financeNetChart');
+                if (!container || !netData.labels.length) {
+                    return;
+                }
+
+                const width = 720;
+                const height = 260;
+                const padding = { top: 20, right: 20, bottom: 36, left: 56 };
+                const values = [...netData.income, ...netData.expense, ...netData.net];
+                const min = Math.min(0, ...values);
+                const max = Math.max(0, ...values);
+                const range = Math.max(max - min, 1);
+                const innerWidth = width - padding.left - padding.right;
+                const innerHeight = height - padding.top - padding.bottom;
+                const stepX = netData.labels.length > 1 ? innerWidth / (netData.labels.length - 1) : innerWidth / 2;
+                const yForValue = (value) => padding.top + ((max - value) / range) * innerHeight;
+                const xForIndex = (index) => padding.left + (netData.labels.length > 1 ? stepX * index : innerWidth / 2);
+                const svg = createSvgNode('svg', {
+                    viewBox: `0 0 ${width} ${height}`,
+                    class: 'w-100',
+                    role: 'img',
+                    'aria-label': 'Daily net flow chart',
+                });
+
+                [0, 0.25, 0.5, 0.75, 1].forEach((ratio) => {
+                    const value = max - range * ratio;
+                    const y = padding.top + innerHeight * ratio;
+                    svg.appendChild(createSvgNode('line', {
+                        x1: padding.left,
+                        y1: y,
+                        x2: width - padding.right,
+                        y2: y,
+                        stroke: '#dee2e6',
+                        'stroke-width': '1',
+                    }));
+
+                    const label = createSvgNode('text', {
+                        x: padding.left - 8,
+                        y: y + 4,
+                        'text-anchor': 'end',
+                        'font-size': '11',
+                        fill: '#6c757d',
+                    });
+                    label.textContent = formatMoney(value);
+                    svg.appendChild(label);
+                });
+
+                const zeroY = yForValue(0);
+                svg.appendChild(createSvgNode('line', {
+                    x1: padding.left,
+                    y1: zeroY,
+                    x2: width - padding.right,
+                    y2: zeroY,
+                    stroke: '#adb5bd',
+                    'stroke-width': '1.5',
                 }));
 
-                new Chart(ctxCategory, {
-                    type: 'bar',
-                    data: {
-                        labels: netData.labels,
-                        datasets,
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        const value = context.parsed.y ?? 0;
-                                        return `${context.dataset.label}: $${value.toLocaleString()}`;
-                                    },
-                                },
-                            },
-                        },
-                        scales: {
-                            x: { stacked: true },
-                            y: {
-                                stacked: true,
-                                ticks: {
-                                    callback(value) {
-                                        return '$' + Number(value).toLocaleString();
-                                    },
-                                },
-                            },
-                        },
-                    },
+                [
+                    { label: 'Income', color: colorMap.success, data: netData.income },
+                    { label: 'Expense', color: colorMap.danger, data: netData.expense },
+                    { label: 'Net', color: colorMap.primary, data: netData.net },
+                ].forEach((series) => {
+                    const points = series.data.map((value, index) => `${xForIndex(index)},${yForValue(value)}`).join(' ');
+                    svg.appendChild(createSvgNode('polyline', {
+                        points,
+                        fill: 'none',
+                        stroke: series.color,
+                        'stroke-width': '3',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round',
+                    }));
                 });
-            }
+
+                const firstLabel = createSvgNode('text', {
+                    x: padding.left,
+                    y: height - 10,
+                    'font-size': '11',
+                    fill: '#6c757d',
+                });
+                firstLabel.textContent = netData.labels[0];
+                svg.appendChild(firstLabel);
+
+                const lastLabel = createSvgNode('text', {
+                    x: width - padding.right,
+                    y: height - 10,
+                    'font-size': '11',
+                    'text-anchor': 'end',
+                    fill: '#6c757d',
+                });
+                lastLabel.textContent = netData.labels[netData.labels.length - 1];
+                svg.appendChild(lastLabel);
+
+                const legend = document.createElement('div');
+                legend.className = 'd-flex flex-wrap gap-3 small text-secondary mt-3';
+                legend.innerHTML = `
+                    <span><span class="d-inline-block rounded-circle me-1 align-middle" style="width:10px;height:10px;background:${colorMap.success};"></span>Income</span>
+                    <span><span class="d-inline-block rounded-circle me-1 align-middle" style="width:10px;height:10px;background:${colorMap.danger};"></span>Expense</span>
+                    <span><span class="d-inline-block rounded-circle me-1 align-middle" style="width:10px;height:10px;background:${colorMap.primary};"></span>Net</span>
+                `;
+
+                container.innerHTML = '';
+                container.appendChild(svg);
+                container.appendChild(legend);
+            };
+
+            const renderCategoryChart = () => {
+                const container = document.getElementById('financeCategoryChart');
+                if (!container || !netData.labels.length || !categoryDatasets.length) {
+                    return;
+                }
+
+                const width = 720;
+                const height = 260;
+                const padding = { top: 20, right: 20, bottom: 36, left: 56 };
+                const totalsByDay = netData.labels.map((_, index) => categoryDatasets.reduce((sum, dataset) => sum + (Number(dataset.data[index]) || 0), 0));
+                const max = Math.max(...totalsByDay, 1);
+                const innerWidth = width - padding.left - padding.right;
+                const innerHeight = height - padding.top - padding.bottom;
+                const barWidth = Math.max(innerWidth / netData.labels.length - 4, 6);
+                const stepX = innerWidth / netData.labels.length;
+                const svg = createSvgNode('svg', {
+                    viewBox: `0 0 ${width} ${height}`,
+                    class: 'w-100',
+                    role: 'img',
+                    'aria-label': 'Category breakdown chart',
+                });
+
+                [0, 0.25, 0.5, 0.75, 1].forEach((ratio) => {
+                    const value = max - max * ratio;
+                    const y = padding.top + innerHeight * ratio;
+                    svg.appendChild(createSvgNode('line', {
+                        x1: padding.left,
+                        y1: y,
+                        x2: width - padding.right,
+                        y2: y,
+                        stroke: '#dee2e6',
+                        'stroke-width': '1',
+                    }));
+
+                    const label = createSvgNode('text', {
+                        x: padding.left - 8,
+                        y: y + 4,
+                        'text-anchor': 'end',
+                        'font-size': '11',
+                        fill: '#6c757d',
+                    });
+                    label.textContent = formatMoney(value);
+                    svg.appendChild(label);
+                });
+
+                netData.labels.forEach((label, index) => {
+                    let cumulative = 0;
+                    const x = padding.left + index * stepX + 2;
+
+                    categoryDatasets.forEach((dataset) => {
+                        const value = Number(dataset.data[index]) || 0;
+                        if (value <= 0) {
+                            return;
+                        }
+
+                        const segmentHeight = (value / max) * innerHeight;
+                        const y = height - padding.bottom - ((cumulative + value) / max) * innerHeight;
+
+                        svg.appendChild(createSvgNode('rect', {
+                            x,
+                            y,
+                            width: barWidth,
+                            height: segmentHeight,
+                            rx: '1',
+                            fill: colorMap[dataset.color] ?? colorMap.primary,
+                        }));
+
+                        cumulative += value;
+                    });
+                });
+
+                const firstLabel = createSvgNode('text', {
+                    x: padding.left,
+                    y: height - 10,
+                    'font-size': '11',
+                    fill: '#6c757d',
+                });
+                firstLabel.textContent = netData.labels[0];
+                svg.appendChild(firstLabel);
+
+                const lastLabel = createSvgNode('text', {
+                    x: width - padding.right,
+                    y: height - 10,
+                    'font-size': '11',
+                    'text-anchor': 'end',
+                    fill: '#6c757d',
+                });
+                lastLabel.textContent = netData.labels[netData.labels.length - 1];
+                svg.appendChild(lastLabel);
+
+                const legend = document.createElement('div');
+                legend.className = 'd-flex flex-wrap gap-3 small text-secondary mt-3';
+                legend.innerHTML = categoryDatasets.map((dataset) => `
+                    <span><span class="d-inline-block rounded-circle me-1 align-middle" style="width:10px;height:10px;background:${colorMap[dataset.color] ?? colorMap.primary};"></span>${dataset.label}</span>
+                `).join('');
+
+                container.innerHTML = '';
+                container.appendChild(svg);
+                container.appendChild(legend);
+            };
+
+            const loadLedgerDay = async (body) => {
+                if (!body || body.dataset.loaded === 'true' || body.dataset.loading === 'true') {
+                    return;
+                }
+
+                body.dataset.loading = 'true';
+
+                try {
+                    const response = await fetch(body.dataset.url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to load day entries (${response.status})`);
+                    }
+
+                    body.innerHTML = await response.text();
+                    body.dataset.loaded = 'true';
+                } catch (error) {
+                    body.innerHTML = `<p class="text-danger mb-0">${error.message}</p>`;
+                } finally {
+                    delete body.dataset.loading;
+                }
+            };
+
+            document.querySelectorAll('#ledgerAccordion .accordion-collapse').forEach((collapse) => {
+                collapse.addEventListener('show.bs.collapse', () => {
+                    loadLedgerDay(collapse.querySelector('[data-ledger-day]'));
+                });
+            });
+
+            renderNetChart();
+            renderCategoryChart();
         });
     </script>
 @endsection
