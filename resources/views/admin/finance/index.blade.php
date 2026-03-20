@@ -109,7 +109,9 @@
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Ledger</span>
-            <span class="text-secondary small">{{ $entriesByDate->flatten()->count() }} entries</span>
+            <span class="text-secondary small">
+                Showing {{ $entryPage->firstItem() ?? 0 }}-{{ $entryPage->lastItem() ?? 0 }} of {{ $entryPage->total() }} entries
+            </span>
         </div>
         <div class="card-body">
             <div class="accordion" id="ledgerAccordion">
@@ -227,6 +229,12 @@
                     <p class="text-secondary mb-0">No ledger data for this range.</p>
                 @endforelse
             </div>
+
+            @if ($entryPage->hasPages())
+                <div class="mt-4">
+                    {{ $entryPage->links() }}
+                </div>
+            @endif
         </div>
     </div>
 @endsection

@@ -6,10 +6,12 @@ use App\DataTransferObjects\AllianceFinanceData;
 use App\Models\AllianceFinanceEntry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\LazyCollection;
 
 final class AllianceFinanceService
 {
@@ -118,22 +120,69 @@ final class AllianceFinanceService
     /**
      * @param  array<string, mixed>  $filters
      */
-    public function getEntries(CarbonInterface $from, CarbonInterface $to, array $filters = []): Collection
-    {
-        $entries = $this->rangeQuery($from, $to, $filters)
-            ->with([
-                'nation:id,nation_name,leader_name',
-                'account:id,name',
-            ])
-            ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+    public function paginateEntries(
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filters = [],
+        int $perPage = 100
+    ): LengthAwarePaginator {
+        $entries = $this->entryQuery($from, $to, $filters)
+            ->paginate($perPage)
+            ->withQueryString();
 
-        $entries
+        $entries->getCollection()
             ->filter(fn (AllianceFinanceEntry $entry) => $entry->sourceClass() !== null)
             ->load('source');
 
         return $entries;
+    }
+
+    public function streamEntries(CarbonInterface $from, CarbonInterface $to, array $filters = []): LazyCollection
+    {
+        return $this->baseEntryQuery($from, $to, $filters)
+            ->orderBy('id')
+            ->lazyById(500, column: 'id');
+    }
+
+    private function baseEntryQuery(CarbonInterface $from, CarbonInterface $to, array $filters = []): Builder
+    {
+        return $this->rangeQuery($from, $to, $filters)
+            ->select([
+                'id',
+                'date',
+                'created_at',
+                'direction',
+                'category',
+                'description',
+                'nation_id',
+                'account_id',
+                'source_type',
+                'source_id',
+                'money',
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food',
+            ])
+            ->with([
+                'nation:id,nation_name,leader_name',
+                'account:id,name',
+            ]);
+    }
+
+    private function entryQuery(CarbonInterface $from, CarbonInterface $to, array $filters = []): Builder
+    {
+        return $this->baseEntryQuery($from, $to, $filters)
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc');
     }
 
     private function persist(AllianceFinanceData $data, string $direction): AllianceFinanceEntry

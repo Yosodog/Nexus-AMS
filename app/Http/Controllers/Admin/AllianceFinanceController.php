@@ -18,6 +18,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class AllianceFinanceController extends Controller
 {
+    private const LEDGER_PER_PAGE = 100;
+
     /**
      * Display the ledger dashboard.
      */
@@ -33,7 +35,7 @@ final class AllianceFinanceController extends Controller
         $to = $filterBag['to'];
         $filters = $filterBag['filters'];
 
-        $entries = $financeService->getEntries($from, $to, $filters);
+        $entryPage = $financeService->paginateEntries($from, $to, $filters, self::LEDGER_PER_PAGE);
         $dailySummary = $financeService->getDailySummary($from, $to, $filters);
         $categoryBreakdown = $financeService->getDailyCategoryBreakdown($from, $to, $filters);
         $totals = $financeService->getTotals($from, $to, $filters);
@@ -43,20 +45,11 @@ final class AllianceFinanceController extends Controller
         $bestDay = $dailyNet->sortByDesc('net')->first();
         $worstDay = $dailyNet->sortBy('net')->first();
 
-        $entriesByDate = $entries
+        $entriesByDate = collect($entryPage->items())
             ->groupBy(fn (AllianceFinanceEntry $entry) => $entry->date->toDateString())
             ->sortKeysDesc();
 
-        $dailyTotals = $entriesByDate->map(function (Collection $items) {
-            $income = (float) $items->where('direction', AllianceFinanceEntry::DIRECTION_INCOME)->sum('money');
-            $expense = (float) $items->where('direction', AllianceFinanceEntry::DIRECTION_EXPENSE)->sum('money');
-
-            return [
-                'income' => $income,
-                'expense' => $expense,
-                'net' => $income - $expense,
-            ];
-        });
+        $dailyTotals = $this->buildDailyTotals($dailySummary);
 
         $netChart = [
             'labels' => $dateLabels,
@@ -76,6 +69,7 @@ final class AllianceFinanceController extends Controller
             'from' => $from,
             'to' => $to,
             'entriesByDate' => $entriesByDate,
+            'entryPage' => $entryPage,
             'dailyTotals' => $dailyTotals,
             'totals' => $totals,
             'netChart' => $netChart,
@@ -98,7 +92,6 @@ final class AllianceFinanceController extends Controller
         Gate::authorize('view-financial-reports');
 
         $filterBag = $this->resolveFilters($request, $categoryRegistry);
-        $entries = $financeService->getEntries($filterBag['from'], $filterBag['to'], $filterBag['filters']);
 
         $filename = sprintf(
             'alliance-finance-ledger_%s_to_%s.csv',
@@ -111,7 +104,7 @@ final class AllianceFinanceController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = static function () use ($entries): void {
+        $callback = function () use ($financeService, $filterBag): void {
             $handle = fopen('php://output', 'w');
 
             fputcsv($handle, [
@@ -138,7 +131,7 @@ final class AllianceFinanceController extends Controller
                 'Source ID',
             ]);
 
-            foreach ($entries as $entry) {
+            foreach ($financeService->streamEntries($filterBag['from'], $filterBag['to'], $filterBag['filters']) as $entry) {
                 fputcsv($handle, [
                     $entry->date?->toDateString(),
                     optional($entry->created_at)->format('H:i'),
@@ -259,6 +252,28 @@ final class AllianceFinanceController extends Controller
                 ],
             ];
         });
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $dailySummary
+     */
+    private function buildDailyTotals(Collection $dailySummary): Collection
+    {
+        return $dailySummary
+            ->groupBy('date')
+            ->map(function (Collection $rows) {
+                $incomeRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_INCOME);
+                $expenseRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_EXPENSE);
+
+                $income = $incomeRow ? (float) $incomeRow->money : 0.0;
+                $expense = $expenseRow ? (float) $expenseRow->money : 0.0;
+
+                return [
+                    'income' => $income,
+                    'expense' => $expense,
+                    'net' => $income - $expense,
+                ];
+            });
     }
 
     /**
