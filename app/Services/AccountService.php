@@ -21,6 +21,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AccountService
 {
@@ -56,6 +57,47 @@ class AccountService
         $account->save();
 
         return $account;
+    }
+
+    /**
+     * Ensure that the nation is not under naval blockade status in P&W.
+     *
+     * @throws UserErrorException
+     */
+    public static function ensureNotBlockaded(int $nationId): void
+    {
+        try {
+            $wars = WarQueryService::getMultipleWars([
+                'active' => true,
+                'or_id' => [$nationId],
+                'first' => 1000,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Unable to validate blockade status via P&W API; allowing withdrawal.', [
+                'nation_id' => $nationId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        foreach ($wars as $war) {
+            $navalBlockade = (int) ($war->naval_blockade ?? 0);
+            if ($navalBlockade <= 0) {
+                continue;
+            }
+
+            $isAttacker = (int) $war->att_id === $nationId;
+            $isDefender = (int) $war->def_id === $nationId;
+
+            if ($isAttacker && $navalBlockade === (int) $war->def_id) {
+                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
+            }
+
+            if ($isDefender && $navalBlockade === (int) $war->att_id) {
+                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
+            }
+        }
     }
 
     /**
@@ -279,6 +321,7 @@ class AccountService
     ): Transaction {
         try {
             $requestNationId = (int) Auth::user()->nation_id;
+            self::ensureNotBlockaded($requestNationId);
 
             return Cache::lock("account-transfer:nation:{$requestNationId}", 15)
                 ->block(5, function () use ($fromAccountId, $nation_id, $resources, $requestNationId): Transaction {

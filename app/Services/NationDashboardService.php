@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DirectDepositLog;
 use App\Models\Nation;
+use App\Models\NationSignIn;
 use App\Models\PayrollMember;
 use App\Models\Taxes;
 use App\Models\Transaction;
@@ -251,7 +252,7 @@ class NationDashboardService
     /**
      * Convert sign-in timestamps to label strings.
      *
-     * @param  Collection<int, \App\Models\NationSignIn>  $signIns
+     * @param  Collection<int, NationSignIn>  $signIns
      * @return array<int, string>
      */
     protected function pluckDates(Collection $signIns): array

@@ -7,6 +7,8 @@ use App\Enums\SpyOperationType;
 use App\Enums\SpyRoundStatus;
 use App\Models\Alliance;
 use App\Models\Nation;
+use App\Models\SpyCampaign;
+use App\Models\SpyRound;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -30,7 +32,7 @@ return new class extends Migration
 
         Schema::create('spy_campaign_alliances', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\SpyCampaign::class, 'spy_campaign_id')->constrained('spy_campaigns')->cascadeOnDelete();
+            $table->foreignIdFor(SpyCampaign::class, 'spy_campaign_id')->constrained('spy_campaigns')->cascadeOnDelete();
             $table->foreignIdFor(Alliance::class, 'alliance_id')->constrained('alliances')->cascadeOnDelete();
             $table->enum('role', SpyCampaignAllianceRole::values())->index();
             $table->json('meta')->nullable();
@@ -40,7 +42,7 @@ return new class extends Migration
 
         Schema::create('spy_rounds', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\SpyCampaign::class, 'spy_campaign_id')->constrained('spy_campaigns')->cascadeOnDelete();
+            $table->foreignIdFor(SpyCampaign::class, 'spy_campaign_id')->constrained('spy_campaigns')->cascadeOnDelete();
             $table->unsignedTinyInteger('round_number');
             $table->enum('op_type', SpyOperationType::values())->index();
             $table->decimal('min_success_chance', 5, 2)->nullable();
@@ -53,7 +55,7 @@ return new class extends Migration
 
         Schema::create('spy_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
+            $table->foreignIdFor(SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'attacker_nation_id')->constrained('nations')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'defender_nation_id')->constrained('nations')->cascadeOnDelete();
             $table->enum('op_type', SpyOperationType::values());
@@ -72,7 +74,7 @@ return new class extends Migration
 
         Schema::create('spy_assignment_message_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
+            $table->foreignIdFor(SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'attacker_nation_id')->constrained('nations')->cascadeOnDelete();
             $table->string('message_hash');
             $table->timestamp('sent_at')->nullable();

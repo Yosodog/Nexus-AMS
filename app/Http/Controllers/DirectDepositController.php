@@ -7,6 +7,7 @@ use App\Models\MMRConfig;
 use App\Services\DirectDepositService;
 use App\Services\InactivityModeService;
 use App\Services\PWHelperService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,7 @@ class DirectDepositController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function enroll(Request $request)
     {
@@ -45,7 +46,7 @@ class DirectDepositController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function disenroll()
     {
@@ -61,7 +62,7 @@ class DirectDepositController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function updateMMRA(Request $request)
     {

@@ -6,6 +6,7 @@ use App\Services\PageRenderer;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $user_id
  * @property string|null $editor_state
  * @property string $status
- * @property \Illuminate\Support\Carbon|null $published_at
+ * @property Carbon|null $published_at
  */
 class PageVersion extends Model
 {

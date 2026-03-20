@@ -97,7 +97,7 @@ class RaidLeaderboardService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     private function memberNations(): Collection
     {
@@ -246,7 +246,7 @@ class RaidLeaderboardService
     }
 
     /**
-     * @param  Collection<int, \App\Models\Nation>  $memberNations
+     * @param  Collection<int, Nation>  $memberNations
      * @param  array<int, string>  $resourceKeys
      * @return array<int, array<string, mixed>>
      */

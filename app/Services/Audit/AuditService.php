@@ -249,7 +249,7 @@ class AuditService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function getNationViolations(Nation $nation): Collection
     {
@@ -257,7 +257,7 @@ class AuditService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function getNationViolationsById(int $nationId): Collection
     {

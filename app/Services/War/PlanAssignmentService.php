@@ -7,6 +7,7 @@ use App\Models\War;
 use App\Models\WarPlan;
 use App\Models\WarPlanAssignment;
 use App\Models\WarPlanSquad;
+use App\Models\WarPlanTarget;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -36,7 +37,7 @@ class PlanAssignmentService
     /**
      * Generate plan assignments and squads.
      *
-     * @param  Collection<int, \App\Models\WarPlanTarget>  $targets
+     * @param  Collection<int, WarPlanTarget>  $targets
      * @param  Collection<int, Nation>  $friendlies
      * @return Collection<int, WarPlanAssignment>
      */
@@ -88,7 +89,7 @@ class PlanAssignmentService
     /**
      * Execute assignment generation within a transaction.
      *
-     * @param  Collection<int, \App\Models\WarPlanTarget>  $targets
+     * @param  Collection<int, WarPlanTarget>  $targets
      * @param  Collection<int, Nation>  $friendlies
      */
     protected function runGeneration(
@@ -295,7 +296,7 @@ class PlanAssignmentService
      */
     protected function scoreFriendlyCandidates(
         WarPlan $plan,
-        \App\Models\WarPlanTarget $target,
+        WarPlanTarget $target,
         SupportCollection $friendlyProfiles,
         array $preservedFriendlyIds,
         SupportCollection $assignmentCounts,

@@ -18,7 +18,7 @@ class RaidFinderService
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function findTargets(int $nationId): Collection
     {
@@ -100,7 +100,7 @@ class RaidFinderService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     private function queryRaidableNations(float $minScore, float $maxScore): Collection
     {

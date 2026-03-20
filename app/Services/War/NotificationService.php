@@ -3,10 +3,12 @@
 namespace App\Services\War;
 
 use App\Enums\DiscordQueueStatus;
+use App\Models\Alliance;
 use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\War;
 use App\Models\WarCounter;
+use App\Models\WarCounterAssignment;
 use App\Models\WarPlan;
 use App\Models\WarPlanAssignment;
 use App\Services\AllianceMembershipService;
@@ -123,7 +125,7 @@ class NotificationService
     /**
      * Queue notifications for counter finalization.
      *
-     * @param  Collection<int, \App\Models\WarCounterAssignment>  $assignments
+     * @param  Collection<int, WarCounterAssignment>  $assignments
      * @param  array{in_game?:bool, create_room?:bool}  $channels
      * @return array{in_game_skipped:int, rooms_queued:int, skipped_no_forum:bool}
      */
@@ -405,7 +407,7 @@ class NotificationService
     protected function defaultCounterReason(): string
     {
         $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
-        $allianceName = \App\Models\Alliance::query()->whereKey($primaryAllianceId)->value('name');
+        $allianceName = Alliance::query()->whereKey($primaryAllianceId)->value('name');
 
         return sprintf('%s Counter', $allianceName ?: config('app.name', 'Alliance'));
     }

@@ -272,6 +272,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/accounts/transactions/{transaction}/refund', [AccountController::class, 'refundTransaction'])
             ->name('admin.accounts.transactions.refund')
             ->middleware(BlockWhenPWDown::class);
+        Route::post('/accounts/transactions/{transaction}/unstuck-refund', [AccountController::class, 'unstuckAndRefundTransaction'])
+            ->name('admin.accounts.transactions.unstuck_refund')
+            ->middleware(BlockWhenPWDown::class);
 
         Route::get('/cities', [CityController::class, 'index'])->name('admin.cities.index');
 

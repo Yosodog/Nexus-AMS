@@ -13,7 +13,9 @@ use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\PWHelperService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -25,9 +27,9 @@ class CityGrantController
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @return Factory|View|Application|object
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function cityGrants(): View
     {

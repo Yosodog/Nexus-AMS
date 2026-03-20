@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,9 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $war_reason
  * @property int|null $suppressed_by_plan_id
  * @property array|null $settings
- * @property \Carbon\CarbonInterface|null $finalized_at
- * @property \Carbon\CarbonInterface|null $archived_at
- * @property \Carbon\CarbonInterface|null $last_war_declared_at
+ * @property CarbonInterface|null $finalized_at
+ * @property CarbonInterface|null $archived_at
+ * @property CarbonInterface|null $last_war_declared_at
  */
 class WarCounter extends Model
 {

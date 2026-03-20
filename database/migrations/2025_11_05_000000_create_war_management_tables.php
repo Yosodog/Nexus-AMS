@@ -2,6 +2,10 @@
 
 use App\Models\Alliance;
 use App\Models\Nation;
+use App\Models\WarCounter;
+use App\Models\WarPlan;
+use App\Models\WarPlanSquad;
+use App\Models\WarPlanTarget;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -37,7 +41,7 @@ return new class extends Migration
 
         Schema::create('war_plan_alliances', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
+            $table->foreignIdFor(WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
             $table->foreignIdFor(Alliance::class, 'alliance_id')->constrained('alliances')->cascadeOnDelete();
             $table->enum('role', ['friendly', 'enemy'])->index();
             $table->json('meta')->nullable();
@@ -47,7 +51,7 @@ return new class extends Migration
 
         Schema::create('war_plan_targets', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
+            $table->foreignIdFor(WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'nation_id')->constrained('nations')->cascadeOnDelete();
             $table->decimal('target_priority_score', 6, 2)->default(0)->index();
             $table->json('meta')->nullable();
@@ -58,7 +62,7 @@ return new class extends Migration
 
         Schema::create('war_plan_squads', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
+            $table->foreignIdFor(WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
             $table->string('label');
             $table->unsignedTinyInteger('round')->default(1);
             $table->decimal('cohesion_score', 6, 2)->default(0);
@@ -69,12 +73,12 @@ return new class extends Migration
 
         Schema::create('war_plan_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
-            $table->foreignIdFor(\App\Models\WarPlanTarget::class, 'war_plan_target_id')
+            $table->foreignIdFor(WarPlan::class, 'war_plan_id')->constrained('war_plans')->cascadeOnDelete();
+            $table->foreignIdFor(WarPlanTarget::class, 'war_plan_target_id')
                 ->constrained('war_plan_targets')
                 ->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'friendly_nation_id')->constrained('nations')->cascadeOnDelete();
-            $table->foreignIdFor(\App\Models\WarPlanSquad::class, 'war_plan_squad_id')
+            $table->foreignIdFor(WarPlanSquad::class, 'war_plan_squad_id')
                 ->nullable()
                 ->constrained('war_plan_squads')
                 ->nullOnDelete();
@@ -93,7 +97,7 @@ return new class extends Migration
             $table->enum('status', ['draft', 'active', 'archived'])->default('draft')->index();
             $table->unsignedTinyInteger('team_size')
                 ->default((int) config('war.counters.default_team_size', 3));
-            $table->foreignIdFor(\App\Models\WarPlan::class, 'suppressed_by_plan_id')
+            $table->foreignIdFor(WarPlan::class, 'suppressed_by_plan_id')
                 ->nullable()
                 ->constrained('war_plans')
                 ->nullOnDelete();
@@ -108,7 +112,7 @@ return new class extends Migration
 
         Schema::create('war_counter_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(\App\Models\WarCounter::class, 'war_counter_id')->constrained('war_counters')->cascadeOnDelete();
+            $table->foreignIdFor(WarCounter::class, 'war_counter_id')->constrained('war_counters')->cascadeOnDelete();
             $table->foreignIdFor(Nation::class, 'friendly_nation_id')->constrained('nations')->cascadeOnDelete();
             $table->decimal('match_score', 6, 2)->default(0);
             $table->enum('status', ['proposed', 'finalized', 'assigned'])->default('proposed')->index();

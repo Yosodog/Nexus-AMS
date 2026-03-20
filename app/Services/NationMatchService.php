@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 class NationMatchService
 {
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * @return Collection<int, mixed>
      */
     public function rankAgainstTarget(Nation $target, iterable $sourceNations): Collection
     {

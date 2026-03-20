@@ -10,6 +10,7 @@ use App\Nel\NationNelHelper;
 use App\Nel\NelParser;
 use App\Nel\NelValidator;
 use App\Services\Audit\AuditVariableRegistry;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,7 +29,7 @@ class AuditRuleRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

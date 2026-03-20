@@ -7,7 +7,11 @@ use App\Models\NoRaidList;
 use App\Services\AuditLogger;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class RaidController extends Controller
@@ -17,7 +21,7 @@ class RaidController extends Controller
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Foundation\Application|object
+     * @return Factory|View|Application|object
      *
      * @throws AuthorizationException
      */
@@ -35,7 +39,7 @@ class RaidController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -70,7 +74,7 @@ class RaidController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
@@ -95,7 +99,7 @@ class RaidController extends Controller
     }
 
     /**
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      *
      * @throws AuthorizationException
      */
