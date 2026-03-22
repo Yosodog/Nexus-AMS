@@ -15,7 +15,7 @@ class CreateNationJob implements ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 5;
+    public $timeout = 20;
 
     public array $nationsData;
 
