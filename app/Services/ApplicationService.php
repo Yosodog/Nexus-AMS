@@ -186,23 +186,23 @@ class ApplicationService
         $application = $this->findPendingApplication($applicantDiscordId);
 
         $nation = $this->fetchNation($application->nation_id);
-        $this->assertNationInAlliance($nation);
+        if ($this->isNationInAlliance($nation)) {
+            try {
+                $this->alliancePositionService->removeMember($application->nation_id);
+            } catch (Throwable $e) {
+                Log::error('Failed to deny applicant in-game', [
+                    'application_id' => $application->id,
+                    'nation_id' => $application->nation_id,
+                    'applicant_discord_id' => $application->discord_user_id,
+                    'moderator_discord_id' => $moderatorDiscordId,
+                    'error' => $e->getMessage(),
+                ]);
 
-        try {
-            $this->alliancePositionService->removeMember($application->nation_id);
-        } catch (Throwable $e) {
-            Log::error('Failed to deny applicant in-game', [
-                'application_id' => $application->id,
-                'nation_id' => $application->nation_id,
-                'applicant_discord_id' => $application->discord_user_id,
-                'moderator_discord_id' => $moderatorDiscordId,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw new ApplicationException(
-                'alliance_update_failed',
-                'Unable to update alliance position at this time.'
-            );
+                throw new ApplicationException(
+                    'alliance_update_failed',
+                    'Unable to update alliance position at this time.'
+                );
+            }
         }
 
         $application->status = ApplicationStatus::Denied;
@@ -380,9 +380,7 @@ class ApplicationService
      */
     protected function assertNationInAlliance(Nation $nation): void
     {
-        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
-
-        if ((int) ($nation->alliance_id ?? 0) !== $primaryAllianceId) {
+        if (! $this->isNationInAlliance($nation)) {
             throw new ApplicationException(
                 'nation_not_in_our_alliance',
                 'The nation is no longer in our alliance.',
@@ -390,6 +388,13 @@ class ApplicationService
                 ['join_url' => self::JOIN_URL]
             );
         }
+    }
+
+    protected function isNationInAlliance(Nation $nation): bool
+    {
+        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
+
+        return (int) ($nation->alliance_id ?? 0) === $primaryAllianceId;
     }
 
     /**
