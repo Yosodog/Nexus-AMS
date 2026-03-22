@@ -219,12 +219,12 @@
                 updateFinal();
             });
 
-            new DataTable('#marketResourcesTable', {
+            initAdminDataTable('#marketResourcesTable', {
                 pageLength: 50,
                 responsive: true
             });
 
-            new DataTable('#marketTransactionsTable', {
+            initAdminDataTable('#marketTransactionsTable', {
                 pageLength: 25,
                 responsive: true
             });

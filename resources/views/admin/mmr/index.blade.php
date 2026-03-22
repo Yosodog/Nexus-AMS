@@ -521,7 +521,8 @@
                     <table class="table table-hover table-striped align-middle mmr-table" id="mmrResourceTable">
                         <thead class="table-light sticky-top">
                         <tr>
-                            <th>Nation</th>
+                            <th>Leader</th>
+                            <th>Discord</th>
                             <th>City Count</th>
                             @foreach($resourceFields as $resource)
                                 <th>{{ ucfirst($resource) }}</th>
@@ -542,6 +543,7 @@
                                         {{ $nation->leader_name }}
                                     </a>
                                 </td>
+                                <td>{{ $nation->discord ?: '—' }}</td>
                                 <td>{{ $nation->num_cities }}</td>
                                 @foreach($resourceFields as $resource)
                                     @php
@@ -602,7 +604,8 @@
                     <table class="table table-hover table-striped align-middle mmr-table" id="mmrMilitaryTable">
                         <thead class="table-light sticky-top">
                         <tr>
-                            <th>Nation</th>
+                            <th>Leader</th>
+                            <th>Discord</th>
                             <th>City Count</th>
                             @foreach($unitFields as $unit)
                                 <th>{{ ucfirst($unit) }}</th>
@@ -622,6 +625,7 @@
                                         {{ $nation->leader_name }}
                                     </a>
                                 </td>
+                                <td>{{ $nation->discord ?: '—' }}</td>
                                 <td>{{ $nation->num_cities }}</td>
                                 @foreach($unitFields as $unit)
                                     @php
@@ -666,12 +670,12 @@
                 new bootstrap.Popover(el);
             });
 
-            const resourceTable = new DataTable('#mmrResourceTable', {
+            const resourceTable = initAdminDataTable('#mmrResourceTable', {
                 pageLength: 50,
                 responsive: true
             });
 
-            const militaryTable = new DataTable('#mmrMilitaryTable', {
+            const militaryTable = initAdminDataTable('#mmrMilitaryTable', {
                 pageLength: 50,
                 responsive: true
             });

@@ -198,7 +198,7 @@
             new bootstrap.Tooltip(el);
         });
 
-        new DataTable('#citiesTable', {
+        initAdminDataTable('#citiesTable', {
             pageLength: 50,
             scrollX: true,
             order: [[0, 'asc']],

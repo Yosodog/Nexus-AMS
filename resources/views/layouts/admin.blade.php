@@ -37,6 +37,122 @@
             padding-right: 1.25rem;
         }
 
+        html[data-bs-theme="dark"] .table-light,
+        html[data-bs-theme="dark"] .table-light > tr > th,
+        html[data-bs-theme="dark"] .table-light > tr > td,
+        html[data-bs-theme="dark"] .table-light th,
+        html[data-bs-theme="dark"] .table-light td {
+            background-color: var(--bs-tertiary-bg);
+            color: var(--bs-body-color);
+            border-color: var(--bs-border-color);
+        }
+
+        html[data-bs-theme="dark"] .card .table-light th {
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        .dt-container .dt-layout-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem 1rem;
+        }
+
+        .dt-container .dt-layout-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .dt-container .dt-length label,
+        .dt-container .dt-search label,
+        .dataTables_wrapper .dataTables_length label,
+        .dataTables_wrapper .dataTables_filter label {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0;
+            font-size: 0.875rem;
+            color: var(--bs-secondary-color);
+        }
+
+        .dt-container .dt-length select,
+        .dataTables_wrapper .dataTables_length select {
+            min-width: 5rem;
+            margin-right: 0.25rem;
+        }
+
+        .dt-container .dt-search input,
+        .dt-container .dt-length select,
+        .dataTables_wrapper .dataTables_filter input,
+        .dataTables_wrapper .dataTables_length select {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            padding: 0.375rem 0.75rem;
+            line-height: 1.5;
+        }
+
+        .dt-container .dt-search input,
+        .dataTables_wrapper .dataTables_filter input {
+            min-width: min(100%, 18rem);
+            margin-left: 0;
+        }
+
+        .dt-container .dt-info,
+        .dataTables_wrapper .dataTables_info {
+            color: var(--bs-secondary-color);
+            font-size: 0.875rem;
+            padding-top: 0;
+        }
+
+        .dt-container .dt-paging .dt-paging-button,
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 0.5rem !important;
+            margin: 0 0.125rem;
+        }
+
+        .dt-container .dt-paging .dt-paging-button.current,
+        .dt-container .dt-paging .dt-paging-button.current:hover,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: #fff !important;
+        }
+
+        .dt-container .dt-paging .dt-paging-button:hover,
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: var(--bs-tertiary-bg);
+            border-color: var(--bs-border-color);
+            color: var(--bs-body-color) !important;
+        }
+
+        .dt-container .dt-layout-row:first-child,
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            padding-bottom: 0.75rem;
+        }
+
+        .dt-container .dt-layout-row:last-child,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            padding-top: 0.75rem;
+        }
+
+        .dt-container .dt-layout-row:first-child {
+            padding-top: 1rem;
+        }
+
+        .dt-container .dt-layout-row:last-child {
+            padding-bottom: 1rem;
+        }
+
         @media (max-width: 767.98px) {
             .app-content .container-fluid {
                 padding-left: 0.75rem;
@@ -135,23 +251,35 @@
             }
 
             .dataTables_wrapper .dataTables_length,
-            .dataTables_wrapper .dataTables_filter {
+            .dataTables_wrapper .dataTables_filter,
+            .dt-container .dt-length,
+            .dt-container .dt-search,
+            .dt-container .dt-info,
+            .dt-container .dt-paging {
                 float: none;
                 text-align: left;
                 width: 100%;
             }
 
             .dataTables_wrapper .dataTables_filter input,
-            .dataTables_wrapper .dataTables_length select {
+            .dataTables_wrapper .dataTables_length select,
+            .dt-container .dt-search input,
+            .dt-container .dt-length select {
                 width: 100%;
                 margin-left: 0;
                 margin-top: 0.5rem;
             }
 
-            .dataTables_wrapper .dataTables_paginate {
+            .dataTables_wrapper .dataTables_paginate,
+            .dt-container .dt-paging {
                 float: none;
                 text-align: center;
                 margin-top: 0.75rem;
+            }
+
+            .dt-container .dt-layout-cell {
+                padding-left: 0;
+                padding-right: 0;
             }
         }
     </style>
@@ -189,6 +317,42 @@
     <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
         integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
     <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script>
+        window.initAdminDataTable = function (selector, options = {}) {
+            const defaults = {
+                pageLength: 25,
+                scrollX: true,
+                autoWidth: false,
+                language: {
+                    searchPlaceholder: 'Search table...',
+                    search: '',
+                    lengthMenu: '_MENU_ entries'
+                },
+                layout: {
+                    topStart: 'pageLength',
+                    topEnd: 'search',
+                    bottomStart: 'info',
+                    bottomEnd: 'paging'
+                },
+                columnDefs: [
+                    {targets: '_all', className: 'align-middle'}
+                ]
+            };
+
+            const mergedOptions = {
+                ...defaults,
+                ...options,
+                language: {
+                    ...defaults.language,
+                    ...(options.language || {})
+                },
+                layout: options.layout === undefined ? defaults.layout : options.layout,
+                columnDefs: options.columnDefs ?? defaults.columnDefs
+            };
+
+            return new DataTable(selector, mergedOptions);
+        };
+    </script>
 
     @stack('modals')
     @stack('scripts')

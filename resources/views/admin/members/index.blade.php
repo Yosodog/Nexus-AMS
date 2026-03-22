@@ -56,8 +56,8 @@
     <div class="card mt-4">
         <div class="card-header">Alliance Members</div>
         <div class="card-body table-responsive">
-            <table class="table table-hover table-striped align-middle">
-                <thead>
+            <table id="membersTable" class="table table-hover table-striped align-middle w-100">
+                <thead class="table-light">
                 <tr>
                     <th>Leader</th>
                     <th>Status</th>
@@ -77,7 +77,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach($members->sortByDesc('score') as $nation)
+                @foreach($members as $nation)
                     <tr>
                         <td>
                             <a href="https://politicsandwar.com/nation/id={{ $nation['id'] }}" target="_blank">
@@ -250,7 +250,7 @@ Ships: {{ number_format($nation['military_current']['ships']) }}">
 
             <div class="table-responsive mt-3">
                 <table class="table table-sm table-striped align-middle mb-0">
-                    <thead>
+                    <thead class="table-light">
                     <tr>
                         <th>Leader</th>
                         <th>Nation</th>
@@ -321,6 +321,16 @@ Ships: {{ number_format($nation['military_current']['ships']) }}">
         // Enable tooltips for military % and resources
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
             new bootstrap.Tooltip(el)
+        });
+
+        initAdminDataTable('#membersTable', {
+            pageLength: 50,
+            order: [[2, 'desc']],
+            scrollX: true,
+            autoWidth: false,
+            language: {
+                searchPlaceholder: 'Search members...',
+            }
         });
     </script>
 @endsection

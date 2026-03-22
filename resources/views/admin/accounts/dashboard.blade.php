@@ -289,6 +289,7 @@
                     <thead class="table-light">
                     <tr>
                         <th>Owner</th>
+                        <th>Nation ID</th>
                         <th>Name</th>
                         <th class="text-end">Money</th>
                         @foreach($resourceList as $resource)
@@ -306,6 +307,7 @@
                                     <span class="text-muted"><i class="bi bi-person-x me-1"></i>Deleted</span>
                                 @endif
                             </td>
+                            <td data-order="{{ $acc->nation_id }}">{{ $acc->nation_id }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link-primary fw-semibold">
@@ -887,20 +889,15 @@
 @push("scripts")
     <script>
         $(function () {
-            $('#account_table').DataTable({
+            initAdminDataTable('#account_table', {
                 pageLength: 25,
                 lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'All']],
-                order: [[2, 'desc']],
+                order: [[3, 'desc']],
                 scrollX: true,
                 autoWidth: false,
                 language: {
                     searchPlaceholder: 'Search accounts...',
-                    search: ''
-                },
-                dom: '<"px-3 pt-3 pb-2"lf>t<"px-3 pb-3"ip>',
-                columnDefs: [
-                    {targets: '_all', className: 'align-middle'}
-                ]
+                }
             });
         });
     </script>

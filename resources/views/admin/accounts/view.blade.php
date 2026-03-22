@@ -438,12 +438,18 @@
 @section("scripts")
     <script>
         $(document).ready(function () {
-            $('#transaction_table').DataTable({
-                "order": [[0, "desc"]]
+            initAdminDataTable('#transaction_table', {
+                order: [[0, 'desc']],
+                language: {
+                    searchPlaceholder: 'Search transactions...'
+                }
             });
 
-            $('#manual_transactions_table').DataTable({
-                "order": [[0, "desc"]]
+            initAdminDataTable('#manual_transactions_table', {
+                order: [[0, 'desc']],
+                language: {
+                    searchPlaceholder: 'Search manual transactions...'
+                }
             });
 
             // Enable Bootstrap Popovers
