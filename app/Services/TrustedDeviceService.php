@@ -83,8 +83,8 @@ class TrustedDeviceService
             value: $token,
             minutes: now()->diffInMinutes($expiresAt),
             path: '/',
-            domain: null,
-            secure: (bool) config('session.secure', false),
+            domain: config('session.domain'),
+            secure: $request->isSecure() || (bool) config('session.secure', false),
             httpOnly: true,
             sameSite: config('session.same_site', 'lax')
         );

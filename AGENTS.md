@@ -49,6 +49,31 @@ subdirectories, follow the most specific guidance available.
 - Avoid hard-coding alliance IDs or environment-specific values—read them from config or env-aware
   helpers.
 
+## Security-Sensitive Workflow Rules
+- For workflows that must allow only one pending request at a time, do **not** rely on an app-only
+  `exists()` or `status = pending` check. Keep the friendly validation check, but also enforce the
+  rule at the database level.
+- In MySQL, use the existing `pending_key` pattern for these cases: set `pending_key = 1` while the
+  row is pending, set it back to `null` when the row is approved/denied/cancelled/completed/
+  expired, and add a unique index such as `(nation_id, pending_key)` or the equivalent workflow key.
+  This allows unlimited historical non-pending rows while still blocking concurrent duplicate
+  pending rows.
+- When adding a new pending-key guard to an existing table, include migration-time cleanup for
+  duplicate pending rows before creating the unique index.
+- Services that create pending rows should catch unique-constraint violations and convert them into
+  user-facing validation errors instead of returning a 500.
+- Admin or diagnostic recovery tools for stuck pending rows should stay behind the
+  `view-diagnostic-info` permission and should move rows into an explicit terminal state while
+  clearing `pending_key`.
+- In this repository, the default location for those stuck-pending recovery controls is the admin
+  settings page. If a new single-pending workflow needs a manual release path, add the summary and
+  action there unless a more specific admin screen already owns that workflow.
+- If a page stores admin-authored HTML (for example CKEditor content), `{!! !!}` is only acceptable
+  when the HTML is sanitized server-side first. Do not assume the editor itself is a sanitizer.
+- When issuing cookies that bypass or weaken authentication friction (for example trusted-device /
+  MFA cookies), prefer the session domain and ensure the cookie is marked secure whenever the
+  current request is HTTPS, even if deployment config is imperfect.
+
 ## Blade, Tailwind, and Assets
 - Blade views in `resources/views` use Tailwind with DaisyUI themes. Prefer utility classes already
   present in the file and keep markup terse by leveraging Blade components/partials where available.

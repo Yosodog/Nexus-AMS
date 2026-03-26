@@ -631,6 +631,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/account-inactivity-auto-disable', [SettingsController::class, 'updateUserInactivityAutoDisable'])->name(
             'admin.settings.account-inactivity-auto-disable'
         );
+        Route::post('/settings/pending-requests/release-stale', [SettingsController::class, 'releaseStalePending'])->name(
+            'admin.settings.pending-requests.release-stale'
+        );
 
         Route::prefix('mmr')->group(function () {
             Route::get('/', [MMRController::class, 'index'])->name('admin.mmr.index');

@@ -27,6 +27,7 @@ class WarAidRequest extends Model
         'aluminum',
         'food',
         'status',
+        'pending_key',
         'approved_at',
         'denied_at',
     ];

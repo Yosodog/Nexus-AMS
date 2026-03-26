@@ -2,22 +2,34 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Models\Application;
+use App\Models\CityGrantRequest;
+use App\Models\DepositRequest;
+use App\Models\GrantApplication;
+use App\Models\Loan;
+use App\Models\RebuildingRequest;
+use App\Models\WarAidRequest;
 use App\Services\AuditLogger;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
+    private const DEFAULT_STALE_PENDING_HOURS = 24;
+
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
@@ -63,6 +75,8 @@ class SettingsController extends Controller
             'auditRetentionDays' => SettingService::getAuditLogRetentionDays(),
             'userInactivityAutoDisableEnabled' => SettingService::isUserInactivityAutoDisableEnabled(),
             'userInactivityAutoDisableDays' => SettingService::getUserInactivityAutoDisableDays(),
+            'stalePendingDefaultHours' => self::DEFAULT_STALE_PENDING_HOURS,
+            'pendingRecoveryItems' => $this->buildPendingRecoveryItems(),
         ]);
     }
 
@@ -537,6 +551,53 @@ class SettingsController extends Controller
         ]);
     }
 
+    public function releaseStalePending(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $definitions = $this->pendingRecoveryDefinitions();
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:'.implode(',', array_keys($definitions))],
+            'older_than_hours' => ['required', 'integer', 'min:1', 'max:8760'],
+        ]);
+
+        $type = (string) $validated['type'];
+        $olderThanHours = (int) $validated['older_than_hours'];
+        $definition = $definitions[$type];
+        $cutoff = now()->subHours($olderThanHours);
+        $releasedAt = now();
+
+        $updated = DB::table($definition['table'])
+            ->where('status', $definition['pending_status'])
+            ->where('created_at', '<=', $cutoff)
+            ->update(($definition['release_payload'])($releasedAt));
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'stale_pending_requests_released',
+            context: [
+                'data' => [
+                    'type' => $type,
+                    'label' => $definition['label'],
+                    'older_than_hours' => $olderThanHours,
+                    'released_count' => $updated,
+                    'cutoff' => $cutoff->toIso8601String(),
+                ],
+            ],
+            message: 'Stale pending requests released.'
+        );
+
+        $message = $updated > 0
+            ? "Released {$updated} stale {$definition['label']} entries older than {$olderThanHours} hours."
+            : "No stale {$definition['label']} entries older than {$olderThanHours} hours were found.";
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => $message,
+            'alert-type' => 'success',
+        ]);
+    }
+
     /**
      * @return array<int|string, mixed>
      */
@@ -573,5 +634,128 @@ class SettingsController extends Controller
             'nextRunAt' => $nextRunAt,
             'stepSeconds' => $stepSeconds,
         ];
+    }
+
+    /**
+     * @return array<string, array{
+     *     label: string,
+     *     table: string,
+     *     model: class-string,
+     *     pending_status: string,
+     *     release_payload: \Closure(Carbon): array<string, mixed>
+     * }>
+     */
+    private function pendingRecoveryDefinitions(): array
+    {
+        return [
+            'war_aid' => [
+                'label' => 'war aid requests',
+                'table' => 'war_aid_requests',
+                'model' => WarAidRequest::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'denied',
+                    'pending_key' => null,
+                    'denied_at' => $releasedAt,
+                ],
+            ],
+            'applications' => [
+                'label' => 'applications',
+                'table' => 'applications',
+                'model' => Application::class,
+                'pending_status' => ApplicationStatus::Pending->value,
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => ApplicationStatus::Cancelled->value,
+                    'pending_key' => null,
+                    'cancelled_at' => $releasedAt,
+                ],
+            ],
+            'loans' => [
+                'label' => 'loan applications',
+                'table' => 'loans',
+                'model' => Loan::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'denied',
+                    'pending_key' => null,
+                ],
+            ],
+            'deposit_requests' => [
+                'label' => 'deposit requests',
+                'table' => 'deposit_requests',
+                'model' => DepositRequest::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'expired',
+                    'pending_key' => null,
+                ],
+            ],
+            'grant_applications' => [
+                'label' => 'grant applications',
+                'table' => 'grant_applications',
+                'model' => GrantApplication::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'denied',
+                    'pending_key' => null,
+                    'denied_at' => $releasedAt,
+                ],
+            ],
+            'city_grant_requests' => [
+                'label' => 'city grant requests',
+                'table' => 'city_grant_requests',
+                'model' => CityGrantRequest::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'denied',
+                    'pending_key' => null,
+                    'denied_at' => $releasedAt,
+                ],
+            ],
+            'rebuilding_requests' => [
+                'label' => 'rebuilding requests',
+                'table' => 'rebuilding_requests',
+                'model' => RebuildingRequest::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'expired',
+                    'pending_key' => null,
+                    'expired_at' => $releasedAt,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array{
+     *     type: string,
+     *     label: string,
+     *     totalPending: int,
+     *     stalePending: int,
+     *     oldestCreatedAt: ?Carbon
+     * }>
+     */
+    private function buildPendingRecoveryItems(): array
+    {
+        $cutoff = now()->subHours(self::DEFAULT_STALE_PENDING_HOURS);
+
+        return collect($this->pendingRecoveryDefinitions())
+            ->map(function (array $definition, string $type) use ($cutoff): array {
+                /** @var class-string<\Illuminate\Database\Eloquent\Model> $model */
+                $model = $definition['model'];
+
+                $baseQuery = $model::query()->where('status', $definition['pending_status']);
+                $oldestCreatedAt = (clone $baseQuery)->oldest('created_at')->value('created_at');
+
+                return [
+                    'type' => $type,
+                    'label' => $definition['label'],
+                    'totalPending' => (clone $baseQuery)->count(),
+                    'stalePending' => (clone $baseQuery)->where('created_at', '<=', $cutoff)->count(),
+                    'oldestCreatedAt' => $oldestCreatedAt ? Carbon::parse($oldestCreatedAt) : null,
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

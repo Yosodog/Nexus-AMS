@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -40,13 +41,26 @@ class ApplicationService
 
         $this->assertNoPendingApplication($nationId, $discordUserId);
 
-        return Application::query()->create([
-            'nation_id' => $nationId,
-            'leader_name_snapshot' => $nation->leader_name ?? '',
-            'discord_user_id' => $discordUserId,
-            'discord_username' => $discordUsername,
-            'status' => ApplicationStatus::Pending,
-        ]);
+        try {
+            return Application::query()->create([
+                'nation_id' => $nationId,
+                'leader_name_snapshot' => $nation->leader_name ?? '',
+                'discord_user_id' => $discordUserId,
+                'discord_username' => $discordUsername,
+                'status' => ApplicationStatus::Pending,
+                'pending_key' => 1,
+            ]);
+        } catch (QueryException $exception) {
+            if ($this->isUniqueConstraintViolation($exception)) {
+                throw new ApplicationException(
+                    'pending_application_exists',
+                    'An application is already pending for this nation or Discord user.',
+                    422
+                );
+            }
+
+            throw $exception;
+        }
     }
 
     /**
@@ -139,6 +153,7 @@ class ApplicationService
         }
 
         $application->status = ApplicationStatus::Approved;
+        $application->pending_key = null;
         $application->approved_at = Carbon::now();
         $application->approved_by_discord_id = $moderatorDiscordId;
         $application->save();
@@ -206,6 +221,7 @@ class ApplicationService
         }
 
         $application->status = ApplicationStatus::Denied;
+        $application->pending_key = null;
         $application->denied_at = Carbon::now();
         $application->denied_by_discord_id = $moderatorDiscordId;
         $application->save();
@@ -265,6 +281,7 @@ class ApplicationService
         }
 
         $application->status = ApplicationStatus::Cancelled;
+        $application->pending_key = null;
         $application->cancelled_at = Carbon::now();
         $application->cancelled_by_discord_id = $actor->activeDiscordAccount()?->discord_id;
         $application->save();
@@ -417,6 +434,11 @@ class ApplicationService
                 422
             );
         }
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 
     /**

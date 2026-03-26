@@ -10,6 +10,7 @@ use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\Nation;
 use App\Notifications\LoanNotification;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -34,18 +35,35 @@ class LoanService
 
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
-        $loan = Loan::create([
-            'nation_id' => $nation->id,
-            'account_id' => $account->id,
-            'amount' => $amount,
-            'term_weeks' => $termLength,
-            'status' => 'pending',
-            'remaining_balance' => $amount,
-            'weekly_interest_paid' => 0,
-            'scheduled_weekly_payment' => 0,
-            'past_due_amount' => 0,
-            'accrued_interest_due' => 0,
-        ]);
+        if (Loan::query()->where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
+            throw ValidationException::withMessages([
+                'loan' => 'You already have a pending loan application.',
+            ]);
+        }
+
+        try {
+            $loan = Loan::create([
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+                'amount' => $amount,
+                'term_weeks' => $termLength,
+                'status' => 'pending',
+                'pending_key' => 1,
+                'remaining_balance' => $amount,
+                'weekly_interest_paid' => 0,
+                'scheduled_weekly_payment' => 0,
+                'past_due_amount' => 0,
+                'accrued_interest_due' => 0,
+            ]);
+        } catch (QueryException $exception) {
+            if ($this->isUniqueConstraintViolation($exception)) {
+                throw ValidationException::withMessages([
+                    'loan' => 'You already have a pending loan application.',
+                ]);
+            }
+
+            throw $exception;
+        }
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -85,6 +103,12 @@ class LoanService
             ]);
         }
 
+        if (Loan::query()->where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
+            throw ValidationException::withMessages([
+                'loan' => 'You already have a pending loan application.',
+            ]);
+        }
+
         return true;
     }
 
@@ -112,6 +136,7 @@ class LoanService
                 'remaining_balance' => $amount,
                 'term_weeks' => $termWeeks,
                 'status' => 'approved',
+                'pending_key' => null,
                 'approved_at' => now(),
                 'next_due_date' => now()->addDays(self::DAYS_PER_PAYMENT_CYCLE),
                 'weekly_interest_paid' => 0,
@@ -177,7 +202,10 @@ class LoanService
                 ]);
             }
 
-            $lockedLoan->update(['status' => 'denied']);
+            $lockedLoan->update([
+                'status' => 'denied',
+                'pending_key' => null,
+            ]);
 
             return $lockedLoan->fresh();
         });
@@ -230,6 +258,11 @@ class LoanService
             });
 
         return $updated;
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 
     public function processWeeklyPayments(): void

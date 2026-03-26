@@ -83,6 +83,76 @@
         <div class="col-md-12">
             <h4 class="mb-2">Other Settings</h4>
         </div>
+        <div class="col-12">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Pending Request Recovery</span>
+                    <span class="badge text-bg-warning">Diagnostics</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Use this only when a workflow is genuinely stuck. Releasing stale pending rows clears the single-pending lock so members can submit a fresh request.
+                    </p>
+                    <div class="alert alert-warning py-2 px-3 small">
+                        These actions do not approve anything. They force stale pending rows into a terminal state based on the workflow, such as denied, cancelled, or expired.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th scope="col">Workflow</th>
+                                <th scope="col">Pending</th>
+                                <th scope="col">Stale ({{ $stalePendingDefaultHours }}h+)</th>
+                                <th scope="col">Oldest Pending</th>
+                                <th scope="col" style="width: 340px;">Force Release</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($pendingRecoveryItems as $item)
+                                <tr>
+                                    <td class="text-capitalize">{{ $item['label'] }}</td>
+                                    <td>{{ number_format($item['totalPending']) }}</td>
+                                    <td>
+                                        <span class="badge {{ $item['stalePending'] > 0 ? 'text-bg-warning' : 'text-bg-secondary' }}">
+                                            {{ number_format($item['stalePending']) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if($item['oldestCreatedAt'])
+                                            <div>{{ $item['oldestCreatedAt']->format('M d, Y H:i') }}</div>
+                                            <small class="text-muted">{{ $item['oldestCreatedAt']->diffForHumans() }}</small>
+                                        @else
+                                            <span class="text-muted">None</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ route('admin.settings.pending-requests.release-stale') }}" class="d-flex gap-2 align-items-end">
+                                            @csrf
+                                            <input type="hidden" name="type" value="{{ $item['type'] }}">
+                                            <div>
+                                                <label class="form-label small mb-1" for="olderThanHours-{{ $item['type'] }}">Older than (hours)</label>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       id="olderThanHours-{{ $item['type'] }}"
+                                                       name="older_than_hours"
+                                                       min="1"
+                                                       max="8760"
+                                                       value="{{ old('older_than_hours', $stalePendingDefaultHours) }}"
+                                                       required>
+                                            </div>
+                                            <button class="btn btn-outline-warning btn-sm mb-0" type="submit">
+                                                Release Stale
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="col-lg-6">
             @php
                 $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);

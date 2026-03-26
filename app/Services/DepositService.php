@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Notifications\DepositCompletedNotification;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -31,9 +32,11 @@ class DepositService
         $lastScannedId = SettingService::getLastScannedBankRecordId();
 
         // Step 3: Fetch all deposits since last scanned ID
-        $bankRecords = BankRecordQueryService::getAllianceDeposits(
-            $allianceId
-        );
+        $bankRecords = BankRecordQueryService::getAllianceDeposits($allianceId, options: [
+            'minId' => $lastScannedId + 1,
+            'orderByColumn' => 'ID',
+            'orderByDirection' => 'ASC',
+        ]);
 
         $updatedLastId = $lastScannedId; // This will be set to the highest next value for saving
 
@@ -119,6 +122,7 @@ class DepositService
     public static function setDepositCompleted(DepositRequest $request): void
     {
         $request->status = 'completed';
+        $request->pending_key = null;
         $request->save();
     }
 
@@ -137,19 +141,34 @@ class DepositService
             return $existing;
         }
 
-        $depositCode = self::generate_code();
+        try {
+            $deposit = new DepositRequest;
+            $deposit->account_id = $account->id;
+            $deposit->deposit_code = self::generate_code();
+            $deposit->status = 'pending';
+            $deposit->pending_key = 1;
+            $deposit->save();
 
-        $deposit = new DepositRequest;
-        $deposit->account_id = $account->id;
-        $deposit->deposit_code = $depositCode;
-        $deposit->status = 'pending';
-        $deposit->save();
+            return $deposit;
+        } catch (QueryException $exception) {
+            if (! self::isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
 
-        return $deposit;
+            return DepositRequest::where('account_id', $account->id)
+                ->where('status', 'pending')
+                ->latest()
+                ->firstOrFail();
+        }
     }
 
     public static function generate_code(): string
     {
         return strtoupper(Str::random(8));
+    }
+
+    private static function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 }

@@ -29,6 +29,7 @@ class Loan extends Model
         'interest_rate',
         'term_weeks',
         'status',
+        'pending_key',
         'approved_at',
         'next_due_date',
     ];

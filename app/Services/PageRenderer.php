@@ -6,7 +6,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
- * Render HTML content for CMS pages. Trust CKEditor output while preserving legacy Editor.js blocks.
+ * Render HTML content for CMS pages while preserving legacy Editor.js blocks.
  */
 class PageRenderer
 {

@@ -8,6 +8,7 @@ use App\Models\AllianceFinanceEntry;
 use App\Models\Nation;
 use App\Models\WarAidRequest;
 use App\Notifications\WarAidNotification;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -19,24 +20,35 @@ class WarAidService
      */
     public function submitAidRequest(Nation $nation, array $data): WarAidRequest
     {
+        // Validate ownership of the account
+        $nation->accounts()->findOrFail($data['account_id']);
+
+        // Validate alliance membership
+        (new NationEligibilityValidator($nation))->validateAllianceMembership(); // PHP 8.4 anyone???
+
         if (WarAidRequest::where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
             throw ValidationException::withMessages([
                 'pending' => 'You already have a pending war aid request.',
             ]);
         }
 
-        // Validate ownership of the account
-        $account = $nation->accounts()->findOrFail($data['account_id']);
+        try {
+            $request = WarAidRequest::create(
+                $this->normalizeAidRequestData([
+                    ...$data,
+                    'nation_id' => $nation->id,
+                    'pending_key' => 1,
+                ])
+            );
+        } catch (QueryException $exception) {
+            if ($this->isUniqueConstraintViolation($exception)) {
+                throw ValidationException::withMessages([
+                    'pending' => 'You already have a pending war aid request.',
+                ]);
+            }
 
-        // Validate alliance membership
-        (new NationEligibilityValidator($nation))->validateAllianceMembership(); // PHP 8.4 anyone???
-
-        $request = WarAidRequest::create(
-            $this->normalizeAidRequestData([
-                ...$data,
-                'nation_id' => $nation->id,
-            ])
-        );
+            throw $exception;
+        }
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -71,31 +83,43 @@ class WarAidService
         $resources = $this->extractResources($adjusted);
 
         $updatedRequest = DB::transaction(function () use ($request, $adjusted, $resources) {
-            $request->update([
+            $lockedRequest = WarAidRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'request' => 'Only pending war aid requests can be approved.',
+                ]);
+            }
+
+            $lockedRequest->update([
                 ...$adjusted,
                 'status' => 'approved',
+                'pending_key' => null,
                 'approved_at' => now(),
             ]);
 
             AccountService::adjustAccountBalance(
-                $request->account,
+                $lockedRequest->account,
                 [
                     ...$resources,
-                    'note' => 'Approved war aid request ID #'.$request->id,
+                    'note' => 'Approved war aid request ID #'.$lockedRequest->id,
                 ],
                 adminId: auth()->id(),
                 ipAddress: request()->ip()
             );
 
-            $request->nation->notify(
+            $lockedRequest->nation->notify(
                 new WarAidNotification(
-                    nation_id: $request->nation_id,
-                    request: $request,
+                    nation_id: $lockedRequest->nation_id,
+                    request: $lockedRequest,
                     status: 'approved'
                 )
             );
 
-            return $request->fresh();
+            return $lockedRequest->fresh();
         });
 
         if ($updatedRequest) {
@@ -155,15 +179,31 @@ class WarAidService
             context: 'deny your own war aid request'
         );
 
-        $request->update([
-            'status' => 'denied',
-            'denied_at' => now(),
-        ]);
+        $updatedRequest = DB::transaction(function () use ($request) {
+            $lockedRequest = WarAidRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $request->nation->notify(
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'request' => 'Only pending war aid requests can be denied.',
+                ]);
+            }
+
+            $lockedRequest->update([
+                'status' => 'denied',
+                'pending_key' => null,
+                'denied_at' => now(),
+            ]);
+
+            return $lockedRequest->fresh();
+        });
+
+        $updatedRequest->nation->notify(
             new WarAidNotification(
-                nation_id: $request->nation_id,
-                request: $request,
+                nation_id: $updatedRequest->nation_id,
+                request: $updatedRequest,
                 status: 'denied'
             )
         );
@@ -175,17 +215,22 @@ class WarAidService
             action: 'war_aid_denied',
             outcome: 'denied',
             severity: 'warning',
-            subject: $request,
+            subject: $updatedRequest,
             context: [
                 'related' => [
-                    ['type' => 'Account', 'id' => (string) $request->account_id, 'role' => 'account'],
+                    ['type' => 'Account', 'id' => (string) $updatedRequest->account_id, 'role' => 'account'],
                 ],
                 'data' => [
-                    'nation_id' => $request->nation_id,
+                    'nation_id' => $updatedRequest->nation_id,
                 ],
             ],
             message: 'War aid denied.'
         );
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 
     /**
