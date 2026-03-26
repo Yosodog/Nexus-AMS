@@ -42,6 +42,20 @@ class OffshoreService
         return Offshore::with('guardrails')->find($id);
     }
 
+    public function primary(bool $includeDisabled = false): ?Offshore
+    {
+        $query = Offshore::query()
+            ->with('guardrails')
+            ->orderByDesc('enabled')
+            ->orderBy('priority');
+
+        if (! $includeDisabled) {
+            $query->where('enabled', true);
+        }
+
+        return $query->first();
+    }
+
     public function create(array $attributes, ?array $guardrails = null): Offshore
     {
         $offshore = new Offshore($attributes);
