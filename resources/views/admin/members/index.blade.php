@@ -52,6 +52,10 @@
         </div>
     </div>
 
+    @php
+        $profitabilityRows = $profitabilityLeaderboard['rows'] ?? [];
+    @endphp
+
     {{-- Member Table --}}
     <div class="card mt-4">
         <div class="card-header">Alliance Members</div>
@@ -131,6 +135,59 @@ Ships: {{ number_format($nation['military_current']['ships']) }}">
                         </td>
                     </tr>
                 @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <span class="fw-semibold">Build Profitability</span>
+                <div class="text-muted small">Current daily economic output converted with 24-hour average trade prices.</div>
+            </div>
+            <div class="text-muted small">
+                Radiation snapshot:
+                {{ optional($profitabilityLeaderboard['radiation_snapshot_at'] ?? null)?->toDateTimeString() ?? 'Unavailable' }}
+            </div>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Rank</th>
+                    <th>Leader</th>
+                    <th>Nation</th>
+                    <th>Cities</th>
+                    <th class="text-end">Net / Day</th>
+                    <th class="text-end">Money</th>
+                    <th class="text-end">City Income</th>
+                    <th class="text-end">Power Cost</th>
+                    <th class="text-end">Food Cost</th>
+                    <th class="text-end">Military Upkeep</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse($profitabilityRows as $row)
+                    <tr>
+                        <td><span class="badge text-bg-secondary">#{{ $row['rank'] }}</span></td>
+                        <td>{{ $row['leader_name'] }}</td>
+                        <td>{{ $row['nation_name'] }}</td>
+                        <td>{{ number_format($row['cities']) }}</td>
+                        <td class="text-end fw-semibold {{ $row['converted_profit_per_day'] >= 0 ? 'text-success' : 'text-danger' }}">
+                            ${{ number_format($row['converted_profit_per_day'], 2) }}
+                        </td>
+                        <td class="text-end">${{ number_format($row['money_profit_per_day'], 2) }}</td>
+                        <td class="text-end text-success">${{ number_format($row['city_income_per_day'], 2) }}</td>
+                        <td class="text-end text-danger">${{ number_format(abs($row['power_cost_per_day']), 2) }}</td>
+                        <td class="text-end text-danger">${{ number_format(abs($row['food_cost_per_day']), 2) }}</td>
+                        <td class="text-end text-danger">${{ number_format(abs($row['military_upkeep_per_day']), 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">No profitability data available yet.</td>
+                    </tr>
+                @endforelse
                 </tbody>
             </table>
         </div>

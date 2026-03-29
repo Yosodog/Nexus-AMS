@@ -94,6 +94,8 @@ Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($wh
 // Treaty sync
 Schedule::command('sync:treaties')->hourlyAt('10')->when($whenPWUp);
 Schedule::command('trades:update')->hourlyAt('10')->when($whenPWUp);
+Schedule::command('pw:sync-radiation')->hourlyAt('18')->runInBackground()->withoutOverlapping(55)->when($whenPWUp);
+Schedule::command('profitability:refresh')->hourlyAt('20')->runInBackground()->withoutOverlapping(55)->when($whenPWUp);
 Schedule::command('rebuilding:refresh-estimates')->everyTwoHours()->withoutOverlapping(110);
 
 Schedule::job(new DispatchBeigeTurnAlertsJob('pre_turn'), 'sync')

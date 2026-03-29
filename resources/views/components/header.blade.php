@@ -32,6 +32,7 @@
                             <li><a href="{{ route("accounts") }}">Accounts</a></li>
                             <li><a href="{{ route('market.index') }}">Market</a></li>
                             <li><a href="{{ route('audit.index') }}">Audits</a></li>
+                            <li><a href="{{ route('leaderboards.index') }}">Leaderboards</a></li>
                             <li>
                                 <details>
                                     <summary>Grants</summary>
@@ -85,6 +86,7 @@
                         <li><a href="{{ route("accounts") }}">Accounts</a></li>
                         <li><a href="{{ route('market.index') }}">Market</a></li>
                         <li><a href="{{ route('audit.index') }}">Audits</a></li>
+                        <li><a href="{{ route('leaderboards.index') }}">Leaderboards</a></li>
                         <li>
                             <details class="relative">
                                 <summary

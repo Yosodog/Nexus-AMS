@@ -47,6 +47,7 @@ use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
+use App\Http\Controllers\LeaderboardsController;
 use App\Http\Controllers\LoansController as UserLoansController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\MemberTransferController;
@@ -116,6 +117,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
     // User dashboard
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
+    Route::get('/leaderboards', LeaderboardsController::class)->name('leaderboards.index');
 
     // Account Routes
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts');

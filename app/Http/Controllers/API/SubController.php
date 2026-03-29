@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
 use App\Jobs\DeleteNationAccountJob;
+use App\Jobs\RefreshNationProfitabilitySnapshotJob;
 use App\Jobs\UpdateAllianceJob;
 use App\Jobs\UpdateCityJob;
 use App\Jobs\UpdateNationJob;
@@ -19,6 +20,7 @@ use App\Models\Nation;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\AllianceQueryService;
+use App\Services\NationProfitabilityService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -85,6 +87,7 @@ class SubController extends Controller
         foreach ($nationDelete as $del) {
             $nation = Nation::getNationById($del['id']);
             $nation->delete();
+            app(NationProfitabilityService::class)->deleteStoredSnapshotForNationId((int) $del['id']);
         }
 
         return response()->json(['message' => 'Nation deleted successfully']);
@@ -226,8 +229,13 @@ class SubController extends Controller
         }
 
         foreach ($citiesDelete as $del) {
-            $nation = City::getById($del['id']);
-            $nation->delete();
+            $city = City::getById($del['id']);
+            $nationId = (int) $city->nation_id;
+            $city->delete();
+
+            if ($nationId > 0) {
+                RefreshNationProfitabilitySnapshotJob::dispatch($nationId);
+            }
         }
 
         return response()->json(['message' => 'Alliance deleted successfully']);

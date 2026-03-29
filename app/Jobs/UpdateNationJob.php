@@ -85,6 +85,10 @@ class UpdateNationJob implements ShouldQueue
                         currentBeigeTurns: (int) $updatedNation->beige_turns,
                     );
                 }
+
+                if ($updatedNation) {
+                    RefreshNationProfitabilitySnapshotJob::dispatch((int) $updatedNation->id);
+                }
             }
         } catch (Exception $e) {
             Log::error('Failed to update nations', ['error' => $e->getMessage()]);

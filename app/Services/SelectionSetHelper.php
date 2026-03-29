@@ -211,6 +211,7 @@ class SelectionSetHelper
             // 'nation',
             'name',
             'date',
+            'nuke_date',
             'infrastructure',
             'land',
             'powered',
