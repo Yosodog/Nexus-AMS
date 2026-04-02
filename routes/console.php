@@ -105,3 +105,6 @@ Schedule::job(new DispatchBeigeTurnAlertsJob('post_turn'), 'sync')
     ->everyTwoHours(10)
     ->withoutOverlapping(9)
     ->when($whenPWUp);
+
+Schedule::command('queue:prune-failed --hours=48')
+    ->daily();
