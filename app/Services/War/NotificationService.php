@@ -16,6 +16,7 @@ use App\Services\Discord\DiscordQueueService;
 use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -213,6 +214,8 @@ class NotificationService
             ),
         ]);
 
+        $this->queueCounterAutoArchiveNotification($counter);
+
         $result['rooms_queued'] = 1;
 
         return $result;
@@ -258,6 +261,30 @@ class NotificationService
                     ->orWhereJsonContains('payload->source->id', (string) $counter->id);
             })
             ->exists();
+    }
+
+    protected function queueCounterAutoArchiveNotification(WarCounter $counter): void
+    {
+        $autoArchiveDays = max(1, (int) config('war.counters.room_auto_archive_days', 14));
+
+        $this->discordQueueService->enqueue(
+            self::DISCORD_WAR_ROOM_ARCHIVE_ACTION,
+            [
+                'discord_channel_id' => null,
+                'source' => [
+                    'type' => 'war_counter',
+                    'id' => $counter->id,
+                    'url' => route('admin.war-counters.show', $counter),
+                ],
+                'archive' => [
+                    'lock' => true,
+                    'title_prefix' => '[Archived] ',
+                ],
+                'archived_at' => Carbon::now()->addDays($autoArchiveDays)->toIso8601String(),
+                'automatic' => true,
+            ],
+            Carbon::now()->addDays($autoArchiveDays)
+        );
     }
 
     protected function resolveForumChannelId(?string $overrideForumId): string

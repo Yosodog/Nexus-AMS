@@ -147,15 +147,25 @@ class WarCounterController extends Controller
             'war_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $mergeThreshold = now()->subDays(max(1, (int) config('war.counters.merge_window_days', 3)));
         $existing = WarCounter::query()
             ->where('aggressor_nation_id', $data['aggressor_nation_id'])
             ->whereIn('status', ['draft', 'active'])
+            ->where(function ($query) use ($mergeThreshold): void {
+                $query->where('last_war_declared_at', '>=', $mergeThreshold)
+                    ->orWhere(function ($fallbackQuery) use ($mergeThreshold): void {
+                        $fallbackQuery->whereNull('last_war_declared_at')
+                            ->where('created_at', '>=', $mergeThreshold);
+                    });
+            })
+            ->latest('last_war_declared_at')
+            ->latest('created_at')
             ->first();
 
         if ($existing) {
             return Redirect::route('admin.war-counters.show', $existing)
                 ->with('alert-type', 'info')
-                ->with('alert-message', 'Counter already exists for this aggressor.');
+                ->with('alert-message', 'A recent counter already exists for this aggressor.');
         }
 
         $aggressor = Nation::query()->findOrFail($data['aggressor_nation_id']);

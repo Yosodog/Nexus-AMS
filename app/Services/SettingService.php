@@ -604,6 +604,28 @@ class SettingService
         self::setValue('discord_war_room_defense_role_id', $roleId ?? '');
     }
 
+    public static function isWarCounterAutoCreationEnabled(): bool
+    {
+        $value = self::getValue('war_counter_auto_creation_enabled');
+
+        if (is_null($value)) {
+            $value = self::getValue('discord_war_room_creation_enabled');
+        }
+
+        if (is_null($value)) {
+            self::setWarCounterAutoCreationEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setWarCounterAutoCreationEnabled(bool $enabled): void
+    {
+        self::setValue('war_counter_auto_creation_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getDiscordAllianceDepartureChannelId(): string
     {
         $channelId = self::getValue('discord_alliance_departure_channel_id');

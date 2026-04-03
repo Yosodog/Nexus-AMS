@@ -56,24 +56,41 @@ class CreateCounterOnWarDeclared
 
         try {
             $lock->block((int) config('war.cache.lock_timeout', 10), function () use ($event) {
-                $counter = WarCounter::query()
-                    ->firstOrCreate(
-                        [
+                $counter = null;
+
+                if (SettingService::isWarCounterAutoCreationEnabled()) {
+                    $mergeWindowDays = max(1, (int) config('war.counters.merge_window_days', 3));
+                    $mergeThreshold = now()->subDays($mergeWindowDays);
+
+                    $counter = WarCounter::query()
+                        ->where('aggressor_nation_id', $event->attackerNationId)
+                        ->whereIn('status', ['draft', 'active'])
+                        ->where(function ($query) use ($mergeThreshold): void {
+                            $query->where('last_war_declared_at', '>=', $mergeThreshold)
+                                ->orWhere(function ($fallbackQuery) use ($mergeThreshold): void {
+                                    $fallbackQuery->whereNull('last_war_declared_at')
+                                        ->where('created_at', '>=', $mergeThreshold);
+                                });
+                        })
+                        ->latest('last_war_declared_at')
+                        ->latest('created_at')
+                        ->first();
+
+                    if (! $counter) {
+                        $counter = WarCounter::query()->create([
                             'aggressor_nation_id' => $event->attackerNationId,
-                        ],
-                        [
                             'team_size' => config('war.counters.default_team_size', 3),
                             'war_declaration_type' => config('war.plan_defaults.plan_type', 'ordinary'),
                             'status' => 'draft',
-                        ]
-                    );
+                        ]);
+                    }
 
-                $counter->update([
-                    'status' => $counter->status === 'archived' ? 'draft' : $counter->status,
-                    'last_war_declared_at' => now(),
-                ]);
+                    $counter->update([
+                        'last_war_declared_at' => now(),
+                    ]);
 
-                AutoPickCounterAssignmentsJob::dispatch($counter->id);
+                    AutoPickCounterAssignmentsJob::dispatch($counter->id);
+                }
 
                 $this->queueDiscordWarAlert($event, $counter);
             });
@@ -91,7 +108,7 @@ class CreateCounterOnWarDeclared
         }
     }
 
-    protected function queueDiscordWarAlert(WarDeclared $event, WarCounter $counter): void
+    protected function queueDiscordWarAlert(WarDeclared $event, ?WarCounter $counter): void
     {
         $channelId = SettingService::getDiscordWarAlertChannelId();
 

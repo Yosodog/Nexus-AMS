@@ -183,6 +183,8 @@ return [
         'default_team_size' => 3,
         'lock_ttl' => 30,
         'debounce_seconds' => 120,
+        'merge_window_days' => 3,
+        'room_auto_archive_days' => 14,
     ],
 
     /*
