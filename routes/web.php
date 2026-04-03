@@ -635,6 +635,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
             'admin.settings.auto-withdraw'
         );
+        Route::post('/settings/growth-circles', [SettingsController::class, 'updateGrowthCircles'])
+            ->name('admin.settings.growth-circles');
         Route::post('/settings/backups', [SettingsController::class, 'updateBackups'])->name(
             'admin.settings.backups'
         );

@@ -68,6 +68,14 @@ class SettingsController extends Controller
             'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
+            'growthCirclesEnabled' => SettingService::isGrowthCirclesEnabled(),
+            'growthCircleTaxId' => SettingService::getGrowthCircleTaxId(),
+            'growthCircleFallbackTaxId' => SettingService::getGrowthCircleFallbackTaxId(),
+            'growthCircleSourceAccountId' => SettingService::getGrowthCircleSourceAccountId(),
+            'growthCircleFoodPerCity' => SettingService::getGrowthCircleFoodPerCity(),
+            'growthCircleUraniumPerCity' => SettingService::getGrowthCircleUraniumPerCity(),
+            'growthCircleDiscordChannelId' => SettingService::getGrowthCircleDiscordChannelId(),
+            'sourceAccounts' => \App\Models\Account::query()->whereNull('nation_id')->orderBy('name')->get(['id', 'name']),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
@@ -295,6 +303,41 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateGrowthCircles(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-growth-circles');
+
+        $validated = $request->validate([
+            'growth_circles_enabled' => ['required', 'boolean'],
+            'growth_circle_tax_id' => ['required', 'integer', 'min:0'],
+            'growth_circle_fallback_tax_id' => ['required', 'integer', 'min:0'],
+            'growth_circle_source_account_id' => ['required', 'integer', 'min:0'],
+            'growth_circle_food_per_city' => ['required', 'integer', 'min:0'],
+            'growth_circle_uranium_per_city' => ['required', 'integer', 'min:0'],
+            'growth_circle_discord_channel_id' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        SettingService::setGrowthCirclesEnabled((bool) $validated['growth_circles_enabled']);
+        SettingService::setGrowthCircleTaxId((int) $validated['growth_circle_tax_id']);
+        SettingService::setGrowthCircleFallbackTaxId((int) $validated['growth_circle_fallback_tax_id']);
+        SettingService::setGrowthCircleSourceAccountId((int) $validated['growth_circle_source_account_id']);
+        SettingService::setGrowthCircleFoodPerCity((int) $validated['growth_circle_food_per_city']);
+        SettingService::setGrowthCircleUraniumPerCity((int) $validated['growth_circle_uranium_per_city']);
+        SettingService::setGrowthCircleDiscordChannelId($validated['growth_circle_discord_channel_id'] ?? '');
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'growth_circles_updated',
+            context: ['data' => $validated],
+            message: 'Growth Circles settings updated.'
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Growth Circles settings saved.',
             'alert-type' => 'success',
         ]);
     }
