@@ -1,5 +1,6 @@
 <?php
 
+use Spatie\DbDumper\Compressors\GzipCompressor;
 use Spatie\Backup\Notifications\Notifiable;
 use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
 use Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification;
@@ -20,13 +21,8 @@ return [
         'name' => env('APP_NAME', 'laravel-backup'),
         'source' => [
             'files' => [
-                'include' => [
-                    base_path(),
-                ],
-                'exclude' => [
-                    base_path('vendor'),
-                    base_path('node_modules'),
-                ],
+                'include' => [],
+                'exclude' => [],
                 'follow_links' => false,
                 'ignore_unreadable_directories' => false,
                 'relative_path' => null,
@@ -35,13 +31,13 @@ return [
                 env('DB_CONNECTION', 'mysql'),
             ],
         ],
-        'database_dump_compressor' => null,
+        'database_dump_compressor' => GzipCompressor::class,
         'database_dump_file_timestamp_format' => null,
         'database_dump_filename_base' => 'database',
         'database_dump_file_extension' => '',
         'destination' => [
-            'compression_method' => ZipArchive::CM_DEFAULT,
-            'compression_level' => 9,
+            'compression_method' => ZipArchive::CM_STORE,
+            'compression_level' => 0,
             'filename_prefix' => '',
             'disks' => $backupDisks,
             'continue_on_failure' => false,
