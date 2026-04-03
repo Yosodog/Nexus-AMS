@@ -83,6 +83,14 @@ Schedule::command('inactivity:check')
 Schedule::command('auto:withdraw')->everyOddHour('54')->runInBackground()
     ->withoutOverlapping(10)->when($whenPWUp);
 
+// Growth Circles
+Schedule::command('growth-circles:distribute')
+    ->everyTwoHours()
+    ->runInBackground()
+    ->withoutOverlapping(110)
+    ->when($whenPWUp)
+    ->when(fn () => SettingService::isGrowthCirclesEnabled());
+
 // Audits
 Schedule::command('audits:run')
     ->everyFifteenMinutes()
