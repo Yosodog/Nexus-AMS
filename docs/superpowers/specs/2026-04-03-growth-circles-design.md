@@ -136,7 +136,7 @@ For each `GrowthCircleEnrollment` where `suspended = false`:
        - `isPending`: `true` — **must be `true`**; the `SendBank` job checks `is_pending` and exits early without sending if it is `false`
        - `requiresAdminApproval`: `false`
        - `note`: `'Growth Circle distribution'`
-   - After the DB transaction commits, call `BankService::send($transaction)` to queue the actual P&W API send (same pattern as `AutoWithdrawService` lines 202–204 which calls `AccountService::dispatchWithdrawal()` only when `!$evaluation['requires_approval']`).
+   - After the DB transaction commits, call `AccountService::dispatchWithdrawal($transaction, $lockedSourceAccount)` to queue the actual P&W API send — identical to `AutoWithdrawService` line 203. This method internally populates the `BankService` instance (receiver, resources, note) before dispatching.
 5. **Log** — create a `GrowthCircleDistribution` record **outside** the `DB::transaction` block, after it completes (or even when no resources were sent this cycle). Zero-send records serve as abuse detection checkpoints. Writing the log outside the transaction ensures nations that need no top-up are still tracked.
 
 ### Pass 2: Abuse Detection
@@ -195,7 +195,7 @@ Two new permissions added to `config/permissions.php`:
 ### Growth Circles Admin Screen (new page, behind `view-growth-circles`)
 
 - Table of enrolled nations: nation name, city count, enrolled date, suspension status
-- Suspended nations highlighted with suspension reason; admins with `manage-growth-circles` can **Clear Suspension** (sets `suspended = false`, clears `suspended_at`/`suspended_reason`) or **Remove from Program** (calls `GrowthCircleService::remove()`)
+- Suspended nations highlighted with suspension reason; admins with `manage-growth-circles` can **Clear Suspension** (sets `suspended = false`, clears `suspended_at` and `suspended_reason`) or **Remove from Program** (calls `GrowthCircleService::remove()`)
 - Distribution history per nation: last 30 days of `growth_circle_distributions` records, expandable row or modal
 
 ---
