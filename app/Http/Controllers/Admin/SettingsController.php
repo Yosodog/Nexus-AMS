@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Models\Account;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
@@ -17,9 +18,10 @@ use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
-use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +77,7 @@ class SettingsController extends Controller
             'growthCircleFoodPerCity' => SettingService::getGrowthCircleFoodPerCity(),
             'growthCircleUraniumPerCity' => SettingService::getGrowthCircleUraniumPerCity(),
             'growthCircleDiscordChannelId' => SettingService::getGrowthCircleDiscordChannelId(),
-            'sourceAccounts' => \App\Models\Account::query()->whereNull('nation_id')->orderBy('name')->get(['id', 'name']),
+            'sourceAccounts' => Account::query()->whereNull('nation_id')->orderBy('name')->get(['id', 'name']),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
@@ -784,7 +786,7 @@ class SettingsController extends Controller
 
         return collect($this->pendingRecoveryDefinitions())
             ->map(function (array $definition, string $type) use ($cutoff): array {
-                /** @var class-string<\Illuminate\Database\Eloquent\Model> $model */
+                /** @var class-string<Model> $model */
                 $model = $definition['model'];
 
                 $baseQuery = $model::query()->where('status', $definition['pending_status']);
