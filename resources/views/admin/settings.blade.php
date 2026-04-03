@@ -165,7 +165,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted">
-                        Customize the guest-facing homepage for your alliance. Content stays alliance-agnostic by default and can be tailored as your branding evolves.
+                        Edit the public homepage copy for your alliance. Keep it specific to your group and focused on recruits.
                     </p>
                     <form method="POST" action="{{ route('admin.settings.homepage') }}">
                         @csrf
@@ -182,7 +182,19 @@
                         <div class="mb-3">
                             <label class="form-label" for="homeAbout">About blurb</label>
                             <textarea class="form-control" id="homeAbout" name="home_about" rows="3" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
-                            <small class="text-muted">Shown beneath the hero to explain what makes your alliance stand out.</small>
+                            <small class="text-muted">A short paragraph near the top of the page.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeStatsIntro">Stats intro</label>
+                            <input type="text" class="form-control" id="homeStatsIntro" name="home_stats_intro"
+                                   value="{{ old('home_stats_intro', $homepageSettings['stats_intro'] ?? '') }}" maxlength="240"
+                                   placeholder="A quick look at the alliance as it stands today.">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeClosingText">Closing line</label>
+                            <input type="text" class="form-control" id="homeClosingText" name="home_closing_text"
+                                   value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300"
+                                   placeholder="If this feels like the right fit, send in your application and come meet the team.">
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Highlights (optional)</label>
@@ -192,9 +204,9 @@
                                        name="home_highlights[]"
                                        value="{{ $highlight }}"
                                        maxlength="140"
-                                       placeholder="e.g. Fast onboarding with clear expectations">
+                                       placeholder="e.g. Clear onboarding and quick responses">
                             @endforeach
-                            <small class="text-muted">These become quick bullet points on the homepage. Leave blank to use defaults.</small>
+                            <small class="text-muted">Short points that tell recruits what they can expect.</small>
                         </div>
                         <button class="btn btn-primary">Save Homepage Content</button>
                     </form>

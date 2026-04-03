@@ -32,6 +32,8 @@ class HomeController extends Controller
             'tagline' => SettingService::getHomepageTagline($allianceName),
             'about' => SettingService::getHomepageAbout($allianceName),
             'highlights' => SettingService::getHomepageHighlights(),
+            'stats_intro' => SettingService::getHomepageStatsIntro(),
+            'closing_text' => SettingService::getHomepageClosingText($allianceName),
         ];
 
         $publicStats = [

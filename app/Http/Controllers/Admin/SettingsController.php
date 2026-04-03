@@ -55,6 +55,8 @@ class SettingsController extends Controller
             'tagline' => SettingService::getHomepageTagline($appName),
             'about' => SettingService::getHomepageAbout($appName),
             'highlights' => SettingService::getHomepageHighlights(),
+            'stats_intro' => SettingService::getHomepageStatsIntro(),
+            'closing_text' => SettingService::getHomepageClosingText($appName),
         ];
 
         return view('admin.settings', [
@@ -227,11 +229,15 @@ class SettingsController extends Controller
             'home_tagline' => SettingService::getHomepageTagline(config('app.name')),
             'home_about' => SettingService::getHomepageAbout(config('app.name')),
             'home_highlights' => SettingService::getHomepageHighlights(),
+            'home_stats_intro' => SettingService::getHomepageStatsIntro(),
+            'home_closing_text' => SettingService::getHomepageClosingText(config('app.name')),
         ];
         $validated = $request->validate([
             'home_headline' => ['required', 'string', 'max:160'],
             'home_tagline' => ['required', 'string', 'max:240'],
             'home_about' => ['nullable', 'string', 'max:800'],
+            'home_stats_intro' => ['nullable', 'string', 'max:240'],
+            'home_closing_text' => ['nullable', 'string', 'max:300'],
             'home_highlights' => ['array'],
             'home_highlights.*' => ['nullable', 'string', 'max:140'],
         ]);
@@ -239,6 +245,8 @@ class SettingsController extends Controller
         SettingService::setHomepageHeadline($validated['home_headline']);
         SettingService::setHomepageTagline($validated['home_tagline']);
         SettingService::setHomepageAbout($validated['home_about'] ?? '');
+        SettingService::setHomepageStatsIntro($validated['home_stats_intro'] ?? '');
+        SettingService::setHomepageClosingText($validated['home_closing_text'] ?? '');
 
         $highlights = collect($validated['home_highlights'] ?? [])
             ->map(fn ($item) => (string) $item)
@@ -254,6 +262,8 @@ class SettingsController extends Controller
                     'home_headline' => ['from' => $previous['home_headline'], 'to' => $validated['home_headline']],
                     'home_tagline' => ['from' => $previous['home_tagline'], 'to' => $validated['home_tagline']],
                     'home_about' => ['from' => $previous['home_about'], 'to' => $validated['home_about'] ?? ''],
+                    'home_stats_intro' => ['from' => $previous['home_stats_intro'], 'to' => $validated['home_stats_intro'] ?? ''],
+                    'home_closing_text' => ['from' => $previous['home_closing_text'], 'to' => $validated['home_closing_text'] ?? ''],
                     'home_highlights' => ['from' => $previous['home_highlights'], 'to' => $highlights],
                 ],
             ],
