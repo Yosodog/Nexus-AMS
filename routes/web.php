@@ -57,6 +57,8 @@ use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
+use App\Http\Controllers\Admin\GrowthCircleController as AdminGrowthCircleController;
+use App\Http\Controllers\GrowthCircleController;
 use App\Http\Controllers\WarSimulatorController;
 use App\Http\Controllers\WarStatsController;
 use App\Http\Middleware\AdminMiddleware;
@@ -151,6 +153,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         ->middleware(BlockWhenPWDown::class);
     Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll')
         ->middleware(BlockWhenPWDown::class);
+
+    // Growth Circles
+    Route::post('/growth-circles/enroll', [GrowthCircleController::class, 'enroll'])
+        ->name('growth-circles.enroll')
+        ->middleware([BlockWhenPWDown::class]);
 
     // MMR Assistant
     Route::post('/mmr-assistant/update', [DirectDepositController::class, 'updateMMRA'])
@@ -547,6 +554,16 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/defense/rebuilding/reset', [AdminRebuildingControllerAlias::class, 'resetCycle'])->name(
             'admin.rebuilding.reset'
         );
+
+        // Growth Circles
+        Route::get('/growth-circles', [AdminGrowthCircleController::class, 'index'])
+            ->name('admin.growth-circles.index');
+        Route::delete('/growth-circles/{nation}/remove', [AdminGrowthCircleController::class, 'remove'])
+            ->name('admin.growth-circles.remove');
+        Route::post('/growth-circles/{enrollment}/clear-suspension', [AdminGrowthCircleController::class, 'clearSuspension'])
+            ->name('admin.growth-circles.clear-suspension');
+        Route::get('/growth-circles/{nation}/distributions', [AdminGrowthCircleController::class, 'distributions'])
+            ->name('admin.growth-circles.distributions');
 
         Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
         Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name(
