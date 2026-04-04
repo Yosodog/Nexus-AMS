@@ -485,7 +485,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
                     <span>Recent War Outcomes</span>
-                    <span class="text-secondary small">Last {{ $recentWars->count() }} wars involving alliance members</span>
+                    <span class="text-secondary small">Last {{ count($recentWars) }} wars involving alliance members</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -580,8 +580,8 @@
             const taxResourceData = @json($taxResourceDaily);
             const warData = @json($warDaily);
             const mmrBuckets = @json($mmrDistribution);
-            const resourceBreakdown = @json($resourceValueBreakdown instanceof \Illuminate\Support\Collection ? $resourceValueBreakdown->toArray() : $resourceValueBreakdown);
-            const militaryReadiness = @json($militaryReadiness instanceof \Illuminate\Support\Collection ? $militaryReadiness->toArray() : $militaryReadiness);
+            const resourceBreakdown = @json($resourceValueBreakdown);
+            const militaryReadiness = @json($militaryReadiness);
 
             const numberFormat = (value) => new Intl.NumberFormat('en-US').format(value ?? 0);
             const currencyFormat = (value) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits: 0}).format(value ?? 0);

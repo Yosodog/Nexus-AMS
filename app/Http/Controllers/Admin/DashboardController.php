@@ -17,7 +17,6 @@ use App\Services\PWHelperService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -41,15 +40,18 @@ class DashboardController extends Controller
         $payload = Cache::remember(
             self::CACHE_KEY,
             now()->addMinutes(self::CACHE_TTL_MINUTES),
-            function () {
-                $metrics = $this->buildMetrics();
-
-                return [
-                    'generated_at' => Carbon::now()->toIso8601String(),
-                    'metrics' => $metrics,
-                ];
-            }
+            fn (): array => $this->buildPayload()
         );
+
+        if ($this->containsIncompleteObject($payload)) {
+            Cache::forget(self::CACHE_KEY);
+
+            $payload = Cache::remember(
+                self::CACHE_KEY,
+                now()->addMinutes(self::CACHE_TTL_MINUTES),
+                fn (): array => $this->buildPayload()
+            );
+        }
 
         $generatedAt = isset($payload['generated_at'])
             ? Carbon::parse($payload['generated_at'])
@@ -61,6 +63,19 @@ class DashboardController extends Controller
             'lastRefreshedAt' => $generatedAt,
             'cacheTtlMinutes' => self::CACHE_TTL_MINUTES,
         ]));
+    }
+
+    /**
+     * Build the cached dashboard payload.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildPayload(): array
+    {
+        return [
+            'generated_at' => Carbon::now()->toIso8601String(),
+            'metrics' => $this->buildMetrics(),
+        ];
     }
 
     /**
@@ -247,7 +262,8 @@ class DashboardController extends Controller
                 'total' => $group->count(),
             ])
             ->sortBy('bucket')
-            ->values();
+            ->values()
+            ->all();
 
         $chartWindowStart = $now->copy()->subDays(13)->startOfDay();
         $chartWindowStartDay = $chartWindowStart->toDateString();
@@ -284,7 +300,8 @@ class DashboardController extends Controller
                 'day' => Carbon::parse($row->day)->format('M d'),
                 'money' => (float) $row->money,
             ])
-            ->values();
+            ->values()
+            ->all();
 
         $taxResourceDaily = (clone $taxBaseQuery)
             ->selectRaw('day,
@@ -302,7 +319,8 @@ class DashboardController extends Controller
                 'aluminum' => (float) $row->aluminum,
                 'food' => (float) $row->food,
             ])
-            ->values();
+            ->values()
+            ->all();
 
         $taxMoneyThisWeek = (float) Taxes::query()
             ->where('date', '>=', $thisWeekStart)
@@ -339,7 +357,8 @@ class DashboardController extends Controller
                 'infra_destroyed' => (float) ($row->att_infra + $row->def_infra),
                 'money_looted' => (float) ($row->att_money + $row->def_money),
             ])
-            ->values();
+            ->values()
+            ->all();
 
         $activeWars = War::query()
             ->active()
@@ -696,7 +715,7 @@ class DashboardController extends Controller
      */
     private function normalizeMetricsForView(array $metrics): array
     {
-        $metrics['topInfrastructureCities'] = $this->objectCollection(
+        $metrics['topInfrastructureCities'] = $this->objectList(
             $metrics['topInfrastructureCities'] ?? [],
             fn (array $city): object => (object) [
                 'id' => (int) ($city['id'] ?? 0),
@@ -713,7 +732,7 @@ class DashboardController extends Controller
             ]
         );
 
-        $metrics['topCashHolders'] = $this->objectCollection(
+        $metrics['topCashHolders'] = $this->objectList(
             $metrics['topCashHolders'] ?? [],
             fn (array $holder): object => (object) [
                 'nation_id' => (int) ($holder['nation_id'] ?? 0),
@@ -724,7 +743,7 @@ class DashboardController extends Controller
             ]
         );
 
-        $metrics['topScoringNations'] = $this->objectCollection(
+        $metrics['topScoringNations'] = $this->objectList(
             $metrics['topScoringNations'] ?? [],
             fn (array $nation): object => (object) [
                 'id' => (int) ($nation['id'] ?? 0),
@@ -735,7 +754,7 @@ class DashboardController extends Controller
             ]
         );
 
-        $metrics['activeWarDetails'] = $this->objectCollection(
+        $metrics['activeWarDetails'] = $this->objectList(
             $metrics['activeWarDetails'] ?? [],
             fn (array $war): object => (object) [
                 'id' => (int) ($war['id'] ?? 0),
@@ -768,7 +787,7 @@ class DashboardController extends Controller
             ]
         );
 
-        $metrics['recentWars'] = $this->objectCollection(
+        $metrics['recentWars'] = $this->objectList(
             $metrics['recentWars'] ?? [],
             fn (array $war): object => (object) [
                 'id' => (int) ($war['id'] ?? 0),
@@ -799,21 +818,91 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param  iterable<mixed>  $items
+     * @param  iterable<mixed>|mixed  $items
      * @param  callable(array<string, mixed>): object  $mapper
-     * @return Collection<int, object>
+     * @return array<int, object>
      */
-    private function objectCollection(iterable $items, callable $mapper): Collection
+    private function objectList(mixed $items, callable $mapper): array
     {
-        return collect($items)
+        return collect($this->normalizeIterable($items))
             ->map(function ($item) use ($mapper) {
-                if (is_object($item)) {
+                if (is_object($item) && get_class($item) !== '__PHP_Incomplete_Class') {
                     return $item;
                 }
 
-                return $mapper(is_array($item) ? $item : []);
+                return $mapper($this->normalizeItemArray($item));
             })
-            ->values();
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function normalizeIterable(mixed $items): array
+    {
+        if (is_array($items)) {
+            return $items;
+        }
+
+        if ($items instanceof \Traversable) {
+            return iterator_to_array($items, false);
+        }
+
+        if (is_object($items) && get_class($items) === '__PHP_Incomplete_Class') {
+            $normalized = $this->normalizeItemArray($items);
+            $storedItems = $normalized["\0*\0items"] ?? $normalized["\0Illuminate\\Support\\Collection\0items"] ?? null;
+
+            return is_array($storedItems) ? array_values($storedItems) : [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeItemArray(mixed $item): array
+    {
+        if (is_array($item)) {
+            return $item;
+        }
+
+        if (is_object($item)) {
+            return array_map(
+                fn ($value) => $value,
+                get_object_vars($item)
+            );
+        }
+
+        return [];
+    }
+
+    private function containsIncompleteObject(mixed $value): bool
+    {
+        if (is_object($value)) {
+            if (get_class($value) === '__PHP_Incomplete_Class') {
+                return true;
+            }
+
+            foreach (get_object_vars($value) as $property) {
+                if ($this->containsIncompleteObject($property)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if ($this->containsIncompleteObject($item)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function serializeDate(mixed $value): ?string
