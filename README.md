@@ -255,7 +255,7 @@ php artisan queue:work
 php artisan schedule:run
 ```
 
-`php artisan schedule:list` is normally useful for inspecting the scheduler, but it requires installed Composer dependencies. In this workspace snapshot, `vendor/` was not present when this README was updated.
+`php artisan schedule:list` will display all available commands.
 
 ## AI Agent Guidance
 
