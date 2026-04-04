@@ -244,7 +244,7 @@ class RebuildingService
 
             AccountService::adjustAccountBalance(
                 account: $request->account,
-                resources: [
+                adjustment: [
                     'money' => $approvedAmount,
                     'note' => 'Approved rebuilding request ID #'.$request->id,
                 ],
