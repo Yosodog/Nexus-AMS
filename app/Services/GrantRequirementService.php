@@ -981,8 +981,12 @@ class GrantRequirementService
      */
     private function coerceLegacyDefinition(mixed $definition): ?array
     {
-        if (! is_array($definition) || $definition === []) {
-            return $definition;
+        if (! is_array($definition)) {
+            return null;
+        }
+
+        if ($definition === []) {
+            return [];
         }
 
         if (isset($definition['group']) || isset($definition['field']) || array_is_list($definition)) {

@@ -2,18 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RaidingLeaderboardRequest;
 use App\Services\LeaderboardDirectoryService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class LeaderboardsController extends Controller
 {
     public function __invoke(
         LeaderboardDirectoryService $leaderboardDirectoryService,
-        RaidingLeaderboardRequest $request,
+        Request $request,
         ?string $board = null
     ): View {
+        if ($board === 'raid-performance') {
+            $request->validate([
+                'from' => ['nullable', 'date'],
+                'to' => ['nullable', 'date'],
+            ]);
+        }
+
         return view('leaderboards.index', $leaderboardDirectoryService->getPageData(
             $board,
             $request->string('from')->toString() ?: null,

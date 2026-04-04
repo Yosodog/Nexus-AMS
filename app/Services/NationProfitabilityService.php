@@ -801,7 +801,7 @@ class NationProfitabilityService
             + (float) $snapshot->asia
             + (float) $snapshot->australia
             + (float) $snapshot->antarctica
-        ) / 5;
+        ) / 7;
 
         return max(0.0, 1 - (($local + $globalAverage) / 1000));
     }

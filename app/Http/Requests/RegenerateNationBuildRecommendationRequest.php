@@ -9,7 +9,7 @@ class RegenerateNationBuildRecommendationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->nation !== null;
+        return $this->user() !== null;
     }
 
     /**
