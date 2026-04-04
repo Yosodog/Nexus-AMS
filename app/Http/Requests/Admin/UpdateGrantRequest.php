@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Models\Grants;
 use App\Rules\ValidGrantRequirementTree;
+use App\Services\GrantRequirementService;
 use App\Services\PWHelperService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,7 +42,7 @@ class UpdateGrantRequest extends FormRequest
             'money' => ['nullable', 'integer', 'min:0'],
             'is_enabled' => ['nullable', 'in:true,false,1,0,on,off'],
             'is_one_time' => ['nullable', 'in:true,false,1,0,on,off'],
-            'validation_rules' => ['nullable', new ValidGrantRequirementTree(app(\App\Services\GrantRequirementService::class))],
+            'validation_rules' => ['nullable', new ValidGrantRequirementTree(app(GrantRequirementService::class))],
         ];
 
         foreach (PWHelperService::resources(false) as $resource) {

@@ -1,6 +1,5 @@
 <?php
 
-use Spatie\DbDumper\Compressors\GzipCompressor;
 use Spatie\Backup\Notifications\Notifiable;
 use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
 use Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification;
@@ -11,6 +10,7 @@ use Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotificatio
 use Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
+use Spatie\DbDumper\Compressors\GzipCompressor;
 
 $defaultBackupDisks = env('AWS_BUCKET') ? ['s3'] : ['local'];
 $configuredBackupDisks = array_values(array_filter(array_map('trim', explode(',', (string) env('BACKUP_DESTINATION_DISKS', implode(',', $defaultBackupDisks))))));
