@@ -12,6 +12,7 @@ use App\Services\GrowthCircleService;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class GrowthCircleController extends Controller
 {
@@ -97,6 +98,10 @@ class GrowthCircleController extends Controller
 
         $enrollment->loadMissing('nation');
         $nation = $enrollment->nation;
+
+        if (! $nation) {
+            throw new NotFoundHttpException('Nation record unavailable for this Growth Circles enrollment.');
+        }
 
         $distributions = GrowthCircleDistribution::query()
             ->where('nation_id', $enrollment->nation_id)
