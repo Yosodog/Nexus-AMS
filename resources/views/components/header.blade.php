@@ -34,6 +34,16 @@
                             <li><a href="{{ route('audit.index') }}">Audits</a></li>
                             <li>
                                 <details>
+                                    <summary>Leaderboards</summary>
+                                    <ul class="p-2">
+                                        <li><a href="{{ route('leaderboards.index') }}">Dashboard</a></li>
+                                        <li><a href="{{ route('leaderboards.index', ['board' => 'profitability']) }}">Profitability</a></li>
+                                        <li><a href="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">Raid Performance</a></li>
+                                    </ul>
+                                </details>
+                            </li>
+                            <li>
+                                <details>
                                     <summary>Grants</summary>
                                     <ul class="p-2">
                                         <li><a href="{{ route("grants.city") }}">City Grants</a></li>
@@ -57,7 +67,6 @@
                                         <li><a href="{{ route("defense.rebuilding") }}">Rebuilding</a></li>
                                         <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
                                         <li><a href="{{ route("defense.simulators") }}">War Simulators</a></li>
-                                        <li><a href="{{ route("defense.raid-leaderboard") }}">Raid Leaderboard</a></li>
                                         <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
                                     </ul>
                                 </details>
@@ -89,6 +98,19 @@
                             <details class="relative">
                                 <summary
                                     class="cursor-pointer px-3 py-2 text-base-content hover:bg-base-200 rounded-md transition">
+                                    Leaderboards
+                                </summary>
+                                <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[60]">
+                                    <li><a href="{{ route('leaderboards.index') }}">Dashboard</a></li>
+                                    <li><a href="{{ route('leaderboards.index', ['board' => 'profitability']) }}">Profitability</a></li>
+                                    <li><a href="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">Raid Performance</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details class="relative">
+                                <summary
+                                    class="cursor-pointer px-3 py-2 text-base-content hover:bg-base-200 rounded-md transition">
                                     Grants
                                 </summary>
                                 <ul class="absolute left-0 mt-2 w-64 menu bg-base-100 p-2 shadow rounded-box z-[60]">
@@ -116,7 +138,6 @@
                                     <li><a href="{{ route("defense.rebuilding") }}">Rebuilding</a></li>
                                     <li><a href="{{ route("defense.war-stats") }}">War Stats</a></li>
                                     <li><a href="{{ route("defense.simulators") }}">War Simulators</a></li>
-                                    <li><a href="{{ route("defense.raid-leaderboard") }}">Raid Leaderboard</a></li>
                                     <li><a href="{{ route("defense.raid-finder") }}">Raid Finder</a></li>
                                 </ul>
                             </details>

@@ -17,6 +17,7 @@ class City extends Model
 
     protected $casts = [
         'date' => 'date',
+        'nuke_date' => 'date',
         'powered' => 'boolean',
         'infrastructure' => 'float',
         'land' => 'float',
@@ -30,6 +31,7 @@ class City extends Model
             'nation_id',
             'name',
             'date',
+            'nuke_date',
             'infrastructure',
             'land',
             'powered',

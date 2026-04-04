@@ -140,6 +140,12 @@
                             </tr>
                             <tr>
                                 <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/nations/{nationId}/profitability</td>
+                                <td class="text-sm">Calculate live profitability for any nation. Eligible alliance nations also refresh their stored leaderboard snapshot.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
                                 <td class="font-mono text-xs">/war-plans/{plan}/targets</td>
                                 <td class="text-sm">Target list plus recommended assignment data.</td>
                                 <td class="text-xs">Admin</td>
@@ -289,6 +295,65 @@ Accept: application/json
 }</code></pre>
                     </div>
                     <p class="text-xs text-base-content/60">Response values are per simulated battle, not per war.</p>
+                </div>
+            </x-utils.card>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-2">
+            <x-utils.card>
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="text-lg font-semibold">Nation profitability endpoint</h3>
+                        <span class="badge badge-primary badge-outline">New</span>
+                    </div>
+                    <p class="text-sm text-base-content/70">
+                        Calculates profitability live for any nation from current PW data. If the nation is one of your eligible alliance members, the stored leaderboard snapshot is refreshed too.
+                    </p>
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
+                        <pre><code>GET {{ url('/api/v1/nations/12345/profitability') }}
+Authorization: Bearer YOUR_TOKEN
+Accept: application/json</code></pre>
+                    </div>
+                    <p class="text-xs text-base-content/60">
+                        Standard personal access token authentication is supported, so user tools and the Discord bot can both call this endpoint with a bearer token.
+                    </p>
+                </div>
+            </x-utils.card>
+
+            <x-utils.card>
+                <div class="space-y-3">
+                    <h3 class="text-lg font-semibold">Profitability response</h3>
+                    <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
+                        <pre><code>{
+  "nation_id": 12345,
+  "nation_url": "https://politicsandwar.com/nation/id=12345",
+  "leader_name": "Leader",
+  "nation_name": "Example Nation",
+  "cities": 12,
+  "converted_profit_per_day": 14856321.44,
+  "money_profit_per_day": 9123456.78,
+  "resource_profit_per_day": {
+    "money": 9123456.78,
+    "food": -142.44,
+    "steel": 51.75,
+    "gasoline": 27.75,
+    "munitions": 55.5,
+    "aluminum": 27.75
+  },
+  "city_income_per_day": 11324567.89,
+  "power_cost_per_day": -43210.55,
+  "food_cost_per_day": -98765.43,
+  "military_upkeep_per_day": -205000.11,
+  "stored_snapshot_updated": true,
+  "source": "live",
+  "price_basis": "24h average trade prices",
+  "radiation_snapshot_id": 18,
+  "radiation_snapshot_at": "2026-03-28T18:18:00.000000Z"
+}</code></pre>
+                    </div>
+                    <p class="text-xs text-base-content/60">
+                        The endpoint does not read from the stored profitability snapshot table for its calculation. It calculates fresh, then optionally persists the result for eligible alliance members.
+                    </p>
                 </div>
             </x-utils.card>
         </div>

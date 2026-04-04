@@ -56,6 +56,10 @@ class UpdateCityJob implements ShouldQueue
                 ): void {
                     $this->ensureNationExists($nationId);
                     $this->upsertCity($cityData, $cityFromApi);
+
+                    if ($nationId) {
+                        RefreshNationProfitabilitySnapshotJob::dispatch((int) $nationId);
+                    }
                 });
             } catch (LockTimeoutException $e) {
                 $this->release(10);

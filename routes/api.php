@@ -9,6 +9,7 @@ use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
 use App\Http\Controllers\API\MembersController;
+use App\Http\Controllers\API\NationProfitabilityController;
 use App\Http\Controllers\API\RaidFinderController;
 use App\Http\Controllers\API\SubController;
 use App\Http\Controllers\API\TradePriceController;
@@ -20,6 +21,10 @@ use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+    Route::get('/nations/{nationId}/profitability', [NationProfitabilityController::class, 'show']);
+});
 
 Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class])->group(function () {
     Route::get('/user', function (Request $request) {

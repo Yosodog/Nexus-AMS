@@ -44,7 +44,9 @@ class CreateNationJob implements ShouldQueue
                     $nationModel = NationQueryService::getNationById($nationId);
 
                     // Use updateFromAPI() to create the nation
-                    Nation::updateFromAPI($nationModel);
+                    $nation = Nation::updateFromAPI($nationModel);
+
+                    RefreshNationProfitabilitySnapshotJob::dispatch((int) $nation->id);
                 });
             } catch (LockTimeoutException $e) {
                 $this->release(10);

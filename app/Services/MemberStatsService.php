@@ -14,7 +14,10 @@ use App\Models\Taxes;
 
 class MemberStatsService
 {
-    public function __construct(private readonly AllianceMembershipService $membershipService) {}
+    public function __construct(
+        private readonly AllianceMembershipService $membershipService,
+        private readonly NationProfitabilityService $nationProfitabilityService
+    ) {}
 
     /**
      * @return array<int|string, mixed>
@@ -54,6 +57,8 @@ class MemberStatsService
 
         $maxTier = $nations->max('num_cities') ?? 0;
         $cityCountsByTier = $nations->countBy('num_cities');
+        $profitabilityLeaderboard = $this->nationProfitabilityService->getLeaderboard();
+        $profitabilityByNation = collect($profitabilityLeaderboard['rows'] ?? [])->keyBy('nation_id');
 
         $cityTiers = collect(range(1, $maxTier))->mapWithKeys(fn ($tier) => [
             $tier => (int) ($cityCountsByTier[$tier] ?? 0),
@@ -68,8 +73,10 @@ class MemberStatsService
             'members' => $nations->map(fn ($nation) => $this->formatNation(
                 $nation,
                 $openEvents->get($nation->id),
-                $accountTotals->get($nation->id)
+                $accountTotals->get($nation->id),
+                $profitabilityByNation->get($nation->id)
             )),
+            'profitabilityLeaderboard' => $profitabilityLeaderboard,
             'inactivitySettings' => [
                 'enabled' => SettingService::isInactivityModeEnabled(),
                 'threshold_hours' => SettingService::getInactivityThresholdHours(),
@@ -103,8 +110,12 @@ class MemberStatsService
     /**
      * @return array<int|string, mixed>
      */
-    protected function formatNation(Nation $nation, ?InactivityEvent $event = null, ?object $accountTotals = null): array
-    {
+    protected function formatNation(
+        Nation $nation,
+        ?InactivityEvent $event = null,
+        ?object $accountTotals = null,
+        ?array $profitability = null
+    ): array {
         $cities = $nation->num_cities;
         $max = [
             'soldiers' => $cities * 15000,
@@ -114,10 +125,10 @@ class MemberStatsService
         ];
 
         $current = [
-            'soldiers' => $nation->military->soldiers ?? 0,
-            'tanks' => $nation->military->tanks ?? 0,
-            'aircraft' => $nation->military->aircraft ?? 0,
-            'ships' => $nation->military->ships ?? 0,
+            'soldiers' => $nation->military?->soldiers ?? 0,
+            'tanks' => $nation->military?->tanks ?? 0,
+            'aircraft' => $nation->military?->aircraft ?? 0,
+            'ships' => $nation->military?->ships ?? 0,
         ];
 
         $militaryPercent = collect($max)->mapWithKeys(fn ($maxVal, $type) => [
@@ -149,13 +160,15 @@ class MemberStatsService
         return [
             'id' => $nation->id,
             'leader_name' => $nation->leader_name,
+            'nation_name' => $nation->nation_name,
             'score' => $nation->score,
             'cities' => $cities,
             'timezone' => $nation->update_tz,
-            'spies' => $nation->military->spies,
+            'spies' => $nation->military?->spies ?? 0,
             'military_percent' => $militaryPercent,
             'military_current' => $current,
             'resources' => $resourceValues,
+            'profitability' => $profitability,
             'is_inactive' => (bool) $event,
             'inactive_since_at' => $event?->episode_started_at,
             'last_pw_last_active_at' => $nation->accountProfile?->last_active,
