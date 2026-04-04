@@ -85,10 +85,10 @@ class NationProfitabilityService
                 ->first();
 
             return [
-                'generated_at' => $latestSnapshot?->calculated_at,
+                'generated_at' => $this->serializeTimestamp($latestSnapshot?->calculated_at),
                 'price_basis' => $latestSnapshot?->price_basis ?? '24h average trade prices',
                 'radiation_snapshot_id' => $latestSnapshot?->radiation_snapshot_id,
-                'radiation_snapshot_at' => $latestSnapshot?->radiationSnapshot?->snapshot_at,
+                'radiation_snapshot_at' => $this->serializeTimestamp($latestSnapshot?->radiationSnapshot?->snapshot_at),
                 'rows' => $rows,
             ];
         });
@@ -125,9 +125,14 @@ class NationProfitabilityService
         $result['source'] = 'live';
         $result['price_basis'] = '24h average trade prices';
         $result['radiation_snapshot_id'] = $radiationSnapshot?->id;
-        $result['radiation_snapshot_at'] = $radiationSnapshot?->snapshot_at;
+        $result['radiation_snapshot_at'] = $this->serializeTimestamp($radiationSnapshot?->snapshot_at);
 
         return $result;
+    }
+
+    private function serializeTimestamp(?Carbon $timestamp): ?string
+    {
+        return $timestamp?->toIso8601String();
     }
 
     public function refreshAllianceSnapshots(): int

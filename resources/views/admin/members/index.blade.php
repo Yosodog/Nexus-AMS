@@ -54,6 +54,9 @@
 
     @php
         $profitabilityRows = $profitabilityLeaderboard['rows'] ?? [];
+        $profitabilityRadiationSnapshotAt = filled($profitabilityLeaderboard['radiation_snapshot_at'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($profitabilityLeaderboard['radiation_snapshot_at'])->toDateTimeString()
+            : 'Unavailable';
     @endphp
 
     {{-- Member Table --}}
@@ -148,7 +151,7 @@ Ships: {{ number_format($nation['military_current']['ships']) }}">
             </div>
             <div class="text-muted small">
                 Radiation snapshot:
-                {{ optional($profitabilityLeaderboard['radiation_snapshot_at'] ?? null)?->toDateTimeString() ?? 'Unavailable' }}
+                {{ $profitabilityRadiationSnapshotAt }}
             </div>
         </div>
         <div class="card-body table-responsive">

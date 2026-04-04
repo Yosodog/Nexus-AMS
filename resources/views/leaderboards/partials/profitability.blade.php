@@ -4,6 +4,12 @@
     $runnerUp = $rows[1] ?? null;
     $thirdPlace = $rows[2] ?? null;
     $positiveCount = collect($rows)->filter(fn ($row) => ($row['converted_profit_per_day'] ?? 0) >= 0)->count();
+    $generatedAt = filled($activePayload['generated_at'] ?? null)
+        ? \Illuminate\Support\Carbon::parse($activePayload['generated_at'])->toDayDateTimeString()
+        : 'N/A';
+    $radiationSnapshotAt = filled($activePayload['radiation_snapshot_at'] ?? null)
+        ? \Illuminate\Support\Carbon::parse($activePayload['radiation_snapshot_at'])->toDayDateTimeString()
+        : 'Unavailable';
 @endphp
 
 <section class="grid gap-8 xl:grid-cols-[1.45fr,0.95fr]">
@@ -57,13 +63,13 @@
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
                     <div class="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 shadow-lg shadow-slate-200/50 backdrop-blur">
                         <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Generated</p>
-                        <p class="mt-3 text-lg font-black text-slate-900">{{ optional($activePayload['generated_at'] ?? null)?->toDayDateTimeString() ?? 'N/A' }}</p>
+                        <p class="mt-3 text-lg font-black text-slate-900">{{ $generatedAt }}</p>
                         <p class="mt-2 text-xs text-slate-500">Last refresh time for the current ranking.</p>
                     </div>
 
                     <div class="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 shadow-lg shadow-slate-200/50 backdrop-blur">
                         <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Radiation Snapshot</p>
-                        <p class="mt-3 text-lg font-black text-slate-900">{{ optional($activePayload['radiation_snapshot_at'] ?? null)?->toDayDateTimeString() ?? 'Unavailable' }}</p>
+                        <p class="mt-3 text-lg font-black text-slate-900">{{ $radiationSnapshotAt }}</p>
                         <p class="mt-2 text-xs text-slate-500">Most recent world radiation reading used in the ranking.</p>
                     </div>
 
