@@ -27,6 +27,7 @@ class DiscordApplicationApiTest extends TestCase
         parent::setUp();
 
         Cache::flush();
+        config()->set('services.pw.alliance_id', 877);
         Cache::forever('alliances:membership:ids', [877]);
         SettingService::setApplicationsEnabled(true);
         SettingService::setApplicationsDiscordApplicantRoleId('applicant-role');
@@ -35,10 +36,6 @@ class DiscordApplicationApiTest extends TestCase
         SettingService::setApplicationsDiscordInterviewCategoryId('interview-category');
         SettingService::setApplicationsApprovalAnnouncementChannelId('announce-channel');
         SettingService::setApplicationsApprovalMessageTemplate('Welcome aboard');
-
-        putenv('PW_ALLIANCE_ID=877');
-        $_ENV['PW_ALLIANCE_ID'] = '877';
-        $_SERVER['PW_ALLIANCE_ID'] = '877';
 
         config()->set('services.discord_bot_key', 'discord-test-token');
     }
@@ -246,7 +243,7 @@ class DiscordApplicationApiTest extends TestCase
     {
         $nation = Nation::factory()->create([
             'id' => random_int(900000, 999999),
-            'alliance_id' => 877,
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
             'alliance_position' => 'MEMBER',
             'alliance_position_id' => 1,
         ]);
@@ -271,7 +268,7 @@ class DiscordApplicationApiTest extends TestCase
         $nation = new GraphQlNation;
         $nation->id = $nationId;
         $nation->leader_name = "Leader {$nationId}";
-        $nation->alliance_id = 877;
+        $nation->alliance_id = app(AllianceMembershipService::class)->getPrimaryAllianceId();
         $nation->alliance_position = 'APPLICANT';
 
         return $nation;

@@ -24,8 +24,8 @@ class AuditServiceTest extends TestCase
         $this->createTables();
 
         Cache::flush();
+        config()->set('services.pw.alliance_id', 1);
         Cache::forever('alliances:membership:ids', [1]);
-        putenv('PW_ALLIANCE_ID=1');
         $membership = app(AllianceMembershipService::class);
         $membership->clear();
         $membership->refresh();
@@ -79,7 +79,7 @@ class AuditServiceTest extends TestCase
     private function createNation(float $score): Nation
     {
         return Nation::query()->create([
-            'alliance_id' => 1,
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
             'alliance_position' => 'MEMBER',
             'alliance_position_id' => 1,
             'nation_name' => 'Testland',

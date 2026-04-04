@@ -27,9 +27,9 @@ class ApplicationAdminWorkflowTest extends TestCase
         parent::setUp();
 
         Cache::flush();
+        config()->set('services.pw.alliance_id', 877);
         Cache::forever('alliances:membership:ids', [877]);
         SettingService::setApplicationsEnabled(true);
-        $this->setPrimaryAllianceId(877);
     }
 
     public function test_discord_application_creation_succeeds_for_an_eligible_applicant(): void
@@ -156,7 +156,7 @@ class ApplicationAdminWorkflowTest extends TestCase
     {
         $nation = Nation::factory()->create([
             'id' => 877099,
-            'alliance_id' => 877,
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
             'alliance_position' => 'MEMBER',
             'alliance_position_id' => 1,
         ]);
@@ -184,7 +184,7 @@ class ApplicationAdminWorkflowTest extends TestCase
         $nation = new GraphQlNation;
         $nation->id = $nationId;
         $nation->leader_name = "Leader {$nationId}";
-        $nation->alliance_id = 877;
+        $nation->alliance_id = app(AllianceMembershipService::class)->getPrimaryAllianceId();
         $nation->alliance_position = 'APPLICANT';
 
         return $nation;
@@ -210,12 +210,5 @@ class ApplicationAdminWorkflowTest extends TestCase
                 return $this->nation;
             }
         };
-    }
-
-    private function setPrimaryAllianceId(int $allianceId): void
-    {
-        putenv("PW_ALLIANCE_ID={$allianceId}");
-        $_ENV['PW_ALLIANCE_ID'] = (string) $allianceId;
-        $_SERVER['PW_ALLIANCE_ID'] = (string) $allianceId;
     }
 }
