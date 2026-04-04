@@ -32,7 +32,7 @@ class ApiDateNormalizer
 
         try {
             return CarbonImmutable::parse($normalized, 'UTC')
-                ->setTimezone($timezone ?? config('app.timezone'))
+                ->setTimezone($timezone ?? 'UTC')
                 ->toDateTimeString();
         } catch (Throwable) {
             return null;
