@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\RecruitedNation;
+use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\PWMessageService;
 use App\Services\SettingService;
@@ -20,6 +21,7 @@ class RecruitmentController
     public function __construct(
         protected PWMessageService $messageService,
         private readonly AuditLogger $auditLogger,
+        private readonly AllianceMembershipService $membershipService,
     ) {}
 
     /**
@@ -43,6 +45,7 @@ class RecruitmentController
             'followUpMessage' => SettingService::getRecruitmentFollowUpMessage(),
             'userNationId' => auth()->user()?->nation_id,
             'latestNations' => $latestNations,
+            'primaryAllianceId' => $this->membershipService->getPrimaryAllianceId(),
         ]);
     }
 

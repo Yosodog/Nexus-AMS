@@ -38,6 +38,7 @@ return [
     'discord_bot_key' => env('DISCORD_BOT_KEY'),
 
     'pw' => [
+        'alliance_id' => env('PW_ALLIANCE_ID', 0),
         'api_key' => env('PW_API_KEY'),
         'mutation_key' => env('PW_API_MUTATION_KEY'),
         'endpoint' => env('PW_API_ENDPOINT', 'https://api.politicsandwar.com/graphql'),

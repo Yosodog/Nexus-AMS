@@ -19,8 +19,6 @@ use Throwable;
 
 class ApplicationService
 {
-    public const JOIN_URL = 'https://politicsandwar.com/alliance/join/id=877';
-
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly AlliancePositionService $alliancePositionService,
@@ -328,7 +326,7 @@ class ApplicationService
             'interview_category_id' => SettingService::getApplicationsDiscordInterviewCategoryId(),
             'approval_announcement_channel_id' => SettingService::getApplicationsApprovalAnnouncementChannelId(),
             'approval_message_template' => SettingService::getApplicationsApprovalMessageTemplate(),
-            'join_url' => self::JOIN_URL,
+            'join_url' => $this->joinUrl(),
         ];
     }
 
@@ -351,7 +349,7 @@ class ApplicationService
             return NationQueryService::getNationById($nationId);
         } catch (PWEntityDoesNotExist $e) {
             throw new ApplicationException('nation_not_found', 'Nation not found.', 404, context: [
-                'join_url' => self::JOIN_URL,
+                'join_url' => $this->joinUrl(),
             ]);
         } catch (Throwable $e) {
             Log::error('Failed to fetch nation for application', [
@@ -378,7 +376,7 @@ class ApplicationService
                 'nation_not_in_our_alliance',
                 'The nation must join our alliance before applying.',
                 422,
-                ['join_url' => self::JOIN_URL]
+                ['join_url' => $this->joinUrl()]
             );
         }
 
@@ -387,7 +385,7 @@ class ApplicationService
                 'nation_not_applicant',
                 'The nation must be marked as an applicant in the alliance.',
                 422,
-                ['join_url' => self::JOIN_URL]
+                ['join_url' => $this->joinUrl()]
             );
         }
     }
@@ -402,7 +400,7 @@ class ApplicationService
                 'nation_not_in_our_alliance',
                 'The nation is no longer in our alliance.',
                 422,
-                ['join_url' => self::JOIN_URL]
+                ['join_url' => $this->joinUrl()]
             );
         }
     }
@@ -500,5 +498,13 @@ class ApplicationService
         }
 
         return Carbon::parse($value);
+    }
+
+    protected function joinUrl(): string
+    {
+        return sprintf(
+            'https://politicsandwar.com/alliance/join/id=%d',
+            $this->membershipService->getPrimaryAllianceId()
+        );
     }
 }

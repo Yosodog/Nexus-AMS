@@ -173,7 +173,7 @@
                             @foreach ($latestNations as $nation)
                                 <tr>
                                     <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank">{{ $nation->nation?->leader_name ?? $nation->nation_id }}</a>@if ($nation->nation?->alliance_id == env('PW_ALLIANCE_ID')) ✅ @else ❌ @endif
+                                        <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank">{{ $nation->nation?->leader_name ?? $nation->nation_id }}</a>@if ($nation->nation?->alliance_id == $primaryAllianceId) ✅ @else ❌ @endif
                                     </td>
                                     <td>{{ $nation->primary_sent_at?->diffForHumans() ?? '—' }}</td>
                                     <td>{{ $nation->follow_up_scheduled_for?->diffForHumans() ?? '—' }}</td>

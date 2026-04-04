@@ -38,7 +38,7 @@ class AllianceMembershipService
      */
     public function getPrimaryAllianceId(): int
     {
-        return (int) env('PW_ALLIANCE_ID', 0);
+        return (int) config('services.pw.alliance_id', 0);
     }
 
     /**
@@ -84,7 +84,7 @@ class AllianceMembershipService
      */
     public function getCredentialsForAlliance(int $allianceId): ?array
     {
-        $primaryAllianceId = (int) env('PW_ALLIANCE_ID', 0);
+        $primaryAllianceId = $this->getPrimaryAllianceId();
 
         if ($allianceId === $primaryAllianceId) {
             $apiKey = env('PW_API_KEY');
@@ -128,7 +128,7 @@ class AllianceMembershipService
      */
     protected function resolveAllianceIds(): array
     {
-        $primaryAllianceId = (int) env('PW_ALLIANCE_ID', 0);
+        $primaryAllianceId = $this->getPrimaryAllianceId();
 
         $offshoreIds = Offshore::query()
             ->enabled()
