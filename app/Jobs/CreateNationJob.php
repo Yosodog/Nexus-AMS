@@ -41,7 +41,7 @@ class CreateNationJob implements ShouldQueue
             }
 
             try {
-                Cache::lock($this->lockKey($nationId), 30)->block(5, function () use ($nationId): void {
+                Cache::lock($this->lockKey($nationId), 30)->block(5, function () use ($nationId, $profitabilityService): void {
                     $nationModel = NationQueryService::getNationById($nationId);
 
                     // Use updateFromAPI() to create the nation

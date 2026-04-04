@@ -51,7 +51,8 @@ class UpdateCityJob implements ShouldQueue
                 Cache::lock($this->lockKey($nationId ?? $cityData['id']), 30)->block(5, function () use (
                     $cityData,
                     $nationId,
-                    $cityFromApi
+                    $cityFromApi,
+                    $profitabilityService
                 ): void {
                     $this->ensureNationExists($nationId);
                     $this->upsertCity($cityData, $cityFromApi);
