@@ -10,6 +10,8 @@ use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Tests\FeatureTestCase;
 
 class LoanServiceTest extends FeatureTestCase
@@ -21,6 +23,7 @@ class LoanServiceTest extends FeatureTestCase
         parent::setUp();
 
         SettingService::setLoanPaymentsEnabled(true);
+        Cache::forever('alliances:membership:ids', [777]);
     }
 
     public function test_calculate_weekly_payment_returns_zero_interest_installment_amount(): void
@@ -156,9 +159,80 @@ class LoanServiceTest extends FeatureTestCase
         }
     }
 
+    public function test_validate_loan_eligibility_rejects_foreign_accounts(): void
+    {
+        $nation = $this->createNationAndAccount();
+        $foreignNation = Nation::factory()->create([
+            'alliance_id' => 777,
+            'alliance_position' => 'MEMBER',
+        ]);
+        $foreignAccount = new Account;
+        $foreignAccount->nation_id = $foreignNation->id;
+        $foreignAccount->name = 'Foreign';
+        $foreignAccount->save();
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage("You don't own that account");
+
+        app(LoanService::class)->validateLoanEligibility($nation, $foreignAccount);
+    }
+
+    public function test_approve_loan_rejects_non_pending_status_before_mutation(): void
+    {
+        $nation = $this->createNationAndAccount();
+        $account = Account::query()->where('nation_id', $nation->id)->firstOrFail();
+        $loan = Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 500,
+            'remaining_balance' => 500,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 0,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
+            'interest_rate' => 10,
+            'term_weeks' => 5,
+            'status' => 'denied',
+            'pending_key' => null,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Only pending loans can be approved.');
+
+        app(LoanService::class)->approveLoan($loan, 500, 10, 5);
+    }
+
+    public function test_deny_loan_rejects_non_pending_status_before_mutation(): void
+    {
+        $nation = $this->createNationAndAccount();
+        $account = Account::query()->where('nation_id', $nation->id)->firstOrFail();
+        $loan = Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 500,
+            'remaining_balance' => 500,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 0,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
+            'interest_rate' => 10,
+            'term_weeks' => 5,
+            'status' => 'approved',
+            'pending_key' => null,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Only pending loans can be denied.');
+
+        app(LoanService::class)->denyLoan($loan);
+    }
+
     private function createNationAndAccount(): Nation
     {
-        $nation = Nation::factory()->create();
+        $nation = Nation::factory()->create([
+            'alliance_id' => 777,
+            'alliance_position' => 'MEMBER',
+        ]);
 
         $account = new Account;
         $account->nation_id = $nation->id;

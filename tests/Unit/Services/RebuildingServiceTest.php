@@ -13,6 +13,7 @@ use App\Services\QueryService;
 use App\Services\RebuildingService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\FeatureTestCase;
 
 class RebuildingServiceTest extends FeatureTestCase
@@ -125,6 +126,68 @@ class RebuildingServiceTest extends FeatureTestCase
         );
 
         $this->assertSame($expected, $service->calculateNationRebuildAmount($nation->fresh('cities'), $tier));
+    }
+
+    public function test_approve_request_rejects_non_pending_status_before_mutation(): void
+    {
+        $tier = $this->createTier();
+        $nation = Nation::factory()->create([
+            'alliance_id' => 777,
+            'alliance_position' => 'MEMBER',
+            'num_cities' => 5,
+        ]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Primary';
+        $account->save();
+
+        $request = RebuildingRequest::query()->create([
+            'cycle_id' => 7,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'tier_id' => $tier->id,
+            'city_count_snapshot' => 5,
+            'target_infrastructure_snapshot' => 1700,
+            'estimated_amount' => 1000,
+            'status' => 'approved',
+            'pending_key' => null,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Only pending requests can be approved.');
+
+        $this->makeService()->approveRequest($request);
+    }
+
+    public function test_deny_request_rejects_non_pending_status_before_mutation(): void
+    {
+        $tier = $this->createTier();
+        $nation = Nation::factory()->create([
+            'alliance_id' => 777,
+            'alliance_position' => 'MEMBER',
+            'num_cities' => 5,
+        ]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Primary';
+        $account->save();
+
+        $request = RebuildingRequest::query()->create([
+            'cycle_id' => 7,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'tier_id' => $tier->id,
+            'city_count_snapshot' => 5,
+            'target_infrastructure_snapshot' => 1700,
+            'estimated_amount' => 1000,
+            'status' => 'denied',
+            'pending_key' => null,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Only pending requests can be denied.');
+
+        $this->makeService()->denyRequest($request);
     }
 
     /**

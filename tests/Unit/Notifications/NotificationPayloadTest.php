@@ -9,12 +9,15 @@ use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Loan;
 use App\Models\RebuildingRequest;
+use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Notifications\CityGrantNotification;
 use App\Notifications\DepositCompletedNotification;
 use App\Notifications\DepositCreated;
 use App\Notifications\GrantNotification;
 use App\Notifications\LoanNotification;
+use App\Notifications\NationVerification;
+use App\Notifications\PasswordResetNotification;
 use App\Notifications\RebuildingNotification;
 use App\Notifications\WarAidNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,5 +103,35 @@ class NotificationPayloadTest extends FeatureTestCase
         $this->assertSame('Deposit Confirmed', $completedPayload['subject']);
         $this->assertStringContainsString('Money: $1,000.00', $completedPayload['message']);
         $this->assertStringContainsString('Food: 50.00', $completedPayload['message']);
+    }
+
+    public function test_password_reset_notification_includes_reset_link_and_notifiable_email(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'security@example.test',
+            'nation_id' => 777001,
+        ]);
+
+        $payload = (new PasswordResetNotification('reset-token'))->toPNW($user);
+
+        $this->assertSame('Reset Your Password', $payload['subject']);
+        $this->assertStringContainsString('reset-token', $payload['message']);
+        $this->assertStringContainsString('security%40example.test', $payload['message']);
+    }
+
+    public function test_nation_verification_notification_persists_and_sends_the_generated_code(): void
+    {
+        $user = User::factory()->create([
+            'nation_id' => 777002,
+            'verification_code' => null,
+        ]);
+
+        $notification = new NationVerification($user);
+        $payload = $notification->toPNW($user);
+
+        $this->assertNotNull($user->fresh()->verification_code);
+        $this->assertSame($user->fresh()->verification_code, $notification->verification_code);
+        $this->assertStringContainsString($notification->verification_code, $payload['message']);
+        $this->assertStringContainsString(route('verify', ['code' => $notification->verification_code]), $payload['message']);
     }
 }
