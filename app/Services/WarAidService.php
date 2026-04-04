@@ -20,8 +20,13 @@ class WarAidService
      */
     public function submitAidRequest(Nation $nation, array $data): WarAidRequest
     {
-        // Validate ownership of the account
-        $nation->accounts()->findOrFail($data['account_id']);
+        $account = $nation->accounts()->find((int) $data['account_id']);
+
+        if (! $account) {
+            throw ValidationException::withMessages([
+                'account_id' => 'You do not own the selected account.',
+            ]);
+        }
 
         // Validate alliance membership
         app(NationEligibilityValidator::class, ['nation' => $nation])->validateAllianceMembership();

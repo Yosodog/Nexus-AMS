@@ -4,9 +4,12 @@ namespace Tests\Integration;
 
 use App\Enums\ApplicationStatus;
 use App\Models\Account;
+use App\Models\Grants;
 use App\Models\Nation;
+use App\Services\GrantService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
 {
@@ -285,5 +288,46 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    public function test_duplicate_pending_grant_insert_is_translated_into_a_validation_error(): void
+    {
+        $this->createNationWithAccount(2040, 95);
+
+        $grant = Grants::query()->create([
+            'name' => 'Integration Grant',
+            'slug' => 'integration-grant',
+            'description' => 'Grant',
+            'money' => 1000,
+            'coal' => 0,
+            'oil' => 0,
+            'uranium' => 0,
+            'iron' => 0,
+            'bauxite' => 0,
+            'lead' => 0,
+            'gasoline' => 0,
+            'munitions' => 0,
+            'steel' => 0,
+            'aluminum' => 0,
+            'food' => 0,
+            'validation_rules' => [],
+            'is_enabled' => true,
+            'is_one_time' => false,
+        ]);
+
+        DB::table('grant_applications')->insert([
+            'grant_id' => $grant->id,
+            'nation_id' => 2040,
+            'account_id' => 95,
+            'status' => 'pending',
+            'pending_key' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('You already have a pending application for this grant.');
+
+        GrantService::createApplication($grant, 2040, 95);
     }
 }

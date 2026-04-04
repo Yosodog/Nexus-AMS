@@ -35,6 +35,7 @@ class PendingRecoveryWorkflowTest extends TestCase
         array $freshPending,
         array $releasedState,
         array $freshState,
+        ?string $terminalTimestampColumn,
     ): void {
         [$admin] = $this->createAdminWithPermission('view-diagnostic-info');
 
@@ -47,10 +48,20 @@ class PendingRecoveryWorkflowTest extends TestCase
                 'older_than_hours' => 48,
             ])
             ->assertRedirect(route('admin.settings'))
-            ->assertSessionHas('alert-type', 'success');
+            ->assertSessionHas('alert-type', 'success')
+            ->assertSessionHas(
+                'alert-message',
+                fn (string $message): bool => str_contains($message, 'Released 1 stale')
+                    && str_contains($message, '48 hours')
+            );
 
         $this->assertDatabaseHas($table, ['id' => $oldId, ...$releasedState]);
         $this->assertDatabaseHas($table, ['id' => $freshId, ...$freshState]);
+
+        if ($terminalTimestampColumn) {
+            $this->assertDatabaseMissing($table, ['id' => $oldId, $terminalTimestampColumn => null]);
+            $this->assertDatabaseHas($table, ['id' => $freshId, $terminalTimestampColumn => null]);
+        }
     }
 
     public function test_admin_without_diagnostic_permission_cannot_release_stale_pending_requests(): void
@@ -75,6 +86,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'denied', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                'denied_at',
             ],
             'applications' => [
                 'applications',
@@ -83,6 +95,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => ApplicationStatus::Pending->value, 'pending_key' => 1],
                 ['status' => ApplicationStatus::Cancelled->value, 'pending_key' => null],
                 ['status' => ApplicationStatus::Pending->value, 'pending_key' => 1],
+                'cancelled_at',
             ],
             'loans' => [
                 'loans',
@@ -91,6 +104,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'denied', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                null,
             ],
             'deposit requests' => [
                 'deposit_requests',
@@ -99,6 +113,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'expired', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                null,
             ],
             'grant applications' => [
                 'grant_applications',
@@ -107,6 +122,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'denied', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                'denied_at',
             ],
             'city grant requests' => [
                 'city_grant_requests',
@@ -115,6 +131,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'denied', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                'denied_at',
             ],
             'rebuilding requests' => [
                 'rebuilding_requests',
@@ -123,6 +140,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'expired', 'pending_key' => null],
                 ['status' => 'pending', 'pending_key' => 1],
+                'expired_at',
             ],
         ];
     }

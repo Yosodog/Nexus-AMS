@@ -173,6 +173,116 @@ class CityGrantWorkflowTest extends TestCase
         $this->assertSame(1, $request->pending_key);
     }
 
+    public function test_member_cannot_request_a_city_grant_already_approved_for_that_city_number(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount(777602);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+
+        CityGrantRequest::query()->create([
+            'city_number' => $grant->city_number,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'approved',
+            'pending_key' => null,
+            'approved_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('grants.city'))
+            ->post(route('grants.city.request'), [
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', "You are not eligible for this grant. You've already gotten that city grant");
+    }
+
+    public function test_admin_cannot_approve_a_city_grant_while_global_approvals_are_disabled(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [$user, $nation, $account] = $this->createMemberWithAccount(777603);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $request = CityGrantRequest::query()->create([
+            'city_number' => $grant->city_number,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.grants.city.approve', ['CityGrantRequest' => $request->id]))
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant approvals are currently paused.');
+
+        $request->refresh();
+        $this->assertSame('pending', $request->status);
+    }
+
+    public function test_city_grant_approval_denies_when_account_ownership_does_not_match(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount(777604);
+        [, , $foreignAccount] = $this->createMemberWithAccount(777605);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $request = CityGrantRequest::query()->create([
+            'city_number' => $grant->city_number,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $foreignAccount->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.grants.city.approve', ['CityGrantRequest' => $request->id]))
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $request->refresh();
+        $account->refresh();
+        $foreignAccount->refresh();
+
+        $this->assertSame('denied', $request->status);
+        $this->assertNull($request->pending_key);
+        $this->assertNotNull($request->denied_at);
+        $this->assertSame(0.0, (float) $account->money);
+        $this->assertSame(0.0, (float) $foreignAccount->money);
+    }
+
+    public function test_city_grant_approval_fails_when_the_grant_is_missing_or_disabled(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount(777606);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $request = CityGrantRequest::query()->create([
+            'city_number' => $grant->city_number,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $grant->delete();
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.grants.city.approve', ['CityGrantRequest' => $request->id]))
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'This city grant is currently disabled.');
+
+        $request->refresh();
+        $this->assertSame('pending', $request->status);
+    }
+
     /**
      * @return array{0: User, 1: Nation, 2: Account}
      */

@@ -8,6 +8,7 @@ use App\Models\Grants;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\GrantNotification;
+use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
@@ -26,6 +27,7 @@ class GrantWorkflowTest extends TestCase
         Cache::flush();
         Cache::forever('alliances:membership:ids', [777]);
         Notification::fake();
+        SettingService::setGrantApprovalsEnabled(true);
     }
 
     public function test_member_can_submit_a_grant_application_with_an_owned_account(): void
@@ -133,6 +135,114 @@ class GrantWorkflowTest extends TestCase
             fn (GrantNotification $notification): bool => $notification->status === 'approved'
                 && $notification->application->is($application)
         );
+    }
+
+    public function test_admin_can_deny_a_pending_grant_application(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.deny', ['application' => $application->id]))
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'success');
+
+        $application->refresh();
+
+        $this->assertSame('denied', $application->status);
+        $this->assertNull($application->pending_key);
+        $this->assertNotNull($application->denied_at);
+
+        Notification::assertSentTo(
+            $nation,
+            GrantNotification::class,
+            fn (GrantNotification $notification): bool => $notification->status === 'denied'
+                && $notification->application->is($application)
+        );
+    }
+
+    public function test_admin_cannot_approve_a_grant_application_that_is_no_longer_pending(): void
+    {
+        [$user, , $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $user->nation_id,
+            'account_id' => $account->id,
+            'status' => 'approved',
+            'pending_key' => null,
+            'approved_at' => now(),
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.approve', ['application' => $application->id]))
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant application is not pending.');
+
+        $this->assertDatabaseMissing('manual_transactions', [
+            'grant_application_id' => $application->id,
+        ]);
+    }
+
+    public function test_admin_cannot_deny_a_grant_application_that_is_no_longer_pending(): void
+    {
+        [$user, , $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $user->nation_id,
+            'account_id' => $account->id,
+            'status' => 'denied',
+            'pending_key' => null,
+            'denied_at' => now(),
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.deny', ['application' => $application->id]))
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant application is not pending.');
+    }
+
+    public function test_admin_cannot_approve_a_grant_application_while_global_approvals_are_disabled(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.approve', ['application' => $application->id]))
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant approvals are currently paused.');
+
+        $application->refresh();
+        $account->refresh();
+
+        $this->assertSame('pending', $application->status);
+        $this->assertSame(1, $application->pending_key);
+        $this->assertSame(0.0, (float) $account->money);
+        Notification::assertNothingSent();
     }
 
     public function test_admin_cannot_approve_their_own_grant_application(): void

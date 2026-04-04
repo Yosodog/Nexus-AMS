@@ -244,6 +244,13 @@ class GrantController
     {
         $this->authorize('manage-grants');
 
+        if ($application->status !== 'pending') {
+            return redirect()->back()->with([
+                'alert-message' => 'Grant application is not pending.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         GrantService::denyGrant($application);
 
         return redirect()->back()
