@@ -33,24 +33,39 @@
 @endphp
 
 <div class="space-y-8">
-    <section class="relative overflow-hidden rounded-[2rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.22),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(239,68,68,0.16),_transparent_24%),linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,0.97),rgba(254,242,242,0.95))] shadow-2xl">
-        <div class="relative grid gap-6 p-6 lg:grid-cols-[1.45fr,0.95fr] lg:p-8">
+    <section class="overflow-hidden rounded-[2rem] border border-amber-200/80 bg-[linear-gradient(140deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(254,242,242,0.94))] shadow-xl shadow-amber-100/70">
+        <div class="grid gap-6 p-6 lg:grid-cols-[1.2fr,0.95fr] lg:p-8">
             <div class="space-y-5">
                 <div class="space-y-3">
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-amber-700">
-                        <span>Leaderboard</span>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-amber-700">
+                        <span>{{ $activeBoard['eyebrow'] }}</span>
                         <span class="h-1 w-1 rounded-full bg-amber-500"></span>
-                        <span>Raid Performance</span>
+                        <span>Live Window</span>
                     </div>
-                    <h2 class="max-w-4xl text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
-                        Raid Hall of Fame
-                    </h2>
-                    <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                        Who is printing cash and wiping cities? This board ranks raiders by loot value, infra damage, and battlefield dominance.
-                    </p>
+                    <div class="space-y-2">
+                        <h2 class="max-w-4xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ $activeBoard['title'] }}</h2>
+                        <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
+                            Compare loot, infra pressure, finishing power, and raid tempo across the alliance without wading through multiple separate reports.
+                        </p>
+                    </div>
                 </div>
 
-                <form class="grid gap-3 rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm sm:grid-cols-[1fr,1fr,auto,auto]" method="GET" action="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="rounded-[1.4rem] border border-white/80 bg-white/90 p-4 shadow-sm">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Loot Value</p>
+                        <p class="mt-2 text-2xl font-black text-slate-950">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
+                    </div>
+                    <div class="rounded-[1.4rem] border border-amber-200 bg-amber-50/80 p-4 shadow-sm">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">Victories</p>
+                        <p class="mt-2 text-2xl font-black text-amber-900">{{ number_format((int) ($totals['victories'] ?? 0)) }}</p>
+                    </div>
+                    <div class="rounded-[1.4rem] border border-rose-200 bg-rose-50/75 p-4 shadow-sm">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-700">Attack Tempo</p>
+                        <p class="mt-2 text-2xl font-black text-rose-900">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
+                    </div>
+                </div>
+
+                <form class="grid gap-3 rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-sm sm:grid-cols-[1fr,1fr,auto,auto]" method="GET" action="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">
                     <div>
                         <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">From</label>
                         <input type="date" name="from" class="input input-bordered w-full" value="{{ $filters['from'] }}">
@@ -68,22 +83,56 @@
                 </form>
             </div>
 
-            <div class="rounded-[1.5rem] border border-white/70 bg-slate-950 p-5 text-white shadow-xl">
-                <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
-                    <span>Alliance totals</span>
-                    <span>{{ $fromLabel }} - {{ $toLabel }}</span>
+            <div class="space-y-4">
+                <div class="rounded-[1.5rem] border border-slate-950 bg-slate-950 p-5 text-white shadow-xl">
+                    <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
+                        <span>Alliance Totals</span>
+                        <span>{{ $fromLabel }} - {{ $toLabel }}</span>
+                    </div>
+                    <p class="mt-4 text-4xl font-black">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
+                    <p class="mt-2 text-sm text-slate-300">Money and resources looted at 24h average pricing.</p>
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <p class="text-xs uppercase text-slate-300">Infra Burned</p>
+                            <p class="mt-2 text-2xl font-bold">${{ number_format((float) ($totals['infra_destroyed_value'] ?? 0), 0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <p class="text-xs uppercase text-slate-300">Loot / Victory</p>
+                            <p class="mt-2 text-2xl font-bold">${{ number_format((float) ($totals['avg_loot_per_victory'] ?? 0), 0) }}</p>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-4 text-4xl font-black">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
-                <p class="mt-2 text-sm text-slate-300">Money and resources looted at 24h average pricing.</p>
-                <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                    <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p class="text-xs uppercase text-slate-300">Infra burned</p>
-                        <p class="mt-2 text-2xl font-bold">${{ number_format((float) ($totals['infra_destroyed_value'] ?? 0), 0) }}</p>
-                    </div>
-                    <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p class="text-xs uppercase text-slate-300">Victories</p>
-                        <p class="mt-2 text-2xl font-bold">{{ number_format((int) ($totals['victories'] ?? 0)) }}</p>
-                    </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <article class="rounded-[1.5rem] border border-base-300 bg-white/90 p-5 shadow-sm">
+                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Top Looter</p>
+                        @if ($topLooter)
+                            <a href="https://politicsandwar.com/nation/id={{ $topLooter['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-black text-base-content transition hover:text-primary">
+                                <span>{{ $topLooter['nation_name'] }}</span>
+                                <span class="text-sm opacity-50">-&gt;</span>
+                            </a>
+                            <p class="mt-1 text-sm text-base-content/60">{{ $topLooter['leader_name'] }}</p>
+                            <p class="mt-4 text-3xl font-black text-secondary">${{ number_format((float) ($topLooter['loot_value'] ?? 0), 0) }}</p>
+                            <p class="mt-2 text-xs text-base-content/55">{{ number_format((int) ($topLooter['victories'] ?? 0)) }} victories • {{ number_format((int) ($topLooter['attacks'] ?? 0)) }} attacks</p>
+                        @else
+                            <p class="mt-4 text-sm text-base-content/60">No raid data yet.</p>
+                        @endif
+                    </article>
+
+                    <article class="rounded-[1.5rem] border border-base-300 bg-white/90 p-5 shadow-sm">
+                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Most Victories</p>
+                        @if ($topCloser)
+                            <a href="https://politicsandwar.com/nation/id={{ $topCloser['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-black text-base-content transition hover:text-primary">
+                                <span>{{ $topCloser['nation_name'] }}</span>
+                                <span class="text-sm opacity-50">-&gt;</span>
+                            </a>
+                            <p class="mt-1 text-sm text-base-content/60">{{ $topCloser['leader_name'] }}</p>
+                            <p class="mt-4 text-3xl font-black text-primary">{{ number_format((int) ($topCloser['victories'] ?? 0)) }}</p>
+                            <p class="mt-2 text-xs text-base-content/55">${{ number_format((float) ($topCloser['loot_value'] ?? 0), 0) }} loot value</p>
+                        @else
+                            <p class="mt-4 text-sm text-base-content/60">No victory data yet.</p>
+                        @endif
+                    </article>
                 </div>
             </div>
         </div>
@@ -112,43 +161,35 @@
         </div>
     </section>
 
-    <section class="grid gap-4 lg:grid-cols-3">
-        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Top Looter</p>
-            @if ($topLooter)
-                <a href="https://politicsandwar.com/nation/id={{ $topLooter['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-2xl font-black text-base-content transition hover:text-primary">
-                    <span>{{ $topLooter['nation_name'] }}</span>
-                    <span class="text-sm opacity-50">-&gt;</span>
-                </a>
-                <p class="mt-1 text-sm text-base-content/60">{{ $topLooter['leader_name'] }}</p>
-                <p class="mt-4 text-3xl font-black text-secondary">${{ number_format((float) ($topLooter['loot_value'] ?? 0), 0) }}</p>
-                <p class="mt-2 text-xs text-base-content/55">{{ number_format((int) ($topLooter['victories'] ?? 0)) }} victories • {{ number_format((int) ($topLooter['attacks'] ?? 0)) }} attacks</p>
-            @else
-                <p class="mt-4 text-sm text-base-content/60">No raid data yet.</p>
-            @endif
-        </article>
-
-        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Most Victories</p>
-            @if ($topCloser)
-                <a href="https://politicsandwar.com/nation/id={{ $topCloser['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-2xl font-black text-base-content transition hover:text-primary">
-                    <span>{{ $topCloser['nation_name'] }}</span>
-                    <span class="text-sm opacity-50">-&gt;</span>
-                </a>
-                <p class="mt-1 text-sm text-base-content/60">{{ $topCloser['leader_name'] }}</p>
-                <p class="mt-4 text-3xl font-black text-primary">{{ number_format((int) ($topCloser['victories'] ?? 0)) }}</p>
-                <p class="mt-2 text-xs text-base-content/55">${{ number_format((float) ($topCloser['loot_value'] ?? 0), 0) }} loot value</p>
-            @else
-                <p class="mt-4 text-sm text-base-content/60">No victory data yet.</p>
-            @endif
-        </article>
-
+    <section class="grid gap-4 md:grid-cols-3">
         <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
             <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Raid Tempo</p>
             <p class="mt-3 text-3xl font-black text-accent">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
             <p class="mt-2 text-sm text-base-content/65">Total raid attacks recorded in this window.</p>
             <p class="mt-4 text-xl font-bold text-base-content">${{ number_format((float) ($totals['avg_loot_per_attack'] ?? 0), 0) }}</p>
             <p class="text-xs text-base-content/55">Average loot value per attack.</p>
+        </article>
+
+        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Pressure</p>
+            <p class="mt-3 text-3xl font-black text-primary">${{ number_format((float) ($totals['avg_infra_per_attack'] ?? 0), 0) }}</p>
+            <p class="mt-2 text-sm text-base-content/65">Average infra value destroyed per raid attack.</p>
+            <p class="mt-4 text-xl font-bold text-base-content">{{ number_format((float) ($totals['kills_score'] ?? 0), 2) }}</p>
+            <p class="text-xs text-base-content/55">Total weighted kill score in the window.</p>
+        </article>
+
+        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Split</p>
+            <div class="mt-3 grid gap-3">
+                <div class="rounded-2xl border border-secondary/25 bg-secondary/10 p-4">
+                    <p class="text-xs uppercase text-base-content/70">Resource share</p>
+                    <p class="mt-2 text-2xl font-black text-secondary">{{ number_format((float) ($totals['resource_share_pct'] ?? 0), 2) }}%</p>
+                </div>
+                <div class="rounded-2xl border border-primary/25 bg-primary/10 p-4">
+                    <p class="text-xs uppercase text-base-content/70">Money share</p>
+                    <p class="mt-2 text-2xl font-black text-primary">{{ number_format((float) ($totals['money_share_pct'] ?? 0), 2) }}%</p>
+                </div>
+            </div>
         </article>
     </section>
 

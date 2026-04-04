@@ -55,49 +55,49 @@
     @endphp
 
     <div class="mx-auto max-w-7xl space-y-8">
-        <section class="relative overflow-hidden rounded-[2rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(248,250,252,0.97),rgba(255,247,237,0.94))] shadow-2xl">
-            <div class="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.04),transparent)] lg:block"></div>
-            <div class="relative grid gap-8 p-6 lg:grid-cols-[1.45fr,0.9fr] lg:p-8">
-                <div class="space-y-5">
-                    <div class="space-y-3">
-                        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-600">
-                            <span>Leaderboards</span>
-                            <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
-                            <span>Alliance Dashboard</span>
-                        </div>
-                        <h1 class="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-                            The best nations, at a glance.
-                        </h1>
-                        <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                            Start on the dashboard to see the current #1 nation on each live leaderboard, then drill straight into the board you want. This gives the alliance one obvious home for rankings without burying people in menus.
-                        </p>
-                    </div>
-
-                    <div class="flex flex-wrap gap-3">
-                        <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($dashboardBoards ?? []) }} live boards</span>
-                        <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($plannedBoards ?? []) }} upcoming</span>
-                        <span class="badge border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">Dashboard selected</span>
-                    </div>
-                </div>
-
-                <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-                    <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Live Boards</p>
-                        <p class="mt-3 text-2xl font-black text-slate-950">{{ number_format(count($dashboardBoards ?? [])) }}</p>
-                    </div>
-                    <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Top Categories</p>
-                        <p class="mt-3 text-2xl font-black text-slate-950">Economy + Raiding</p>
-                    </div>
-                    <div class="rounded-[1.5rem] border border-white/70 bg-slate-950 p-5 text-white shadow-xl">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Use It Fast</p>
-                        <p class="mt-3 text-lg font-bold">Open the board that matches the question you are asking.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         @if ($activeBoard['slug'] === 'dashboard')
+            <section class="relative overflow-hidden rounded-[2rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(248,250,252,0.97),rgba(255,247,237,0.94))] shadow-2xl">
+                <div class="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.04),transparent)] lg:block"></div>
+                <div class="relative grid gap-8 p-6 lg:grid-cols-[1.45fr,0.9fr] lg:p-8">
+                    <div class="space-y-5">
+                        <div class="space-y-3">
+                            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-600">
+                                <span>Leaderboards</span>
+                                <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
+                                <span>Alliance Dashboard</span>
+                            </div>
+                            <h1 class="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                                The best nations, at a glance.
+                            </h1>
+                            <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
+                                Start on the dashboard to see the current #1 nation on each live leaderboard, then drill straight into the board you want. This gives the alliance one obvious home for rankings without burying people in menus.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($dashboardBoards ?? []) }} live boards</span>
+                            <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($plannedBoards ?? []) }} upcoming</span>
+                            <span class="badge border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">Dashboard selected</span>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                        <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Live Boards</p>
+                            <p class="mt-3 text-2xl font-black text-slate-950">{{ number_format(count($dashboardBoards ?? [])) }}</p>
+                        </div>
+                        <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Top Categories</p>
+                            <p class="mt-3 text-2xl font-black text-slate-950">Economy + Raiding</p>
+                        </div>
+                        <div class="rounded-[1.5rem] border border-white/70 bg-slate-950 p-5 text-white shadow-xl">
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Use It Fast</p>
+                            <p class="mt-3 text-lg font-bold">Open the board that matches the question you are asking.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="space-y-5">
                 <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
@@ -194,14 +194,33 @@
             @endif
         @else
             <section class="space-y-5">
-                <div class="flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Active Board</p>
-                        <h2 class="mt-1 text-3xl font-black text-base-content">{{ $activeBoard['title'] }}</h2>
+                <div class="overflow-hidden rounded-[1.75rem] border border-base-300 bg-base-100 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-5 py-4 sm:px-6">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Live Boards</p>
+                            <p class="mt-1 text-sm text-base-content/70">Jump directly between leaderboard families without going back through the dashboard.</p>
+                        </div>
+                        <a href="{{ route('leaderboards.index') }}" class="btn btn-ghost btn-sm">Back to Dashboard</a>
                     </div>
-                    <div class="flex flex-wrap gap-3">
-                        <a href="{{ route('leaderboards.index') }}" class="btn btn-outline">Back to Dashboard</a>
-                        <span class="badge {{ ($accentMap[$activeBoard['accent']] ?? $accentMap['emerald'])['badge'] }}">{{ $activeBoard['name'] }}</span>
+                    <div class="flex flex-wrap gap-3 px-5 py-4 sm:px-6">
+                        @foreach ($liveBoards as $board)
+                            @php
+                                $boardAccent = $accentMap[$board['accent']] ?? $accentMap['emerald'];
+                                $isActiveBoard = $board['slug'] === $activeBoard['slug'];
+                            @endphp
+                            <a
+                                href="{{ route('leaderboards.index', ['board' => $board['slug']]) }}"
+                                class="{{ $isActiveBoard ? 'border-transparent bg-slate-950 text-white shadow-lg' : 'border-base-300 bg-base-100 text-base-content hover:border-base-content/20 hover:bg-base-200/70' }} inline-flex items-center gap-3 rounded-2xl border px-4 py-3 transition"
+                            >
+                                <span class="{{ $isActiveBoard ? 'bg-white/15 text-white' : $boardAccent['icon'] }} flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black shadow-sm">
+                                    {{ $board['icon'] }}
+                                </span>
+                                <span class="space-y-1">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-[0.24em] {{ $isActiveBoard ? 'text-white/60' : 'text-base-content/50' }}">{{ $board['eyebrow'] }}</span>
+                                    <span class="block text-sm font-bold">{{ $board['name'] }}</span>
+                                </span>
+                            </a>
+                        @endforeach
                     </div>
                 </div>
 

@@ -4,6 +4,7 @@
     $runnerUp = $rows[1] ?? null;
     $thirdPlace = $rows[2] ?? null;
     $positiveCount = collect($rows)->filter(fn ($row) => ($row['converted_profit_per_day'] ?? 0) >= 0)->count();
+    $negativeCount = max(count($rows) - $positiveCount, 0);
     $generatedAt = filled($activePayload['generated_at'] ?? null)
         ? \Illuminate\Support\Carbon::parse($activePayload['generated_at'])->toDayDateTimeString()
         : 'N/A';
@@ -12,47 +13,55 @@
         : 'Unavailable';
 @endphp
 
-<section class="grid gap-8 xl:grid-cols-[1.45fr,0.95fr]">
+<section class="space-y-8">
     <div class="space-y-8">
-        <section class="relative overflow-hidden rounded-[2rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.18),_transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(240,253,244,0.95),rgba(255,251,235,0.96))] shadow-2xl">
-            <div class="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.04),transparent)] lg:block"></div>
-            <div class="relative grid gap-6 p-6 lg:grid-cols-[1.45fr,0.95fr] lg:p-8">
+        <section class="overflow-hidden rounded-[2rem] border border-emerald-200/70 bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(236,253,245,0.96),rgba(255,251,235,0.92))] shadow-xl shadow-emerald-100/60">
+            <div class="grid gap-6 p-6 lg:grid-cols-[1.3fr,0.95fr] lg:p-8">
                 <div class="space-y-5">
                     <div class="space-y-3">
-                        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-emerald-700">
-                            <span>Leaderboard</span>
+                        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-emerald-700">
+                            <span>{{ $activeBoard['eyebrow'] }}</span>
                             <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
-                            <span>Daily Economics</span>
+                            <span>Live Snapshot</span>
                         </div>
-                        <h2 class="max-w-4xl text-3xl font-black tracking-tight text-slate-900 sm:text-5xl">
-                            See who is actually printing value.
-                        </h2>
-                        <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                            This board ranks eligible alliance members by current net profit per day using city output, manufacturing, power, food, military upkeep, prices, and radiation.
-                        </p>
+                        <div class="space-y-2">
+                            <h2 class="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ $activeBoard['title'] }}</h2>
+                            <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
+                                This board ranks eligible alliance members by current net profit per day, blending city income, manufacturing, power, food, military upkeep, prices, and radiation into one clean daily number.
+                            </p>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-3 text-sm">
-                        <span class="badge border-emerald-300 bg-emerald-50 px-3 py-3 text-emerald-800">{{ count($rows) }} ranked nations</span>
-                        <span class="badge border-amber-300 bg-amber-50 px-3 py-3 text-amber-800">{{ $positiveCount }} positive</span>
-                        <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ $activePayload['price_basis'] ?? '24h average trade prices' }}</span>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-[1.4rem] border border-white/80 bg-white/85 p-4 shadow-sm">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Ranked Nations</p>
+                            <p class="mt-2 text-2xl font-black text-slate-950">{{ number_format(count($rows)) }}</p>
+                        </div>
+                        <div class="rounded-[1.4rem] border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Positive Net</p>
+                            <p class="mt-2 text-2xl font-black text-emerald-900">{{ number_format($positiveCount) }}</p>
+                        </div>
+                        <div class="rounded-[1.4rem] border border-rose-200 bg-rose-50/75 p-4 shadow-sm">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-700">Under Water</p>
+                            <p class="mt-2 text-2xl font-black text-rose-900">{{ number_format($negativeCount) }}</p>
+                        </div>
                     </div>
 
                     @if ($topNation)
-                        <div class="rounded-[1.75rem] border border-emerald-200 bg-white/85 p-5 shadow-lg shadow-emerald-100/60 backdrop-blur">
+                        <div class="rounded-[1.6rem] border border-slate-950 bg-slate-950 p-5 text-white shadow-xl">
                             <div class="flex flex-wrap items-start justify-between gap-4">
                                 <div class="space-y-2">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Top performer</p>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">Top Performer</p>
                                     <div class="space-y-1">
-                                        <a href="{{ $topNation['nation_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-slate-900 transition hover:text-emerald-700">
+                                        <a href="{{ $topNation['nation_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-white transition hover:text-emerald-300">
                                             <span>{{ $topNation['nation_name'] }}</span>
-                                            <span class="text-sm font-semibold text-slate-400">-&gt;</span>
+                                            <span class="text-sm font-semibold text-white/40">-&gt;</span>
                                         </a>
-                                        <p class="text-sm text-slate-600">{{ $topNation['leader_name'] }} | {{ number_format($topNation['cities']) }} cities</p>
+                                        <p class="text-sm text-slate-300">{{ $topNation['leader_name'] }} • {{ number_format($topNation['cities']) }} cities</p>
                                     </div>
                                 </div>
-                                <div class="rounded-2xl bg-slate-950 px-5 py-4 text-right text-white shadow-xl">
-                                    <p class="text-xs uppercase tracking-[0.25em] text-emerald-300">Net / day</p>
+                                <div class="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-right shadow-sm">
+                                    <p class="text-xs uppercase tracking-[0.25em] text-emerald-300">Net / Day</p>
                                     <p class="mt-1 text-3xl font-black">${{ number_format($topNation['converted_profit_per_day'], 2) }}</p>
                                 </div>
                             </div>
@@ -60,24 +69,36 @@
                     @endif
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                    <div class="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 shadow-lg shadow-slate-200/50 backdrop-blur">
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Generated</p>
-                        <p class="mt-3 text-lg font-black text-slate-900">{{ $generatedAt }}</p>
-                        <p class="mt-2 text-xs text-slate-500">Last refresh time for the current ranking.</p>
+                <div class="space-y-4">
+                    <div class="rounded-[1.6rem] border border-white/80 bg-white/90 p-5 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Price Basis</p>
+                                <p class="mt-2 text-lg font-black text-slate-950">{{ $activePayload['price_basis'] ?? '24h average trade prices' }}</p>
+                            </div>
+                            <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Current</span>
+                        </div>
                     </div>
 
-                    <div class="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 shadow-lg shadow-slate-200/50 backdrop-blur">
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Radiation Snapshot</p>
-                        <p class="mt-3 text-lg font-black text-slate-900">{{ $radiationSnapshotAt }}</p>
-                        <p class="mt-2 text-xs text-slate-500">Most recent world radiation reading used in the ranking.</p>
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                        <div class="rounded-[1.6rem] border border-slate-200 bg-white/85 p-5 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Generated</p>
+                            <p class="mt-3 text-lg font-black text-slate-900">{{ $generatedAt }}</p>
+                            <p class="mt-2 text-xs text-slate-500">Last refresh time for the current ranking.</p>
+                        </div>
+
+                        <div class="rounded-[1.6rem] border border-slate-200 bg-white/85 p-5 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Radiation Snapshot</p>
+                            <p class="mt-3 text-lg font-black text-slate-900">{{ $radiationSnapshotAt }}</p>
+                            <p class="mt-2 text-xs text-slate-500">Most recent world radiation reading used in the ranking.</p>
+                        </div>
                     </div>
 
-                    <div class="rounded-[1.6rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-xl">
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">What This Shows</p>
+                    <div class="rounded-[1.6rem] border border-slate-950 bg-slate-950 p-5 text-white shadow-xl">
+                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Read It Fast</p>
                         <div class="mt-3 space-y-2 text-sm text-slate-200">
-                            <p>Net profit per day, not stockpile totals.</p>
-                            <p>Applicants and Vacation Mode nations are excluded.</p>
+                            <p>Net profit per day matters more than raw city count.</p>
+                            <p>Applicants and Vacation Mode nations are excluded from the board.</p>
                         </div>
                     </div>
                 </div>
@@ -117,8 +138,14 @@
                         @php
                             $resources = $row['resource_profit_per_day'] ?? [];
                             $manufacturing = ($resources['gasoline'] ?? 0) + ($resources['munitions'] ?? 0) + ($resources['steel'] ?? 0) + ($resources['aluminum'] ?? 0);
+                            $rowClasses = match ((int) ($row['rank'] ?? 0)) {
+                                1 => 'bg-emerald-50/70',
+                                2 => 'bg-amber-50/55',
+                                3 => 'bg-orange-50/55',
+                                default => '',
+                            };
                         @endphp
-                        <tr class="hover">
+                        <tr class="{{ $rowClasses }} hover">
                             <td>
                                 <span class="inline-flex min-w-12 justify-center rounded-full border border-base-300 bg-base-100 px-3 py-1 text-xs font-bold shadow-sm">
                                     #{{ $row['rank'] }}
@@ -172,54 +199,54 @@
                 </table>
             </div>
         </section>
-    </div>
 
-    <div class="space-y-8">
-        @if ($topNation || $runnerUp || $thirdPlace)
-            <section class="grid gap-4">
-                @foreach ([$topNation, $runnerUp, $thirdPlace] as $spotlight)
-                    @continue(! $spotlight)
+        <section class="grid gap-4 xl:grid-cols-[1.4fr,0.95fr]">
+            @if ($topNation || $runnerUp || $thirdPlace)
+                <div class="grid gap-4 md:grid-cols-3">
+                    @foreach ([$topNation, $runnerUp, $thirdPlace] as $spotlight)
+                        @continue(! $spotlight)
 
-                    @php
-                        $resources = $spotlight['resource_profit_per_day'] ?? [];
-                        $spotlightManufacturing = ($resources['gasoline'] ?? 0) + ($resources['munitions'] ?? 0) + ($resources['steel'] ?? 0) + ($resources['aluminum'] ?? 0);
-                    @endphp
+                        @php
+                            $resources = $spotlight['resource_profit_per_day'] ?? [];
+                            $spotlightManufacturing = ($resources['gasoline'] ?? 0) + ($resources['munitions'] ?? 0) + ($resources['steel'] ?? 0) + ($resources['aluminum'] ?? 0);
+                        @endphp
 
-                    <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Rank #{{ $spotlight['rank'] }}</p>
-                                <a href="{{ $spotlight['nation_url'] }}" target="_blank" rel="noopener" class="mt-2 inline-flex items-center gap-2 text-xl font-bold text-base-content transition hover:text-primary">
-                                    <span>{{ $spotlight['nation_name'] }}</span>
-                                    <span class="text-sm opacity-50">-&gt;</span>
-                                </a>
-                                <p class="mt-1 text-sm text-base-content/65">{{ $spotlight['leader_name'] }}</p>
+                        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Rank #{{ $spotlight['rank'] }}</p>
+                                    <a href="{{ $spotlight['nation_url'] }}" target="_blank" rel="noopener" class="mt-2 inline-flex items-center gap-2 text-xl font-bold text-base-content transition hover:text-primary">
+                                        <span>{{ $spotlight['nation_name'] }}</span>
+                                        <span class="text-sm opacity-50">-&gt;</span>
+                                    </a>
+                                    <p class="mt-1 text-sm text-base-content/65">{{ $spotlight['leader_name'] }}</p>
+                                </div>
+                                <span class="badge badge-outline whitespace-nowrap">{{ number_format($spotlight['cities']) }} cities</span>
                             </div>
-                            <span class="badge badge-outline">{{ number_format($spotlight['cities']) }} cities</span>
-                        </div>
-                        <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-2xl bg-emerald-50 p-4">
-                                <p class="text-xs uppercase tracking-[0.22em] text-emerald-700">Converted</p>
-                                <p class="mt-2 text-2xl font-black text-emerald-900">${{ number_format($spotlight['converted_profit_per_day'], 2) }}</p>
+                            <div class="mt-5 grid gap-3">
+                                <div class="rounded-2xl bg-emerald-50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-emerald-700">Converted</p>
+                                    <p class="mt-2 text-2xl font-black text-emerald-900">${{ number_format($spotlight['converted_profit_per_day'], 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl bg-amber-50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-amber-700">Manufacturing</p>
+                                    <p class="mt-2 text-2xl font-black text-amber-900">{{ number_format($spotlightManufacturing, 2) }}</p>
+                                </div>
                             </div>
-                            <div class="rounded-2xl bg-amber-50 p-4">
-                                <p class="text-xs uppercase tracking-[0.22em] text-amber-700">Manufacturing</p>
-                                <p class="mt-2 text-2xl font-black text-amber-900">{{ number_format($spotlightManufacturing, 2) }}</p>
-                            </div>
-                        </div>
-                    </article>
-                @endforeach
+                        </article>
+                    @endforeach
+                </div>
+            @endif
+
+            <section class="rounded-[2rem] border border-base-300 bg-base-100 p-6 shadow-lg">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Coach's Notes</p>
+                    <h3 class="text-2xl font-black text-base-content">Use the board to spot who is compounding and who is quietly leaking value.</h3>
+                    <p class="text-sm leading-6 text-base-content/70">
+                        Start with net profit, then compare the money line and manufacturing line. A strong net with weak manufacturing usually means city income is carrying the nation. A weak net with strong city count usually means the build, military load, or power mix needs work.
+                    </p>
+                </div>
             </section>
-        @endif
-
-        <section class="rounded-[2rem] border border-base-300 bg-base-100 p-6 shadow-lg">
-            <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Read It Fast</p>
-                <h3 class="text-2xl font-black text-base-content">Use the board to spot who is thriving and who is leaking value.</h3>
-                <p class="text-sm leading-6 text-base-content/70">
-                    Start with net profit, then compare the money line and manufacturing line. A strong net with weak manufacturing usually means city income is carrying the nation. A weak net with strong city count usually means the build, military load, or power mix needs work.
-                </p>
-            </div>
         </section>
     </div>
 </section>
