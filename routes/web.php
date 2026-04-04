@@ -167,6 +167,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
     // Audits
     Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+    Route::post('/audit/recommendation/regenerate', [AuditController::class, 'regenerate'])
+        ->name('audit.recommendation.regenerate');
 
     /***** Defense Routes *****/
     Route::prefix('defense')->middleware(['auth'])->group(function () {

@@ -130,6 +130,55 @@ class NationProfitabilityService
         return $result;
     }
 
+    /**
+     * @return array<string, float>
+     */
+    public function getResourcePrices(): array
+    {
+        return $this->resourcePrices();
+    }
+
+    public function getCurrentRadiationSnapshot(): ?RadiationSnapshot
+    {
+        return $this->currentRadiationSnapshot();
+    }
+
+    /**
+     * @param  array<string, float>|null  $resourcePrices
+     * @return array<string, mixed>
+     */
+    public function calculateCityRecommendationMetrics(
+        Nation $nation,
+        City $city,
+        ?RadiationSnapshot $radiationSnapshot = null,
+        ?array $resourcePrices = null
+    ): array {
+        $resourcePrices ??= $this->resourcePrices();
+        $cityResult = $this->calculateCityProfitability($nation, $city, $radiationSnapshot, $resourcePrices);
+        $hasProject = fn (string $project): bool => (bool) data_get($nation->projects, $project, false);
+        $resourceProfitPerDay = collect($cityResult['resource_profit_per_turn'])->mapWithKeys(
+            fn (float $value, string $resource): array => [$resource => round($value, 2)]
+        )->all();
+
+        return [
+            'converted_profit_per_day' => round(
+                $this->convertResourcesToMoney($cityResult['resource_profit_per_turn'], $resourcePrices),
+                2
+            ),
+            'money_profit_per_day' => round((float) ($cityResult['resource_profit_per_turn']['money'] ?? 0.0), 2),
+            'resource_profit_per_day' => $resourceProfitPerDay,
+            'city_income_per_day' => round($cityResult['city_income_per_turn'], 2),
+            'power_cost_per_day' => round($cityResult['power_cost_per_turn'], 2),
+            'food_cost_per_day' => round($cityResult['food_cost_per_turn'], 2),
+            'disease' => round($this->disease($city, $hasProject), 2),
+            'pollution' => $this->pollution($city, $hasProject),
+            'crime' => round($this->crime($city, $hasProject), 2),
+            'commerce' => $this->commerce($city, $hasProject),
+            'population' => $this->population($city, $hasProject),
+            'powered' => (bool) $city->powered && $this->poweredInfra($city) >= (float) $city->infrastructure,
+        ];
+    }
+
     private function serializeTimestamp(?Carbon $timestamp): ?string
     {
         return $timestamp?->toIso8601String();
