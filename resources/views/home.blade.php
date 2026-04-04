@@ -84,7 +84,13 @@
 
     <div class="space-y-10 sm:space-y-14">
         <section class="relative overflow-hidden rounded-[2rem] border border-base-300/60 bg-base-100 px-5 py-6 shadow-2xl sm:px-8 sm:py-8 lg:px-10 lg:py-10">
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_30%),radial-gradient(circle_at_80%_20%,_rgba(16,185,129,0.18),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.9),_rgba(243,244,246,0.72))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_30%),radial-gradient(circle_at_80%_20%,_rgba(16,185,129,0.16),_transparent_24%),linear-gradient(135deg,_rgba(17,24,39,0.95),_rgba(31,41,55,0.9))]"></div>
+            <div
+                class="absolute inset-0"
+                style="background:
+                    radial-gradient(circle at top left, rgba(59,130,246,0.16), transparent 30%),
+                    radial-gradient(circle at 80% 20%, rgba(16,185,129,0.18), transparent 24%),
+                    linear-gradient(135deg, hsl(var(--b1) / 0.94), hsl(var(--b2) / 0.82));"
+            ></div>
             <div class="absolute -left-10 top-10 h-28 w-28 rounded-full border border-primary/20 bg-primary/10 blur-2xl"></div>
             <div class="absolute -right-12 bottom-8 h-40 w-40 rounded-full border border-secondary/20 bg-secondary/10 blur-3xl"></div>
 
