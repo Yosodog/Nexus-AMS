@@ -50,31 +50,35 @@
                                     </td>
                                     <td>
                                         <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.growth-circles.distributions', $enrollment->nation) }}"
-                                               class="btn btn-sm btn-outline-secondary">History</a>
+                                            @if ($enrollment->nation)
+                                                <a href="{{ route('admin.growth-circles.distributions', $enrollment->nation) }}"
+                                                   class="btn btn-sm btn-outline-secondary">History</a>
 
-                                            @can('manage-growth-circles')
-                                                @if ($enrollment->suspended)
+                                                @can('manage-growth-circles')
+                                                    @if ($enrollment->suspended)
+                                                        <form method="POST"
+                                                              action="{{ route('admin.growth-circles.clear-suspension', $enrollment) }}">
+                                                            @csrf
+                                                            <button class="btn btn-sm btn-outline-success"
+                                                                    onclick="return confirm('Clear suspension for this nation?')">
+                                                                Clear Suspension
+                                                            </button>
+                                                        </form>
+                                                    @endif
+
                                                     <form method="POST"
-                                                          action="{{ route('admin.growth-circles.clear-suspension', $enrollment) }}">
+                                                          action="{{ route('admin.growth-circles.remove', $enrollment->nation) }}">
                                                         @csrf
-                                                        <button class="btn btn-sm btn-outline-success"
-                                                                onclick="return confirm('Clear suspension for this nation?')">
-                                                            Clear Suspension
+                                                        @method('DELETE')
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                onclick="return confirm('Remove this nation from Growth Circles? Their previous tax bracket will be restored.')">
+                                                            Remove
                                                         </button>
                                                     </form>
-                                                @endif
-
-                                                <form method="POST"
-                                                      action="{{ route('admin.growth-circles.remove', $enrollment->nation) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger"
-                                                            onclick="return confirm('Remove this nation from Growth Circles? Their previous tax bracket will be restored.')">
-                                                        Remove
-                                                    </button>
-                                                </form>
-                                            @endcan
+                                                @endcan
+                                            @else
+                                                <span class="text-muted small">Nation record unavailable</span>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
