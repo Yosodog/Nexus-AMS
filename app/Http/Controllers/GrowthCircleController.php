@@ -34,7 +34,7 @@ class GrowthCircleController extends Controller
             $this->service->enroll($nation);
         } catch (ValidationException $e) {
             return back()->with([
-                'alert-message' => $e->getMessage(),
+                'alert-message' => $e->validator->errors()->first() ?: 'Unable to enroll in Growth Circles.',
                 'alert-type' => 'error',
             ]);
         }

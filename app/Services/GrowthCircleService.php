@@ -33,20 +33,24 @@ class GrowthCircleService
      */
     public function enroll(Nation $nation): GrowthCircleEnrollment
     {
+        if (GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->exists()) {
+            throw ValidationException::withMessages([
+                'growth_circle' => 'You are already enrolled in Growth Circles.',
+            ]);
+        }
+
         try {
-            $enrollment = GrowthCircleEnrollment::updateOrCreate(
-                ['nation_id' => $nation->id],
-                [
-                    'previous_tax_id' => $nation->tax_id,
-                    'suspended' => false,
-                    'suspended_at' => null,
-                    'suspended_reason' => null,
-                    'enrolled_at' => now(),
-                ]
-            );
+            $enrollment = GrowthCircleEnrollment::query()->create([
+                'nation_id' => $nation->id,
+                'previous_tax_id' => $nation->tax_id,
+                'suspended' => false,
+                'suspended_at' => null,
+                'suspended_reason' => null,
+                'enrolled_at' => now(),
+            ]);
         } catch (QueryException $e) {
             throw ValidationException::withMessages([
-                'You are already enrolled in Growth Circles.',
+                'growth_circle' => 'You are already enrolled in Growth Circles.',
             ]);
         }
 
