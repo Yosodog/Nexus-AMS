@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\UpdateGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Services\AuditLogger;
+use App\Services\GrantRequirementService;
 use App\Services\GrantService;
 use App\Services\PWHelperService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -22,7 +23,10 @@ class GrantController
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly GrantRequirementService $grantRequirementService,
+    ) {}
 
     /**
      * @return Factory|View|Application|object
@@ -33,7 +37,14 @@ class GrantController
     {
         $this->authorize('view-grants');
 
-        $grants = Grants::orderBy('created_at', 'desc')->get();
+        $grants = Grants::orderBy('created_at', 'desc')->get()
+            ->each(function (Grants $grant): void {
+                $grant->validation_rules = $this->grantRequirementService->normalize($grant->validation_rules);
+                $grant->setAttribute(
+                    'requirement_summary',
+                    $this->grantRequirementService->summarize($grant->validation_rules)
+                );
+            });
         $pendingRequests = GrantApplication::with('grant', 'nation', 'account')
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
@@ -54,7 +65,7 @@ class GrantController
                 'pendingCount',
                 'totalFundsDistributed'
             )
-        );
+        )->with('grantRequirementBuilderConfig', $this->grantRequirementService->getBuilderConfig());
     }
 
     /**
@@ -76,6 +87,7 @@ class GrantController
             $grant->$resource = $validated[$resource] ?? 0;
         }
 
+        $grant->validation_rules = $this->grantRequirementService->normalize($validated['validation_rules'] ?? null);
         $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
@@ -85,7 +97,7 @@ class GrantController
             action: 'grant_created',
             subject: $grant,
             context: [
-                'data' => $grant->only(['name', 'slug', 'description', 'money', 'is_one_time', 'is_enabled']),
+                'data' => $grant->only(['name', 'slug', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules']),
             ],
             message: 'Grant created.'
         );
@@ -103,7 +115,7 @@ class GrantController
     public function updateGrant(Grants $grant, UpdateGrantRequest $request)
     {
         $validated = $request->validated();
-        $before = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled']);
+        $before = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules']);
 
         $grant->name = $validated['name'];
         $grant->slug = Str::slug($grant->name);
@@ -114,15 +126,16 @@ class GrantController
             $grant->$resource = $validated[$resource] ?? 0;
         }
 
+        $grant->validation_rules = $this->grantRequirementService->normalize($validated['validation_rules'] ?? null);
         $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->save();
 
-        $after = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled']);
+        $after = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules']);
         $changes = [];
 
         foreach ($after as $field => $value) {
-            if ((string) ($before[$field] ?? null) !== (string) $value) {
+            if ($this->valuesDiffer($before[$field] ?? null, $value)) {
                 $changes[$field] = [
                     'from' => $before[$field] ?? null,
                     'to' => $value,
@@ -145,6 +158,28 @@ class GrantController
         return redirect()->route('admin.grants')
             ->with('alert-message', 'Grant updated successfully.')
             ->with('alert-type', 'success');
+    }
+
+    private function valuesDiffer(mixed $before, mixed $after): bool
+    {
+        return $this->normalizeComparableValue($before) !== $this->normalizeComparableValue($after);
+    }
+
+    private function normalizeComparableValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return json_encode($value, JSON_THROW_ON_ERROR);
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        return (string) $value;
     }
 
     /**

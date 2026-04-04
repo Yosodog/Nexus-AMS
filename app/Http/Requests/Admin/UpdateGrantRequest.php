@@ -3,10 +3,12 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Grants;
+use App\Rules\ValidGrantRequirementTree;
 use App\Services\PWHelperService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use JsonException;
 
 class UpdateGrantRequest extends FormRequest
 {
@@ -39,6 +41,7 @@ class UpdateGrantRequest extends FormRequest
             'money' => ['nullable', 'integer', 'min:0'],
             'is_enabled' => ['nullable', 'in:true,false,1,0,on,off'],
             'is_one_time' => ['nullable', 'in:true,false,1,0,on,off'],
+            'validation_rules' => ['nullable', new ValidGrantRequirementTree(app(\App\Services\GrantRequirementService::class))],
         ];
 
         foreach (PWHelperService::resources(false) as $resource) {
@@ -67,5 +70,26 @@ class UpdateGrantRequest extends FormRequest
         }
 
         return $messages;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $rawValidationRules = $this->input('validation_rules_json');
+
+        if ($rawValidationRules === null || trim((string) $rawValidationRules) === '') {
+            $this->merge(['validation_rules' => null]);
+
+            return;
+        }
+
+        try {
+            $decodedValidationRules = json_decode((string) $rawValidationRules, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $this->merge(['validation_rules' => '__invalid_json__']);
+
+            return;
+        }
+
+        $this->merge(['validation_rules' => $decodedValidationRules]);
     }
 }
