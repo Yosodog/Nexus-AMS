@@ -62,7 +62,10 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('application.status', ApplicationStatus::Pending->value)
             ->assertJsonPath('nation.id', 877001)
             ->assertJsonPath('config.applicant_role_id', 'applicant-role')
-            ->assertJsonPath('config.join_url', ApplicationService::JOIN_URL);
+            ->assertJsonPath('config.join_url', sprintf(
+                'https://politicsandwar.com/alliance/join/id=%d',
+                app(AllianceMembershipService::class)->getPrimaryAllianceId()
+            ));
 
         $this->assertDatabaseHas('applications', [
             'nation_id' => 877001,
