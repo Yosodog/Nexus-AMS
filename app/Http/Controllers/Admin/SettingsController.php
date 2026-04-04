@@ -6,7 +6,6 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
 use App\Http\Requests\Admin\UpdateGrowthCirclesRequest;
-use App\Models\Account;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
@@ -71,14 +70,6 @@ class SettingsController extends Controller
             'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
-            'growthCirclesEnabled' => SettingService::isGrowthCirclesEnabled(),
-            'growthCircleTaxId' => SettingService::getGrowthCircleTaxId(),
-            'growthCircleFallbackTaxId' => SettingService::getGrowthCircleFallbackTaxId(),
-            'growthCircleSourceAccountId' => SettingService::getGrowthCircleSourceAccountId(),
-            'growthCircleFoodPerCity' => SettingService::getGrowthCircleFoodPerCity(),
-            'growthCircleUraniumPerCity' => SettingService::getGrowthCircleUraniumPerCity(),
-            'growthCircleDiscordChannelId' => SettingService::getGrowthCircleDiscordChannelId(),
-            'sourceAccounts' => Account::query()->whereNull('nation_id')->orderBy('name')->get(['id', 'name']),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),

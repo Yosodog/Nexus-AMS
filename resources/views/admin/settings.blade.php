@@ -335,69 +335,6 @@
         <div class="col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Growth Circles</span>
-                    <span class="badge {{ $growthCirclesEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
-                        {{ $growthCirclesEnabled ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">
-                        Opt-in program that taxes members at 100% and automatically distributes food and uranium to support their growth.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.growth-circles') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="growth_circles_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="growthCirclesEnabled"
-                                   name="growth_circles_enabled" value="1" @checked($growthCirclesEnabled)>
-                            <label class="form-check-label" for="growthCirclesEnabled">Enable Growth Circles</label>
-                        </div>
-                        <div class="mb-3">
-                            <label for="gcTaxId" class="form-label">P&W Tax Bracket ID (100%)</label>
-                            <input type="number" class="form-control" id="gcTaxId"
-                                   name="growth_circle_tax_id" value="{{ $growthCircleTaxId }}" min="0">
-                        </div>
-                        <div class="mb-3">
-                            <label for="gcFallbackTaxId" class="form-label">Fallback Tax Bracket ID</label>
-                            <input type="number" class="form-control" id="gcFallbackTaxId"
-                                   name="growth_circle_fallback_tax_id" value="{{ $growthCircleFallbackTaxId }}" min="0">
-                        </div>
-                        <div class="mb-3">
-                            <label for="gcSourceAccount" class="form-label">Source Account</label>
-                            <select class="form-select" id="gcSourceAccount" name="growth_circle_source_account_id">
-                                <option value="0">— Select account —</option>
-                                @foreach ($sourceAccounts as $account)
-                                    <option value="{{ $account->id }}" @selected($growthCircleSourceAccountId === $account->id)>
-                                        {{ $account->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col">
-                                <label for="gcFoodPerCity" class="form-label">Food per city</label>
-                                <input type="number" class="form-control" id="gcFoodPerCity"
-                                       name="growth_circle_food_per_city" value="{{ $growthCircleFoodPerCity }}" min="0">
-                            </div>
-                            <div class="col">
-                                <label for="gcUraniumPerCity" class="form-label">Uranium per city</label>
-                                <input type="number" class="form-control" id="gcUraniumPerCity"
-                                       name="growth_circle_uranium_per_city" value="{{ $growthCircleUraniumPerCity }}" min="0">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="gcDiscordChannel" class="form-label">Abuse Alert Discord Channel ID</label>
-                            <input type="text" class="form-control" id="gcDiscordChannel"
-                                   name="growth_circle_discord_channel_id" value="{{ $growthCircleDiscordChannelId }}">
-                        </div>
-                        <button class="btn btn-primary">Save Growth Circles Settings</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Backups</span>
                     <span class="badge {{ $backupsEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
                         {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
