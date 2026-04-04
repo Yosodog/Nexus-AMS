@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\GraphQL\Models\Nation as NationGraphQL;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 
 class Nation extends Model
 {
-    use Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * Will be set to what projects this nation has. Must run getProjectsAttribute() first.

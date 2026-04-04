@@ -210,7 +210,32 @@ Development:
 composer run dev
 npm run build
 ./vendor/bin/pint --dirty
+composer test:fast
+composer test:integration
+npm run test:browser
 ```
+
+## Automated Testing
+
+Automated tests are part of the expected regression-safety workflow.
+
+- `tests/Unit`: pure business logic and builder/parser coverage
+- `tests/Feature`: Laravel HTTP and container-backed application tests
+- `tests/Integration`: MySQL-backed schema and workflow constraint tests
+- `tests/Browser`: Playwright smoke coverage for critical pages and flows
+
+Test authoring rules:
+
+- Write tests against the intended, supported behavior of the application
+- Fake Politics & War and Discord at stable seams; never call live external services from test runs
+- If a new or updated test fails, verify the fixture, auth state, seed data, fake responses, and assertions before concluding the application behavior is wrong
+- Prefer observable outcomes such as redirects, DB writes, queued jobs, events, notifications, and cookies over implementation-detail assertions
+
+Environment defaults:
+
+- Copy [`.env.testing.example`](.env.testing.example) to `.env.testing` when you need a local testing env file
+- Fast suites use in-memory SQLite by default
+- Integration suites should point `.env.testing` at MySQL so `pending_key` and unique-constraint behavior matches production
 
 Common app commands:
 
@@ -241,7 +266,7 @@ If you are using Codex, Claude, Cursor, or another coding agent on this repo, th
 3. Use Laravel Boost tools when available. They are the fastest path for application info, docs lookup, routes, logs, config, schema, and safe database reads.
 4. Search Laravel ecosystem docs before making framework-level assumptions.
 5. Run `./vendor/bin/pint --dirty` after touching PHP.
-6. Do not add, modify, or run automated tests in this repository unless a maintainer explicitly changes that policy.
+6. Add or update automated tests when they protect intended, supported behavior. When a test fails, rule out fixture, fake, auth, and assertion issues before concluding the application behavior is wrong.
 7. Do not rely on a friendly `exists()` check alone for single-pending workflows. Preserve or add the `pending_key` database guard.
 8. Never commit secrets, `.env` edits, or generated frontend build output.
 9. When editing UI, preserve the repo split: Tailwind/DaisyUI for user views, Bootstrap/AdminLTE for admin views.

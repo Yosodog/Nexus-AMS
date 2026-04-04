@@ -3,9 +3,11 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:browser": "playwright test"
     },
     "devDependencies": {
+        "@playwright/test": "^1.55.0",
         "@tailwindcss/typography": "^0.5.15",
         "autoprefixer": "^10.4.20",
         "axios": "^1.8.2",

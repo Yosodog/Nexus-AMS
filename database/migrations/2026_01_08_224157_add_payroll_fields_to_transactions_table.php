@@ -12,7 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer','payroll') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer','payroll') NOT NULL");
+        }
 
         Schema::table('transactions', function (Blueprint $table) {
             $table->foreignId('payroll_grade_id')->nullable()->after('transaction_type')
@@ -36,6 +38,8 @@ return new class extends Migration
             $table->dropColumn(['payroll_grade_id', 'payroll_member_id', 'payroll_run_date']);
         });
 
-        DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer') NOT NULL");
+        }
     }
 };

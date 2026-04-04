@@ -10,6 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer','payroll','member_transfer') NOT NULL");
     }
 
@@ -18,6 +22,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `transactions` CHANGE `transaction_type` `transaction_type` ENUM('deposit','withdrawal','transfer','payroll') NOT NULL");
     }
 };

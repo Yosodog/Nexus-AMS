@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Add a generated column for active status and create a unique index on it
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('accounts', function (Blueprint $table) {
+                $table->string('unique_name_key')->nullable();
+            });
+
+            return;
+        }
+
         Schema::table('accounts', function (Blueprint $table) {
             $table->string('unique_name_key')->virtualAs(
                 "IF(deleted_at IS NULL, CONCAT(name, '_', nation_id), NULL)"

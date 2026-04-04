@@ -11,6 +11,14 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="Fast">
+            <directory>tests/Unit</directory>
+            <directory>tests/Feature</directory>
+            <exclude>tests/Feature/Browser</exclude>
+        </testsuite>
     </testsuites>
     <source>
         <include>
@@ -22,9 +30,13 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="NEXUS_API_TOKEN" value="testing-nexus-token"/>
+        <env name="PW_API_ENDPOINT" value="https://pw.test/graphql"/>
+        <env name="PW_API_KEY" value="testing-pw-key"/>
+        <env name="PW_API_MUTATION_KEY" value="testing-pw-mutation-key"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
