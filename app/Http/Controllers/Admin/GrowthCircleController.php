@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
+use App\Services\AuditLogger;
 use App\Services\GrowthCircleService;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +15,10 @@ use Illuminate\View\View;
 
 class GrowthCircleController extends Controller
 {
-    public function __construct(private readonly GrowthCircleService $service) {}
+    public function __construct(
+        private readonly GrowthCircleService $service,
+        private readonly AuditLogger $auditLogger
+    ) {}
 
     public function index(): View
     {
@@ -45,6 +49,18 @@ class GrowthCircleController extends Controller
 
         $this->service->remove($nation);
 
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'growth_circle_removed',
+            subject: $nation,
+            context: [
+                'data' => [
+                    'nation_id' => $nation->id,
+                ],
+            ],
+            message: 'Nation removed from Growth Circles.'
+        );
+
         return redirect()->route('admin.growth-circles.index')->with([
             'alert-message' => "{$nation->nation_name} has been removed from Growth Circles.",
             'alert-type' => 'success',
@@ -56,6 +72,18 @@ class GrowthCircleController extends Controller
         $this->authorize('manage-growth-circles');
 
         $this->service->clearSuspension($enrollment);
+
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'growth_circle_suspension_cleared',
+            subject: $enrollment,
+            context: [
+                'data' => [
+                    'nation_id' => $enrollment->nation_id,
+                ],
+            ],
+            message: 'Growth Circles suspension cleared.'
+        );
 
         return redirect()->route('admin.growth-circles.index')->with([
             'alert-message' => 'Suspension cleared. Distributions will resume on the next cycle.',

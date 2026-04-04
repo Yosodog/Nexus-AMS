@@ -332,6 +332,21 @@ class GrowthCircleService
             'suspended_reason' => 'Resource levels significantly below expected after distributions. Possible selling detected.',
         ]);
 
+        app(AuditLogger::class)->record(
+            category: 'finance',
+            action: 'growth_circle_abuse_suspended',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $enrollment,
+            context: [
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'reason' => $enrollment->suspended_reason,
+                ],
+            ],
+            message: 'Growth Circles abuse detection suspended an enrollment.'
+        );
+
         $channelId = SettingService::getGrowthCircleDiscordChannelId();
 
         if (empty($channelId)) {

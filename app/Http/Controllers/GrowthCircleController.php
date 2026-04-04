@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AllianceMembershipService;
+use App\Services\AuditLogger;
 use App\Services\GrowthCircleService;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,8 @@ class GrowthCircleController extends Controller
 {
     public function __construct(
         private readonly GrowthCircleService $service,
-        private readonly AllianceMembershipService $membershipService
+        private readonly AllianceMembershipService $membershipService,
+        private readonly AuditLogger $auditLogger
     ) {}
 
     public function enroll(): RedirectResponse
@@ -49,6 +51,18 @@ class GrowthCircleController extends Controller
                 'alert-type' => 'error',
             ]);
         }
+
+        $this->auditLogger->success(
+            category: 'finance',
+            action: 'growth_circle_enrolled',
+            subject: $nation,
+            context: [
+                'data' => [
+                    'nation_id' => $nation->id,
+                ],
+            ],
+            message: 'Nation enrolled in Growth Circles.'
+        );
 
         return back()->with([
             'alert-message' => 'You have been enrolled in Growth Circles. Your tax bracket will update shortly.',
