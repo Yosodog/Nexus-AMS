@@ -213,8 +213,8 @@ class SyncWarsJob implements ShouldQueue
         }
 
         $data = $this->mapValues($warArray, self::WAR_COLUMNS);
-        $data['date'] = $this->normalizeTimestamp($warArray['date'] ?? null);
-        $data['end_date'] = $this->normalizeTimestamp($warArray['end_date'] ?? null);
+        $data['date'] = War::normalizeApiTimestamp($warArray['date'] ?? null);
+        $data['end_date'] = War::normalizeApiTimestamp($warArray['end_date'] ?? null);
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
 
@@ -239,14 +239,5 @@ class SyncWarsJob implements ShouldQueue
         $template = $templates[$key];
 
         return array_replace($template, array_intersect_key($source, $template));
-    }
-
-    private function normalizeTimestamp(?string $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return CarbonImmutable::parse($value)->toDateTimeString();
     }
 }

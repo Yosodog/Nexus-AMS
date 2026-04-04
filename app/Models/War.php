@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\GraphQL\Models\War as WarGraphQL;
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use stdClass;
+use Throwable;
 
 class War extends Model
 {
@@ -26,10 +27,25 @@ class War extends Model
             $war = self::normalizeDeprecatedKilledFields($war);
         }
 
-        $war['date'] = isset($war['date']) ? Carbon::parse($war['date'])->toDateTimeString() : null;
-        $war['end_date'] = isset($war['end_date']) ? Carbon::parse($war['end_date'])->toDateTimeString() : null;
+        $war['date'] = self::normalizeApiTimestamp($war['date'] ?? null);
+        $war['end_date'] = self::normalizeApiTimestamp($war['end_date'] ?? null);
 
         return self::updateOrCreate(['id' => $war['id']], $war);
+    }
+
+    public static function normalizeApiTimestamp(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value, 'UTC')
+                ->setTimezone(config('app.timezone'))
+                ->toDateTimeString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

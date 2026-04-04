@@ -527,6 +527,7 @@ class SyncNationsJob implements ShouldQueue
             }
             if (! empty($citiesData)) {
                 foreach (array_chunk($citiesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                    $chunk = array_map(fn (array $cityData): array => City::normalizeApiPayload($cityData), $chunk);
                     DB::table(self::TABLE_CITIES)->upsert($chunk, ['id'], self::CITY_UPDATE_COLUMNS);
                 }
             }
