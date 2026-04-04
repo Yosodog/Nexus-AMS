@@ -28,16 +28,16 @@ class ApplicationServiceTest extends FeatureTestCase
         parent::setUp();
 
         SettingService::setApplicationsEnabled(true);
+        config()->set('services.pw.alliance_id', 877);
         cache()->forever('alliances:membership:ids', [877]);
-        putenv('PW_ALLIANCE_ID=877');
-        $_ENV['PW_ALLIANCE_ID'] = '877';
-        $_SERVER['PW_ALLIANCE_ID'] = '877';
     }
 
     public function test_assert_applicant_eligible_rejects_non_applicants(): void
     {
+        $primaryAllianceId = app(AllianceMembershipService::class)->getPrimaryAllianceId();
+
         $service = $this->makeService([
-            877100 => $this->makeNation(877100, 877, 'MEMBER'),
+            877100 => $this->makeNation(877100, $primaryAllianceId, 'MEMBER'),
         ]);
 
         $this->expectException(ApplicationException::class);
@@ -127,7 +127,9 @@ class ApplicationServiceTest extends FeatureTestCase
 
     private function createModerator(string $discordId): User
     {
-        $nation = Nation::factory()->create(['alliance_id' => 877]);
+        $nation = Nation::factory()->create([
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
+        ]);
         $user = $this->grantPermissions(
             User::factory()->verified()->admin()->create(['nation_id' => $nation->id]),
             ['manage-applications']
