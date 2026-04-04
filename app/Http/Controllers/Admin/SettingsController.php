@@ -320,7 +320,7 @@ class SettingsController extends Controller
             message: 'Growth Circles settings updated.'
         );
 
-        return redirect()->route('admin.settings')->with([
+        return redirect()->route('admin.growth-circles.index')->with([
             'alert-message' => 'Growth Circles settings saved.',
             'alert-type' => 'success',
         ]);
