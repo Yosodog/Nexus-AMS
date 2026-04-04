@@ -21,6 +21,88 @@
                 </div>
             @endif
 
+            @can('manage-growth-circles')
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Program Settings</span>
+                        <span class="badge {{ $growthCirclesEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                            {{ $growthCirclesEnabled ? 'Enabled' : 'Disabled' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            Configure the Growth Circles tax bracket, payout source, and abuse alert destination.
+                        </p>
+                        <form method="POST" action="{{ route('admin.settings.growth-circles') }}">
+                            @csrf
+                            <div class="form-check form-switch mb-3">
+                                <input type="hidden" name="growth_circles_enabled" value="0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="growthCirclesEnabled"
+                                       name="growth_circles_enabled" value="1" @checked($growthCirclesEnabled)>
+                                <label class="form-check-label" for="growthCirclesEnabled">Enable Growth Circles</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gcTaxId" class="form-label">P&amp;W Tax Bracket ID (100%)</label>
+                                <input type="number" class="form-control @error('growth_circle_tax_id') is-invalid @enderror" id="gcTaxId"
+                                       name="growth_circle_tax_id" value="{{ old('growth_circle_tax_id', $growthCircleTaxId) }}" min="0">
+                                @error('growth_circle_tax_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="gcFallbackTaxId" class="form-label">Fallback Tax Bracket ID</label>
+                                <input type="number" class="form-control @error('growth_circle_fallback_tax_id') is-invalid @enderror" id="gcFallbackTaxId"
+                                       name="growth_circle_fallback_tax_id" value="{{ old('growth_circle_fallback_tax_id', $growthCircleFallbackTaxId) }}" min="0">
+                                @error('growth_circle_fallback_tax_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="gcSourceAccount" class="form-label">Source Account</label>
+                                <select class="form-select @error('growth_circle_source_account_id') is-invalid @enderror" id="gcSourceAccount" name="growth_circle_source_account_id">
+                                    <option value="0">-- Select account --</option>
+                                    @foreach ($sourceAccounts as $account)
+                                        <option value="{{ $account->id }}" @selected((int) old('growth_circle_source_account_id', $growthCircleSourceAccountId) === $account->id)>
+                                            {{ $account->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('growth_circle_source_account_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col">
+                                    <label for="gcFoodPerCity" class="form-label">Food per city</label>
+                                    <input type="number" class="form-control @error('growth_circle_food_per_city') is-invalid @enderror" id="gcFoodPerCity"
+                                           name="growth_circle_food_per_city" value="{{ old('growth_circle_food_per_city', $growthCircleFoodPerCity) }}" min="0">
+                                    @error('growth_circle_food_per_city')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col">
+                                    <label for="gcUraniumPerCity" class="form-label">Uranium per city</label>
+                                    <input type="number" class="form-control @error('growth_circle_uranium_per_city') is-invalid @enderror" id="gcUraniumPerCity"
+                                           name="growth_circle_uranium_per_city" value="{{ old('growth_circle_uranium_per_city', $growthCircleUraniumPerCity) }}" min="0">
+                                    @error('growth_circle_uranium_per_city')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gcDiscordChannel" class="form-label">Abuse Alert Discord Channel ID</label>
+                                <input type="text" class="form-control @error('growth_circle_discord_channel_id') is-invalid @enderror" id="gcDiscordChannel"
+                                       name="growth_circle_discord_channel_id" value="{{ old('growth_circle_discord_channel_id', $growthCircleDiscordChannelId) }}">
+                                @error('growth_circle_discord_channel_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <button class="btn btn-primary">Save Growth Circles Settings</button>
+                        </form>
+                    </div>
+                </div>
+            @endcan
+
             <div class="card shadow-sm">
                 <div class="card-header">Enrolled Nations</div>
                 <div class="card-body p-0">
