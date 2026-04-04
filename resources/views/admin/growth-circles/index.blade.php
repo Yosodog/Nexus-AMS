@@ -133,7 +133,7 @@
                                     <td>
                                         <div class="d-flex gap-2">
                                             @if ($enrollment->nation)
-                                                <a href="{{ route('admin.growth-circles.distributions', $enrollment->nation) }}"
+                                                <a href="{{ route('admin.growth-circles.distributions', $enrollment) }}"
                                                    class="btn btn-sm btn-outline-secondary">History</a>
 
                                                 @can('manage-growth-circles')

@@ -91,12 +91,15 @@ class GrowthCircleController extends Controller
         ]);
     }
 
-    public function distributions(Nation $nation): View
+    public function distributions(GrowthCircleEnrollment $enrollment): View
     {
         $this->authorize('view-growth-circles');
 
+        $enrollment->loadMissing('nation');
+        $nation = $enrollment->nation;
+
         $distributions = GrowthCircleDistribution::query()
-            ->where('nation_id', $nation->id)
+            ->where('nation_id', $enrollment->nation_id)
             ->orderByDesc('created_at')
             ->limit(30)
             ->get();

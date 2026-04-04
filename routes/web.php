@@ -562,7 +562,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->name('admin.growth-circles.remove');
         Route::post('/growth-circles/{enrollment}/clear-suspension', [AdminGrowthCircleController::class, 'clearSuspension'])
             ->name('admin.growth-circles.clear-suspension');
-        Route::get('/growth-circles/{nation}/distributions', [AdminGrowthCircleController::class, 'distributions'])
+        Route::get('/growth-circles/{enrollment}/distributions', [AdminGrowthCircleController::class, 'distributions'])
             ->name('admin.growth-circles.distributions');
 
         Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
