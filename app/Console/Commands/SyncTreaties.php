@@ -47,6 +47,12 @@ class SyncTreaties extends Command
                 continue;
             }
 
+            if ($graphQLTreaty->date === null) {
+                $this->warn("Skipping treaty {$graphQLTreaty->id} because the API date was invalid.");
+
+                continue;
+            }
+
             Treaty::updateOrInsert(
                 ['pw_id' => $graphQLTreaty->id],
                 [

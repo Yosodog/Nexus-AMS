@@ -2,7 +2,7 @@
 
 namespace App\GraphQL\Models;
 
-use Carbon\Carbon;
+use App\Services\ApiDateNormalizer;
 use stdClass;
 
 class Nation
@@ -440,7 +440,7 @@ class Nation
         $this->total_infrastructure_lost = isset($json->total_infrastructure_lost) ? (float) $json->total_infrastructure_lost : null;
 
         if (isset($json->last_active)) {
-            $this->last_active = Carbon::create($json->last_active)->toDateTimeString();
+            $this->last_active = ApiDateNormalizer::normalizeTimestamp($json->last_active);
         }
     }
 

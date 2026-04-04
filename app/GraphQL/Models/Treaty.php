@@ -2,14 +2,14 @@
 
 namespace App\GraphQL\Models;
 
-use Carbon\Carbon;
+use App\Services\ApiDateNormalizer;
 use stdClass;
 
 class Treaty
 {
     public int $id;
 
-    public string $date;
+    public ?string $date = null;
 
     public int $turns_left;
 
@@ -24,7 +24,7 @@ class Treaty
     public function buildWithJSON(stdClass $json): void
     {
         $this->id = (int) $json->id;
-        $this->date = Carbon::parse($json->date)->format('Y-m-d H:i:s'); // ✅ convert for MySQL
+        $this->date = ApiDateNormalizer::normalizeTimestamp($json->date);
         $this->treaty_type = $json->treaty_type;
         $this->turns_left = $json->turns_left;
         $this->alliance1_id = $json->alliance1_id;

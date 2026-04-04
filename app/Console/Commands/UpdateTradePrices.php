@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\TradePrice;
+use App\Services\ApiDateNormalizer;
 use App\Services\TradePriceService;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -25,9 +25,14 @@ class UpdateTradePrices extends Command
 
         try {
             $graphqlPrice = $this->tradePriceService->pullFromGraphQL();
+            $normalizedDate = ApiDateNormalizer::normalizeDate($graphqlPrice->date);
+
+            if ($normalizedDate === null) {
+                throw new \UnexpectedValueException('Trade price API returned an invalid date.');
+            }
 
             TradePrice::create([
-                'date' => Carbon::parse($graphqlPrice->date)->toDateString(),
+                'date' => $normalizedDate,
                 'coal' => (int) $graphqlPrice->coal,
                 'oil' => (int) $graphqlPrice->oil,
                 'uranium' => (int) $graphqlPrice->uranium,

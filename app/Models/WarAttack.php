@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WarAttackTypeEnum;
-use Carbon\Carbon;
+use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
@@ -122,9 +122,7 @@ class WarAttack extends Model
 
     protected static function normalisePayload(array $warAttack): array
     {
-        $warAttack['date'] = isset($warAttack['date'])
-            ? Carbon::parse($warAttack['date'])->toDateTimeString()
-            : null;
+        $warAttack['date'] = ApiDateNormalizer::normalizeTimestamp($warAttack['date'] ?? null);
 
         $warAttack['improvements_destroyed'] = $warAttack['improvements_destroyed'] ?? [];
         $warAttack['cities_infra_before'] = $warAttack['cities_infra_before'] ?? [];

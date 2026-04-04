@@ -3,11 +3,10 @@
 namespace App\Models;
 
 use App\GraphQL\Models\City as CityGraphQL;
-use Carbon\CarbonImmutable;
+use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Throwable;
 
 class City extends Model
 {
@@ -81,21 +80,7 @@ class City extends Model
 
     public static function normalizeApiDateValue(mixed $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
-        $dateValue = trim((string) $value);
-
-        if ($dateValue === '' || str_starts_with($dateValue, '-') || str_starts_with($dateValue, '0000-00-00')) {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($dateValue)->toDateString();
-        } catch (Throwable) {
-            return null;
-        }
+        return ApiDateNormalizer::normalizeDate($value);
     }
 
     public static function getById(int $id): self

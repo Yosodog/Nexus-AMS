@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use App\GraphQL\Models\War as WarGraphQL;
-use Carbon\CarbonImmutable;
+use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use stdClass;
-use Throwable;
 
 class War extends Model
 {
@@ -35,17 +34,7 @@ class War extends Model
 
     public static function normalizeApiTimestamp(?string $value): ?string
     {
-        if ($value === null || trim($value) === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($value, 'UTC')
-                ->setTimezone(config('app.timezone'))
-                ->toDateTimeString();
-        } catch (Throwable) {
-            return null;
-        }
+        return ApiDateNormalizer::normalizeTimestamp($value);
     }
 
     /**

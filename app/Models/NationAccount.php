@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
+use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
@@ -38,9 +38,7 @@ class NationAccount extends Model
             'nation_id' => $account['id'],
             'credits' => $account['credits'] ?? null,
             'discord_id' => $account['discord_id'] ?? null,
-            'last_active' => isset($account['last_active'])
-                ? Carbon::parse($account['last_active'])->toDateTimeString()
-                : null,
+            'last_active' => ApiDateNormalizer::normalizeTimestamp($account['last_active'] ?? null),
         ];
 
         return self::updateOrCreate(
