@@ -604,6 +604,28 @@ class SettingService
         self::setValue('discord_war_room_defense_role_id', $roleId ?? '');
     }
 
+    public static function isWarCounterAutoCreationEnabled(): bool
+    {
+        $value = self::getValue('war_counter_auto_creation_enabled');
+
+        if (is_null($value)) {
+            $value = self::getValue('discord_war_room_creation_enabled');
+        }
+
+        if (is_null($value)) {
+            self::setWarCounterAutoCreationEnabled(true);
+
+            return true;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setWarCounterAutoCreationEnabled(bool $enabled): void
+    {
+        self::setValue('war_counter_auto_creation_enabled', $enabled ? 1 : 0);
+    }
+
     public static function getDiscordAllianceDepartureChannelId(): string
     {
         $channelId = self::getValue('discord_alliance_departure_channel_id');
@@ -1040,7 +1062,7 @@ class SettingService
 
     public static function getHomepageHeadline(string $allianceName): string
     {
-        $default = "Join {$allianceName}";
+        $default = "Build your next chapter with {$allianceName}";
 
         return self::getStringSetting('home_headline', $default);
     }
@@ -1052,7 +1074,7 @@ class SettingService
 
     public static function getHomepageTagline(string $allianceName): string
     {
-        $default = "{$allianceName} is growing — and we operate with clarity, fairness, and speed.";
+        $default = "{$allianceName} is where ambitious nations find real support, sharp coordination, and a community worth staying for.";
 
         return self::getStringSetting('home_tagline', $default);
     }
@@ -1064,9 +1086,7 @@ class SettingService
 
     public static function getHomepageAbout(string $allianceName): string
     {
-        $appName = config('app.name');
-        $default = "{$allianceName} runs recruitment, economic programs, and defense with {$appName}. "
-            .'Your experience stays transparent while leadership keeps operations secure.';
+        $default = "{$allianceName} is built for members who want a steady alliance, active leadership, and a community that knows how to work together.";
 
         return self::getStringSetting('home_about', $default);
     }
@@ -1093,9 +1113,9 @@ class SettingService
         }
 
         return [
-            'Guest-friendly application with consistent questions.',
-            'Clear grant and loan programs—no guesswork for members.',
-            'Defense coordination tools without exposing sensitive data.',
+            'A straightforward application process and a clear path into the alliance.',
+            'Support for growth, coordination, and day-to-day progress once you are in.',
+            'An alliance culture that feels active, stable, and easy to settle into.',
         ];
     }
 
@@ -1108,6 +1128,30 @@ class SettingService
             ->all();
 
         self::setValue('home_highlights', json_encode($cleaned));
+    }
+
+    public static function getHomepageStatsIntro(): string
+    {
+        $default = 'A quick look at the alliance as it stands today.';
+
+        return self::getStringSetting('home_stats_intro', $default);
+    }
+
+    public static function setHomepageStatsIntro(string $intro): void
+    {
+        self::setValue('home_stats_intro', $intro);
+    }
+
+    public static function getHomepageClosingText(string $allianceName): string
+    {
+        $default = "If {$allianceName} feels like the right fit, send in your application and come meet the team.";
+
+        return self::getStringSetting('home_closing_text', $default);
+    }
+
+    public static function setHomepageClosingText(string $text): void
+    {
+        self::setValue('home_closing_text', $text);
     }
 
     protected static function getRecruitmentMessage(string $type, string $default): string

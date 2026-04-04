@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-class OffshoreFulfillmentResult
+readonly class OffshoreFulfillmentResult
 {
     public const STATUS_SKIPPED = 'skipped';
 
@@ -13,13 +13,13 @@ class OffshoreFulfillmentResult
     public const STATUS_TIMEOUT = 'timeout';
 
     public function __construct(
-        public readonly string $status,
-        public readonly string $message,
-        public readonly array $transfers = [],
-        public readonly array $errors = [],
-        public readonly array $guardrailBlocks = [],
-        public readonly array $remainingDeficits = [],
-        public readonly array $initialDeficits = []
+        public string $status,
+        public string $message,
+        public array $transfers = [],
+        public array $errors = [],
+        public array $guardrailBlocks = [],
+        public array $remainingDeficits = [],
+        public array $initialDeficits = []
     ) {}
 
     public function shouldSendWithdrawal(): bool

@@ -5,17 +5,12 @@ namespace App\Services;
 use App\Models\Nation;
 use Illuminate\Validation\ValidationException;
 
-class NationEligibilityValidator
+final class NationEligibilityValidator
 {
-    protected Nation $nation;
-
-    protected AllianceMembershipService $membershipService;
-
-    public function __construct(Nation $nation, ?AllianceMembershipService $membershipService = null)
-    {
-        $this->nation = $nation;
-        $this->membershipService = $membershipService ?? app(AllianceMembershipService::class);
-    }
+    public function __construct(
+        private readonly Nation $nation,
+        private readonly ?AllianceMembershipService $membershipService = null
+    ) {}
 
     /**
      * Validate alliance membership.
@@ -24,7 +19,7 @@ class NationEligibilityValidator
      */
     public function validateAllianceMembership(): void
     {
-        if (! $this->membershipService->contains($this->nation->alliance_id)) {
+        if (! $this->resolveMembershipService()->contains($this->nation->alliance_id)) {
             throw ValidationException::withMessages([
                 'alliance' => 'You are not a member of the required alliance.',
             ]);
@@ -105,5 +100,10 @@ class NationEligibilityValidator
         //         'infrastructure' => "You must have at least $minInfraPerCity infrastructure per city."
         //      ]);
         //  }
+    }
+
+    private function resolveMembershipService(): AllianceMembershipService
+    {
+        return $this->membershipService ?? app(AllianceMembershipService::class);
     }
 }

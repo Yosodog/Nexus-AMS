@@ -43,6 +43,7 @@ class WarRoomController extends Controller
             'discordWarAlertsEnabled' => SettingService::isDiscordWarAlertEnabled(),
             'defaultWarRoomForumId' => SettingService::getDiscordWarRoomForumId(),
             'warRoomDefenseRoleId' => SettingService::getDiscordWarRoomDefenseRoleId(),
+            'warCounterAutoCreationEnabled' => SettingService::isWarCounterAutoCreationEnabled(),
         ]);
     }
 
@@ -150,6 +151,36 @@ class WarRoomController extends Controller
         return back()
             ->with('alert-type', 'success')
             ->with('alert-message', 'War room defense role updated.');
+    }
+
+    /**
+     * Update whether the app may auto-create counter rooms from incoming attacks.
+     */
+    public function updateWarRoomCreation(Request $request): RedirectResponse
+    {
+        $this->authorize('manage-war-room');
+
+        $previousEnabled = SettingService::isWarCounterAutoCreationEnabled();
+
+        SettingService::setWarCounterAutoCreationEnabled($request->boolean('enabled'));
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'war_counter_auto_creation_updated',
+            context: [
+                'changes' => [
+                    'war_counter_auto_creation_enabled' => [
+                        'from' => $previousEnabled,
+                        'to' => $request->boolean('enabled'),
+                    ],
+                ],
+            ],
+            message: 'Counter room auto-creation setting updated.'
+        );
+
+        return back()
+            ->with('alert-type', 'success')
+            ->with('alert-message', 'Counter room auto-creation setting updated.');
     }
 
     /**

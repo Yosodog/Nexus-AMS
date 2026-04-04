@@ -17,7 +17,7 @@ class WarDeclaredDiscordNotification extends Notification
         private readonly int $warId,
         private readonly Nation $attacker,
         private readonly Nation $defender,
-        private readonly WarCounter $counter,
+        private readonly ?WarCounter $counter,
         private readonly string $channelId,
         private readonly ?CarbonInterface $availableAt = null
     ) {}
@@ -49,8 +49,8 @@ class WarDeclaredDiscordNotification extends Notification
                 'war_id' => $this->warId,
                 'war_url' => $this->warUrl(),
                 'counter' => [
-                    'id' => $this->counter->id,
-                    'url' => $this->counterUrl(),
+                    'id' => $this->counter?->id,
+                    'url' => $this->counter ? $this->counterUrl() : null,
                 ],
                 'attacker' => $this->formatNation($this->attacker),
                 'defender' => $this->formatNation($this->defender),

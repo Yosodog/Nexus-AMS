@@ -269,7 +269,7 @@ class OffshoreService
     protected function normalizeSnapshot(mixed $snapshot): array
     {
         if (is_array($snapshot) && array_key_exists('balances', $snapshot)) {
-            $balances = (array) ($snapshot['balances'] ?? []);
+            $balances = array_map('floatval', (array) ($snapshot['balances'] ?? []));
             $cachedAt = $snapshot['cached_at'] ?? null;
 
             if ($cachedAt instanceof Carbon) {
@@ -281,7 +281,7 @@ class OffshoreService
 
             return [
                 'balances' => $balances,
-                'cached_at' => $cachedAt ? Carbon::parse($cachedAt) : null,
+                'cached_at' => $this->normalizeCachedAt($cachedAt),
             ];
         }
 
@@ -296,6 +296,23 @@ class OffshoreService
             'balances' => [],
             'cached_at' => null,
         ];
+    }
+
+    protected function normalizeCachedAt(mixed $cachedAt): ?Carbon
+    {
+        if ($cachedAt instanceof Carbon) {
+            return $cachedAt;
+        }
+
+        if ($cachedAt instanceof \DateTimeInterface) {
+            return Carbon::instance($cachedAt);
+        }
+
+        if (is_string($cachedAt) || is_int($cachedAt) || is_float($cachedAt) || $cachedAt === null) {
+            return $cachedAt !== null && $cachedAt !== '' ? Carbon::parse($cachedAt) : null;
+        }
+
+        return null;
     }
 
     /**

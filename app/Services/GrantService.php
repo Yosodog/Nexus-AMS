@@ -73,16 +73,11 @@ class GrantService
         }
 
         // Run alliance + custom checks
-        $validator = new NationEligibilityValidator($nation);
+        $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
         $validator->validateAllianceMembership();
 
         $requirements = $grant->validation_rules ?? [];
-
-        // Placeholder for future validation
-        // $validator->validateGovernmentType($requirements["government_type"] ?? null);
-        // $validator->validateColor($requirements["allowed_colors"] ?? []);
-        // $validator->validateRequiredProjects($requirements["required_projects"] ?? []);
-        // $validator->validateInfrastructure($requirements["infra_per_city"] ?? 0);
+        app(GrantRequirementService::class)->assertEligible($requirements, $nation);
     }
 
     public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication

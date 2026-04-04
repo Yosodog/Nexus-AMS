@@ -81,27 +81,29 @@ class WarStatsController extends Controller
             $recentWars = $wars->take(15);
 
             return [
-                'activeWars' => $activeWars,
-                'pastWars' => $pastWars,
-                'offensiveCount' => $offensiveCount,
-                'defensiveCount' => $defensiveCount,
-                'wins' => $wins,
-                'losses' => $losses,
-                'draws' => $draws,
+                'activeWars' => $this->serializeWars($activeWars),
+                'pastWars' => $this->serializeWars($pastWars),
+                'offensiveCount' => (int) $offensiveCount,
+                'defensiveCount' => (int) $defensiveCount,
+                'wins' => (int) $wins,
+                'losses' => (int) $losses,
+                'draws' => (int) $draws,
                 'unitExchange' => $unitExchange,
                 'unitScoreExchange' => $unitScoreExchange,
                 'resourceUsage' => $resourceUsage,
                 'infraExchange' => $infraExchange,
-                'lootTotal' => $lootTotal,
+                'lootTotal' => (float) $lootTotal,
                 'warTypeBreakdown' => $warTypeBreakdown,
                 'timeline' => $timeline,
                 'opponents' => $opponents,
-                'avgDurationHours' => $avgDurationHours,
-                'missilesUsed' => $missilesUsed,
-                'nukesUsed' => $nukesUsed,
-                'recentWars' => $recentWars,
+                'avgDurationHours' => $avgDurationHours !== null ? (float) $avgDurationHours : 0.0,
+                'missilesUsed' => (int) $missilesUsed,
+                'nukesUsed' => (int) $nukesUsed,
+                'recentWars' => $this->serializeWars($recentWars),
             ];
         });
+
+        $payload = $this->normalizePayloadForView($payload);
 
         return view('defense.war-stats', [
             ...$payload,
@@ -113,6 +115,30 @@ class WarStatsController extends Controller
                 'is_self' => $targetNationId === $currentUserNation?->id,
             ],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizePayloadForView(array $payload): array
+    {
+        $payload['activeWars'] = $this->objectCollection(
+            $payload['activeWars'] ?? [],
+            fn (array $war): object => $this->hydrateWarViewModel($war)
+        );
+
+        $payload['pastWars'] = $this->objectCollection(
+            $payload['pastWars'] ?? [],
+            fn (array $war): object => $this->hydrateWarViewModel($war)
+        );
+
+        $payload['recentWars'] = $this->objectCollection(
+            $payload['recentWars'] ?? [],
+            fn (array $war): object => $this->hydrateWarViewModel($war)
+        );
+
+        return $payload;
     }
 
     private function isAttacker(War $war, int $nationId): bool
@@ -301,5 +327,153 @@ class WarStatsController extends Controller
             ->take(6)
             ->values()
             ->toArray();
+    }
+
+    /**
+     * @param  Collection<int, War>  $wars
+     * @return array<int, array<string, mixed>>
+     */
+    private function serializeWars(Collection $wars): array
+    {
+        return $wars
+            ->map(fn (War $war): array => [
+                'id' => (int) $war->id,
+                'date' => $this->serializeDate($war->date),
+                'end_date' => $this->serializeDate($war->end_date),
+                'att_id' => (int) $war->att_id,
+                'def_id' => (int) $war->def_id,
+                'winner_id' => isset($war->winner_id) ? (int) $war->winner_id : null,
+                'war_type' => (string) ($war->war_type ?? ''),
+                'reason' => $war->reason !== null ? (string) $war->reason : null,
+                'turns_left' => (int) ($war->turns_left ?? 0),
+                'att_points' => (int) ($war->att_points ?? 0),
+                'def_points' => (int) ($war->def_points ?? 0),
+                'att_resistance' => (int) ($war->att_resistance ?? 0),
+                'def_resistance' => (int) ($war->def_resistance ?? 0),
+                'att_money_looted' => (float) ($war->att_money_looted ?? 0),
+                'def_money_looted' => (float) ($war->def_money_looted ?? 0),
+                'att_infra_destroyed' => (float) ($war->att_infra_destroyed ?? 0),
+                'def_infra_destroyed' => (float) ($war->def_infra_destroyed ?? 0),
+                'att_infra_destroyed_value' => (float) ($war->att_infra_destroyed_value ?? 0),
+                'def_infra_destroyed_value' => (float) ($war->def_infra_destroyed_value ?? 0),
+                'att_aircraft_lost' => (int) ($war->att_aircraft_lost ?? 0),
+                'def_aircraft_lost' => (int) ($war->def_aircraft_lost ?? 0),
+                'att_soldiers_lost' => (int) ($war->att_soldiers_lost ?? 0),
+                'def_soldiers_lost' => (int) ($war->def_soldiers_lost ?? 0),
+                'att_missiles_used' => (int) ($war->att_missiles_used ?? 0),
+                'def_missiles_used' => (int) ($war->def_missiles_used ?? 0),
+                'att_nukes_used' => (int) ($war->att_nukes_used ?? 0),
+                'def_nukes_used' => (int) ($war->def_nukes_used ?? 0),
+                'attacker' => $war->attacker ? [
+                    'id' => (int) $war->attacker->id,
+                    'leader_name' => (string) $war->attacker->leader_name,
+                ] : null,
+                'defender' => $war->defender ? [
+                    'id' => (int) $war->defender->id,
+                    'leader_name' => (string) $war->defender->leader_name,
+                ] : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $war
+     */
+    private function hydrateWarViewModel(array $war): object
+    {
+        return (object) [
+            'id' => (int) ($war['id'] ?? 0),
+            'date' => $this->parseDateValue($war['date'] ?? null),
+            'end_date' => $this->parseDateValue($war['end_date'] ?? null),
+            'att_id' => (int) ($war['att_id'] ?? 0),
+            'def_id' => (int) ($war['def_id'] ?? 0),
+            'winner_id' => isset($war['winner_id']) ? (int) $war['winner_id'] : null,
+            'war_type' => (string) ($war['war_type'] ?? ''),
+            'reason' => isset($war['reason']) ? (string) $war['reason'] : null,
+            'turns_left' => (int) ($war['turns_left'] ?? 0),
+            'att_points' => (int) ($war['att_points'] ?? 0),
+            'def_points' => (int) ($war['def_points'] ?? 0),
+            'att_resistance' => (int) ($war['att_resistance'] ?? 0),
+            'def_resistance' => (int) ($war['def_resistance'] ?? 0),
+            'att_money_looted' => (float) ($war['att_money_looted'] ?? 0),
+            'def_money_looted' => (float) ($war['def_money_looted'] ?? 0),
+            'att_infra_destroyed' => (float) ($war['att_infra_destroyed'] ?? 0),
+            'def_infra_destroyed' => (float) ($war['def_infra_destroyed'] ?? 0),
+            'att_infra_destroyed_value' => (float) ($war['att_infra_destroyed_value'] ?? 0),
+            'def_infra_destroyed_value' => (float) ($war['def_infra_destroyed_value'] ?? 0),
+            'att_aircraft_lost' => (int) ($war['att_aircraft_lost'] ?? 0),
+            'def_aircraft_lost' => (int) ($war['def_aircraft_lost'] ?? 0),
+            'att_soldiers_lost' => (int) ($war['att_soldiers_lost'] ?? 0),
+            'def_soldiers_lost' => (int) ($war['def_soldiers_lost'] ?? 0),
+            'att_missiles_used' => (int) ($war['att_missiles_used'] ?? 0),
+            'def_missiles_used' => (int) ($war['def_missiles_used'] ?? 0),
+            'att_nukes_used' => (int) ($war['att_nukes_used'] ?? 0),
+            'def_nukes_used' => (int) ($war['def_nukes_used'] ?? 0),
+            'attacker' => isset($war['attacker']) && is_array($war['attacker'])
+                ? (object) [
+                    'id' => (int) ($war['attacker']['id'] ?? 0),
+                    'leader_name' => (string) ($war['attacker']['leader_name'] ?? ''),
+                ]
+                : null,
+            'defender' => isset($war['defender']) && is_array($war['defender'])
+                ? (object) [
+                    'id' => (int) ($war['defender']['id'] ?? 0),
+                    'leader_name' => (string) ($war['defender']['leader_name'] ?? ''),
+                ]
+                : null,
+        ];
+    }
+
+    /**
+     * @param  iterable<mixed>  $items
+     * @param  callable(array<string, mixed>): object  $mapper
+     * @return Collection<int, object>
+     */
+    private function objectCollection(iterable $items, callable $mapper): Collection
+    {
+        return collect($items)
+            ->map(function ($item) use ($mapper) {
+                if (is_object($item)) {
+                    return $item;
+                }
+
+                return $mapper(is_array($item) ? $item : []);
+            })
+            ->values();
+    }
+
+    private function serializeDate(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format(\DateTimeInterface::ATOM);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        return null;
+    }
+
+    private function parseDateValue(mixed $value): ?Carbon
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return Carbon::instance($value);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return Carbon::parse($value);
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return Carbon::parse($value);
+        }
+
+        return null;
     }
 }

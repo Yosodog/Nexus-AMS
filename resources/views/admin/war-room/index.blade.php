@@ -285,6 +285,39 @@
                 </div>
             </div>
         </div>
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-0">War Room Creation</h5>
+                        <small class="text-muted">Controls automatic {{ config('app.name') }} counter room creation from incoming attacks.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ route('admin.war-room.creation') }}" class="row g-3">
+                        @csrf
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="war_room_creation_enabled"
+                                       name="enabled"
+                                       value="1"
+                                       {{ old('enabled', $warCounterAutoCreationEnabled) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="war_room_creation_enabled">Enable automatic {{ config('app.name') }} counter room creation</label>
+                            </div>
+                            <div class="form-text">War alerts still dispatch normally when this is disabled. Existing {{ config('app.name') }} counter rooms can still create Discord rooms manually.</div>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i> Save Setting
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-4 mt-1">
