@@ -22,6 +22,7 @@ class AccessControlTest extends FeatureTestCase
     {
         parent::setUp();
 
+        $this->ensureIsolatedTestDatabase();
         Schema::dropAllTables();
         $this->createTables();
 

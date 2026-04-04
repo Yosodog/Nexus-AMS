@@ -19,6 +19,7 @@ class BeigeAlertServiceTest extends TestCase
     {
         parent::setUp();
 
+        $this->ensureIsolatedTestDatabase();
         Schema::dropAllTables();
         $this->createTables();
     }

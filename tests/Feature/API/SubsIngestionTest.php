@@ -29,6 +29,7 @@ class SubsIngestionTest extends FeatureTestCase
     {
         parent::setUp();
 
+        $this->ensureIsolatedTestDatabase();
         Schema::dropAllTables();
         $this->createTables();
         config()->set('services.nexus_api_token', 'testing-nexus-token');

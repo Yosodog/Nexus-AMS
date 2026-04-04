@@ -14,6 +14,7 @@ abstract class MySqlIntegrationTestCase extends TestCase
             $this->markTestSkipped('MySQL integration tests require the mysql connection.');
         }
 
+        $this->ensureIsolatedTestDatabase('mysql');
         $this->artisan('migrate:fresh', ['--force' => true]);
     }
 }
