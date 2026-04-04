@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Http\Requests\Admin\UpdateGrowthCirclesRequest;
 use App\Models\Account;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
@@ -309,19 +310,9 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function updateGrowthCircles(Request $request): RedirectResponse
+    public function updateGrowthCircles(UpdateGrowthCirclesRequest $request): RedirectResponse
     {
-        $this->authorize('manage-growth-circles');
-
-        $validated = $request->validate([
-            'growth_circles_enabled' => ['required', 'boolean'],
-            'growth_circle_tax_id' => ['required', 'integer', 'min:0'],
-            'growth_circle_fallback_tax_id' => ['required', 'integer', 'min:0'],
-            'growth_circle_source_account_id' => ['required', 'integer', 'min:0'],
-            'growth_circle_food_per_city' => ['required', 'integer', 'min:0'],
-            'growth_circle_uranium_per_city' => ['required', 'integer', 'min:0'],
-            'growth_circle_discord_channel_id' => ['nullable', 'string', 'max:30'],
-        ]);
+        $validated = $request->validated();
 
         SettingService::setGrowthCirclesEnabled((bool) $validated['growth_circles_enabled']);
         SettingService::setGrowthCircleTaxId((int) $validated['growth_circle_tax_id']);
