@@ -29,6 +29,12 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'nation_id' => fake()->unique()->numberBetween(1000, 999999),
+            'is_admin' => false,
+            'disabled' => false,
+            'verification_code' => Str::upper(Str::random(12)),
+            'verified_at' => now(),
+            'discord_verification_token' => null,
             'remember_token' => Str::random(10),
         ];
     }
@@ -40,6 +46,30 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+            'verified_at' => null,
+        ]);
+    }
+
+    public function verified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email_verified_at' => now(),
+            'verified_at' => now(),
+            'verification_code' => null,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+        ]);
+    }
+
+    public function discordPending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'discord_verification_token' => (string) Str::uuid(),
         ]);
     }
 }

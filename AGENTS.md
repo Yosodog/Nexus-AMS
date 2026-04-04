@@ -83,9 +83,17 @@ subdirectories, follow the most specific guidance available.
   sanity-check output, but do not commit build artifacts.
 
 ## Testing Policy
-- This project intentionally avoids automated tests. **Do not add, modify, or run any automated
-  tests** (including PHPUnit, Pest, Playwright, etc.). Rely on code review and manual QA notes
-  instead.
+- Automated tests are allowed and expected when they protect intended, supported behavior.
+- Prefer PHPUnit for unit, feature, and integration coverage, and use Playwright only for a small
+  browser smoke layer.
+- Write tests against the intended, supported behavior of the application. If a new or updated
+  test fails, verify the fixture, seed state, fake responses, auth state, and assertion first to
+  rule out test defects before concluding the application behavior is wrong.
+- Never call live Politics & War or Discord services in tests. Simulate them with Laravel fakes or
+  realistic canned payloads instead.
+- Fast suites may use SQLite when schema fidelity does not matter. MySQL-backed integration tests
+  should be used for database-specific behavior such as `pending_key` enforcement and unique
+  constraint handling.
 
 ## Pull Request Guidance
 - Summaries must list the user-visible or operational effects of the change. Call out any manual

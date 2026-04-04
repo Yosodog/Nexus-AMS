@@ -10,6 +10,7 @@ use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Nation;
 use App\Notifications\GrantNotification;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -80,15 +81,28 @@ class GrantService
         app(GrantRequirementService::class)->assertEligible($requirements, $nation);
     }
 
+    /**
+     * @throws ValidationException
+     */
     public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication
     {
-        $application = GrantApplication::create([
-            'grant_id' => $grant->id,
-            'nation_id' => $nationId,
-            'account_id' => $accountId,
-            'status' => 'pending',
-            'pending_key' => 1,
-        ]);
+        try {
+            $application = GrantApplication::create([
+                'grant_id' => $grant->id,
+                'nation_id' => $nationId,
+                'account_id' => $accountId,
+                'status' => 'pending',
+                'pending_key' => 1,
+            ]);
+        } catch (QueryException $exception) {
+            if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
+                throw ValidationException::withMessages([
+                    'grant' => 'You already have a pending application for this grant.',
+                ]);
+            }
+
+            throw $exception;
+        }
 
         app(PendingRequestsService::class)->flushCache();
 

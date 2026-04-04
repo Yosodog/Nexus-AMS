@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         if ($this->indexExists('direct_deposit_logs', 'ddl_nation_created_at_idx')) {
             Schema::table('direct_deposit_logs', function (Blueprint $table) {
                 $table->dropIndex('ddl_nation_created_at_idx');
@@ -24,6 +28,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('direct_deposit_logs', function (Blueprint $table) {
             $table->dropIndex('ddl_nation_created_at_money_idx');
             $table->dropIndex('ddl_account_created_at_idx');

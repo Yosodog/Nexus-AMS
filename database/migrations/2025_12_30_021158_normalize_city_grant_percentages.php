@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         $average = DB::table('settings')
             ->where('key', 'pw_city_average')
             ->value('value');

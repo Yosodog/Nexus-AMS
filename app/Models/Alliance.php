@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\GraphQL\Models\Alliance as AllianceGraphQL;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Alliance extends Model
 {
+    use HasFactory;
+
     public $table = 'alliances';
 
     protected $guarded = [];

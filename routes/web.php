@@ -55,6 +55,7 @@ use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
 use App\Http\Controllers\RebuildingController;
 use App\Http\Controllers\SpyAssignmentController;
+use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WarAidController;
@@ -70,6 +71,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
+
+if (app()->environment('testing')) {
+    Route::get('/_browser/login/{persona}', [BrowserTestController::class, 'login'])
+        ->whereIn('persona', ['admin', 'member'])
+        ->name('browser.login');
+}
 
 Route::middleware(['auth'])->group(function () {
     // Verification
