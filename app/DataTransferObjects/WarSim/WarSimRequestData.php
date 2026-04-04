@@ -2,7 +2,7 @@
 
 namespace App\DataTransferObjects\WarSim;
 
-final class WarSimRequestData
+final readonly class WarSimRequestData
 {
     public function __construct(
         public int $iterations,

@@ -2,11 +2,11 @@
 
 namespace App\Nel;
 
-final class Token
+final readonly class Token
 {
     public function __construct(
-        public readonly string $type,
-        public readonly mixed $value,
-        public readonly int $position
+        public string $type,
+        public mixed $value,
+        public int $position
     ) {}
 }

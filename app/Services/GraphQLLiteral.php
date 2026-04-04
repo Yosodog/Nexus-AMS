@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-class GraphQLLiteral
+final readonly class GraphQLLiteral
 {
     public function __construct(protected string $value) {}
 

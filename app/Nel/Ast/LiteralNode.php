@@ -2,7 +2,7 @@
 
 namespace App\Nel\Ast;
 
-final class LiteralNode implements ExpressionNode
+final readonly class LiteralNode implements ExpressionNode
 {
-    public function __construct(public readonly mixed $value) {}
+    public function __construct(public mixed $value) {}
 }

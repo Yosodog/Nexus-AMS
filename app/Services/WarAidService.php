@@ -24,7 +24,7 @@ class WarAidService
         $nation->accounts()->findOrFail($data['account_id']);
 
         // Validate alliance membership
-        (new NationEligibilityValidator($nation))->validateAllianceMembership(); // PHP 8.4 anyone???
+        app(NationEligibilityValidator::class, ['nation' => $nation])->validateAllianceMembership();
 
         if (WarAidRequest::where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
             throw ValidationException::withMessages([
