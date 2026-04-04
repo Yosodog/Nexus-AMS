@@ -1,6 +1,10 @@
 @extends('layouts.admin')
 
 @section('content')
+    @php
+        $formatNumber = static fn (mixed $value, int $decimals = 0): string => number_format(is_numeric($value) ? (float) $value : 0, $decimals);
+        $formatMoney = static fn (mixed $value, int $decimals = 0): string => '$' . $formatNumber($value, $decimals);
+    @endphp
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row align-items-center">
@@ -13,13 +17,13 @@
                 <div class="col-12 col-lg-6 mt-3 mt-lg-0">
                     <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center">
                         <span class="badge bg-primary-subtle text-primary-emphasis">
-                            <i class="bi bi-people me-1"></i> Members: {{ number_format($totalMembers) }}
+                            <i class="bi bi-people me-1"></i> Members: {{ $formatNumber($totalMembers) }}
                         </span>
                         <span class="badge bg-success-subtle text-success-emphasis">
-                            <i class="bi bi-building me-1"></i> Cities: {{ number_format($totalCities) }}
+                            <i class="bi bi-building me-1"></i> Cities: {{ $formatNumber($totalCities) }}
                         </span>
                         <span class="badge bg-dark-subtle text-dark-emphasis">
-                            <i class="bi bi-cash-stack me-1"></i> Cash: ${{ number_format($cashTotal, 0) }}
+                            <i class="bi bi-cash-stack me-1"></i> Cash: {{ $formatMoney($cashTotal, 0) }}
                         </span>
                         <a href="{{ route('admin.dashboard', ['refresh' => 1]) }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-arrow-clockwise me-1"></i> Refresh
@@ -44,7 +48,7 @@
                             @if (! is_null($kpi['trend']))
                                 <span class="badge {{ $kpi['trend'] >= 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis' }}">
                                     <i class="bi {{ $kpi['trend'] >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
-                                    {{ $kpi['trend'] >= 0 ? '+' : '' }}{{ number_format($kpi['trend'], 1) }}%
+                                    {{ $kpi['trend'] >= 0 ? '+' : '' }}{{ $formatNumber($kpi['trend'], 1) }}%
                                 </span>
                             @endif
                         </div>
@@ -64,11 +68,11 @@
                     <span class="fw-semibold">Tax Intake (Money)</span>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-success-subtle text-success-emphasis">
-                            ${{ number_format($taxMoneyThisWeek, 0) }} / 7d
+                            {{ $formatMoney($taxMoneyThisWeek, 0) }} / 7d
                         </span>
                         @if (! is_null($taxMoneyTrend))
                             <span class="badge {{ $taxMoneyTrend >= 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis' }}">
-                                {{ $taxMoneyTrend >= 0 ? '+' : '' }}{{ number_format($taxMoneyTrend, 1) }}% vs prior week
+                                {{ $taxMoneyTrend >= 0 ? '+' : '' }}{{ $formatNumber($taxMoneyTrend, 1) }}% vs prior week
                             </span>
                         @endif
                     </div>
@@ -101,11 +105,11 @@
                     <span class="fw-semibold">War Tempo & Damage (14 Days)</span>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-danger-subtle text-danger-emphasis">
-                            {{ number_format($warsThisWeek) }} wars launched
+                            {{ $formatNumber($warsThisWeek) }} wars launched
                         </span>
                         @if (! is_null($warTrend))
                             <span class="badge {{ $warTrend >= 0 ? 'bg-danger-subtle text-danger-emphasis' : 'bg-success-subtle text-success-emphasis' }}">
-                                {{ $warTrend >= 0 ? '+' : '' }}{{ number_format($warTrend, 1) }}% vs prior week
+                                {{ $warTrend >= 0 ? '+' : '' }}{{ $formatNumber($warTrend, 1) }}% vs prior week
                             </span>
                         @endif
                     </div>
@@ -123,7 +127,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span class="fw-semibold">MMR Readiness</span>
                     <span class="badge bg-info-subtle text-info-emphasis">
-                        {{ number_format($mmrCoverage, 1) }}% compliant ({{ $mmrCompliantCount }}/{{ number_format($totalMembers) }})
+                        {{ $formatNumber($mmrCoverage, 1) }}% compliant ({{ $mmrCompliantCount }}/{{ $formatNumber($totalMembers) }})
                     </span>
                 </div>
                 <div class="card-body">
@@ -131,7 +135,7 @@
                     <div class="mt-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="text-secondary small">Coverage to {{ $mmrThreshold }} score</span>
-                            <span class="fw-semibold small">{{ number_format($mmrCoverage, 1) }}%</span>
+                            <span class="fw-semibold small">{{ $formatNumber($mmrCoverage, 1) }}%</span>
                         </div>
                         <div class="progress" style="height: 6px;">
                             <div class="progress-bar bg-info" role="progressbar"
@@ -150,7 +154,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span class="fw-semibold">Resource Stockpile</span>
                     <span class="badge bg-dark-subtle text-dark-emphasis">
-                        Total value ≈ ${{ number_format($resourceTotalValue, 0) }}
+                        Total value ≈ {{ $formatMoney($resourceTotalValue, 0) }}
                     </span>
                 </div>
                 <div class="card-body">
@@ -175,8 +179,8 @@
                                 @endphp
                                 <tr>
                                     <td class="text-capitalize">{{ str_replace('_', ' ', $resourceKey) }}</td>
-                                    <td class="text-end">{{ $units !== null ? number_format($units, $units >= 1000 ? 0 : 2) : '—' }}</td>
-                                    <td class="text-end">${{ number_format($value, 0) }}</td>
+                                    <td class="text-end">{{ $units !== null ? $formatNumber($units, $units >= 1000 ? 0 : 2) : '—' }}</td>
+                                    <td class="text-end">{{ $formatMoney($value, 0) }}</td>
                                 </tr>
                             @endforeach
                             </tbody>
@@ -203,9 +207,9 @@
                                     <li class="d-flex justify-content-between">
                                         <span class="text-capitalize">{{ str_replace('_', ' ', $unit) }}</span>
                                         <span class="text-dark fw-semibold">
-                                            {{ number_format($total) }}
+                                            {{ $formatNumber($total) }}
                                             /
-                                            {{ number_format($militaryCapacity[$unit]) }}
+                                            {{ $formatNumber($militaryCapacity[$unit]) }}
                                         </span>
                                     </li>
                                 @endforeach
@@ -216,23 +220,23 @@
                             <ul class="list-unstyled mb-0">
                                 <li class="d-flex justify-content-between">
                                     <span>Soldiers / city</span>
-                                    <span class="text-dark fw-semibold">{{ number_format($militaryPerUnitAverage['soldiers']) }}</span>
+                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['soldiers']) }}</span>
                                 </li>
                                 <li class="d-flex justify-content-between">
                                     <span>Tanks / city</span>
-                                    <span class="text-dark fw-semibold">{{ number_format($militaryPerUnitAverage['tanks']) }}</span>
+                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['tanks']) }}</span>
                                 </li>
                                 <li class="d-flex justify-content-between">
                                     <span>Aircraft / city</span>
-                                    <span class="text-dark fw-semibold">{{ number_format($militaryPerUnitAverage['aircraft'], 1) }}</span>
+                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['aircraft'], 1) }}</span>
                                 </li>
                                 <li class="d-flex justify-content-between">
                                     <span>Ships / city</span>
-                                    <span class="text-dark fw-semibold">{{ number_format($militaryPerUnitAverage['ships'], 2) }}</span>
+                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['ships'], 2) }}</span>
                                 </li>
                                 <li class="d-flex justify-content-between">
                                     <span>Spies / member</span>
-                                    <span class="text-dark fw-semibold">{{ number_format($militaryPerUnitAverage['spies'], 1) }}</span>
+                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['spies'], 1) }}</span>
                                 </li>
                             </ul>
                         </div>
@@ -248,7 +252,7 @@
                 <div class="card-header fw-semibold">Infrastructure Focus</div>
                 <div class="card-body">
                     <p class="text-secondary small">
-                        Alliance infrastructure totals {{ number_format($totalInfrastructure, 0) }}. Power coverage at {{ number_format($powerCoverage, 1) }}% keeps the network ready.
+                        Alliance infrastructure totals {{ $formatNumber($totalInfrastructure, 0) }}. Power coverage at {{ $formatNumber($powerCoverage, 1) }}% keeps the network ready.
                     </p>
                     <ul class="list-group list-group-flush">
                         @forelse ($topInfrastructureCities as $city)
@@ -264,8 +268,8 @@
                                     </span>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-semibold">{{ number_format($city->infrastructure, 0) }} infra</div>
-                                    <div class="text-secondary small">{{ number_format($city->land, 0) }} land</div>
+                                    <div class="fw-semibold">{{ $formatNumber($city->infrastructure, 0) }} infra</div>
+                                    <div class="text-secondary small">{{ $formatNumber($city->land, 0) }} land</div>
                                 </div>
                             </li>
                         @empty
@@ -280,7 +284,7 @@
                 <div class="card-header fw-semibold">Wealth Concentration</div>
                 <div class="card-body">
                     <p class="text-secondary small">
-                        Alliance-wide cash reserves average ${{ number_format($cashPerMember, 0) }} per member.
+                        Alliance-wide cash reserves average {{ $formatMoney($cashPerMember, 0) }} per member.
                     </p>
                     <ul class="list-group list-group-flush">
                         @forelse ($topCashHolders as $holder)
@@ -292,7 +296,7 @@
                                     <span class="text-secondary small d-block">{{ $holder->nation_name }}</span>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-semibold">${{ number_format($holder->money, 0) }}</div>
+                                    <div class="fw-semibold">{{ $formatMoney($holder->money, 0) }}</div>
                                     <div class="text-secondary small">{{ optional($holder->snapshot_at)->diffForHumans() ?? 'Snapshot pending' }}</div>
                                 </div>
                             </li>
@@ -325,8 +329,8 @@
                                         </a>
                                         <span class="text-secondary small d-block">{{ $nation->nation_name }}</span>
                                     </td>
-                                    <td class="text-end">{{ number_format($nation->score, 2) }}</td>
-                                    <td class="text-end">{{ number_format($nation->num_cities) }}</td>
+                                    <td class="text-end">{{ $formatNumber($nation->score, 2) }}</td>
+                                    <td class="text-end">{{ $formatNumber($nation->num_cities) }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -348,25 +352,25 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-7 text-secondary small text-uppercase">Pending approvals</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($loanStats['pending']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['pending']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Active or delinquent</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($loanStats['active']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['active']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Paid-off loans</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($loanStats['paid']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['paid']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Outstanding balance</dt>
-                        <dd class="col-5 text-end fw-semibold">${{ number_format($loanStats['outstanding_balance'], 0) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatMoney($loanStats['outstanding_balance'], 0) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Avg interest</dt>
                         <dd class="col-5 text-end fw-semibold">
-                            {{ $loanStats['avg_interest'] !== null ? number_format($loanStats['avg_interest'], 2).'%' : '—' }}
+                            {{ $loanStats['avg_interest'] !== null ? $formatNumber($loanStats['avg_interest'], 2).'%' : '—' }}
                         </dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Avg term (weeks)</dt>
                         <dd class="col-5 text-end fw-semibold">
-                            {{ $loanStats['avg_term'] !== null ? number_format($loanStats['avg_term'], 1) : '—' }}
+                            {{ $loanStats['avg_term'] !== null ? $formatNumber($loanStats['avg_term'], 1) : '—' }}
                         </dd>
                     </dl>
                     <p class="text-secondary small mt-3 mb-0">
@@ -381,16 +385,16 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-7 text-secondary small text-uppercase">Pending applications</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($grantStats['pending']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['pending']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Approved this week</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($grantStats['approved_this_week']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['approved_this_week']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Total approvals</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ number_format($grantStats['approved_total']) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['approved_total']) }}</dd>
 
                         <dt class="col-7 text-secondary small text-uppercase">Money issued (30d)</dt>
-                        <dd class="col-5 text-end fw-semibold">${{ number_format($grantStats['money_disbursed_30d'], 0) }}</dd>
+                        <dd class="col-5 text-end fw-semibold">{{ $formatMoney($grantStats['money_disbursed_30d'], 0) }}</dd>
                     </dl>
                     <p class="text-secondary small mt-3 mb-0">
                         Resource payouts are calculated from the latest 30 days of approved grant disbursements.
@@ -439,7 +443,7 @@
                                         <span class="badge bg-danger-subtle text-danger-emphasis text-uppercase small">
                                             {{ \Illuminate\Support\Str::headline($war->war_type) }}
                                         </span>
-                                        <div class="text-secondary small mt-1">Turns left: {{ number_format($war->turns_left) }}</div>
+                                        <div class="text-secondary small mt-1">Turns left: {{ $formatNumber($war->turns_left) }}</div>
                                     </div>
                                 </div>
                                 <div class="mt-2 text-secondary small">
@@ -453,11 +457,11 @@
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <span>Infra loss</span>
-                                        <span>{{ number_format($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}</span>
+                                        <span>{{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}</span>
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <span>Bank loot</span>
-                                        <span>${{ number_format($war->att_money_looted + $war->def_money_looted, 0) }}</span>
+                                        <span>{{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}</span>
                                     </div>
                                     @if ($war->att_fortify || $war->def_fortify)
                                         <div class="d-flex justify-content-between">
@@ -538,10 +542,10 @@
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        {{ number_format($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}
+                                        {{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}
                                     </td>
                                     <td class="text-end">
-                                        ${{ number_format($war->att_money_looted + $war->def_money_looted, 0) }}
+                                        {{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}
                                     </td>
                                 </tr>
                             @empty
