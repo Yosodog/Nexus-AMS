@@ -17,6 +17,7 @@ use App\Services\PWHelperService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -54,7 +55,7 @@ class DashboardController extends Controller
             ? Carbon::parse($payload['generated_at'])
             : Carbon::now();
 
-        $metrics = $payload['metrics'] ?? $payload;
+        $metrics = $this->normalizeMetricsForView($payload['metrics'] ?? $payload);
 
         return view('admin.dashboard', array_merge($metrics, [
             'lastRefreshedAt' => $generatedAt,
@@ -181,7 +182,9 @@ class DashboardController extends Controller
             }
         }
 
-        $resourceTotals = $resourceTotalsCollection->all();
+        $resourceTotals = $resourceTotalsCollection
+            ->map(fn ($value) => (float) $value)
+            ->all();
 
         $militaryTotalsRecord = NationMilitary::query()
             ->join('nations', 'nations.id', '=', 'nation_military.nation_id')
@@ -500,7 +503,7 @@ class DashboardController extends Controller
                 'gross_domestic_product',
             ]);
 
-        $kpis = collect([
+        $kpis = [
             [
                 'icon' => 'bi bi-people-fill',
                 'bg' => 'text-bg-primary',
@@ -549,48 +552,281 @@ class DashboardController extends Controller
                 'helper' => "{$warsThisWeek} wars started last 7 days",
                 'trend' => $warTrend,
             ],
-        ]);
+        ];
 
         return [
             'kpis' => $kpis,
-            'totalMembers' => $totalMembers,
-            'totalCities' => $totalCities,
-            'poweredCities' => $poweredCities,
-            'powerCoverage' => $powerCoverage,
-            'totalInfrastructure' => $totalInfrastructure,
-            'avgInfrastructure' => $avgInfrastructure,
-            'topInfrastructureCities' => $topInfrastructureCities,
-            'cashTotal' => $cashTotal,
-            'cashPerMember' => $cashPerMember,
+            'totalMembers' => (int) $totalMembers,
+            'totalCities' => (int) $totalCities,
+            'poweredCities' => (int) $poweredCities,
+            'powerCoverage' => (float) $powerCoverage,
+            'totalInfrastructure' => (float) $totalInfrastructure,
+            'avgInfrastructure' => (float) $avgInfrastructure,
+            'topInfrastructureCities' => $topInfrastructureCities
+                ->map(fn ($city) => [
+                    'id' => (int) $city->id,
+                    'name' => (string) $city->name,
+                    'infrastructure' => (float) $city->infrastructure,
+                    'land' => (float) $city->land,
+                    'nation' => $city->nation ? [
+                        'id' => (int) $city->nation->id,
+                        'leader_name' => (string) $city->nation->leader_name,
+                        'nation_name' => (string) $city->nation->nation_name,
+                    ] : null,
+                ])
+                ->all(),
+            'cashTotal' => (float) $cashTotal,
+            'cashPerMember' => (float) $cashPerMember,
             'resourceTotals' => $resourceTotals,
-            'resourceTotalValue' => $resourceTotalValue,
-            'resourceValueBreakdown' => $resourceValueBreakdown,
+            'resourceTotalValue' => (float) $resourceTotalValue,
+            'resourceValueBreakdown' => collect($resourceValueBreakdown)
+                ->map(fn ($value) => (float) $value)
+                ->all(),
             'latestTradePriceDate' => $latestTradePrice?->date?->format('M d, Y'),
-            'militaryTotals' => $militaryTotals,
+            'militaryTotals' => collect($militaryTotals)->map(fn ($value) => (int) $value)->all(),
             'militaryReadiness' => $militaryReadiness->all(),
-            'militaryCapacity' => $militaryCapacity,
-            'militaryPerUnitAverage' => $militaryPerUnitAverage,
-            'averageMmrScore' => $averageMmrScore,
-            'mmrThreshold' => $mmrThreshold,
-            'mmrCompliantCount' => $mmrCompliantCount,
-            'mmrCoverage' => $mmrCoverage,
+            'militaryCapacity' => collect($militaryCapacity)->map(fn ($value) => (int) $value)->all(),
+            'militaryPerUnitAverage' => collect($militaryPerUnitAverage)->map(fn ($value) => (float) $value)->all(),
+            'averageMmrScore' => (float) $averageMmrScore,
+            'mmrThreshold' => (int) $mmrThreshold,
+            'mmrCompliantCount' => (int) $mmrCompliantCount,
+            'mmrCoverage' => (float) $mmrCoverage,
             'mmrDistribution' => $mmrDistribution,
             'taxMoneyDaily' => $taxMoneyDaily,
             'taxResourceDaily' => $taxResourceDaily,
-            'taxMoneyThisWeek' => $taxMoneyThisWeek,
+            'taxMoneyThisWeek' => (float) $taxMoneyThisWeek,
             'taxMoneyTrend' => $taxMoneyTrend,
             'warDaily' => $warDaily,
-            'warsThisWeek' => $warsThisWeek,
+            'warsThisWeek' => (int) $warsThisWeek,
             'warTrend' => $warTrend,
-            'activeWars' => $activeWars,
-            'activeWarDetails' => $activeWarDetails,
-            'recentWars' => $recentWars,
-            'loanStats' => $loanStats,
-            'grantStats' => $grantStats,
-            'topCashHolders' => $topCashHolders,
-            'topScoringNations' => $topScoringNations,
+            'activeWars' => (int) $activeWars,
+            'loanStats' => [
+                'pending' => (int) $loanStats['pending'],
+                'active' => (int) $loanStats['active'],
+                'paid' => (int) $loanStats['paid'],
+                'outstanding_balance' => (float) $loanStats['outstanding_balance'],
+                'avg_interest' => $loanStats['avg_interest'] !== null ? (float) $loanStats['avg_interest'] : null,
+                'avg_term' => $loanStats['avg_term'] !== null ? (float) $loanStats['avg_term'] : null,
+            ],
+            'grantStats' => [
+                'pending' => (int) $grantStats['pending'],
+                'approved_this_week' => (int) $grantStats['approved_this_week'],
+                'approved_total' => (int) $grantStats['approved_total'],
+                'money_disbursed_30d' => (float) $grantStats['money_disbursed_30d'],
+            ],
+            'topCashHolders' => $topCashHolders
+                ->map(fn ($holder) => [
+                    'nation_id' => (int) $holder->nation_id,
+                    'leader_name' => (string) $holder->leader_name,
+                    'nation_name' => (string) $holder->nation_name,
+                    'money' => (float) $holder->money,
+                    'snapshot_at' => $this->serializeDate($holder->snapshot_at),
+                ])
+                ->values()
+                ->all(),
+            'topScoringNations' => $topScoringNations
+                ->map(fn ($nation) => [
+                    'id' => (int) $nation->id,
+                    'leader_name' => (string) $nation->leader_name,
+                    'nation_name' => (string) $nation->nation_name,
+                    'score' => (float) $nation->score,
+                    'num_cities' => (int) $nation->num_cities,
+                ])
+                ->values()
+                ->all(),
+            'activeWarDetails' => $activeWarDetails
+                ->map(fn ($war) => [
+                    'id' => (int) $war->id,
+                    'att_id' => (int) $war->att_id,
+                    'def_id' => (int) $war->def_id,
+                    'war_type' => (string) $war->war_type,
+                    'turns_left' => (int) $war->turns_left,
+                    'att_points' => (int) $war->att_points,
+                    'def_points' => (int) $war->def_points,
+                    'att_resistance' => (int) $war->att_resistance,
+                    'def_resistance' => (int) $war->def_resistance,
+                    'att_money_looted' => (float) $war->att_money_looted,
+                    'def_money_looted' => (float) $war->def_money_looted,
+                    'att_infra_destroyed' => (float) $war->att_infra_destroyed,
+                    'def_infra_destroyed' => (float) $war->def_infra_destroyed,
+                    'att_fortify' => (bool) $war->att_fortify,
+                    'def_fortify' => (bool) $war->def_fortify,
+                    'attacker' => $war->attacker ? [
+                        'id' => (int) $war->attacker->id,
+                        'leader_name' => (string) $war->attacker->leader_name,
+                    ] : null,
+                    'defender' => $war->defender ? [
+                        'id' => (int) $war->defender->id,
+                        'leader_name' => (string) $war->defender->leader_name,
+                    ] : null,
+                ])
+                ->values()
+                ->all(),
+            'recentWars' => $recentWars
+                ->map(fn ($war) => [
+                    'id' => (int) $war->id,
+                    'date' => $this->serializeDate($war->date),
+                    'att_id' => (int) $war->att_id,
+                    'def_id' => (int) $war->def_id,
+                    'winner_id' => $war->winner_id !== null ? (int) $war->winner_id : null,
+                    'att_infra_destroyed' => (float) $war->att_infra_destroyed,
+                    'def_infra_destroyed' => (float) $war->def_infra_destroyed,
+                    'att_money_looted' => (float) $war->att_money_looted,
+                    'def_money_looted' => (float) $war->def_money_looted,
+                    'attacker' => $war->attacker ? [
+                        'id' => (int) $war->attacker->id,
+                        'leader_name' => (string) $war->attacker->leader_name,
+                    ] : null,
+                    'defender' => $war->defender ? [
+                        'id' => (int) $war->defender->id,
+                        'leader_name' => (string) $war->defender->leader_name,
+                    ] : null,
+                ])
+                ->values()
+                ->all(),
             'memberNationIds' => $memberNationIds,
         ];
+    }
+
+    /**
+     * Normalize cached dashboard payloads so first render and refresh share the same shape.
+     *
+     * @param  array<string, mixed>  $metrics
+     * @return array<string, mixed>
+     */
+    private function normalizeMetricsForView(array $metrics): array
+    {
+        $metrics['topInfrastructureCities'] = $this->objectCollection(
+            $metrics['topInfrastructureCities'] ?? [],
+            fn (array $city): object => (object) [
+                'id' => (int) ($city['id'] ?? 0),
+                'name' => (string) ($city['name'] ?? ''),
+                'infrastructure' => (float) ($city['infrastructure'] ?? 0),
+                'land' => (float) ($city['land'] ?? 0),
+                'nation' => isset($city['nation']) && is_array($city['nation'])
+                    ? (object) [
+                        'id' => (int) ($city['nation']['id'] ?? 0),
+                        'leader_name' => (string) ($city['nation']['leader_name'] ?? ''),
+                        'nation_name' => (string) ($city['nation']['nation_name'] ?? ''),
+                    ]
+                    : null,
+            ]
+        );
+
+        $metrics['topCashHolders'] = $this->objectCollection(
+            $metrics['topCashHolders'] ?? [],
+            fn (array $holder): object => (object) [
+                'nation_id' => (int) ($holder['nation_id'] ?? 0),
+                'leader_name' => (string) ($holder['leader_name'] ?? ''),
+                'nation_name' => (string) ($holder['nation_name'] ?? ''),
+                'money' => (float) ($holder['money'] ?? 0),
+                'snapshot_at' => ! empty($holder['snapshot_at']) ? Carbon::parse($holder['snapshot_at']) : null,
+            ]
+        );
+
+        $metrics['topScoringNations'] = $this->objectCollection(
+            $metrics['topScoringNations'] ?? [],
+            fn (array $nation): object => (object) [
+                'id' => (int) ($nation['id'] ?? 0),
+                'leader_name' => (string) ($nation['leader_name'] ?? ''),
+                'nation_name' => (string) ($nation['nation_name'] ?? ''),
+                'score' => (float) ($nation['score'] ?? 0),
+                'num_cities' => (int) ($nation['num_cities'] ?? 0),
+            ]
+        );
+
+        $metrics['activeWarDetails'] = $this->objectCollection(
+            $metrics['activeWarDetails'] ?? [],
+            fn (array $war): object => (object) [
+                'id' => (int) ($war['id'] ?? 0),
+                'att_id' => (int) ($war['att_id'] ?? 0),
+                'def_id' => (int) ($war['def_id'] ?? 0),
+                'war_type' => (string) ($war['war_type'] ?? ''),
+                'turns_left' => (int) ($war['turns_left'] ?? 0),
+                'att_points' => (int) ($war['att_points'] ?? 0),
+                'def_points' => (int) ($war['def_points'] ?? 0),
+                'att_resistance' => (int) ($war['att_resistance'] ?? 0),
+                'def_resistance' => (int) ($war['def_resistance'] ?? 0),
+                'att_money_looted' => (float) ($war['att_money_looted'] ?? 0),
+                'def_money_looted' => (float) ($war['def_money_looted'] ?? 0),
+                'att_infra_destroyed' => (float) ($war['att_infra_destroyed'] ?? 0),
+                'def_infra_destroyed' => (float) ($war['def_infra_destroyed'] ?? 0),
+                'att_fortify' => (bool) ($war['att_fortify'] ?? false),
+                'def_fortify' => (bool) ($war['def_fortify'] ?? false),
+                'attacker' => isset($war['attacker']) && is_array($war['attacker'])
+                    ? (object) [
+                        'id' => (int) ($war['attacker']['id'] ?? 0),
+                        'leader_name' => (string) ($war['attacker']['leader_name'] ?? ''),
+                    ]
+                    : null,
+                'defender' => isset($war['defender']) && is_array($war['defender'])
+                    ? (object) [
+                        'id' => (int) ($war['defender']['id'] ?? 0),
+                        'leader_name' => (string) ($war['defender']['leader_name'] ?? ''),
+                    ]
+                    : null,
+            ]
+        );
+
+        $metrics['recentWars'] = $this->objectCollection(
+            $metrics['recentWars'] ?? [],
+            fn (array $war): object => (object) [
+                'id' => (int) ($war['id'] ?? 0),
+                'date' => ! empty($war['date']) ? Carbon::parse($war['date']) : null,
+                'att_id' => (int) ($war['att_id'] ?? 0),
+                'def_id' => (int) ($war['def_id'] ?? 0),
+                'winner_id' => isset($war['winner_id']) ? (int) $war['winner_id'] : null,
+                'att_infra_destroyed' => (float) ($war['att_infra_destroyed'] ?? 0),
+                'def_infra_destroyed' => (float) ($war['def_infra_destroyed'] ?? 0),
+                'att_money_looted' => (float) ($war['att_money_looted'] ?? 0),
+                'def_money_looted' => (float) ($war['def_money_looted'] ?? 0),
+                'attacker' => isset($war['attacker']) && is_array($war['attacker'])
+                    ? (object) [
+                        'id' => (int) ($war['attacker']['id'] ?? 0),
+                        'leader_name' => (string) ($war['attacker']['leader_name'] ?? ''),
+                    ]
+                    : null,
+                'defender' => isset($war['defender']) && is_array($war['defender'])
+                    ? (object) [
+                        'id' => (int) ($war['defender']['id'] ?? 0),
+                        'leader_name' => (string) ($war['defender']['leader_name'] ?? ''),
+                    ]
+                    : null,
+            ]
+        );
+
+        return $metrics;
+    }
+
+    /**
+     * @param  iterable<mixed>  $items
+     * @param  callable(array<string, mixed>): object  $mapper
+     * @return Collection<int, object>
+     */
+    private function objectCollection(iterable $items, callable $mapper): Collection
+    {
+        return collect($items)
+            ->map(function ($item) use ($mapper) {
+                if (is_object($item)) {
+                    return $item;
+                }
+
+                return $mapper(is_array($item) ? $item : []);
+            })
+            ->values();
+    }
+
+    private function serializeDate(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format(\DateTimeInterface::ATOM);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        return null;
     }
 
     /**

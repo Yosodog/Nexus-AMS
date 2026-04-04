@@ -73,7 +73,7 @@ class GrantService
         }
 
         // Run alliance + custom checks
-        $validator = new NationEligibilityValidator($nation);
+        $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
         $validator->validateAllianceMembership();
 
         $requirements = $grant->validation_rules ?? [];

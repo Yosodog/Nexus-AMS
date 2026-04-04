@@ -108,7 +108,7 @@ class CityGrantService
             throw ValidationException::withMessages(["You've already gotten that city grant"]);
         }
 
-        $validator = new NationEligibilityValidator($nation);
+        $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
 
         $validator->validateAllianceMembership();
         // $validator->validateGovernmentType($requirements["government_type"]);

@@ -2,7 +2,7 @@
 
 namespace App\DataTransferObjects\WarSim;
 
-final class WarSimContextData
+final readonly class WarSimContextData
 {
     public function __construct(
         public string $warType,

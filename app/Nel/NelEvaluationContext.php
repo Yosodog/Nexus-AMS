@@ -2,15 +2,15 @@
 
 namespace App\Nel;
 
-final class NelEvaluationContext
+final readonly class NelEvaluationContext
 {
     /**
      * @param  array<string, mixed>  $variables
      * @param  array<string, callable>  $helpers
      */
     public function __construct(
-        public readonly array $variables,
-        public readonly array $helpers,
-        public readonly VariableResolver $resolver
+        public array $variables,
+        public array $helpers,
+        public VariableResolver $resolver
     ) {}
 }

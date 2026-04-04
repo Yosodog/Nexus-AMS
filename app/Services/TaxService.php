@@ -192,14 +192,14 @@ class TaxService
                 ->avg('total');
 
             return [
-                'total_money' => $sums->money,
+                'total_money' => (float) ($sums->money ?? 0),
                 'top_resource' => collect($resources)
                     ->mapWithKeys(fn ($res) => [$res => $sums->$res])
                     ->sortDesc()
                     ->keys()
                     ->first(),
-                'transaction_count' => $transactionCount,
-                'average_daily_money' => $dailyAvg,
+                'transaction_count' => (int) $transactionCount,
+                'average_daily_money' => (float) ($dailyAvg ?? 0),
             ];
         });
     }
@@ -232,13 +232,15 @@ class TaxService
             if ($formatForChart) {
                 $data[$res] = [
                     'labels' => $results->pluck('day')->toArray(),
-                    'data' => $results->pluck($res)->toArray(),
+                    'data' => $results->pluck($res)
+                        ->map(fn ($value) => (float) $value)
+                        ->toArray(),
                 ];
             } else {
                 $data[$res] = $results->map(fn ($row) => [
                     'day' => $row->day,
-                    'total' => $row->$res,
-                ]);
+                    'total' => (float) ($row->$res ?? 0),
+                ])->all();
             }
         }
 

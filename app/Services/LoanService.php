@@ -94,7 +94,7 @@ class LoanService
      */
     public function validateLoanEligibility(Nation $nation, Account $account): bool
     {
-        $validator = new NationEligibilityValidator($nation);
+        $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
         $validator->validateAllianceMembership();
 
         if ($nation->id !== $account->nation_id) {

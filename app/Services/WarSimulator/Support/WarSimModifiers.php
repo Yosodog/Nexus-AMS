@@ -2,7 +2,7 @@
 
 namespace App\Services\WarSimulator\Support;
 
-final class WarSimModifiers
+final readonly class WarSimModifiers
 {
     public function __construct(
         public float $warTypeInfraFactor,

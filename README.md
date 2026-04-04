@@ -21,8 +21,8 @@ Nexus AMS is built around day-to-day alliance operations rather than a single fe
 
 ## Current Stack
 
-- PHP 8.4
-- Laravel 12
+- PHP 8.5
+- Laravel 13
 - MySQL as the default and primary supported database path
 - Blade views for the UI
 - Tailwind CSS + DaisyUI 4 for the user-facing side
@@ -57,7 +57,7 @@ composer run dev
 
 Minimum local requirements:
 
-- PHP 8.4+
+- PHP 8.5+
 - Composer
 - Node.js 18+
 - MySQL 8+ or compatible MariaDB

@@ -2,7 +2,7 @@
 
 namespace App\DataTransferObjects\WarSim;
 
-final class WarSimActionData
+final readonly class WarSimActionData
 {
     public function __construct(
         public string $type,

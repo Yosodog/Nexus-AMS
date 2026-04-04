@@ -2,10 +2,10 @@
 
 namespace App\Nel\Ast;
 
-final class UnaryOpNode implements ExpressionNode
+final readonly class UnaryOpNode implements ExpressionNode
 {
     public function __construct(
-        public readonly string $operator,
-        public readonly ExpressionNode $operand
+        public string $operator,
+        public ExpressionNode $operand
     ) {}
 }
