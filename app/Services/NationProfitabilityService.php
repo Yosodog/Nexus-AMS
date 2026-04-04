@@ -266,6 +266,11 @@ class NationProfitabilityService
             ->delete();
     }
 
+    public function shouldStoreSnapshotForNation(Nation $nation): bool
+    {
+        return $this->isEligibleNation($nation);
+    }
+
     /**
      * @param  array<string, float>|null  $resourcePrices
      * @return array<string, mixed>

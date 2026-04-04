@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Nation;
+use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -30,7 +31,7 @@ class CreateNationJob implements ShouldQueue
     /**
      * The subscription doesn't give us everything we need, so we'll just query the API to get all the info. Weird, but I don't care.
      */
-    public function handle(): void
+    public function handle(NationProfitabilityService $profitabilityService): void
     {
         foreach ($this->nationsData as $nationData) {
             $nationId = $nationData['id'] ?? null;
@@ -46,7 +47,11 @@ class CreateNationJob implements ShouldQueue
                     // Use updateFromAPI() to create the nation
                     $nation = Nation::updateFromAPI($nationModel);
 
-                    RefreshNationProfitabilitySnapshotJob::dispatch((int) $nation->id);
+                    if ($profitabilityService->shouldStoreSnapshotForNation($nation)) {
+                        RefreshNationProfitabilitySnapshotJob::dispatch((int) $nation->id);
+                    } else {
+                        $profitabilityService->deleteStoredSnapshotForNationId((int) $nation->id);
+                    }
                 });
             } catch (LockTimeoutException $e) {
                 $this->release(10);

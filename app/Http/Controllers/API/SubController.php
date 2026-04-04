@@ -233,7 +233,11 @@ class SubController extends Controller
             $nationId = (int) $city->nation_id;
             $city->delete();
 
-            if ($nationId > 0) {
+            $nation = $nationId > 0
+                ? Nation::query()->select(['id', 'alliance_id', 'alliance_position', 'vacation_mode_turns'])->find($nationId)
+                : null;
+
+            if ($nation && app(NationProfitabilityService::class)->shouldStoreSnapshotForNation($nation)) {
                 RefreshNationProfitabilitySnapshotJob::dispatch($nationId);
             }
         }

@@ -6,6 +6,7 @@ use App\GraphQL\Models\City as CityGraphQL;
 use App\Models\City;
 use App\Models\Nation;
 use App\Services\CityQueryService;
+use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -35,7 +36,7 @@ class UpdateCityJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(NationProfitabilityService $profitabilityService): void
     {
         foreach ($this->citiesData as $cityData) {
             $cityFromApi = null;
@@ -55,7 +56,7 @@ class UpdateCityJob implements ShouldQueue
                     $this->ensureNationExists($nationId);
                     $this->upsertCity($cityData, $cityFromApi);
 
-                    if ($nationId) {
+                    if ($nationId && $this->shouldRefreshProfitabilitySnapshot($nationId, $profitabilityService)) {
                         RefreshNationProfitabilitySnapshotJob::dispatch((int) $nationId);
                     }
                 });
@@ -121,5 +122,16 @@ class UpdateCityJob implements ShouldQueue
                 }
             }
         }
+    }
+
+    private function shouldRefreshProfitabilitySnapshot(
+        int $nationId,
+        NationProfitabilityService $profitabilityService
+    ): bool {
+        $nation = Nation::query()
+            ->select(['id', 'alliance_id', 'alliance_position', 'vacation_mode_turns'])
+            ->find($nationId);
+
+        return $nation !== null && $profitabilityService->shouldStoreSnapshotForNation($nation);
     }
 }

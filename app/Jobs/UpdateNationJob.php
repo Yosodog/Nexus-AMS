@@ -6,6 +6,7 @@ use App\Events\NationAllianceChanged;
 use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
 use App\Services\BeigeAlertService;
+use App\Services\NationProfitabilityService;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,8 +35,10 @@ class UpdateNationJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(BeigeAlertService $beigeAlertService): void
-    {
+    public function handle(
+        BeigeAlertService $beigeAlertService,
+        NationProfitabilityService $profitabilityService
+    ): void {
         try {
             foreach ($this->nationsData as $nationData) {
                 $nationModel = new GraphQLNationModel;
@@ -87,7 +90,11 @@ class UpdateNationJob implements ShouldQueue
                 }
 
                 if ($updatedNation) {
-                    RefreshNationProfitabilitySnapshotJob::dispatch((int) $updatedNation->id);
+                    if ($profitabilityService->shouldStoreSnapshotForNation($updatedNation)) {
+                        RefreshNationProfitabilitySnapshotJob::dispatch((int) $updatedNation->id);
+                    } else {
+                        $profitabilityService->deleteStoredSnapshotForNationId((int) $updatedNation->id);
+                    }
                 }
             }
         } catch (Exception $e) {
