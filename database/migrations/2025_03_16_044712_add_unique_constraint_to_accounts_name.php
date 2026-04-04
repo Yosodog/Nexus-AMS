@@ -33,6 +33,14 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('accounts', function (Blueprint $table) {
+                $table->dropColumn('unique_name_key');
+            });
+
+            return;
+        }
+
         Schema::table('accounts', function (Blueprint $table) {
             $table->dropUnique(['unique_name_key']);
             $table->dropColumn('unique_name_key');
