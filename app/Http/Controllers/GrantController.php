@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplyGrantRequest;
 use App\Models\Grants;
+use App\Services\GrantRequirementService;
 use App\Services\GrantService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -25,13 +26,16 @@ class GrantController extends Controller
 
         $nation = Auth::user()->nation;
         $accounts = $nation->accounts ?? [];
+        $grantRequirementService = app(GrantRequirementService::class);
 
         $alreadyApplied = $grant->applications()
             ->where('nation_id', $nation->id)
             ->where('status', 'approved')
             ->exists();
 
-        return view('grants.show_grant', compact('grant', 'accounts', 'alreadyApplied'));
+        $eligibilityReport = $grantRequirementService->evaluate($grant->validation_rules, $nation);
+
+        return view('grants.show_grant', compact('grant', 'accounts', 'alreadyApplied', 'eligibilityReport'));
     }
 
     /**
