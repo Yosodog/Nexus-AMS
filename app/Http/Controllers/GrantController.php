@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class GrantController extends Controller
@@ -33,7 +34,23 @@ class GrantController extends Controller
             ->where('status', 'approved')
             ->exists();
 
-        $eligibilityReport = $grantRequirementService->evaluate($grant->validation_rules, $nation);
+        $inspection = $grantRequirementService->inspect($grant->validation_rules);
+
+        if ($inspection['errors'] !== []) {
+            Log::warning('Grant detail page encountered malformed stored validation rules.', [
+                'grant_id' => $grant->id,
+                'errors' => $inspection['errors'],
+                'nation_id' => $nation->id,
+            ]);
+        }
+
+        $eligibilityReport = $inspection['errors'] === []
+            ? $grantRequirementService->evaluate($inspection['normalized'], $nation)
+            : [
+                'passes' => false,
+                'failures' => ['This grant has invalid eligibility requirements. Please contact an administrator.'],
+                'summary' => ['Grant requirements are currently unavailable because the saved configuration is invalid.'],
+            ];
 
         return view('grants.show_grant', compact('grant', 'accounts', 'alreadyApplied', 'eligibilityReport'));
     }

@@ -16,6 +16,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -39,11 +40,17 @@ class GrantController
 
         $grants = Grants::orderBy('created_at', 'desc')->get()
             ->each(function (Grants $grant): void {
-                $grant->validation_rules = $this->grantRequirementService->normalize($grant->validation_rules);
-                $grant->setAttribute(
-                    'requirement_summary',
-                    $this->grantRequirementService->summarize($grant->validation_rules)
-                );
+                $inspection = $this->grantRequirementService->inspect($grant->validation_rules);
+
+                if ($inspection['errors'] !== []) {
+                    Log::warning('Grant has malformed stored validation rules.', [
+                        'grant_id' => $grant->id,
+                        'errors' => $inspection['errors'],
+                    ]);
+                }
+
+                $grant->validation_rules = $inspection['normalized'];
+                $grant->setAttribute('requirement_summary', $this->buildRequirementSummary($inspection['normalized'], $inspection['errors']));
             });
         $pendingRequests = GrantApplication::with('grant', 'nation', 'account')
             ->where('status', 'pending')
@@ -163,6 +170,20 @@ class GrantController
     private function valuesDiffer(mixed $before, mixed $after): bool
     {
         return $this->normalizeComparableValue($before) !== $this->normalizeComparableValue($after);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $normalizedRules
+     * @param  array<int, string>  $errors
+     * @return array<int, string>
+     */
+    private function buildRequirementSummary(?array $normalizedRules, array $errors): array
+    {
+        if ($errors !== []) {
+            return ['Stored grant requirements are invalid and need to be re-saved.'];
+        }
+
+        return $this->grantRequirementService->summarize($normalizedRules);
     }
 
     private function normalizeComparableValue(mixed $value): string
