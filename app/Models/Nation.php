@@ -316,6 +316,11 @@ class Nation extends Model
         return $this->hasOne(User::class, 'nation_id', 'id');
     }
 
+    public function buildRecommendation(): HasOne
+    {
+        return $this->hasOne(NationBuildRecommendation::class, 'nation_id');
+    }
+
     public function signIns(): HasMany
     {
         return $this->hasMany(NationSignIn::class, 'nation_id');
