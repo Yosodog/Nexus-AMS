@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use stdClass;
+use Throwable;
 
 class QueryService
 {
@@ -233,6 +234,17 @@ class QueryService
                             return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers);
                         }
 
+                        if ($this->shouldRetryResponse($response)) {
+                            return $this->retryTransientResponse(
+                                $response,
+                                $query,
+                                $variables,
+                                $retryCount,
+                                $delay,
+                                $headers
+                            );
+                        }
+
                         if ($response->successful()) {
                             $retryCount = 0;
                             $delay = $this->initialDelay;
@@ -240,15 +252,120 @@ class QueryService
                             return $response->json();
                         }
 
-                        Log::error('Query failed: '.$response->body());
-                        throw new PWQueryFailedException('Query failed: '.$response->body());
+                        $context = [
+                            'status' => $response->status(),
+                            'reason' => $response->reason(),
+                            'headers' => $response->headers(),
+                            'body' => $response->body(),
+                        ];
+
+                        Log::error('Query failed.', $context);
+
+                        $message = sprintf(
+                            'Query failed: status=%d reason=%s body=%s',
+                            $response->status(),
+                            $response->reason() ?: 'unknown',
+                            $response->body() !== '' ? $response->body() : '[empty]'
+                        );
+
+                        throw new PWQueryFailedException($message);
                     }
                 } catch (ConnectionException $e) {
                     Log::error('Connection exception: '.$e->getMessage());
                     throw new ConnectionException('Failed to connect to the Politics & War API.');
                 }
+            },
+            function ($reason) use (&$retryCount, &$delay, $query, $variables, $headers) {
+                return $this->retryRejectedRequest(
+                    $reason,
+                    $query,
+                    $variables,
+                    $retryCount,
+                    $delay,
+                    $headers
+                );
             }
         );
+    }
+
+    protected function shouldRetryResponse(Response $response): bool
+    {
+        return $response->serverError() || $response->status() === 408;
+    }
+
+    protected function retryTransientResponse(
+        Response $response,
+        string $query,
+        array $variables,
+        int &$retryCount,
+        int &$delay,
+        array $headers = []
+    ): PromiseInterface {
+        if ($retryCount >= $this->maxRetries) {
+            $message = sprintf(
+                'Query failed after retries: status=%d reason=%s body=%s',
+                $response->status(),
+                $response->reason() ?: 'unknown',
+                $response->body() !== '' ? $response->body() : '[empty]'
+            );
+
+            Log::error($message, [
+                'retryCount' => $retryCount,
+                'headers' => $response->headers(),
+            ]);
+
+            throw new PWQueryFailedException($message);
+        }
+
+        $waitSeconds = max(1, $delay);
+
+        Log::warning('Transient query failure, retrying request.', [
+            'status' => $response->status(),
+            'reason' => $response->reason(),
+            'retryCount' => $retryCount,
+            'nextDelaySeconds' => $waitSeconds,
+            'body' => $response->body(),
+        ]);
+
+        sleep($waitSeconds);
+        $retryCount++;
+        $delay *= 2;
+
+        return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers);
+    }
+
+    protected function retryRejectedRequest(
+        mixed $reason,
+        string $query,
+        array $variables,
+        int &$retryCount,
+        int &$delay,
+        array $headers = []
+    ): PromiseInterface {
+        $message = $reason instanceof Throwable ? $reason->getMessage() : (string) $reason;
+
+        if ($retryCount >= $this->maxRetries) {
+            Log::error('Query request rejected after retries.', [
+                'retryCount' => $retryCount,
+                'reason' => $message,
+            ]);
+
+            throw new ConnectionException("Failed to connect to the Politics & War API after retries: {$message}");
+        }
+
+        $waitSeconds = max(1, $delay);
+
+        Log::warning('Query request rejected, retrying.', [
+            'retryCount' => $retryCount,
+            'nextDelaySeconds' => $waitSeconds,
+            'reason' => $message,
+        ]);
+
+        sleep($waitSeconds);
+        $retryCount++;
+        $delay *= 2;
+
+        return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers);
     }
 
     protected function sleepForRateLimitRemaining(Response $response): void

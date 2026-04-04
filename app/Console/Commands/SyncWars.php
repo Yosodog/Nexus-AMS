@@ -8,7 +8,6 @@ use App\Jobs\SyncWarsJob;
 use App\Services\AllianceMembershipService;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
-use App\Services\SelectionSetHelper;
 use App\Services\SettingService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
@@ -56,7 +55,7 @@ class SyncWars extends Command
                         'active' => false,
                         'alliance_id' => $primaryAllianceId,
                     ])
-                    ->addNestedField('data', fn ($b) => $b->addFields(SelectionSetHelper::warSet()))
+                    ->addNestedField('data', fn ($b) => $b->addFields(['id']))
                     ->withPaginationInfo();
 
                 return $client->getPaginationInfo($builder);
