@@ -24,8 +24,6 @@ class UpdateCityJob implements ShouldQueue
 
     public array $citiesData;
 
-    public array $skips = ['nuke_date'];
-
     /**
      * Create a new job instance.
      */
@@ -96,7 +94,9 @@ class UpdateCityJob implements ShouldQueue
             $cityModel = City::getById($cityData['id']);
 
             foreach ($cityData as $key => $data) {
-                if (in_array($key, $this->skips)) {
+                if ($key === 'nuke_date') {
+                    $cityModel->$key = City::normalizeApiDateValue($data);
+
                     continue;
                 }
 

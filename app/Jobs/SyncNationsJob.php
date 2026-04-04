@@ -10,6 +10,7 @@
 
 namespace App\Jobs;
 
+use App\Models\City;
 use App\Services\NationQueryService;
 use Carbon\CarbonImmutable;
 use Exception;
@@ -492,6 +493,7 @@ class SyncNationsJob implements ShouldQueue
         foreach ($nation['cities'] as $city) {
             $cityArray = is_array($city) ? $city : (array) $city;
             $cityData = $this->mapValues($cityArray, self::CITY_COLUMNS);
+            $cityData = City::normalizeApiPayload($cityData);
             $cityData['nation_id'] = $nation['id'];
             $cityData['updated_at'] = $this->syncTimestampString;
             $cityData['created_at'] = $this->syncTimestampString;

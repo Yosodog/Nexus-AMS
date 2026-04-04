@@ -2,7 +2,9 @@
 
 namespace App\GraphQL\Models;
 
+use Carbon\CarbonImmutable;
 use stdClass;
+use Throwable;
 
 class City
 {
@@ -86,7 +88,7 @@ class City
         // $this->nation = $json->nation; // Uncomment for use
         $this->name = $json->name;
         $this->date = $json->date;
-        $this->nuke_date = isset($json->nuke_date) ? (string) $json->nuke_date : null;
+        $this->nuke_date = $this->normalizeNullableDate(isset($json->nuke_date) ? (string) $json->nuke_date : null);
         $this->infrastructure = $json->infrastructure;
         $this->land = $json->land;
         $this->powered = $json->powered;
@@ -117,5 +119,24 @@ class City
         $this->factory = $json->factory;
         $this->hangar = $json->hangar;
         $this->drydock = $json->drydock;
+    }
+
+    private function normalizeNullableDate(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $dateValue = trim($value);
+
+        if ($dateValue === '' || str_starts_with($dateValue, '-') || str_starts_with($dateValue, '0000-00-00')) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($dateValue)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

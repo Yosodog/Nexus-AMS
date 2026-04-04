@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\GraphQL\Models\City as CityGraphQL;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Throwable;
 
 class City extends Model
 {
@@ -25,7 +27,6 @@ class City extends Model
 
     public static function updateFromAPI(CityGraphQL $graphQLCityModel): self
     {
-        // Extract city data
         $cityData = collect((array) $graphQLCityModel)->only([
             'id',
             'nation_id',
@@ -64,8 +65,37 @@ class City extends Model
             'drydock',
         ])->toArray();
 
-        // Use `updateOrCreate` to handle both creation and update
+        $cityData = self::normalizeApiPayload($cityData);
+
         return self::updateOrCreate(['id' => $graphQLCityModel->id], $cityData);
+    }
+
+    public static function normalizeApiPayload(array $cityData): array
+    {
+        if (array_key_exists('nuke_date', $cityData)) {
+            $cityData['nuke_date'] = self::normalizeApiDateValue($cityData['nuke_date']);
+        }
+
+        return $cityData;
+    }
+
+    public static function normalizeApiDateValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $dateValue = trim((string) $value);
+
+        if ($dateValue === '' || str_starts_with($dateValue, '-') || str_starts_with($dateValue, '0000-00-00')) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($dateValue)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     public static function getById(int $id): self
