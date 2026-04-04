@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AllianceMembershipService;
 use App\Services\GrowthCircleService;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
@@ -10,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class GrowthCircleController extends Controller
 {
-    public function __construct(private readonly GrowthCircleService $service) {}
+    public function __construct(
+        private readonly GrowthCircleService $service,
+        private readonly AllianceMembershipService $membershipService
+    ) {}
 
     public function enroll(): RedirectResponse
     {
@@ -26,6 +30,13 @@ class GrowthCircleController extends Controller
         if (! $nation) {
             return back()->with([
                 'alert-message' => 'No nation linked to your account.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if (! $this->membershipService->contains($nation->alliance_id)) {
+            return back()->with([
+                'alert-message' => 'Only alliance members can enroll in Growth Circles.',
                 'alert-type' => 'error',
             ]);
         }
