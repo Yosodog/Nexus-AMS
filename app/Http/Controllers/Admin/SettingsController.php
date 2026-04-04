@@ -17,9 +17,10 @@ use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
-use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -741,7 +742,7 @@ class SettingsController extends Controller
 
         return collect($this->pendingRecoveryDefinitions())
             ->map(function (array $definition, string $type) use ($cutoff): array {
-                /** @var class-string<\Illuminate\Database\Eloquent\Model> $model */
+                /** @var class-string<Model> $model */
                 $model = $definition['model'];
 
                 $baseQuery = $model::query()->where('status', $definition['pending_status']);
