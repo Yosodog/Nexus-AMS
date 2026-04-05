@@ -189,6 +189,41 @@
             </div>
         </div>
 
+        {{-- Growth Circles --}}
+        @if (\App\Services\SettingService::isGrowthCirclesEnabled())
+            <div class="card bg-base-100 shadow border border-base-300">
+                <div class="card-body">
+                    <h3 class="card-title">Growth Circles</h3>
+
+                    @if ($growthCircleEnrollment)
+                        @if ($growthCircleEnrollment->suspended)
+                            <p class="text-sm text-warning">
+                                Your distributions are currently paused. Please contact an admin to resolve this.
+                            </p>
+                        @else
+                            <p class="text-sm text-base-content/70">
+                                You are enrolled in Growth Circles. You are taxed at 100% and the alliance automatically
+                                tops up your food and uranium every 2 hours.
+                            </p>
+                            <p class="text-xs text-base-content/50">Enrolled {{ $growthCircleEnrollment->enrolled_at->diffForHumans() }}</p>
+                        @endif
+                    @else
+                        <p class="text-sm text-base-content/70">
+                            Join Growth Circles to have 100% of your taxes go to the alliance in exchange for automatic
+                            food and uranium distributions every 2 hours.
+                        </p>
+                        <form method="POST" action="{{ route('growth-circles.enroll') }}">
+                            @csrf
+                            <button class="btn btn-primary btn-sm mt-2"
+                                    onclick="return confirm('Enroll in Growth Circles? You will be taxed at 100% and cannot unenroll yourself. Contact an admin to leave.')">
+                                Enroll in Growth Circles
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         {{-- Recent Transactions --}}
         <div class="card bg-base-100 shadow border border-base-300">
             <div class="card-body">

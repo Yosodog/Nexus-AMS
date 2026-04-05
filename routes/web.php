@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
+use App\Http\Controllers\Admin\GrowthCircleController as AdminGrowthCircleController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MarketController as AdminMarketController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
 use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
+use App\Http\Controllers\GrowthCircleController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LeaderboardsController;
@@ -160,6 +162,11 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         ->middleware(BlockWhenPWDown::class);
     Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll')
         ->middleware(BlockWhenPWDown::class);
+
+    // Growth Circles
+    Route::post('/growth-circles/enroll', [GrowthCircleController::class, 'enroll'])
+        ->name('growth-circles.enroll')
+        ->middleware([BlockWhenPWDown::class]);
 
     // MMR Assistant
     Route::post('/mmr-assistant/update', [DirectDepositController::class, 'updateMMRA'])
@@ -559,6 +566,16 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             'admin.rebuilding.reset'
         );
 
+        // Growth Circles
+        Route::get('/growth-circles', [AdminGrowthCircleController::class, 'index'])
+            ->name('admin.growth-circles.index');
+        Route::delete('/growth-circles/{nation}/remove', [AdminGrowthCircleController::class, 'remove'])
+            ->name('admin.growth-circles.remove');
+        Route::post('/growth-circles/{enrollment}/clear-suspension', [AdminGrowthCircleController::class, 'clearSuspension'])
+            ->name('admin.growth-circles.clear-suspension');
+        Route::get('/growth-circles/{enrollment}/distributions', [AdminGrowthCircleController::class, 'distributions'])
+            ->name('admin.growth-circles.distributions');
+
         Route::get('/defense/raids', [RaidController::class, 'index'])->name('admin.raids.index');
         Route::post('/defense/raids/no-raid', [RaidController::class, 'storeNoRaid'])->name(
             'admin.raids.no-raid.store'
@@ -629,6 +646,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
             'admin.settings.auto-withdraw'
         );
+        Route::post('/settings/growth-circles', [SettingsController::class, 'updateGrowthCircles'])
+            ->name('admin.settings.growth-circles');
         Route::post('/settings/backups', [SettingsController::class, 'updateBackups'])->name(
             'admin.settings.backups'
         );

@@ -237,6 +237,84 @@ class SettingService
         self::setValue('backups_enabled', $enabled ? 1 : 0);
     }
 
+    public static function isGrowthCirclesEnabled(): bool
+    {
+        $value = self::getValue('growth_circles_enabled');
+
+        if (is_null($value)) {
+            self::setGrowthCirclesEnabled(false);
+
+            return false;
+        }
+
+        return (bool) $value;
+    }
+
+    public static function setGrowthCirclesEnabled(bool $enabled): void
+    {
+        self::setValue('growth_circles_enabled', $enabled ? 1 : 0);
+    }
+
+    public static function getGrowthCircleTaxId(): int
+    {
+        return (int) (self::getValue('growth_circle_tax_id') ?? 0);
+    }
+
+    public static function setGrowthCircleTaxId(int $taxId): void
+    {
+        self::setValue('growth_circle_tax_id', $taxId);
+    }
+
+    public static function getGrowthCircleFallbackTaxId(): int
+    {
+        return (int) (self::getValue('growth_circle_fallback_tax_id') ?? 0);
+    }
+
+    public static function setGrowthCircleFallbackTaxId(int $taxId): void
+    {
+        self::setValue('growth_circle_fallback_tax_id', $taxId);
+    }
+
+    public static function getGrowthCircleSourceAccountId(): int
+    {
+        return (int) (self::getValue('growth_circle_source_account_id') ?? 0);
+    }
+
+    public static function setGrowthCircleSourceAccountId(int $accountId): void
+    {
+        self::setValue('growth_circle_source_account_id', $accountId);
+    }
+
+    public static function getGrowthCircleFoodPerCity(): int
+    {
+        return (int) (self::getValue('growth_circle_food_per_city') ?? 0);
+    }
+
+    public static function setGrowthCircleFoodPerCity(int $amount): void
+    {
+        self::setValue('growth_circle_food_per_city', $amount);
+    }
+
+    public static function getGrowthCircleUraniumPerCity(): int
+    {
+        return (int) (self::getValue('growth_circle_uranium_per_city') ?? 0);
+    }
+
+    public static function setGrowthCircleUraniumPerCity(int $amount): void
+    {
+        self::setValue('growth_circle_uranium_per_city', $amount);
+    }
+
+    public static function getGrowthCircleDiscordChannelId(): string
+    {
+        return (string) (self::getValue('growth_circle_discord_channel_id') ?? '');
+    }
+
+    public static function setGrowthCircleDiscordChannelId(string $channelId): void
+    {
+        self::setValue('growth_circle_discord_channel_id', $channelId);
+    }
+
     public static function isLoanPaymentsEnabled(): bool
     {
         $value = self::getValue('loan_payments_enabled');

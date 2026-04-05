@@ -43,4 +43,6 @@ return [
     'manage-spies',
     'view-market',
     'manage-market',
+    'view-growth-circles',
+    'manage-growth-circles',
 ];

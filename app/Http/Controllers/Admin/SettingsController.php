@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Http\Requests\Admin\UpdateGrowthCirclesRequest;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
@@ -306,6 +307,31 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $enabled ? 'Auto withdraw enabled.' : 'Auto withdraw disabled.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateGrowthCircles(UpdateGrowthCirclesRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        SettingService::setGrowthCirclesEnabled((bool) $validated['growth_circles_enabled']);
+        SettingService::setGrowthCircleTaxId((int) $validated['growth_circle_tax_id']);
+        SettingService::setGrowthCircleFallbackTaxId((int) $validated['growth_circle_fallback_tax_id']);
+        SettingService::setGrowthCircleSourceAccountId((int) $validated['growth_circle_source_account_id']);
+        SettingService::setGrowthCircleFoodPerCity((int) $validated['growth_circle_food_per_city']);
+        SettingService::setGrowthCircleUraniumPerCity((int) $validated['growth_circle_uranium_per_city']);
+        SettingService::setGrowthCircleDiscordChannelId($validated['growth_circle_discord_channel_id'] ?? '');
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'growth_circles_updated',
+            context: ['data' => $validated],
+            message: 'Growth Circles settings updated.'
+        );
+
+        return redirect()->route('admin.growth-circles.index')->with([
+            'alert-message' => 'Growth Circles settings saved.',
             'alert-type' => 'success',
         ]);
     }

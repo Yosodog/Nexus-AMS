@@ -6,7 +6,7 @@
         $financePending = ($pendingCounts['withdrawals'] ?? 0);
         $warsPending = ($pendingCounts['war_aid'] ?? 0) + ($pendingCounts['rebuilding'] ?? 0);
         $grantsActive = request()->routeIs('admin.grants.city', 'admin.grants');
-        $financeActive = request()->routeIs('admin.offshores.*', 'admin.finance.*', 'admin.payroll.*');
+        $financeActive = request()->routeIs('admin.offshores.*', 'admin.finance.*', 'admin.payroll.*', 'admin.growth-circles.*');
         $warsActive = request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.rebuilding.*', 'admin.raids.*', 'admin.beige-alerts.*');
         $intakeActive = request()->routeIs('admin.applications.*', 'admin.recruitment.*');
         $auditsActive = request()->routeIs('admin.audits.*');
@@ -190,6 +190,14 @@
                                         permission="view-market"
                                         :active="request()->routeIs('admin.market.*')">
                                 Alliance Market
+                            </x-nav.link>
+                        </li>
+                        <li class="nav-item">
+                            <x-nav.link href="{{ route('admin.growth-circles.index') }}"
+                                        icon="bi bi-graph-up-arrow ms-3"
+                                        permission="view-growth-circles"
+                                        :active="request()->routeIs('admin.growth-circles.*')">
+                                Growth Circles
                             </x-nav.link>
                         </li>
                     </ul>

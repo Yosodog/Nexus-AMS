@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DirectDepositLog;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use App\Models\NationSignIn;
 use App\Models\PayrollMember;
@@ -92,6 +93,7 @@ class NationDashboardService
                 ['steel', 'aluminum', 'gasoline', 'munitions', 'uranium', 'food'],
                 $taxes
             ),
+            'growthCircleEnrollment' => GrowthCircleEnrollment::where('nation_id', $nation->id)->first(),
         ];
     }
 
