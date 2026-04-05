@@ -19,7 +19,7 @@
             </div>
         @endif
 
-        <form method="post" action="{{ route("login") }}" class="">
+        <form method="post" action="{{ route("login") }}" class="" x-data="{ loading: false }" x-on:submit="loading = true">
             @csrf
 
             <div class="form-control">
@@ -69,7 +69,13 @@
             </div>
 
             <div class="card-actions flex-col gap-2">
-                <input type="submit" class="btn btn-primary w-full" value="Log in">
+                <button type="submit" class="btn btn-primary w-full" x-bind:disabled="loading">
+                    <span x-show="!loading">Log in</span>
+                    <span x-cloak x-show="loading" class="flex items-center gap-2">
+                        <span class="loading loading-spinner loading-xs"></span>
+                        <span>Logging in...</span>
+                    </span>
+                </button>
                 <p class="text-sm text-base-content/70 text-center">
                     New here?
                     <a class="link link-primary" href="{{ route('register') }}">Create an account</a>

@@ -156,7 +156,7 @@
             <div class="navbar-end shrink-0 gap-1 sm:gap-2 lg:w-auto lg:flex-1">
                 <!-- Theme Dropdown -->
                 <div class="dropdown dropdown-end">
-                    <div tabindex="0" role="button" class="btn btn-ghost btn-circle">
+                    <div tabindex="0" role="button" class="btn btn-ghost btn-circle" aria-label="Change theme">
                         <!-- Sun Icon -->
                         <svg class="theme-icon-sun h-6 w-6 fill-current sm:h-7 sm:w-7" xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24">

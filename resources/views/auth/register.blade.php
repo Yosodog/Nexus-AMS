@@ -13,7 +13,7 @@
             </div>
         @endif
 
-        <form method="post" action="{{ route("register") }}" class="space-y-4">
+        <form method="post" action="{{ route("register") }}" class="space-y-4" x-data="{ loading: false }" x-on:submit="loading = true">
             @csrf
 
             <div class="grid gap-4 md:grid-cols-2">
@@ -118,7 +118,13 @@
             </div>
 
             <div class="card-actions flex-col gap-2">
-                <input type="submit" class="btn btn-primary w-full" value="Register">
+                <button type="submit" class="btn btn-primary w-full" x-bind:disabled="loading">
+                    <span x-show="!loading">Register</span>
+                    <span x-cloak x-show="loading" class="flex items-center gap-2">
+                        <span class="loading loading-spinner loading-xs"></span>
+                        <span>Creating account...</span>
+                    </span>
+                </button>
                 <p class="text-sm text-base-content/70 text-center">
                     Already have an account?
                     <a class="link link-primary" href="{{ route('login') }}">Log in</a>
