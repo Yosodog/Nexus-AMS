@@ -30,7 +30,15 @@ class PageRenderer
 
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('HTML.Allowed', 'p,br,b,strong,i,em,u,ul,ol,li,a[href],img[src|alt],div,span,h1,h2,h3,h4,h5,h6,blockquote,pre,code,iframe[src|title]');
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true, 'data' => true]);
+        $config->set('HTML.SafeIframe', true);
+        $config->set('URI.SafeIframeRegexp', '%^(https?:)?//(www\.youtube(?:-nocookie)?\.com/embed/|youtu\.be/)%');
+
+        $purifier = new \HTMLPurifier($config);
+
+        return trim($purifier->purify($html));
     }
 
     /**
