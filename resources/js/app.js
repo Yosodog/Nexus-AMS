@@ -29,7 +29,6 @@ const applyTheme = (mode) => {
     const theme = resolveThemeMode(resolvedMode);
 
     document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-bs-theme', theme === 'night' ? 'dark' : 'light');
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.themeMode = resolvedMode;
 };
@@ -69,57 +68,13 @@ const compareSortableValues = (left, right) => {
     });
 };
 
-const closeModal = (modal) => {
-    if (!modal) {
-        return;
-    }
-
-    modal.dispatchEvent(new Event('hide.bs.modal'));
-
-    if (typeof modal.close === 'function' && modal.tagName === 'DIALOG') {
-        if (modal.open) {
-            modal.close();
-        }
-        modal.dispatchEvent(new Event('hidden.bs.modal'));
-        return;
-    }
-
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
-    modal.dispatchEvent(new Event('hidden.bs.modal'));
-};
-
-const openModal = (modal) => {
-    if (!modal) {
-        return;
-    }
-
-    modal.dispatchEvent(new Event('show.bs.modal'));
-
-    if (typeof modal.showModal === 'function' && modal.tagName === 'DIALOG') {
-        if (!modal.open) {
-            modal.showModal();
-        }
-        modal.dispatchEvent(new Event('shown.bs.modal'));
-        return;
-    }
-
-    modal.classList.add('show');
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-    modal.dispatchEvent(new Event('shown.bs.modal'));
-};
-
 const enableMobileTableScrolling = (root = document) => {
     if (window.innerWidth >= 768) {
         return;
     }
 
     root.querySelectorAll('main table').forEach((table) => {
-        if (table.closest('.overflow-x-auto, .table-responsive')) {
+        if (table.closest('.overflow-x-auto')) {
             return;
         }
 
@@ -127,19 +82,6 @@ const enableMobileTableScrolling = (root = document) => {
         wrapper.className = 'overflow-x-auto';
         table.parentNode.insertBefore(wrapper, table);
         wrapper.appendChild(table);
-    });
-};
-
-const enableBootstrapTooltipCompatibility = (root = document) => {
-    root.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-tooltip="true"]').forEach((element) => {
-        const title = element.getAttribute('title');
-        if (!title) {
-            return;
-        }
-
-        element.classList.add('tooltip');
-        element.setAttribute('data-tip', title);
-        element.dataset.tooltipReady = 'true';
     });
 };
 
@@ -229,68 +171,6 @@ const enableSortableTables = (root = document) => {
     });
 };
 
-const enableBootstrapModalCompatibility = () => {
-    if (document.body.dataset.modalCompatibilityBound === 'true') {
-        return;
-    }
-
-    document.body.dataset.modalCompatibilityBound = 'true';
-
-    document.addEventListener('click', (event) => {
-        const openTrigger = event.target.closest('[data-bs-toggle="modal"][data-bs-target]');
-        if (openTrigger) {
-            event.preventDefault();
-            openModal(document.querySelector(openTrigger.getAttribute('data-bs-target')));
-            return;
-        }
-
-        const closeTrigger = event.target.closest('[data-bs-dismiss="modal"]');
-        if (closeTrigger) {
-            event.preventDefault();
-            closeModal(closeTrigger.closest('.modal, dialog'));
-            return;
-        }
-
-        const backdrop = event.target.closest('.modal.show:not(dialog)');
-        if (backdrop && event.target === backdrop) {
-            closeModal(backdrop);
-        }
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') {
-            return;
-        }
-
-        document.querySelectorAll('.modal.show, dialog[open]').forEach((modal) => {
-            closeModal(modal);
-        });
-    });
-};
-
-const enableBootstrapCollapseCompatibility = () => {
-    if (document.body.dataset.collapseCompatibilityBound === 'true') {
-        return;
-    }
-
-    document.body.dataset.collapseCompatibilityBound = 'true';
-
-    document.addEventListener('click', (event) => {
-        const trigger = event.target.closest('[data-bs-toggle="collapse"][data-bs-target]');
-        if (!trigger) {
-            return;
-        }
-
-        event.preventDefault();
-        const target = document.querySelector(trigger.getAttribute('data-bs-target'));
-        if (!target) {
-            return;
-        }
-
-        target.classList.toggle('show');
-    });
-};
-
 const enableThemePicker = (root = document) => {
     const activeThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.dataset.themeMode || DEFAULT_THEME_MODE);
     applyTheme(activeThemeMode);
@@ -342,13 +222,9 @@ SYSTEM_DARK_QUERY.addEventListener('change', () => {
 
 const initAppUi = (root = document) => {
     enableMobileTableScrolling(root);
-    enableBootstrapTooltipCompatibility(root);
     enableSortableTables(root);
     enableThemePicker(root);
 };
-
-enableBootstrapModalCompatibility();
-enableBootstrapCollapseCompatibility();
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
