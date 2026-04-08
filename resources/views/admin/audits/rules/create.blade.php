@@ -3,30 +3,24 @@
 @section('title', 'Create Audit Rule')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h3 class="mb-1">New Audit Rule</h3>
-                    <p class="text-base-content/50 mb-0">Define a NEL expression against nations or cities.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="New Audit Rule" separator>
+        <x-slot:subtitle>Define a NEL expression against nations or cities.</x-slot:subtitle>
+    </x-header>
 
     <form method="POST" action="{{ route('admin.audits.rules.store') }}">
         @csrf
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                @include('admin.audits.rules._form')
-            </div>
-            <div class="card-footer flex justify-content-between">
-                <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="o-check me-1"></i>
-                    Save rule
-                </button>
-            </div>
-        </div>
+        <x-card title="Rule details" subtitle="Expressions are validated before save.">
+            @include('admin.audits.rules._form')
+
+            <x-slot:menu>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-ghost btn-sm">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <x-icon name="o-check" class="size-4" />
+                        Save rule
+                    </button>
+                </div>
+            </x-slot:menu>
+        </x-card>
     </form>
 @endsection

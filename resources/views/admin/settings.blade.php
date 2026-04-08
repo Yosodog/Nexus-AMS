@@ -1,506 +1,411 @@
 @extends('layouts.admin')
 
-@section("content")
+@section('content')
     <x-header title="Admin Settings" separator>
         <x-slot:subtitle>Control sync workflows, diagnostics, public-facing content, and operational toggles from one place.</x-slot:subtitle>
     </x-header>
 
-    {{-- Sync Settings Section --}}
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h4 class="mb-1">Data Synchronization</h4>
-            <p class="mb-0 text-sm text-base-content/50">Review manual sync controls, rolling progress, and operational status before forcing jobs.</p>
-        </div>
-        <a href="#" data-bs-toggle="collapse" data-bs-target="#syncHelp" class="btn btn-ghost btn-sm">
-            <x-icon name="o-question-mark-circle" class="size-4" />
-            Learn more
-        </a>
-    </div>
-
-    <div class="collapse mb-4" id="syncHelp">
-        <div class="alert alert-light border">
-                <p class="mb-2">
-                    {{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.
-                    However, these subscriptions are not guaranteed and may occasionally miss updates due to network or service disruptions.
-                </p>
-                <p class="mb-2">
-                    Full sync jobs are automatically scheduled and run periodically, so manual execution is rarely needed. Manual sync should only be used to correct known discrepancies.
-                </p>
-                <p class="mb-2">
-                    The <strong>Manual Nation Sync</strong> runs immediately and cancels any in-progress rolling nation sync. The <strong>Rolling Nation Sync</strong> is queued by the scheduler and staggers the workload across ~23 hours; use the status card below to see when the last rolling job ran and when the next one is scheduled. Nations below 500 score are only included on the sync on Mondays.
-                </p>
-                <p class="mb-2">
-                    Each sync fetches and updates all data for the selected type. Depending on system resources and queue activity, this can take anywhere from a few minutes to nearly an hour.
-                </p>
-                <p class="mb-0">
-                    <strong>Note:</strong> Running syncs consumes queue capacity and may delay other time-sensitive tasks like withdrawals, transfers, and in-game messaging. You can cancel a sync at any time.
-                </p>
-        </div>
-    </div>
-    <div class="row g-4">
-        <div class="col-md-6">
-            @include('components.admin.sync-card', [
-                'title' => 'Nation Sync (Manual)',
-                'batch' => $nationBatch,
-                'route' => route('admin.settings.sync.run'),
-            ])
-        </div>
-
-        <div class="col-md-6">
-            @include('components.admin.rolling-sync-card', [
-                'batch' => $rollingNationBatch,
-                'rollingSchedule' => $rollingSchedule,
-            ])
+            <h2 class="text-lg font-semibold">Data Synchronization</h2>
+            <p class="text-sm text-base-content/60">Review manual sync controls, rolling progress, and operational status before forcing jobs.</p>
         </div>
     </div>
 
-    <div class="row mt-4 g-4">
-        <div class="col-md-6">
-            @include('components.admin.sync-card', [
-                'title' => 'Alliance Sync',
-                'batch' => $allianceBatch,
-                'route' => route('admin.settings.sync.alliances'),
-            ])
-        </div>
-
-        <div class="col-md-6">
-            @include('components.admin.sync-card', [
-                'title' => 'War Sync',
-                'batch' => $warBatch,
-                'route' => route('admin.settings.sync.wars'),
-            ])
-        </div>
-    </div>
-
-    {{-- Other Settings Sections Go Below --}}
-    <div class="row mt-2 g-3">
-        <div class="col-md-12">
-            <h4 class="mb-2">Other Settings</h4>
-        </div>
-        <div class="col-12">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Pending Request Recovery</span>
-                    <span class="badge badge-warning">Diagnostics</span>
+    <details class="collapse collapse-arrow mb-6 border border-base-300 bg-base-100">
+        <summary class="collapse-title text-sm font-semibold">How the sync system works</summary>
+        <div class="collapse-content">
+            <div class="alert alert-info">
+                <div class="space-y-3 text-sm leading-6">
+                    <p>{{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.</p>
+                    <p>Full sync jobs are automatically scheduled and run periodically, so manual execution is rarely needed. Manual sync should only be used to correct known discrepancies.</p>
+                    <p>The <strong>Manual Nation Sync</strong> runs immediately and cancels any in-progress rolling nation sync. The <strong>Rolling Nation Sync</strong> is queued by the scheduler and staggers the workload across roughly 23 hours.</p>
+                    <p>Each sync fetches and updates all data for the selected type. Depending on queue activity, this can take anywhere from a few minutes to nearly an hour.</p>
+                    <p><strong>Note:</strong> Running syncs consumes queue capacity and may delay other time-sensitive tasks like withdrawals, transfers, and in-game messaging.</p>
                 </div>
-                <div class="card-body">
-                    <p class="text-base-content/50 mb-3">
-                        Use this only when a workflow is genuinely stuck. Releasing stale pending rows clears the single-pending lock so members can submit a fresh request.
-                    </p>
-                    <div class="alert alert-warning py-2 px-3 small">
-                        These actions do not approve anything. They force stale pending rows into a terminal state based on the workflow, such as denied, cancelled, or expired.
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
+            </div>
+        </div>
+    </details>
+
+    <div class="mb-6 grid gap-6 md:grid-cols-2">
+        @include('components.admin.sync-card', [
+            'title' => 'Nation Sync (Manual)',
+            'batch' => $nationBatch,
+            'route' => route('admin.settings.sync.run'),
+        ])
+
+        @include('components.admin.rolling-sync-card', [
+            'batch' => $rollingNationBatch,
+            'rollingSchedule' => $rollingSchedule,
+        ])
+
+        @include('components.admin.sync-card', [
+            'title' => 'Alliance Sync',
+            'batch' => $allianceBatch,
+            'route' => route('admin.settings.sync.alliances'),
+        ])
+
+        @include('components.admin.sync-card', [
+            'title' => 'War Sync',
+            'batch' => $warBatch,
+            'route' => route('admin.settings.sync.wars'),
+        ])
+    </div>
+
+    <div class="mb-4">
+        <h2 class="text-lg font-semibold">Other Settings</h2>
+        <p class="text-sm text-base-content/60">Operational controls, diagnostics, and public site content.</p>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <x-card title="Pending Request Recovery" subtitle="Use this only when a workflow is genuinely stuck." class="lg:col-span-2 border border-warning/40">
+            <x-slot:menu>
+                <span class="badge badge-warning">Diagnostics</span>
+            </x-slot:menu>
+
+            <div class="space-y-4">
+                <div class="alert alert-warning">
+                    <span class="text-sm">These actions do not approve anything. They force stale pending rows into a terminal state such as denied, cancelled, or expired.</span>
+                </div>
+
+                <div class="overflow-x-auto rounded-box border border-base-300">
+                    <table class="table table-zebra">
+                        <thead>
+                        <tr>
+                            <th scope="col">Workflow</th>
+                            <th scope="col">Pending</th>
+                            <th scope="col">Stale ({{ $stalePendingDefaultHours }}h+)</th>
+                            <th scope="col">Oldest Pending</th>
+                            <th scope="col">Force Release</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($pendingRecoveryItems as $item)
                             <tr>
-                                <th scope="col">Workflow</th>
-                                <th scope="col">Pending</th>
-                                <th scope="col">Stale ({{ $stalePendingDefaultHours }}h+)</th>
-                                <th scope="col">Oldest Pending</th>
-                                <th scope="col" style="width: 340px;">Force Release</th>
+                                <td class="font-semibold">{{ $item['label'] }}</td>
+                                <td>{{ number_format($item['totalPending']) }}</td>
+                                <td>
+                                    <span class="badge {{ $item['stalePending'] > 0 ? 'badge-warning' : 'badge-ghost' }}">
+                                        {{ number_format($item['stalePending']) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($item['oldestCreatedAt'])
+                                        <div>{{ $item['oldestCreatedAt']->format('M d, Y H:i') }}</div>
+                                        <div class="text-sm text-base-content/60">{{ $item['oldestCreatedAt']->diffForHumans() }}</div>
+                                    @else
+                                        <span class="text-sm text-base-content/60">None</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ route('admin.settings.pending-requests.release-stale') }}" class="flex flex-wrap items-end gap-2">
+                                        @csrf
+                                        <input type="hidden" name="type" value="{{ $item['type'] }}">
+                                        <label class="block space-y-2">
+                                            <span class="text-xs font-medium">Older than (hours)</span>
+                                            <input
+                                                type="number"
+                                                class="input input-bordered input-sm w-28"
+                                                id="olderThanHours-{{ $item['type'] }}"
+                                                name="older_than_hours"
+                                                min="1"
+                                                max="8760"
+                                                value="{{ old('older_than_hours', $stalePendingDefaultHours) }}"
+                                                required
+                                            >
+                                        </label>
+                                        <button class="btn btn-warning btn-outline btn-sm" type="submit">Release Stale</button>
+                                    </form>
+                                </td>
                             </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($pendingRecoveryItems as $item)
-                                <tr>
-                                    <td class="text-capitalize">{{ $item['label'] }}</td>
-                                    <td>{{ number_format($item['totalPending']) }}</td>
-                                    <td>
-                                        <span class="badge {{ $item['stalePending'] > 0 ? 'badge-warning' : 'badge-ghost' }}">
-                                            {{ number_format($item['stalePending']) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if($item['oldestCreatedAt'])
-                                            <div>{{ $item['oldestCreatedAt']->format('M d, Y H:i') }}</div>
-                                            <small class="text-base-content/50">{{ $item['oldestCreatedAt']->diffForHumans() }}</small>
-                                        @else
-                                            <span class="text-base-content/50">None</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <form method="POST" action="{{ route('admin.settings.pending-requests.release-stale') }}" class="flex gap-2 align-items-end">
-                                            @csrf
-                                            <input type="hidden" name="type" value="{{ $item['type'] }}">
-                                            <div>
-                                                <label class="form-label small mb-1" for="olderThanHours-{{ $item['type'] }}">Older than (hours)</label>
-                                                <input type="number"
-                                                       class="form-control form-control-sm"
-                                                       id="olderThanHours-{{ $item['type'] }}"
-                                                       name="older_than_hours"
-                                                       min="1"
-                                                       max="8760"
-                                                       value="{{ old('older_than_hours', $stalePendingDefaultHours) }}"
-                                                       required>
-                                            </div>
-                                            <button class="btn btn-outline-warning btn-sm mb-0" type="submit">
-                                                Release Stale
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </x-card>
+
+        @php
+            $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);
+            $highlightInputs = array_pad($highlightInputs, 3, '');
+        @endphp
+        <x-card title="Homepage Messaging" subtitle="Edit the public homepage copy for your alliance.">
+            <x-slot:menu>
+                <span class="badge badge-info">Public</span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.homepage') }}" class="space-y-4">
+                @csrf
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Headline</span>
+                    <input type="text" class="input input-bordered" id="homeHeadline" name="home_headline" value="{{ old('home_headline', $homepageSettings['headline'] ?? '') }}" maxlength="160" required>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Tagline</span>
+                    <input type="text" class="input input-bordered" id="homeTagline" name="home_tagline" value="{{ old('home_tagline', $homepageSettings['tagline'] ?? '') }}" maxlength="240" required>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">About blurb</span>
+                    <textarea class="textarea textarea-bordered min-h-28" id="homeAbout" name="home_about" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
+                    <span class="text-xs text-base-content/60">A short paragraph near the top of the page.</span>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Stats intro</span>
+                    <input type="text" class="input input-bordered" id="homeStatsIntro" name="home_stats_intro" value="{{ old('home_stats_intro', $homepageSettings['stats_intro'] ?? '') }}" maxlength="240" placeholder="A quick look at the alliance as it stands today.">
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Closing line</span>
+                    <input type="text" class="input input-bordered" id="homeClosingText" name="home_closing_text" value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300" placeholder="If this feels like the right fit, send in your application and come meet the team.">
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Hero badge</span>
+                    <input type="text" class="input input-bordered" id="homeHeroBadge" name="home_hero_badge" value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60" placeholder="Recruiting now">
+                    <span class="text-xs text-base-content/60">Short status label shown in the hero section.</span>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">CTA button label</span>
+                    <input type="text" class="input input-bordered" id="homeCtaLabel" name="home_cta_label" value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60" placeholder="Start your application">
+                    <span class="text-xs text-base-content/60">Text on the main call-to-action button.</span>
+                </label>
+
+                <div class="space-y-2">
+                    <div class="text-sm font-medium">Highlights (optional)</div>
+                    @foreach($highlightInputs as $highlight)
+                        <input type="text" class="input input-bordered w-full" name="home_highlights[]" value="{{ $highlight }}" maxlength="140" placeholder="e.g. Clear onboarding and quick responses">
+                    @endforeach
+                    <div class="text-xs text-base-content/60">Short points that tell recruits what they can expect.</div>
+                </div>
+
+                <button class="btn btn-primary" type="submit">Save Homepage Content</button>
+            </form>
+        </x-card>
+
+        @php
+            $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
+        @endphp
+        <x-card title="Favicon" subtitle="Upload a square icon to update the browser favicon across the site." class="{{ $canUploadFavicon ? '' : 'opacity-60' }}">
+            <x-slot:menu>
+                <span class="badge badge-ghost">Branding</span>
+            </x-slot:menu>
+
+            <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-box border border-base-300 bg-white">
+                        <img src="{{ $faviconUrl }}" alt="Current favicon" class="max-h-8 max-w-8">
                     </div>
+                    <div class="text-sm text-base-content/60">Current favicon preview</div>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            @php
-                $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);
-                $highlightInputs = array_pad($highlightInputs, 3, '');
-            @endphp
-            <div class="card shadow-sm h-100">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Homepage Messaging</span>
-                    <span class="badge badge-info">Public</span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Edit the public homepage copy for your alliance. Keep it specific to your group and focused on recruits.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.homepage') }}">
-                        @csrf
-                        <div class="mb-3">
-                            <label class="form-label" for="homeHeadline">Headline</label>
-                            <input type="text" class="form-control" id="homeHeadline" name="home_headline"
-                                   value="{{ old('home_headline', $homepageSettings['headline'] ?? '') }}" maxlength="160" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeTagline">Tagline</label>
-                            <input type="text" class="form-control" id="homeTagline" name="home_tagline"
-                                   value="{{ old('home_tagline', $homepageSettings['tagline'] ?? '') }}" maxlength="240" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeAbout">About blurb</label>
-                            <textarea class="form-control" id="homeAbout" name="home_about" rows="3" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
-                            <small class="text-base-content/50">A short paragraph near the top of the page.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeStatsIntro">Stats intro</label>
-                            <input type="text" class="form-control" id="homeStatsIntro" name="home_stats_intro"
-                                   value="{{ old('home_stats_intro', $homepageSettings['stats_intro'] ?? '') }}" maxlength="240"
-                                   placeholder="A quick look at the alliance as it stands today.">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeClosingText">Closing line</label>
-                            <input type="text" class="form-control" id="homeClosingText" name="home_closing_text"
-                                   value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300"
-                                   placeholder="If this feels like the right fit, send in your application and come meet the team.">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeHeroBadge">Hero badge</label>
-                            <input type="text" class="form-control" id="homeHeroBadge" name="home_hero_badge"
-                                   value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60"
-                                   placeholder="Recruiting now">
-                            <small class="text-base-content/50">Short status label shown in the hero section.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="homeCtaLabel">CTA button label</label>
-                            <input type="text" class="form-control" id="homeCtaLabel" name="home_cta_label"
-                                   value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60"
-                                   placeholder="Start your application">
-                            <small class="text-base-content/50">Text on the main call-to-action button.</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Highlights (optional)</label>
-                            @foreach($highlightInputs as $index => $highlight)
-                                <input type="text"
-                                       class="form-control mb-2"
-                                       name="home_highlights[]"
-                                       value="{{ $highlight }}"
-                                       maxlength="140"
-                                       placeholder="e.g. Clear onboarding and quick responses">
-                            @endforeach
-                            <small class="text-base-content/50">Short points that tell recruits what they can expect.</small>
-                        </div>
-                        <button class="btn btn-primary">Save Homepage Content</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            @php
-                $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
-            @endphp
-            <div class="card shadow-sm {{ $canUploadFavicon ? '' : 'opacity-50' }}">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Favicon</span>
-                    <span class="badge badge-ghost">Branding</span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Upload a square icon (PNG, ICO, SVG, or JPG) to update the browser favicon across the site.
-                    </p>
-                    <div class="flex align-items-center gap-3 mb-3">
-                        <div class="border rounded bg-white flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
-                            <img src="{{ $faviconUrl }}" alt="Current favicon" class="img-fluid" style="max-width: 32px; max-height: 32px;">
-                        </div>
-                        <div class="small text-base-content/50">
-                            Current favicon preview
-                        </div>
-                    </div>
-                    <form method="POST" action="{{ route('admin.settings.favicon') }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="mb-3">
-                            <label class="form-label" for="faviconUpload">Favicon file</label>
-                            <input type="file"
-                                   class="form-control"
-                                   id="faviconUpload"
-                                   name="favicon"
-                                   accept=".png,.ico,.svg,.jpg,.jpeg"
-                                   @disabled(! $canUploadFavicon)
-                                   required>
-                            <small class="text-base-content/50">Recommended: 32x32 or 64x64.</small>
-                        </div>
-                        <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
-                        @if (! $canUploadFavicon)
-                            <div class="form-text text-base-content/50 mt-2">
-                                Requires the View Diagnostic permission.
-                            </div>
-                        @endif
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Discord Verification</span>
-                    <span class="badge {{ $discordVerificationRequired ? 'badge-success' : 'badge-ghost' }}">
-                        {{ $discordVerificationRequired ? 'Required' : 'Optional' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Control whether members must complete Discord verification after in-game verification. When enabled,
-                        users without an active Discord link are redirected to the verification page.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.discord') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="require_discord_verification" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="requireDiscordVerification"
-                                   name="require_discord_verification" value="1" @checked($discordVerificationRequired)>
-                            <label class="form-check-label" for="requireDiscordVerification">Require Discord Verification</label>
-                        </div>
-                        <button class="btn btn-primary">Save Discord Setting</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Discord Alliance Departures</span>
-                    <span class="badge {{ $discordDepartureEnabled ? 'badge-success' : 'badge-ghost' }}">
-                        {{ $discordDepartureEnabled ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Send a Discord alert when a non-applicant leaves any alliance in our membership group.
-                        Defaults to the war alert channel if left blank.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.discord.departure') }}">
-                        @csrf
-                        <div class="mb-3">
-                            <label for="discordAllianceDepartureChannelId" class="form-label">Channel ID</label>
-                            <input type="text"
-                                   class="form-control"
-                                   id="discordAllianceDepartureChannelId"
-                                   name="discord_alliance_departure_channel_id"
-                                   value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}"
-                                   placeholder="e.g. 123456789012345678">
-                            <small class="text-base-content/50">Leave blank to reuse the war alert channel.</small>
-                        </div>
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="discord_alliance_departure_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="discordAllianceDepartureEnabled"
-                                   name="discord_alliance_departure_enabled" value="1" @checked($discordDepartureEnabled)>
-                            <label class="form-check-label" for="discordAllianceDepartureEnabled">Enable departure alerts</label>
-                        </div>
-                        <button class="btn btn-primary">Save Discord Departure Settings</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Auto Withdraw</span>
-                    <span class="badge {{ $autoWithdrawEnabled ? 'badge-success' : 'badge-ghost' }}">
-                        {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Global toggle for the automatic withdrawal scheduler. Disabling keeps member settings intact but stops scheduled runs.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.auto-withdraw') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="auto_withdraw_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="autoWithdrawEnabled"
-                                   name="auto_withdraw_enabled" value="1" @checked($autoWithdrawEnabled)>
-                            <label class="form-check-label" for="autoWithdrawEnabled">Enable Auto Withdraw</label>
-                        </div>
-                        <button class="btn btn-primary">Save Auto Withdraw Setting</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Backups</span>
-                    <span class="badge {{ $backupsEnabled ? 'badge-success' : 'badge-ghost' }}">
-                        {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Run application + database backups every 6 hours. Backups are stored in AWS S3 only.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.backups') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="backups_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="backupsEnabled"
-                                   name="backups_enabled" value="1" @checked($backupsEnabled)>
-                            <label class="form-check-label" for="backupsEnabled">Enable Backups</label>
-                        </div>
-                        <button class="btn btn-primary">Save Backup Setting</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Loan Payments</span>
-                    <span class="badge {{ $loanPaymentsEnabled ? 'badge-success' : 'badge-warning' }}">
-                        {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Pause required loan payments during war or special events. When paused, scheduled deductions and
-                        interest are frozen, and due dates shift forward when payments resume.
-                    </p>
-                    @if (! $loanPaymentsEnabled && $loanPaymentsPausedAt)
-                        <div class="alert alert-warning py-2 px-3 small mb-3">
-                            Paused since {{ $loanPaymentsPausedAt->format('M d, Y H:i') }}.
-                        </div>
+
+                <form method="POST" action="{{ route('admin.settings.favicon') }}" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
+                    <label class="block space-y-2">
+                        <span class="text-sm font-medium">Favicon file</span>
+                        <input
+                            type="file"
+                            class="file-input file-input-bordered"
+                            id="faviconUpload"
+                            name="favicon"
+                            accept=".png,.ico,.svg,.jpg,.jpeg"
+                            @disabled(! $canUploadFavicon)
+                            required
+                        >
+                        <span class="text-xs text-base-content/60">Recommended: 32x32 or 64x64.</span>
+                    </label>
+
+                    <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
+
+                    @if (! $canUploadFavicon)
+                        <div class="text-sm text-base-content/60">Requires the View Diagnostic permission.</div>
                     @endif
-                    <form method="POST" action="{{ route('admin.settings.loan-payments') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="loan_payments_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="loanPaymentsEnabled"
-                                   name="loan_payments_enabled" value="1" @checked($loanPaymentsEnabled)>
-                            <label class="form-check-label" for="loanPaymentsEnabled">Enable Loan Payments</label>
-                        </div>
-                        <button class="btn btn-primary">Save Loan Payment Setting</button>
-                    </form>
-                </div>
+                </form>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Account Inactivity Auto-Disable</span>
-                    <span class="badge {{ $userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost' }}">
-                        {{ $userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Automatically disable user accounts when there has been no activity for the configured number of days.
-                        Activity is based on each user's <code>last_active_at</code> timestamp.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.account-inactivity-auto-disable') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="user_inactivity_auto_disable_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="userInactivityAutoDisableEnabled"
-                                   name="user_inactivity_auto_disable_enabled" value="1"
-                                   @checked(old('user_inactivity_auto_disable_enabled', $userInactivityAutoDisableEnabled))>
-                            <label class="form-check-label" for="userInactivityAutoDisableEnabled">Enable automatic account disabling</label>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="userInactivityAutoDisableDays">Inactivity threshold (days)</label>
-                            <input type="number"
-                                   class="form-control"
-                                   id="userInactivityAutoDisableDays"
-                                   name="user_inactivity_auto_disable_days"
-                                   min="1"
-                                   max="3650"
-                                   value="{{ old('user_inactivity_auto_disable_days', $userInactivityAutoDisableDays) }}"
-                                   required>
-                            <small class="text-base-content/50">Default is 90 days (about 3 months).</small>
-                        </div>
-                        <button class="btn btn-primary">Save Inactivity Auto-Disable</button>
-                    </form>
-                </div>
+        </x-card>
+
+        <x-card title="Discord Verification" subtitle="Redirect users without an active Discord link after in-game verification.">
+            <x-slot:menu>
+                <span class="badge {{ $discordVerificationRequired ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $discordVerificationRequired ? 'Required' : 'Optional' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.discord') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="require_discord_verification" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="requireDiscordVerification" name="require_discord_verification" value="1" @checked($discordVerificationRequired)>
+                    <span class="label-text">Require Discord Verification</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Discord Setting</button>
+            </form>
+        </x-card>
+
+        <x-card title="Discord Alliance Departures" subtitle="Send a Discord alert when a non-applicant leaves any alliance in our membership group.">
+            <x-slot:menu>
+                <span class="badge {{ $discordDepartureEnabled ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $discordDepartureEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.discord.departure') }}" class="space-y-4">
+                @csrf
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Channel ID</span>
+                    <input type="text" class="input input-bordered" id="discordAllianceDepartureChannelId" name="discord_alliance_departure_channel_id" value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}" placeholder="e.g. 123456789012345678">
+                    <span class="text-xs text-base-content/60">Leave blank to reuse the war alert channel.</span>
+                </label>
+                <input type="hidden" name="discord_alliance_departure_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="discordAllianceDepartureEnabled" name="discord_alliance_departure_enabled" value="1" @checked($discordDepartureEnabled)>
+                    <span class="label-text">Enable departure alerts</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Discord Departure Settings</button>
+            </form>
+        </x-card>
+
+        <x-card title="Auto Withdraw" subtitle="Global toggle for the automatic withdrawal scheduler.">
+            <x-slot:menu>
+                <span class="badge {{ $autoWithdrawEnabled ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.auto-withdraw') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="auto_withdraw_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="autoWithdrawEnabled" name="auto_withdraw_enabled" value="1" @checked($autoWithdrawEnabled)>
+                    <span class="label-text">Enable Auto Withdraw</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Auto Withdraw Setting</button>
+            </form>
+        </x-card>
+
+        <x-card title="Backups" subtitle="Run application and database backups every 6 hours.">
+            <x-slot:menu>
+                <span class="badge {{ $backupsEnabled ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.backups') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="backups_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="backupsEnabled" name="backups_enabled" value="1" @checked($backupsEnabled)>
+                    <span class="label-text">Enable Backups</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Backup Setting</button>
+            </form>
+        </x-card>
+
+        <x-card title="Loan Payments" subtitle="Pause required loan payments during war or special events.">
+            <x-slot:menu>
+                <span class="badge {{ $loanPaymentsEnabled ? 'badge-success' : 'badge-warning' }}">
+                    {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
+                </span>
+            </x-slot:menu>
+
+            <div class="space-y-4">
+                @if (! $loanPaymentsEnabled && $loanPaymentsPausedAt)
+                    <div class="alert alert-warning">
+                        <span class="text-sm">Paused since {{ $loanPaymentsPausedAt->format('M d, Y H:i') }}.</span>
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('admin.settings.loan-payments') }}" class="space-y-4">
+                    @csrf
+                    <input type="hidden" name="loan_payments_enabled" value="0">
+                    <label class="label cursor-pointer justify-start gap-3">
+                        <input class="toggle toggle-primary" type="checkbox" id="loanPaymentsEnabled" name="loan_payments_enabled" value="1" @checked($loanPaymentsEnabled)>
+                        <span class="label-text">Enable Loan Payments</span>
+                    </label>
+                    <button class="btn btn-primary" type="submit">Save Loan Payment Setting</button>
+                </form>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Grant Approvals</span>
-                    <span class="badge {{ $grantApprovalsEnabled ? 'badge-success' : 'badge-warning' }}">
-                        {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Emergency kill switch for grant and city grant approvals. Requests can still be submitted,
-                        but approvals are blocked until re-enabled.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.grants.approvals') }}">
-                        @csrf
-                        <div class="form-check form-switch mb-3">
-                            <input type="hidden" name="grant_approvals_enabled" value="0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="grantApprovalsEnabled"
-                                   name="grant_approvals_enabled" value="1" @checked($grantApprovalsEnabled)>
-                            <label class="form-check-label" for="grantApprovalsEnabled">Enable Grant Approvals</label>
-                        </div>
-                        <button class="btn btn-primary">Save Grant Approval Setting</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <span>Audit Log Retention</span>
-                    <span class="badge badge-ghost">{{ $auditRetentionDays }} days</span>
-                </div>
-                <div class="card-body">
-                    <p class="text-base-content/50">
-                        Control how long audit log entries are retained before automatic pruning.
-                    </p>
-                    <form method="POST" action="{{ route('admin.settings.audit-retention') }}">
-                        @csrf
-                        <div class="mb-3">
-                            <label class="form-label" for="auditRetentionDays">Retention (days)</label>
-                            <input type="number"
-                                   class="form-control"
-                                   id="auditRetentionDays"
-                                   name="audit_log_retention_days"
-                                   min="1"
-                                   max="3650"
-                                   value="{{ old('audit_log_retention_days', $auditRetentionDays) }}"
-                                   required>
-                            <small class="text-base-content/50">Use 1–3650 days (up to 10 years).</small>
-                        </div>
-                        <button class="btn btn-primary">Save Audit Retention</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        </x-card>
+
+        <x-card title="Account Inactivity Auto-Disable" subtitle="Disable user accounts after a configurable period without activity.">
+            <x-slot:menu>
+                <span class="badge {{ $userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.account-inactivity-auto-disable') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="user_inactivity_auto_disable_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input
+                        class="toggle toggle-primary"
+                        type="checkbox"
+                        id="userInactivityAutoDisableEnabled"
+                        name="user_inactivity_auto_disable_enabled"
+                        value="1"
+                        @checked(old('user_inactivity_auto_disable_enabled', $userInactivityAutoDisableEnabled))
+                    >
+                    <span class="label-text">Enable automatic account disabling</span>
+                </label>
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Inactivity threshold (days)</span>
+                    <input
+                        type="number"
+                        class="input input-bordered"
+                        id="userInactivityAutoDisableDays"
+                        name="user_inactivity_auto_disable_days"
+                        min="1"
+                        max="3650"
+                        value="{{ old('user_inactivity_auto_disable_days', $userInactivityAutoDisableDays) }}"
+                        required
+                    >
+                    <span class="text-xs text-base-content/60">Default is 90 days (about 3 months).</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Inactivity Auto-Disable</button>
+            </form>
+        </x-card>
+
+        <x-card title="Grant Approvals" subtitle="Emergency kill switch for grant and city grant approvals.">
+            <x-slot:menu>
+                <span class="badge {{ $grantApprovalsEnabled ? 'badge-success' : 'badge-warning' }}">
+                    {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.grants.approvals') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="grant_approvals_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="grantApprovalsEnabled" name="grant_approvals_enabled" value="1" @checked($grantApprovalsEnabled)>
+                    <span class="label-text">Enable Grant Approvals</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Grant Approval Setting</button>
+            </form>
+        </x-card>
+
+        <x-card title="Audit Log Retention" :subtitle="$auditRetentionDays . ' days'">
+            <form method="POST" action="{{ route('admin.settings.audit-retention') }}" class="space-y-4">
+                @csrf
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Retention (days)</span>
+                    <input
+                        type="number"
+                        class="input input-bordered"
+                        id="auditRetentionDays"
+                        name="audit_log_retention_days"
+                        min="1"
+                        max="3650"
+                        value="{{ old('audit_log_retention_days', $auditRetentionDays) }}"
+                        required
+                    >
+                    <span class="text-xs text-base-content/60">Use 1–3650 days (up to 10 years).</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save Audit Retention</button>
+            </form>
+        </x-card>
     </div>
 @endsection

@@ -13,128 +13,111 @@
         };
     @endphp
 
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row mb-3">
-                <div class="col-sm-8">
-                    <h3 class="mb-0">Application #{{ $application->id }}</h3>
-                    <div class="text-base-content/50">Nation #{{ $application->nation_id }} &mdash; {{ $application->leader_name_snapshot }}</div>
-                </div>
-                <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
-                    <span class="badge {{ $statusClass }} px-3 py-2">{{ ucfirst(strtolower($statusValue)) }}</span>
-                    @can('manage-applications')
-                        @if($application->status === \App\Enums\ApplicationStatus::Pending)
-                            <form action="{{ route('admin.applications.cancel', $application) }}" method="POST" class="d-inline">
-                                @csrf
-                                <button type="submit" class="btn btn-outline-danger btn-sm ms-2"
-                                        onclick="return confirm('Cancel this application?')">
-                                    Cancel
-                                </button>
-                            </form>
+    <x-header :title="'Application #' . $application->id" separator>
+        <x-slot:subtitle>Nation #{{ $application->nation_id }} · {{ $application->leader_name_snapshot }}</x-slot:subtitle>
+        <x-slot:actions>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="badge {{ $statusClass }} badge-lg">{{ ucfirst(strtolower($statusValue)) }}</span>
+                @can('manage-applications')
+                    @if($application->status === \App\Enums\ApplicationStatus::Pending)
+                        <form action="{{ route('admin.applications.cancel', $application) }}" method="POST">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="btn btn-error btn-outline btn-sm"
+                                onclick="return confirm('Cancel this application?')"
+                            >
+                                Cancel
+                            </button>
+                        </form>
+                    @endif
+                @endcan
+            </div>
+        </x-slot:actions>
+    </x-header>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <div class="space-y-6">
+            <x-card title="Applicant">
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm">
+                    <dt class="font-semibold text-base-content/70">Leader</dt>
+                    <dd>{{ $application->leader_name_snapshot }}</dd>
+
+                    <dt class="font-semibold text-base-content/70">Nation</dt>
+                    <dd>
+                        <a href="https://politicsandwar.com/nation/id={{ $application->nation_id }}" target="_blank" rel="noopener" class="link link-primary">
+                            #{{ $application->nation_id }}
+                        </a>
+                    </dd>
+
+                    <dt class="font-semibold text-base-content/70">Discord</dt>
+                    <dd>
+                        <div>{{ $application->discord_username }}</div>
+                        <div class="text-base-content/60">{{ $application->discord_user_id }}</div>
+                    </dd>
+
+                    <dt class="font-semibold text-base-content/70">Channel</dt>
+                    <dd>{{ $application->discord_channel_id ?? '—' }}</dd>
+
+                    <dt class="font-semibold text-base-content/70">Created</dt>
+                    <dd>{{ $application->created_at?->toDayDateTimeString() ?? '—' }}</dd>
+                </dl>
+            </x-card>
+
+            <x-card title="Status">
+                <div class="space-y-4 text-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="font-semibold text-base-content/70">Current</span>
+                        <span class="badge {{ $statusClass }}">{{ ucfirst(strtolower($statusValue)) }}</span>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-base-content/70">Approved</div>
+                        <div>{{ $application->approved_at?->toDayDateTimeString() ?? '—' }}</div>
+                        @if($application->approved_by_discord_id)
+                            <div class="text-base-content/60">by {{ $application->approved_by_discord_id }}</div>
                         @endif
-                    @endcan
+                    </div>
+                    <div>
+                        <div class="font-semibold text-base-content/70">Denied</div>
+                        <div>{{ $application->denied_at?->toDayDateTimeString() ?? '—' }}</div>
+                        @if($application->denied_by_discord_id)
+                            <div class="text-base-content/60">by {{ $application->denied_by_discord_id }}</div>
+                        @endif
+                    </div>
+                    <div>
+                        <div class="font-semibold text-base-content/70">Cancelled</div>
+                        <div>{{ $application->cancelled_at?->toDayDateTimeString() ?? '—' }}</div>
+                        @if($application->cancelled_by_discord_id)
+                            <div class="text-base-content/60">by {{ $application->cancelled_by_discord_id }}</div>
+                        @endif
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Applicant</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-5">Leader</dt>
-                        <dd class="col-7">{{ $application->leader_name_snapshot }}</dd>
-
-                        <dt class="col-5">Nation</dt>
-                        <dd class="col-7">
-                            <a href="https://politicsandwar.com/nation/id={{ $application->nation_id }}" target="_blank" rel="noopener">
-                                #{{ $application->nation_id }}
-                            </a>
-                        </dd>
-
-                        <dt class="col-5">Discord</dt>
-                        <dd class="col-7">
-                            {{ $application->discord_username }}
-                            <div class="text-base-content/50 small">{{ $application->discord_user_id }}</div>
-                        </dd>
-
-                        <dt class="col-5">Channel</dt>
-                        <dd class="col-7">{{ $application->discord_channel_id ?? '—' }}</dd>
-
-                        <dt class="col-5">Created</dt>
-                        <dd class="col-7">{{ $application->created_at?->toDayDateTimeString() ?? '—' }}</dd>
-                    </dl>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Status</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <strong>Current:</strong>
-                            <span class="badge {{ $statusClass }}">{{ ucfirst(strtolower($statusValue)) }}</span>
-                        </li>
-                        <li class="mb-2">
-                            <strong>Approved:</strong>
-                            {{ $application->approved_at?->toDayDateTimeString() ?? '—' }}
-                            @if($application->approved_by_discord_id)
-                                <span class="text-base-content/50 small">by {{ $application->approved_by_discord_id }}</span>
-                            @endif
-                        </li>
-                        <li class="mb-2">
-                            <strong>Denied:</strong>
-                            {{ $application->denied_at?->toDayDateTimeString() ?? '—' }}
-                            @if($application->denied_by_discord_id)
-                                <span class="text-base-content/50 small">by {{ $application->denied_by_discord_id }}</span>
-                            @endif
-                        </li>
-                        <li class="mb-2">
-                            <strong>Cancelled:</strong>
-                            {{ $application->cancelled_at?->toDayDateTimeString() ?? '—' }}
-                            @if($application->cancelled_by_discord_id)
-                                <span class="text-base-content/50 small">by {{ $application->cancelled_by_discord_id }}</span>
-                            @endif
-                        </li>
-                    </ul>
-                </div>
-            </div>
+            </x-card>
         </div>
 
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Interview Transcript</h5>
-                    <span class="text-base-content/50 small">{{ $application->messages->count() }} messages</span>
-                </div>
-                <div class="card-body">
-                    @forelse($application->messages as $message)
-                        <div class="mb-3 p-3 rounded {{ $message->is_staff ? 'bg-body-secondary' : 'bg-body' }}">
-                            <div class="flex justify-content-between align-items-start">
-                                <div>
-                                    <strong>{{ $message->discord_username }}</strong>
-                                    <div class="text-base-content/50 small">{{ $message->discord_user_id }}</div>
-                                </div>
-                                <span class="text-base-content/50 small">{{ $message->sent_at?->toDayDateTimeString() ?? '—' }}</span>
+        <x-card title="Interview Transcript" :subtitle="$application->messages->count() . ' messages'">
+            <div class="space-y-4">
+                @forelse($application->messages as $message)
+                    <article class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm {{ $message->is_staff ? 'ring-1 ring-info/20 bg-info/5' : '' }}">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div class="font-semibold">{{ $message->discord_username }}</div>
+                                <div class="text-sm text-base-content/60">{{ $message->discord_user_id }}</div>
                             </div>
-                            @if($message->is_staff)
-                                <span class="badge badge-info mt-2">Staff</span>
-                            @endif
-                            <p class="mb-0 mt-2">{!! nl2br(e($message->content)) !!}</p>
+                            <div class="text-sm text-base-content/60">{{ $message->sent_at?->toDayDateTimeString() ?? '—' }}</div>
                         </div>
-                    @empty
-                        <div class="alert alert-info mb-0">
-                            No messages have been logged for this application yet.
-                        </div>
-                    @endforelse
-                </div>
+                        @if($message->is_staff)
+                            <span class="badge badge-info mt-3">Staff</span>
+                        @endif
+                        <div class="mt-3 whitespace-pre-line text-sm leading-6">{!! nl2br(e($message->content)) !!}</div>
+                    </article>
+                @empty
+                    <div class="alert alert-info">
+                        <x-icon name="o-information-circle" class="size-5" />
+                        <span>No messages have been logged for this application yet.</span>
+                    </div>
+                @endforelse
             </div>
-        </div>
+        </x-card>
     </div>
 @endsection
