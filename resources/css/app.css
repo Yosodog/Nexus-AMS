@@ -144,12 +144,30 @@
         @apply px-3 py-2 text-sm;
     }
 
-    .form-control {
-        @apply w-full rounded-md border border-base-300 bg-base-100 px-3 py-2;
+    .form-control,
+    .input.input-bordered,
+    .textarea.textarea-bordered {
+        @apply w-full rounded-xl border border-base-300/80 bg-base-200/55 px-3 py-2 text-base-content shadow-none outline-none transition duration-200;
+        @apply hover:border-base-content/20 focus:border-primary/40 focus:bg-base-100 focus:ring-4 focus:ring-primary/10;
     }
 
-    .form-select {
-        @apply w-full rounded-md border border-base-300 bg-base-100 px-3 py-2;
+    .form-select,
+    .select.select-bordered {
+        @apply w-full rounded-xl border border-base-300/80 bg-base-200/55 px-3 py-2 text-base-content shadow-none outline-none transition duration-200 appearance-none;
+        @apply hover:border-base-content/20 focus:border-primary/40 focus:bg-base-100 focus:ring-4 focus:ring-primary/10;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6' /%3E%3C/svg%3E");
+        background-position: right 0.9rem center;
+        background-repeat: no-repeat;
+        background-size: 1rem;
+        padding-right: 2.75rem;
+    }
+
+    .form-select[multiple],
+    .form-select[size]:not([size="1"]),
+    .select.select-bordered[multiple],
+    .select.select-bordered[size]:not([size="1"]) {
+        background-image: none;
+        padding-right: 1rem;
     }
 
     .form-control-sm,
@@ -166,7 +184,7 @@
     }
 
     .input-group-text {
-        @apply inline-flex items-center px-3 border border-base-300 bg-base-200 text-base-content/70;
+        @apply inline-flex items-center rounded-l-xl border border-base-300/80 bg-base-200/80 px-3 text-base-content/65;
     }
 
     .card {
@@ -276,7 +294,7 @@
 
     .badge.bg-primary { @apply bg-primary text-white border-transparent; }
     .badge.bg-success { @apply bg-success text-white border-transparent; }
-    .badge.bg-warning { @apply bg-warning text-black border-transparent; }
+    .badge.bg-warning { @apply bg-warning text-warning-content border-transparent; }
     .badge.bg-danger { @apply bg-error text-white border-transparent; }
     .badge.bg-secondary { @apply bg-base-200 text-base-content border-transparent; }
     .badge.bg-dark { @apply bg-neutral text-white border-transparent; }
@@ -335,12 +353,16 @@
         @apply flex items-center gap-2;
     }
 
-    .form-check-input {
+    .form-check-input:not([type="radio"]):not([role="switch"]) {
         @apply checkbox checkbox-sm;
     }
 
     .form-switch .form-check-input {
         @apply toggle toggle-primary;
+    }
+
+    .form-check-input[type="radio"] {
+        @apply radio radio-sm radio-primary;
     }
 
     .form-check-label {
@@ -469,6 +491,7 @@
     .fs-4 { font-size: 1.5rem; line-height: 2rem; }
     .text-capitalize { text-transform: capitalize; }
     .text-uppercase { text-transform: uppercase; }
+    .text-black { color: hsl(var(--bc)); }
     .text-white-50 { color: rgb(255 255 255 / 50%); }
     .text-dark { color: hsl(var(--bc)); }
     .text-body { color: hsl(var(--bc)); }

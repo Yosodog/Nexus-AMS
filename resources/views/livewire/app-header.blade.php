@@ -44,8 +44,8 @@
 @endphp
 
 <div>
-    <div class="mx-auto w-full max-w-[1600px] px-2 sm:px-4">
-        <x-nav sticky full-width class="relative overflow-visible rounded-b-box border-b border-base-300/60 bg-base-100/95 backdrop-blur">
+    <div class="w-full px-0">
+        <x-nav sticky class="relative overflow-visible border-b border-base-300/60 bg-base-100/95 backdrop-blur">
             <x-slot:brand>
                 <div class="flex items-center gap-2">
                     <label for="user-mobile-menu" class="btn btn-ghost btn-circle lg:hidden">
@@ -58,15 +58,15 @@
                 </div>
 
                 @if($showMemberNavigation)
-                    <div class="absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-1">
+                    <div class="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-1">
                         @foreach($mainLinks as $link)
-                            <a href="{{ $link['route'] }}" class="btn btn-sm {{ $link['active'] ? 'btn-primary' : 'btn-ghost' }} rounded-full" wire:navigate.hover>
+                            <a href="{{ $link['route'] }}" class="pointer-events-auto btn btn-sm {{ $link['active'] ? 'btn-primary' : 'btn-ghost' }} rounded-full" wire:navigate.hover>
                                 {{ $link['label'] }}
                             </a>
                         @endforeach
 
                         @foreach($groups as $group)
-                            <div class="dropdown dropdown-bottom">
+                            <div class="pointer-events-auto dropdown dropdown-bottom">
                                 <button tabindex="0" class="btn btn-sm {{ $group['active'] ? 'btn-primary' : 'btn-ghost' }} rounded-full">
                                     {{ $group['label'] }}
                                     <x-icon name="o-chevron-down" class="size-4" />
@@ -80,8 +80,8 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-2">
-                        <a href="{{ route('apply.show') }}" class="btn btn-sm rounded-full {{ request()->routeIs('apply.show') ? 'btn-primary' : 'btn-ghost' }}">Apply</a>
+                    <div class="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-2">
+                        <a href="{{ route('apply.show') }}" class="pointer-events-auto btn btn-sm rounded-full {{ request()->routeIs('apply.show') ? 'btn-primary' : 'btn-ghost' }}">Apply</a>
                     </div>
                 @endif
             </x-slot:brand>
