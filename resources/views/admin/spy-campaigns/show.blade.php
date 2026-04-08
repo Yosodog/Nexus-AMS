@@ -8,394 +8,364 @@
         $activeTab = in_array($requestedTab, $allowedTabs, true)
             ? $requestedTab
             : (in_array($oldTab, $allowedTabs, true) ? $oldTab : 'overview');
+        $statusValue = $campaign->status instanceof \BackedEnum ? $campaign->status->value : (string) $campaign->status;
+        $statusClass = match ($statusValue) {
+            'active' => 'badge-success',
+            'draft' => 'badge-ghost',
+            default => 'badge-neutral',
+        };
     @endphp
 
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="flex flex-wrap justify-content-between align-items-center mb-3">
-                <div>
-                    <h3 class="mb-0 flex align-items-center gap-2">
-                        {{ $campaign->name }}
-                        <span class="text-base-content/50" data-bs-toggle="tooltip" title="Each round runs a single op type. Assignments respect spy range, slots, policy synergy, and your min success target.">
-                            <i class="o-question-mark-circle"></i>
-                        </span>
-                    </h3>
-                    <div class="text-base-content/50">
-                        Status:
-                        <span class="badge badge-primary text-uppercase">{{ $campaign->status }}</span>
-                        <span class="ms-2 small">{{ $campaign->description }}</span>
-                    </div>
+    <div x-data="{ activeTab: @js($activeTab) }">
+        <x-header :title="$campaign->name" separator>
+            <x-slot:subtitle>
+                <span class="inline-flex items-center gap-2">
+                    <span>Status:</span>
+                    <span class="badge {{ $statusClass }} text-uppercase">{{ $statusValue }}</span>
+                    @if (filled($campaign->description))
+                        <span class="text-base-content/60">{{ $campaign->description }}</span>
+                    @endif
+                </span>
+            </x-slot:subtitle>
+            <x-slot:actions>
+                <div class="flex items-center gap-2">
+                    <span class="tooltip tooltip-left" data-tip="Each round runs a single op type. Assignments respect spy range, slots, policy synergy, and your min success target.">
+                        <x-icon name="o-question-mark-circle" class="size-5 text-base-content/50" />
+                    </span>
+                    <a href="{{ route('admin.spy-campaigns.index') }}" class="btn btn-ghost btn-sm">Back</a>
                 </div>
-                <div class="flex gap-2">
-                    <a href="{{ route('admin.spy-campaigns.index') }}" class="btn btn-outline-secondary btn-sm">Back</a>
-                </div>
-            </div>
+            </x-slot:actions>
+        </x-header>
 
-            <div class="alert alert-info flex align-items-start gap-2">
-                <i class="o-information-circle fs-5 mt-1"></i>
-                <div>
-                    <strong>How this works:</strong> add allied and enemy alliances, create rounds with a single spy op, then click <em>Generate assignments</em>. The system builds attacker/defender pairs within spy range, applies slot caps (2 offensive / 3 defensive), finds the lowest safety level meeting the minimum success target, and boosts matches with policy synergy. Use the message action to push formatted PW mails to each aggressor with links.
-                </div>
-            </div>
-
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-lg-3">
-                    <div class="card shadow-none border h-100">
-                        <div class="card-body py-3">
-                            <div class="text-base-content/50 small">Allied / Enemy Alliances</div>
-                            <div class="flex align-items-center justify-content-between">
-                                <span class="h5 mb-0">{{ $campaign->alliances->where('role', 'ally')->count() }} / {{ $campaign->alliances->where('role', 'enemy')->count() }}</span>
-                                <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Alliances synced to feed aggressors and targets">Range</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card shadow-none border h-100">
-                        <div class="card-body py-3">
-                            <div class="text-base-content/50 small">Rounds</div>
-                            <div class="flex align-items-center justify-content-between">
-                                <span class="h5 mb-0">{{ $campaign->rounds->count() }}</span>
-                                <span class="badge badge-primary">{{ $latestRound?->op_type?->name ?? 'n/a' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card shadow-none border h-100">
-                        <div class="card-body py-3">
-                            <div class="text-base-content/50 small">Assignments</div>
-                            <div class="flex align-items-center justify-content-between">
-                                <span class="h5 mb-0">{{ $latestRound?->assignments->count() ?? 0 }}</span>
-                                <span class="badge badge-info" data-bs-toggle="tooltip" title="Latest round assignment count">Live</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card shadow-none border h-100">
-                        <div class="card-body py-3">
-                            <div class="text-base-content/50 small">Avg Odds</div>
-                            <div class="flex align-items-center justify-content-between">
-                                <span class="h5 mb-0">{{ number_format($oddsDistribution->avg() ?? 0, 1) }}%</span>
-                                <span class="badge badge-warning" data-bs-toggle="tooltip" title="Mean odds of the latest round">Quality</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {{ $activeTab === 'overview' ? 'active' : '' }}" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {{ $activeTab === 'rounds' ? 'active' : '' }}" id="rounds-tab" data-bs-toggle="tab" data-bs-target="#rounds" type="button" role="tab">Rounds</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {{ $activeTab === 'alliances' ? 'active' : '' }}" id="alliances-tab" data-bs-toggle="tab" data-bs-target="#alliances" type="button" role="tab">Alliances</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {{ $activeTab === 'settings' ? 'active' : '' }}" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">Settings</button>
-                </li>
-            </ul>
-
-            <div class="tab-content">
-                <div class="tab-pane fade {{ $activeTab === 'overview' ? 'show active' : '' }}" id="overview" role="tabpanel">
-                    <div class="row g-3">
-                        <div class="col-lg-7">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">Odds Distribution</h5>
-                                    <i class="o-information-circle text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Spread of calculated odds for the latest round."></i>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="oddsChart" height="200"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">Impact Projections</h5>
-                                    <i class="o-bolt text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Expected impact scaled by op type and policy synergy."></i>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="impactChart" height="200"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mt-2">
-                        <div class="col-lg-6">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">Slot Usage</h5>
-                                    <i class="o-squares-plus text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Max 2 offensive slots per aggressor, 3 defensive per target."></i>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="slotsChart" height="200"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-0">Top Targets</h5>
-                                    <i class="o-bolt text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Sorted by expected impact."></i>
-                                </div>
-                                <div class="card-body">
-                                    <div class="list-group list-group-flush">
-                                        @forelse ($topTargets as $target)
-                                            <div class="list-group-item flex justify-content-between align-items-center">
-                                                <span>{{ $target['defender'] ?? 'Unknown' }}</span>
-                                                <span class="badge badge-primary">{{ number_format($target['impact'], 1) }} impact</span>
-                                            </div>
-                                        @empty
-                                            <div class="text-base-content/50 small">No assignments yet.</div>
-                                        @endforelse
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade {{ $activeTab === 'rounds' ? 'show active' : '' }}" id="rounds" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-header flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Rounds</h5>
-                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoundModal">
-                                <i class="o-plus-circle me-1"></i> Add Round
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Op</th>
-                                    <th>Status</th>
-                                    <th>Assignments</th>
-                                    <th>Average Odds</th>
-                                    <th class="text-right">Actions</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @foreach ($campaign->rounds->sortBy('round_number') as $round)
-                                    <tr>
-                                        <td>{{ $round->round_number }}</td>
-                                        <td>{{ $round->op_type?->name ?? 'n/a' }}</td>
-                                        <td><span class="badge badge-ghost text-uppercase">{{ $round->status }}</span></td>
-                                        <td>{{ $round->assignments->count() }}</td>
-                                        <td>{{ number_format($round->assignments->avg('calculated_odds') ?? 0, 1) }}%</td>
-                                        <td class="text-right">
-                                            <a href="{{ route('admin.spy-campaigns.rounds.show', $round) }}" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="View assignments">
-                                                <i class="o-list-bullet-check"></i>
-                                            </a>
-                                            <form action="{{ route('admin.spy-campaigns.rounds.generate', $round) }}" method="post" class="d-inline">
-                                                @csrf
-                                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Generate assignments for this round">
-                                                    <i class="o-cpu-chip"></i>
-                                                </button>
-                                            </form>
-                                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#messageModal-{{ $round->id }}">
-                                                <i class="o-envelope"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {{-- Message modal --}}
-                                    <div class="modal fade" id="messageModal-{{ $round->id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-lg">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Send messages for Round {{ $round->round_number }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <form method="post" action="{{ route('admin.spy-campaigns.rounds.message', $round) }}">
-                                                    @csrf
-                                                    <div class="modal-body">
-                                                        <label class="form-label">Message body</label>
-                                                        <textarea name="message" class="form-control" rows="6" placeholder="Include tactics, timing, and reminders."></textarea>
-                                                        <p class="text-base-content/50 small mt-2">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <button type="submit" class="btn btn-success">Queue Messages</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade {{ $activeTab === 'alliances' ? 'show active' : '' }}" id="alliances" role="tabpanel">
-                    <div class="row g-3">
-                        <div class="col-lg-6">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Allied</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="list-group list-group-flush">
-                                        @foreach ($campaign->alliances->where('role', 'ally') as $alliance)
-                                            <li class="list-group-item flex justify-content-between align-items-center">
-                                                <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
-                                                <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Remove alliance">
-                                                        <i class="o-x-mark"></i>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                                <div class="card-footer">
-                                    <form method="post" action="{{ route('admin.spy-campaigns.alliances.store', $campaign) }}" class="row g-2">
-                                        @csrf
-                                        <input type="hidden" name="role" value="ally">
-                                        <div class="col-8">
-                                            <label class="form-label">Alliance ID</label>
-                                            <input type="number" name="alliance_id" class="form-control" placeholder="1234">
-                                        </div>
-                                        <div class="col-4 flex align-items-end">
-                                            <button class="btn btn-primary w-100" type="submit">Add</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Enemy</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="list-group list-group-flush">
-                                        @foreach ($campaign->alliances->where('role', 'enemy') as $alliance)
-                                            <li class="list-group-item flex justify-content-between align-items-center">
-                                                <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
-                                                <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger">
-                                                        <i class="o-x-mark"></i>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                                <div class="card-footer">
-                                    <form method="post" action="{{ route('admin.spy-campaigns.alliances.store', $campaign) }}" class="row g-2">
-                                        @csrf
-                                        <input type="hidden" name="role" value="enemy">
-                                        <div class="col-8">
-                                            <label class="form-label">Alliance ID</label>
-                                            <input type="number" name="alliance_id" class="form-control" placeholder="5678">
-                                        </div>
-                                        <div class="col-4 flex align-items-end">
-                                            <button class="btn btn-danger w-100" type="submit">Add</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade {{ $activeTab === 'settings' ? 'show active' : '' }}" id="settings" role="tabpanel">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <form method="post" action="{{ route('admin.spy-campaigns.update', $campaign) }}" class="row g-3">
-                                @csrf
-                                @method('PUT')
-                                <div class="col-md-6">
-                                    <label class="form-label">Name</label>
-                                    <input type="text" name="name" class="form-control" value="{{ old('name', $campaign->name) }}">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Status</label>
-                                    <select name="status" class="form-select">
-                                        @foreach (['draft', 'active', 'archived'] as $status)
-                                            <option value="{{ $status }}" @selected($campaign->status === $status)>{{ ucfirst($status) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label flex align-items-center gap-2">
-                                        Min success %
-                                        <span class="text-base-content/50" data-bs-toggle="tooltip" title="Assignments test safety 1→3 and stop at the first level meeting this threshold; otherwise they’re flagged low-odds.">
-                                            <i class="o-question-mark-circle"></i>
-                                        </span>
-                                    </label>
-                                    <input type="number" name="settings[min_success_chance]" class="form-control" min="0" max="100" step="1" value="{{ old('settings.min_success_chance', $campaign->settings['min_success_chance'] ?? 65) }}">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Description</label>
-                                    <textarea name="description" class="form-control" rows="3">{{ old('description', $campaign->description) }}</textarea>
-                                </div>
-                                <div class="col-12 text-right">
-                                    <button type="submit" class="btn btn-primary">Save settings</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="alert alert-info mb-6">
+            <x-icon name="o-information-circle" class="size-5 shrink-0" />
+            <span class="text-sm">
+                Add allied and enemy alliances, create rounds with a single spy op, then generate assignments. The system stays within spy range, respects slot caps, picks the lowest safety level that clears the success threshold, and boosts matches with policy synergy.
+            </span>
         </div>
-    </div>
 
-    {{-- Add round modal --}}
-    <div class="modal fade" id="addRoundModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Round</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <x-stat
+                title="Allied / Enemy Alliances"
+                :value="$campaign->alliances->where('role', 'ally')->count() . ' / ' . $campaign->alliances->where('role', 'enemy')->count()"
+                icon="o-globe-alt"
+                description="Alliance pools used to build aggressors and targets"
+            />
+            <x-stat
+                title="Rounds"
+                :value="number_format($campaign->rounds->count())"
+                icon="o-rectangle-stack"
+                :description="$latestRound?->op_type?->name ?? 'No rounds yet'"
+                color="text-primary"
+            />
+            <x-stat
+                title="Assignments"
+                :value="number_format($latestRound?->assignments->count() ?? 0)"
+                icon="o-paper-airplane"
+                description="Assignments in the latest round"
+                color="text-info"
+            />
+            <x-stat
+                title="Avg Odds"
+                :value="number_format($oddsDistribution->avg() ?? 0, 1) . '%'"
+                icon="o-chart-bar-square"
+                description="Mean odds of the latest round"
+                color="text-warning"
+            />
+        </div>
+
+        <div class="mb-6 flex flex-wrap gap-2 border-b border-base-300 pb-2">
+            @foreach ($allowedTabs as $tab)
+                <button
+                    type="button"
+                    class="tab tab-bordered"
+                    :class="activeTab === '{{ $tab }}' ? 'tab-active' : ''"
+                    @click="activeTab = '{{ $tab }}'"
+                >
+                    {{ ucfirst($tab) }}
+                </button>
+            @endforeach
+        </div>
+
+        <section x-show="activeTab === 'overview'" x-cloak class="space-y-6">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+                <x-card title="Odds Distribution" subtitle="Spread of calculated odds for the latest round.">
+                    <canvas id="oddsChart" height="200"></canvas>
+                </x-card>
+
+                <x-card title="Impact Projections" subtitle="Expected impact scaled by op type and policy synergy.">
+                    <canvas id="impactChart" height="200"></canvas>
+                </x-card>
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-2">
+                <x-card title="Slot Usage" subtitle="Max 2 offensive slots per aggressor and 3 defensive per target.">
+                    <canvas id="slotsChart" height="200"></canvas>
+                </x-card>
+
+                <x-card title="Top Targets" subtitle="Sorted by expected impact.">
+                    <div class="space-y-3">
+                        @forelse ($topTargets as $target)
+                            <div class="flex items-center justify-between rounded-box border border-base-300 px-4 py-3">
+                                <span class="font-medium">{{ $target['defender'] ?? 'Unknown' }}</span>
+                                <span class="badge badge-primary">{{ number_format($target['impact'], 1) }} impact</span>
+                            </div>
+                        @empty
+                            <div class="text-sm text-base-content/60">No assignments yet.</div>
+                        @endforelse
+                    </div>
+                </x-card>
+            </div>
+        </section>
+
+        <section x-show="activeTab === 'rounds'" x-cloak>
+            <x-card title="Rounds" :subtitle="$campaign->rounds->count() . ' rounds configured'">
+                <x-slot:menu>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('addRoundModal').showModal()">
+                        <x-icon name="o-plus-circle" class="size-4" />
+                        Add Round
+                    </button>
+                </x-slot:menu>
+
+                <div class="overflow-x-auto rounded-box border border-base-300">
+                    <table class="table table-zebra">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Op</th>
+                            <th>Status</th>
+                            <th>Assignments</th>
+                            <th>Average Odds</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach ($campaign->rounds->sortBy('round_number') as $round)
+                            <tr>
+                                <td>{{ $round->round_number }}</td>
+                                <td>{{ $round->op_type?->name ?? 'n/a' }}</td>
+                                <td><span class="badge badge-ghost text-uppercase">{{ $round->status }}</span></td>
+                                <td>{{ $round->assignments->count() }}</td>
+                                <td>{{ number_format($round->assignments->avg('calculated_odds') ?? 0, 1) }}%</td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <a href="{{ route('admin.spy-campaigns.rounds.show', $round) }}" class="btn btn-ghost btn-sm">
+                                            <x-icon name="o-list-bullet" class="size-4" />
+                                        </a>
+                                        <form action="{{ route('admin.spy-campaigns.rounds.generate', $round) }}" method="post">
+                                            @csrf
+                                            <input type="hidden" name="active_tab" x-model="activeTab">
+                                            <button class="btn btn-primary btn-outline btn-sm" type="submit">
+                                                <x-icon name="o-cpu-chip" class="size-4" />
+                                            </button>
+                                        </form>
+                                        <button class="btn btn-success btn-outline btn-sm" type="button" onclick="document.getElementById('messageModal-{{ $round->id }}').showModal()">
+                                            <x-icon name="o-envelope" class="size-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <dialog id="messageModal-{{ $round->id }}" class="modal">
+                                <div class="modal-box max-w-3xl">
+                                    <form method="post" action="{{ route('admin.spy-campaigns.rounds.message', $round) }}" class="space-y-4">
+                                        @csrf
+                                        <input type="hidden" name="active_tab" x-model="activeTab">
+
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h3 class="text-lg font-semibold">Send messages for Round {{ $round->round_number }}</h3>
+                                                <p class="text-sm text-base-content/60">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('messageModal-{{ $round->id }}').close()">✕</button>
+                                        </div>
+
+                                        <label class="block space-y-2">
+                                            <span class="text-sm font-medium">Message body</span>
+                                            <textarea name="message" class="textarea textarea-bordered min-h-40 w-full" rows="6" placeholder="Include tactics, timing, and reminders."></textarea>
+                                        </label>
+
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" class="btn btn-ghost" onclick="document.getElementById('messageModal-{{ $round->id }}').close()">Cancel</button>
+                                            <button type="submit" class="btn btn-success">Queue Messages</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <form method="dialog" class="modal-backdrop"><button>close</button></form>
+                            </dialog>
+                        @endforeach
+                        </tbody>
+                    </table>
                 </div>
-                <form method="post" action="{{ route('admin.spy-campaigns.rounds.store', $campaign) }}">
+            </x-card>
+        </section>
+
+        <section x-show="activeTab === 'alliances'" x-cloak>
+            <div class="grid gap-6 lg:grid-cols-2">
+                <x-card title="Allied" subtitle="Alliances used to source aggressors.">
+                    <div class="space-y-3">
+                        @forelse ($campaign->alliances->where('role', 'ally') as $alliance)
+                            <div class="flex items-center justify-between rounded-box border border-base-300 px-4 py-3">
+                                <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
+                                <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="active_tab" x-model="activeTab">
+                                    <button class="btn btn-error btn-outline btn-sm" type="submit">
+                                        <x-icon name="o-x-mark" class="size-4" />
+                                    </button>
+                                </form>
+                            </div>
+                        @empty
+                            <div class="text-sm text-base-content/60">No allied alliances added yet.</div>
+                        @endforelse
+                    </div>
+
+                    <div class="mt-4 border-t border-base-300 pt-4">
+                        <form method="post" action="{{ route('admin.spy-campaigns.alliances.store', $campaign) }}" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            @csrf
+                            <input type="hidden" name="role" value="ally">
+                            <input type="hidden" name="active_tab" x-model="activeTab">
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Alliance ID</span>
+                                <input type="number" name="alliance_id" class="input input-bordered w-full" placeholder="1234">
+                            </label>
+                            <div class="flex items-end">
+                                <button class="btn btn-primary w-full sm:w-auto" type="submit">Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </x-card>
+
+                <x-card title="Enemy" subtitle="Alliances used to source targets.">
+                    <div class="space-y-3">
+                        @forelse ($campaign->alliances->where('role', 'enemy') as $alliance)
+                            <div class="flex items-center justify-between rounded-box border border-base-300 px-4 py-3">
+                                <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
+                                <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="active_tab" x-model="activeTab">
+                                    <button class="btn btn-error btn-outline btn-sm" type="submit">
+                                        <x-icon name="o-x-mark" class="size-4" />
+                                    </button>
+                                </form>
+                            </div>
+                        @empty
+                            <div class="text-sm text-base-content/60">No enemy alliances added yet.</div>
+                        @endforelse
+                    </div>
+
+                    <div class="mt-4 border-t border-base-300 pt-4">
+                        <form method="post" action="{{ route('admin.spy-campaigns.alliances.store', $campaign) }}" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            @csrf
+                            <input type="hidden" name="role" value="enemy">
+                            <input type="hidden" name="active_tab" x-model="activeTab">
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Alliance ID</span>
+                                <input type="number" name="alliance_id" class="input input-bordered w-full" placeholder="5678">
+                            </label>
+                            <div class="flex items-end">
+                                <button class="btn btn-error w-full sm:w-auto" type="submit">Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </x-card>
+            </div>
+        </section>
+
+        <section x-show="activeTab === 'settings'" x-cloak>
+            <x-card title="Campaign Settings" subtitle="Adjust defaults used by future assignment generation.">
+                <form method="post" action="{{ route('admin.spy-campaigns.update', $campaign) }}" class="space-y-4">
                     @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Operation Type</label>
-                            <select name="op_type" class="form-select" required>
-                                @foreach ($opTypes as $type)
-                                    <option value="{{ $type->value }}">{{ \Illuminate\Support\Str::headline(strtolower($type->name)) }}</option>
+                    @method('PUT')
+                    <input type="hidden" name="active_tab" x-model="activeTab">
+
+                    <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_14rem_14rem]">
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Name</span>
+                            <input type="text" name="name" class="input input-bordered w-full" value="{{ old('name', $campaign->name) }}">
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Status</span>
+                            <select name="status" class="select select-bordered w-full">
+                                @foreach (['draft', 'active', 'archived'] as $status)
+                                    <option value="{{ $status }}" @selected($campaign->status === $status)>{{ ucfirst($status) }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Round # (optional)</label>
-                            <input type="number" name="round_number" class="form-control" min="1">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label flex align-items-center gap-2">
-                                Min success target (%)
-                                <span class="text-base-content/50" data-bs-toggle="tooltip" title="Assignments pick the lowest safety level that meets this chance; lower odds are still assigned but flagged.">
-                                    <i class="o-question-mark-circle"></i>
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="flex items-center gap-2 text-sm font-medium">
+                                Min success %
+                                <span class="tooltip" data-tip="Assignments test safety 1→3 and stop at the first level meeting this threshold; otherwise they’re flagged low-odds.">
+                                    <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
                                 </span>
-                            </label>
-                            <input type="number" name="min_success_chance" class="form-control" min="0" max="100" step="1" value="{{ $campaign->settings['min_success_chance'] ?? 65 }}">
-                        </div>
+                            </span>
+                            <input type="number" name="settings[min_success_chance]" class="input input-bordered w-full" min="0" max="100" step="1" value="{{ old('settings.min_success_chance', $campaign->settings['min_success_chance'] ?? 65) }}">
+                        </label>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add</button>
+
+                    <label class="block space-y-2">
+                        <span class="text-sm font-medium">Description</span>
+                        <textarea name="description" class="textarea textarea-bordered min-h-28 w-full" rows="3">{{ old('description', $campaign->description) }}</textarea>
+                    </label>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-primary">Save settings</button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </x-card>
+        </section>
     </div>
+
+    <dialog id="addRoundModal" class="modal">
+        <div class="modal-box max-w-2xl">
+            <form method="post" action="{{ route('admin.spy-campaigns.rounds.store', $campaign) }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="active_tab" value="rounds">
+
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold">Add Round</h3>
+                        <p class="text-sm text-base-content/60">Each round generates assignments for one operation type.</p>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('addRoundModal').close()">✕</button>
+                </div>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Operation Type</span>
+                    <select name="op_type" class="select select-bordered w-full" required>
+                        @foreach ($opTypes as $type)
+                            <option value="{{ $type->value }}">{{ \Illuminate\Support\Str::headline(strtolower($type->name)) }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Round # (optional)</span>
+                    <input type="number" name="round_number" class="input input-bordered w-full" min="1">
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="flex items-center gap-2 text-sm font-medium">
+                        Min success target (%)
+                        <span class="tooltip" data-tip="Assignments pick the lowest safety level that meets this chance; lower odds are still assigned but flagged.">
+                            <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
+                        </span>
+                    </span>
+                    <input type="number" name="min_success_chance" class="input input-bordered w-full" min="0" max="100" step="1" value="{{ $campaign->settings['min_success_chance'] ?? 65 }}">
+                </label>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('addRoundModal').close()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
 @endsection
 
 @pushOnce('scripts')
@@ -452,58 +422,5 @@
                 }
             });
         }
-    </script>
-@endPushOnce
-
-@pushOnce('scripts', 'spy-campaign-show-tooltips')
-    <script>
-        document.addEventListener('codex:page-ready', () => {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach((tooltipTriggerEl) => {
-                });
-
-            const allowedTabs = @json($allowedTabs);
-            const defaultTab = @json($activeTab);
-            const forms = document.querySelectorAll('form');
-            const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"][data-bs-target]');
-
-            const sanitizeTab = (tab) => allowedTabs.includes(tab) ? tab : defaultTab;
-
-            const currentActiveTab = () => {
-                const activeButton = document.querySelector('button[data-bs-toggle="tab"].active');
-                const tabTarget = activeButton?.getAttribute('data-bs-target') ?? '';
-
-                if (!tabTarget.startsWith('#')) {
-                    return defaultTab;
-                }
-
-                return sanitizeTab(tabTarget.substring(1));
-            };
-
-            const syncActiveTabInput = (tab) => {
-                forms.forEach((form) => {
-                    let activeTabInput = form.querySelector('input[name="active_tab"]');
-
-                    if (!activeTabInput) {
-                        activeTabInput = document.createElement('input');
-                        activeTabInput.type = 'hidden';
-                        activeTabInput.name = 'active_tab';
-                        form.appendChild(activeTabInput);
-                    }
-
-                    activeTabInput.value = tab;
-                });
-            };
-
-            syncActiveTabInput(currentActiveTab());
-
-            tabButtons.forEach((tabButton) => {
-                tabButton.addEventListener('shown.bs.tab', (event) => {
-                    const tabTarget = event.target.getAttribute('data-bs-target') ?? '';
-                    const tab = tabTarget.startsWith('#') ? tabTarget.substring(1) : defaultTab;
-                    syncActiveTabInput(sanitizeTab(tab));
-                });
-            });
-        });
     </script>
 @endPushOnce
