@@ -7,8 +7,10 @@ use App\Actions\Fortify\RedirectIfTwoFactorAuthenticatable;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -46,6 +48,20 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::loginView(function () {
             return view('auth.login');
+        });
+
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $username = Str::lower((string) $request->input(Fortify::username(), ''));
+
+            $user = User::query()
+                ->whereRaw('LOWER(name) = ?', [$username])
+                ->first();
+
+            if (! $user || ! Hash::check((string) $request->input('password', ''), $user->password)) {
+                return null;
+            }
+
+            return $user;
         });
 
         Fortify::requestPasswordResetLinkView(function () {

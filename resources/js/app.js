@@ -175,7 +175,7 @@ const enableThemePicker = (root = document) => {
     const activeThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.dataset.themeMode || DEFAULT_THEME_MODE);
     applyTheme(activeThemeMode);
 
-    root.querySelectorAll('[data-theme-mode]').forEach((button) => {
+    root.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((button) => {
         if (button.dataset.themeBound === 'true') {
             button.classList.toggle('menu-active', button.dataset.themeMode === activeThemeMode);
             return;
@@ -196,7 +196,7 @@ const enableThemePicker = (root = document) => {
 
             applyTheme(themeMode);
 
-            document.querySelectorAll('[data-theme-mode]').forEach((item) => {
+            document.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((item) => {
                 item.classList.toggle('menu-active', item.dataset.themeMode === themeMode);
             });
         });

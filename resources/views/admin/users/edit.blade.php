@@ -2,8 +2,6 @@
 
 @section('content')
     @php
-        use Illuminate\Support\Str;
-
         $nation = $user->nation;
         $latestSignIn = $latestSignIn ?? optional($nation)->latestSignIn;
         $accounts = $accounts ?? collect();
@@ -94,7 +92,7 @@
                         <p class="mb-1 text-base-content/50">Total balance: ${{ number_format($accountTotalMoney, 2) }}</p>
                         <div class="flex flex-wrap gap-2">
                             @forelse($roles as $role)
-                                <x-badge :value="Str::title($role)" class="badge-primary badge-outline badge-sm max-w-full" />
+                                <x-badge :value="\Illuminate\Support\Str::title($role)" class="badge-primary badge-outline badge-sm max-w-full" />
                             @empty
                                 <x-badge value="No roles assigned" class="badge-ghost badge-sm" />
                             @endforelse
@@ -354,7 +352,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <x-badge :value="Str::title(str_replace('_', ' ', $transaction->transaction_type))" class="badge-primary badge-outline badge-sm" />
+                                                <x-badge :value="\Illuminate\Support\Str::title(str_replace('_', ' ', $transaction->transaction_type))" class="badge-primary badge-outline badge-sm" />
                                             </td>
                                             <td>
                                                 <div class="small text-base-content/50">From</div>

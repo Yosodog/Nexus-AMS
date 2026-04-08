@@ -2,8 +2,6 @@
 
 @section('content')
     @php
-        use Illuminate\Support\Str;
-
         $filters = $filters ?? [
             'search' => '',
             'status' => 'enabled',
@@ -134,7 +132,7 @@
                                 <td>
                                     <div class="flex flex-wrap gap-2">
                                         @forelse($user->roles as $role)
-                                            <x-badge :value="Str::title($role->name)" class="badge-primary badge-outline badge-sm" />
+                                            <x-badge :value="\Illuminate\Support\Str::title($role->name)" class="badge-primary badge-outline badge-sm" />
                                         @empty
                                             <span class="text-sm text-base-content/50">No roles assigned</span>
                                         @endforelse
@@ -194,5 +192,5 @@
                 <button type="submit" class="btn btn-primary mt-4 w-full">Save MFA Policy</button>
             </div>
         </form>
-    </div>
+    </x-card>
 @endsection
