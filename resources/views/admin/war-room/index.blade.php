@@ -114,7 +114,7 @@
 
                 @if ($counters->hasPages())
                     <div class="card-footer bg-body-tertiary">
-                        {{ $counters->links('pagination::bootstrap-5') }}
+                        {{ $counters->links() }}
                     </div>
                 @endif
             </div>
@@ -205,7 +205,7 @@
 
                 @if ($plans->hasPages())
                     <div class="card-footer bg-body-tertiary">
-                        {{ $plans->links('pagination::bootstrap-5') }}
+                        {{ $plans->links() }}
                     </div>
                 @endif
             </div>
