@@ -7,58 +7,39 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row align-items-center">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">City Grant Management</h3>
-                </div>
-                @can('manage-city-grants')
-                    <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#grantReminderModal">
-                            Send City Grant Reminders
-                        </button>
-                    </div>
-                @endcan
-            </div>
-        </div>
-    </div>
+    <x-header title="City Grant Management" separator>
+        <x-slot:subtitle>Review pending requests, issue manual disbursements, and maintain grant thresholds from one place.</x-slot:subtitle>
+        <x-slot:actions>
+            @can('manage-city-grants')
+                <button class="btn btn-outline btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantReminderModal">
+                    Send Reminders
+                </button>
+            @endcan
+        </x-slot:actions>
+    </x-header>
 
-    {{-- Info Boxes --}}
-    <div class="row">
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-check-circle" bgColor="badge-primary" title="Total Approved Grants"
-                              :value="$totalApproved"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-x-circle" bgColor="badge-error" title="Total Denied Grants"
-                              :value="$totalDenied"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-clock" bgColor="badge-warning" title="Pending Grants"
-                              :value="$pendingCount"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-banknotes" bgColor="badge-success" title="Total Funds Distributed"
-                              :value="number_format($totalFundsDistributed)"/>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="Approved Grants" :value="number_format($totalApproved)" icon="o-check-circle" color="text-primary" description="Completed city grant payouts" />
+        <x-stat title="Denied Grants" :value="number_format($totalDenied)" icon="o-x-circle" color="text-error" description="Requests rejected by staff" />
+        <x-stat title="Pending Grants" :value="number_format($pendingCount)" icon="o-clock" color="text-warning" description="Waiting for review" />
+        <x-stat title="Funds Distributed" :value="'$' . number_format($totalFundsDistributed)" icon="o-banknotes" color="text-success" description="Total city grant outflow" />
     </div>
 
     {{-- Pending Grants --}}
-    <div class="card mt-4">
-        <div class="card-header">Pending City Grants</div>
-        <div class="card-body">
+    <x-card class="mb-6">
+        <x-slot:title>Pending City Grants</x-slot:title>
+        <div class="overflow-x-auto">
             @if($pendingRequests->isEmpty())
-                <p>No pending grant requests.</p>
+                <p class="py-6 text-base-content/50">No pending grant requests.</p>
             @else
-                <table class="table table-striped">
+                <table class="table table-zebra">
                     <thead>
                     <tr>
                         <th>City #</th>
                         <th>Nation</th>
                         <th>Amount</th>
                         <th>Requested At</th>
-                        <th>Actions</th>
+                        <th data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -79,18 +60,18 @@
                                 @endif
                             </td>
                             <td>${{ number_format($request->grant_amount) }}</td>
-                            <td>{{ $request->created_at->format('M d, Y') }}</td>
+                            <td data-order="{{ $request->created_at->timestamp }}">{{ $request->created_at->format('M d, Y') }}</td>
                             <td>
-                                <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST"
-                                      class="d-inline">
+                                <div class="flex flex-wrap gap-2">
+                                <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-success btn-sm">Approve</button>
                                 </form>
-                                <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST"
-                                      class="d-inline">
+                                <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-danger btn-sm">Deny</button>
+                                    <button type="submit" class="btn btn-outline btn-error btn-sm">Deny</button>
                                 </form>
+                                </div>
                             </td>
                         </tr>
                     @endforeach
@@ -98,12 +79,12 @@
                 </table>
             @endif
         </div>
-    </div>
+    </x-card>
 
     @can('manage-city-grants')
-        <div class="card mt-4">
-            <div class="card-header">Manual City Grant Disbursement</div>
-            <div class="card-body">
+        <x-card class="mb-6">
+            <x-slot:title>Manual City Grant Disbursement</x-slot:title>
+            <div>
                 <p class="text-base-content/50 small mb-3">
                     Approves and pays a city grant immediately, bypassing pending or prior award checks. Use when admins need to push funds without a request.
                 </p>
@@ -157,28 +138,38 @@
                     </div>
                 </form>
             </div>
-        </div>
+        </x-card>
     @endcan
 
     {{-- City Grants List --}}
-    <div class="card mt-4">
-        <div class="card-header">City Grants</div>
-        <div class="card-body">
-            <table class="table table-striped">
+    <x-card>
+        <x-slot:title>
+            <div>
+                City Grants
+                <div class="text-sm font-normal text-base-content/60">Sortable overview of every city grant tier and its project requirements.</div>
+            </div>
+        </x-slot:title>
+        <x-slot:menu>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal" onclick="clearGrantForm()">
+                Create New Grant
+            </button>
+        </x-slot:menu>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
                 <thead>
                 <tr>
                     <th>City #</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Description</th>
-                        <th>Required Projects</th>
-                        <th>Actions</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Required Projects</th>
+                    <th data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach ($grants as $grant)
                     <tr>
-                        <td>{{ $grant->city_number }}</td>
+                        <td data-order="{{ $grant->city_number }}">{{ $grant->city_number }}</td>
                         <td>
                             @php
                                 $computedAmount = $grantAmounts[$grant->id] ?? null;
@@ -190,13 +181,19 @@
                             @endif
                             <span class="text-base-content/50">({{ number_format($grant->grant_amount) }}%)</span>
                         </td>
-                        <td>{{ $grant->enabled ? 'Enabled' : 'Disabled' }}</td>
+                        <td data-order="{{ $grant->enabled ? 1 : 0 }}">
+                            <x-badge value="{{ $grant->enabled ? 'Enabled' : 'Disabled' }}" class="{{ $grant->enabled ? 'badge-success badge-sm' : 'badge-ghost badge-sm' }}" />
+                        </td>
                         <td>{{ $grant->description }}</td>
                         <td>
                             @if(isset($grant->requirements['required_projects']))
-                                {{ implode(', ', $grant->requirements['required_projects']) }}
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($grant->requirements['required_projects'] as $project)
+                                        <x-badge :value="$project" class="badge-primary badge-outline badge-sm" />
+                                    @endforeach
+                                </div>
                             @else
-                                None
+                                <span class="text-base-content/50">None</span>
                             @endif
                         </td>
                         <td>
@@ -208,11 +205,8 @@
                 @endforeach
                 </tbody>
             </table>
-            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#grantModal"
-                    onclick="clearGrantForm()">Create New Grant
-            </button>
         </div>
-    </div>
+    </x-card>
 
     {{-- Grant Modal --}}
     <div class="modal modal-lg fade" id="grantModal" tabindex="-1" aria-labelledby="grantModalLabel" aria-hidden="true">

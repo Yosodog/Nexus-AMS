@@ -90,7 +90,7 @@
                                 <td>
                                     {{ $bracket->city_number }}
                                     @if ($bracket->city_number === 0)
-                                        <x-badge label="Default" class="badge-primary badge-sm ml-1" />
+                                        <x-badge  value="Default" class="badge-primary badge-sm ml-1" />
                                     @endif
                                 </td>
                                 @foreach(\App\Services\PWHelperService::resources() as $resource)

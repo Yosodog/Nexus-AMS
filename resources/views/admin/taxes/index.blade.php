@@ -18,7 +18,9 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             @foreach ($charts as $resource => $data)
                 <x-card :title="ucfirst($resource) . ' Collected'">
-                    <canvas id="chart-{{ $resource }}" class="max-h-48"></canvas>
+                    <div class="h-72">
+                        <canvas id="chart-{{ $resource }}" class="h-full w-full"></canvas>
+                    </div>
                 </x-card>
             @endforeach
         </div>
@@ -68,7 +70,11 @@
                     pointRadius: 2
                 }]
             },
-            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
         });
         @endforeach
     </script>

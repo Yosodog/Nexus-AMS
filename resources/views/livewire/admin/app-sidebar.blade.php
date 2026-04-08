@@ -1,28 +1,29 @@
 <div>
-    {{-- Brand --}}
-    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-5 pt-4 pb-5">
-        <div class="flex flex-col">
-            <span class="font-black text-base-content text-sm">{{ config('app.name') }}</span>
-            <span class="text-xs text-base-content/50 font-medium -mt-0.5">Admin Panel</span>
-        </div>
+    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 pb-4 pt-4">
+        <span class="grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 font-black uppercase tracking-[0.18em] text-primary">
+            {{ str(config('app.name'))->substr(0, 2)->upper() }}
+        </span>
+        <span class="hidden-when-collapsed text-sm font-black uppercase tracking-[0.18em] text-base-content">
+            {{ config('app.name') }}
+        </span>
     </a>
 
     <x-menu activate-by-route>
 
         {{-- Dashboard --}}
-        <x-menu-item title="Dashboard" icon="o-squares-2x2" route="admin.dashboard" />
+        <x-menu-item no-wire-navigate title="Dashboard" icon="o-squares-2x2" route="admin.dashboard" />
 
         {{-- User Management --}}
         <x-menu-separator title="Alliance" />
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Members"
             icon="o-users"
             route="admin.members"
             :hidden="! auth()->user()?->can('view-members')"
         />
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Cities"
             icon="o-building-office-2"
             :link="route('admin.cities.index')"
@@ -31,14 +32,14 @@
         />
 
         <x-menu-sub title="User Management" icon="o-identification">
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Manage Users"
                 icon="o-user-group"
                 :link="route('admin.users.index')"
                 :active="request()->routeIs('admin.users.*')"
                 :hidden="! auth()->user()?->can('view-users')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Manage Roles"
                 icon="o-shield-check"
                 :link="route('admin.roles.index')"
@@ -50,7 +51,7 @@
         {{-- Economics --}}
         <x-menu-separator title="Economics" />
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Accounts"
             icon="o-building-library"
             :link="route('admin.accounts.dashboard')"
@@ -65,7 +66,7 @@
             icon="o-home-modern"
             :open="request()->routeIs('admin.grants.city', 'admin.grants')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="City Grants"
                 icon="o-home"
                 :link="route('admin.grants.city')"
@@ -74,7 +75,7 @@
                 badge-classes="badge-primary badge-sm"
                 :hidden="! auth()->user()?->can('view-city-grants')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Grants"
                 icon="o-gift"
                 :link="route('admin.grants')"
@@ -85,7 +86,7 @@
             />
         </x-menu-sub>
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Loans"
             icon="o-banknotes"
             :link="route('admin.loans')"
@@ -95,7 +96,7 @@
             :hidden="! auth()->user()?->can('view-loans')"
         />
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Taxes"
             icon="o-receipt-percent"
             route="admin.taxes"
@@ -107,28 +108,28 @@
             icon="o-currency-dollar"
             :open="request()->routeIs('admin.offshores.*', 'admin.finance.*', 'admin.payroll.*')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Offshores"
                 icon="o-globe-alt"
                 :link="route('admin.offshores.index')"
                 :active="request()->routeIs('admin.offshores.*')"
                 :hidden="! auth()->user()?->can('view-offshores')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Finance Ledger"
                 icon="o-book-open"
                 :link="route('admin.finance.index')"
                 :active="request()->routeIs('admin.finance.*')"
                 :hidden="! auth()->user()?->can('view-financial-reports')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Payroll"
                 icon="o-currency-dollar"
                 :link="route('admin.payroll.index')"
                 :active="request()->routeIs('admin.payroll.*')"
                 :hidden="! auth()->user()?->can('view_payroll')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Alliance Market"
                 icon="o-shopping-bag"
                 :link="route('admin.market.index')"
@@ -145,21 +146,21 @@
             icon="o-bolt"
             :open="request()->routeIs('admin.war-room', 'admin.wars', 'admin.war-aid', 'admin.rebuilding.*', 'admin.raids.*', 'admin.beige-alerts.*', 'admin.spy-campaigns.*')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="War Room"
                 icon="o-command-line"
                 :link="route('admin.war-room')"
                 :active="request()->routeIs('admin.war-room')"
                 :hidden="! auth()->user()?->can('view-wars')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Wars"
                 icon="o-chart-bar"
                 :link="route('admin.wars')"
                 :active="request()->routeIs('admin.wars')"
                 :hidden="! auth()->user()?->can('view-wars')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="War Aid"
                 icon="o-heart"
                 :link="route('admin.war-aid')"
@@ -168,7 +169,7 @@
                 badge-classes="badge-warning badge-sm"
                 :hidden="! auth()->user()?->can('view-war-aid')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Rebuilding"
                 icon="o-wrench-screwdriver"
                 :link="route('admin.rebuilding.index')"
@@ -177,21 +178,21 @@
                 badge-classes="badge-warning badge-sm"
                 :hidden="! auth()->user()?->can('view-rebuilding')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Raids"
                 icon="o-arrow-trending-up"
                 :link="route('admin.raids.index')"
                 :active="request()->routeIs('admin.raids.*')"
                 :hidden="! auth()->user()?->can('view-raids')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Beige Alerts"
                 icon="o-bell-alert"
                 :link="route('admin.beige-alerts.index')"
                 :active="request()->routeIs('admin.beige-alerts.*')"
                 :hidden="! auth()->user()?->can('view-raids')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Spy Campaigns"
                 icon="o-eye"
                 :link="route('admin.spy-campaigns.index')"
@@ -200,7 +201,7 @@
             />
         </x-menu-sub>
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="MMR"
             icon="o-shield-exclamation"
             :link="route('admin.mmr.index')"
@@ -216,14 +217,14 @@
             icon="o-user-plus"
             :open="request()->routeIs('admin.applications.*', 'admin.recruitment.*')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Applications"
                 icon="o-document-text"
                 :link="route('admin.applications.index')"
                 :active="request()->routeIs('admin.applications.*')"
                 :hidden="! auth()->user()?->can('view-applications')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Recruitment"
                 icon="o-envelope"
                 :link="route('admin.recruitment.index')"
@@ -232,7 +233,7 @@
             />
         </x-menu-sub>
 
-        <x-menu-item
+        <x-menu-item no-wire-navigate
             title="Audits"
             icon="o-shield-check"
             :link="route('admin.audits.index')"
@@ -248,19 +249,19 @@
             icon="o-cog-6-tooth"
             :open="request()->routeIs('admin.settings', 'admin.nel.docs', 'admin.customization.*')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Settings"
                 icon="o-adjustments-horizontal"
                 route="admin.settings"
                 :hidden="! auth()->user()?->can('view-diagnostic-info')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="NEL Docs"
                 icon="o-code-bracket"
                 route="admin.nel.docs"
                 :hidden="! auth()->user()?->can('view-diagnostic-info')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Customize Pages"
                 icon="o-paint-brush"
                 :link="route('admin.customization.index')"
@@ -274,28 +275,28 @@
             icon="o-chart-bar-square"
             :open="request()->is('telescope', 'pulse', 'log-viewer') || request()->routeIs('admin.audit-logs.*')"
         >
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Audit Logs"
                 icon="o-clipboard-document-list"
                 :link="route('admin.audit-logs.index')"
                 :active="request()->routeIs('admin.audit-logs.*')"
                 :hidden="! auth()->user()?->can('view-diagnostic-info')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Telescope"
                 icon="o-bug-ant"
                 :link="url('/telescope')"
                 :active="request()->is('telescope')"
                 :hidden="! auth()->user()?->can('view-diagnostic-info')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Pulse"
                 icon="o-signal"
                 :link="url('/pulse')"
                 :active="request()->is('pulse')"
                 :hidden="! auth()->user()?->can('view-diagnostic-info')"
             />
-            <x-menu-item
+            <x-menu-item no-wire-navigate
                 title="Log Viewer"
                 icon="o-document-magnifying-glass"
                 :link="url('/log-viewer')"

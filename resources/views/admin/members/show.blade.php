@@ -81,7 +81,7 @@
                                 <div class="text-xs text-base-content/50">#{{ $account['id'] }}</div>
                             </td>
                             <td>
-                                <x-badge :label="$account['frozen'] ? 'Frozen' : 'Active'"
+                                <x-badge : value="$account['frozen'] ? 'Frozen' : 'Active'"
                                          :class="$account['frozen'] ? 'badge-error badge-sm' : 'badge-success badge-sm'" />
                             </td>
                             <td>${{ number_format((float) $account['resources']['money'], 2) }}</td>

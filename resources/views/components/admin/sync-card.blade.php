@@ -33,11 +33,11 @@
         <dd>
             @if($batch)
                 @if($batch->cancelled())
-                    <x-badge label="Cancelled" icon="o-x-circle" class="badge-error badge-sm" />
+                    <x-badge  value="Cancelled" icon="o-x-circle" class="badge-error badge-sm" />
                 @elseif($batch->finished())
-                    <x-badge label="Finished" icon="o-check-circle" class="badge-success badge-sm" />
+                    <x-badge  value="Finished" icon="o-check-circle" class="badge-success badge-sm" />
                 @else
-                    <x-badge label="Running" icon="o-clock" class="badge-warning badge-sm" />
+                    <x-badge  value="Running" icon="o-clock" class="badge-warning badge-sm" />
                 @endif
             @else
                 <span class="text-base-content/50">Idle</span>

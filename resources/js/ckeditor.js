@@ -170,8 +170,12 @@ function trackEditor(element, editor) {
     }));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const initCkeditors = () => {
     document.querySelectorAll('.js-ckeditor').forEach((element) => {
+        if (editors.has(element) || element.dataset.ckeditorReady === 'true') {
+            return;
+        }
+
         ClassicEditor.create(element, {
             licenseKey: 'GPL',
             plugins: editorPlugins,
@@ -203,7 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to initialize CKEditor 5', error);
             });
     });
-});
+};
+
+document.addEventListener('DOMContentLoaded', initCkeditors);
+document.addEventListener('livewire:navigated', initCkeditors);
 
 window.getCkeditorInstance = function getCkeditorInstance(element) {
     return editors.get(element) ?? null;

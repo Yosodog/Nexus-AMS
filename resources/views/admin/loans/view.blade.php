@@ -13,7 +13,7 @@
             @php
                 $statusMap = ['missed' => 'badge-warning', 'approved' => 'badge-success', 'paid' => 'badge-primary'];
             @endphp
-            <x-badge :label="ucfirst($loan->status)" :class="($statusMap[$loan->status] ?? 'badge-ghost') . ' badge-lg'" />
+            <x-badge : value="ucfirst($loan->status)" :class="($statusMap[$loan->status] ?? 'badge-ghost') . ' badge-lg'" />
         </x-slot:actions>
     </x-header>
 

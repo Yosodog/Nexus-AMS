@@ -4,7 +4,7 @@
 @section('content')
     <x-header :title="'Account: ' . $account->name" separator>
         <x-slot:actions>
-            <x-badge :label="$account->frozen ? 'Frozen' : 'Active'"
+            <x-badge : value="$account->frozen ? 'Frozen' : 'Active'"
                      :class="$account->frozen ? 'badge-error' : 'badge-success'" />
             @can('manage-accounts')
                 <form method="POST"
@@ -82,7 +82,7 @@
                 </thead>
                 <tbody>
                     @foreach ($transactions as $transaction)
-                        <tr x-show="!search || '{{ strtolower($transaction->transaction_type) }}'.includes(search.toLowerCase())">
+                        <tr x-show="!search || {{ \Illuminate\Support\Js::from(strtolower($transaction->transaction_type)) }}.includes(search.toLowerCase())">
                             <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
                             <td>
                                 @if($transaction->transaction_type === 'deposit' && $transaction->nation_id)
@@ -138,7 +138,7 @@
                                     </form>
                                 @elseif($transaction->isRefunded())
                                     <span class="tooltip" data-tip="This transaction was refunded.">
-                                        <x-badge label="Refunded" class="badge-ghost badge-sm" />
+                                        <x-badge  value="Refunded" class="badge-ghost badge-sm" />
                                     </span>
                                 @endif
                             </td>
@@ -154,7 +154,7 @@
         <x-card title="Stuck Pending Withdrawals" class="mb-4 border-warning">
             <x-slot:subtitle>Transactions that are still pending and require manual intervention.</x-slot:subtitle>
             <x-slot:menu>
-                <x-badge label="{{ $stuckTransactions->count() }} stuck" class="badge-warning" />
+                <x-badge  value="{{ $stuckTransactions->count() }} stuck" class="badge-warning" />
             </x-slot:menu>
             <div class="overflow-x-auto">
                 <table class="table table-sm table-zebra">
@@ -252,7 +252,7 @@
     <x-card id="direct-deposit-logs" class="mb-4">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge label="DD" class="badge-primary" /> Direct Deposit Logs
+                <x-badge  value="DD" class="badge-primary" /> Direct Deposit Logs
             </div>
             <div class="text-sm font-normal text-base-content/50">After-tax payouts tagged to this account.</div>
         </x-slot:title>
@@ -288,7 +288,7 @@
                                 @if($deliveredResources->isNotEmpty())
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($deliveredResources as $resource => $amount)
-                                            <x-badge label="{{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}" class="badge-ghost badge-sm" />
+                                            <x-badge  value="{{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}" class="badge-ghost badge-sm" />
                                         @endforeach
                                     </div>
                                 @else
@@ -316,7 +316,7 @@
     <x-card id="mmr-assistant" class="mb-4">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge label="MMR" class="badge-neutral" /> MMR Assistant Purchases
+                <x-badge  value="MMR" class="badge-neutral" /> MMR Assistant Purchases
             </div>
             <div class="text-sm font-normal text-base-content/50">Withheld cash converted into resources via MMR Assistant.</div>
         </x-slot:title>

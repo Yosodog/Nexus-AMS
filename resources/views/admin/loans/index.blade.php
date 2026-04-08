@@ -144,9 +144,9 @@
                             <tr>
                                 <td>
                                     @if ($loan->status === 'missed')
-                                        <x-badge label="Missed" class="badge-warning badge-sm" />
+                                        <x-badge  value="Missed" class="badge-warning badge-sm" />
                                     @else
-                                        <x-badge label="Active" class="badge-success badge-sm" />
+                                        <x-badge  value="Active" class="badge-success badge-sm" />
                                     @endif
                                 </td>
                                 <td>
@@ -221,11 +221,11 @@
             <x-card title="Default Loan Interest Rate">
                 <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
                     @csrf
-                    <div class="flex gap-2">
+                    <div class="flex items-end gap-2">
                         <x-input type="number" name="default_interest_rate" step="0.01" min="0" max="100" required
                                  :value="old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', ''))"
                                  hint="Used to prefill approvals; each loan can still be adjusted." class="grow" />
-                        <x-button label="Update" type="submit" icon="o-check" class="btn-primary self-start mt-6" />
+                        <x-button label="Update" type="submit" icon="o-check" class="btn-primary" />
                     </div>
                 </form>
             </x-card>
@@ -234,7 +234,7 @@
                 <x-slot:title>
                     <div class="flex items-center gap-2">
                         Loan Applications
-                        <x-badge :label="$loanApplicationsEnabled ? 'Open' : 'Closed'"
+                        <x-badge : value="$loanApplicationsEnabled ? 'Open' : 'Closed'"
                                  :class="$loanApplicationsEnabled ? 'badge-success badge-sm' : 'badge-warning badge-sm'" />
                     </div>
                 </x-slot:title>

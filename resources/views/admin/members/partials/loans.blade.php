@@ -15,11 +15,11 @@
                     <td>${{ number_format($loan->amount) }}</td>
                     <td>
                         @if($loan->approved_at)
-                            <x-badge label="Approved" class="badge-success badge-sm" />
+                            <x-badge  value="Approved" class="badge-success badge-sm" />
                         @elseif($loan->denied_at)
-                            <x-badge label="Denied" class="badge-error badge-sm" />
+                            <x-badge  value="Denied" class="badge-error badge-sm" />
                         @else
-                            <x-badge label="Pending" class="badge-warning badge-sm" />
+                            <x-badge  value="Pending" class="badge-warning badge-sm" />
                         @endif
                     </td>
                     <td>{{ $loan->created_at->format('M d, Y') }}</td>

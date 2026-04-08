@@ -55,7 +55,7 @@
                 </thead>
                 <tbody>
                     @foreach($members as $nation)
-                        <tr x-show="!search || '{{ strtolower($nation['leader_name']) }}'.includes(search.toLowerCase())">
+                        <tr x-show="!search || {{ \Illuminate\Support\Js::from(strtolower($nation['leader_name'])) }}.includes(search.toLowerCase())">
                             <td>
                                 <a href="https://politicsandwar.com/nation/id={{ $nation['id'] }}" target="_blank"
                                    class="link link-primary font-medium">
@@ -64,9 +64,9 @@
                             </td>
                             <td>
                                 @if($nation['is_inactive'])
-                                    <x-badge label="Inactive" class="badge-error badge-sm" />
+                                    <x-badge  value="Inactive" class="badge-error badge-sm" />
                                 @else
-                                    <x-badge label="Active" class="badge-success badge-sm" />
+                                    <x-badge  value="Active" class="badge-success badge-sm" />
                                 @endif
                             </td>
                             <td>{{ number_format($nation['score'], 2) }}</td>
@@ -136,7 +136,7 @@
                 <tbody>
                     @forelse($profitabilityRows as $row)
                         <tr>
-                            <td><x-badge label="#{{ $row['rank'] }}" class="badge-ghost badge-sm" /></td>
+                            <td data-order="{{ $row['rank'] }}"><x-badge value="#{{ $row['rank'] }}" class="badge-ghost badge-sm" /></td>
                             <td>{{ $row['leader_name'] }}</td>
                             <td>{{ $row['nation_name'] }}</td>
                             <td>{{ number_format($row['cities']) }}</td>
@@ -236,7 +236,7 @@
                 <div class="font-semibold">Inactive Nations</div>
                 <div class="text-sm text-base-content/50">Nations currently in an open inactivity episode.</div>
             </div>
-            <x-badge label="{{ $members->where('is_inactive', true)->count() }} inactive" class="badge-error" />
+            <x-badge  value="{{ $members->where('is_inactive', true)->count() }} inactive" class="badge-error" />
         </div>
 
         <div class="overflow-x-auto">

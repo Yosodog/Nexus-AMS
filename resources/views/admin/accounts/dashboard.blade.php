@@ -94,11 +94,11 @@
                     <div class="text-2xl font-bold">${{ number_format($accountsCash, 2) }}</div>
                     <div class="text-sm text-base-content/50">{{ number_format($accounts->count()) }} accounts tracked</div>
                 </div>
-                <x-badge label="Members" icon="o-wallet" class="badge-primary badge-sm" />
+                <x-badge  value="Members" icon="o-wallet" class="badge-primary badge-sm" />
             </div>
             <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
-                <x-badge label="Avg ${{ number_format($accounts->avg('money'), 2) }}" class="badge-ghost badge-sm" />
-                <x-badge label="{{ number_format($activeAccounts) }} assigned" class="badge-ghost badge-sm" />
+                <x-badge  value="Avg ${{ number_format($accounts->avg('money'), 2) }}" class="badge-ghost badge-sm" />
+                <x-badge  value="{{ number_format($activeAccounts) }} assigned" class="badge-ghost badge-sm" />
             </div>
         </x-card>
 
@@ -109,11 +109,11 @@
                     <div class="text-2xl font-bold">${{ number_format($allianceCash, 2) }}</div>
                     <div class="text-sm text-base-content/50">Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}</div>
                 </div>
-                <x-badge label="Bank" icon="o-building-library" class="badge-info badge-sm" />
+                <x-badge  value="Bank" icon="o-building-library" class="badge-info badge-sm" />
             </div>
             <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
-                <x-badge label="Bank {{ $mainBankCachedDisplay }}" class="badge-ghost badge-sm" />
-                <x-badge label="{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}" class="badge-ghost badge-sm" />
+                <x-badge  value="Bank {{ $mainBankCachedDisplay }}" class="badge-ghost badge-sm" />
+                <x-badge  value="{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}" class="badge-ghost badge-sm" />
             </div>
         </x-card>
 
@@ -126,7 +126,7 @@
                     </div>
                     <div class="text-sm text-base-content/50">After covering member balances</div>
                 </div>
-                <x-badge :label="$netCashPosition >= 0 ? 'Surplus' : 'Shortfall'"
+                <x-badge : value="$netCashPosition >= 0 ? 'Surplus' : 'Shortfall'"
                          :class="$netCashPosition >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'" />
             </div>
             <x-progress :value="min(100, max(0, $coveragePercent))"
@@ -189,7 +189,7 @@
             </div>
         </x-slot:title>
         <x-slot:menu>
-            <x-badge label="{{ number_format($accounts->count()) }} accounts" class="badge-ghost" />
+            <x-badge  value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost" />
             <x-input placeholder="Search..." x-model="search" icon="o-magnifying-glass" class="input-sm w-48" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto">
@@ -208,7 +208,7 @@
                 <tbody>
                     @foreach ($accounts as $acc)
                         <tr :class="{ 'bg-error/10': {{ $acc->frozen ? 'true' : 'false' }} }"
-                            x-show="!search || '{{ strtolower($acc->name . ' ' . ($acc->user?->name ?? '')) }}'.includes(search.toLowerCase())">
+                            x-show="!search || {{ \Illuminate\Support\Js::from(strtolower($acc->name . ' ' . ($acc->user?->name ?? ''))) }}.includes(search.toLowerCase())">
                             <td>
                                 @if($acc->user)
                                     <a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank"
@@ -226,7 +226,7 @@
                                         {{ $acc->name }}
                                     </a>
                                     @if($acc->frozen)
-                                        <x-badge label="Frozen" class="badge-error badge-sm" />
+                                        <x-badge  value="Frozen" class="badge-error badge-sm" />
                                     @endif
                                 </div>
                             </td>
@@ -253,7 +253,7 @@
                         </div>
                     </x-slot:title>
                     <x-slot:menu>
-                        <x-badge label="Controls" class="badge-info badge-sm" />
+                        <x-badge  value="Controls" class="badge-info badge-sm" />
                     </x-slot:menu>
                     <form method="POST" action="{{ route('admin.withdrawals.limits') }}">
                         @csrf
@@ -377,7 +377,7 @@
                     </div>
                 </x-slot:title>
                 <x-slot:menu>
-                    <x-badge label="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning" />
+                    <x-badge  value="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning" />
                 </x-slot:menu>
                 <div class="overflow-x-auto">
                     <table class="table table-sm table-zebra">
@@ -456,7 +456,7 @@
     <x-card id="direct-deposit-logs" class="mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge label="DD" class="badge-primary" />
+                <x-badge  value="DD" class="badge-primary" />
                 Direct Deposit Logs
             </div>
             <div class="text-sm font-normal text-base-content/50">After-tax payouts with quick links to nations and deposit accounts.</div>
@@ -506,7 +506,7 @@
                                 @if($deliveredResources->isNotEmpty())
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($deliveredResources as $resource => $amount)
-                                            <x-badge label="{{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}" class="badge-ghost badge-sm" />
+                                            <x-badge  value="{{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}" class="badge-ghost badge-sm" />
                                         @endforeach
                                     </div>
                                 @else
@@ -534,7 +534,7 @@
     <x-card id="mmr-assistant" class="mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge label="MMR" class="badge-neutral" />
+                <x-badge  value="MMR" class="badge-neutral" />
                 MMR Assistant Purchases
             </div>
             <div class="text-sm font-normal text-base-content/50">Withheld cash reinvested into resources based on player configs.</div>
@@ -682,7 +682,7 @@
                                         <x-button label="Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-xs" />
                                     </form>
                                 @elseif($transaction->isRefunded())
-                                    <x-badge label="Refunded" class="badge-ghost badge-sm" />
+                                    <x-badge  value="Refunded" class="badge-ghost badge-sm" />
                                 @endif
                             </td>
                         </tr>

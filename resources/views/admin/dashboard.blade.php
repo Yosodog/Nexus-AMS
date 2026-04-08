@@ -33,9 +33,9 @@
         </x-slot:subtitle>
         <x-slot:actions>
             <div class="flex flex-wrap gap-2 items-center">
-                <x-badge label="{{ $formatNumber($totalMembers) }} Members" icon="o-users" class="badge-primary badge-lg" />
-                <x-badge label="{{ $formatNumber($totalCities) }} Cities" icon="o-building-office-2" class="badge-success badge-lg" />
-                <x-badge label="{{ $formatMoney($cashTotal, 0) }} Cash" icon="o-currency-dollar" class="badge-neutral badge-lg" />
+                <x-badge  value="{{ $formatNumber($totalMembers) }} Members" icon="o-users" class="badge-primary badge-lg" />
+                <x-badge  value="{{ $formatNumber($totalCities) }} Cities" icon="o-building-office-2" class="badge-success badge-lg" />
+                <x-badge  value="{{ $formatMoney($cashTotal, 0) }} Cash" icon="o-currency-dollar" class="badge-neutral badge-lg" />
                 <a href="{{ route('admin.dashboard', ['refresh' => 1]) }}" class="btn btn-sm btn-outline btn-primary">
                     <x-icon name="o-arrow-path" class="size-4" />
                     Refresh
@@ -57,7 +57,7 @@
                 @if (! is_null($kpi['trend']))
                     <x-slot:figure>
                         <x-badge
-                            :label="($kpi['trend'] >= 0 ? '+' : '') . $formatNumber($kpi['trend'], 1) . '%'"
+                            : value="($kpi['trend'] >= 0 ? '+' : '') . $formatNumber($kpi['trend'], 1) . '%'"
                             :class="$kpi['trend'] >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
                         />
                     </x-slot:figure>
@@ -70,10 +70,10 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="Tax Intake (Money)">
             <x-slot:menu>
-                <x-badge :label="$formatMoney($taxMoneyThisWeek, 0) . ' / 7d'" class="badge-success badge-sm" />
+                <x-badge : value="$formatMoney($taxMoneyThisWeek, 0) . ' / 7d'" class="badge-success badge-sm" />
                 @if (! is_null($taxMoneyTrend))
                     <x-badge
-                        :label="($taxMoneyTrend >= 0 ? '+' : '') . $formatNumber($taxMoneyTrend, 1) . '% vs prior week'"
+                        : value="($taxMoneyTrend >= 0 ? '+' : '') . $formatNumber($taxMoneyTrend, 1) . '% vs prior week'"
                         :class="$taxMoneyTrend >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
                     />
                 @endif
@@ -96,10 +96,10 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="War Tempo & Damage (14 Days)">
             <x-slot:menu>
-                <x-badge :label="$formatNumber($warsThisWeek) . ' wars launched'" class="badge-error badge-sm" />
+                <x-badge : value="$formatNumber($warsThisWeek) . ' wars launched'" class="badge-error badge-sm" />
                 @if (! is_null($warTrend))
                     <x-badge
-                        :label="($warTrend >= 0 ? '+' : '') . $formatNumber($warTrend, 1) . '% vs prior week'"
+                        : value="($warTrend >= 0 ? '+' : '') . $formatNumber($warTrend, 1) . '% vs prior week'"
                         :class="$warTrend >= 0 ? 'badge-error badge-sm' : 'badge-success badge-sm'"
                     />
                 @endif
@@ -113,7 +113,7 @@
         <x-card title="MMR Readiness">
             <x-slot:menu>
                 <x-badge
-                    :label="$formatNumber($mmrCoverage, 1) . '% compliant (' . $mmrCompliantCount . '/' . $formatNumber($totalMembers) . ')'"
+                    : value="$formatNumber($mmrCoverage, 1) . '% compliant (' . $mmrCompliantCount . '/' . $formatNumber($totalMembers) . ')'"
                     class="badge-info badge-sm"
                 />
             </x-slot:menu>
@@ -132,7 +132,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="Resource Stockpile">
             <x-slot:menu>
-                <x-badge :label="'≈ ' . $formatMoney($resourceTotalValue, 0) . ' total'" class="badge-neutral badge-sm" />
+                <x-badge : value="'≈ ' . $formatMoney($resourceTotalValue, 0) . ' total'" class="badge-neutral badge-sm" />
             </x-slot:menu>
             <canvas id="resourceChart" height="240"></canvas>
             <p class="text-base-content/50 text-sm mt-3 mb-2">
@@ -167,7 +167,7 @@
         <x-card title="Military Readiness">
             <x-slot:menu>
                 <x-badge
-                    label="Max: 15k soldiers · 1.25k tanks · 75 aircraft · 15 ships · 60 spies"
+                     value="Max: 15k soldiers · 1.25k tanks · 75 aircraft · 15 ships · 60 spies"
                     class="badge-warning badge-sm"
                 />
             </x-slot:menu>
@@ -370,7 +370,7 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <x-badge :label="\Illuminate\Support\Str::headline($war->war_type)" class="badge-error badge-xs" />
+                                <x-badge : value="\Illuminate\Support\Str::headline($war->war_type)" class="badge-error badge-xs" />
                                 <div class="text-base-content/50 text-xs mt-1">Turns: {{ $formatNumber($war->turns_left) }}</div>
                             </div>
                         </div>
@@ -435,7 +435,7 @@
                                                 <span class="tooltip" data-tip="Alliance member"><x-icon name="o-shield-check" class="size-3 text-primary" /></span>
                                             @endif
                                             @if ($war->winner_id === $war->att_id)
-                                                <x-badge label="W" class="badge-success badge-xs" />
+                                                <x-badge  value="W" class="badge-success badge-xs" />
                                             @endif
                                         </div>
                                     </td>
@@ -448,7 +448,7 @@
                                                 <span class="tooltip" data-tip="Alliance member"><x-icon name="o-shield-check" class="size-3 text-primary" /></span>
                                             @endif
                                             @if ($war->winner_id === $war->def_id)
-                                                <x-badge label="W" class="badge-success badge-xs" />
+                                                <x-badge  value="W" class="badge-success badge-xs" />
                                             @endif
                                         </div>
                                     </td>
