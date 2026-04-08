@@ -50,7 +50,7 @@
             </div>
         </x-utils.card>
 
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr,1fr]">
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
             <x-utils.card title="Eligibility" extraClasses="shadow-xl border border-base-300">
                 @if (! empty($eligibilityReport['summary']))
                     <div class="space-y-3">
@@ -85,7 +85,7 @@
                 @endif
             </x-utils.card>
 
-            <div class="space-y-6">
+            <div class="space-y-6 lg:self-start">
                 @if ($alreadyApplied)
                     <div class="alert alert-info shadow-lg">
                         <span class="text-lg">You’ve already received this grant.</span>
