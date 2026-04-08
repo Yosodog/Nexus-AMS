@@ -7,8 +7,8 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center">
                 <div class="col-sm-6">
                     <h3 class="mb-0">City Grant Management</h3>
@@ -27,19 +27,19 @@
     {{-- Info Boxes --}}
     <div class="row">
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved Grants"
+            <x-admin.info-box icon="o-check-circle" bgColor="badge-primary" title="Total Approved Grants"
                               :value="$totalApproved"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied Grants"
+            <x-admin.info-box icon="o-x-circle" bgColor="badge-error" title="Total Denied Grants"
                               :value="$totalDenied"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending Grants"
+            <x-admin.info-box icon="o-clock" bgColor="badge-warning" title="Pending Grants"
                               :value="$pendingCount"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Funds Distributed"
+            <x-admin.info-box icon="o-banknotes" bgColor="badge-success" title="Total Funds Distributed"
                               :value="number_format($totalFundsDistributed)"/>
         </div>
     </div>
@@ -71,11 +71,11 @@
                                        target="_blank" rel="noopener noreferrer">
                                         {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
                                     </a>
-                                    <div class="small text-muted">
+                                    <div class="small text-base-content/50">
                                         {{ $request->nation->nation_name ?? 'Unknown Nation' }}
                                     </div>
                                 @else
-                                    <span class="text-muted">Unknown Nation</span>
+                                    <span class="text-base-content/50">Unknown Nation</span>
                                 @endif
                             </td>
                             <td>${{ number_format($request->grant_amount) }}</td>
@@ -104,7 +104,7 @@
         <div class="card mt-4">
             <div class="card-header">Manual City Grant Disbursement</div>
             <div class="card-body">
-                <p class="text-muted small mb-3">
+                <p class="text-base-content/50 small mb-3">
                     Approves and pays a city grant immediately, bypassing pending or prior award checks. Use when admins need to push funds without a request.
                 </p>
                 <form method="POST" action="{{ route('admin.manual-disbursements.city-grants') }}">
@@ -137,7 +137,7 @@
                         <div class="col-md-4">
                             <label class="form-label">Account ID</label>
                             <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
-                            <small class="text-muted">Must belong to the nation above.</small>
+                            <small class="text-base-content/50">Must belong to the nation above.</small>
                         </div>
                     </div>
                     <div class="row g-3 mt-1">
@@ -152,7 +152,7 @@
                                    placeholder="Defaults to the calculated grant amount">
                         </div>
                     </div>
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="flex justify-content-end mt-3">
                         <button class="btn btn-primary" type="submit">Send City Grant</button>
                     </div>
                 </form>
@@ -188,7 +188,7 @@
                             @else
                                 Unavailable
                             @endif
-                            <span class="text-muted">({{ number_format($grant->grant_amount) }}%)</span>
+                            <span class="text-base-content/50">({{ number_format($grant->grant_amount) }}%)</span>
                         </td>
                         <td>{{ $grant->enabled ? 'Enabled' : 'Disabled' }}</td>
                         <td>{{ $grant->description }}</td>
@@ -287,7 +287,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">City Grants to Check</label>
-                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                <div class="flex flex-wrap gap-2 mb-2">
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
                                             onclick="setGrantReminderSelection(true)">
                                         Select All
@@ -313,7 +313,7 @@
                                                 <label class="form-check-label" for="grant-reminder-{{ $grant->id }}">
                                                     City #{{ $grant->city_number }}
                                                     @if (! $grant->enabled)
-                                                        <span class="text-muted">(Disabled)</span>
+                                                        <span class="text-base-content/50">(Disabled)</span>
                                                     @endif
                                                 </label>
                                             </div>
@@ -324,7 +324,7 @@
 
                         <div class="mb-3">
                             <label class="form-label" for="grantReminderMessage">Admin Message</label>
-                            <div class="border rounded p-2 mb-2 small text-muted">
+                            <div class="border rounded p-2 mb-2 small text-base-content/50">
                                 <div>Hi {leader_name},</div>
                                 <div class="mt-2">[Your message below]</div>
                                 <div class="mt-2">
@@ -350,7 +350,7 @@
     @endcan
 @endsection
 
-@section("scripts")
+@push("scripts")
     <script>
         function editGrant(grant) {
             document.getElementById('grantForm').action = `{{ url('admin/grants/city') }}/${grant.id}/update`;
@@ -387,11 +387,13 @@
             document.addEventListener('DOMContentLoaded', () => {
                 const reminderModal = document.getElementById('grantReminderModal');
                 if (reminderModal) {
-                    const modal = new bootstrap.Modal(reminderModal);
-                    modal.show();
+                    reminderModal.classList.add('show');
+                    reminderModal.style.display = 'flex';
+                    document.body.classList.add('modal-open');
+                    reminderModal.dispatchEvent(new Event('show.bs.modal'));
                 }
             });
             @endif
         @endcan
     </script>
-@endsection
+@endpush

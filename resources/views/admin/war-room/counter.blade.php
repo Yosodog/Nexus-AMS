@@ -15,8 +15,8 @@
         $canManageAccounts = $canManageAccounts ?? false;
         $activeReimbursementNationId = (int) old('nation_id', 0);
     @endphp
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3 align-items-center">
                 <div class="col-sm-8">
                     <h3 class="mb-0">Counter:
@@ -26,10 +26,10 @@
                             Unknown Aggressor
                         @endif
                     </h3>
-                    <div class="text-muted">Status: <span class="badge text-bg-primary text-uppercase">{{ $counter->status }}</span></div>
-                    <div class="small text-muted">Leader names open in Politics &amp; War for quick validation and targeting.</div>
+                    <div class="text-base-content/50">Status: <span class="badge badge-primary text-uppercase">{{ $counter->status }}</span></div>
+                    <div class="small text-base-content/50">Leader names open in Politics &amp; War for quick validation and targeting.</div>
                 </div>
-                <div class="col-sm-4 text-end">
+                <div class="col-sm-4 text-right">
                     <a href="{{ route('admin.war-room') }}" class="btn btn-outline-secondary btn-sm">Back to War Room</a>
                 </div>
             </div>
@@ -45,10 +45,10 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-6">Team Size</dt>
-                        <dd class="col-6 text-end"><span class="badge text-bg-info">{{ $counter->team_size }}</span></dd>
+                        <dd class="col-6 text-right"><span class="badge badge-info">{{ $counter->team_size }}</span></dd>
 
                         <dt class="col-6">Aggressor Alliance</dt>
-                        <dd class="col-6 text-end">
+                        <dd class="col-6 text-right">
                             @if($counter->aggressor?->alliance)
                                 <a href="https://politicsandwar.com/alliance/id={{ $counter->aggressor->alliance->id }}" target="_blank">{{ $counter->aggressor->alliance->name }}</a>
                             @else
@@ -57,26 +57,26 @@
                         </dd>
 
                         <dt class="col-6">Last War Declared</dt>
-                        <dd class="col-6 text-end">{{ optional($counter->last_war_declared_at)->diffForHumans() ?? '—' }}</dd>
+                        <dd class="col-6 text-right">{{ optional($counter->last_war_declared_at)->diffForHumans() ?? '—' }}</dd>
 
                         <dt class="col-6">Last Activity</dt>
-                        <dd class="col-6 text-end">{{ $aggressorLastActive?->diffForHumans() ?? 'Unknown' }}</dd>
+                        <dd class="col-6 text-right">{{ $aggressorLastActive?->diffForHumans() ?? 'Unknown' }}</dd>
 
                         <dt class="col-6">Created</dt>
-                        <dd class="col-6 text-end">{{ $counter->created_at->diffForHumans() }}</dd>
+                        <dd class="col-6 text-right">{{ $counter->created_at->diffForHumans() }}</dd>
 
                         <dt class="col-6">War Type</dt>
-                        <dd class="col-6 text-end text-uppercase">
+                        <dd class="col-6 text-right text-uppercase">
                             {{ config('war.war_types')[strtolower($counter->war_declaration_type ?? '')] ?? ucfirst($counter->war_declaration_type ?? 'Unknown') }}
                         </dd>
 
                         <dt class="col-6">Discord Forum</dt>
-                        <dd class="col-6 text-end">{{ $counter->discord_forum_channel_id ?: 'Default' }}</dd>
+                        <dd class="col-6 text-right">{{ $counter->discord_forum_channel_id ?: 'Default' }}</dd>
 
                         <dt class="col-6">Reason</dt>
-                        <dd class="col-6 text-end">{{ $counter->war_reason ?: ($defaultWarReason ?? 'Counter') }}</dd>
+                        <dd class="col-6 text-right">{{ $counter->war_reason ?: ($defaultWarReason ?? 'Counter') }}</dd>
                     </dl>
-                    <div class="mt-3 small text-muted">
+                    <div class="mt-3 small text-base-content/50">
                         <div>Aggressor score {{ number_format($aggressor->score ?? 0, 2) }} • Cities {{ $aggressor->num_cities ?? 0 }}</div>
                         <div>Last active {{ $aggressorLastActive?->format('M j, Y g:i A') ?? 'Unknown' }}</div>
                         <div>Soldiers {{ number_format(optional($aggressorMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($aggressorMilitary)->tanks ?? 0) }}</div>
@@ -165,9 +165,9 @@
 
         <div class="col-12 col-xl-8">
             <div class="card shadow-sm mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Proposed Assignments</h5>
-                    <small class="text-muted">Scores reflect availability, readiness, cohesion.</small>
+                    <small class="text-base-content/50">Scores reflect availability, readiness, cohesion.</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -193,25 +193,25 @@
                                 <tr>
                                     <td>
                                         @if($friendly?->id)
-                                            <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
+                                            <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="font-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
                                         @else
-                                            <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                            <span class="font-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
                                         @endif
-                                        <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
+                                        <div class="small text-base-content/50">{{ $friendly->nation_name ?? '—' }}</div>
                                     </td>
                                     <td>
                                         <div class="small">Score {{ number_format($friendly->score ?? 0, 2) }} • Cities {{ $friendly->num_cities ?? 0 }}</div>
-                                        <div class="small text-muted">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
-                                        <div class="small text-muted">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
+                                        <div class="small text-base-content/50">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
+                                        <div class="small text-base-content/50">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive wars">
+                                        <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Offensive / defensive wars">
                                             {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge text-bg-info">{{ number_format($assignment->match_score, 1) }}</span>
-                                        <div class="small text-muted">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
+                                        <span class="badge badge-info">{{ number_format($assignment->match_score, 1) }}</span>
+                                        <div class="small text-base-content/50">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
                                     </td>
                                     <td>
                                         <span class="badge text-bg-light text-uppercase">{{ $assignment->status }}</span>
@@ -245,7 +245,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">No assignments proposed yet.</td>
+                                    <td colspan="6" class="text-center py-4 text-base-content/50">No assignments proposed yet.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -257,9 +257,9 @@
             <div class="row g-4">
                 <div class="col-12">
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="card-header flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">All Candidate Nations (In Range)</h5>
-                            <small class="text-muted">All in-range nations, sorted with recommended options first.</small>
+                            <small class="text-base-content/50">All in-range nations, sorted with recommended options first.</small>
                         </div>
                         <div class="card-body border-bottom bg-body-tertiary">
                             <div class="row g-2 align-items-end" id="candidate-filter-bar">
@@ -324,30 +324,30 @@
                                             data-recommended="{{ ($row['recommended'] ?? false) ? '1' : '0' }}">
                                             <td>
                                                 @if($friendly?->id)
-                                                    <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
+                                                    <a href="https://politicsandwar.com/nation/id={{ $friendly->id }}" target="_blank" rel="noopener noreferrer" class="font-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</a>
                                                 @else
-                                                    <span class="fw-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
+                                                    <span class="font-semibold">{{ $friendly->leader_name ?? 'Unknown' }}</span>
                                                 @endif
-                                                <div class="small text-muted">{{ $friendly->nation_name ?? '—' }}</div>
+                                                <div class="small text-base-content/50">{{ $friendly->nation_name ?? '—' }}</div>
                                             </td>
                                             <td>
                                                 <div class="small">Score {{ number_format($friendly->score ?? 0, 2) }} • Cities {{ $friendly->num_cities ?? 0 }}</div>
-                                                <div class="small text-muted">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
-                                                <div class="small text-muted">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
+                                                <div class="small text-base-content/50">Soldiers {{ number_format(optional($friendlyMilitary)->soldiers ?? 0) }} • Tanks {{ number_format(optional($friendlyMilitary)->tanks ?? 0) }}</div>
+                                                <div class="small text-base-content/50">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                             </td>
                                             <td>
-                                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive wars">
+                                                <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Offensive / defensive wars">
                                                     {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                                 </span>
                                             </td>
                                             <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge text-bg-info">{{ number_format($row['score'] ?? 0, 1) }}</span>
-                                                    <span class="badge {{ ($row['recommended'] ?? false) ? 'text-bg-success' : 'text-bg-secondary' }}">
+                                                <div class="flex align-items-center gap-2">
+                                                    <span class="badge badge-info">{{ number_format($row['score'] ?? 0, 1) }}</span>
+                                                    <span class="badge {{ ($row['recommended'] ?? false) ? 'badge-success' : 'badge-ghost' }}">
                                                         {{ ($row['recommended'] ?? false) ? 'Recommended' : 'Manual only' }}
                                                     </span>
                                                 </div>
-                                                <div class="small text-muted">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
+                                                <div class="small text-base-content/50">Active {{ $lastActiveAt?->diffForHumans() ?? 'Unknown' }}</div>
                                             </td>
                                             <td>
                                                 <form method="post" action="{{ route('admin.war-counters.assignments.manual', $counter) }}" class="d-inline">
@@ -360,11 +360,11 @@
                                         </tr>
                                     @empty
                                         <tr class="candidate-empty-row">
-                                            <td colspan="5" class="text-center py-4 text-muted">No nations are in war range.</td>
+                                            <td colspan="5" class="text-center py-4 text-base-content/50">No nations are in war range.</td>
                                         </tr>
                                     @endforelse
                                     <tr class="candidate-filter-empty d-none">
-                                        <td colspan="5" class="text-center py-4 text-muted">No candidates match the current filters.</td>
+                                        <td colspan="5" class="text-center py-4 text-base-content/50">No candidates match the current filters.</td>
                                     </tr>
                                     </tbody>
                                 </table>
@@ -378,7 +378,7 @@
                             <h5 class="card-title mb-0">War Attacks Involving Enemy Nation</h5>
                         </div>
                         <div class="card-body p-0">
-                            <div class="px-3 pt-3 small text-muted">
+                            <div class="px-3 pt-3 small text-base-content/50">
                                 Most recent 50 attacks where this aggressor was either the attacker or defender.
                             </div>
                             <div class="table-responsive">
@@ -398,14 +398,14 @@
                                         <tr>
                                             <td>{{ optional($attack->date)->diffForHumans() }}</td>
                                             <td>
-                                                <span class="badge {{ $attack->att_id === $counter->aggressor_nation_id ? 'text-bg-warning' : 'text-bg-info' }}">
+                                                <span class="badge {{ $attack->att_id === $counter->aggressor_nation_id ? 'badge-warning' : 'badge-info' }}">
                                                     {{ $attack->att_id === $counter->aggressor_nation_id ? 'Attacker' : 'Defender' }}
                                                 </span>
                                             </td>
                                             <td>
                                                 @if($attack->attacker?->id)
                                                     <a href="https://politicsandwar.com/nation/id={{ $attack->attacker->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->attacker->leader_name ?? $attack->att_id }}</a>
-                                                    <div class="small text-muted">Active {{ $attack->attacker?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
+                                                    <div class="small text-base-content/50">Active {{ $attack->attacker?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                                 @else
                                                     {{ $attack->att_id }}
                                                 @endif
@@ -413,7 +413,7 @@
                                             <td>
                                                 @if($attack->defender?->id)
                                                     <a href="https://politicsandwar.com/nation/id={{ $attack->defender->id }}" target="_blank" rel="noopener noreferrer">{{ $attack->defender->leader_name ?? $attack->def_id }}</a>
-                                                    <div class="small text-muted">Active {{ $attack->defender?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
+                                                    <div class="small text-base-content/50">Active {{ $attack->defender?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                                 @else
                                                     {{ $attack->def_id }}
                                                 @endif
@@ -423,13 +423,13 @@
                                                 @if($attack->war_id)
                                                     <a href="https://politicsandwar.com/nation/war/timeline/war={{ $attack->war_id }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Timeline</a>
                                                 @else
-                                                    <span class="text-muted">—</span>
+                                                    <span class="text-base-content/50">—</span>
                                                 @endif
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center py-3 text-muted">No war attacks recorded for this enemy nation yet.</td>
+                                            <td colspan="6" class="text-center py-3 text-base-content/50">No war attacks recorded for this enemy nation yet.</td>
                                         </tr>
                                     @endforelse
                                     </tbody>
@@ -466,27 +466,27 @@
                                             <td>{{ optional($war->date)->diffForHumans() }}</td>
                                             <td>{{ $isAggAtt ? 'Attacking' : 'Defending' }}</td>
                                             <td>
-                                                <div class="fw-semibold">
+                                                <div class="font-semibold">
                                                     @if($opponent?->id)
                                                         <a href="https://politicsandwar.com/nation/id={{ $opponent->id }}" target="_blank" rel="noopener noreferrer">{{ $opponent->leader_name ?? $opponent->id }}</a>
                                                     @else
                                                         —
                                                     @endif
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     @if($opAlliance)
                                                         <a href="https://politicsandwar.com/alliance/id={{ $opAlliance->id }}" target="_blank" rel="noopener noreferrer">{{ $opAlliance->name }}</a>
                                                     @else
                                                         —
                                                     @endif
                                                 </div>
-                                                <div class="small text-muted">Active {{ $opponent?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
+                                                <div class="small text-base-content/50">Active {{ $opponent?->accountProfile?->last_active?->diffForHumans() ?? 'Unknown' }}</div>
                                             </td>
                                             <td>
                                                 @if($war->end_date)
-                                                    <span class="badge text-bg-secondary">Ended</span>
+                                                    <span class="badge badge-ghost">Ended</span>
                                                 @else
-                                                    <span class="badge text-bg-success">Ongoing</span>
+                                                    <span class="badge badge-success">Ongoing</span>
                                                 @endif
                                             </td>
                                             <td>
@@ -495,7 +495,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-center py-3 text-muted">No wars in last 30 days.</td>
+                                            <td colspan="5" class="text-center py-3 text-base-content/50">No wars in last 30 days.</td>
                                         </tr>
                                     @endforelse
                                     </tbody>
@@ -510,14 +510,14 @@
 
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title mb-0">Counter Cost &amp; Reimbursements</h5>
-                        <small class="text-muted">
+                        <small class="text-base-content/50">
                             Live war costs for this counter using attacker/defender direction correctly per member.
                         </small>
                     </div>
-                    <div class="text-end small text-muted">
+                    <div class="text-right small text-base-content/50">
                         @if($tradePriceAsOf)
                             24h average trade prices • as of {{ \Carbon\Carbon::parse($tradePriceAsOf)->format('M j, Y') }}
                         @else
@@ -532,7 +532,7 @@
                         </div>
                     @else
                         <div class="alert alert-secondary">
-                            <div class="fw-semibold mb-1">How costs are valued</div>
+                            <div class="font-semibold mb-1">How costs are valued</div>
                             <div class="small">
                                 Resources are reimbursed as actual amounts (gas, munitions, steel, aluminum). Money reimbursement is for unit + infra value only.
                                 Unit valuation uses: Soldiers $5, Tanks $60 + 0.5 steel, Aircraft $4,000 + 10 aluminum, Ships $50,000 + 30 steel.
@@ -548,56 +548,56 @@
                         <div class="row g-3 mb-4">
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Total Value (Units + Infra)</div>
-                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_counter_cost'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Total Value (Units + Infra)</div>
+                                    <div class="font-semibold">${{ number_format((float) ($counterCostSummary['total_counter_cost'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Value Reimbursed</div>
-                                    <div class="fw-semibold text-success">${{ number_format((float) ($counterCostSummary['total_reimbursed'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Value Reimbursed</div>
+                                    <div class="font-semibold text-success">${{ number_format((float) ($counterCostSummary['total_reimbursed'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Value Outstanding</div>
-                                    <div class="fw-semibold text-warning">${{ number_format((float) ($counterCostSummary['outstanding_total'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Value Outstanding</div>
+                                    <div class="font-semibold text-warning">${{ number_format((float) ($counterCostSummary['outstanding_total'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Resource Burn</div>
-                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_resources_cost'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Resource Burn</div>
+                                    <div class="font-semibold">${{ number_format((float) ($counterCostSummary['total_resources_cost'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Unit Losses</div>
-                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_unit_loss_cost'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Unit Losses</div>
+                                    <div class="font-semibold">${{ number_format((float) ($counterCostSummary['total_unit_loss_cost'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Infra Losses</div>
-                                    <div class="fw-semibold">${{ number_format((float) ($counterCostSummary['total_infra_loss_cost'] ?? 0), 2) }}</div>
+                                    <div class="small text-base-content/50">Infra Losses</div>
+                                    <div class="font-semibold">${{ number_format((float) ($counterCostSummary['total_infra_loss_cost'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Wars Tracked</div>
-                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['war_count'] ?? 0)) }}</div>
+                                    <div class="small text-base-content/50">Wars Tracked</div>
+                                    <div class="font-semibold">{{ number_format((int) ($counterCostSummary['war_count'] ?? 0)) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Active Wars</div>
-                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['active_war_count'] ?? 0)) }}</div>
+                                    <div class="small text-base-content/50">Active Wars</div>
+                                    <div class="font-semibold">{{ number_format((int) ($counterCostSummary['active_war_count'] ?? 0)) }}</div>
                                 </div>
                             </div>
                             <div class="col-6 col-xl-2">
                                 <div class="border rounded p-2 bg-body-tertiary">
-                                    <div class="small text-muted">Members Involved</div>
-                                    <div class="fw-semibold">{{ number_format((int) ($counterCostSummary['participant_count'] ?? 0)) }}</div>
+                                    <div class="small text-base-content/50">Members Involved</div>
+                                    <div class="font-semibold">{{ number_format((int) ($counterCostSummary['participant_count'] ?? 0)) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -633,21 +633,21 @@
                                             @else
                                                 —
                                             @endif
-                                            <div class="small text-muted">{{ $friendlyNation?->nation_name ?? 'Unknown nation' }}</div>
+                                            <div class="small text-base-content/50">{{ $friendlyNation?->nation_name ?? 'Unknown nation' }}</div>
                                         </td>
                                         <td>
-                                            <span class="badge {{ ($warCost['friendly_role'] ?? '') === 'attacker' ? 'text-bg-danger' : 'text-bg-primary' }}">
+                                            <span class="badge {{ ($warCost['friendly_role'] ?? '') === 'attacker' ? 'badge-error' : 'badge-primary' }}">
                                                 {{ ucfirst($warCost['friendly_role'] ?? 'unknown') }}
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge {{ ($warCost['is_active'] ?? false) ? 'text-bg-success' : 'text-bg-secondary' }}">
+                                            <span class="badge {{ ($warCost['is_active'] ?? false) ? 'badge-success' : 'badge-ghost' }}">
                                                 {{ ($warCost['is_active'] ?? false) ? 'Active' : 'Ended' }}
                                             </span>
                                         </td>
                                         <td>
                                             ${{ number_format((float) ($warCost['resources_cost'] ?? 0), 2) }}
-                                            <div class="small text-muted">
+                                            <div class="small text-base-content/50">
                                                 G {{ number_format((float) ($warCost['resources_used']['gasoline'] ?? 0), 2) }}
                                                 • M {{ number_format((float) ($warCost['resources_used']['munitions'] ?? 0), 2) }}
                                                 • S {{ number_format((float) ($warCost['resources_used']['steel'] ?? 0), 2) }}
@@ -656,7 +656,7 @@
                                         </td>
                                         <td>
                                             ${{ number_format((float) ($warCost['unit_loss_cost'] ?? 0), 2) }}
-                                            <div class="small text-muted">
+                                            <div class="small text-base-content/50">
                                                 S {{ number_format((int) ($warCost['unit_losses']['soldiers'] ?? 0)) }}
                                                 • T {{ number_format((int) ($warCost['unit_losses']['tanks'] ?? 0)) }}
                                                 • A {{ number_format((int) ($warCost['unit_losses']['aircraft'] ?? 0)) }}
@@ -664,7 +664,7 @@
                                             </div>
                                         </td>
                                         <td>${{ number_format((float) ($warCost['infra_loss_cost'] ?? 0), 2) }}</td>
-                                        <td class="fw-semibold">${{ number_format((float) ($warCost['total_cost'] ?? 0), 2) }}</td>
+                                        <td class="font-semibold">${{ number_format((float) ($warCost['total_cost'] ?? 0), 2) }}</td>
                                         <td>
                                             <a href="https://politicsandwar.com/nation/war/timeline/war={{ $warCost['war_id'] ?? 0 }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
                                                 Timeline
@@ -673,7 +673,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center py-3 text-muted">No counter wars found yet for this aggressor window.</td>
+                                        <td colspan="9" class="text-center py-3 text-base-content/50">No counter wars found yet for this aggressor window.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>
@@ -681,7 +681,7 @@
                         </div>
 
                         <h6 class="mb-2">Reimburse Members</h6>
-                        <div class="small text-muted mb-2">
+                        <div class="small text-base-content/50 mb-2">
                             Includes members actively involved in this counter, including the original defender when detected in counter wars.
                         </div>
                         <div class="table-responsive mb-4">
@@ -693,7 +693,7 @@
                                     <th>Suggested Reimbursement</th>
                                     <th>Deposit Account</th>
                                     <th>Adjustable Reimbursement</th>
-                                    <th class="text-end">Action</th>
+                                    <th class="text-right">Action</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -719,37 +719,37 @@
                                     <tr data-counter-reimbursement-row data-total-target="{{ $rowTotalTargetId }}">
                                         <td>
                                             @if($nation?->id)
-                                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">
+                                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener noreferrer" class="font-semibold">
                                                     {{ $nation->leader_name ?? $nation->id }}
                                                 </a>
                                             @else
-                                                <span class="fw-semibold">Nation #{{ $nationId }}</span>
+                                                <span class="font-semibold">Nation #{{ $nationId }}</span>
                                             @endif
-                                            <div class="small text-muted">{{ $nation?->nation_name ?? 'Unknown nation' }}</div>
-                                            <div class="small text-muted">
+                                            <div class="small text-base-content/50">{{ $nation?->nation_name ?? 'Unknown nation' }}</div>
+                                            <div class="small text-base-content/50">
                                                 Already reimbursed: ${{ number_format((float) ($participant['reimbursed_total'] ?? 0), 2) }}
                                                 @if((int) ($participant['reimbursement_count'] ?? 0) > 0)
                                                     • {{ (int) $participant['reimbursement_count'] }} payout(s)
                                                 @endif
                                             </div>
-                                            <div class="small text-muted">
+                                            <div class="small text-base-content/50">
                                                 Resource reimbursed:
                                                 Gas {{ number_format((float) ($participant['reimbursed_resources']['gasoline'] ?? 0), 2) }}
                                                 • Mun {{ number_format((float) ($participant['reimbursed_resources']['munitions'] ?? 0), 2) }}
                                                 • Steel {{ number_format((float) ($participant['reimbursed_resources']['steel'] ?? 0), 2) }}
                                                 • Alum {{ number_format((float) ($participant['reimbursed_resources']['aluminum'] ?? 0), 2) }}
                                             </div>
-                                            <div class="small text-muted">
+                                            <div class="small text-base-content/50">
                                                 Value outstanding: ${{ number_format((float) ($participant['outstanding_cost'] ?? 0), 2) }}
                                             </div>
                                         </td>
                                         <td>
                                             <div class="small">{{ number_format((int) ($participant['war_count'] ?? 0)) }} tracked</div>
-                                            <div class="small text-muted">{{ number_format((int) ($participant['active_war_count'] ?? 0)) }} active</div>
+                                            <div class="small text-base-content/50">{{ number_format((int) ($participant['active_war_count'] ?? 0)) }} active</div>
                                         </td>
                                         <td>
-                                            <div class="small fw-semibold">Resource Amounts (remaining)</div>
-                                            <div class="small text-muted">
+                                            <div class="small font-semibold">Resource Amounts (remaining)</div>
+                                            <div class="small text-base-content/50">
                                                 Gas {{ number_format((float) ($participant['outstanding_resources']['gasoline'] ?? 0), 2) }}
                                                 • Mun {{ number_format((float) ($participant['outstanding_resources']['munitions'] ?? 0), 2) }}
                                                 • Steel {{ number_format((float) ($participant['outstanding_resources']['steel'] ?? 0), 2) }}
@@ -757,8 +757,8 @@
                                             </div>
                                             <div class="small mt-1">Unit Value: ${{ number_format((float) ($participant['outstanding_unit_loss_cost'] ?? 0), 2) }}</div>
                                             <div class="small">Infra Value: ${{ number_format((float) ($participant['outstanding_infra_loss_cost'] ?? 0), 2) }}</div>
-                                            <div class="small fw-semibold">Money Total: ${{ number_format((float) ($participant['outstanding_cost'] ?? 0), 2) }}</div>
-                                            <div class="small text-muted">Defaults use remaining amount per category/resource.</div>
+                                            <div class="small font-semibold">Money Total: ${{ number_format((float) ($participant['outstanding_cost'] ?? 0), 2) }}</div>
+                                            <div class="small text-base-content/50">Defaults use remaining amount per category/resource.</div>
                                         </td>
                                         <td>
                                                 <select name="account_id" class="form-select form-select-sm mb-2" form="{{ $reimbursementFormId }}" @disabled(! $rowCanSubmit)>
@@ -770,7 +770,7 @@
                                                         <option value="">No accounts available</option>
                                                     @endforelse
                                                 </select>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     @if($rowAccounts->isEmpty())
                                                         Member has no accounts to receive reimbursement.
                                                     @else
@@ -859,13 +859,13 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="text-end">
+                                        <td class="text-right">
                                             <form id="{{ $reimbursementFormId }}" method="post" action="{{ route('admin.war-counters.reimbursements.store', $counter) }}" class="d-none">
                                                 @csrf
                                                 <input type="hidden" name="nation_id" value="{{ $nationId }}">
                                             </form>
-                                            <div class="small text-muted mb-1">Money reimbursement total</div>
-                                            <div class="fw-semibold mb-2" id="{{ $rowTotalTargetId }}">${{ number_format($rowTotal, 2) }}</div>
+                                            <div class="small text-base-content/50 mb-1">Money reimbursement total</div>
+                                            <div class="font-semibold mb-2" id="{{ $rowTotalTargetId }}">${{ number_format($rowTotal, 2) }}</div>
                                             <button type="submit"
                                                     class="btn btn-sm btn-primary"
                                                     form="{{ $reimbursementFormId }}"
@@ -881,7 +881,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-3 text-muted">No member cost records available yet.</td>
+                                        <td colspan="6" class="text-center py-3 text-base-content/50">No member cost records available yet.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>
@@ -922,12 +922,12 @@
                                             Alum {{ number_format((float) $reimbursement->aluminum, 2) }}
                                             <div>Units ${{ number_format((float) $reimbursement->unit_loss_cost, 2) }} • Infra ${{ number_format((float) $reimbursement->infra_loss_cost, 2) }}</div>
                                         </td>
-                                        <td class="fw-semibold">${{ number_format((float) $reimbursement->total_cost, 2) }}</td>
+                                        <td class="font-semibold">${{ number_format((float) $reimbursement->total_cost, 2) }}</td>
                                         <td>{{ $reimbursement->reimbursedByUser?->name ?? 'System' }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-3 text-muted">No reimbursements issued for this counter yet.</td>
+                                        <td colspan="6" class="text-center py-3 text-base-content/50">No reimbursements issued for this counter yet.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>

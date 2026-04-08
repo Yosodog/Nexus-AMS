@@ -14,17 +14,17 @@
 @section('title', 'Offshore Management')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Offshore Management</h3>
-                    <p class="text-muted small mb-0">Monitor cached balances, adjust guardrails, and trigger manual transfers.</p>
+                    <p class="text-base-content/50 small mb-0">Monitor cached balances, adjust guardrails, and trigger manual transfers.</p>
                 </div>
                 @if($canManageOffshores)
                     <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createOffshoreModal">
-                            <i class="bi bi-plus-circle me-1"></i> Add Offshore
+                            <i class="o-plus-circle me-1"></i> Add Offshore
                         </button>
                     </div>
                 @endif
@@ -35,11 +35,11 @@
     <div class="row g-4">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="mb-0">Configured Offshores</h5>
                     @if($canManageOffshores)
                         <button class="btn btn-outline-primary btn-sm" type="submit" form="offshore-priority-form">
-                            <i class="bi bi-arrow-repeat me-1"></i> Save Priority Order
+                            <i class="o-arrow-path me-1"></i> Save Priority Order
                         </button>
                     @endif
                 </div>
@@ -60,7 +60,7 @@
                                     <th>Cached Balances</th>
                                     <th>Guardrails</th>
                                     @if($canManageOffshores)
-                                        <th class="text-end">Actions</th>
+                                        <th class="text-right">Actions</th>
                                     @endif
                                 </tr>
                                 </thead>
@@ -81,33 +81,33 @@
                                                        aria-label="Priority for {{ $offshore->name }}"
                                                        form="offshore-priority-form">
                                             @else
-                                                <span class="badge text-bg-secondary">{{ $offshore->priority }}</span>
+                                                <span class="badge badge-ghost">{{ $offshore->priority }}</span>
                                             @endif
                                         </td>
                                         <td>
-                                            <div class="fw-semibold">{{ $offshore->name }}</div>
-                                            <div class="text-muted small">Created {{ $offshore->created_at?->format('M d, Y') ?? 'Unknown' }}</div>
+                                            <div class="font-semibold">{{ $offshore->name }}</div>
+                                            <div class="text-base-content/50 small">Created {{ $offshore->created_at?->format('M d, Y') ?? 'Unknown' }}</div>
                                         </td>
                                         <td>
                                             <a href="https://politicsandwar.com/alliance/id={{ $offshore->alliance_id }}"
                                                target="_blank"
                                                class="text-decoration-none">
-                                                <i class="bi bi-box-arrow-up-right me-1"></i>{{ $offshore->alliance_id }}
+                                                <i class="o-arrow-top-right-on-square me-1"></i>{{ $offshore->alliance_id }}
                                             </a>
                                         </td>
                                         <td>
                                             @if($offshore->enabled)
-                                                <span class="badge text-bg-success">Enabled</span>
+                                                <span class="badge badge-success">Enabled</span>
                                             @else
-                                                <span class="badge text-bg-secondary">Disabled</span>
+                                                <span class="badge badge-ghost">Disabled</span>
                                             @endif
                                         </td>
                                         <td>
                                             @if(!empty($snapshot['balances']))
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Cached {{ $cachedAt ? $cachedAt->diffForHumans() : 'recently' }}
                                                 </div>
-                                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                                <div class="flex flex-wrap gap-2 mt-2">
                                                     @foreach($snapshot['balances'] as $resource => $amount)
                                                         <span class="badge text-bg-light text-capitalize">
                                                             {{ $resource }}:
@@ -116,7 +116,7 @@
                                                     @endforeach
                                                 </div>
                                             @else
-                                                <span class="text-muted">No cached balances yet.</span>
+                                                <span class="text-base-content/50">No cached balances yet.</span>
                                             @endif
                                         </td>
                                         <td>
@@ -130,11 +130,11 @@
                                                     @endforeach
                                                 </ul>
                                             @else
-                                                <span class="text-muted">No guardrails</span>
+                                                <span class="text-base-content/50">No guardrails</span>
                                             @endif
                                         </td>
                                         @if($canManageOffshores)
-                                            <td class="text-end">
+                                            <td class="text-right">
                                                 <div class="btn-group btn-group-sm" role="group" aria-label="Actions for {{ $offshore->name }}">
                                                     <button class="btn btn-outline-secondary"
                                                             type="button"
@@ -143,7 +143,7 @@
                                                             data-bs-tooltip="true"
                                                             data-bs-placement="top"
                                                             title="Edit offshore">
-                                                        <i class="bi bi-pencil"></i>
+                                                        <i class="o-pencil"></i>
                                                     </button>
                                                     <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST" class="d-inline">
                                                         @csrf
@@ -152,7 +152,7 @@
                                                                 data-bs-toggle="tooltip"
                                                                 data-bs-placement="top"
                                                                 title="Refresh balances">
-                                                            <i class="bi bi-arrow-clockwise"></i>
+                                                            <i class="o-arrow-path"></i>
                                                         </button>
                                                     </form>
                                                     <button type="button"
@@ -166,7 +166,7 @@
                                                             data-bs-tooltip="true"
                                                             data-bs-placement="top"
                                                             title="Transfer to main bank">
-                                                        <i class="bi bi-upload"></i>
+                                                        <i class="o-arrow-up-tray"></i>
                                                     </button>
                                                     <button type="button"
                                                             class="btn btn-outline-success"
@@ -179,7 +179,7 @@
                                                             data-bs-tooltip="true"
                                                             data-bs-placement="top"
                                                             title="Send funds from main bank">
-                                                        <i class="bi bi-download"></i>
+                                                        <i class="o-arrow-down-tray"></i>
                                                     </button>
                                                     <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" class="d-inline"
                                                           onsubmit="return confirm('Sweep the entire main bank into {{ $offshore->name }}? This cannot be undone.');">
@@ -189,7 +189,7 @@
                                                                 data-bs-toggle="tooltip"
                                                                 data-bs-placement="top"
                                                                 title="Sweep entire main bank into this offshore">
-                                                            <i class="bi bi-bank"></i>
+                                                            <i class="o-building-library"></i>
                                                         </button>
                                                     </form>
                                                     <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="d-inline">
@@ -199,7 +199,7 @@
                                                                 data-bs-toggle="tooltip"
                                                                 data-bs-placement="top"
                                                                 title="Toggle availability">
-                                                            <i class="bi bi-power"></i>
+                                                            <i class="o-power"></i>
                                                         </button>
                                                     </form>
                                                     <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" class="d-inline"
@@ -211,7 +211,7 @@
                                                                 data-bs-toggle="tooltip"
                                                                 data-bs-placement="top"
                                                                 title="Delete offshore">
-                                                            <i class="bi bi-trash"></i>
+                                                            <i class="o-trash"></i>
                                                         </button>
                                                     </form>
                                                 </div>
@@ -220,7 +220,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
+                                        <td colspan="7" class="text-center text-base-content/50 py-4">
                                             No offshores configured yet.
                                         </td>
                                     </tr>
@@ -236,13 +236,13 @@
     <div class="row mt-4">
         <div class="col-12 ">
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="mb-0">Main Bank Snapshot</h5>
                     @if($canManageOffshores)
                         <form action="{{ route('admin.offshores.main-bank.refresh') }}" method="POST" class="ms-2">
                             @csrf
                             <button type="submit" class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                <i class="o-arrow-path me-1"></i> Refresh
                             </button>
                         </form>
                     @endif
@@ -253,10 +253,10 @@
                             ->filter(fn($amount) => $amount !== null);
                     @endphp
                     @if($visibleMainBalances->isNotEmpty())
-                        <div class="text-muted small">
+                        <div class="text-base-content/50 small">
                             Cached {{ $mainBankCachedAt ? $mainBankCachedAt->diffForHumans() : 'recently' }}
                         </div>
-                        <div class="d-flex flex-wrap gap-2 mt-2">
+                        <div class="flex flex-wrap gap-2 mt-2">
                             @foreach($visibleMainBalances as $resource => $amount)
                                 <span class="badge text-bg-light text-capitalize">
                                     {{ $resource }}:
@@ -265,7 +265,7 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-muted mb-0">No cached main bank data yet.</p>
+                        <p class="text-base-content/50 mb-0">No cached main bank data yet.</p>
                     @endif
                 </div>
             </div>
@@ -280,9 +280,9 @@
                         <h5 class="mb-0">Manual Transfer</h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small">Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.</p>
+                        <p class="text-base-content/50 small">Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.</p>
                         <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#manualTransferModal">
-                            <i class="bi bi-cash-coin me-1"></i> Start Transfer
+                            <i class="o-banknotes-coin me-1"></i> Start Transfer
                         </button>
                     </div>
                 </div>
@@ -292,9 +292,9 @@
             <div class="col-12">
         @endif
                 <div class="card shadow-sm h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header flex justify-content-between align-items-center">
                         <h5 class="mb-0">Recent Manual Transfers</h5>
-                        <span class="text-muted small">Last {{ $transfers->count() }} records</span>
+                        <span class="text-base-content/50 small">Last {{ $transfers->count() }} records</span>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -315,7 +315,7 @@
                                         <td>{{ $transfer->user?->name ?? 'Unknown User' }}</td>
                                         <td>
                                             {{ $transfer->source_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->sourceOffshore?->name ?? 'Offshore') }}
-                                            <i class="bi bi-arrow-right-short"></i>
+                                            <i class="o-arrow-right"></i>
                                             {{ $transfer->destination_type === \App\Models\OffshoreTransfer::TYPE_MAIN ? 'Main Bank' : ($transfer->destinationOffshore?->name ?? 'Offshore') }}
                                         </td>
                                         <td>
@@ -330,25 +330,25 @@
                                                 @endforeach
                                             </ul>
                                             @if($transfer->message)
-                                                <div class="small text-muted mt-1">{{ $transfer->message }}</div>
+                                                <div class="small text-base-content/50 mt-1">{{ $transfer->message }}</div>
                                             @endif
                                         </td>
                                         <td>
                                             @switch($transfer->status)
                                                 @case(\App\Models\OffshoreTransfer::STATUS_COMPLETED)
-                                                    <span class="badge text-bg-success">Completed</span>
+                                                    <span class="badge badge-success">Completed</span>
                                                     @break
                                                 @case(\App\Models\OffshoreTransfer::STATUS_FAILED)
-                                                    <span class="badge text-bg-danger">Failed</span>
+                                                    <span class="badge badge-error">Failed</span>
                                                     @break
                                                 @default
-                                                    <span class="badge text-bg-secondary">Pending</span>
+                                                    <span class="badge badge-ghost">Pending</span>
                                             @endswitch
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">No transfers recorded yet.</td>
+                                        <td colspan="5" class="text-center text-base-content/50 py-4">No transfers recorded yet.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>
@@ -406,11 +406,11 @@
 
                             <hr class="my-4">
 
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0">Guardrails</h6>
                                 <button class="btn btn-sm btn-outline-secondary" type="button"
                                         data-action="add-guardrail" data-target="#create-guardrail-container">
-                                    <i class="bi bi-plus-circle me-1"></i> Add Guardrail
+                                    <i class="o-plus-circle me-1"></i> Add Guardrail
                                 </button>
                             </div>
                             @php $createGuardrails = $modalContext === 'create' ? old('guardrails', []) : [] @endphp
@@ -420,7 +420,7 @@
                                     @include('admin.offshores.partials.guardrail-row', ['index' => $index, 'guardrail' => $guardrail, 'resources' => $guardrailResources])
                                 @endforeach
                             </div>
-                            <p class="text-muted small mt-2">Guardrails prevent automated withdrawals from dropping a resource below the specified minimum.</p>
+                            <p class="text-base-content/50 small mt-2">Guardrails prevent automated withdrawals from dropping a resource below the specified minimum.</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -479,11 +479,11 @@
 
                                 <hr class="my-4">
 
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="flex justify-content-between align-items-center mb-2">
                                     <h6 class="mb-0">Guardrails</h6>
                                     <button class="btn btn-sm btn-outline-secondary" type="button"
                                             data-action="add-guardrail" data-target="#edit-guardrail-container-{{ $offshore->id }}">
-                                        <i class="bi bi-plus-circle me-1"></i> Add Guardrail
+                                        <i class="o-plus-circle me-1"></i> Add Guardrail
                                     </button>
                                 </div>
                                 @php
@@ -501,7 +501,7 @@
                                         @include('admin.offshores.partials.guardrail-row', ['index' => $index, 'guardrail' => $guardrail, 'resources' => $guardrailResources])
                                     @endforeach
                                 </div>
-                                <p class="text-muted small mt-2">Leave guardrails empty to allow the service to manage resources freely.</p>
+                                <p class="text-base-content/50 small mt-2">Leave guardrails empty to allow the service to manage resources freely.</p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -550,7 +550,7 @@
                                     <input type="hidden" name="destination_offshore_id" id="transfer-destination-id">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Operator Note <span class="text-muted small">(optional)</span></label>
+                                    <label class="form-label">Operator Note <span class="text-base-content/50 small">(optional)</span></label>
                                     <input type="text" class="form-control" name="note" placeholder="Visible in bank records and audit logs">
                                 </div>
                             </div>
@@ -570,7 +570,7 @@
                                     </div>
                                 @endforeach
                             </div>
-                            <p class="text-muted small mt-2">Only resources with amounts greater than zero will be transferred.</p>
+                            <p class="text-base-content/50 small mt-2">Only resources with amounts greater than zero will be transferred.</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -597,9 +597,9 @@
                 <label class="form-label">Minimum Amount</label>
                 <input type="number" step="0.01" min="0" class="form-control" name="guardrails[__INDEX__][minimum_amount]" required>
             </div>
-            <div class="col-md-2 text-end">
+            <div class="col-md-2 text-right">
                 <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-guardrail">
-                    <i class="bi bi-trash"></i>
+                    <i class="o-trash"></i>
                 </button>
             </div>
         </div>
@@ -609,15 +609,10 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if (!window.bootstrap || !bootstrap.Tooltip) {
-                return;
-            }
-
             const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-tooltip="true"]'));
 
             tooltipTriggerList.forEach((tooltipTriggerEl) => {
-                new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+                });
         });
     </script>
 @endpush
@@ -713,13 +708,20 @@
 
             // Automatically open the relevant modal when validation errors occur.
             @if($showCreateModal)
-            const createModal = new bootstrap.Modal(document.getElementById('createOffshoreModal'));
-            createModal.show();
+            const createModal = document.getElementById('createOffshoreModal');
+            if (createModal) {
+                createModal.classList.add('show');
+                createModal.style.display = 'flex';
+                document.body.classList.add('modal-open');
+                createModal.dispatchEvent(new Event('show.bs.modal'));
+            }
             @elseif($editOffshoreId)
             const editModalElement = document.getElementById('editOffshoreModal-{{ $editOffshoreId }}');
             if (editModalElement) {
-                const editModal = new bootstrap.Modal(editModalElement);
-                editModal.show();
+                editModalElement.classList.add('show');
+                editModalElement.style.display = 'flex';
+                document.body.classList.add('modal-open');
+                editModalElement.dispatchEvent(new Event('show.bs.modal'));
             }
             @endif
         });

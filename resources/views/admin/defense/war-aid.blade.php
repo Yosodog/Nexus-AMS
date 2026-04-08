@@ -2,11 +2,11 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row">
                 <div class="col-sm-6"><h3 class="mb-0">War Aid Management</h3></div>
-                <div class="col-sm-6 text-end">
+                <div class="col-sm-6 text-right">
                     <form method="POST" action="{{ route('admin.war-aid.toggle') }}">
                         @csrf
                         <button class="btn btn-{{ $enabled ? 'warning' : 'success' }}">
@@ -18,8 +18,8 @@
         </div>
     </div>
 
-    <div class="app-content">
-        <div class="container-fluid">
+    <div class="space-y-6">
+        <div class="w-full">
 
             {{-- Pending Requests --}}
             @if ($pending->isNotEmpty())
@@ -41,8 +41,8 @@
                                         @csrf
                                         @method('PATCH')
 
-                                        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
-                                            <div class="d-flex align-items-center gap-3">
+                                        <div class="flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
+                                            <div class="flex align-items-center gap-3">
                                                 @if ($nation)
                                                     <img src="{{ $nation->flag }}" alt="Flag" style="height: 30px;">
                                                 @else
@@ -60,11 +60,11 @@
                                                         @endif
                                                     </h5>
                                                     @if ($nation)
-                                                        <div class="small text-muted mb-1">
+                                                        <div class="small text-base-content/50 mb-1">
                                                             {{ $nation->nation_name ?? 'Unknown Nation' }}
                                                         </div>
                                                     @endif
-                                                    <small class="text-muted">Account:
+                                                    <small class="text-base-content/50">Account:
                                                         @if ($account)
                                                             <a href="{{ route('admin.accounts.view', $req->account_id) }}">
                                                                 {{ $account->name }}
@@ -73,10 +73,10 @@
                                                             <span>Unknown Account</span>
                                                         @endif
                                                     </small><br>
-                                                    <small class="text-muted">Note: {{ $req->note }}</small>
+                                                    <small class="text-base-content/50">Note: {{ $req->note }}</small>
                                                 </div>
                                             </div>
-                                            <div class="d-flex gap-2">
+                                            <div class="flex gap-2">
                                                 <button type="submit" class="btn btn-success btn-sm">Approve</button>
                                             </div>
                                         </div>
@@ -88,7 +88,7 @@
                                                     <input type="number" name="{{ $resource }}"
                                                            class="form-control form-control-sm"
                                                            min="0" value="{{ $req->$resource }}">
-                                                    <small class="text-muted">
+                                                    <small class="text-base-content/50">
                                                         Has: {{ number_format(($nation?->resources->$resource ?? 0) + ($nation?->accounts?->sum($resource) ?? 0)) }}
                                                     </small>
                                                 </div>
@@ -114,7 +114,7 @@
                 <div class="card mb-4">
                     <div class="card-header">Manual War Aid Disbursement</div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3">
+                        <p class="text-base-content/50 small mb-3">
                             Issues war aid immediately and bypasses pending-request checks. Provide at least one resource amount.
                         </p>
                         <form method="POST" action="{{ route('admin.manual-disbursements.war-aid') }}">
@@ -127,7 +127,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Account ID</label>
                                     <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
-                                    <small class="text-muted">Must belong to the nation above.</small>
+                                    <small class="text-base-content/50">Must belong to the nation above.</small>
                                 </div>
                             </div>
                             <div class="mt-3">
@@ -144,7 +144,7 @@
                                     </div>
                                 @endforeach
                             </div>
-                            <div class="d-flex justify-content-end mt-3">
+                            <div class="flex justify-content-end mt-3">
                                 <button class="btn btn-primary" type="submit">Send War Aid</button>
                             </div>
                         </form>
@@ -184,9 +184,9 @@
                                                target="_blank" rel="noopener noreferrer">
                                                 {{ $nation->leader_name ?? ('Nation #'.$nation->id) }}
                                             </a>
-                                            <div class="small text-muted">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
+                                            <div class="small text-base-content/50">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
                                         @else
-                                            <span class="text-muted">Unknown Nation</span>
+                                            <span class="text-base-content/50">Unknown Nation</span>
                                         @endif
                                     </td>
                                     <td>
@@ -195,7 +195,7 @@
                                                 {{ $account->name }}
                                             </a>
                                         @else
-                                            <span class="text-muted">Unknown Account</span>
+                                            <span class="text-base-content/50">Unknown Account</span>
                                         @endif
                                     </td>
                                     <td>{{ $req->note }}</td>
@@ -216,7 +216,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">No previous requests.</td>
+                                    <td colspan="7" class="text-center text-base-content/50">No previous requests.</td>
                                 </tr>
                             @endforelse
                             </tbody>

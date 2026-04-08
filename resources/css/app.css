@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+    themes: light --default, night --prefersdark;
+}
+@source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
 
 @layer base {
     img,
@@ -62,5 +65,198 @@
             overflow-wrap: anywhere;
             word-break: break-word;
         }
+    }
+}
+
+@layer components {
+    .row {
+        @apply grid grid-cols-12 gap-4;
+    }
+
+    .row > [class*="col-"] {
+        grid-column: span 12 / span 12;
+    }
+
+    .col-12 { grid-column: span 12 / span 12; }
+    .col-6 { grid-column: span 6 / span 6; }
+    .col-5 { grid-column: span 5 / span 5; }
+    .col-4 { grid-column: span 4 / span 4; }
+    .col-3 { grid-column: span 3 / span 3; }
+    .col-2 { grid-column: span 2 / span 2; }
+    .col-1 { grid-column: span 1 / span 1; }
+
+    @media (min-width: 640px) {
+        .col-sm-6 { grid-column: span 6 / span 6; }
+    }
+
+    @media (min-width: 768px) {
+        .col-md-2 { grid-column: span 2 / span 2; }
+        .col-md-3 { grid-column: span 3 / span 3; }
+        .col-md-4 { grid-column: span 4 / span 4; }
+        .col-md-6 { grid-column: span 6 / span 6; }
+    }
+
+    @media (min-width: 1024px) {
+        .col-lg-4 { grid-column: span 4 / span 4; }
+        .col-lg-6 { grid-column: span 6 / span 6; }
+        .col-lg-8 { grid-column: span 8 / span 8; }
+    }
+
+    @media (min-width: 1280px) {
+        .col-xl-3 { grid-column: span 3 / span 3; }
+        .col-xl-5 { grid-column: span 5 / span 5; }
+        .col-xl-7 { grid-column: span 7 / span 7; }
+    }
+
+    .table-responsive {
+        @apply overflow-x-auto;
+    }
+
+    .form-control {
+        @apply w-full rounded-md border border-base-300 bg-base-100 px-3 py-2;
+    }
+
+    .form-select {
+        @apply w-full rounded-md border border-base-300 bg-base-100 px-3 py-2;
+    }
+
+    .input-group {
+        @apply flex items-stretch w-full;
+    }
+
+    .input-group-text {
+        @apply inline-flex items-center px-3 border border-base-300 bg-base-200 text-base-content/70;
+    }
+
+    .card {
+        @apply bg-base-100 border border-base-300 rounded-lg shadow-sm;
+    }
+
+    .card-header {
+        @apply px-4 py-3 border-b border-base-300 font-semibold;
+    }
+
+    .card-body {
+        @apply p-4;
+    }
+
+    .card-footer {
+        @apply px-4 py-3 border-t border-base-300;
+    }
+
+    .btn-outline-secondary { @apply border border-base-300 text-base-content bg-transparent; }
+    .btn-outline-primary { @apply border border-primary text-primary bg-transparent; }
+    .btn-outline-danger { @apply border border-error text-error bg-transparent; }
+
+    .badge.bg-primary { @apply bg-primary text-white border-transparent; }
+    .badge.bg-success { @apply bg-success text-white border-transparent; }
+    .badge.bg-warning { @apply bg-warning text-black border-transparent; }
+    .badge.bg-danger { @apply bg-error text-white border-transparent; }
+    .badge.bg-secondary { @apply bg-base-200 text-base-content border-transparent; }
+    .badge.bg-dark { @apply bg-neutral text-white border-transparent; }
+    .badge.bg-secondary-subtle { @apply bg-base-200 text-base-content border-transparent; }
+
+    .list-group-item {
+        @apply border border-base-300 bg-base-100 px-3 py-2 rounded-lg;
+    }
+
+    .modal:not(dialog) {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgb(0 0 0 / 35%);
+    }
+
+    .modal.show:not(dialog) {
+        display: flex;
+    }
+
+    .modal-dialog {
+        width: min(44rem, calc(100vw - 2rem));
+    }
+
+    .modal-content {
+        @apply bg-base-100 border border-base-300 rounded-lg shadow-xl;
+    }
+
+    .modal-header {
+        @apply px-4 py-3 border-b border-base-300 flex items-center justify-between;
+    }
+
+    .modal-body {
+        @apply p-4;
+    }
+
+    .modal-footer {
+        @apply px-4 py-3 border-t border-base-300 flex items-center justify-end gap-2;
+    }
+
+    .collapse:not(.show) {
+        display: none;
+    }
+
+    .collapse.show {
+        display: block;
+    }
+}
+
+@layer utilities {
+    .ms-auto { margin-left: auto; }
+    .me-auto { margin-right: auto; }
+    .ms-1 { margin-left: 0.25rem; }
+    .ms-2 { margin-left: 0.5rem; }
+    .me-1 { margin-right: 0.25rem; }
+    .me-2 { margin-right: 0.5rem; }
+    .fs-3 { font-size: 1.75rem; line-height: 2rem; }
+    .fs-4 { font-size: 1.5rem; line-height: 2rem; }
+    .text-capitalize { text-transform: capitalize; }
+    .text-white-50 { color: rgb(255 255 255 / 50%); }
+    .text-dark { color: hsl(var(--bc)); }
+    .small { @apply text-sm; }
+    .font-monospace { @apply font-mono; }
+    .text-decoration-none { @apply no-underline; }
+    .d-inline-flex { @apply inline-flex; }
+    .d-block { display: block; }
+    .align-items-start { @apply items-start; }
+    .align-items-center { @apply items-center; }
+    .align-items-end { @apply items-end; }
+    .align-items-baseline { @apply items-baseline; }
+    .justify-content-between { @apply justify-between; }
+    .justify-content-end { @apply justify-end; }
+    .justify-content-center { @apply justify-center; }
+    .flex-column { @apply flex-col; }
+    .g-2 { @apply gap-2; }
+    .g-3 { @apply gap-3; }
+    .g-4 { @apply gap-4; }
+    .row-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .row-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .text-base-content\/50-emphasis { @apply text-base-content/70; }
+    .bg-secondary-subtle { @apply bg-base-200; }
+    .bg-body-secondary { @apply bg-base-200; }
+    .bg-body-secondary-subtle { @apply bg-base-200/60; }
+
+    @media (min-width: 640px) {
+        .row-cols-sm-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (min-width: 768px) {
+        .row-cols-md-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .row-cols-md-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (min-width: 1024px) {
+        .flex-lg-row { @apply flex-row; }
+        .align-items-lg-center { @apply items-center; }
+        .text-lg-end { @apply text-right; }
+    }
+
+    @media (min-width: 1280px) {
+        .flex-xl-row { @apply flex-row; }
+        .align-items-xl-center { @apply items-center; }
+        .row-cols-xl-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     }
 }

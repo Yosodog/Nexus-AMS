@@ -3,31 +3,31 @@
 @section('title', 'Audits')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center">
                 <div class="col">
                     <h3 class="mb-1">Audit Overview</h3>
-                    <p class="text-muted mb-0">Track active rules and live violations across your membership.</p>
+                    <p class="text-base-content/50 mb-0">Track active rules and live violations across your membership.</p>
                 </div>
                 <div class="col-auto">
-                    <div class="d-flex gap-2">
+                    <div class="flex gap-2">
                         <form method="POST" action="{{ route('admin.audits.run') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-primary">
-                                <i class="bi bi-play-fill me-1"></i>
+                                <i class="o-play me-1"></i>
                                 Run audits now
                             </button>
                         </form>
                         <form method="POST" action="{{ route('admin.audits.notify') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-success">
-                                <i class="bi bi-send-fill me-1"></i>
+                                <i class="o-paper-airplane-fill me-1"></i>
                                 Notify members
                             </button>
                         </form>
                         <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>
+                            <i class="o-plus-circle me-1"></i>
                             New Rule
                         </a>
                     </div>
@@ -40,32 +40,32 @@
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <span class="text-uppercase text-muted small fw-semibold">Enabled rules</span>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="text-uppercase text-base-content/50 small font-semibold">Enabled rules</span>
+                    <div class="flex justify-content-between align-items-center mt-2">
                         <div class="display-6 fw-bold">{{ $summary['enabled_rules'] }}</div>
                         <span class="badge bg-primary-subtle text-primary-emphasis">/{{ $summary['total_rules'] }} total</span>
                     </div>
-                    <p class="text-muted small mb-0 mt-2">Rules currently participating in scheduled audits.</p>
+                    <p class="text-base-content/50 small mb-0 mt-2">Rules currently participating in scheduled audits.</p>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <span class="text-uppercase text-muted small fw-semibold">Open violations</span>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="text-uppercase text-base-content/50 small font-semibold">Open violations</span>
+                    <div class="flex justify-content-between align-items-center mt-2">
                         <div class="display-6 fw-bold">{{ $summary['violations_total'] }}</div>
-                        <i class="bi bi-exclamation-octagon text-danger fs-3"></i>
+                        <i class="o-exclamation-triangle text-danger fs-3"></i>
                     </div>
-                    <p class="text-muted small mb-0 mt-2">Live rows in <code>audit_results</code>.</p>
+                    <p class="text-base-content/50 small mb-0 mt-2">Live rows in <code>audit_results</code>.</p>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <span class="text-uppercase text-muted small fw-semibold">By priority</span>
-                    <div class="d-flex flex-wrap gap-2 mt-2">
+                    <span class="text-uppercase text-base-content/50 small font-semibold">By priority</span>
+                    <div class="flex flex-wrap gap-2 mt-2">
                         <span class="badge bg-danger-subtle text-danger-emphasis">
                             High {{ $summary['violations_by_priority']['high'] ?? 0 }}
                         </span>
@@ -75,19 +75,19 @@
                         <span class="badge bg-info-subtle text-info-emphasis">
                             Low {{ $summary['violations_by_priority']['low'] ?? 0 }}
                         </span>
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                        <span class="badge bg-secondary-subtle text-base-content/50-emphasis">
                             Info {{ $summary['violations_by_priority']['info'] ?? 0 }}
                         </span>
                     </div>
-                    <p class="text-muted small mb-0 mt-2">Current distribution across rule severity.</p>
+                    <p class="text-base-content/50 small mb-0 mt-2">Current distribution across rule severity.</p>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <span class="text-uppercase text-muted small fw-semibold">By target</span>
-                    <div class="d-flex flex-wrap gap-2 mt-2">
+                    <span class="text-uppercase text-base-content/50 small font-semibold">By target</span>
+                    <div class="flex flex-wrap gap-2 mt-2">
                         <span class="badge bg-primary-subtle text-primary-emphasis">
                             Nation {{ $summary['violations_by_target']['nation'] ?? 0 }}
                         </span>
@@ -95,19 +95,19 @@
                             City {{ $summary['violations_by_target']['city'] ?? 0 }}
                         </span>
                     </div>
-                    <p class="text-muted small mb-0 mt-2">Where violations are currently anchored.</p>
+                    <p class="text-base-content/50 small mb-0 mt-2">Where violations are currently anchored.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header flex justify-content-between align-items-center">
             <div>
                 <h5 class="mb-0">Rule coverage</h5>
-                <span class="text-muted small">Live snapshot of all rules with their current violation counts.</span>
+                <span class="text-base-content/50 small">Live snapshot of all rules with their current violation counts.</span>
             </div>
-            <div class="d-flex gap-2">
+            <div class="flex gap-2">
                 <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline-secondary btn-sm">
                     Manage rules
                 </a>
@@ -125,15 +125,15 @@
                     <th scope="col">Priority</th>
                     <th scope="col">Status</th>
                     <th scope="col" class="text-center">Violations</th>
-                    <th scope="col" class="text-end">Actions</th>
+                    <th scope="col" class="text-right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 @forelse($rules as $rule)
                     <tr>
                         <td>
-                            <div class="fw-semibold">{{ $rule->name }}</div>
-                            <div class="text-muted small text-truncate" style="max-width: 420px;">
+                            <div class="font-semibold">{{ $rule->name }}</div>
+                            <div class="text-base-content/50 small text-truncate" style="max-width: 420px;">
                                 {{ $rule->description ?? 'No description provided.' }}
                             </div>
                         </td>
@@ -159,7 +159,7 @@
                             @if($rule->enabled)
                                 <span class="badge bg-success-subtle text-success-emphasis">Enabled</span>
                             @else
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis">Disabled</span>
+                                <span class="badge bg-secondary-subtle text-base-content/50-emphasis">Disabled</span>
                             @endif
                         </td>
                         <td class="text-center">
@@ -167,20 +167,20 @@
                                 {{ $rule->results_count }}
                             </span>
                         </td>
-                        <td class="text-end">
+                        <td class="text-right">
                             <div class="btn-group">
                                 <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-activity me-1"></i>Violations
+                                    <i class="o-bolt me-1"></i>Violations
                                 </a>
                                 <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-pencil me-1"></i>Edit
+                                    <i class="o-pencil me-1"></i>Edit
                                 </a>
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-base-content/50 py-4">
                             No audit rules defined yet.
                         </td>
                     </tr>

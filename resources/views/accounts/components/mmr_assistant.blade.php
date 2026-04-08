@@ -3,7 +3,7 @@
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
     <div>
         <h1 class="text-2xl font-semibold mb-1 flex items-center gap-2">
-            <i class="bi bi-cash-stack text-primary text-lg"></i>
+            <i class="o-banknotes text-primary text-lg"></i>
             MMR Assistant
             @if ($mmrConfig && $mmrConfig->enabled)
                 <span class="badge badge-outline badge-success">Enabled</span>
@@ -26,7 +26,7 @@
                 <input type="hidden" name="{{ $resource }}_pct" value="{{ $mmrConfig["{$resource}_pct"] }}">
             @endforeach
             <button type="submit" class="btn btn-sm btn-outline-error">
-                <i class="bi bi-x-circle me-1"></i> Disable Assistant
+                <i class="o-x-circle me-1"></i> Disable Assistant
             </button>
         </form>
     @endif
@@ -55,7 +55,7 @@
         <input type="hidden" name="enabled" value="1" />
 
         <button type="submit" class="btn btn-primary">
-            <i class="bi bi-lightning-charge me-1"></i> Enable MMR Assistant
+            <i class="o-bolt me-1"></i> Enable MMR Assistant
         </button>
     </form>
 @else
@@ -138,7 +138,7 @@
 
         <div class="flex justify-end">
             <button type="submit" class="btn btn-success">
-                <i class="bi bi-save me-1"></i> Save Preferences
+                <i class="o-check me-1"></i> Save Preferences
             </button>
         </div>
     </form>

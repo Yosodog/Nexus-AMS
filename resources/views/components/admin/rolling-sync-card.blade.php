@@ -1,21 +1,21 @@
 <div class="card shadow-sm mb-4 h-100">
-    <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div class="card-header flex justify-content-between align-items-start flex-wrap gap-2">
         <div>
-            <h5 class="mb-0 text-primary fw-semibold">Rolling Nation Sync</h5>
-            <p class="mb-0 text-muted small">
+            <h5 class="mb-0 text-primary font-semibold">Rolling Nation Sync</h5>
+            <p class="mb-0 text-base-content/50 small">
                 Scheduled command that staggers nation syncs over ~23 hours (scope: {{ $rollingSchedule['scope'] ? ucfirst($rollingSchedule['scope']) : 'unknown' }}).
             </p>
         </div>
 
         @if($batch && !$batch->finished() && !$batch->cancelled())
-            <div class="d-flex gap-2 ms-auto">
+            <div class="flex gap-2 ms-auto">
                 <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
                       onsubmit="return confirm('Cancel the active rolling nation sync?')">
                     @csrf
                     <input type="hidden" name="batch_id" value="{{ $batch->id }}">
                     <input type="hidden" name="type" value="rolling_nation">
                     <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="bi bi-x-circle me-1"></i> Cancel Rolling
+                        <i class="o-x-circle me-1"></i> Cancel Rolling
                     </button>
                 </form>
             </div>
@@ -35,21 +35,21 @@
             @endphp
 
             <dl class="row mb-0">
-                <dt class="col-sm-4 text-muted">Status</dt>
+                <dt class="col-sm-4 text-base-content/50">Status</dt>
                 <dd class="col-sm-8">
                     @if($batch->cancelled())
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Cancelled</span>
+                        <span class="badge bg-danger"><i class="o-x-circle me-1"></i> Cancelled</span>
                     @elseif($batch->finished())
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Finished</span>
+                        <span class="badge bg-success"><i class="o-check-circle me-1"></i> Finished</span>
                     @else
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Running</span>
+                        <span class="badge bg-warning text-dark"><i class="o-clock me-1"></i> Running</span>
                     @endif
                 </dd>
 
-                <dt class="col-sm-4 text-muted">Jobs Completed</dt>
+                <dt class="col-sm-4 text-base-content/50">Jobs Completed</dt>
                 <dd class="col-sm-8">{{ $batch->processedJobs() }} / {{ $batch->totalJobs }}</dd>
 
-                <dt class="col-sm-4 text-muted">Progress</dt>
+                <dt class="col-sm-4 text-base-content/50">Progress</dt>
                 <dd class="col-sm-8">
                     <div class="progress" style="height: 20px;">
                         <div class="progress-bar {{ $progressBarClasses }}" style="width: {{ $progressPercent }}%;">
@@ -58,7 +58,7 @@
                     </div>
                 </dd>
 
-                <dt class="col-sm-4 text-muted">Last Job</dt>
+                <dt class="col-sm-4 text-base-content/50">Last Job</dt>
                 <dd class="col-sm-8">
                     @if($rollingSchedule['lastRunAt'])
                         {{ $rollingSchedule['lastRunAt']->toDayDateTimeString() }} ({{ $rollingSchedule['lastRunAt']->diffForHumans() }})
@@ -67,7 +67,7 @@
                     @endif
                 </dd>
 
-                <dt class="col-sm-4 text-muted">Next Job</dt>
+                <dt class="col-sm-4 text-base-content/50">Next Job</dt>
                 <dd class="col-sm-8">
                     @if($rollingSchedule['nextRunAt'])
                         {{ $rollingSchedule['nextRunAt']->toDayDateTimeString() }} ({{ $rollingSchedule['nextRunAt']->diffForHumans() }})
@@ -78,21 +78,21 @@
                     @endif
                 </dd>
 
-                <dt class="col-sm-4 text-muted">Started</dt>
+                <dt class="col-sm-4 text-base-content/50">Started</dt>
                 <dd class="col-sm-8">{{ $batch->createdAt->toDayDateTimeString() }} ({{ $batch->createdAt->diffForHumans() }})</dd>
 
                 @if($batch->finishedAt)
-                    <dt class="col-sm-4 text-muted">Finished</dt>
+                    <dt class="col-sm-4 text-base-content/50">Finished</dt>
                     <dd class="col-sm-8">{{ $batch->finishedAt->toDayDateTimeString() }} ({{ $batch->finishedAt->diffForHumans() }})</dd>
                 @endif
 
                 @if($batch->cancelledAt)
-                    <dt class="col-sm-4 text-muted">Cancelled</dt>
+                    <dt class="col-sm-4 text-base-content/50">Cancelled</dt>
                     <dd class="col-sm-8 text-danger">{{ $batch->cancelledAt->toDayDateTimeString() }} ({{ $batch->cancelledAt->diffForHumans() }})</dd>
                 @endif
             </dl>
         @else
-            <p class="mb-0 text-muted">
+            <p class="mb-0 text-base-content/50">
                 No rolling nation sync is currently scheduled. The nightly scheduler will queue it automatically.
             </p>
         @endif

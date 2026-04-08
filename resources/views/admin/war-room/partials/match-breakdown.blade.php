@@ -4,7 +4,7 @@
 @endphp
 
 @if(empty($factors))
-    <p class="small text-muted mb-0">No factor breakdown captured for this match.</p>
+    <p class="small text-base-content/50 mb-0">No factor breakdown captured for this match.</p>
 @else
     <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-2">
@@ -30,7 +30,7 @@
                     }
                 @endphp
                 <tr>
-                    <td class="text-uppercase small fw-semibold">{{ str_replace('_', ' ', $key) }}</td>
+                    <td class="text-uppercase small font-semibold">{{ str_replace('_', ' ', $key) }}</td>
                     <td>{{ $value !== null ? number_format((float) $value, 4) : '—' }}</td>
                     <td>{{ number_format((float) $weight, 2) }}</td>
                     <td class="{{ ($impact ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format((float) $impact, 2) }}</td>
@@ -39,7 +39,7 @@
                             <div>{{ $reason }}</div>
                         @endif
                         @if(!empty($extras))
-                            <div class="small text-muted">
+                            <div class="small text-base-content/50">
                                 @foreach($extras as $extraKey => $extraValue)
                                     <span class="me-2">
                                         {{ str_replace('_', ' ', $extraKey) }}:
@@ -75,7 +75,7 @@
     </dl>
 
     @if(!empty($meta['relative_power_details'] ?? []))
-        <div class="small text-muted">
+        <div class="small text-base-content/50">
             Relative power details:
             {{ json_encode($meta['relative_power_details'], JSON_UNESCAPED_SLASHES) }}
         </div>

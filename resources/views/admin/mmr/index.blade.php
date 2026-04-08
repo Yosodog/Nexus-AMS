@@ -1,16 +1,16 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header mb-3">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center">
+    <div class="mb-6 mb-3">
+        <div class="w-full">
+            <div class="flex justify-content-between align-items-center">
                 <h3 class="mb-0">Minimum Military Requirements</h3>
             </div>
         </div>
     </div>
 
-    <div class="app-content">
-        <div class="container-fluid">
+    <div class="space-y-6">
+        <div class="w-full">
             @php
                 $mmrService = app(\App\Services\MMRService::class);
                 $resourceFields = $mmrService->getResourceFields();
@@ -21,27 +21,27 @@
 
             {{-- Section: Tier Definitions --}}
             <div class="mb-4">
-                <h4 class="fw-semibold">Defined MMR Tiers</h4>
-                <p class="text-muted mb-2">Each city count tier defines the per-city minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
+                <h4 class="font-semibold">Defined MMR Tiers</h4>
+                <p class="text-base-content/50 mb-2">Each city count tier defines the per-city minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
             </div>
 
             <div class="row g-3 mb-4">
                 <div class="col-lg-7">
                     <div class="card h-100">
                         <div class="card-header">
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="flex align-items-center justify-content-between">
                                 <h5 class="card-title mb-0">Create a New Tier</h5>
                             </div>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted">Add the city count you need, then set resource and readiness minimums in the table.</p>
+                            <p class="text-base-content/50">Add the city count you need, then set resource and readiness minimums in the table.</p>
 
                             <form method="POST" action="{{ route('admin.mmr.store') }}" class="row g-3 align-items-end">
                                 @csrf
                                 <div class="col-sm-6 col-md-5">
                                     <label for="city_count" class="form-label mb-1">City count</label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-buildings"></i></span>
+                                        <span class="input-group-text"><i class="o-building-office-2"></i></span>
                                         <input type="number"
                                                id="city_count"
                                                name="city_count"
@@ -51,17 +51,17 @@
                                                required>
                                     </div>
                                 </div>
-                                <div class="col-sm-6 col-md-4 d-flex gap-2">
+                                <div class="col-sm-6 col-md-4 flex gap-2">
                                     <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
-                                        <i class="bi bi-plus-circle me-1"></i> Add Tier
+                                        <i class="o-plus-circle me-1"></i> Add Tier
                                     </button>
                                     <a href="#tier-config-table" class="btn btn-sm btn-outline-secondary" title="Jump to configuration">
-                                        <i class="bi bi-arrow-down-short"></i>
+                                        <i class="o-arrow-down"></i>
                                     </a>
                                 </div>
                                 <div class="col-12">
-                                    <div class="d-flex align-items-center gap-2 text-muted small">
-                                        <i class="bi bi-lightbulb-fill text-warning"></i>
+                                    <div class="flex align-items-center gap-2 text-base-content/50 small">
+                                        <i class="o-light-bulb-fill text-warning"></i>
                                         <span>Use the grouped table below to enter expected resources and readiness for each tier.</span>
                                     </div>
                                 </div>
@@ -73,14 +73,14 @@
                 <div class="col-lg-5">
                     <div class="card h-100">
                         <div class="card-header">
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="flex align-items-center justify-content-between">
                                 <h5 class="card-title mb-0">Tier housekeeping</h5>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <p class="text-muted mb-2">Remove tiers you no longer use. Tier 0 is protected.</p>
+                                    <p class="text-base-content/50 mb-2">Remove tiers you no longer use. Tier 0 is protected.</p>
                                 </div>
                             </div>
 
@@ -102,16 +102,16 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-12 d-flex justify-content-end">
+                                <div class="col-12 flex justify-content-end">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash me-1"></i> Delete Tier
+                                        <i class="o-trash me-1"></i> Delete Tier
                                     </button>
                                 </div>
                             </form>
 
                             <div class="mt-3 p-2 bg-body-tertiary rounded">
-                                <div class="d-flex align-items-start gap-2 text-muted small">
-                                    <i class="bi bi-info-circle"></i>
+                                <div class="flex align-items-start gap-2 text-base-content/50 small">
+                                    <i class="o-information-circle"></i>
                                     <span>Tier 0 is the default fallback and cannot be deleted.</span>
                                 </div>
                             </div>
@@ -122,7 +122,7 @@
 
             <div class="card mb-5">
                 <div class="card-header">
-                    <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex align-items-center justify-content-between">
                         <h5 class="card-title mb-0">Tier Configuration</h5>
                         <span class="badge bg-info-subtle text-info-emphasis">Values are per city</span>
                     </div>
@@ -130,13 +130,13 @@
                 <div class="card-body table-responsive" id="tier-config-table">
                     <form method="POST" action="{{ route('admin.mmr.updateAll') }}">
                         @csrf
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2 text-muted small">
-                                <i class="bi bi-grid-3x3-gap"></i>
+                        <div class="flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="flex align-items-center gap-2 text-base-content/50 small">
+                                <i class="o-squares-2x2"></i>
                                 <span>Numbers are minimum expectations per tier. Empty values default to 0.</span>
                             </div>
                             <button type="submit" class="btn btn-success btn-sm">
-                                <i class="bi bi-save me-1"></i> Save all tiers
+                                <i class="o-check me-1"></i> Save all tiers
                             </button>
                         </div>
 
@@ -149,11 +149,11 @@
                                                 data-bs-target="#collapse{{ $tier->id }}"
                                                 aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
                                                 aria-controls="collapse{{ $tier->id }}">
-                                            <div class="d-flex align-items-center gap-3">
+                                            <div class="flex align-items-center gap-3">
                                                 <span class="badge bg-primary-subtle text-primary-emphasis fs-6">{{ $tier->city_count }}</span>
-                                                <div class="d-flex flex-column">
-                                                    <span class="fw-semibold">City count {{ $tier->city_count }}</span>
-                                                    <small class="text-muted">Configure per-city resource minimums and readiness</small>
+                                                <div class="flex flex-column">
+                                                    <span class="font-semibold">City count {{ $tier->city_count }}</span>
+                                                    <small class="text-base-content/50">Configure per-city resource minimums and readiness</small>
                                                 </div>
                                             </div>
                                         </button>
@@ -163,8 +163,8 @@
                                         <div class="accordion-body">
                                             <div class="row g-4">
                                                 <div class="col-12">
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <span class="fw-semibold">Resource minimums</span>
+                                                    <div class="flex align-items-center gap-2 mb-2">
+                                                        <span class="font-semibold">Resource minimums</span>
                                                         <span class="badge bg-light text-dark">Per city</span>
                                                     </div>
                                                     <div class="row g-3">
@@ -174,7 +174,7 @@
                                                                 <input type="number"
                                                                        name="tiers[{{ $tier->id }}][{{ $field }}]"
                                                                        value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
+                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-right"
                                                                        min="0"
                                                                        inputmode="numeric"
                                                                        placeholder="{{ ucfirst($field) }}">
@@ -188,8 +188,8 @@
 
                                                 <div class="col-12">
                                                     <hr class="my-3">
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <span class="fw-semibold">Readiness per city</span>
+                                                    <div class="flex align-items-center gap-2 mb-2">
+                                                        <span class="font-semibold">Readiness per city</span>
                                                         <span class="badge bg-light text-dark">Buildings &amp; slots</span>
                                                     </div>
                                                     <div class="row g-3">
@@ -199,7 +199,7 @@
                                                                 <input type="number"
                                                                        name="tiers[{{ $tier->id }}][{{ $field }}]"
                                                                        value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
+                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-right"
                                                                        min="0"
                                                                        inputmode="numeric"
                                                                        placeholder="{{ ucfirst($field) }}">
@@ -217,13 +217,13 @@
                             @endforeach
                         </div>
 
-                        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
-                            <div class="d-flex align-items-center gap-2 text-muted small">
-                                <i class="bi bi-shield-check text-success"></i>
+                        <div class="flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                            <div class="flex align-items-center gap-2 text-base-content/50 small">
+                                <i class="o-shield-check-check text-success"></i>
                                 <span>Changes save everything at once—review before submitting.</span>
                             </div>
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-save me-1"></i> Save all tiers
+                                <i class="o-check me-1"></i> Save all tiers
                             </button>
                         </div>
                     </form>
@@ -232,7 +232,7 @@
 
             <div class="card mb-5">
                 <div class="card-header">
-                    <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex align-items-center justify-content-between">
                         <h5 class="card-title mb-0">Bulk Edit Tier Resources</h5>
                         <span class="badge bg-primary-subtle text-primary-emphasis">Per city updates</span>
                     </div>
@@ -242,14 +242,14 @@
                         @csrf
 
                         <div class="col-12 col-lg-4">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-semibold">Select tiers</span>
-                                <div class="d-flex align-items-center gap-2">
+                            <div class="flex align-items-center justify-content-between mb-2">
+                                <span class="font-semibold">Select tiers</span>
+                                <div class="flex align-items-center gap-2">
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkSelectAll">Select all</button>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkClearAll">Clear</button>
                                 </div>
                             </div>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 @foreach($tiers as $tier)
                                     <div class="form-check form-check-inline m-0">
                                         <input class="form-check-input mmr-bulk-tier"
@@ -260,7 +260,7 @@
                                                @checked(in_array($tier->id, old('tier_ids', [])))>
                                         <label class="form-check-label" for="bulk-tier-{{ $tier->id }}">
                                             <span class="badge bg-primary-subtle text-primary-emphasis">{{ $tier->city_count }}</span>
-                                            <span class="text-muted small ms-1">cities</span>
+                                            <span class="text-base-content/50 small ms-1">cities</span>
                                         </label>
                                     </div>
                                 @endforeach
@@ -271,20 +271,20 @@
                             @error('tier_ids.*')
                             <div class="text-danger small mt-2">{{ $message }}</div>
                             @enderror
-                            <div class="text-muted small mt-3">
+                            <div class="text-base-content/50 small mt-3">
                                 Choose one or more city-count tiers to update together.
                             </div>
                         </div>
 
                         <div class="col-12 col-lg-8">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-semibold">Per-city minimums</span>
-                                <span class="text-muted small">Leave blank to keep current values</span>
+                            <div class="flex align-items-center justify-content-between mb-2">
+                                <span class="font-semibold">Per-city minimums</span>
+                                <span class="text-base-content/50 small">Leave blank to keep current values</span>
                             </div>
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="fw-semibold">Resources</span>
+                                    <div class="flex align-items-center gap-2 mb-2">
+                                        <span class="font-semibold">Resources</span>
                                         <span class="badge bg-light text-dark">Per city</span>
                                     </div>
                                     <div class="row g-3">
@@ -294,7 +294,7 @@
                                                 <input type="number"
                                                        name="resources[{{ $field }}]"
                                                        value="{{ old("resources.{$field}") }}"
-                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
+                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-right"
                                                        min="0"
                                                        inputmode="numeric"
                                                        placeholder="Leave blank">
@@ -307,8 +307,8 @@
                                 </div>
                                 <div class="col-12">
                                     <hr class="my-2">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="fw-semibold">Readiness</span>
+                                    <div class="flex align-items-center gap-2 mb-2">
+                                        <span class="font-semibold">Readiness</span>
                                         <span class="badge bg-light text-dark">Buildings &amp; slots</span>
                                     </div>
                                     <div class="row g-3">
@@ -318,7 +318,7 @@
                                                 <input type="number"
                                                        name="resources[{{ $field }}]"
                                                        value="{{ old("resources.{$field}") }}"
-                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
+                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-right"
                                                        min="0"
                                                        inputmode="numeric"
                                                        placeholder="Leave blank">
@@ -335,13 +335,13 @@
                             @enderror
                         </div>
 
-                        <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-start gap-2 text-muted small">
-                                <i class="bi bi-arrow-repeat"></i>
+                        <div class="col-12 flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="flex align-items-start gap-2 text-base-content/50 small">
+                                <i class="o-arrow-path"></i>
                                 <span>Filled fields replace per-city values on the selected tiers.</span>
                             </div>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check2-circle me-1"></i> Apply Bulk Edit
+                                <i class="o-check-circle me-1"></i> Apply Bulk Edit
                             </button>
                         </div>
                     </form>
@@ -350,10 +350,10 @@
 
             {{-- Section: Resource Weighting --}}
             <div class="card mb-5">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title mb-0">Resource Weighting</h5>
-                        <small class="text-muted">Weights must total 100% and control how the MMR score is calculated.</small>
+                        <small class="text-base-content/50">Weights must total 100% and control how the MMR score is calculated.</small>
                     </div>
                     <span class="badge bg-light text-dark">Current total: {{ number_format($weightTotal, 2) }}%</span>
                 </div>
@@ -369,9 +369,9 @@
                         <div class="row g-3">
                             @foreach($resourceFields as $resource)
                                 <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                                    <label class="form-label text-capitalize d-flex justify-content-between align-items-center">
+                                    <label class="form-label text-capitalize flex justify-content-between align-items-center">
                                         <span>{{ $resource }}</span>
-                                        <span class="text-muted small">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
+                                        <span class="text-base-content/50 small">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
                                     </label>
                                     <div class="input-group">
                                         <input type="number"
@@ -390,14 +390,14 @@
                             @endforeach
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div class="text-muted small">
+                        <div class="flex justify-content-between align-items-center mt-3">
+                            <div class="text-base-content/50 small">
                                 Adjust weights to emphasize specific resources. The live total updates as you type.
                             </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="fw-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
+                            <div class="flex align-items-center gap-3">
+                                <span class="font-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
                                 <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-sliders me-1"></i> Save Weights
+                                    <i class="o-adjustments-horizontal me-1"></i> Save Weights
                                 </button>
                             </div>
                         </div>
@@ -407,11 +407,11 @@
 
             {{-- Section: MMR Assistant Resource Settings --}}
             <div class="mb-5">
-                <h4 class="fw-semibold d-flex align-items-center">
+                <h4 class="font-semibold flex align-items-center">
                     MMR Assistant Resource Settings
 
                     {{-- Popover for global helper --}}
-                    <i class="bi bi-info-circle-fill ms-2 text-muted"
+                    <i class="o-information-circle ms-2 text-base-content/50"
                        style="cursor: pointer;"
                        tabindex="0"
                        data-bs-toggle="popover"
@@ -426,7 +426,7 @@
            "></i>
                 </h4>
 
-                <p class="text-muted mb-3">
+                <p class="text-base-content/50 mb-3">
                     Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they’re purchasable via MMR Assistant.
                 </p>
 
@@ -443,7 +443,7 @@
                                        name="enabled"
                                        value="1"
                                         @checked(\App\Services\SettingService::getMMRAssistantEnabled()) />
-                                <label class="form-check-label fw-semibold" for="mmrEnabledToggle">
+                                <label class="form-check-label font-semibold" for="mmrEnabledToggle">
                                     Enable MMR Assistant Globally
 
                                     @if(\App\Services\SettingService::getMMRAssistantEnabled())
@@ -487,9 +487,9 @@
                                 </table>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex justify-content-between align-items-center">
                                 <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-save me-1"></i> Save Settings
+                                    <i class="o-check me-1"></i> Save Settings
                                 </button>
 
                                 <div class="input-group" style="width: 300px;">
@@ -505,13 +505,13 @@
 
             {{-- Section: Resource Table --}}
             <div class="mb-3">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="flex flex-wrap align-items-center justify-content-between gap-2">
                     <div>
-                        <h4 class="fw-semibold mb-0">Member Resource Totals</h4>
-                        <p class="text-muted mb-0">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
+                        <h4 class="font-semibold mb-0">Member Resource Totals</h4>
+                        <p class="text-base-content/50 mb-0">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
                     </div>
                     <button type="button" class="btn btn-outline-primary btn-sm" id="mmrExportCsv">
-                        <i class="bi bi-download me-1"></i> Export Resources + Units CSV
+                        <i class="o-arrow-down-tray me-1"></i> Export Resources + Units CSV
                     </button>
                 </div>
             </div>
@@ -553,7 +553,7 @@
                                     @endphp
                                     <td @class([
                                         'bg-danger-subtle text-danger-emphasis' => !$meets,
-                                        'text-muted' => $required === 0
+                                        'text-base-content/50' => $required === 0
                                     ])>
                                         <span data-bs-toggle="tooltip" title="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)">
                                             {{ number_format($have) }}
@@ -568,9 +568,9 @@
                                             $unitMet = $eval['meets_unit_requirements'] ?? false;
                                             $barClass = $score >= 90 ? 'bg-success' : ($score >= 70 ? 'bg-warning' : 'bg-danger');
                                         @endphp
-                                        <div class="d-flex flex-column gap-1">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="fw-semibold">{{ $score }}%</span>
+                                        <div class="flex flex-column gap-1">
+                                            <div class="flex align-items-center gap-2 flex-wrap">
+                                                <span class="font-semibold">{{ $score }}%</span>
                                                 <span class="badge {{ $resourceMet ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis' }}">
                                                     Resources {{ $resourceMet ? 'OK' : 'Low' }}
                                                 </span>
@@ -583,7 +583,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-base-content/50">N/A</span>
                                     @endif
                                 </td>
                             </tr>
@@ -595,8 +595,8 @@
 
             {{-- Section: Military Table --}}
             <div class="mb-3">
-                <h4 class="fw-semibold">Member Military Units</h4>
-                <p class="text-muted mb-2">Military minimums are derived from the member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
+                <h4 class="font-semibold">Member Military Units</h4>
+                <p class="text-base-content/50 mb-2">Military minimums are derived from the member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
             </div>
 
             <div class="card">
@@ -635,7 +635,7 @@
                                     @endphp
                                     <td @class([
                                         'bg-danger-subtle text-danger-emphasis' => !$meets,
-                                        'text-muted' => $min === 0
+                                        'text-base-content/50' => $min === 0
                                     ])>
                                         <span data-bs-toggle="tooltip" title="Required: {{ number_format($min) }}">
                                             {{ number_format($have) }}
@@ -650,9 +650,9 @@
             </div>
 
             {{-- Back to Top --}}
-            <div class="text-end mt-4">
+            <div class="text-right mt-4">
                 <a href="#" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-up"></i> Back to Top
+                    <i class="o-arrow-up"></i> Back to Top
                 </a>
             </div>
         </div>
@@ -663,24 +663,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                new bootstrap.Tooltip(el);
-            });
+                });
 
             document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-                new bootstrap.Popover(el);
-            });
+                });
 
-            const resourceTable = initAdminDataTable('#mmrResourceTable', {
-                pageLength: 50,
-                responsive: true
-            });
-
-            const militaryTable = initAdminDataTable('#mmrMilitaryTable', {
-                pageLength: 50,
-                responsive: true
-            });
-
-            const weightInputs = document.querySelectorAll('.mmr-weight-input');
+            const resourceTable = const militaryTable = const weightInputs = document.querySelectorAll('.mmr-weight-input');
             const weightTotal = document.getElementById('mmrWeightTotal');
 
             const updateWeightTotal = () => {

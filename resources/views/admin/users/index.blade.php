@@ -16,80 +16,80 @@
         ];
     @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center">
                 <div class="col">
                     <h3 class="mb-1">Users</h3>
-                    <p class="text-muted mb-0">Monitor activity, spot administrators, and jump quickly into user management.</p>
+                    <p class="text-base-content/50 mb-0">Monitor activity, spot administrators, and jump quickly into user management.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="container-fluid">
+    <div class="w-full">
         <div class="row g-3 mt-1">
             <div class="col-12 col-md-4">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex justify-content-between align-items-start">
                             <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Total users</span>
+                                <span class="text-uppercase text-base-content/50 small font-semibold">Total users</span>
                                 <div class="display-6 fw-bold mt-1">{{ $stats['total_users'] }}</div>
                             </div>
-                            <span class="text-primary fs-3"><i class="bi bi-people"></i></span>
+                            <span class="text-primary fs-3"><i class="o-users"></i></span>
                         </div>
-                        <p class="text-muted small mb-0 mt-3">All accounts that have access to {{ config("app.name") }}</p>
+                        <p class="text-base-content/50 small mb-0 mt-3">All accounts that have access to {{ config("app.name") }}</p>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex justify-content-between align-items-start">
                             <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Admins</span>
+                                <span class="text-uppercase text-base-content/50 small font-semibold">Admins</span>
                                 <div class="display-6 fw-bold mt-1">{{ $stats['admins'] }}</div>
                             </div>
-                            <span class="text-danger fs-3"><i class="bi bi-shield-check"></i></span>
+                            <span class="text-danger fs-3"><i class="o-shield-check-check"></i></span>
                         </div>
-                        <p class="text-muted small mb-0 mt-3">Users with elevated platform access.</p>
+                        <p class="text-base-content/50 small mb-0 mt-3">Users with elevated platform access.</p>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex justify-content-between align-items-start">
                             <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Active today</span>
+                                <span class="text-uppercase text-base-content/50 small font-semibold">Active today</span>
                                 <div class="display-6 fw-bold mt-1">{{ $stats['active_today'] }}</div>
                             </div>
-                            <span class="text-success fs-3"><i class="bi bi-activity"></i></span>
+                            <span class="text-success fs-3"><i class="o-bolt"></i></span>
                         </div>
-                        <p class="text-muted small mb-0 mt-3">Members seen within the last 24 hours.</p>
+                        <p class="text-base-content/50 small mb-0 mt-3">Members seen within the last 24 hours.</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+            <div class="card-header flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
                 <div>
                     <h5 class="mb-0">Member directory</h5>
-                    <span class="text-muted small">Browse user details and jump into edits without leaving the page.</span>
+                    <span class="text-base-content/50 small">Browse user details and jump into edits without leaving the page.</span>
                 </div>
                 <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-shield-lock me-1"></i>
+                    <i class="o-shield-check-lock me-1"></i>
                     Manage roles
                 </a>
             </div>
             <div class="card-body border-top">
                 <form method="GET" class="row g-3 align-items-end">
                     <div class="col-12 col-lg-4">
-                        <label for="filter-search" class="form-label text-uppercase small fw-semibold text-muted">Search</label>
+                        <label for="filter-search" class="form-label text-uppercase small font-semibold text-base-content/50">Search</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <span class="input-group-text"><i class="o-magnifying-glass"></i></span>
                             <input
                                 type="text"
                                 id="filter-search"
@@ -101,7 +101,7 @@
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-2">
-                        <label for="filter-status" class="form-label text-uppercase small fw-semibold text-muted">Account status</label>
+                        <label for="filter-status" class="form-label text-uppercase small font-semibold text-base-content/50">Account status</label>
                         <select id="filter-status" name="status" class="form-select">
                             <option value="enabled" @selected($filters['status'] === 'enabled')>Enabled</option>
                             <option value="disabled" @selected($filters['status'] === 'disabled')>Disabled</option>
@@ -109,7 +109,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-2">
-                        <label for="filter-verification" class="form-label text-uppercase small fw-semibold text-muted">Verification</label>
+                        <label for="filter-verification" class="form-label text-uppercase small font-semibold text-base-content/50">Verification</label>
                         <select id="filter-verification" name="verification" class="form-select">
                             <option value="any" @selected($filters['verification'] === 'any')>Any</option>
                             <option value="verified" @selected($filters['verification'] === 'verified')>Verified</option>
@@ -148,7 +148,7 @@
                     </div>
                     <div class="col-12 col-lg-12 d-grid gap-2 d-lg-flex justify-content-lg-end">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel me-1"></i>
+                            <i class="o-funnel me-1"></i>
                             Apply filters
                         </button>
                         <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">
@@ -156,7 +156,7 @@
                         </a>
                     </div>
                 </form>
-                <div class="text-muted small mt-3">
+                <div class="text-base-content/50 small mt-3">
                     Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} users
                 </div>
             </div>
@@ -170,7 +170,7 @@
                         <th scope="col" class="text-center">Alliance</th>
                         <th scope="col">Roles</th>
                         <th scope="col">Last active</th>
-                        <th scope="col" class="text-end">Actions</th>
+                        <th scope="col" class="text-right">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -178,9 +178,9 @@
                     @foreach($users as $user)
                         <tr>
                             <td>
-                                <div class="fw-semibold">{{ $user->name }}</div>
-                                <div class="text-muted small">{{ $user->email }}</div>
-                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                <div class="font-semibold">{{ $user->name }}</div>
+                                <div class="text-base-content/50 small">{{ $user->email }}</div>
+                                <div class="flex flex-wrap gap-2 mt-2">
                                     @if($user->is_admin)
                                         <span class="badge bg-danger">Admin</span>
                                     @endif
@@ -202,7 +202,7 @@
                                         {{ $user->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <span class="text-base-content/50">—</span>
                                 @endif
                             </td>
                             <td class="text-center">
@@ -213,20 +213,20 @@
                                 @endif
                             </td>
                             <td>
-                                <div class="d-flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-2">
                                     @forelse($user->roles as $role)
                                         <span class="badge rounded-pill bg-primary">{{ Str::title($role->name) }}</span>
                                     @empty
-                                        <span class="text-muted">No roles assigned</span>
+                                        <span class="text-base-content/50">No roles assigned</span>
                                     @endforelse
                                 </div>
                             </td>
                             <td>
                                 {{ $user->last_active_at ? $user->last_active_at->diffForHumans() : 'Never' }}
                             </td>
-                            <td class="text-end">
+                            <td class="text-right">
                                 <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-pencil-square me-1"></i>
+                                    <i class="o-pencil-square me-1"></i>
                                     Edit
                                 </a>
                             </td>
@@ -236,8 +236,8 @@
                 </table>
             </div>
 
-            <div class="card-footer bg-white d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-2">
-                <span class="text-muted small">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
+            <div class="card-footer bg-white flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-2">
+                <span class="text-base-content/50 small">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
                 {{ $users->onEachSide(1)->links() }}
             </div>
         </div>
@@ -245,7 +245,7 @@
         <div class="card border-0 shadow-sm mt-4">
             <div class="card-header">
                 <h5 class="mb-1">Multi-factor authentication requirements</h5>
-                <span class="text-muted small">Use these toggles to enforce Fortify two-factor authentication enrollment.</span>
+                <span class="text-base-content/50 small">Use these toggles to enforce Fortify two-factor authentication enrollment.</span>
             </div>
             <div class="card-body border-top">
                 <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="row g-3 align-items-end">
@@ -261,11 +261,11 @@
                                 value="1"
                                 @checked($mfaRequirements['all_users'])
                             >
-                            <label class="form-check-label fw-semibold" for="require-mfa-all-users">
+                            <label class="form-check-label font-semibold" for="require-mfa-all-users">
                                 Require MFA for all users
                             </label>
                         </div>
-                        <p class="text-muted small mb-0 mt-1">Default: off. Forces every authenticated user to enroll in MFA before using the app.</p>
+                        <p class="text-base-content/50 small mb-0 mt-1">Default: off. Forces every authenticated user to enroll in MFA before using the app.</p>
                     </div>
                     <div class="col-12 col-lg-5">
                         <div class="form-check form-switch">
@@ -278,15 +278,15 @@
                                 value="1"
                                 @checked($mfaRequirements['admins'])
                             >
-                            <label class="form-check-label fw-semibold" for="require-mfa-admins">
+                            <label class="form-check-label font-semibold" for="require-mfa-admins">
                                 Require MFA for admins
                             </label>
                         </div>
-                        <p class="text-muted small mb-0 mt-1">Default: off. Applies to administrator accounts even when the all-users toggle is off.</p>
+                        <p class="text-base-content/50 small mb-0 mt-1">Default: off. Applies to administrator accounts even when the all-users toggle is off.</p>
                     </div>
                     <div class="col-12 col-lg-2 d-grid">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-shield-lock me-1"></i>
+                            <i class="o-shield-check-lock me-1"></i>
                             Save
                         </button>
                     </div>

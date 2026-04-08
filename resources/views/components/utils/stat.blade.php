@@ -1,19 +1,29 @@
-@props(['title', 'value', 'desc' => null, 'icon' => null, 'color' => 'primary'])
+@props(['title', 'value', 'desc' => null, 'icon' => null, 'color' => 'text-primary'])
 
-<div class="stats shadow">
-    <div class="stat min-h-[120px]">
-        @if ($icon)
-            <div class="stat-figure text-{{ $color }}">
-                <x-dynamic-component :component="'icons.' . $icon" class="w-8 h-8" />
-            </div>
-        @endif
+@php
+    $iconAliases = [
+        'chart' => 'o-chart-bar',
+        'bank' => 'o-building-library',
+        'city' => 'o-building-office-2',
+        'gift' => 'o-gift',
+        'clock' => 'o-clock',
+        'credit-card' => 'o-credit-card',
+    ];
 
-        <div class="stat-title truncate">{{ $title }}</div>
-        <div class="stat-value text-{{ $color }} truncate max-w-full overflow-hidden text-ellipsis">
-            {{ $value }}
-        </div>
-        @if ($desc)
-            <div class="stat-desc">{{ $desc }}</div>
-        @endif
-    </div>
-</div>
+    $resolvedIcon = null;
+
+    if ($icon) {
+        $resolvedIcon = str_starts_with($icon, 'o-')
+            ? $icon
+            : ($iconAliases[$icon] ?? 'o-' . $icon);
+    }
+@endphp
+
+<x-stat
+    :title="$title"
+    :value="$value"
+    :description="$desc"
+    :icon="$resolvedIcon"
+    :color="$color"
+    {{ $attributes }}
+/>

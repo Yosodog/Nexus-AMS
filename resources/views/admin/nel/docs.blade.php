@@ -3,19 +3,19 @@
 @section('title', 'NEL Documentation')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center">
                 <div class="col-12 col-lg-8">
                     <h3 class="mb-1">{{ config('app.name') }} Expression Language (NEL)</h3>
-                    <p class="text-secondary mb-0">
+                    <p class="text-base-content/50 mb-0">
                         Define safe, predictable expressions for audits, grants, and MMR checks using dot-notation like
                         <code>nation.score</code> or <code>nation.military.soldiers</code>.
                     </p>
                 </div>
                 <div class="col-12 col-lg-4 mt-3 mt-lg-0 text-lg-end">
                     <span class="badge bg-primary-subtle text-primary-emphasis">
-                        <i class="bi bi-shield-lock me-1"></i> Sandboxed &amp; read-only
+                        <i class="o-shield-check-lock me-1"></i> Sandboxed &amp; read-only
                     </span>
                 </div>
             </div>
@@ -25,24 +25,24 @@
     <div class="row g-3">
         <div class="col-lg-6">
                     <div class="card shadow-sm h-100">
-                        <div class="card-header fw-semibold">
+                        <div class="card-header font-semibold">
                             Overview
                         </div>
                         <div class="card-body">
                             <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Dot-notation walks the
+                        <li class="mb-2"><i class="o-check-circle-fill text-success me-1"></i> Dot-notation walks the
                             variable tree you provide (e.g., <code>nation.military.soldiers</code>).
                         </li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Supports numbers, strings,
+                        <li class="mb-2"><i class="o-check-circle-fill text-success me-1"></i> Supports numbers, strings,
                             booleans, null, arithmetic, comparisons, and boolean logic.
                         </li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Function hooks are supported
+                        <li class="mb-2"><i class="o-check-circle-fill text-success me-1"></i> Function hooks are supported
                             via helpers (future-ready; no domain helpers ship yet).
                         </li>
-                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Evaluation is pure: no DB,
+                        <li class="mb-2"><i class="o-check-circle-fill text-success me-1"></i> Evaluation is pure: no DB,
                             filesystem, or network access.
                         </li>
-                        <li class="mb-0"><i class="bi bi-check-circle-fill text-success me-1"></i> Backed by the NEL core in
+                        <li class="mb-0"><i class="o-check-circle-fill text-success me-1"></i> Backed by the NEL core in
                             <code>App\Nel</code> and adapter profiles (e.g., nation → <code>nation.*</code>).
                         </li>
                     </ul>
@@ -51,23 +51,23 @@
         </div>
         <div class="col-lg-6">
                         <div class="card shadow-sm h-100">
-                            <div class="card-header fw-semibold">
+                            <div class="card-header font-semibold">
                                 Quick start
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <div class="fw-semibold text-secondary text-uppercase small">Variables &amp; paths</div>
+                                    <div class="font-semibold text-base-content/50 text-uppercase small">Variables &amp; paths</div>
                                     <p class="mb-1"><code>nation.score</code>, <code>nation.soldiers</code>,
                                         <code>city.infrastructure</code>, <code>city.powered</code></p>
                                 </div>
                                 <div class="mb-3">
-                                    <div class="fw-semibold text-secondary text-uppercase small">Literals</div>
+                                    <div class="font-semibold text-base-content/50 text-uppercase small">Literals</div>
                                     <p class="mb-1">Numbers (<code>1200</code>, <code>3.14</code>), strings (<code>"text"</code> or
                                         <code>'text'</code>), booleans (<code>true</code>, <code>false</code>), null (<code>null</code>).
                                     </p>
                                 </div>
                                 <div class="mb-0">
-                                    <div class="fw-semibold text-secondary text-uppercase small">Operators</div>
+                                    <div class="font-semibold text-base-content/50 text-uppercase small">Operators</div>
                                     <p class="mb-1">Comparison: <code>==</code>, <code>!=</code>, <code>&lt;</code>,
                                         <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code></p>
                                     <p class="mb-1">Boolean: <code>&amp;&amp;</code>, <code>||</code>, <code>!</code></p>
@@ -82,7 +82,7 @@
     <div class="row g-3 mt-1">
         <div class="col-lg-6">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header fw-semibold">
+                    <div class="card-header font-semibold">
                         Operator Precedence
                     </div>
                     <div class="card-body">
@@ -90,8 +90,8 @@
                             <table class="table table-sm mb-0 align-middle">
                             <thead>
                             <tr>
-                                <th scope="col" class="text-secondary text-uppercase small">Level</th>
-                                <th scope="col" class="text-secondary text-uppercase small">Operators</th>
+                                <th scope="col" class="text-base-content/50 text-uppercase small">Level</th>
+                                <th scope="col" class="text-base-content/50 text-uppercase small">Operators</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -127,27 +127,27 @@
                             </tbody>
                         </table>
                     </div>
-                    <p class="text-secondary small mb-0 mt-2">All binary operators are left-associative. Parentheses win.</p>
+                    <p class="text-base-content/50 small mb-0 mt-2">All binary operators are left-associative. Parentheses win.</p>
                 </div>
             </div>
         </div>
         <div class="col-lg-6">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header fw-semibold">
+                    <div class="card-header font-semibold">
                         Examples
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <div class="fw-semibold text-secondary text-uppercase small">Readiness checks</div>
+                            <div class="font-semibold text-base-content/50 text-uppercase small">Readiness checks</div>
                         <pre class="bg-body-secondary p-3 rounded mb-0"><code>nation.score &gt; 500 &amp;&amp; nation.military.soldiers &gt; 10000
 city.infrastructure % 50 != 0 || city.land % 50 != 0
 !(nation.score &gt;= 1000)</code></pre>
                     </div>
                     <div>
-                        <div class="fw-semibold text-secondary text-uppercase small">Future helper shape</div>
+                        <div class="font-semibold text-base-content/50 text-uppercase small">Future helper shape</div>
                         <pre class="bg-body-secondary p-3 rounded mb-0"><code>hasProject("Nuclear Research")
 double(nation.score)</code></pre>
-                        <p class="text-secondary small mb-0 mt-1">Helpers are registered server-side; unknown helpers throw
+                        <p class="text-base-content/50 small mb-0 mt-1">Helpers are registered server-side; unknown helpers throw
                             an error.</p>
                     </div>
                 </div>
@@ -158,14 +158,14 @@ double(nation.score)</code></pre>
     <div class="row g-3 mt-1">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     Audit-focused reference
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-lg-6">
-                            <h6 class="text-uppercase text-secondary small fw-semibold">Nation rule variables (flat)</h6>
-                            <p class="text-muted small mb-2">Available under <code>nation.*</code> when target type = nation. <strong>Violation triggers when the expression evaluates to <code>true</code>.</strong></p>
+                            <h6 class="text-uppercase text-base-content/50 small font-semibold">Nation rule variables (flat)</h6>
+                            <p class="text-base-content/50 small mb-2">Available under <code>nation.*</code> when target type = nation. <strong>Violation triggers when the expression evaluates to <code>true</code>.</strong></p>
                             <ul class="mb-3">
                                 <li><code>nation.score</code>, <code>nation.num_cities</code>, <code>nation.color</code>, <code>nation.continent</code></li>
                                 <li>Alliance: <code>nation.alliance_id</code>, <code>nation.alliance_position</code></li>
@@ -180,8 +180,8 @@ double(nation.score)</code></pre>
 nation.aircraft &gt;= nation.num_cities * 50</code></pre>
                         </div>
                         <div class="col-lg-6">
-                            <h6 class="text-uppercase text-secondary small fw-semibold">City rule variables</h6>
-                            <p class="text-muted small mb-2">Available under <code>city.*</code> (plus a minimal <code>nation.*</code> context) when target type = city. <strong>Violation triggers when the expression returns <code>true</code>.</strong></p>
+                            <h6 class="text-uppercase text-base-content/50 small font-semibold">City rule variables</h6>
+                            <p class="text-base-content/50 small mb-2">Available under <code>city.*</code> (plus a minimal <code>nation.*</code> context) when target type = city. <strong>Violation triggers when the expression returns <code>true</code>.</strong></p>
                             <ul class="mb-3">
                                 <li>Basics: <code>city.id</code>, <code>city.name</code>, <code>city.infrastructure</code>, <code>city.land</code>, <code>city.powered</code></li>
                                 <li>Power: <code>city.oil_power</code>, <code>city.wind_power</code>, <code>city.coal_power</code>, <code>city.nuclear_power</code></li>
@@ -203,18 +203,18 @@ city.powered == true || city.nuclear_power &gt; 0</code></pre>
     <div class="row g-3 mt-1">
         <div class="col-12">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     Nation Helpers
                 </div>
                 <div class="card-body">
                     <p class="mb-2"><strong><code>nation.has_project(name)</code></strong><br>Checks whether the nation owns a specific project.</p>
                     <p class="mb-3">Projects are matched using the Politics &amp; War project list built into <code>PWHelperService::projects()</code>.</p>
                     <div class="mb-3">
-                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <div class="font-semibold text-base-content/50 text-uppercase small">Example usage</div>
                         <pre class="bg-body-secondary p-3 rounded small mb-2"><code>nation.has_project("Iron Dome")
 nation.has_project("Urban Planning") &amp;&amp; !nation.has_project("Advanced Pirate Economy")</code></pre>
                     </div>
-                    <p class="text-secondary small mb-0">This helper reads the binary <code>project_bits</code> string right-to-left, where index 0 is the rightmost bit.</p>
+                    <p class="text-base-content/50 small mb-0">This helper reads the binary <code>project_bits</code> string right-to-left, where index 0 is the rightmost bit.</p>
                 </div>
             </div>
         </div>
@@ -223,17 +223,17 @@ nation.has_project("Urban Planning") &amp;&amp; !nation.has_project("Advanced Pi
     <div class="row g-3 mt-1">
         <div class="col-12">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     City Helpers
                 </div>
                 <div class="card-body">
                     <p class="mb-2"><strong><code>city.improvements_count()</code></strong><br>Returns the total count of all city improvements (power, mines, refineries, factories, hangars, drydocks, etc.).</p>
                     <div class="mb-3">
-                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <div class="font-semibold text-base-content/50 text-uppercase small">Example usage</div>
                         <pre class="bg-body-secondary p-3 rounded small mb-2"><code>city.improvements_count() &gt;= 35
 city.improvements_count() == city.num_cities * 3 // per-city target example</code></pre>
                     </div>
-                    <p class="text-secondary small mb-0">Counts the individual improvement slots on the city, treating missing values as zero.</p>
+                    <p class="text-base-content/50 small mb-0">Counts the individual improvement slots on the city, treating missing values as zero.</p>
                 </div>
             </div>
         </div>
@@ -242,20 +242,20 @@ city.improvements_count() == city.num_cities * 3 // per-city target example</cod
     <div class="row g-3 mt-1">
         <div class="col-12">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     Math Helpers
                 </div>
                 <div class="card-body">
                     <p class="mb-2"><strong><code>math.floor_to_multiple(value, multiple)</code></strong><br>Rounds a number down to the nearest multiple.</p>
                     <div class="mb-3">
-                        <div class="fw-semibold text-secondary text-uppercase small">Example usage</div>
+                        <div class="font-semibold text-base-content/50 text-uppercase small">Example usage</div>
                         <pre class="bg-body-secondary p-3 rounded small mb-2"><code>// Slot alignment (1 slot per 50 infra)
 math.floor_to_multiple(city.infrastructure, 50) / 50 &gt;= city.improvements_count()
 
 // Round down a score to the nearest hundred
 math.floor_to_multiple(nation.score, 100)</code></pre>
                     </div>
-                    <p class="text-secondary small mb-0">Throws an error if <code>multiple</code> is zero.</p>
+                    <p class="text-base-content/50 small mb-0">Throws an error if <code>multiple</code> is zero.</p>
                 </div>
             </div>
         </div>
@@ -264,7 +264,7 @@ math.floor_to_multiple(nation.score, 100)</code></pre>
     <div class="row g-3 mt-1">
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     Validation &amp; error handling
                 </div>
                 <div class="card-body">
@@ -274,7 +274,7 @@ math.floor_to_multiple(nation.score, 100)</code></pre>
                         <li>Helpers like <code>nation.has_project(...)</code> are registered server-side; unknown helpers throw an error.</li>
                     </ul>
                     <div class="alert alert-warning mb-0">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <i class="o-exclamation-triangle me-1"></i>
                         Keep expressions pure: avoid division by zero and guard nulls (e.g., <code>nation.aircraft ?? 0</code> is not supported; use comparisons that tolerate nulls).
                     </div>
                 </div>
@@ -282,7 +282,7 @@ math.floor_to_multiple(nation.score, 100)</code></pre>
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">
+                <div class="card-header font-semibold">
                     Patterns for audits
                 </div>
                 <div class="card-body">
@@ -294,7 +294,7 @@ nation.aircraft &lt; nation.num_cities * 50
 
 // Activity check (timestamp seconds)
 nation.last_active &lt; (now - 86400) // not supported directly; compare against a literal timestamp</code></pre>
-                    <p class="text-muted small mb-2">Tips:</p>
+                    <p class="text-base-content/50 small mb-2">Tips:</p>
                     <ul class="mb-0">
                         <li>Use integer math for thresholds; no date helpers are available in NEL.</li>
                         <li>Prefer combining conditions with <code>&amp;&amp;</code> to narrow matches; use <code>||</code> for exceptions.</li>
@@ -308,10 +308,10 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
     <div class="row g-3 mt-1">
         <div class="col-12">
             <div class="card shadow-sm" x-data="projectBitsGenerator({{ Illuminate\Support\Js::from($projects) }})">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="card-header flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <div class="fw-semibold">Project Bits Generator</div>
-                        <small class="text-secondary">Toggle PW projects to compute the project_bits integer in real time.</small>
+                        <div class="font-semibold">Project Bits Generator</div>
+                        <small class="text-base-content/50">Toggle PW projects to compute the project_bits integer in real time.</small>
                     </div>
                     <div class="btn-group btn-group-sm" role="group" aria-label="Project bulk actions">
                         <button type="button" class="btn btn-outline-primary" @click="selectAll">Select All</button>
@@ -325,8 +325,8 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
                                 <table class="table table-sm align-middle mb-0">
                                     <thead class="table-light">
                                     <tr>
-                                        <th scope="col" class="text-secondary text-uppercase small">Project</th>
-                                        <th scope="col" class="text-secondary text-uppercase small text-end">Bit Value</th>
+                                        <th scope="col" class="text-base-content/50 text-uppercase small">Project</th>
+                                        <th scope="col" class="text-base-content/50 text-uppercase small text-right">Bit Value</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -338,8 +338,8 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
                                                     <label class="form-check-label" :for="'project-'+index" x-text="name"></label>
                                                 </div>
                                             </td>
-                                            <td class="text-end">
-                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" x-text="bit.toString()"></span>
+                                            <td class="text-right">
+                                                <span class="badge bg-secondary-subtle text-base-content/50-emphasis" x-text="bit.toString()"></span>
                                             </td>
                                         </tr>
                                     </template>
@@ -361,8 +361,8 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
                                 <input type="text" class="form-control" :value="selected.length ? selected.join(', ') : 'None'" readonly>
                             </div>
                             <div class="border rounded p-3 bg-body-secondary">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-semibold">Selected Projects</span>
+                                <div class="flex justify-content-between align-items-center mb-2">
+                                    <span class="font-semibold">Selected Projects</span>
                                     <span class="badge bg-primary-subtle text-primary-emphasis" x-text="selected.length + ' / ' + Object.keys(projects).length"></span>
                                 </div>
                                 <template x-if="selected.length">
@@ -372,7 +372,7 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
                                         </template>
                                     </ul>
                                 </template>
-                                <p class="text-secondary mb-0" x-show="!selected.length">No projects selected.</p>
+                                <p class="text-base-content/50 mb-0" x-show="!selected.length">No projects selected.</p>
                             </div>
                         </div>
                     </div>

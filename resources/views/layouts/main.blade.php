@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? config('app.name') }}</title>
     <link rel="icon" href="{{ $faviconUrl }}">
-    <x-theme-script />
-    @vite('resources/css/app.css')
-    @vite('resources/js/app.js')
+
+    @livewireStyles
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -25,7 +25,7 @@
         </div>
     @endif
 
-    <x-header />
+    <livewire:app-header />
 
     <div class="flex-grow relative">
         <div class="absolute inset-0 bg-gradient-to-b from-primary/5 via-base-200/30 to-base-100 pointer-events-none">
@@ -48,10 +48,7 @@
 
     <x-footer />
 
-
-
-    <script src="//unpkg.com/alpinejs" defer></script>
-
+    @livewireScripts
     @stack('scripts')
 
 </body>

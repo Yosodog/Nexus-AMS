@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Raid Finder</h3>
@@ -36,9 +36,9 @@
 
     {{-- No-Raid Alliance List --}}
     <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header flex justify-content-between align-items-center">
             <span>No-Raid Alliance List</span>
-            <form method="POST" action="{{ route('admin.raids.no-raid.store') }}" class="d-flex align-items-center">
+            <form method="POST" action="{{ route('admin.raids.no-raid.store') }}" class="flex align-items-center">
                 @csrf
                 <input type="number" class="form-control me-2" name="alliance_id" placeholder="Alliance ID" required>
                 <button class="btn btn-primary btn-sm" type="submit">Add</button>
@@ -71,7 +71,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="text-center text-muted">No entries in no-raid list.</td>
+                        <td colspan="4" class="text-center text-base-content/50">No entries in no-raid list.</td>
                     </tr>
                 @endforelse
                 </tbody>

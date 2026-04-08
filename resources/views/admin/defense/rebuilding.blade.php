@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row">
                 <div class="col-sm-6"><h3 class="mb-0">Rebuilding Management</h3></div>
-                <div class="col-sm-6 text-end d-flex justify-content-end gap-2">
+                <div class="col-sm-6 text-right flex justify-content-end gap-2">
                     <form method="POST" action="{{ route('admin.rebuilding.toggle') }}">
                         @csrf
                         <button class="btn btn-{{ $enabled ? 'warning' : 'success' }}">
@@ -21,19 +21,19 @@
         </div>
     </div>
 
-    <div class="app-content">
-        <div class="container-fluid">
+    <div class="space-y-6">
+        <div class="w-full">
             <div class="row g-3 mb-4">
                 <div class="col-md-6 col-xl-3">
                     <div class="card border-0 shadow-sm h-100 bg-primary text-white bg-gradient">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <span class="text-uppercase fw-semibold text-white-50 small">Current Cycle</span>
+                                    <span class="text-uppercase font-semibold text-white-50 small">Current Cycle</span>
                                     <h2 class="fw-bold mb-0">{{ number_format($cycleId) }}</h2>
                                 </div>
                                 <span class="badge text-bg-light text-primary-emphasis">
-                                    <i class="bi bi-arrow-repeat"></i>
+                                    <i class="o-arrow-path"></i>
                                 </span>
                             </div>
                             <p class="mb-0 small text-white-50">Rebuilding state: {{ $enabled ? 'Open' : 'Closed' }}</p>
@@ -43,13 +43,13 @@
                 <div class="col-md-6 col-xl-3">
                     <div class="card border-0 shadow-sm h-100 bg-success text-white bg-gradient">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <span class="text-uppercase fw-semibold text-white-50 small">Eligible Estimate</span>
+                                    <span class="text-uppercase font-semibold text-white-50 small">Eligible Estimate</span>
                                     <h2 class="fw-bold mb-0">${{ number_format((float) $estimateTotal) }}</h2>
                                 </div>
                                 <span class="badge text-bg-light text-success-emphasis">
-                                    <i class="bi bi-calculator"></i>
+                                    <i class="o-calculator"></i>
                                 </span>
                             </div>
                             <p class="mb-0 small text-white-50">Projected total for current cycle payouts.</p>
@@ -59,13 +59,13 @@
                 <div class="col-md-6 col-xl-3">
                     <div class="card border-0 shadow-sm h-100 bg-dark text-white bg-gradient">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <span class="text-uppercase fw-semibold text-white-50 small">Total Sent</span>
+                                    <span class="text-uppercase font-semibold text-white-50 small">Total Sent</span>
                                     <h2 class="fw-bold mb-0">${{ number_format((float) $totalSentThisCycle) }}</h2>
                                 </div>
                                 <span class="badge text-bg-light text-dark">
-                                    <i class="bi bi-cash-coin"></i>
+                                    <i class="o-banknotes-coin"></i>
                                 </span>
                             </div>
                             <p class="mb-0 small text-white-50">Approved rebuilding disbursements this cycle.</p>
@@ -75,13 +75,13 @@
                 <div class="col-md-6 col-xl-3">
                     <div class="card border-0 shadow-sm h-100 bg-secondary text-white bg-gradient">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <span class="text-uppercase fw-semibold text-white-50 small">Last Refresh</span>
+                                    <span class="text-uppercase font-semibold text-white-50 small">Last Refresh</span>
                                     <h2 class="fw-bold mb-0">{{ $lastEstimateRefreshAt ? $lastEstimateRefreshAt->format('M d H:i') : 'Never' }}</h2>
                                 </div>
-                                <span class="badge text-bg-light text-secondary-emphasis">
-                                    <i class="bi bi-clock-history"></i>
+                                <span class="badge text-bg-light text-base-content/50-emphasis">
+                                    <i class="o-clock"></i>
                                 </span>
                             </div>
                             <p class="mb-0 small text-white-50">Estimate snapshot refresh timestamp.</p>
@@ -94,17 +94,17 @@
                 <div class="col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <span class="text-uppercase text-muted small">Request Pipeline</span>
+                                    <span class="text-uppercase text-base-content/50 small">Request Pipeline</span>
                                     <h3 class="fw-bold mb-0">{{ number_format($pendingCount) }} pending</h3>
-                                    <p class="mb-0 text-muted small">{{ number_format($approvedCount) }} approved · {{ number_format($deniedCount) }} denied</p>
+                                    <p class="mb-0 text-base-content/50 small">{{ number_format($approvedCount) }} approved · {{ number_format($deniedCount) }} denied</p>
                                 </div>
-                                <span class="badge text-bg-primary"><i class="bi bi-list-check"></i></span>
+                                <span class="badge badge-primary"><i class="o-list-bullet-check"></i></span>
                             </div>
-                            <div class="d-flex flex-wrap gap-2 small text-muted">
-                                <span class="badge text-bg-light text-secondary border">Cycle {{ number_format($cycleId) }}</span>
-                                <span class="badge text-bg-light text-secondary border">{{ number_format($estimateCount) }} with estimates</span>
+                            <div class="flex flex-wrap gap-2 small text-base-content/50">
+                                <span class="badge text-bg-light text-base-content/50 border">Cycle {{ number_format($cycleId) }}</span>
+                                <span class="badge text-bg-light text-base-content/50 border">{{ number_format($estimateCount) }} with estimates</span>
                             </div>
                         </div>
                     </div>
@@ -112,17 +112,17 @@
                 <div class="col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <span class="text-uppercase text-muted small">Payout Quality</span>
+                                    <span class="text-uppercase text-base-content/50 small">Payout Quality</span>
                                     <h3 class="fw-bold mb-0">{{ number_format($approvalRate, 1) }}%</h3>
-                                    <p class="mb-0 text-muted small">Approval rate of decided requests</p>
+                                    <p class="mb-0 text-base-content/50 small">Approval rate of decided requests</p>
                                 </div>
-                                <span class="badge text-bg-success"><i class="bi bi-graph-up-arrow"></i></span>
+                                <span class="badge badge-success"><i class="o-arrow-trending-up"></i></span>
                             </div>
-                            <div class="d-flex flex-wrap gap-2 small text-muted">
-                                <span class="badge text-bg-light text-secondary border">Avg payout ${{ number_format($averageApprovedPayout, 0) }}</span>
-                                <span class="badge text-bg-light text-secondary border">Remaining est. ${{ number_format($estimatedButUnsent, 0) }}</span>
+                            <div class="flex flex-wrap gap-2 small text-base-content/50">
+                                <span class="badge text-bg-light text-base-content/50 border">Avg payout ${{ number_format($averageApprovedPayout, 0) }}</span>
+                                <span class="badge text-bg-light text-base-content/50 border">Remaining est. ${{ number_format($estimatedButUnsent, 0) }}</span>
                             </div>
                         </div>
                     </div>
@@ -130,18 +130,18 @@
                 <div class="col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <span class="text-uppercase text-muted small">Eligibility Snapshot</span>
+                                    <span class="text-uppercase text-base-content/50 small">Eligibility Snapshot</span>
                                     <h3 class="fw-bold mb-0">{{ number_format($applicantCount + $vacationCount + $ineligibleCount) }} excluded</h3>
-                                    <p class="mb-0 text-muted small">Current cycle exclusion footprint</p>
+                                    <p class="mb-0 text-base-content/50 small">Current cycle exclusion footprint</p>
                                 </div>
-                                <span class="badge text-bg-warning"><i class="bi bi-shield-exclamation"></i></span>
+                                <span class="badge badge-warning"><i class="o-shield-check-exclamation"></i></span>
                             </div>
-                            <div class="d-flex flex-wrap gap-2 small text-muted">
-                                <span class="badge text-bg-light text-secondary border">{{ number_format($applicantCount) }} applicants</span>
-                                <span class="badge text-bg-light text-secondary border">{{ number_format($vacationCount) }} in VM</span>
-                                <span class="badge text-bg-light text-secondary border">{{ number_format($ineligibleCount) }} ineligible</span>
+                            <div class="flex flex-wrap gap-2 small text-base-content/50">
+                                <span class="badge text-bg-light text-base-content/50 border">{{ number_format($applicantCount) }} applicants</span>
+                                <span class="badge text-bg-light text-base-content/50 border">{{ number_format($vacationCount) }} in VM</span>
+                                <span class="badge text-bg-light text-base-content/50 border">{{ number_format($ineligibleCount) }} ineligible</span>
                             </div>
                         </div>
                     </div>
@@ -149,11 +149,11 @@
             </div>
 
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Refresh Estimates</span>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.rebuilding.refresh-estimates') }}" class="d-flex gap-2 align-items-end">
+                    <form method="POST" action="{{ route('admin.rebuilding.refresh-estimates') }}" class="flex gap-2 align-items-end">
                         @csrf
                         <div>
                             <label class="form-label">Cycle Override (optional)</label>
@@ -210,13 +210,13 @@
                                             <span class="badge bg-warning text-dark">Ineligible</span>
                                         @endif
                                         @if(! $row['is_applicant'] && ! $row['is_vacation_mode'] && ! $row['is_ineligible'])
-                                            <span class="text-muted">-</span>
+                                            <span class="text-base-content/50">-</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">No nations available in alliance scope.</td>
+                                    <td colspan="6" class="text-center text-base-content/50">No nations available in alliance scope.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -257,7 +257,7 @@
                         </div>
                         <div class="col-md-12">
                             <label class="form-label">Assumed Cost-Reduction Projects (for calculation)</label>
-                            <div class="d-flex flex-wrap gap-3">
+                            <div class="flex flex-wrap gap-3">
                                 @foreach($requirementOptions as $value => $label)
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="requirements[]" value="{{ $value }}" id="req-create-{{ $value }}">
@@ -298,7 +298,7 @@
                                         @forelse(($tier->requirements ?? []) as $requirement)
                                             <span class="badge bg-light text-dark">{{ str_replace('_', ' ', $requirement) }}</span>
                                         @empty
-                                            <span class="text-muted">None</span>
+                                            <span class="text-base-content/50">None</span>
                                         @endforelse
                                     </td>
                                     <td>{{ $tier->is_active ? 'Yes' : 'No' }}</td>
@@ -371,9 +371,9 @@
                                                target="_blank" rel="noopener noreferrer">
                                                 {{ $entry->nation->leader_name ?? ('Nation #'.$entry->nation->id) }}
                                             </a>
-                                            <div class="small text-muted">{{ $entry->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                            <div class="small text-base-content/50">{{ $entry->nation->nation_name ?? 'Unknown Nation' }}</div>
                                         @else
-                                            <span class="text-muted">{{ 'Nation #'.$entry->nation_id }}</span>
+                                            <span class="text-base-content/50">{{ 'Nation #'.$entry->nation_id }}</span>
                                         @endif
                                     </td>
                                     <td>{{ $entry->reason ?: '-' }}</td>
@@ -387,7 +387,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted">No ineligible nations this cycle.</td>
+                                    <td colspan="3" class="text-center text-base-content/50">No ineligible nations this cycle.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -402,7 +402,7 @@
                     <div class="card-body">
                         @foreach ($pending as $req)
                             <div class="border rounded p-3 mb-3">
-                                <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                                <div class="flex justify-content-between flex-wrap gap-2 mb-2">
                                     <div>
                                         @if ($req->nation)
                                             <strong>
@@ -411,18 +411,18 @@
                                                     {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
                                                 </a>
                                             </strong>
-                                            <div class="small text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                            <div class="small text-base-content/50">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
                                         @else
                                             <strong>{{ 'Nation #'.$req->nation_id }}</strong>
                                         @endif
-                                        <div class="small text-muted">
+                                        <div class="small text-base-content/50">
                                             Account: {{ $req->account?->name ?? 'Unknown' }} |
                                             Cities: {{ $req->city_count_snapshot }} |
                                             Target: {{ number_format((float) $req->target_infrastructure_snapshot, 2) }}
                                         </div>
-                                        <div class="small text-muted">Estimated: ${{ number_format((float) $req->estimated_amount) }}</div>
+                                        <div class="small text-base-content/50">Estimated: ${{ number_format((float) $req->estimated_amount) }}</div>
                                         @if($req->note)
-                                            <div class="small text-muted">Note: {{ $req->note }}</div>
+                                            <div class="small text-base-content/50">Note: {{ $req->note }}</div>
                                         @endif
                                     </div>
                                 </div>
@@ -487,9 +487,9 @@
                                                target="_blank" rel="noopener noreferrer">
                                                 {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
                                             </a>
-                                            <div class="small text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                            <div class="small text-base-content/50">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
                                         @else
-                                            <span class="text-muted">{{ 'Nation #'.$req->nation_id }}</span>
+                                            <span class="text-base-content/50">{{ 'Nation #'.$req->nation_id }}</span>
                                         @endif
                                     </td>
                                     <td><span class="badge bg-{{ $req->status === 'approved' ? 'success' : ($req->status === 'denied' ? 'danger' : 'secondary') }}">{{ ucfirst($req->status) }}</span></td>
@@ -499,7 +499,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No history records this cycle.</td>
+                                    <td colspan="5" class="text-center text-base-content/50">No history records this cycle.</td>
                                 </tr>
                             @endforelse
                             </tbody>

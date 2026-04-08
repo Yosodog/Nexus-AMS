@@ -3,8 +3,8 @@
 @section('title', 'Audit Logs')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Audit Logs</h3>
@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    <div class="container-fluid">
+    <div class="w-full">
         <div class="card shadow-sm mb-3">
             <div class="card-header">
                 <strong>Filters</strong>
@@ -84,7 +84,7 @@
                         <label class="form-label" for="searchFilter">Search</label>
                         <input class="form-control" id="searchFilter" type="text" name="q" value="{{ $filters['q'] }}" placeholder="Message, actor name, or action">
                     </div>
-                    <div class="col-12 d-flex gap-2">
+                    <div class="col-12 flex gap-2">
                         <button class="btn btn-primary" type="submit">Apply Filters</button>
                         <a class="btn btn-outline-secondary" href="{{ route('admin.audit-logs.index') }}">Reset</a>
                     </div>
@@ -119,33 +119,33 @@
                                     <td>{{ $log->outcome }}</td>
                                     <td>{{ $log->severity }}</td>
                                     <td>
-                                        <div class="small text-muted">{{ $log->actor_type }}</div>
+                                        <div class="small text-base-content/50">{{ $log->actor_type }}</div>
                                         <div>{{ $log->actor_name ?? '—' }}</div>
-                                        <div class="small text-muted">ID: {{ $log->actor_id ?? '—' }}</div>
+                                        <div class="small text-base-content/50">ID: {{ $log->actor_id ?? '—' }}</div>
                                     </td>
                                     <td>
-                                        <div class="small text-muted">{{ $log->subject_type ?? '—' }}</div>
-                                        <div class="small text-muted">ID: {{ $log->subject_id ?? '—' }}</div>
+                                        <div class="small text-base-content/50">{{ $log->subject_type ?? '—' }}</div>
+                                        <div class="small text-base-content/50">ID: {{ $log->subject_id ?? '—' }}</div>
                                     </td>
                                     <td>
-                                        <div class="small text-muted">Req: {{ $log->request_id ?? '—' }}</div>
-                                        <div class="small text-muted">IP: {{ $log->ip ?? '—' }}</div>
+                                        <div class="small text-base-content/50">Req: {{ $log->request_id ?? '—' }}</div>
+                                        <div class="small text-base-content/50">IP: {{ $log->ip ?? '—' }}</div>
                                     </td>
                                     <td>{{ $log->message ?? '—' }}</td>
                                     <td style="min-width: 220px;">
                                         @if($log->context)
                                             <details>
-                                                <summary class="small text-muted">View</summary>
+                                                <summary class="small text-base-content/50">View</summary>
                                                 <pre class="small bg-light border rounded p-2 mt-2 mb-0">{{ json_encode($log->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                                             </details>
                                         @else
-                                            <span class="text-muted small">—</span>
+                                            <span class="text-base-content/50 small">—</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center text-muted py-4">No audit logs found.</td>
+                                    <td colspan="10" class="text-center text-base-content/50 py-4">No audit logs found.</td>
                                 </tr>
                             @endforelse
                         </tbody>

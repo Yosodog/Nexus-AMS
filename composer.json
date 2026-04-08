@@ -14,7 +14,9 @@
         "laravel/telescope": "^5.5",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.31",
+        "livewire/livewire": "^3.0",
         "opcodesio/log-viewer": "^3.21",
+        "robsontenorio/mary": "^2.0",
         "spatie/laravel-backup": "^10.0"
     },
     "require-dev": {

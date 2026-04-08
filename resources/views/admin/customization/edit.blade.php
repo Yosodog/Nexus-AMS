@@ -28,12 +28,12 @@
 @section('title', 'Customize ' . $page->slug)
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row align-items-center g-3">
                 <div class="col-lg-8">
                     <h3 class="mb-0">Customize Page: /{{ $page->slug }}</h3>
-                    <p class="text-muted small mb-0">Use the editor to update headings, narrative copy, embeds, and media for this page.</p>
+                    <p class="text-base-content/50 small mb-0">Use the editor to update headings, narrative copy, embeds, and media for this page.</p>
                 </div>
                 <div class="col-lg-4">
                     <label for="customization-page-picker" class="form-label small mb-1">Switch to another page</label>
@@ -53,20 +53,20 @@
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="card-header flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0">Editor</h5>
                     <div class="btn-group" role="group" aria-label="Editor actions">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="customization-preview">
-                            <i class="bi bi-eye me-1"></i> Preview
+                            <i class="o-eye me-1"></i> Preview
                         </button>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="customization-save">
-                            <i class="bi bi-floppy me-1"></i> Save Draft
+                            <i class="o-document-arrow-down me-1"></i> Save Draft
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" id="customization-publish">
-                            <i class="bi bi-broadcast me-1"></i> Publish
+                            <i class="o-signal me-1"></i> Publish
                         </button>
                         <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#customization-version-modal" id="customization-versions">
-                            <i class="bi bi-clock-history me-1"></i> Versions
+                            <i class="o-clock me-1"></i> Versions
                         </button>
                     </div>
                 </div>
@@ -84,12 +84,12 @@
                     </div>
 
                     <div class="mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="flex justify-content-between align-items-center mb-2">
                             <h6 class="mb-0">Live Preview</h6>
                             <span class="badge text-bg-light" id="customization-preview-status">Awaiting preview</span>
                         </div>
                         <div id="customization-preview-pane" class="border rounded p-3 bg-white shadow-sm" style="min-height: 200px;">
-                            <p class="text-muted mb-0">Use the Preview button to render the current draft without publishing.</p>
+                            <p class="text-base-content/50 mb-0">Use the Preview button to render the current draft without publishing.</p>
                         </div>
                     </div>
                 </div>
@@ -103,26 +103,26 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Current status</dt>
-                        <dd class="col-7 fw-semibold" id="customization-status">{{ ucfirst($page->status) }}</dd>
+                        <dt class="col-5 text-base-content/50">Current status</dt>
+                        <dd class="col-7 font-semibold" id="customization-status">{{ ucfirst($page->status) }}</dd>
 
-                        <dt class="col-5 text-muted">Last draft</dt>
+                        <dt class="col-5 text-base-content/50">Last draft</dt>
                         <dd class="col-7" id="customization-last-draft">
                             @if($latestDraft)
                                 <div>{{ $latestDraft->created_at?->diffForHumans() ?? 'Recently' }}</div>
-                                <div class="text-muted">by {{ $latestDraft->user?->name ?? 'System' }}</div>
+                                <div class="text-base-content/50">by {{ $latestDraft->user?->name ?? 'System' }}</div>
                             @else
-                                <span class="text-muted">No drafts yet</span>
+                                <span class="text-base-content/50">No drafts yet</span>
                             @endif
                         </dd>
 
-                        <dt class="col-5 text-muted">Last publish</dt>
+                        <dt class="col-5 text-base-content/50">Last publish</dt>
                         <dd class="col-7" id="customization-last-publish">
                             @if($latestPublished)
                                 <div>{{ $latestPublished->published_at?->diffForHumans() ?? 'Recently' }}</div>
-                                <div class="text-muted">by {{ $latestPublished->user?->name ?? 'System' }}</div>
+                                <div class="text-base-content/50">by {{ $latestPublished->user?->name ?? 'System' }}</div>
                             @else
-                                <span class="text-muted">Never published</span>
+                                <span class="text-base-content/50">Never published</span>
                             @endif
                         </dd>
                     </dl>
@@ -130,7 +130,7 @@
             </div>
 
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="mb-0">Recent Activity</h5>
                     <span class="badge text-bg-light">{{ $recentActivity->count() }}</span>
                 </div>
@@ -138,14 +138,14 @@
                     <ul class="list-unstyled mb-0 small" id="customization-activity-list">
                         @forelse($recentActivity as $log)
                             <li class="mb-3">
-                                <div class="fw-semibold text-uppercase small text-muted">{{ \Illuminate\Support\Str::headline($log->action) }}</div>
+                                <div class="font-semibold text-uppercase small text-base-content/50">{{ \Illuminate\Support\Str::headline($log->action) }}</div>
                                 <div>{{ $log->created_at?->diffForHumans() ?? 'Recently' }} &mdash; {{ $log->user?->name ?? 'System' }}</div>
                                 @if(!empty($log->metadata))
                                     <code class="d-block mt-1">{{ json_encode($log->metadata) }}</code>
                                 @endif
                             </li>
                         @empty
-                            <li class="text-muted">No activity has been recorded yet.</li>
+                            <li class="text-base-content/50">No activity has been recorded yet.</li>
                         @endforelse
                     </ul>
                 </div>
@@ -172,7 +172,7 @@
                                 <th>Status</th>
                                 <th>Timestamp</th>
                                 <th>User</th>
-                                <th class="text-end">Actions</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                             </thead>
                             <tbody id="customization-versions-table"></tbody>

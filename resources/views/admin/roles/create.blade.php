@@ -3,20 +3,20 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div class="mb-6">
+        <div class="w-full">
+            <div class="flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="flex align-items-center gap-2 flex-wrap">
                         <h3 class="mb-1">Create Role</h3>
-                        <span class="badge rounded-pill text-bg-success-subtle border border-success-subtle">
-                            <i class="bi bi-tools me-1"></i>Manage mode
+                        <span class="badge rounded-pill badge-success-subtle border border-success-subtle">
+                            <i class="o-wrench-screwdriver me-1"></i>Manage mode
                         </span>
                     </div>
-                    <p class="text-muted mb-0">Give the role a clear name and choose the permissions that match its purpose.</p>
+                    <p class="text-base-content/50 mb-0">Give the role a clear name and choose the permissions that match its purpose.</p>
                 </div>
                 <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left-circle me-1"></i> Back to roles
+                    <i class="o-arrow-left-circle me-1"></i> Back to roles
                 </a>
             </div>
         </div>
@@ -30,7 +30,7 @@
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
                         <h5 class="mb-1">Role details</h5>
-                        <p class="text-muted small mb-4">A concise name makes it easy to spot in member management and audit logs.</p>
+                        <p class="text-base-content/50 small mb-4">A concise name makes it easy to spot in member management and audit logs.</p>
 
                         <div class="mb-3">
                             <label class="form-label" for="role-name">Role name</label>
@@ -49,7 +49,7 @@
                         </div>
 
                         <div class="bg-body-secondary rounded p-3 border small">
-                            <div class="fw-semibold mb-1"><i class="bi bi-lightbulb me-1"></i> Tips</div>
+                            <div class="font-semibold mb-1"><i class="o-light-bulb me-1"></i> Tips</div>
                             <ul class="mb-0 ps-3">
                                 <li>Match one role to one responsibility.</li>
                                 <li>Favor adding permissions as needed instead of starting with too many.</li>
@@ -62,22 +62,22 @@
 
             <div class="col-12 col-xl-8">
                 <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="card-header flex justify-content-between align-items-center flex-wrap gap-2">
                         <div>
                             <h5 class="mb-0">Permissions</h5>
-                            <span class="text-muted small">Enable the capabilities this role should have.</span>
+                            <span class="text-base-content/50 small">Enable the capabilities this role should have.</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="flex align-items-center gap-2 flex-wrap">
                             <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-body"><i class="bi bi-search"></i></span>
+                                <span class="input-group-text bg-body"><i class="o-magnifying-glass"></i></span>
                                 <input type="search" class="form-control" placeholder="Filter permissions" data-permission-search>
                             </div>
                             <div class="btn-group btn-group-sm" role="group" aria-label="Permission quick actions">
                                 <button class="btn btn-outline-primary" type="button" data-permission-select="all">
-                                    <i class="bi bi-check2-square me-1"></i> Select all
+                                    <i class="o-check-badge me-1"></i> Select all
                                 </button>
                                 <button class="btn btn-outline-secondary" type="button" data-permission-select="none">
-                                    <i class="bi bi-x-square me-1"></i> Clear
+                                    <i class="o-x-mark me-1"></i> Clear
                                 </button>
                             </div>
                         </div>
@@ -94,7 +94,7 @@
                                     $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
                                 @endphp
                                 <div class="col-12 col-md-6 col-lg-4 permission-item" data-permission-label="{{ Str::lower($perm) }}">
-                                    <div class="d-flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle">
+                                    <div class="flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle">
                                         <input type="checkbox"
                                                name="permissions[]"
                                                value="{{ $perm }}"
@@ -103,30 +103,30 @@
                                                id="perm-{{ Str::slug($perm) }}"
                                                 {{ $isChecked ? 'checked' : '' }}>
                                         <label for="perm-{{ Str::slug($perm) }}" class="form-check-label w-100">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="fw-semibold">{{ Str::headline($perm) }}</span>
+                                            <div class="flex justify-content-between align-items-center">
+                                                <span class="font-semibold">{{ Str::headline($perm) }}</span>
                                                 <span class="badge border {{ $typeClass }}">
                                                     <i class="bi {{ $typeIcon }} me-1"></i>{{ $typeLabel }}
                                                 </span>
                                             </div>
-                                            <span class="text-muted small d-block mt-1">{{ $description }}</span>
+                                            <span class="text-base-content/50 small d-block mt-1">{{ $description }}</span>
                                         </label>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
-                        <div class="text-muted small mt-3">
-                            <i class="bi bi-info-circle me-1"></i>Permissions update immediately after saving.
+                        <div class="text-base-content/50 small mt-3">
+                            <i class="o-information-circle me-1"></i>Permissions update immediately after saving.
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-3">
+        <div class="flex justify-content-end gap-2 mt-3">
             <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-success">
-                <i class="bi bi-save me-1"></i> Create role
+                <i class="o-check me-1"></i> Create role
             </button>
         </div>
     </form>

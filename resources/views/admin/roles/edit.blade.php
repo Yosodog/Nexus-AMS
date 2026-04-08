@@ -3,17 +3,17 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div class="mb-6">
+        <div class="w-full">
+            <div class="flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="flex align-items-center gap-2 flex-wrap">
                         <h3 class="mb-1">Edit Role: {{ Str::headline($role->name) }}</h3>
                     </div>
-                    <p class="text-muted mb-0">Update the name or refine the permissions assigned to this role.</p>
+                    <p class="text-base-content/50 mb-0">Update the name or refine the permissions assigned to this role.</p>
                 </div>
                 <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left-circle me-1"></i> Back to roles
+                    <i class="o-arrow-left-circle me-1"></i> Back to roles
                 </a>
             </div>
         </div>
@@ -28,13 +28,13 @@
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
                         <h5 class="mb-1">Role details</h5>
-                        <p class="text-muted small mb-4">Keep names purposeful so teammates know when to use this role.</p>
+                        <p class="text-base-content/50 small mb-4">Keep names purposeful so teammates know when to use this role.</p>
 
                         @if($role->protected)
-                            <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
-                                <i class="bi bi-shield-lock-fill fs-5"></i>
+                            <div class="alert alert-warning flex align-items-start gap-2 mb-3">
+                                <i class="o-shield-check-lock-fill fs-5"></i>
                                 <div>
-                                    <div class="fw-semibold">Protected role</div>
+                                    <div class="font-semibold">Protected role</div>
                                     <div class="small mb-0">This role is locked to prevent accidental edits. Permissions are read-only.</div>
                                 </div>
                             </div>
@@ -57,7 +57,7 @@
                         </div>
 
                         <div class="bg-body-secondary rounded p-3 border small">
-                            <div class="fw-semibold mb-1"><i class="bi bi-clipboard-check me-1"></i>Checklist</div>
+                            <div class="font-semibold mb-1"><i class="o-clipboard-document-check me-1"></i>Checklist</div>
                             <ul class="mb-0 ps-3">
                                 <li>Keep responsibilities narrow.</li>
                                 <li>Only enable permissions that are truly required.</li>
@@ -71,18 +71,18 @@
                                 $totalUsers = $role->users->count();
                                 $visibleUsers = $role->users->take($maxUsersToShow);
                             @endphp
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="flex justify-content-between align-items-center mb-2">
                                 <div>
-                                    <div class="fw-semibold">Assigned members</div>
-                                    <div class="text-muted small">
+                                    <div class="font-semibold">Assigned members</div>
+                                    <div class="text-base-content/50 small">
                                         {{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}
                                     </div>
                                 </div>
-                                <span class="badge bg-body-secondary border text-muted">
-                                    <i class="bi bi-people me-1"></i>{{ $totalUsers }}
+                                <span class="badge bg-body-secondary border text-base-content/50">
+                                    <i class="o-users me-1"></i>{{ $totalUsers }}
                                 </span>
                             </div>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 @forelse($visibleUsers as $user)
                                     @php
                                         $flag = $user->nation?->flag;
@@ -94,29 +94,29 @@
                                             ->implode('');
                                     @endphp
                                     <a href="{{ route('admin.users.edit', $user) }}" class="text-decoration-none">
-                                        <div class="d-flex align-items-center gap-2 border rounded-pill px-2 py-1 bg-body-secondary-subtle">
+                                        <div class="flex align-items-center gap-2 border rounded-pill px-2 py-1 bg-body-secondary-subtle">
                                             @if($flag)
                                                 <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
                                             @else
-                                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary fw-semibold" style="width: 36px; height: 36px;">
+                                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary font-semibold" style="width: 36px; height: 36px;">
                                                     {{ $initials ?: '?' }}
                                                 </div>
                                             @endif
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-semibold small text-body">{{ $user->name }}</span>
-                                                <span class="text-muted small">{{ $nationName ?: 'No nation linked' }}</span>
+                                            <div class="flex flex-column">
+                                                <span class="font-semibold small text-body">{{ $user->name }}</span>
+                                                <span class="text-base-content/50 small">{{ $nationName ?: 'No nation linked' }}</span>
                                             </div>
                                         </div>
                                     </a>
                                 @empty
-                                    <div class="text-muted small d-flex align-items-center gap-2">
-                                        <i class="bi bi-people"></i>
+                                    <div class="text-base-content/50 small flex align-items-center gap-2">
+                                        <i class="o-users"></i>
                                         <span>No members have this role yet.</span>
                                     </div>
                                 @endforelse
 
                                 @if($totalUsers > $maxUsersToShow)
-                                    <span class="badge bg-body-secondary border text-muted">
+                                    <span class="badge bg-body-secondary border text-base-content/50">
                                         +{{ $totalUsers - $maxUsersToShow }} more
                                     </span>
                                 @endif
@@ -128,22 +128,22 @@
 
             <div class="col-12 col-xl-8">
                 <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="card-header flex justify-content-between align-items-center flex-wrap gap-2">
                         <div>
                             <h5 class="mb-0">Permissions</h5>
-                            <span class="text-muted small">Enable the capabilities this role should have.</span>
+                            <span class="text-base-content/50 small">Enable the capabilities this role should have.</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="flex align-items-center gap-2 flex-wrap">
                             <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-body"><i class="bi bi-search"></i></span>
+                                <span class="input-group-text bg-body"><i class="o-magnifying-glass"></i></span>
                                 <input type="search" class="form-control" placeholder="Filter permissions" data-permission-search {{ $role->protected ? 'disabled' : '' }}>
                             </div>
                             <div class="btn-group btn-group-sm" role="group" aria-label="Permission quick actions">
                                 <button class="btn btn-outline-primary" type="button" data-permission-select="all" {{ $role->protected ? 'disabled' : '' }}>
-                                    <i class="bi bi-check2-square me-1"></i> Select all
+                                    <i class="o-check-badge me-1"></i> Select all
                                 </button>
                                 <button class="btn btn-outline-secondary" type="button" data-permission-select="none" {{ $role->protected ? 'disabled' : '' }}>
-                                    <i class="bi bi-x-square me-1"></i> Clear
+                                    <i class="o-x-mark me-1"></i> Clear
                                 </button>
                             </div>
                         </div>
@@ -161,7 +161,7 @@
                                     $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
                                 @endphp
                                 <div class="col-12 col-md-6 col-lg-4 permission-item" data-permission-label="{{ Str::lower($perm) }}">
-                                    <div class="d-flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle {{ $role->protected ? 'opacity-75' : '' }}">
+                                    <div class="flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle {{ $role->protected ? 'opacity-75' : '' }}">
                                         <input type="checkbox"
                                                name="permissions[]"
                                                value="{{ $perm }}"
@@ -171,31 +171,31 @@
                                                 {{ $isChecked ? 'checked' : '' }}
                                                 {{ $role->protected ? 'disabled' : '' }}>
                                         <label for="perm-{{ Str::slug($perm) }}" class="form-check-label w-100">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="fw-semibold">{{ Str::headline($perm) }}</span>
+                                            <div class="flex justify-content-between align-items-center">
+                                                <span class="font-semibold">{{ Str::headline($perm) }}</span>
                                                 <span class="badge border {{ $typeClass }}">
                                                     <i class="bi {{ $typeIcon }} me-1"></i>{{ $typeLabel }}
                                                 </span>
                                             </div>
-                                            <span class="text-muted small d-block mt-1">{{ $description }}</span>
+                                            <span class="text-base-content/50 small d-block mt-1">{{ $description }}</span>
                                         </label>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
-                        <div class="text-muted small mt-3">
-                            <i class="bi bi-info-circle me-1"></i>Changes apply as soon as you save the role.
+                        <div class="text-base-content/50 small mt-3">
+                            <i class="o-information-circle me-1"></i>Changes apply as soon as you save the role.
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-3">
+        <div class="flex justify-content-end gap-2 mt-3">
             <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">Back</a>
             @if(!$role->protected)
                 <button type="submit" class="btn btn-success">
-                    <i class="bi bi-save me-1"></i> Save changes
+                    <i class="o-check me-1"></i> Save changes
                 </button>
             @endif
         </div>

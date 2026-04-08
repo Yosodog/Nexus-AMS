@@ -6,19 +6,19 @@
         $activeMembers = $members->where('is_active', true);
     @endphp
 
-    <div class="app-content-header">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+    <div class="mb-6">
+        <div class="flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
                 <h3 class="mb-1">Payroll</h3>
-                <p class="text-secondary mb-0">Manage weekly payroll grades and member payouts.</p>
+                <p class="text-base-content/50 mb-0">Manage weekly payroll grades and member payouts.</p>
             </div>
-            <div class="d-flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
                 @can('edit_payroll')
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGradeModal">
-                        <i class="bi bi-plus-circle me-1"></i> Add Grade
+                        <i class="o-plus-circle me-1"></i> Add Grade
                     </button>
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createMemberModal">
-                        <i class="bi bi-person-plus me-1"></i> Add Member
+                        <i class="o-user-plus me-1"></i> Add Member
                     </button>
                 @endcan
             </div>
@@ -28,37 +28,37 @@
     <div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
         <div class="col">
             <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon text-bg-primary">
-                    <i class="bi bi-people-fill"></i>
+                <span class="info-box-icon badge-primary">
+                    <i class="o-users"></i>
                 </span>
                 <div class="info-box-content">
-                    <span class="info-box-text text-secondary text-uppercase fw-semibold">Members</span>
-                    <span class="info-box-number fs-4 fw-semibold">{{ $members->count() }}</span>
-                    <span class="text-secondary small">{{ $activeMembers->count() }} active</span>
+                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Members</span>
+                    <span class="info-box-number fs-4 font-semibold">{{ $members->count() }}</span>
+                    <span class="text-base-content/50 small">{{ $activeMembers->count() }} active</span>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon text-bg-success">
-                    <i class="bi bi-calendar-week"></i>
+                <span class="info-box-icon badge-success">
+                    <i class="o-calendar-days"></i>
                 </span>
                 <div class="info-box-content">
-                    <span class="info-box-text text-secondary text-uppercase fw-semibold">Weekly Total</span>
-                    <span class="info-box-number fs-4 fw-semibold">${{ number_format((float) $weeklyTotal, 2) }}</span>
-                    <span class="text-secondary small">Enabled + active members</span>
+                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Weekly Total</span>
+                    <span class="info-box-number fs-4 font-semibold">${{ number_format((float) $weeklyTotal, 2) }}</span>
+                    <span class="text-base-content/50 small">Enabled + active members</span>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon text-bg-info">
-                    <i class="bi bi-calendar-event"></i>
+                <span class="info-box-icon badge-info">
+                    <i class="o-calendar"></i>
                 </span>
                 <div class="info-box-content">
-                    <span class="info-box-text text-secondary text-uppercase fw-semibold">Daily Total</span>
-                    <span class="info-box-number fs-4 fw-semibold">${{ number_format((float) $dailyTotal, 2) }}</span>
-                    <span class="text-secondary small">Weekly / 7</span>
+                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Daily Total</span>
+                    <span class="info-box-number fs-4 font-semibold">${{ number_format((float) $dailyTotal, 2) }}</span>
+                    <span class="text-base-content/50 small">Weekly / 7</span>
                 </div>
             </div>
         </div>
@@ -67,9 +67,9 @@
     <div class="row g-4">
         <div class="col-12 col-xl-5">
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Payroll Grades</span>
-                    <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $grades->count() }} grades</span>
+                <div class="card-header flex justify-content-between align-items-center">
+                    <span class="font-semibold">Payroll Grades</span>
+                    <span class="badge bg-secondary-subtle text-base-content/50-emphasis">{{ $grades->count() }} grades</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -87,7 +87,7 @@
                             <tbody>
                             @forelse ($grades as $grade)
                                 <tr>
-                                    <td class="fw-semibold">{{ $grade->name }}</td>
+                                    <td class="font-semibold">{{ $grade->name }}</td>
                                     <td>${{ number_format((float) $grade->weekly_amount, 2) }}</td>
                                     <td>${{ number_format((float) ($dailyAmounts[$grade->id] ?? 0), 2) }}</td>
                                     <td>
@@ -96,7 +96,7 @@
                                         </span>
                                     </td>
                                     <td>{{ $members->where('payroll_grade_id', $grade->id)->count() }}</td>
-                                    <td class="text-end">
+                                    <td class="text-right">
                                         @can('edit_payroll')
                                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
                                                     data-bs-target="#editGradeModal-{{ $grade->id }}">
@@ -114,7 +114,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-secondary">No payroll grades configured.</td>
+                                    <td colspan="6" class="text-center text-base-content/50">No payroll grades configured.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -126,9 +126,9 @@
 
         <div class="col-12 col-xl-7">
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Payroll Members</span>
-                    <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $members->count() }} records</span>
+                <div class="card-header flex justify-content-between align-items-center">
+                    <span class="font-semibold">Payroll Members</span>
+                    <span class="badge bg-secondary-subtle text-base-content/50-emphasis">{{ $members->count() }} records</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -152,8 +152,8 @@
                                 @endphp
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $member->nation?->leader_name ?? 'Nation #'.$member->nation_id }}</div>
-                                        <div class="text-secondary small">{{ $member->nation?->nation_name ?? 'Unknown nation' }}</div>
+                                        <div class="font-semibold">{{ $member->nation?->leader_name ?? 'Nation #'.$member->nation_id }}</div>
+                                        <div class="text-base-content/50 small">{{ $member->nation?->nation_name ?? 'Unknown nation' }}</div>
                                     </td>
                                     <td>
                                         @php
@@ -170,7 +170,7 @@
                                             {{ $member->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-right">
                                         @can('edit_payroll')
                                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
                                                     data-bs-target="#editMemberModal-{{ $member->id }}">
@@ -188,7 +188,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-secondary">No payroll members configured.</td>
+                                    <td colspan="7" class="text-center text-base-content/50">No payroll members configured.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -373,8 +373,10 @@
                     if (! modalElement) {
                         return;
                     }
-                    const modal = new bootstrap.Modal(modalElement);
-                    modal.show();
+                    modalElement.classList.add('show');
+                    modalElement.style.display = 'flex';
+                    document.body.classList.add('modal-open');
+                    modalElement.dispatchEvent(new Event('show.bs.modal'));
                 });
             </script>
         @endpush

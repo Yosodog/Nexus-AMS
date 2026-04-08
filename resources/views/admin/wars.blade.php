@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Ongoing Wars</h3>
@@ -14,19 +14,19 @@
     {{-- Info Boxes --}}
     <div class="row">
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-fire" bgColor="text-bg-danger" title="Ongoing Wars"
+            <x-admin.info-box icon="o-fire" bgColor="badge-error" title="Ongoing Wars"
                               :value="$stats['total_ongoing']"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-calendar-week" bgColor="text-bg-info" title="Wars Last 7 Days"
+            <x-admin.info-box icon="o-calendar-days" bgColor="badge-info" title="Wars Last 7 Days"
                               :value="$stats['wars_last_7_days']"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-clock-history" bgColor="text-bg-warning" title="Avg Duration (days)"
+            <x-admin.info-box icon="o-clock" bgColor="badge-warning" title="Avg Duration (days)"
                               :value="$stats['avg_duration']"/>
         </div>
         <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash-stack" bgColor="text-bg-success" title="Looted (7 Days)"
+            <x-admin.info-box icon="o-banknotes" bgColor="badge-success" title="Looted (7 Days)"
                               :value="'$' . number_format($stats['total_looted'], 2)"/>
         </div>
     </div>
@@ -173,7 +173,7 @@
     </div>
 @endsection
 
-@section("scripts")
+@push("scripts")
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const warsLineChartCtx = document.getElementById('warsLineChart').getContext('2d');
@@ -284,4 +284,4 @@
             }
         });
     </script>
-@endsection
+@endpush

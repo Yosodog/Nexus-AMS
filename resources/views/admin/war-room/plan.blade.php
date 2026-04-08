@@ -7,17 +7,17 @@
         </template>
     </datalist>
 
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3 align-items-center">
                 <div class="col-sm-8">
                     <h3 class="mb-0">War Plan: {{ $plan->name }}</h3>
-                    <div class="text-muted">
+                    <div class="text-base-content/50">
                         Status:
-                        <span class="badge text-bg-primary text-uppercase">{{ $plan->status }}</span>
+                        <span class="badge badge-primary text-uppercase">{{ $plan->status }}</span>
                         <span class="ms-2" data-bs-toggle="tooltip"
                               title="Plan type drives the default war declaration when our members engage targets.">
-                            <i class="bi bi-info-circle"></i>
+                            <i class="o-information-circle"></i>
                         </span>
                     </div>
                 </div>
@@ -29,11 +29,11 @@
                 <div class="col-6 col-md-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Targets</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Targets</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $enemyCount }}</span>
-                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Enemy nations tracked with TPS">
-                                    <i class="bi bi-bullseye"></i>
+                                <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Enemy nations tracked with TPS">
+                                    <i class="o-bolt"></i>
                                 </span>
                             </div>
                         </div>
@@ -42,10 +42,10 @@
                 <div class="col-6 col-md-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Assign coverage</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Assign coverage</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $coverage !== null ? $coverage.'%' : 'n/a' }}</span>
-                                <span class="badge text-bg-primary" data-bs-toggle="tooltip" title="Assignments / preferred slots">
+                                <span class="badge badge-primary" data-bs-toggle="tooltip" title="Assignments / preferred slots">
                                     {{ $assignmentCount }} / {{ $preferredSlotsTotal }}
                                 </span>
                             </div>
@@ -55,10 +55,10 @@
                 <div class="col-6 col-md-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Locked slots</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Locked slots</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $lockedCount }}</span>
-                                <span class="badge text-bg-success" data-bs-toggle="tooltip" title="Locked or overridden assignments remain untouched">
+                                <span class="badge badge-success" data-bs-toggle="tooltip" title="Locked or overridden assignments remain untouched">
                                     Safe
                                 </span>
                             </div>
@@ -68,10 +68,10 @@
                 <div class="col-6 col-md-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Preferred wars / nation</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Preferred wars / nation</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $preferredTargetsPerNation }}</span>
-                                <span class="badge text-bg-info" data-bs-toggle="tooltip" title="Activity window drives readiness weighting">
+                                <span class="badge badge-info" data-bs-toggle="tooltip" title="Activity window drives readiness weighting">
                                     {{ $plan->activity_window_hours }}h
                                 </span>
                             </div>
@@ -85,56 +85,56 @@
     <div class="row g-4">
         <div class="col-12 col-xl-5">
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Plan Options</h5>
                     <span data-bs-toggle="tooltip" title="Baseline settings that influence automation heuristics.">
-                        <i class="bi bi-question-circle"></i>
+                        <i class="o-question-mark-circle"></i>
                     </span>
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-6">Plan Type</dt>
-                        <dd class="col-6 text-end text-uppercase">
+                        <dd class="col-6 text-right text-uppercase">
                             {{ $warTypes[strtolower($plan->plan_type ?? '')] ?? ucfirst($plan->plan_type ?? 'Unknown') }}
                         </dd>
 
                         <dt class="col-7">
                             Preferred targets / nation
-                            <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
+                            <i class="o-information-circle ms-1 text-base-content/50" data-bs-toggle="tooltip"
                                title="Offensive wars we aim to give each friendly before applying slot caps."></i>
                         </dt>
-                        <dd class="col-5 text-end">{{ $preferredTargetsPerNation }}</dd>
+                        <dd class="col-5 text-right">{{ $preferredTargetsPerNation }}</dd>
 
                         <dt class="col-7">
                             Max Squad Size
-                            <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
+                            <i class="o-information-circle ms-1 text-base-content/50" data-bs-toggle="tooltip"
                                title="Upper bound when forming automatic strike squads."></i>
                         </dt>
-                        <dd class="col-5 text-end">{{ $plan->max_squad_size }}</dd>
+                        <dd class="col-5 text-right">{{ $plan->max_squad_size }}</dd>
 
                         <dt class="col-7">
                             Cohesion tolerance
-                            <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
+                            <i class="o-information-circle ms-1 text-base-content/50" data-bs-toggle="tooltip"
                                title="Tolerance (±) that keeps squads aligned on readiness."></i>
                         </dt>
-                        <dd class="col-5 text-end">±{{ $plan->squad_cohesion_tolerance }}</dd>
+                        <dd class="col-5 text-right">±{{ $plan->squad_cohesion_tolerance }}</dd>
 
                         <dt class="col-7">
                             Activity window
-                            <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
+                            <i class="o-information-circle ms-1 text-base-content/50" data-bs-toggle="tooltip"
                                title="Recent activity (hours) factored into Target Priority Score."></i>
                         </dt>
-                        <dd class="col-5 text-end">{{ $plan->activity_window_hours }}h</dd>
+                        <dd class="col-5 text-right">{{ $plan->activity_window_hours }}h</dd>
 
                         <dt class="col-7">Discord forum override</dt>
-                        <dd class="col-5 text-end">{{ $plan->discord_forum_channel_id ?: 'Default' }}</dd>
+                        <dd class="col-5 text-right">{{ $plan->discord_forum_channel_id ?: 'Default' }}</dd>
 
                         <dt class="col-7">Suppress counters</dt>
-                        <dd class="col-5 text-end">
+                        <dd class="col-5 text-right">
                             @if ($plan->suppress_counters_when_active)
-                                <span class="badge text-bg-success">Enabled</span>
+                                <span class="badge badge-success">Enabled</span>
                             @else
-                                <span class="badge text-bg-secondary">Disabled</span>
+                                <span class="badge badge-ghost">Disabled</span>
                             @endif
                         </dd>
                     </dl>
@@ -185,14 +185,14 @@
                                    placeholder="Use default from War Room settings"
                                    value="{{ old('discord_forum_channel_id', $plan->discord_forum_channel_id) }}">
                         </div>
-                        <div class="col-md-6 d-flex align-items-end">
+                        <div class="col-md-6 flex align-items-end">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" name="suppress_counters_when_active" value="1"
                                        {{ old('suppress_counters_when_active', $plan->suppress_counters_when_active) ? 'checked' : '' }}>
                                 <label class="form-check-label">Suppress counters</label>
                             </div>
                         </div>
-                        <div class="col-12 text-end">
+                        <div class="col-12 text-right">
                             <button type="submit" class="btn btn-sm btn-primary">Save changes</button>
                         </div>
                     </form>
@@ -202,46 +202,46 @@
 
         <div class="col-12 col-xl-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Alliances</h5>
                     <span data-bs-toggle="tooltip" title="Friendly alliances supply our assignment pool. Enemy alliances seed targets.">
-                        <i class="bi bi-info-circle"></i>
+                        <i class="o-information-circle"></i>
                     </span>
                 </div>
                 <div class="card-body">
-                    <h6 class="fw-semibold">Friendly</h6>
+                    <h6 class="font-semibold">Friendly</h6>
                     <ul class="list-unstyled mb-3">
                         @forelse ($plan->friendlyAlliances as $alliance)
-                            <li class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-2">
+                            <li class="flex justify-content-between align-items-center border rounded px-2 py-1 mb-2">
                                 <span>{{ $alliance->alliance->name ?? 'Alliance #'.$alliance->alliance_id }}</span>
                                 <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-link btn-sm text-danger" type="submit" data-bs-toggle="tooltip" title="Remove">
-                                        <i class="bi bi-x-circle"></i>
+                                        <i class="o-x-circle"></i>
                                     </button>
                                 </form>
                             </li>
                         @empty
-                            <li class="text-muted">Using alliance membership defaults.</li>
+                            <li class="text-base-content/50">Using alliance membership defaults.</li>
                         @endforelse
                     </ul>
 
-                    <h6 class="fw-semibold">Enemy</h6>
+                    <h6 class="font-semibold">Enemy</h6>
                     <ul class="list-unstyled mb-0">
                         @forelse ($plan->enemyAlliances as $alliance)
-                            <li class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-2">
+                            <li class="flex justify-content-between align-items-center border rounded px-2 py-1 mb-2">
                                 <span>{{ $alliance->alliance->name ?? 'Alliance #'.$alliance->alliance_id }}</span>
                                 <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-link btn-sm text-danger" type="submit" data-bs-toggle="tooltip" title="Remove">
-                                        <i class="bi bi-x-circle"></i>
+                                        <i class="o-x-circle"></i>
                                     </button>
                                 </form>
                             </li>
                         @empty
-                            <li class="text-muted">Add enemy alliances to drive target discovery.</li>
+                            <li class="text-base-content/50">Add enemy alliances to drive target discovery.</li>
                         @endforelse
                     </ul>
                 </div>
@@ -263,7 +263,7 @@
                             <button type="submit" class="btn btn-sm btn-outline-primary w-100">Add alliance</button>
                         </div>
                         <div class="col-12">
-                            <p class="small text-muted mb-0">Alliance IDs appear in PW URLs (e.g. <code>.../alliance/id=1234</code>).</p>
+                            <p class="small text-base-content/50 mb-0">Alliance IDs appear in PW URLs (e.g. <code>.../alliance/id=1234</code>).</p>
                         </div>
                     </form>
                 </div>
@@ -309,7 +309,7 @@
                             <label class="form-check-label" for="notifyDiscordRoom">Create Discord War Room</label>
                         </div>
                         <button class="btn btn-primary w-100" type="submit">Publish assignments</button>
-                        <div class="d-flex gap-2 mt-3">
+                        <div class="flex gap-2 mt-3">
                             <a href="{{ route('admin.war-plans.export', $plan) }}" class="btn btn-outline-primary w-50">Export</a>
                             <button class="btn btn-outline-secondary w-50" type="button" data-bs-toggle="modal" data-bs-target="#importPlanModal">Import</button>
                         </div>
@@ -369,12 +369,12 @@
     <div class="row g-4 mt-1">
         <div class="col-12">
             <div class="card shadow-sm" x-data="targetsTable()">
-                <div class="card-header d-flex flex-column flex-lg-row align-items-lg-center gap-3">
+                <div class="card-header flex flex-column flex-lg-row align-items-lg-center gap-3">
                     <div>
                         <h5 class="card-title mb-0">Targets</h5>
-                        <small class="text-muted">TPS = Target Priority Score. Hover the badge to inspect factor breakdowns.</small>
+                        <small class="text-base-content/50">TPS = Target Priority Score. Hover the badge to inspect factor breakdowns.</small>
                     </div>
-                    <form class="ms-lg-auto d-flex flex-wrap gap-2" method="post" action="{{ route('admin.war-plans.targets.store', $plan) }}">
+                    <form class="ms-lg-auto flex flex-wrap gap-2" method="post" action="{{ route('admin.war-plans.targets.store', $plan) }}">
                         @csrf
                         <div class="input-group input-group-sm">
                             <span class="input-group-text" data-bs-toggle="tooltip" title="Nation ID pulled from PW profile">Nation ID</span>
@@ -390,23 +390,23 @@
                     </form>
                 </div>
                 <div class="card-body p-0">
-                    <div class="p-3 d-flex flex-wrap gap-2 align-items-center">
+                    <div class="p-3 flex flex-wrap gap-2 align-items-center">
                         <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0">
                             <span class="input-group-text">Search</span>
                             <input type="search" class="form-control" placeholder="Enemy, alliance, TPS, status" x-model.debounce.300ms="search">
                         </div>
-                        <div class="d-flex align-items-center gap-2 ms-auto">
+                        <div class="flex align-items-center gap-2 ms-auto">
                             <a href="{{ route('admin.war-plans.targets.export-csv', $plan) }}" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download me-1"></i> Export CSV
+                                <i class="o-arrow-down-tray me-1"></i> Export CSV
                             </a>
                             <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchTargets">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                <i class="o-arrow-path me-1"></i> Refresh
                             </button>
                             <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
-                                <span class="text-muted small">Loading targets…</span>
+                                <span class="text-base-content/50 small">Loading targets…</span>
                             </div>
                             <span class="text-danger small" x-show="error" x-text="error"></span>
                             <button class="btn btn-sm btn-outline-secondary" type="button" x-show="error" @click="fetchTargets">Retry</button>
@@ -423,13 +423,13 @@
                                 <th>Status</th>
                                 <th>Activity</th>
                                 <th>War type</th>
-                                <th class="text-end">Actions</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             <template x-if="!filteredTargets.length && !error">
                                 <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">No targets yet. Add alliances or seed specific nation IDs above.</td>
+                                    <td colspan="8" class="text-center py-4 text-base-content/50">No targets yet. Add alliances or seed specific nation IDs above.</td>
                                 </tr>
                             </template>
                             <template x-for="target in filteredTargets" :key="target.id">
@@ -437,41 +437,41 @@
                                     <td>
                                         <template x-if="target.nation">
                                             <div>
-                                                <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`" target="_blank" class="fw-semibold">
+                                                <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`" target="_blank" class="font-semibold">
                                                     <span x-text="target.nation.leader_name"></span>
                                                 </a>
-                                                <div class="small text-muted" x-text="target.nation.nation_name"></div>
+                                                <div class="small text-base-content/50" x-text="target.nation.nation_name"></div>
                                                 <div class="small">
                                                     Score <span x-text="formatNumber(target.nation.score, 2)"></span>
                                                     • Cities <span x-text="target.nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Soldiers <span x-text="formatNumber(target.nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(target.nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Aircraft <span x-text="formatNumber(target.nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(target.nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation">
-                                            <span class="fw-semibold text-muted">Unknown</span>
+                                            <span class="font-semibold text-base-content/50">Unknown</span>
                                         </template>
                                     </td>
                                     <td>
                                         <template x-if="target.nation?.alliance">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/alliance/id=${target.nation.alliance.id}`" target="_blank" x-text="target.nation.alliance.name"></a>
-                                                <div class="small text-muted" x-text="target.nation.alliance.acronym"></div>
+                                                <div class="small text-base-content/50" x-text="target.nation.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation?.alliance">
-                                            <span class="text-muted">No alliance</span>
+                                            <span class="text-base-content/50">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge text-bg-danger" data-bs-toggle="tooltip"
+                                        <span class="badge badge-error" data-bs-toggle="tooltip"
                                               title="Stored TPS meta" x-text="formatNumber(target.target_priority_score, 1)"></span>
                                     </td>
                                     <td>
@@ -484,17 +484,17 @@
                                     </td>
                                     <td>
                                         <template x-if="target.nation">
-                                            <div class="d-flex flex-wrap gap-1">
-                                                <span class="badge text-bg-warning" data-bs-toggle="tooltip" title="In vacation mode" x-show="(target.nation.vacation_mode_turns ?? 0) > 0">VM</span>
-                                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="On beige" x-show="(target.nation.beige_turns ?? 0) > 0" x-text="`${target.nation.beige_turns} beige`"></span>
-                                                <span class="badge text-bg-info" data-bs-toggle="tooltip" title="Active wars"
+                                            <div class="flex flex-wrap gap-1">
+                                                <span class="badge badge-warning" data-bs-toggle="tooltip" title="In vacation mode" x-show="(target.nation.vacation_mode_turns ?? 0) > 0">VM</span>
+                                                <span class="badge badge-ghost" data-bs-toggle="tooltip" title="On beige" x-show="(target.nation.beige_turns ?? 0) > 0" x-text="`${target.nation.beige_turns} beige`"></span>
+                                                <span class="badge badge-info" data-bs-toggle="tooltip" title="Active wars"
                                                       x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) > 0"
                                                       x-text="`Wars ${target.nation.offensive_wars_count ?? 0} / ${target.nation.defensive_wars_count ?? 0}`"></span>
-                                                <span class="text-muted small" x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) === 0 && (target.nation.beige_turns ?? 0) === 0 && (target.nation.vacation_mode_turns ?? 0) === 0">No flags</span>
+                                                <span class="text-base-content/50 small" x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) === 0 && (target.nation.beige_turns ?? 0) === 0 && (target.nation.vacation_mode_turns ?? 0) === 0">No flags</span>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation">
-                                            <span class="text-muted">Unknown</span>
+                                            <span class="text-base-content/50">Unknown</span>
                                         </template>
                                     </td>
                                     <td x-text="lastActive(target)"></td>
@@ -512,7 +512,7 @@
                                             </select>
                                         </form>
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-right">
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-outline-secondary" type="button" @click="toggleTargetMeta(target.id)">
                                                 Meta
@@ -525,11 +525,11 @@
                                                   onsubmit="return confirm('Remove this target from the plan?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="o-trash"></i></button>
                                             </form>
                                         </div>
-                                        <div class="mt-2 text-start" x-show="isTargetMetaOpen(target.id)" x-transition>
-                                            <pre class="mb-0 small text-muted" x-text="prettyMeta(target.meta)"></pre>
+                                        <div class="mt-2 text-left" x-show="isTargetMetaOpen(target.id)" x-transition>
+                                            <pre class="mb-0 small text-base-content/50" x-text="prettyMeta(target.meta)"></pre>
                                         </div>
                                     </td>
                                 </tr>
@@ -555,8 +555,8 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <h6 class="fw-semibold">In-range friendlies</h6>
-                                <p class="small text-muted">All nations in war range, sorted with recommended options first.</p>
+                                <h6 class="font-semibold">In-range friendlies</h6>
+                                <p class="small text-base-content/50">All nations in war range, sorted with recommended options first.</p>
                                 <div class="table-responsive mb-3">
                                     <table class="table table-sm align-middle">
                                         <thead class="table-light">
@@ -568,13 +568,13 @@
                                             <th>Match score</th>
                                             <th>Assignments</th>
                                             <th>Open slots</th>
-                                            <th class="text-end">Action</th>
+                                            <th class="text-right">Action</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         <template x-if="candidatesLoading">
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted py-3">Loading candidates…</td>
+                                                <td colspan="8" class="text-center text-base-content/50 py-3">Loading candidates…</td>
                                             </tr>
                                         </template>
                                         <template x-if="!candidatesLoading && candidatesError">
@@ -584,24 +584,24 @@
                                         </template>
                                         <template x-if="!candidatesLoading && !candidatesError && !candidatesForActiveTarget().length">
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted py-3">No friendlies are in war range right now.</td>
+                                                <td colspan="8" class="text-center text-base-content/50 py-3">No friendlies are in war range right now.</td>
                                             </tr>
                                         </template>
                                         <template x-for="candidate in (candidatesLoading ? [] : candidatesForActiveTarget())" :key="candidate.friendly.id">
                                             <tr>
                                                 <td>
-                                                    <a :href="`https://politicsandwar.com/nation/id=${candidate.friendly.id}`" target="_blank" rel="noopener noreferrer" class="fw-semibold" x-text="candidate.friendly.leader_name"></a>
-                                                    <div class="small text-muted" x-text="candidate.friendly.nation_name"></div>
+                                                    <a :href="`https://politicsandwar.com/nation/id=${candidate.friendly.id}`" target="_blank" rel="noopener noreferrer" class="font-semibold" x-text="candidate.friendly.leader_name"></a>
+                                                    <div class="small text-base-content/50" x-text="candidate.friendly.nation_name"></div>
                                                 </td>
                                                 <td>
                                                     <template x-if="candidate.friendly.alliance">
                                                         <div>
                                                             <a :href="`https://politicsandwar.com/alliance/id=${candidate.friendly.alliance.id}`" target="_blank" x-text="candidate.friendly.alliance.name"></a>
-                                                            <div class="small text-muted" x-text="candidate.friendly.alliance.acronym"></div>
+                                                            <div class="small text-base-content/50" x-text="candidate.friendly.alliance.acronym"></div>
                                                         </div>
                                                     </template>
                                                     <template x-if="!candidate.friendly.alliance">
-                                                        <span class="text-muted">No alliance</span>
+                                                        <span class="text-base-content/50">No alliance</span>
                                                     </template>
                                                 </td>
                                                 <td>
@@ -609,33 +609,33 @@
                                                         Score <span x-text="formatNumber(candidate.friendly.score, 2)"></span>
                                                         • Cities <span x-text="candidate.friendly.num_cities ?? 0"></span>
                                                     </div>
-                                                    <div class="small text-muted">
+                                                    <div class="small text-base-content/50">
                                                         Soldiers <span x-text="formatNumber(candidate.friendly.military?.soldiers || 0)"></span>
                                                         • Tanks <span x-text="formatNumber(candidate.friendly.military?.tanks || 0)"></span>
                                                     </div>
-                                                    <div class="small text-muted">
+                                                    <div class="small text-base-content/50">
                                                         Aircraft <span x-text="formatNumber(candidate.friendly.military?.aircraft || 0)"></span>
                                                         • Ships <span x-text="formatNumber(candidate.friendly.military?.ships || 0)"></span>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive wars">
+                                                    <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Offensive / defensive wars">
                                                         <span x-text="candidate.friendly.offensive_wars_count ?? 0"></span>
                                                         /
                                                         <span x-text="candidate.friendly.defensive_wars_count ?? 0"></span>
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="badge text-bg-info" x-text="formatNumber(candidate.score, 1)"></span>
+                                                    <div class="flex align-items-center gap-2">
+                                                        <span class="badge badge-info" x-text="formatNumber(candidate.score, 1)"></span>
                                                         <span class="badge"
-                                                              :class="candidate.recommended ? 'text-bg-success' : 'text-bg-secondary'"
+                                                              :class="candidate.recommended ? 'badge-success' : 'badge-ghost'"
                                                               x-text="candidate.recommended ? 'Recommended' : 'Manual only'"></span>
                                                     </div>
                                                 </td>
                                                 <td x-text="`${candidate.assignment_load} / ${candidate.max_assignments}`"></td>
                                                 <td x-text="candidate.available_slots"></td>
-                                                <td class="text-end">
+                                                <td class="text-right">
                                                     <form method="post" :action="routes.manualAssignment">
                                                         @csrf
                                                         <input type="hidden" name="war_plan_target_id" :value="activeTarget?.id">
@@ -650,7 +650,7 @@
                                     </table>
                                 </div>
                                 <hr>
-                                <h6 class="fw-semibold">Manual assignment</h6>
+                                <h6 class="font-semibold">Manual assignment</h6>
                                 <form method="post" :action="routes.manualAssignment" class="row g-2 align-items-end">
                                     @csrf
                                     <input type="hidden" name="war_plan_target_id" :value="activeTarget?.id">
@@ -667,7 +667,7 @@
                                         <button type="submit" class="btn btn-primary w-100 mt-3 mt-md-0">Assign</button>
                                     </div>
                                 </form>
-                                <p class="small text-muted mt-3 mb-0">Use the datalist to search by leader name if you already know the responder.</p>
+                                <p class="small text-base-content/50 mt-3 mb-0">Use the datalist to search by leader name if you already know the responder.</p>
                             </div>
                         </div>
                     </div>
@@ -678,23 +678,23 @@
         <div class="col-12">
             <div class="card shadow-sm" x-data="assignmentsTable()">
                 <div class="card-header">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="flex flex-wrap justify-content-between align-items-center gap-2">
                         <div>
                             <h5 class="card-title mb-0">Assignments &amp; squads</h5>
-                            <small class="text-muted">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
+                            <small class="text-base-content/50">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="flex align-items-center gap-2">
                             <a href="{{ route('admin.war-plans.assignments.export-csv', $plan) }}" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download me-1"></i> Export CSV
+                                <i class="o-arrow-down-tray me-1"></i> Export CSV
                             </a>
                             <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchAssignments">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                <i class="o-arrow-path me-1"></i> Refresh
                             </button>
                             <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
-                                <span class="text-muted small">Loading assignments…</span>
+                                <span class="text-base-content/50 small">Loading assignments…</span>
                             </div>
                             <span class="text-danger small" x-show="error" x-text="error"></span>
                             <button class="btn btn-sm btn-outline-secondary" type="button" x-show="error" @click="fetchAssignments">Retry</button>
@@ -702,7 +702,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="p-3 d-flex flex-wrap gap-2 align-items-center">
+                    <div class="p-3 flex flex-wrap gap-2 align-items-center">
                         <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0">
                             <span class="input-group-text">Search</span>
                             <input type="search" class="form-control" placeholder="Friendly, target, status" x-model.debounce.300ms="search">
@@ -720,13 +720,13 @@
                                 <th>Assignments</th>
                                 <th>Match score</th>
                                 <th>Status</th>
-                                <th class="text-end">Actions</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             <template x-if="!filteredAssignments.length && !error">
                                 <tr>
-                                    <td colspan="9" class="text-center py-4 text-muted">No assignments yet. Auto-generate or use the Assign buttons to attach friendlies.</td>
+                                    <td colspan="9" class="text-center py-4 text-base-content/50">No assignments yet. Auto-generate or use the Assign buttons to attach friendlies.</td>
                                 </tr>
                             </template>
                             <template x-for="assignment in filteredAssignments" :key="assignment.id">
@@ -734,63 +734,63 @@
                                     <td>
                                         <template x-if="assignment.target?.nation">
                                             <div>
-                                                <a :href="`https://politicsandwar.com/nation/id=${assignment.target.nation.id}`" target="_blank" class="fw-semibold" x-text="assignment.target.nation.leader_name"></a>
-                                                <div class="small text-muted" x-text="assignment.target.nation.nation_name"></div>
+                                                <a :href="`https://politicsandwar.com/nation/id=${assignment.target.nation.id}`" target="_blank" class="font-semibold" x-text="assignment.target.nation.leader_name"></a>
+                                                <div class="small text-base-content/50" x-text="assignment.target.nation.nation_name"></div>
                                                 <div class="small">
                                                     Score <span x-text="formatNumber(assignment.target.nation.score, 2)"></span>
                                                     • Cities <span x-text="assignment.target.nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Soldiers <span x-text="formatNumber(assignment.target.nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(assignment.target.nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Aircraft <span x-text="formatNumber(assignment.target.nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(assignment.target.nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.target?.nation">
-                                            <span class="text-muted">Unknown</span>
+                                            <span class="text-base-content/50">Unknown</span>
                                         </template>
                                     </td>
                                     <td x-text="assignment.squad?.label ?? 'Unassigned'"></td>
                                     <td>
                                         <template x-if="assignment.friendly_nation">
                                             <div>
-                                                <a :href="`https://politicsandwar.com/nation/id=${assignment.friendly_nation.id}`" target="_blank" class="fw-semibold" x-text="assignment.friendly_nation.leader_name"></a>
-                                                <div class="small text-muted" x-text="assignment.friendly_nation.nation_name"></div>
+                                                <a :href="`https://politicsandwar.com/nation/id=${assignment.friendly_nation.id}`" target="_blank" class="font-semibold" x-text="assignment.friendly_nation.leader_name"></a>
+                                                <div class="small text-base-content/50" x-text="assignment.friendly_nation.nation_name"></div>
                                                 <div class="small">
                                                     Score <span x-text="formatNumber(assignment.friendly_nation.score, 2)"></span>
                                                     • Cities <span x-text="assignment.friendly_nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Soldiers <span x-text="formatNumber(assignment.friendly_nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(assignment.friendly_nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="small text-muted">
+                                                <div class="small text-base-content/50">
                                                     Aircraft <span x-text="formatNumber(assignment.friendly_nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(assignment.friendly_nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.friendly_nation">
-                                            <span class="text-muted">Unknown</span>
+                                            <span class="text-base-content/50">Unknown</span>
                                         </template>
                                     </td>
                                     <td>
                                         <template x-if="assignment.friendly_nation?.alliance">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/alliance/id=${assignment.friendly_nation.alliance.id}`" target="_blank" x-text="assignment.friendly_nation.alliance.name"></a>
-                                                <div class="small text-muted" x-text="assignment.friendly_nation.alliance.acronym"></div>
+                                                <div class="small text-base-content/50" x-text="assignment.friendly_nation.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.friendly_nation?.alliance">
-                                            <span class="text-muted">No alliance</span>
+                                            <span class="text-base-content/50">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive wars currently active">
+                                        <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Offensive / defensive wars currently active">
                                             <span x-text="assignment.friendly_nation?.offensive_wars_count ?? 0"></span>
                                             /
                                             <span x-text="assignment.friendly_nation?.defensive_wars_count ?? 0"></span>
@@ -802,36 +802,36 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                        <div class="flex align-items-center gap-2 mb-1">
                                             <div class="progress flex-grow-1" style="height: 8px;" aria-label="Match strength">
                                                 <div class="progress-bar bg-info" role="progressbar" :style="`width: ${Math.min(100, assignment.match_score ?? 0)}%`"
                                                      :aria-valuenow="assignment.match_score ?? 0" aria-valuemin="0" aria-valuemax="100"></div>
                                             </div>
-                                            <span class="badge text-bg-info" x-text="formatNumber(assignment.match_score, 1)"></span>
+                                            <span class="badge badge-info" x-text="formatNumber(assignment.match_score, 1)"></span>
                                         </div>
-                                        <div class="d-flex flex-wrap gap-1">
+                                        <div class="flex flex-wrap gap-1">
                                             <button class="btn btn-sm btn-outline-secondary" type="button" @click="toggleAssignmentMeta(assignment.id)">
                                                 Details
                                             </button>
-                                            <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Manual override" x-show="assignment.is_overridden">Manual</span>
-                                            <span class="badge text-bg-success" data-bs-toggle="tooltip" title="Locked assignment" x-show="assignment.is_locked">Locked</span>
+                                            <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Manual override" x-show="assignment.is_overridden">Manual</span>
+                                            <span class="badge badge-success" data-bs-toggle="tooltip" title="Locked assignment" x-show="assignment.is_locked">Locked</span>
                                         </div>
                                         <div class="mt-2" x-show="isAssignmentMetaOpen(assignment.id)" x-transition>
-                                            <pre class="mb-0 small text-muted" x-text="prettyMeta(assignment.meta)"></pre>
+                                            <pre class="mb-0 small text-base-content/50" x-text="prettyMeta(assignment.meta)"></pre>
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-wrap gap-1">
+                                        <div class="flex flex-wrap gap-1">
                                             <span class="badge text-bg-light text-uppercase" x-text="assignment.status"></span>
-                                            <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Friendly on beige" x-show="(assignment.friendly_nation?.beige_turns ?? 0) > 0">Beige</span>
+                                            <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Friendly on beige" x-show="(assignment.friendly_nation?.beige_turns ?? 0) > 0">Beige</span>
                                         </div>
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-right">
                                         <form method="post" :action="routes.deleteAssignment(assignment.id)"
                                               onsubmit="return confirm('Remove this assignment?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="o-trash"></i></button>
                                         </form>
                                     </td>
                                 </tr>
@@ -845,9 +845,9 @@
 
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Live attacks</h5>
-                    <small class="text-muted">Filter window, scope, or attack type to focus the feed.</small>
+                    <small class="text-base-content/50">Filter window, scope, or attack type to focus the feed.</small>
                 </div>
                 <div class="card-body">
                     <form class="row g-3 mb-3" method="get">
@@ -870,7 +870,7 @@
                                    value="{{ is_array(request('attack_types')) ? implode(',', request('attack_types')) : request('attack_types') }}"
                                    placeholder="ground,air">
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
+                        <div class="col-md-2 flex align-items-end">
                             <button class="btn btn-outline-primary w-100" type="submit">Apply</button>
                         </div>
                     </form>
@@ -909,7 +909,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">No attacks within the selected window.</td>
+                                    <td colspan="5" class="text-center py-4 text-base-content/50">No attacks within the selected window.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -923,18 +923,18 @@
     <div class="row g-4 mt-1">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header d-flex flex-column flex-lg-row align-items-lg-center gap-3">
+                <div class="card-header flex flex-column flex-lg-row align-items-lg-center gap-3">
                     <div>
                         <h5 class="card-title mb-0">Comparative Stats</h5>
-                        <small class="text-muted">Quick glance at friendly vs enemy scale and militarization.</small>
+                        <small class="text-base-content/50">Quick glance at friendly vs enemy scale and militarization.</small>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <h6 class="fw-semibold d-flex justify-content-between">
+                            <h6 class="font-semibold flex justify-content-between">
                                 <span>Cities</span>
-                                <span class="text-muted small">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
+                                <span class="text-base-content/50 small">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
                             </h6>
                             <div class="progress" style="height: 10px;" aria-label="Cities share">
                                 @php
@@ -945,9 +945,9 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="fw-semibold d-flex justify-content-between">
+                            <h6 class="font-semibold flex justify-content-between">
                                 <span>Force Readiness</span>
-                                <span class="text-muted small">By unit type</span>
+                                <span class="text-base-content/50 small">By unit type</span>
                             </h6>
                             @foreach (['soldiers' => 'Soldiers', 'tanks' => 'Tanks', 'aircraft' => 'Aircraft', 'ships' => 'Ships'] as $unitKey => $label)
                                 @php
@@ -963,9 +963,9 @@
                                     }
                                 @endphp
                                 <div class="mb-2">
-                                    <div class="d-flex justify-content-between small">
+                                    <div class="flex justify-content-between small">
                                         <span>{{ $label }}</span>
-                                        <span class="text-muted">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
+                                        <span class="text-base-content/50">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
                                         <div class="progress-bar bg-primary" style="width: {{ $friendlyPct }}%" data-bs-toggle="tooltip" title="Friendly {{ number_format($friendlyVal) }} units ({{ $friendlyPct }}% share)"></div>
@@ -975,16 +975,16 @@
                             @endforeach
                         </div>
                         <div class="col-md-6">
-                            <h6 class="fw-semibold">Average Cities</h6>
-                            <p class="mb-1"><span class="badge text-bg-primary">Friendly {{ number_format($friendlyCityAvg ?? 0, 1) }}</span></p>
-                            <p class="mb-1"><span class="badge text-bg-danger">Enemy {{ number_format($enemyCityAvg ?? 0, 1) }}</span></p>
+                            <h6 class="font-semibold">Average Cities</h6>
+                            <p class="mb-1"><span class="badge badge-primary">Friendly {{ number_format($friendlyCityAvg ?? 0, 1) }}</span></p>
+                            <p class="mb-1"><span class="badge badge-error">Enemy {{ number_format($enemyCityAvg ?? 0, 1) }}</span></p>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="fw-semibold">Assignments Coverage</h6>
+                            <h6 class="font-semibold">Assignments Coverage</h6>
                             <div class="progress" style="height: 10px;">
                                 <div class="progress-bar bg-success" style="width: {{ $coverage ?? 0 }}%" data-bs-toggle="tooltip" title="Assignments {{ $assignmentCount }} / Desired {{ $preferredSlotsTotal ?? 0 }}"></div>
                             </div>
-                            <small class="text-muted">
+                            <small class="text-base-content/50">
                                 Remaining gap: {{ $preferredSlotsTotal > 0 ? max(0, $preferredSlotsTotal - $assignmentCount).' slots' : 'n/a' }}.
                             </small>
                         </div>
@@ -997,27 +997,27 @@
     <div class="row g-4 mt-1">
         <div class="col-12 col-xl-8">
             <div class="card shadow-sm h-100" x-data="friendliesPanel()">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title mb-0">Unassigned friendlies</h5>
-                        <small class="text-muted">No current target — fill gaps manually if needed.</small>
+                        <small class="text-base-content/50">No current target — fill gaps manually if needed.</small>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="flex align-items-center gap-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" @click="fetchFriendlies">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                            <i class="o-arrow-path me-1"></i> Refresh
                         </button>
                         <div class="align-items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                             <div class="spinner-border spinner-border-sm text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <span class="text-muted small">Loading friendlies…</span>
+                            <span class="text-base-content/50 small">Loading friendlies…</span>
                         </div>
                         <span class="text-danger small" x-show="error" x-text="error"></span>
                         <button class="btn btn-sm btn-outline-secondary" type="button" x-show="error" @click="fetchFriendlies">Retry</button>
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="p-3 d-flex flex-wrap gap-2 align-items-center">
+                    <div class="p-3 flex flex-wrap gap-2 align-items-center">
                         <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0">
                             <span class="input-group-text">Search</span>
                             <input type="search" class="form-control" placeholder="Friendly, alliance" x-model.debounce.300ms="search">
@@ -1031,20 +1031,20 @@
                                 <th>Alliance</th>
                                 <th>Wars</th>
                                 <th>Activity</th>
-                                <th class="text-end">Action</th>
+                                <th class="text-right">Action</th>
                             </tr>
                             </thead>
                             <tbody>
                             <template x-if="!filteredUnassigned.length && !error">
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">Everyone is assigned.</td>
+                                    <td colspan="5" class="text-center py-4 text-base-content/50">Everyone is assigned.</td>
                                 </tr>
                             </template>
                             <template x-for="friendly in filteredUnassigned" :key="friendly.id">
                                 <tr>
                                     <td>
-                                        <a :href="`https://politicsandwar.com/nation/id=${friendly.id}`" target="_blank" class="fw-semibold" x-text="friendly.leader_name"></a>
-                                        <div class="small text-muted" x-text="friendly.nation_name"></div>
+                                        <a :href="`https://politicsandwar.com/nation/id=${friendly.id}`" target="_blank" class="font-semibold" x-text="friendly.leader_name"></a>
+                                        <div class="small text-base-content/50" x-text="friendly.nation_name"></div>
                                         <div class="small">
                                             Cities <span x-text="friendly.num_cities ?? 0"></span>
                                             • Score <span x-text="formatNumber(friendly.score, 2)"></span>
@@ -1054,25 +1054,25 @@
                                         <template x-if="friendly.alliance">
                                             <div>
                                                 <span class="d-inline-flex align-items-center gap-1">
-                                                    <i class="bi bi-people-fill text-muted"></i>
+                                                    <i class="o-users text-base-content/50"></i>
                                                     <a :href="`https://politicsandwar.com/alliance/id=${friendly.alliance.id}`" target="_blank" x-text="friendly.alliance.name"></a>
                                                 </span>
-                                                <div class="small text-muted" x-text="friendly.alliance.acronym"></div>
+                                                <div class="small text-base-content/50" x-text="friendly.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!friendly.alliance">
-                                            <span class="text-muted">No alliance</span>
+                                            <span class="text-base-content/50">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Offensive / defensive">
+                                        <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Offensive / defensive">
                                             <span x-text="friendly.offensive_wars_count ?? 0"></span>
                                             /
                                             <span x-text="friendly.defensive_wars_count ?? 0"></span>
                                         </span>
                                     </td>
                                     <td x-text="relativeTime(friendly.account_profile?.last_active)"></td>
-                                    <td class="text-end">
+                                    <td class="text-right">
                                         <button class="btn btn-sm btn-outline-primary"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#quickAssignModal"
@@ -1111,7 +1111,7 @@
                             <input class="form-check-input" type="checkbox" name="dry_run" value="1" id="dryRun">
                             <label class="form-check-label" for="dryRun">Dry run (preview diff only)</label>
                         </div>
-                        <p class="small text-muted mt-3 mb-0">Imports honor the latest schema and override conflicting targets or assignments.</p>
+                        <p class="small text-base-content/50 mt-3 mb-0">Imports honor the latest schema and override conflicting targets or assignments.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1145,10 +1145,7 @@
             },
         };
 
-        function refreshTooltips() {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
-        }
+        function refreshTooltips() {        }
 
         function formatNumber(value, decimals = 0) {
             const number = Number(value ?? 0);
@@ -1369,7 +1366,7 @@
                     return Math.max(1, preferred);
                 },
                 badgeForSlots(target) {
-                    return (target.assignments_count ?? 0) >= this.slotsFor(target) ? 'text-bg-danger' : 'text-bg-success';
+                    return (target.assignments_count ?? 0) >= this.slotsFor(target) ? 'badge-error' : 'badge-success';
                 },
                 isVacation(target) {
                     return (target.nation?.vacation_mode_turns ?? 0) > 0;

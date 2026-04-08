@@ -1,12 +1,12 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Beige Alerts</h3>
-                    <div class="text-muted small">
+                    <div class="text-base-content/50 small">
                         Tracks enemy alliances for beige sniping windows and early beige exits.
                     </div>
                 </div>
@@ -55,25 +55,25 @@
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Tracked Alliances</div>
-                    <div class="fs-4 fw-semibold">{{ number_format($trackedAlliances->count()) }}</div>
+                    <div class="text-base-content/50 small">Tracked Alliances</div>
+                    <div class="fs-4 font-semibold">{{ number_format($trackedAlliances->count()) }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Beige Nations</div>
-                    <div class="fs-4 fw-semibold">{{ number_format($totalBeigeNations) }}</div>
+                    <div class="text-base-content/50 small">Beige Nations</div>
+                    <div class="fs-4 font-semibold">{{ number_format($totalBeigeNations) }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Leaving Next Turn</div>
-                    <div class="fs-4 fw-semibold text-warning">{{ number_format($nextTurnLeavers) }}</div>
-                    <div class="small text-muted">
+                    <div class="text-base-content/50 small">Leaving Next Turn</div>
+                    <div class="fs-4 font-semibold text-warning">{{ number_format($nextTurnLeavers) }}</div>
+                    <div class="small text-base-content/50">
                         Next turn: {{ $nextTurnChangeAt->format('M d, H:i') }}
                     </div>
                 </div>
@@ -82,8 +82,8 @@
         <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Average Score</div>
-                    <div class="fs-4 fw-semibold">{{ number_format($avgScore, 2) }}</div>
+                    <div class="text-base-content/50 small">Average Score</div>
+                    <div class="fs-4 font-semibold">{{ number_format($avgScore, 2) }}</div>
                 </div>
             </div>
         </div>
@@ -93,21 +93,21 @@
         <div class="card-header">
             Beige Turn Breakdown
         </div>
-        <div class="card-body d-flex flex-wrap gap-2">
+        <div class="card-body flex flex-wrap gap-2">
             @forelse($beigeTurnsBreakdown as $turns => $count)
-                <span class="badge text-bg-secondary">
+                <span class="badge badge-ghost">
                     {{ $turns }} turn{{ (int) $turns === 1 ? '' : 's' }}: {{ number_format((int) $count) }}
                 </span>
             @empty
-                <span class="text-muted small">No tracked beige nations.</span>
+                <span class="text-base-content/50 small">No tracked beige nations.</span>
             @endforelse
         </div>
     </div>
 
     <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header flex justify-content-between align-items-center">
             <span>Tracked Alliances</span>
-            <form method="POST" action="{{ route('admin.beige-alerts.alliances.store') }}" class="d-flex gap-2 align-items-center">
+            <form method="POST" action="{{ route('admin.beige-alerts.alliances.store') }}" class="flex gap-2 align-items-center">
                 @csrf
                 <input type="number"
                        name="alliance_id"
@@ -126,7 +126,7 @@
                     <th>Name</th>
                     <th>Currently Beige</th>
                     <th>Leaving Next Turn</th>
-                    <th class="text-end">Actions</th>
+                    <th class="text-right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -142,12 +142,12 @@
                                     {{ $alliance->name }}
                                 </a>
                             @else
-                                <span class="text-muted">Unknown Alliance</span>
+                                <span class="text-base-content/50">Unknown Alliance</span>
                             @endif
                         </td>
                         <td>{{ number_format((int) ($beigeCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
                         <td>{{ number_format((int) ($nextTurnCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
-                        <td class="text-end">
+                        <td class="text-right">
                             <form method="POST"
                                   action="{{ route('admin.beige-alerts.alliances.destroy', $trackedAlliance) }}"
                                   onsubmit="return confirm('Remove this alliance from beige alerts?');">
@@ -159,7 +159,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-3">
+                        <td colspan="5" class="text-center text-base-content/50 py-3">
                             No tracked alliances configured.
                         </td>
                     </tr>
@@ -170,9 +170,9 @@
     </div>
 
     <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header flex justify-content-between align-items-center">
             <span>Tracked Beige Nations</span>
-            <span class="text-muted small">Sorted by earliest beige exit</span>
+            <span class="text-base-content/50 small">Sorted by earliest beige exit</span>
         </div>
         <div class="card-body p-0">
             <table class="table table-sm table-striped mb-0">
@@ -208,13 +208,13 @@
                                     {{ $alliance->name }}
                                 </a>
                             @else
-                                <span class="text-muted">No Alliance</span>
+                                <span class="text-base-content/50">No Alliance</span>
                             @endif
                         </td>
                         <td>{{ number_format((int) $nation->num_cities) }}</td>
                         <td>{{ number_format((float) $nation->score, 2) }}</td>
                         <td>
-                            <span class="badge {{ (int) $nation->beige_turns === 1 ? 'text-bg-warning' : 'text-bg-secondary' }}">
+                            <span class="badge {{ (int) $nation->beige_turns === 1 ? 'badge-warning' : 'badge-ghost' }}">
                                 {{ (int) $nation->beige_turns }}
                             </span>
                         </td>
@@ -226,13 +226,13 @@
                                 A: {{ number_format((int) $military->aircraft) }},
                                 N: {{ number_format((int) $military->ships) }}
                             @else
-                                <span class="text-muted">No data</span>
+                                <span class="text-base-content/50">No data</span>
                             @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-3">
+                        <td colspan="8" class="text-center text-base-content/50 py-3">
                             No tracked beige nations found.
                         </td>
                     </tr>

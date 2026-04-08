@@ -18,9 +18,9 @@
                name="guardrails[{{ $index }}][minimum_amount]"
                value="{{ $amountValue }}" required>
     </div>
-    <div class="col-md-2 text-end">
+    <div class="col-md-2 text-right">
         <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-guardrail">
-            <i class="bi bi-trash"></i>
+            <i class="o-trash"></i>
         </button>
     </div>
 </div>

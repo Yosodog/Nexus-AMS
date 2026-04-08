@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Admin Settings</h3>
@@ -13,10 +13,10 @@
 
     {{-- Sync Settings Section --}}
     <div class="row mb-3">
-        <div class="col-md-12 d-flex justify-content-between align-items-center">
+        <div class="col-md-12 flex justify-content-between align-items-center">
             <h4 class="mb-0">Data Synchronization</h4>
-            <a href="#" data-bs-toggle="collapse" data-bs-target="#syncHelp" class="text-muted small">
-                <i class="bi bi-question-circle me-1"></i> Learn more about data sync
+            <a href="#" data-bs-toggle="collapse" data-bs-target="#syncHelp" class="text-base-content/50 small">
+                <i class="o-question-mark-circle me-1"></i> Learn more about data sync
             </a>
         </div>
     </div>
@@ -85,12 +85,12 @@
         </div>
         <div class="col-12">
             <div class="card shadow-sm border-warning">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Pending Request Recovery</span>
-                    <span class="badge text-bg-warning">Diagnostics</span>
+                    <span class="badge badge-warning">Diagnostics</span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">
+                    <p class="text-base-content/50 mb-3">
                         Use this only when a workflow is genuinely stuck. Releasing stale pending rows clears the single-pending lock so members can submit a fresh request.
                     </p>
                     <div class="alert alert-warning py-2 px-3 small">
@@ -113,20 +113,20 @@
                                     <td class="text-capitalize">{{ $item['label'] }}</td>
                                     <td>{{ number_format($item['totalPending']) }}</td>
                                     <td>
-                                        <span class="badge {{ $item['stalePending'] > 0 ? 'text-bg-warning' : 'text-bg-secondary' }}">
+                                        <span class="badge {{ $item['stalePending'] > 0 ? 'badge-warning' : 'badge-ghost' }}">
                                             {{ number_format($item['stalePending']) }}
                                         </span>
                                     </td>
                                     <td>
                                         @if($item['oldestCreatedAt'])
                                             <div>{{ $item['oldestCreatedAt']->format('M d, Y H:i') }}</div>
-                                            <small class="text-muted">{{ $item['oldestCreatedAt']->diffForHumans() }}</small>
+                                            <small class="text-base-content/50">{{ $item['oldestCreatedAt']->diffForHumans() }}</small>
                                         @else
-                                            <span class="text-muted">None</span>
+                                            <span class="text-base-content/50">None</span>
                                         @endif
                                     </td>
                                     <td>
-                                        <form method="POST" action="{{ route('admin.settings.pending-requests.release-stale') }}" class="d-flex gap-2 align-items-end">
+                                        <form method="POST" action="{{ route('admin.settings.pending-requests.release-stale') }}" class="flex gap-2 align-items-end">
                                             @csrf
                                             <input type="hidden" name="type" value="{{ $item['type'] }}">
                                             <div>
@@ -159,12 +159,12 @@
                 $highlightInputs = array_pad($highlightInputs, 3, '');
             @endphp
             <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Homepage Messaging</span>
-                    <span class="badge text-bg-info">Public</span>
+                    <span class="badge badge-info">Public</span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Edit the public homepage copy for your alliance. Keep it specific to your group and focused on recruits.
                     </p>
                     <form method="POST" action="{{ route('admin.settings.homepage') }}">
@@ -182,7 +182,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="homeAbout">About blurb</label>
                             <textarea class="form-control" id="homeAbout" name="home_about" rows="3" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
-                            <small class="text-muted">A short paragraph near the top of the page.</small>
+                            <small class="text-base-content/50">A short paragraph near the top of the page.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="homeStatsIntro">Stats intro</label>
@@ -206,7 +206,7 @@
                                        maxlength="140"
                                        placeholder="e.g. Clear onboarding and quick responses">
                             @endforeach
-                            <small class="text-muted">Short points that tell recruits what they can expect.</small>
+                            <small class="text-base-content/50">Short points that tell recruits what they can expect.</small>
                         </div>
                         <button class="btn btn-primary">Save Homepage Content</button>
                     </form>
@@ -218,19 +218,19 @@
                 $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
             @endphp
             <div class="card shadow-sm {{ $canUploadFavicon ? '' : 'opacity-50' }}">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Favicon</span>
-                    <span class="badge text-bg-secondary">Branding</span>
+                    <span class="badge badge-ghost">Branding</span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Upload a square icon (PNG, ICO, SVG, or JPG) to update the browser favicon across the site.
                     </p>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="border rounded bg-white d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    <div class="flex align-items-center gap-3 mb-3">
+                        <div class="border rounded bg-white flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
                             <img src="{{ $faviconUrl }}" alt="Current favicon" class="img-fluid" style="max-width: 32px; max-height: 32px;">
                         </div>
-                        <div class="small text-muted">
+                        <div class="small text-base-content/50">
                             Current favicon preview
                         </div>
                     </div>
@@ -245,11 +245,11 @@
                                    accept=".png,.ico,.svg,.jpg,.jpeg"
                                    @disabled(! $canUploadFavicon)
                                    required>
-                            <small class="text-muted">Recommended: 32x32 or 64x64.</small>
+                            <small class="text-base-content/50">Recommended: 32x32 or 64x64.</small>
                         </div>
                         <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
                         @if (! $canUploadFavicon)
-                            <div class="form-text text-muted mt-2">
+                            <div class="form-text text-base-content/50 mt-2">
                                 Requires the View Diagnostic permission.
                             </div>
                         @endif
@@ -259,14 +259,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Discord Verification</span>
-                    <span class="badge {{ $discordVerificationRequired ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    <span class="badge {{ $discordVerificationRequired ? 'badge-success' : 'badge-ghost' }}">
                         {{ $discordVerificationRequired ? 'Required' : 'Optional' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Control whether members must complete Discord verification after in-game verification. When enabled,
                         users without an active Discord link are redirected to the verification page.
                     </p>
@@ -285,14 +285,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Discord Alliance Departures</span>
-                    <span class="badge {{ $discordDepartureEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    <span class="badge {{ $discordDepartureEnabled ? 'badge-success' : 'badge-ghost' }}">
                         {{ $discordDepartureEnabled ? 'Enabled' : 'Disabled' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Send a Discord alert when a non-applicant leaves any alliance in our membership group.
                         Defaults to the war alert channel if left blank.
                     </p>
@@ -306,7 +306,7 @@
                                    name="discord_alliance_departure_channel_id"
                                    value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}"
                                    placeholder="e.g. 123456789012345678">
-                            <small class="text-muted">Leave blank to reuse the war alert channel.</small>
+                            <small class="text-base-content/50">Leave blank to reuse the war alert channel.</small>
                         </div>
                         <div class="form-check form-switch mb-3">
                             <input type="hidden" name="discord_alliance_departure_enabled" value="0">
@@ -321,14 +321,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Auto Withdraw</span>
-                    <span class="badge {{ $autoWithdrawEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    <span class="badge {{ $autoWithdrawEnabled ? 'badge-success' : 'badge-ghost' }}">
                         {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Global toggle for the automatic withdrawal scheduler. Disabling keeps member settings intact but stops scheduled runs.
                     </p>
                     <form method="POST" action="{{ route('admin.settings.auto-withdraw') }}">
@@ -346,14 +346,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Backups</span>
-                    <span class="badge {{ $backupsEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    <span class="badge {{ $backupsEnabled ? 'badge-success' : 'badge-ghost' }}">
                         {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Run application + database backups every 6 hours. Backups are stored in AWS S3 only.
                     </p>
                     <form method="POST" action="{{ route('admin.settings.backups') }}">
@@ -371,14 +371,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Loan Payments</span>
-                    <span class="badge {{ $loanPaymentsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
+                    <span class="badge {{ $loanPaymentsEnabled ? 'badge-success' : 'badge-warning' }}">
                         {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Pause required loan payments during war or special events. When paused, scheduled deductions and
                         interest are frozen, and due dates shift forward when payments resume.
                     </p>
@@ -402,14 +402,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Account Inactivity Auto-Disable</span>
-                    <span class="badge {{ $userInactivityAutoDisableEnabled ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    <span class="badge {{ $userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost' }}">
                         {{ $userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Automatically disable user accounts when there has been no activity for the configured number of days.
                         Activity is based on each user's <code>last_active_at</code> timestamp.
                     </p>
@@ -432,7 +432,7 @@
                                    max="3650"
                                    value="{{ old('user_inactivity_auto_disable_days', $userInactivityAutoDisableDays) }}"
                                    required>
-                            <small class="text-muted">Default is 90 days (about 3 months).</small>
+                            <small class="text-base-content/50">Default is 90 days (about 3 months).</small>
                         </div>
                         <button class="btn btn-primary">Save Inactivity Auto-Disable</button>
                     </form>
@@ -441,14 +441,14 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Grant Approvals</span>
-                    <span class="badge {{ $grantApprovalsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
+                    <span class="badge {{ $grantApprovalsEnabled ? 'badge-success' : 'badge-warning' }}">
                         {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
                     </span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Emergency kill switch for grant and city grant approvals. Requests can still be submitted,
                         but approvals are blocked until re-enabled.
                     </p>
@@ -467,12 +467,12 @@
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <span>Audit Log Retention</span>
-                    <span class="badge text-bg-secondary">{{ $auditRetentionDays }} days</span>
+                    <span class="badge badge-ghost">{{ $auditRetentionDays }} days</span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">
+                    <p class="text-base-content/50">
                         Control how long audit log entries are retained before automatic pruning.
                     </p>
                     <form method="POST" action="{{ route('admin.settings.audit-retention') }}">
@@ -487,7 +487,7 @@
                                    max="3650"
                                    value="{{ old('audit_log_retention_days', $auditRetentionDays) }}"
                                    required>
-                            <small class="text-muted">Use 1–3650 days (up to 10 years).</small>
+                            <small class="text-base-content/50">Use 1–3650 days (up to 10 years).</small>
                         </div>
                         <button class="btn btn-primary">Save Audit Retention</button>
                     </form>

@@ -9,7 +9,7 @@
 
 <div class="row g-3">
     <div class="col-md-6">
-        <label class="form-label fw-semibold">Name</label>
+        <label class="form-label font-semibold">Name</label>
         <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
                value="{{ old('name', $rule->name) }}" required>
         @error('name')
@@ -17,7 +17,7 @@
         @enderror
     </div>
     <div class="col-md-6">
-        <label class="form-label fw-semibold">Target type</label>
+        <label class="form-label font-semibold">Target type</label>
         <select name="target_type" class="form-select @error('target_type') is-invalid @enderror" required>
             @foreach($targetTypes as $targetType)
                 <option value="{{ $targetType->value }}"
@@ -31,7 +31,7 @@
         @enderror
     </div>
     <div class="col-md-6">
-        <label class="form-label fw-semibold">Priority</label>
+        <label class="form-label font-semibold">Priority</label>
         <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
             @foreach($priorities as $priority)
                 <option value="{{ $priority->value }}"
@@ -45,7 +45,7 @@
         @enderror
     </div>
     <div class="col-md-6">
-        <label class="form-label fw-semibold">Enabled</label>
+        <label class="form-label font-semibold">Enabled</label>
         <div class="form-check form-switch mt-2">
             <input class="form-check-input" type="checkbox" role="switch" id="enabledToggle"
                    name="enabled" value="1" @checked(old('enabled', $rule->enabled ?? true))>
@@ -53,7 +53,7 @@
         </div>
     </div>
     <div class="col-12">
-        <label class="form-label fw-semibold">Description</label>
+        <label class="form-label font-semibold">Description</label>
         <textarea name="description" rows="2" class="form-control @error('description') is-invalid @enderror"
                   placeholder="Optional context for admins">{{ old('description', $rule->description) }}</textarea>
         @error('description')
@@ -61,10 +61,10 @@
         @enderror
     </div>
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <label class="form-label fw-semibold mb-0">NEL Expression</label>
+        <div class="flex justify-content-between align-items-center">
+            <label class="form-label font-semibold mb-0">NEL Expression</label>
             <a href="{{ route('admin.nel.docs') }}" target="_blank" class="small text-decoration-none">
-                <i class="bi bi-journal-text me-1"></i>Syntax help
+                <i class="o-document-text-text me-1"></i>Syntax help
             </a>
         </div>
         <textarea name="expression" rows="4" class="form-control font-monospace @error('expression') is-invalid @enderror"

@@ -19,7 +19,7 @@
         @if($icon)
             <i class="{{ $icon }}"></i>
         @endif
-        <p class="d-flex align-items-center gap-2 w-100">
+        <p class="flex align-items-center gap-2 w-100">
             <span class="flex-grow-1">{{ $slot }}</span>
             @if($badge)
                 <span class="{{ $badgeClass }}">{{ $badge }}</span>

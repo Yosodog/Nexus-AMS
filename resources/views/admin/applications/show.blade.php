@@ -6,19 +6,19 @@
     @php
         $statusValue = $application->status->value ?? (string) $application->status;
         $statusClass = match($statusValue) {
-            \App\Enums\ApplicationStatus::Approved->value => 'text-bg-success',
-            \App\Enums\ApplicationStatus::Denied->value => 'text-bg-danger',
-            \App\Enums\ApplicationStatus::Cancelled->value => 'text-bg-secondary',
-            default => 'text-bg-warning'
+            \App\Enums\ApplicationStatus::Approved->value => 'badge-success',
+            \App\Enums\ApplicationStatus::Denied->value => 'badge-error',
+            \App\Enums\ApplicationStatus::Cancelled->value => 'badge-ghost',
+            default => 'badge-warning'
         };
     @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3">
                 <div class="col-sm-8">
                     <h3 class="mb-0">Application #{{ $application->id }}</h3>
-                    <div class="text-muted">Nation #{{ $application->nation_id }} &mdash; {{ $application->leader_name_snapshot }}</div>
+                    <div class="text-base-content/50">Nation #{{ $application->nation_id }} &mdash; {{ $application->leader_name_snapshot }}</div>
                 </div>
                 <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
                     <span class="badge {{ $statusClass }} px-3 py-2">{{ ucfirst(strtolower($statusValue)) }}</span>
@@ -59,7 +59,7 @@
                         <dt class="col-5">Discord</dt>
                         <dd class="col-7">
                             {{ $application->discord_username }}
-                            <div class="text-muted small">{{ $application->discord_user_id }}</div>
+                            <div class="text-base-content/50 small">{{ $application->discord_user_id }}</div>
                         </dd>
 
                         <dt class="col-5">Channel</dt>
@@ -85,21 +85,21 @@
                             <strong>Approved:</strong>
                             {{ $application->approved_at?->toDayDateTimeString() ?? '—' }}
                             @if($application->approved_by_discord_id)
-                                <span class="text-muted small">by {{ $application->approved_by_discord_id }}</span>
+                                <span class="text-base-content/50 small">by {{ $application->approved_by_discord_id }}</span>
                             @endif
                         </li>
                         <li class="mb-2">
                             <strong>Denied:</strong>
                             {{ $application->denied_at?->toDayDateTimeString() ?? '—' }}
                             @if($application->denied_by_discord_id)
-                                <span class="text-muted small">by {{ $application->denied_by_discord_id }}</span>
+                                <span class="text-base-content/50 small">by {{ $application->denied_by_discord_id }}</span>
                             @endif
                         </li>
                         <li class="mb-2">
                             <strong>Cancelled:</strong>
                             {{ $application->cancelled_at?->toDayDateTimeString() ?? '—' }}
                             @if($application->cancelled_by_discord_id)
-                                <span class="text-muted small">by {{ $application->cancelled_by_discord_id }}</span>
+                                <span class="text-base-content/50 small">by {{ $application->cancelled_by_discord_id }}</span>
                             @endif
                         </li>
                     </ul>
@@ -109,22 +109,22 @@
 
         <div class="col-lg-8">
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="mb-0">Interview Transcript</h5>
-                    <span class="text-muted small">{{ $application->messages->count() }} messages</span>
+                    <span class="text-base-content/50 small">{{ $application->messages->count() }} messages</span>
                 </div>
                 <div class="card-body">
                     @forelse($application->messages as $message)
                         <div class="mb-3 p-3 rounded {{ $message->is_staff ? 'bg-body-secondary' : 'bg-body' }}">
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex justify-content-between align-items-start">
                                 <div>
                                     <strong>{{ $message->discord_username }}</strong>
-                                    <div class="text-muted small">{{ $message->discord_user_id }}</div>
+                                    <div class="text-base-content/50 small">{{ $message->discord_user_id }}</div>
                                 </div>
-                                <span class="text-muted small">{{ $message->sent_at?->toDayDateTimeString() ?? '—' }}</span>
+                                <span class="text-base-content/50 small">{{ $message->sent_at?->toDayDateTimeString() ?? '—' }}</span>
                             </div>
                             @if($message->is_staff)
-                                <span class="badge text-bg-info mt-2">Staff</span>
+                                <span class="badge badge-info mt-2">Staff</span>
                             @endif
                             <p class="mb-0 mt-2">{!! nl2br(e($message->content)) !!}</p>
                         </div>

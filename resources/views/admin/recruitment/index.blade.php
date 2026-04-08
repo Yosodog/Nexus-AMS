@@ -3,8 +3,8 @@
 @section('title', 'Recruitment Messaging')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
+    <div class="mb-6">
+        <div class="w-full">
             <div class="row mb-3">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Recruitment Messaging</h3>
@@ -16,7 +16,7 @@
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header flex justify-content-between align-items-center">
                     <h5 class="mb-0">Message Templates</h5>
                 </div>
                 <div class="card-body">
@@ -101,7 +101,7 @@
                             </p>
                         </div>
 
-                        <div class="d-flex justify-content-end">
+                        <div class="flex justify-content-end">
                             <button type="submit" class="btn btn-primary">
                                 Save changes
                             </button>
@@ -118,7 +118,7 @@
                 </div>
                 <div class="card-body">
                     @if($userNationId)
-                        <p class="text-muted small">
+                        <p class="text-base-content/50 small">
                             Test messages are sent to your nation (ID {{ $userNationId }}).
                         </p>
 

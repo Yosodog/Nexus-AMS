@@ -10,29 +10,29 @@
             : (in_array($oldTab, $allowedTabs, true) ? $oldTab : 'overview');
     @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div class="mb-6">
+        <div class="w-full">
+            <div class="flex flex-wrap justify-content-between align-items-center mb-3">
                 <div>
-                    <h3 class="mb-0 d-flex align-items-center gap-2">
+                    <h3 class="mb-0 flex align-items-center gap-2">
                         {{ $campaign->name }}
-                        <span class="text-muted" data-bs-toggle="tooltip" title="Each round runs a single op type. Assignments respect spy range, slots, policy synergy, and your min success target.">
-                            <i class="bi bi-question-circle"></i>
+                        <span class="text-base-content/50" data-bs-toggle="tooltip" title="Each round runs a single op type. Assignments respect spy range, slots, policy synergy, and your min success target.">
+                            <i class="o-question-mark-circle"></i>
                         </span>
                     </h3>
-                    <div class="text-muted">
+                    <div class="text-base-content/50">
                         Status:
-                        <span class="badge text-bg-primary text-uppercase">{{ $campaign->status }}</span>
+                        <span class="badge badge-primary text-uppercase">{{ $campaign->status }}</span>
                         <span class="ms-2 small">{{ $campaign->description }}</span>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="flex gap-2">
                     <a href="{{ route('admin.spy-campaigns.index') }}" class="btn btn-outline-secondary btn-sm">Back</a>
                 </div>
             </div>
 
-            <div class="alert alert-info d-flex align-items-start gap-2">
-                <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+            <div class="alert alert-info flex align-items-start gap-2">
+                <i class="o-information-circle fs-5 mt-1"></i>
                 <div>
                     <strong>How this works:</strong> add allied and enemy alliances, create rounds with a single spy op, then click <em>Generate assignments</em>. The system builds attacker/defender pairs within spy range, applies slot caps (2 offensive / 3 defensive), finds the lowest safety level meeting the minimum success target, and boosts matches with policy synergy. Use the message action to push formatted PW mails to each aggressor with links.
                 </div>
@@ -42,10 +42,10 @@
                 <div class="col-6 col-lg-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Allied / Enemy Alliances</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Allied / Enemy Alliances</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $campaign->alliances->where('role', 'ally')->count() }} / {{ $campaign->alliances->where('role', 'enemy')->count() }}</span>
-                                <span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Alliances synced to feed aggressors and targets">Range</span>
+                                <span class="badge badge-ghost" data-bs-toggle="tooltip" title="Alliances synced to feed aggressors and targets">Range</span>
                             </div>
                         </div>
                     </div>
@@ -53,10 +53,10 @@
                 <div class="col-6 col-lg-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Rounds</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Rounds</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $campaign->rounds->count() }}</span>
-                                <span class="badge text-bg-primary">{{ $latestRound?->op_type?->name ?? 'n/a' }}</span>
+                                <span class="badge badge-primary">{{ $latestRound?->op_type?->name ?? 'n/a' }}</span>
                             </div>
                         </div>
                     </div>
@@ -64,10 +64,10 @@
                 <div class="col-6 col-lg-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Assignments</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Assignments</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ $latestRound?->assignments->count() ?? 0 }}</span>
-                                <span class="badge text-bg-info" data-bs-toggle="tooltip" title="Latest round assignment count">Live</span>
+                                <span class="badge badge-info" data-bs-toggle="tooltip" title="Latest round assignment count">Live</span>
                             </div>
                         </div>
                     </div>
@@ -75,10 +75,10 @@
                 <div class="col-6 col-lg-3">
                     <div class="card shadow-none border h-100">
                         <div class="card-body py-3">
-                            <div class="text-muted small">Avg Odds</div>
-                            <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-base-content/50 small">Avg Odds</div>
+                            <div class="flex align-items-center justify-content-between">
                                 <span class="h5 mb-0">{{ number_format($oddsDistribution->avg() ?? 0, 1) }}%</span>
-                                <span class="badge text-bg-warning" data-bs-toggle="tooltip" title="Mean odds of the latest round">Quality</span>
+                                <span class="badge badge-warning" data-bs-toggle="tooltip" title="Mean odds of the latest round">Quality</span>
                             </div>
                         </div>
                     </div>
@@ -105,9 +105,9 @@
                     <div class="row g-3">
                         <div class="col-lg-7">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="card-title mb-0">Odds Distribution</h5>
-                                    <i class="bi bi-info-circle text-muted ms-auto" data-bs-toggle="tooltip" title="Spread of calculated odds for the latest round."></i>
+                                    <i class="o-information-circle text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Spread of calculated odds for the latest round."></i>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="oddsChart" height="200"></canvas>
@@ -116,9 +116,9 @@
                         </div>
                         <div class="col-lg-5">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="card-title mb-0">Impact Projections</h5>
-                                    <i class="bi bi-activity text-muted ms-auto" data-bs-toggle="tooltip" title="Expected impact scaled by op type and policy synergy."></i>
+                                    <i class="o-bolt text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Expected impact scaled by op type and policy synergy."></i>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="impactChart" height="200"></canvas>
@@ -130,9 +130,9 @@
                     <div class="row g-3 mt-2">
                         <div class="col-lg-6">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="card-title mb-0">Slot Usage</h5>
-                                    <i class="bi bi-collection text-muted ms-auto" data-bs-toggle="tooltip" title="Max 2 offensive slots per aggressor, 3 defensive per target."></i>
+                                    <i class="o-squares-plus text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Max 2 offensive slots per aggressor, 3 defensive per target."></i>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="slotsChart" height="200"></canvas>
@@ -141,19 +141,19 @@
                         </div>
                         <div class="col-lg-6">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="card-title mb-0">Top Targets</h5>
-                                    <i class="bi bi-bullseye text-muted ms-auto" data-bs-toggle="tooltip" title="Sorted by expected impact."></i>
+                                    <i class="o-bolt text-base-content/50 ms-auto" data-bs-toggle="tooltip" title="Sorted by expected impact."></i>
                                 </div>
                                 <div class="card-body">
                                     <div class="list-group list-group-flush">
                                         @forelse ($topTargets as $target)
-                                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="list-group-item flex justify-content-between align-items-center">
                                                 <span>{{ $target['defender'] ?? 'Unknown' }}</span>
-                                                <span class="badge text-bg-primary">{{ number_format($target['impact'], 1) }} impact</span>
+                                                <span class="badge badge-primary">{{ number_format($target['impact'], 1) }} impact</span>
                                             </div>
                                         @empty
-                                            <div class="text-muted small">No assignments yet.</div>
+                                            <div class="text-base-content/50 small">No assignments yet.</div>
                                         @endforelse
                                     </div>
                                 </div>
@@ -164,10 +164,10 @@
 
                 <div class="tab-pane fade {{ $activeTab === 'rounds' ? 'show active' : '' }}" id="rounds" role="tabpanel">
                     <div class="card shadow-sm">
-                        <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="card-header flex justify-content-between align-items-center">
                             <h5 class="mb-0">Rounds</h5>
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoundModal">
-                                <i class="bi bi-plus-circle me-1"></i> Add Round
+                                <i class="o-plus-circle me-1"></i> Add Round
                             </button>
                         </div>
                         <div class="table-responsive">
@@ -179,7 +179,7 @@
                                     <th>Status</th>
                                     <th>Assignments</th>
                                     <th>Average Odds</th>
-                                    <th class="text-end">Actions</th>
+                                    <th class="text-right">Actions</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -187,21 +187,21 @@
                                     <tr>
                                         <td>{{ $round->round_number }}</td>
                                         <td>{{ $round->op_type?->name ?? 'n/a' }}</td>
-                                        <td><span class="badge text-bg-secondary text-uppercase">{{ $round->status }}</span></td>
+                                        <td><span class="badge badge-ghost text-uppercase">{{ $round->status }}</span></td>
                                         <td>{{ $round->assignments->count() }}</td>
                                         <td>{{ number_format($round->assignments->avg('calculated_odds') ?? 0, 1) }}%</td>
-                                        <td class="text-end">
+                                        <td class="text-right">
                                             <a href="{{ route('admin.spy-campaigns.rounds.show', $round) }}" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="View assignments">
-                                                <i class="bi bi-list-check"></i>
+                                                <i class="o-list-bullet-check"></i>
                                             </a>
                                             <form action="{{ route('admin.spy-campaigns.rounds.generate', $round) }}" method="post" class="d-inline">
                                                 @csrf
                                                 <button class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Generate assignments for this round">
-                                                    <i class="bi bi-cpu"></i>
+                                                    <i class="o-cpu-chip"></i>
                                                 </button>
                                             </form>
                                             <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#messageModal-{{ $round->id }}">
-                                                <i class="bi bi-envelope"></i>
+                                                <i class="o-envelope"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -219,7 +219,7 @@
                                                     <div class="modal-body">
                                                         <label class="form-label">Message body</label>
                                                         <textarea name="message" class="form-control" rows="6" placeholder="Include tactics, timing, and reminders."></textarea>
-                                                        <p class="text-muted small mt-2">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
+                                                        <p class="text-base-content/50 small mt-2">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -240,19 +240,19 @@
                     <div class="row g-3">
                         <div class="col-lg-6">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="mb-0">Allied</h5>
                                 </div>
                                 <div class="card-body">
                                     <ul class="list-group list-group-flush">
                                         @foreach ($campaign->alliances->where('role', 'ally') as $alliance)
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item flex justify-content-between align-items-center">
                                                 <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
                                                 <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Remove alliance">
-                                                        <i class="bi bi-x"></i>
+                                                        <i class="o-x-mark"></i>
                                                     </button>
                                                 </form>
                                             </li>
@@ -267,7 +267,7 @@
                                             <label class="form-label">Alliance ID</label>
                                             <input type="number" name="alliance_id" class="form-control" placeholder="1234">
                                         </div>
-                                        <div class="col-4 d-flex align-items-end">
+                                        <div class="col-4 flex align-items-end">
                                             <button class="btn btn-primary w-100" type="submit">Add</button>
                                         </div>
                                     </form>
@@ -276,19 +276,19 @@
                         </div>
                         <div class="col-lg-6">
                             <div class="card shadow-sm h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="card-header flex justify-content-between align-items-center">
                                     <h5 class="mb-0">Enemy</h5>
                                 </div>
                                 <div class="card-body">
                                     <ul class="list-group list-group-flush">
                                         @foreach ($campaign->alliances->where('role', 'enemy') as $alliance)
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item flex justify-content-between align-items-center">
                                                 <span>{{ $alliance->alliance?->name ?? 'Unknown' }}</span>
                                                 <form method="post" action="{{ route('admin.spy-campaigns.alliances.destroy', [$campaign, $alliance]) }}">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="btn btn-sm btn-outline-danger">
-                                                        <i class="bi bi-x"></i>
+                                                        <i class="o-x-mark"></i>
                                                     </button>
                                                 </form>
                                             </li>
@@ -303,7 +303,7 @@
                                             <label class="form-label">Alliance ID</label>
                                             <input type="number" name="alliance_id" class="form-control" placeholder="5678">
                                         </div>
-                                        <div class="col-4 d-flex align-items-end">
+                                        <div class="col-4 flex align-items-end">
                                             <button class="btn btn-danger w-100" type="submit">Add</button>
                                         </div>
                                     </form>
@@ -332,10 +332,10 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label d-flex align-items-center gap-2">
+                                    <label class="form-label flex align-items-center gap-2">
                                         Min success %
-                                        <span class="text-muted" data-bs-toggle="tooltip" title="Assignments test safety 1→3 and stop at the first level meeting this threshold; otherwise they’re flagged low-odds.">
-                                            <i class="bi bi-question-circle"></i>
+                                        <span class="text-base-content/50" data-bs-toggle="tooltip" title="Assignments test safety 1→3 and stop at the first level meeting this threshold; otherwise they’re flagged low-odds.">
+                                            <i class="o-question-mark-circle"></i>
                                         </span>
                                     </label>
                                     <input type="number" name="settings[min_success_chance]" class="form-control" min="0" max="100" step="1" value="{{ old('settings.min_success_chance', $campaign->settings['min_success_chance'] ?? 65) }}">
@@ -344,7 +344,7 @@
                                     <label class="form-label">Description</label>
                                     <textarea name="description" class="form-control" rows="3">{{ old('description', $campaign->description) }}</textarea>
                                 </div>
-                                <div class="col-12 text-end">
+                                <div class="col-12 text-right">
                                     <button type="submit" class="btn btn-primary">Save settings</button>
                                 </div>
                             </form>
@@ -379,10 +379,10 @@
                             <input type="number" name="round_number" class="form-control" min="1">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label d-flex align-items-center gap-2">
+                            <label class="form-label flex align-items-center gap-2">
                                 Min success target (%)
-                                <span class="text-muted" data-bs-toggle="tooltip" title="Assignments pick the lowest safety level that meets this chance; lower odds are still assigned but flagged.">
-                                    <i class="bi bi-question-circle"></i>
+                                <span class="text-base-content/50" data-bs-toggle="tooltip" title="Assignments pick the lowest safety level that meets this chance; lower odds are still assigned but flagged.">
+                                    <i class="o-question-mark-circle"></i>
                                 </span>
                             </label>
                             <input type="number" name="min_success_chance" class="form-control" min="0" max="100" step="1" value="{{ $campaign->settings['min_success_chance'] ?? 65 }}">
@@ -460,8 +460,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.forEach((tooltipTriggerEl) => {
-                new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+                });
 
             const allowedTabs = @json($allowedTabs);
             const defaultTab = @json($activeTab);
