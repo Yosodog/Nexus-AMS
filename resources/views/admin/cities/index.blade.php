@@ -110,11 +110,23 @@
                             @endif
                         </td>
                         <td data-order="{{ optional($city->date)->format('Y-m-d') }}">{{ optional($city->date)->format('M j, Y') ?? '—' }}</td>
-                        <td data-order="{{ $city->infrastructure }}" @class(['text-warning font-semibold' => ! $infraAligned]) @if(! $infraAligned) data-bs-toggle="tooltip" title="Infrastructure not divisible by 50" @endif>
-                            {{ number_format($city->infrastructure, 2) }}
+                        <td data-order="{{ $city->infrastructure }}" @class(['text-warning font-semibold' => ! $infraAligned])>
+                            @if($infraAligned)
+                                {{ number_format($city->infrastructure, 2) }}
+                            @else
+                                <span class="tooltip tooltip-left" data-tip="Infrastructure not divisible by 50">
+                                    {{ number_format($city->infrastructure, 2) }}
+                                </span>
+                            @endif
                         </td>
-                        <td data-order="{{ $city->land }}" @class(['text-warning font-semibold' => ! $landAligned]) @if(! $landAligned) data-bs-toggle="tooltip" title="Land not divisible by 50" @endif>
-                            {{ number_format($city->land, 2) }}
+                        <td data-order="{{ $city->land }}" @class(['text-warning font-semibold' => ! $landAligned])>
+                            @if($landAligned)
+                                {{ number_format($city->land, 2) }}
+                            @else
+                                <span class="tooltip tooltip-left" data-tip="Land not divisible by 50">
+                                    {{ number_format($city->land, 2) }}
+                                </span>
+                            @endif
                         </td>
                         <td><x-badge :value="$city->powered ? 'Powered' : 'Offline'" :class="$city->powered ? 'badge-success badge-sm' : 'badge-error badge-sm'" /></td>
                         <td>{{ $city->oil_power }}</td>

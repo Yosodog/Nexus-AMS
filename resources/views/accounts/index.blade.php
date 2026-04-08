@@ -89,9 +89,6 @@
             });
 
             updateMMREstimates();
-
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                });
         });
     </script>
 @endpush

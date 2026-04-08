@@ -28,163 +28,139 @@
 @section('title', 'Customize ' . $page->slug)
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row align-items-center g-3">
-                <div class="col-lg-8">
-                    <h3 class="mb-0">Customize Page: /{{ $page->slug }}</h3>
-                    <p class="text-base-content/50 small mb-0">Use the editor to update headings, narrative copy, embeds, and media for this page.</p>
+    <x-header :title="'Customize Page: /' . $page->slug" separator>
+        <x-slot:subtitle>Use the editor to update headings, narrative copy, embeds, and media for this page.</x-slot:subtitle>
+        <x-slot:actions>
+            <div class="w-full sm:w-72">
+                <label for="customization-page-picker" class="fieldset-legend mb-0.5">Switch to another page</label>
+                <select id="customization-page-picker" class="select w-full" aria-label="Select page to customize">
+                    @foreach($pages as $candidate)
+                        <option value="{{ route('admin.customization.edit', $candidate) }}" @selected($candidate->id === $page->id)>
+                            /{{ $candidate->slug }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        </x-slot:actions>
+    </x-header>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <x-card title="Editor" class="min-w-0">
+            <x-slot:menu>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="customization-preview">
+                        <i class="o-eye me-1"></i> Preview
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="customization-save">
+                        <i class="o-document-arrow-down me-1"></i> Save Draft
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="customization-publish">
+                        <i class="o-signal me-1"></i> Publish
+                    </button>
+                    <button type="button" class="btn btn-outline-neutral btn-sm" id="customization-versions">
+                        <i class="o-clock me-1"></i> Versions
+                    </button>
                 </div>
-                <div class="col-lg-4">
-                    <label for="customization-page-picker" class="form-label small mb-1">Switch to another page</label>
-                    <select id="customization-page-picker" class="form-select"
-                            aria-label="Select page to customize">
-                        @foreach($pages as $candidate)
-                            <option value="{{ route('admin.customization.edit', $candidate) }}" @selected($candidate->id === $page->id)>
-                                /{{ $candidate->slug }}
-                            </option>
-                        @endforeach
-                    </select>
+            </x-slot:menu>
+
+            <div
+                id="customization-editor"
+                class="rounded-box border border-base-300 bg-base-200/40 p-4"
+                data-endpoints='@json($endpoints)'
+                data-page='@json(['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status])'
+                data-csrf="{{ csrf_token() }}"
+                data-initial-activity='@json($initialActivity)'
+            >
+                <textarea
+                    id="customization-editor-input"
+                    class="textarea js-ckeditor w-full"
+                    data-editor-input="true"
+                    rows="14"
+                >{!! $initialContent !!}</textarea>
+            </div>
+
+            <div class="mt-6">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h6 class="font-semibold">Live Preview</h6>
+                    <span class="badge badge-ghost" id="customization-preview-status">Awaiting preview</span>
+                </div>
+                <div id="customization-preview-pane" class="min-h-[200px] rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
+                    <p class="mb-0 text-base-content/50">Use the Preview button to render the current draft without publishing.</p>
                 </div>
             </div>
-        </div>
-    </div>
+        </x-card>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0">Editor</h5>
-                    <div class="btn-group" role="group" aria-label="Editor actions">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="customization-preview">
-                            <i class="o-eye me-1"></i> Preview
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="customization-save">
-                            <i class="o-document-arrow-down me-1"></i> Save Draft
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="customization-publish">
-                            <i class="o-signal me-1"></i> Publish
-                        </button>
-                        <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#customization-version-modal" id="customization-versions">
-                            <i class="o-clock me-1"></i> Versions
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="customization-editor"
-                         class="bg-body-secondary rounded border p-3"
-                         data-endpoints='@json($endpoints)'
-                         data-page='@json(['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status])'
-                         data-csrf="{{ csrf_token() }}"
-                         data-initial-activity='@json($initialActivity)'>
-                        <textarea id="customization-editor-input"
-                                  class="form-control js-ckeditor"
-                                  data-editor-input="true"
-                                  rows="14">{!! $initialContent !!}</textarea>
-                    </div>
+        <div class="space-y-6">
+            <x-card title="Audit Summary">
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm">
+                    <dt class="text-base-content/50">Current status</dt>
+                    <dd class="font-semibold" id="customization-status">{{ ucfirst($page->status) }}</dd>
 
-                    <div class="mt-4">
-                        <div class="flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">Live Preview</h6>
-                            <span class="badge text-bg-light" id="customization-preview-status">Awaiting preview</span>
-                        </div>
-                        <div id="customization-preview-pane" class="border rounded p-3 bg-white shadow-sm" style="min-height: 200px;">
-                            <p class="text-base-content/50 mb-0">Use the Preview button to render the current draft without publishing.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    <dt class="text-base-content/50">Last draft</dt>
+                    <dd id="customization-last-draft">
+                        @if($latestDraft)
+                            <div>{{ $latestDraft->created_at?->diffForHumans() ?? 'Recently' }}</div>
+                            <div class="text-base-content/50">by {{ $latestDraft->user?->name ?? 'System' }}</div>
+                        @else
+                            <span class="text-base-content/50">No drafts yet</span>
+                        @endif
+                    </dd>
 
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Audit Summary</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-base-content/50">Current status</dt>
-                        <dd class="col-7 font-semibold" id="customization-status">{{ ucfirst($page->status) }}</dd>
+                    <dt class="text-base-content/50">Last publish</dt>
+                    <dd id="customization-last-publish">
+                        @if($latestPublished)
+                            <div>{{ $latestPublished->published_at?->diffForHumans() ?? 'Recently' }}</div>
+                            <div class="text-base-content/50">by {{ $latestPublished->user?->name ?? 'System' }}</div>
+                        @else
+                            <span class="text-base-content/50">Never published</span>
+                        @endif
+                    </dd>
+                </dl>
+            </x-card>
 
-                        <dt class="col-5 text-base-content/50">Last draft</dt>
-                        <dd class="col-7" id="customization-last-draft">
-                            @if($latestDraft)
-                                <div>{{ $latestDraft->created_at?->diffForHumans() ?? 'Recently' }}</div>
-                                <div class="text-base-content/50">by {{ $latestDraft->user?->name ?? 'System' }}</div>
-                            @else
-                                <span class="text-base-content/50">No drafts yet</span>
+            <x-card title="Recent Activity" :subtitle="$recentActivity->count() . ' entries'">
+                <ul class="space-y-3 text-sm" id="customization-activity-list">
+                    @forelse($recentActivity as $log)
+                        <li class="rounded-box border border-base-300 bg-base-200/30 p-3">
+                            <div class="text-xs font-semibold uppercase tracking-wide text-base-content/55">{{ \Illuminate\Support\Str::headline($log->action) }}</div>
+                            <div>{{ $log->created_at?->diffForHumans() ?? 'Recently' }} | {{ $log->user?->name ?? 'System' }}</div>
+                            @if(!empty($log->metadata))
+                                <code class="mt-1 block overflow-x-auto">{{ json_encode($log->metadata) }}</code>
                             @endif
-                        </dd>
-
-                        <dt class="col-5 text-base-content/50">Last publish</dt>
-                        <dd class="col-7" id="customization-last-publish">
-                            @if($latestPublished)
-                                <div>{{ $latestPublished->published_at?->diffForHumans() ?? 'Recently' }}</div>
-                                <div class="text-base-content/50">by {{ $latestPublished->user?->name ?? 'System' }}</div>
-                            @else
-                                <span class="text-base-content/50">Never published</span>
-                            @endif
-                        </dd>
-                    </dl>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Recent Activity</h5>
-                    <span class="badge text-bg-light">{{ $recentActivity->count() }}</span>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0 small" id="customization-activity-list">
-                        @forelse($recentActivity as $log)
-                            <li class="mb-3">
-                                <div class="font-semibold text-uppercase small text-base-content/50">{{ \Illuminate\Support\Str::headline($log->action) }}</div>
-                                <div>{{ $log->created_at?->diffForHumans() ?? 'Recently' }} &mdash; {{ $log->user?->name ?? 'System' }}</div>
-                                @if(!empty($log->metadata))
-                                    <code class="d-block mt-1">{{ json_encode($log->metadata) }}</code>
-                                @endif
-                            </li>
-                        @empty
-                            <li class="text-base-content/50">No activity has been recorded yet.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
+                        </li>
+                    @empty
+                        <li class="text-base-content/50">No activity has been recorded yet.</li>
+                    @endforelse
+                </ul>
+            </x-card>
         </div>
     </div>
 
-    <div class="modal fade" id="customization-version-modal" tabindex="-1" aria-labelledby="customization-version-modal-label" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="customization-version-modal-label">Version History</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info small" role="alert" id="customization-versions-alert">
-                        Loading version history&hellip;
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle">
-                            <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Status</th>
-                                <th>Timestamp</th>
-                                <th>User</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody id="customization-versions-table"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+    <x-modal id="customization-version-modal" title="Version History" separator box-class="max-w-5xl">
+        <div class="space-y-4">
+            <div class="alert alert-info hidden text-sm" role="alert" id="customization-versions-alert">
+                Loading version history...
+            </div>
+            <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-zebra table-sm">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="customization-versions-table"></tbody>
+                </table>
             </div>
         </div>
-    </div>
+
+        <x-slot:actions>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('customization-version-modal').close()">Close</button>
+        </x-slot:actions>
+    </x-modal>
 @endsection
 
 @push('scripts')

@@ -3,127 +3,98 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                    <div class="flex align-items-center gap-2 flex-wrap">
-                        <h3 class="mb-1">Create Role</h3>
-                        <span class="badge rounded-pill badge-success-subtle border border-success-subtle">
-                            <i class="o-wrench-screwdriver me-1"></i>Manage mode
-                        </span>
-                    </div>
-                    <p class="text-base-content/50 mb-0">Give the role a clear name and choose the permissions that match its purpose.</p>
-                </div>
-                <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                    <i class="o-arrow-left-circle me-1"></i> Back to roles
-                </a>
-            </div>
-        </div>
-    </div>
+    <x-header title="Create Role" separator>
+        <x-slot:subtitle>Give the role a clear name and choose the permissions that match its purpose.</x-slot:subtitle>
+        <x-slot:actions>
+            <span class="badge badge-success badge-soft">
+                <i class="o-wrench-screwdriver me-1"></i>Manage mode
+            </span>
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
+                <i class="o-arrow-left-circle me-1"></i> Back to roles
+            </a>
+        </x-slot:actions>
+    </x-header>
 
     <form method="POST" action="{{ route('admin.roles.store') }}" class="mt-3">
         @csrf
 
-        <div class="row g-3">
-            <div class="col-12 col-xl-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="mb-1">Role details</h5>
-                        <p class="text-base-content/50 small mb-4">A concise name makes it easy to spot in member management and audit logs.</p>
+        <div class="grid gap-6 xl:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
+            <x-card title="Role details">
+                <p class="mb-4 text-sm text-base-content/60">A concise name makes it easy to spot in member management and audit logs.</p>
 
-                        <div class="mb-3">
-                            <label class="form-label" for="role-name">Role name</label>
-                            <input id="role-name"
-                                   type="text"
-                                   name="name"
-                                   value="{{ old('name') }}"
-                                   class="form-control @error('name') is-invalid @enderror"
-                                   placeholder="e.g. finance.reviewer"
-                                   required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @else
-                                <div class="form-text">Use a descriptive, lowercase name so others know what this role is for.</div>
-                            @enderror
-                        </div>
+                <x-input
+                    id="role-name"
+                    label="Role name"
+                    name="name"
+                    :value="old('name')"
+                    error-field="name"
+                    hint="Use a descriptive, lowercase name so others know what this role is for."
+                    placeholder="e.g. finance.reviewer"
+                    required
+                />
 
-                        <div class="bg-body-secondary rounded p-3 border small">
-                            <div class="font-semibold mb-1"><i class="o-light-bulb me-1"></i> Tips</div>
-                            <ul class="mb-0 ps-3">
-                                <li>Match one role to one responsibility.</li>
-                                <li>Favor adding permissions as needed instead of starting with too many.</li>
-                                <li>Review permissions regularly to keep access tidy.</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="mt-5 rounded-box border border-base-300 bg-base-200/40 p-4 text-sm">
+                    <div class="mb-2 font-semibold"><i class="o-light-bulb me-1"></i>Tips</div>
+                    <ul class="list-disc space-y-1 pl-5">
+                        <li>Match one role to one responsibility.</li>
+                        <li>Favor adding permissions as needed instead of starting with too many.</li>
+                        <li>Review permissions regularly to keep access tidy.</li>
+                    </ul>
                 </div>
-            </div>
+            </x-card>
 
-            <div class="col-12 col-xl-8">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div>
-                            <h5 class="mb-0">Permissions</h5>
-                            <span class="text-base-content/50 small">Enable the capabilities this role should have.</span>
-                        </div>
-                        <div class="flex align-items-center gap-2 flex-wrap">
-                            <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-body"><i class="o-magnifying-glass"></i></span>
-                                <input type="search" class="form-control" placeholder="Filter permissions" data-permission-search>
-                            </div>
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Permission quick actions">
-                                <button class="btn btn-outline-primary" type="button" data-permission-select="all">
-                                    <i class="o-check-badge me-1"></i> Select all
-                                </button>
-                                <button class="btn btn-outline-secondary" type="button" data-permission-select="none">
-                                    <i class="o-x-mark me-1"></i> Clear
-                                </button>
-                            </div>
-                        </div>
+            <x-card title="Permissions" subtitle="Enable the capabilities this role should have.">
+                <x-slot:menu>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="input input-sm w-full max-w-xs">
+                            <i class="o-magnifying-glass"></i>
+                            <input type="search" placeholder="Filter permissions" data-permission-search />
+                        </label>
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-permission-select="all">
+                            <i class="o-check-badge me-1"></i> Select all
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-permission-select="none">
+                            <i class="o-x-mark me-1"></i> Clear
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-2" id="permission-grid">
-                            @foreach($permissions as $perm)
-                                @php
-                                    $isChecked = in_array($perm, old('permissions', []));
-                                    $isView = Str::startsWith($perm, 'view');
-                                    $typeLabel = $isView ? 'View' : 'Manage';
-                                    $typeClass = $isView ? 'bg-info-subtle text-info-emphasis border-info-subtle' : 'bg-primary-subtle text-primary-emphasis border-primary-subtle';
-                                    $typeIcon = $isView ? 'bi-eye' : 'bi-gear';
-                                    $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
-                                @endphp
-                                <div class="col-12 col-md-6 col-lg-4 permission-item" data-permission-label="{{ Str::lower($perm) }}">
-                                    <div class="flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle">
-                                        <input type="checkbox"
-                                               name="permissions[]"
-                                               value="{{ $perm }}"
-                                               class="form-check-input position-relative mt-1 flex-shrink-0"
-                                               style="margin-left: 0; margin-right: 0.25rem;"
-                                               id="perm-{{ Str::slug($perm) }}"
-                                                {{ $isChecked ? 'checked' : '' }}>
-                                        <label for="perm-{{ Str::slug($perm) }}" class="form-check-label w-100">
-                                            <div class="flex justify-content-between align-items-center">
-                                                <span class="font-semibold">{{ Str::headline($perm) }}</span>
-                                                <span class="badge border {{ $typeClass }}">
-                                                    <i class="bi {{ $typeIcon }} me-1"></i>{{ $typeLabel }}
-                                                </span>
-                                            </div>
-                                            <span class="text-base-content/50 small d-block mt-1">{{ $description }}</span>
-                                        </label>
-                                    </div>
+                </x-slot:menu>
+
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" id="permission-grid">
+                    @foreach($permissions as $perm)
+                        @php
+                            $isChecked = in_array($perm, old('permissions', []));
+                            $isView = Str::startsWith($perm, 'view');
+                            $typeLabel = $isView ? 'View' : 'Manage';
+                            $typeClass = $isView ? 'badge-info badge-soft' : 'badge-primary badge-soft';
+                            $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
+                        @endphp
+                        <label class="permission-item flex gap-3 rounded-box border border-base-300 bg-base-200/30 p-4" data-permission-label="{{ Str::lower($perm) }}" for="perm-{{ Str::slug($perm) }}">
+                            <input
+                                type="checkbox"
+                                name="permissions[]"
+                                value="{{ $perm }}"
+                                class="checkbox checkbox-sm mt-1 shrink-0"
+                                id="perm-{{ Str::slug($perm) }}"
+                                @checked($isChecked)
+                            >
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-semibold">{{ Str::headline($perm) }}</span>
+                                    <span class="badge {{ $typeClass }}">{{ $typeLabel }}</span>
                                 </div>
-                            @endforeach
-                        </div>
-                        <div class="text-base-content/50 small mt-3">
-                            <i class="o-information-circle me-1"></i>Permissions update immediately after saving.
-                        </div>
-                    </div>
+                                <span class="mt-1 block text-sm text-base-content/60">{{ $description }}</span>
+                            </div>
+                        </label>
+                    @endforeach
                 </div>
-            </div>
+
+                <div class="mt-4 text-sm text-base-content/60">
+                    <i class="o-information-circle me-1"></i>Permissions update immediately after saving.
+                </div>
+            </x-card>
         </div>
 
-        <div class="flex justify-content-end gap-2 mt-3">
+        <div class="mt-3 flex justify-end gap-2">
             <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-success">
                 <i class="o-check me-1"></i> Create role
@@ -147,7 +118,7 @@
 
                     items.forEach((item) => {
                         const label = item.getAttribute('data-permission-label') || '';
-                        item.classList.toggle('d-none', term && !label.includes(term));
+                        item.classList.toggle('hidden', term && !label.includes(term));
                     });
                 });
             }

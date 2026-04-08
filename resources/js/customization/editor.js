@@ -68,8 +68,16 @@ function setStatusBadge(badge, message, style = 'secondary') {
         return;
     }
 
+    const styleClass = {
+        success: 'badge-success',
+        info: 'badge-info',
+        danger: 'badge-error',
+        warning: 'badge-warning',
+        secondary: 'badge-ghost',
+    }[style] ?? 'badge-ghost';
+
     badge.textContent = message;
-    badge.className = `badge text-bg-${style}`;
+    badge.className = `badge ${styleClass}`;
 }
 
 /**
@@ -256,13 +264,13 @@ function showTransientAlert(anchor, message, type = 'success') {
     }
 
     const alert = document.createElement('div');
-    alert.className = `alert alert-${type} small mt-3`;
+    alert.className = `alert alert-${type} mt-3 text-sm transition-opacity duration-300`;
     alert.textContent = message;
 
     anchor.parentElement?.insertBefore(alert, anchor);
 
     setTimeout(() => {
-        alert.classList.add('fade');
+        alert.classList.add('opacity-0');
         alert.addEventListener('transitionend', () => alert.remove(), { once: true });
         alert.remove();
     }, 4000);
@@ -367,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionsTable = document.getElementById('customization-versions-table');
     const versionsAlert = document.getElementById('customization-versions-alert');
     const versionModal = document.getElementById('customization-version-modal');
+    const versionsButton = document.getElementById('customization-versions');
     const pagePicker = document.getElementById('customization-page-picker');
 
     renderActivity(activityList, initialActivity);
@@ -538,18 +547,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        versionsAlert.className = 'alert alert-info small';
+        versionsAlert.className = 'alert alert-info text-sm';
         versionsAlert.textContent = 'Loading version history...';
-        versionsAlert.classList.remove('d-none');
+        versionsAlert.classList.remove('hidden');
 
         try {
             const history = await fetchHistory(endpoints.versions);
             renderVersionsTable(versionsTable, history.versions ?? []);
             renderActivity(activityList, history.activity ?? []);
-            versionsAlert.classList.add('d-none');
+            versionsAlert.classList.add('hidden');
         } catch (error) {
             console.error(error);
-            versionsAlert.className = 'alert alert-danger small';
+            versionsAlert.className = 'alert alert-error text-sm';
             versionsAlert.textContent = 'Unable to load version history.';
         }
     }
@@ -609,11 +618,12 @@ document.addEventListener('DOMContentLoaded', () => {
     draftButton?.addEventListener('click', () => handleDraft(draftButton));
     publishButton?.addEventListener('click', () => handlePublish(publishButton));
 
-    if (versionModal) {
-        versionModal.addEventListener('show.bs.modal', () => {
-            loadVersions();
-        });
-    }
+    versionsButton?.addEventListener('click', () => {
+        loadVersions();
+        if (versionModal instanceof HTMLDialogElement && !versionModal.open) {
+            versionModal.showModal();
+        }
+    });
 
     if (versionsTable) {
         versionsTable.addEventListener('click', (event) => {

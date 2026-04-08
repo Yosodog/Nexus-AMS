@@ -7,18 +7,19 @@
     ];
 @endphp
 
-<div class="row g-3">
-    <div class="col-md-6">
-        <label class="form-label font-semibold">Name</label>
-        <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-               value="{{ old('name', $rule->name) }}" required>
-        @error('name')
-        <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
+<div class="grid gap-4 md:grid-cols-2">
+    <div>
+        <x-input
+            label="Name"
+            name="name"
+            :value="old('name', $rule->name)"
+            error-field="name"
+            required
+        />
     </div>
-    <div class="col-md-6">
-        <label class="form-label font-semibold">Target type</label>
-        <select name="target_type" class="form-select @error('target_type') is-invalid @enderror" required>
+    <div>
+        <label class="fieldset-legend mb-0.5">Target type <span class="text-error">*</span></label>
+        <select name="target_type" class="select w-full @error('target_type') !select-error @enderror" required>
             @foreach($targetTypes as $targetType)
                 <option value="{{ $targetType->value }}"
                         @selected(old('target_type', $rule->target_type?->value) === $targetType->value)>
@@ -27,12 +28,12 @@
             @endforeach
         </select>
         @error('target_type')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <div class="text-error">{{ $message }}</div>
         @enderror
     </div>
-    <div class="col-md-6">
-        <label class="form-label font-semibold">Priority</label>
-        <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
+    <div>
+        <label class="fieldset-legend mb-0.5">Priority <span class="text-error">*</span></label>
+        <select name="priority" class="select w-full @error('priority') !select-error @enderror" required>
             @foreach($priorities as $priority)
                 <option value="{{ $priority->value }}"
                         @selected(old('priority', $rule->priority?->value) === $priority->value)>
@@ -41,36 +42,42 @@
             @endforeach
         </select>
         @error('priority')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <div class="text-error">{{ $message }}</div>
         @enderror
     </div>
-    <div class="col-md-6">
-        <label class="form-label font-semibold">Enabled</label>
-        <div class="form-check form-switch mt-2">
-            <input class="form-check-input" type="checkbox" role="switch" id="enabledToggle"
-                   name="enabled" value="1" @checked(old('enabled', $rule->enabled ?? true))>
-            <label class="form-check-label" for="enabledToggle">Participate in scheduled audits</label>
-        </div>
+    <div>
+        <x-toggle
+            id="enabledToggle"
+            label="Participate in scheduled audits"
+            name="enabled"
+            value="1"
+            hint="Enabled rules participate in scheduled audit runs."
+            @checked(old('enabled', $rule->enabled ?? true))
+        />
     </div>
-    <div class="col-12">
-        <label class="form-label font-semibold">Description</label>
-        <textarea name="description" rows="2" class="form-control @error('description') is-invalid @enderror"
-                  placeholder="Optional context for admins">{{ old('description', $rule->description) }}</textarea>
-        @error('description')
-        <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
+    <div class="md:col-span-2">
+        <x-textarea
+            label="Description"
+            name="description"
+            rows="2"
+            error-field="description"
+            placeholder="Optional context for admins"
+        >{{ old('description', $rule->description) }}</x-textarea>
     </div>
-    <div class="col-12">
-        <div class="flex justify-content-between align-items-center">
-            <label class="form-label font-semibold mb-0">NEL Expression</label>
-            <a href="{{ route('admin.nel.docs') }}" target="_blank" class="small text-decoration-none">
+    <div class="md:col-span-2">
+        <div class="mb-2 flex items-center justify-between gap-3">
+            <span class="fieldset-legend m-0">NEL Expression</span>
+            <a href="{{ route('admin.nel.docs') }}" target="_blank" class="text-sm text-primary no-underline">
                 <i class="o-document-text-text me-1"></i>Syntax help
             </a>
         </div>
-        <textarea name="expression" rows="4" class="form-control font-monospace @error('expression') is-invalid @enderror"
-                  required placeholder="e.g. nation.score > 1000 && nation.soldiers < 50000">{{ old('expression', $rule->expression) }}</textarea>
-        @error('expression')
-        <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
+        <x-textarea
+            name="expression"
+            rows="4"
+            error-field="expression"
+            class="font-mono"
+            required
+            placeholder="e.g. nation.score > 1000 && nation.soldiers < 50000"
+        >{{ old('expression', $rule->expression) }}</x-textarea>
     </div>
 </div>

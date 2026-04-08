@@ -5,42 +5,31 @@
         <x-slot:subtitle>Track enemy alliances for beige sniping windows, early exits, and next-turn opportunities.</x-slot:subtitle>
     </x-header>
 
-    <div class="card mt-4">
-        <div class="card-header">Alert Settings</div>
-        <div class="card-body">
-            <form method="POST" action="{{ route('admin.beige-alerts.settings') }}">
-                @csrf
-                <input type="hidden" name="beige_alerts_enabled" value="0">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="beige_alerts_enabled"
-                                   name="beige_alerts_enabled" value="1" @checked(old('beige_alerts_enabled', $enabled))>
-                            <label class="form-check-label" for="beige_alerts_enabled">
-                                Enable beige alerts
-                            </label>
-                        </div>
-                        <div class="form-text">Schedules at `:50` odd hours and `:10` even hours.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="beige_alerts_discord_channel_id" class="form-label">Discord Channel ID</label>
-                        <input type="text"
-                               id="beige_alerts_discord_channel_id"
-                               name="beige_alerts_discord_channel_id"
-                               class="form-control @error('beige_alerts_discord_channel_id') is-invalid @enderror"
-                               value="{{ old('beige_alerts_discord_channel_id', $channelId) }}"
-                               placeholder="123456789012345678">
-                        @error('beige_alerts_discord_channel_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    <div class="col-md-3 text-md-end">
-                        <button type="submit" class="btn btn-primary">Save Settings</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-card title="Alert Settings" class="mb-6">
+        <form method="POST" action="{{ route('admin.beige-alerts.settings') }}" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] md:items-end">
+            @csrf
+            <input type="hidden" name="beige_alerts_enabled" value="0">
+            <x-toggle
+                id="beige_alerts_enabled"
+                label="Enable beige alerts"
+                hint="Schedules at :50 on odd hours and :10 on even hours."
+                name="beige_alerts_enabled"
+                value="1"
+                @checked(old('beige_alerts_enabled', $enabled))
+            />
+            <x-input
+                id="beige_alerts_discord_channel_id"
+                label="Discord Channel ID"
+                name="beige_alerts_discord_channel_id"
+                :value="old('beige_alerts_discord_channel_id', $channelId)"
+                error-field="beige_alerts_discord_channel_id"
+                placeholder="123456789012345678"
+            />
+            <div class="flex md:justify-end">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </div>
+        </form>
+    </x-card>
 
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" class="admin-stat-card admin-stat-card-primary" />
@@ -49,37 +38,36 @@
         <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" class="admin-stat-card admin-stat-card-success" />
     </div>
 
-    <div class="card mt-4">
-        <div class="card-header">
-            Beige Turn Breakdown
-        </div>
-        <div class="card-body flex flex-wrap gap-2">
+    <x-card title="Beige Turn Breakdown" class="mb-6">
+        <div class="flex flex-wrap gap-2">
             @forelse($beigeTurnsBreakdown as $turns => $count)
                 <span class="badge badge-ghost">
                     {{ $turns }} turn{{ (int) $turns === 1 ? '' : 's' }}: {{ number_format((int) $count) }}
                 </span>
             @empty
-                <span class="text-base-content/50 small">No tracked beige nations.</span>
+                <span class="text-base-content/50 text-sm">No tracked beige nations.</span>
             @endforelse
         </div>
-    </div>
+    </x-card>
 
-    <div class="card mt-4">
-        <div class="card-header flex justify-content-between align-items-center">
-            <span>Tracked Alliances</span>
-            <form method="POST" action="{{ route('admin.beige-alerts.alliances.store') }}" class="flex gap-2 align-items-center">
+    <x-card title="Tracked Alliances" class="mb-6">
+        <x-slot:menu>
+            <form method="POST" action="{{ route('admin.beige-alerts.alliances.store') }}" class="flex flex-wrap items-end gap-2">
                 @csrf
-                <input type="number"
-                       name="alliance_id"
-                       class="form-control @error('alliance_id') is-invalid @enderror"
-                       placeholder="Alliance ID"
-                       min="1"
-                       required>
+                <x-input
+                    name="alliance_id"
+                    type="number"
+                    min="1"
+                    error-field="alliance_id"
+                    placeholder="Alliance ID"
+                    required
+                />
                 <button type="submit" class="btn btn-primary btn-sm">Add</button>
             </form>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-sm table-striped mb-0">
+        </x-slot:menu>
+
+        <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra table-sm">
                 <thead>
                 <tr>
                     <th>Alliance ID</th>
@@ -98,7 +86,7 @@
                         <td>{{ $trackedAlliance->alliance_id }}</td>
                         <td>
                             @if($alliance)
-                                <a href="https://politicsandwar.com/alliance/id={{ $alliance->id }}" target="_blank">
+                                <a href="https://politicsandwar.com/alliance/id={{ $alliance->id }}" target="_blank" rel="noopener">
                                     {{ $alliance->name }}
                                 </a>
                             @else
@@ -108,12 +96,10 @@
                         <td>{{ number_format((int) ($beigeCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
                         <td>{{ number_format((int) ($nextTurnCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
                         <td class="text-right">
-                            <form method="POST"
-                                  action="{{ route('admin.beige-alerts.alliances.destroy', $trackedAlliance) }}"
-                                  onsubmit="return confirm('Remove this alliance from beige alerts?');">
+                            <form method="POST" action="{{ route('admin.beige-alerts.alliances.destroy', $trackedAlliance) }}" onsubmit="return confirm('Remove this alliance from beige alerts?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                <button type="submit" class="btn btn-error btn-sm">Remove</button>
                             </form>
                         </td>
                     </tr>
@@ -127,15 +113,11 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 
-    <div class="card mt-4">
-        <div class="card-header flex justify-content-between align-items-center">
-            <span>Tracked Beige Nations</span>
-            <span class="text-base-content/50 small">Sorted by earliest beige exit</span>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-sm table-striped mb-0">
+    <x-card title="Tracked Beige Nations" subtitle="Sorted by earliest beige exit.">
+        <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra table-sm">
                 <thead>
                 <tr>
                     <th>Leader</th>
@@ -157,14 +139,14 @@
                     @endphp
                     <tr>
                         <td>
-                            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank">
+                            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener">
                                 {{ $nation->leader_name }}
                             </a>
                         </td>
                         <td>{{ $nation->nation_name }}</td>
                         <td>
                             @if($alliance)
-                                <a href="https://politicsandwar.com/alliance/id={{ $alliance->id }}" target="_blank">
+                                <a href="https://politicsandwar.com/alliance/id={{ $alliance->id }}" target="_blank" rel="noopener">
                                     {{ $alliance->name }}
                                 </a>
                             @else
@@ -179,7 +161,7 @@
                             </span>
                         </td>
                         <td>{{ $estimatedExit->format('M d, H:i') }}</td>
-                        <td class="small">
+                        <td class="text-sm">
                             @if($military)
                                 S: {{ number_format((int) $military->soldiers) }},
                                 T: {{ number_format((int) $military->tanks) }},
@@ -200,5 +182,5 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 @endsection

@@ -64,12 +64,8 @@
         />
     </div>
 
-    <x-card>
-        <div class="card-header flex justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-0">Rule coverage</h5>
-                <span class="text-base-content/50 small">Live snapshot of all rules with their current violation counts.</span>
-            </div>
+    <x-card title="Rule coverage" subtitle="Live snapshot of all rules with their current violation counts.">
+        <x-slot:menu>
             <div class="flex gap-2">
                 <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline-secondary btn-sm">
                     Manage rules
@@ -78,10 +74,10 @@
                     NEL syntax
                 </a>
             </div>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="table-light">
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra">
+                <thead>
                 <tr>
                     <th scope="col">Rule</th>
                     <th scope="col">Target</th>
@@ -101,7 +97,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-{{ $rule->target_type->value === 'nation' ? 'primary' : 'info' }}">
+                            <span class="badge {{ $rule->target_type->value === 'nation' ? 'badge-primary' : 'badge-info' }}">
                                 {{ ucfirst($rule->target_type->value) }}
                             </span>
                         </td>
@@ -113,20 +109,26 @@
                                     'low' => 'info',
                                     'info' => 'secondary',
                                 ][$rule->priority->value] ?? 'secondary';
+                                $priorityBadgeClass = match ($priorityClass) {
+                                    'danger' => 'badge-error',
+                                    'warning' => 'badge-warning',
+                                    'info' => 'badge-info',
+                                    default => 'badge-ghost',
+                                };
                             @endphp
-                            <span class="badge bg-{{ $priorityClass }}">
+                            <span class="badge {{ $priorityBadgeClass }}">
                                 {{ ucfirst($rule->priority->value) }}
                             </span>
                         </td>
                         <td>
                             @if($rule->enabled)
-                                <span class="badge bg-success-subtle text-success-emphasis">Enabled</span>
+                                <span class="badge badge-success badge-soft">Enabled</span>
                             @else
-                                <span class="badge bg-secondary-subtle text-base-content/50-emphasis">Disabled</span>
+                                <span class="badge badge-ghost">Disabled</span>
                             @endif
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-light text-dark border">
+                            <span class="badge badge-outline">
                                 {{ $rule->results_count }}
                             </span>
                         </td>
