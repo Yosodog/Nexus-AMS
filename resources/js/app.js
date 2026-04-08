@@ -363,7 +363,6 @@ if (document.readyState === 'loading') {
 document.addEventListener('livewire:navigated', () => {
     initAppUi();
     signalPageReady('livewire:navigated');
-    document.dispatchEvent(new Event('DOMContentLoaded'));
     window.dispatchEvent(new Event('resize'));
 });
 

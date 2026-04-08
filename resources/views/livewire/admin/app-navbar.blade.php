@@ -52,12 +52,12 @@
             </a>
         </div>
 
-        <div class="absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-1">
+        <div class="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-1">
             @foreach($mainLinks as $link)
-                <a href="{{ $link['route'] }}" class="btn btn-sm rounded-full {{ $link['active'] ? 'btn-primary' : 'btn-ghost' }}">{{ $link['label'] }}</a>
+                <a href="{{ $link['route'] }}" class="pointer-events-auto btn btn-sm rounded-full {{ $link['active'] ? 'btn-primary' : 'btn-ghost' }}">{{ $link['label'] }}</a>
             @endforeach
             @foreach($navGroups as $group)
-                <div class="dropdown dropdown-bottom">
+                <div class="pointer-events-auto dropdown dropdown-bottom">
                     <button tabindex="0" class="btn btn-sm rounded-full {{ $group['active'] ? 'btn-primary' : 'btn-ghost' }}">
                         {{ $group['label'] }}
                         <x-icon name="o-chevron-down" class="size-4" />

@@ -327,7 +327,15 @@
 
     function handleFromSelectionChange() {
         const fromSelect = document.getElementById('tran_from');
+        if (!fromSelect || fromSelect.selectedIndex < 0) {
+            return;
+        }
+
         const selectedOption = fromSelect.options[fromSelect.selectedIndex];
+        if (!selectedOption) {
+            return;
+        }
+
         const summary = document.getElementById('fromSummary');
         if (summary && selectedOption) {
             summary.textContent = selectedOption.textContent.trim();
@@ -386,9 +394,20 @@
         });
     }
 
-    // Call the function on page load to set initial state
-    document.addEventListener('DOMContentLoaded', handleFromSelectionChange);
+    function initTransferComponent() {
+        const fromSelect = document.getElementById('tran_from');
+        if (!fromSelect) {
+            return;
+        }
 
-    // Add event listener for when the from account changes
-    document.getElementById('tran_from').addEventListener('change', handleFromSelectionChange);
+        if (fromSelect.dataset.bound !== 'true') {
+            fromSelect.dataset.bound = 'true';
+            fromSelect.addEventListener('change', handleFromSelectionChange);
+        }
+
+        handleFromSelectionChange();
+    }
+
+    document.addEventListener('codex:page-ready', initTransferComponent);
+    initTransferComponent();
 </script>

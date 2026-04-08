@@ -203,6 +203,11 @@
         @apply px-4 py-3 border-t border-base-300;
     }
 
+    details.dropdown > .menu,
+    details.dropdown > ul.menu {
+        z-index: 90;
+    }
+
     .admin-stat-card {
         @apply rounded-3xl border border-base-300/70 bg-base-100/95 px-5 py-4 shadow-sm ring-1 ring-white/10 transition;
     }

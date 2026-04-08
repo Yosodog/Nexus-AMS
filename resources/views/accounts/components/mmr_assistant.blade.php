@@ -239,6 +239,9 @@
             let total = 0;
             const afterTax = {{ $mmrAfterTaxIncome }};
             const badge = document.getElementById('totalPct');
+            if (!badge) {
+                return;
+            }
 
             document.querySelectorAll('.resource-input').forEach(input => {
                 const percent = parseFloat(input.value || 0);
@@ -264,10 +267,25 @@
             badge.classList.toggle('animate-pulse', total > 100);
         }
 
-        document.querySelectorAll('.resource-input').forEach(input => {
-            input.addEventListener('input', updateMMREstimates);
-        });
+        function initMMRAssistant() {
+            const inputs = document.querySelectorAll('.resource-input');
+            if (!inputs.length || !document.getElementById('totalPct')) {
+                return;
+            }
 
-        updateMMREstimates();
+            inputs.forEach(input => {
+                if (input.dataset.bound === 'true') {
+                    return;
+                }
+
+                input.dataset.bound = 'true';
+                input.addEventListener('input', updateMMREstimates);
+            });
+
+            updateMMREstimates();
+        }
+
+        document.addEventListener('codex:page-ready', initMMRAssistant);
+        initMMRAssistant();
     </script>
 @endpush
