@@ -138,7 +138,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const netData = @json($netChart);
             const categoryDatasets = @json($categoryDatasets);
             const colorMap = {

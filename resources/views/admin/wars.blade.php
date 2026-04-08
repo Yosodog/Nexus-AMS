@@ -13,85 +13,48 @@
     </div>
 
     {{-- Charts --}}
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Wars Started (Last 30 Days)</div>
-                <div class="card-body">
-                    <canvas id="warsLineChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">War Type Distribution</div>
-                <div class="card-body">
-                    <canvas id="warTypePieChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">Top Nations w/ Active Wars</div>
-                <div class="card-body">
-                    <canvas id="topNationsBarChart"></canvas>
-                </div>
-            </div>
-        </div>
-
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)_minmax(280px,1fr)]">
+        <x-card title="Wars Started (Last 30 Days)">
+            <canvas id="warsLineChart" height="260"></canvas>
+        </x-card>
+        <x-card title="War Type Distribution">
+            <canvas id="warTypePieChart" height="260"></canvas>
+        </x-card>
+        <x-card title="Top Nations w/ Active Wars">
+            <canvas id="topNationsBarChart" height="260"></canvas>
+        </x-card>
     </div>
-    <div class="row mt-4">
-        {{-- Resource Usage Breakdown --}}
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Resource Usage Breakdown</div>
-                <div class="card-body">
-                    <canvas id="resourceUsageChart"></canvas>
-                </div>
-            </div>
-        </div>
 
-        {{-- Aggressor vs Defender --}}
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Aggressor vs Defender</div>
-                <div class="card-body">
-                    <canvas id="aggroDefenderChart" style="max-height: 335px;"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="mt-4 grid gap-4 xl:grid-cols-2">
+        <x-card title="Resource Usage Breakdown">
+            <canvas id="resourceUsageChart" height="260"></canvas>
+        </x-card>
+
+        <x-card title="Aggressor vs Defender">
+            <canvas id="aggroDefenderChart" height="260"></canvas>
+        </x-card>
     </div>
 
     {{-- Damage Dealt vs Taken --}}
-    <div class="row mt-4">
+    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         @foreach($damageBreakdown as $type => $data)
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-header">{{ ucfirst(str_replace('_', ' ', $type)) }}: Dealt vs Taken</div>
-                    <div class="card-body">
-                        <canvas id="damageChart_{{ $type }}"></canvas>
-                    </div>
-                </div>
-            </div>
+            <x-card :title="ucfirst(str_replace('_', ' ', $type)) . ': Dealt vs Taken'">
+                <canvas id="damageChart_{{ $type }}" height="220"></canvas>
+            </x-card>
         @endforeach
     </div>
 
     {{-- Active War by Member --}}
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">Active Wars by Member</div>
-                <div class="card-body">
-                    <canvas id="warsByNationChart"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="mt-4">
+        <x-card title="Active Wars by Member">
+            <canvas id="warsByNationChart" height="320"></canvas>
+        </x-card>
     </div>
 
     {{-- War Table --}}
-    <div class="card mt-4">
-        <div class="card-header">Active Wars</div>
-        <div class="card-body table-responsive">
+    <x-card class="mt-4">
+        <x-slot:title>Active Wars</x-slot:title>
+        <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
                 <tr>
@@ -151,7 +114,7 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 @endsection
 
 @push("scripts")

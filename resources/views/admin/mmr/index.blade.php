@@ -661,7 +661,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
                 });
 

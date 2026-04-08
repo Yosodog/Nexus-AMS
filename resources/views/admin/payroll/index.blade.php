@@ -346,7 +346,7 @@
     @if ($modalContext)
         @push('scripts')
             <script>
-                document.addEventListener('DOMContentLoaded', function () {
+                document.addEventListener('codex:page-ready', function () {
                     const modalId = @json($modalContext);
                     const modalElement = document.getElementById(modalId);
                     if (! modalElement) {

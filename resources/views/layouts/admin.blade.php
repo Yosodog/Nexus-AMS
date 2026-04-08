@@ -24,7 +24,7 @@
             <livewire:admin.app-sidebar />
         </x-slot:sidebar>
 
-        <x-slot:content class="px-4 py-5 lg:px-6 lg:py-6">
+        <x-slot:content class="min-w-0 overflow-x-hidden px-4 py-5 lg:px-6 lg:py-6">
             @if (session('alert-message') || $errors->any())
                 <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
             @endif

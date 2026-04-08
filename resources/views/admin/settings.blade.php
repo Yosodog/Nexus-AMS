@@ -6,18 +6,19 @@
     </x-header>
 
     {{-- Sync Settings Section --}}
-    <div class="row mb-3">
-        <div class="col-md-12 flex justify-content-between align-items-center">
-            <h4 class="mb-0">Data Synchronization</h4>
-            <a href="#" data-bs-toggle="collapse" data-bs-target="#syncHelp" class="text-base-content/50 small">
-                <i class="o-question-mark-circle me-1"></i> Learn more about data sync
-            </a>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h4 class="mb-1">Data Synchronization</h4>
+            <p class="mb-0 text-sm text-base-content/50">Review manual sync controls, rolling progress, and operational status before forcing jobs.</p>
         </div>
+        <a href="#" data-bs-toggle="collapse" data-bs-target="#syncHelp" class="btn btn-ghost btn-sm">
+            <x-icon name="o-question-mark-circle" class="size-4" />
+            Learn more
+        </a>
     </div>
 
-    <div class="row collapse mb-4" id="syncHelp">
-        <div class="col-md-12">
-            <div class="alert alert-light border">
+    <div class="collapse mb-4" id="syncHelp">
+        <div class="alert alert-light border">
                 <p class="mb-2">
                     {{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.
                     However, these subscriptions are not guaranteed and may occasionally miss updates due to network or service disruptions.
@@ -34,10 +35,9 @@
                 <p class="mb-0">
                     <strong>Note:</strong> Running syncs consumes queue capacity and may delay other time-sensitive tasks like withdrawals, transfers, and in-game messaging. You can cancel a sync at any time.
                 </p>
-            </div>
         </div>
     </div>
-    <div class="row">
+    <div class="row g-4">
         <div class="col-md-6">
             @include('components.admin.sync-card', [
                 'title' => 'Nation Sync (Manual)',
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <div class="row mt-4">
+    <div class="row mt-4 g-4">
         <div class="col-md-6">
             @include('components.admin.sync-card', [
                 'title' => 'Alliance Sync',

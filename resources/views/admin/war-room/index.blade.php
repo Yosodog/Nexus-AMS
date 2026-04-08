@@ -437,6 +437,6 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {        });
+        document.addEventListener('codex:page-ready', () => {        });
     </script>
 @endpush

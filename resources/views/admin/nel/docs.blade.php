@@ -3,24 +3,15 @@
 @section('title', 'NEL Documentation')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row align-items-center">
-                <div class="col-12 col-lg-8">
-                    <h3 class="mb-1">{{ config('app.name') }} Expression Language (NEL)</h3>
-                    <p class="text-base-content/50 mb-0">
-                        Define safe, predictable expressions for audits, grants, and MMR checks using dot-notation like
-                        <code>nation.score</code> or <code>nation.military.soldiers</code>.
-                    </p>
-                </div>
-                <div class="col-12 col-lg-4 mt-3 mt-lg-0 text-lg-end">
-                    <span class="badge bg-primary-subtle text-primary-emphasis">
-                        <i class="o-shield-check-lock me-1"></i> Sandboxed &amp; read-only
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header :title="config('app.name') . ' Expression Language (NEL)'" separator>
+        <x-slot:subtitle>
+            Define safe, predictable expressions for audits, grants, and MMR checks using dot-notation like
+            <code>nation.score</code> or <code>nation.military.soldiers</code>.
+        </x-slot:subtitle>
+        <x-slot:actions>
+            <x-badge value="Sandboxed & read-only" icon="o-shield-check" class="badge-primary badge-sm" />
+        </x-slot:actions>
+    </x-header>
 
     <div class="row g-3">
         <div class="col-lg-6">

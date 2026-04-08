@@ -43,10 +43,10 @@
     </div>
 
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" />
-        <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" />
-        <x-stat title="Leaving Next Turn" :value="number_format($nextTurnLeavers)" icon="o-clock" color="text-warning" :description="'Next turn: ' . $nextTurnChangeAt->format('M d, H:i')" />
-        <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" />
+        <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" class="admin-stat-card admin-stat-card-primary" />
+        <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" class="admin-stat-card admin-stat-card-info" />
+        <x-stat title="Leaving Next Turn" :value="number_format($nextTurnLeavers)" icon="o-clock" color="text-warning" :description="'Next turn: ' . $nextTurnChangeAt->format('M d, H:i')" class="admin-stat-card admin-stat-card-warning" />
+        <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" class="admin-stat-card admin-stat-card-success" />
     </div>
 
     <div class="card mt-4">

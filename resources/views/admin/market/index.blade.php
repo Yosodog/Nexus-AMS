@@ -154,7 +154,7 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const formatPrice = (value) => {
                 return new Intl.NumberFormat(undefined, {
                     minimumFractionDigits: 4,

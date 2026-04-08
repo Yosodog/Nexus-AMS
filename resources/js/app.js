@@ -3,16 +3,35 @@ import './bootstrap';
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
 const THEME_STORAGE_KEY = 'nexus-theme';
-const DEFAULT_THEME = 'acid';
-const DARK_THEMES = new Set(['night', 'sunset']);
+const DEFAULT_THEME_MODE = 'auto';
+const SYSTEM_DARK_QUERY = window.matchMedia('(prefers-color-scheme: dark)');
 
 const normalizeValue = (value) => value.replace(/\s+/g, ' ').trim();
 
-const applyTheme = (theme) => {
-    const resolvedTheme = theme || DEFAULT_THEME;
-    document.documentElement.setAttribute('data-theme', resolvedTheme);
-    document.documentElement.setAttribute('data-bs-theme', DARK_THEMES.has(resolvedTheme) ? 'dark' : 'light');
-    document.documentElement.dataset.theme = resolvedTheme;
+const resolveThemeMode = (mode) => {
+    if (mode === 'light' || mode === 'night') {
+        return mode;
+    }
+
+    return SYSTEM_DARK_QUERY.matches ? 'night' : 'light';
+};
+
+const normalizeThemeMode = (mode) => {
+    if (mode === 'light' || mode === 'night' || mode === 'auto') {
+        return mode;
+    }
+
+    return DEFAULT_THEME_MODE;
+};
+
+const applyTheme = (mode) => {
+    const resolvedMode = normalizeThemeMode(mode || DEFAULT_THEME_MODE);
+    const theme = resolveThemeMode(resolvedMode);
+
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-bs-theme', theme === 'night' ? 'dark' : 'light');
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.themeMode = resolvedMode;
 };
 
 const parseSortableValue = (value) => {
@@ -273,31 +292,53 @@ const enableBootstrapCollapseCompatibility = () => {
 };
 
 const enableThemePicker = (root = document) => {
-    const activeTheme = localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.getAttribute('data-theme') || DEFAULT_THEME;
-    applyTheme(activeTheme);
+    const activeThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.dataset.themeMode || DEFAULT_THEME_MODE);
+    applyTheme(activeThemeMode);
 
-    root.querySelectorAll('[data-theme-option]').forEach((button) => {
+    root.querySelectorAll('[data-theme-mode]').forEach((button) => {
         if (button.dataset.themeBound === 'true') {
-            button.classList.toggle('menu-active', button.dataset.themeOption === activeTheme);
+            button.classList.toggle('menu-active', button.dataset.themeMode === activeThemeMode);
             return;
         }
 
         button.dataset.themeBound = 'true';
-        button.classList.toggle('menu-active', button.dataset.themeOption === activeTheme);
+        button.classList.toggle('menu-active', button.dataset.themeMode === activeThemeMode);
 
         button.addEventListener('click', (event) => {
             event.preventDefault();
 
-            const theme = button.dataset.themeOption || DEFAULT_THEME;
-            localStorage.setItem(THEME_STORAGE_KEY, theme);
-            applyTheme(theme);
+            const themeMode = button.dataset.themeMode || DEFAULT_THEME_MODE;
+            if (themeMode === DEFAULT_THEME_MODE) {
+                localStorage.removeItem(THEME_STORAGE_KEY);
+            } else {
+                localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+            }
 
-            document.querySelectorAll('[data-theme-option]').forEach((item) => {
-                item.classList.toggle('menu-active', item.dataset.themeOption === theme);
+            applyTheme(themeMode);
+
+            document.querySelectorAll('[data-theme-mode]').forEach((item) => {
+                item.classList.toggle('menu-active', item.dataset.themeMode === themeMode);
             });
         });
     });
 };
+
+const signalPageReady = (source = 'app') => {
+    document.dispatchEvent(new CustomEvent('codex:page-ready', {
+        detail: { source },
+    }));
+
+    window.dispatchEvent(new CustomEvent('codex:page-ready', {
+        detail: { source },
+    }));
+};
+
+SYSTEM_DARK_QUERY.addEventListener('change', () => {
+    const savedThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_THEME_MODE);
+    if (savedThemeMode === DEFAULT_THEME_MODE) {
+        applyTheme(DEFAULT_THEME_MODE);
+    }
+});
 
 const initAppUi = (root = document) => {
     enableMobileTableScrolling(root);
@@ -310,10 +351,21 @@ enableBootstrapModalCompatibility();
 enableBootstrapCollapseCompatibility();
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initAppUi());
+    document.addEventListener('DOMContentLoaded', () => {
+        initAppUi();
+        signalPageReady('dom');
+    });
 } else {
     initAppUi();
+    signalPageReady('immediate');
 }
 
-document.addEventListener('livewire:navigated', () => initAppUi());
+document.addEventListener('livewire:navigated', () => {
+    initAppUi();
+    signalPageReady('livewire:navigated');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    window.dispatchEvent(new Event('resize'));
+});
+
 window.initAppUi = initAppUi;
+window.signalPageReady = signalPageReady;

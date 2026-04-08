@@ -608,7 +608,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-tooltip="true"]'));
 
             tooltipTriggerList.forEach((tooltipTriggerEl) => {
@@ -619,10 +619,15 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        function initOffshoreAdminPage() {
             const guardrailTemplate = document.getElementById('guardrail-row-template');
 
             document.querySelectorAll('[data-action="add-guardrail"]').forEach(button => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
                 button.addEventListener('click', () => {
                     const targetSelector = button.dataset.target;
                     const container = targetSelector ? document.querySelector(targetSelector) : null;
@@ -651,6 +656,11 @@
 
             // Synchronize hidden inputs when opening the transfer modal.
             document.querySelectorAll('[data-action="open-transfer"]').forEach(button => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
                 button.addEventListener('click', () => {
                     const sourceType = button.dataset.sourceType;
                     const destinationType = button.dataset.destinationType;
@@ -681,7 +691,8 @@
             });
 
             const transferModal = document.getElementById('manualTransferModal');
-            if (transferModal) {
+            if (transferModal && transferModal.dataset.bound !== 'true') {
+                transferModal.dataset.bound = 'true';
                 transferModal.addEventListener('show.bs.modal', () => {
                     const sourceTypeSelect = document.getElementById('transfer-source-type');
                     const destinationTypeSelect = document.getElementById('transfer-destination-type');
@@ -724,6 +735,9 @@
                 editModalElement.dispatchEvent(new Event('show.bs.modal'));
             }
             @endif
-        });
+        }
+
+        document.addEventListener('codex:page-ready', initOffshoreAdminPage);
+        initOffshoreAdminPage();
     </script>
 @endpush

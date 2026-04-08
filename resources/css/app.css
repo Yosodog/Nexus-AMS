@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
-    themes: all;
+    themes: light --default, night --prefersdark;
 }
 @source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
 
@@ -183,6 +183,30 @@
 
     .card-footer {
         @apply px-4 py-3 border-t border-base-300;
+    }
+
+    .admin-stat-card {
+        @apply rounded-3xl border border-base-300/70 bg-base-100/95 px-5 py-4 shadow-sm ring-1 ring-white/10 transition;
+    }
+
+    .admin-stat-card-primary {
+        @apply border-primary/20 bg-gradient-to-br from-primary/12 via-base-100 to-base-100;
+    }
+
+    .admin-stat-card-success {
+        @apply border-success/20 bg-gradient-to-br from-success/12 via-base-100 to-base-100;
+    }
+
+    .admin-stat-card-info {
+        @apply border-info/20 bg-gradient-to-br from-info/12 via-base-100 to-base-100;
+    }
+
+    .admin-stat-card-warning {
+        @apply border-warning/25 bg-gradient-to-br from-warning/15 via-base-100 to-base-100;
+    }
+
+    .admin-stat-card-error {
+        @apply border-error/20 bg-gradient-to-br from-error/12 via-base-100 to-base-100;
     }
 
     .info-box {

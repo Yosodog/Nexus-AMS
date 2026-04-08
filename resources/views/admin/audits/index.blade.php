@@ -3,105 +3,68 @@
 @section('title', 'Audits')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h3 class="mb-1">Audit Overview</h3>
-                    <p class="text-base-content/50 mb-0">Track active rules and live violations across your membership.</p>
-                </div>
-                <div class="col-auto">
-                    <div class="flex gap-2">
-                        <form method="POST" action="{{ route('admin.audits.run') }}">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-primary">
-                                <i class="o-play me-1"></i>
-                                Run audits now
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ route('admin.audits.notify') }}">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-success">
-                                <i class="o-paper-airplane-fill me-1"></i>
-                                Notify members
-                            </button>
-                        </form>
-                        <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                            <i class="o-plus-circle me-1"></i>
-                            New Rule
-                        </a>
-                    </div>
-                </div>
+    <x-header title="Audit Overview" separator>
+        <x-slot:subtitle>Track active rules, triage live violations, and manage member notifications from one place.</x-slot:subtitle>
+        <x-slot:actions>
+            <div class="flex flex-wrap gap-2">
+                <form method="POST" action="{{ route('admin.audits.run') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <x-icon name="o-play" class="size-4" />
+                        Run audits
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('admin.audits.notify') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-success btn-sm">
+                        <x-icon name="o-paper-airplane" class="size-4" />
+                        Notify members
+                    </button>
+                </form>
+                <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary btn-sm">
+                    <x-icon name="o-plus-circle" class="size-4" />
+                    New rule
+                </a>
             </div>
-        </div>
+        </x-slot:actions>
+    </x-header>
+
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat
+            title="Enabled Rules"
+            :value="number_format($summary['enabled_rules'])"
+            icon="o-check-circle"
+            color="text-primary"
+            :description="number_format($summary['total_rules']) . ' total rules configured'"
+            class="admin-stat-card admin-stat-card-primary"
+        />
+        <x-stat
+            title="Open Violations"
+            :value="number_format($summary['violations_total'])"
+            icon="o-exclamation-triangle"
+            color="text-error"
+            description="Live rows currently requiring attention"
+            class="admin-stat-card admin-stat-card-error"
+        />
+        <x-stat
+            title="High Priority"
+            :value="number_format($summary['violations_by_priority']['high'] ?? 0)"
+            icon="o-bolt"
+            color="text-warning"
+            :description="'Medium ' . number_format($summary['violations_by_priority']['medium'] ?? 0) . ' · Low ' . number_format($summary['violations_by_priority']['low'] ?? 0)"
+            class="admin-stat-card admin-stat-card-warning"
+        />
+        <x-stat
+            title="Target Split"
+            :value="number_format($summary['violations_by_target']['nation'] ?? 0) . ' nation'"
+            icon="o-users"
+            color="text-info"
+            :description="number_format($summary['violations_by_target']['city'] ?? 0) . ' city violations'"
+            class="admin-stat-card admin-stat-card-info"
+        />
     </div>
 
-    <div class="row g-3 mt-1">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <span class="text-uppercase text-base-content/50 small font-semibold">Enabled rules</span>
-                    <div class="flex justify-content-between align-items-center mt-2">
-                        <div class="display-6 fw-bold">{{ $summary['enabled_rules'] }}</div>
-                        <span class="badge bg-primary-subtle text-primary-emphasis">/{{ $summary['total_rules'] }} total</span>
-                    </div>
-                    <p class="text-base-content/50 small mb-0 mt-2">Rules currently participating in scheduled audits.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <span class="text-uppercase text-base-content/50 small font-semibold">Open violations</span>
-                    <div class="flex justify-content-between align-items-center mt-2">
-                        <div class="display-6 fw-bold">{{ $summary['violations_total'] }}</div>
-                        <i class="o-exclamation-triangle text-danger fs-3"></i>
-                    </div>
-                    <p class="text-base-content/50 small mb-0 mt-2">Live rows in <code>audit_results</code>.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <span class="text-uppercase text-base-content/50 small font-semibold">By priority</span>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        <span class="badge bg-danger-subtle text-danger-emphasis">
-                            High {{ $summary['violations_by_priority']['high'] ?? 0 }}
-                        </span>
-                        <span class="badge bg-warning-subtle text-warning-emphasis">
-                            Medium {{ $summary['violations_by_priority']['medium'] ?? 0 }}
-                        </span>
-                        <span class="badge bg-info-subtle text-info-emphasis">
-                            Low {{ $summary['violations_by_priority']['low'] ?? 0 }}
-                        </span>
-                        <span class="badge bg-secondary-subtle text-base-content/50-emphasis">
-                            Info {{ $summary['violations_by_priority']['info'] ?? 0 }}
-                        </span>
-                    </div>
-                    <p class="text-base-content/50 small mb-0 mt-2">Current distribution across rule severity.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <span class="text-uppercase text-base-content/50 small font-semibold">By target</span>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        <span class="badge bg-primary-subtle text-primary-emphasis">
-                            Nation {{ $summary['violations_by_target']['nation'] ?? 0 }}
-                        </span>
-                        <span class="badge bg-info-subtle text-info-emphasis">
-                            City {{ $summary['violations_by_target']['city'] ?? 0 }}
-                        </span>
-                    </div>
-                    <p class="text-base-content/50 small mb-0 mt-2">Where violations are currently anchored.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mt-4">
+    <x-card>
         <div class="card-header flex justify-content-between align-items-center">
             <div>
                 <h5 class="mb-0">Rule coverage</h5>
@@ -188,5 +151,5 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 @endsection

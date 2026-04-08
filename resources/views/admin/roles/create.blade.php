@@ -134,7 +134,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        function initRoleCreatePage() {
             const searchInput = document.querySelector('[data-permission-search]');
             const items = Array.from(document.querySelectorAll('[data-permission-label]'));
             const selectButtons = document.querySelectorAll('[data-permission-select]');
@@ -153,6 +153,11 @@
             }
 
             selectButtons.forEach((button) => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
                 button.addEventListener('click', () => {
                     const mode = button.getAttribute('data-permission-select');
 
@@ -165,6 +170,9 @@
                     });
                 });
             });
-        });
+        }
+
+        document.addEventListener('codex:page-ready', initRoleCreatePage);
+        initRoleCreatePage();
     </script>
 @endpush

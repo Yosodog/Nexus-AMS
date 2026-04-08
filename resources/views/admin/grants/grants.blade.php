@@ -684,7 +684,7 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             renderRootGroupModeSelect();
 
             document.getElementById('addTopLevelCondition').addEventListener('click', () => {

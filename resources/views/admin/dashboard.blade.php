@@ -23,6 +23,14 @@
             'text-bg-dark'    => 'text-neutral-content',
             'badge-error'  => 'text-error',
         ];
+        $statCardVariants = [
+            'admin-stat-card admin-stat-card-primary',
+            'admin-stat-card admin-stat-card-success',
+            'admin-stat-card admin-stat-card-info',
+            'admin-stat-card admin-stat-card-warning',
+            'admin-stat-card admin-stat-card-error',
+            'admin-stat-card admin-stat-card-primary',
+        ];
     @endphp
 
     {{-- Page Header --}}
@@ -45,14 +53,15 @@
     </x-header>
 
     {{-- KPI Stats --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        @foreach ($kpis as $kpi)
+    <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        @foreach ($kpis as $index => $kpi)
             <x-stat
                 :title="$kpi['title']"
                 :value="$kpi['value']"
                 :description="! empty($kpi['helper']) ? $kpi['helper'] : null"
                 :icon="$iconMap[$kpi['icon']] ?? 'o-chart-bar'"
                 :color="$colorMap[$kpi['bg']] ?? 'text-primary'"
+                :class="$statCardVariants[$index % count($statCardVariants)]"
             >
                 @if (! is_null($kpi['trend']))
                     <x-slot:figure>
@@ -471,7 +480,7 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const palette = {
                 primary: '#2563eb',
                 secondary: '#1d4ed8',

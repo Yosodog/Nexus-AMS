@@ -1560,7 +1560,7 @@
             };
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             refreshTooltips();
         });
     </script>

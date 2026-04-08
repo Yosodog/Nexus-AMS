@@ -150,7 +150,13 @@
             </div>
         </x-slot:title>
         <x-slot:menu>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal" onclick="clearGrantForm()">
+            <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#grantModal"
+                data-city-grant-create
+            >
                 Create New Grant
             </button>
         </x-slot:menu>
@@ -197,8 +203,14 @@
                             @endif
                         </td>
                         <td>
-                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal"
-                                    onclick="editGrant({{ json_encode($grant) }})">Edit
+                            <button
+                                class="btn btn-primary btn-sm"
+                                type="button"
+                                data-bs-toggle="modal"
+                                data-bs-target="#grantModal"
+                                data-city-grant-edit='@json($grant)'
+                            >
+                                Edit
                             </button>
                         </td>
                     </tr>
@@ -282,12 +294,10 @@
                             <div class="mb-3">
                                 <label class="form-label">City Grants to Check</label>
                                 <div class="flex flex-wrap gap-2 mb-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="setGrantReminderSelection(true)">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-grant-reminder-select="all">
                                         Select All
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="setGrantReminderSelection(false)">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-grant-reminder-select="none">
                                         Select None
                                     </button>
                                 </div>
@@ -376,9 +386,45 @@
             });
         }
 
+        function initCityGrantAdminPage() {
+            document.querySelectorAll('[data-city-grant-create]').forEach((button) => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
+                button.addEventListener('click', () => clearGrantForm());
+            });
+
+            document.querySelectorAll('[data-city-grant-edit]').forEach((button) => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
+                button.addEventListener('click', () => {
+                    editGrant(JSON.parse(button.dataset.cityGrantEdit || '{}'));
+                });
+            });
+
+            document.querySelectorAll('[data-grant-reminder-select]').forEach((button) => {
+                if (button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
+                button.addEventListener('click', () => {
+                    setGrantReminderSelection(button.dataset.grantReminderSelect === 'all');
+                });
+            });
+        }
+
+        document.addEventListener('codex:page-ready', initCityGrantAdminPage);
+        initCityGrantAdminPage();
+
         @can('manage-city-grants')
             @if ($errors->has('grant_ids') || $errors->has('message'))
-            document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('codex:page-ready', () => {
                 const reminderModal = document.getElementById('grantReminderModal');
                 if (reminderModal) {
                     reminderModal.classList.add('show');
