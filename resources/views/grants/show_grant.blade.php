@@ -23,34 +23,34 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr,1fr]">
-        <div class="space-y-6">
-            <x-utils.card title="Grant Details" extraClasses="shadow-xl border border-base-300">
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                    @if ($grant->money > 0)
+    <div class="space-y-6">
+        <x-utils.card title="Grant Details" extraClasses="shadow-xl border border-base-300">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                @if ($grant->money > 0)
+                    <div class="rounded-xl bg-base-200 p-4">
+                        <div class="text-xs uppercase tracking-wide text-base-content/55">Money</div>
+                        <div class="mt-2 text-xl font-semibold text-success">${{ number_format($grant->money) }}</div>
+                    </div>
+                @endif
+
+                @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
+                    @if ((int) $grant->$resource > 0)
                         <div class="rounded-xl bg-base-200 p-4">
-                            <div class="text-xs uppercase tracking-wide text-base-content/55">Money</div>
-                            <div class="mt-2 text-xl font-semibold text-success">${{ number_format($grant->money) }}</div>
+                            <div class="text-xs uppercase tracking-wide text-base-content/55">{{ ucfirst($resource) }}</div>
+                            <div class="mt-2 text-xl font-semibold text-success">{{ number_format($grant->$resource) }}</div>
                         </div>
                     @endif
+                @endforeach
+            </div>
 
-                    @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
-                        @if ((int) $grant->$resource > 0)
-                            <div class="rounded-xl bg-base-200 p-4">
-                                <div class="text-xs uppercase tracking-wide text-base-content/55">{{ ucfirst($resource) }}</div>
-                                <div class="mt-2 text-xl font-semibold text-success">{{ number_format($grant->$resource) }}</div>
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
+            <div class="mt-4">
+                <span class="badge badge-outline badge-lg">
+                    {{ $grant->is_one_time ? 'One-time Grant' : 'Reusable Grant' }}
+                </span>
+            </div>
+        </x-utils.card>
 
-                <div class="mt-4">
-                    <span class="badge badge-outline badge-lg">
-                        {{ $grant->is_one_time ? 'One-time Grant' : 'Reusable Grant' }}
-                    </span>
-                </div>
-            </x-utils.card>
-
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr,1fr]">
             <x-utils.card title="Eligibility" extraClasses="shadow-xl border border-base-300">
                 @if (! empty($eligibilityReport['summary']))
                     <div class="space-y-3">
@@ -84,48 +84,48 @@
                     </div>
                 @endif
             </x-utils.card>
-        </div>
 
-        <div class="space-y-6">
-            @if ($alreadyApplied)
-                <div class="alert alert-info shadow-lg">
-                    <span class="text-lg">You’ve already received this grant.</span>
-                </div>
-            @else
-                <x-utils.card title="Apply for this Grant" extraClasses="shadow-xl border border-base-300">
-                    <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="apply-form" class="space-y-4">
-                        @csrf
-
-                        <div class="form-control w-full">
-                            <label class="label font-semibold text-base-content" for="account_id">Select Bank Account</label>
-                            <select name="account_id" id="account_id" class="select select-bordered w-full">
-                                <option value="">-- Choose an account --</option>
-                                @foreach ($accounts as $account)
-                                    <option value="{{ $account->id }}">{{ $account->name }} (Balance: ${{ number_format($account->money) }})</option>
-                                @endforeach
-                            </select>
-                            @error('account_id')
-                                <span class="mt-1 text-sm text-error">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-full sm:w-auto" @disabled(! empty($eligibilityReport['failures']))>
-                            Apply for Grant
-                        </button>
-                    </form>
-                </x-utils.card>
-            @endif
-
-            @if (! empty($grant->description))
-                <x-utils.card title="Grant Overview" extraClasses="bg-base-100 shadow border border-base-200">
-                    <div class="prose max-w-none">
-                        {!! Str::of($grant->description)->markdown([
-                            'html_input' => 'strip',
-                            'allow_unsafe_links' => false,
-                        ]) !!}
+            <div class="space-y-6">
+                @if ($alreadyApplied)
+                    <div class="alert alert-info shadow-lg">
+                        <span class="text-lg">You’ve already received this grant.</span>
                     </div>
-                </x-utils.card>
-            @endif
+                @else
+                    <x-utils.card title="Apply for this Grant" extraClasses="shadow-xl border border-base-300">
+                        <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="apply-form" class="space-y-4">
+                            @csrf
+
+                            <div class="form-control w-full">
+                                <label class="label font-semibold text-base-content" for="account_id">Select Bank Account</label>
+                                <select name="account_id" id="account_id" class="select select-bordered w-full">
+                                    <option value="">-- Choose an account --</option>
+                                    @foreach ($accounts as $account)
+                                        <option value="{{ $account->id }}">{{ $account->name }} (Balance: ${{ number_format($account->money) }})</option>
+                                    @endforeach
+                                </select>
+                                @error('account_id')
+                                    <span class="mt-1 text-sm text-error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-full sm:w-auto" @disabled(! empty($eligibilityReport['failures']))>
+                                Apply for Grant
+                            </button>
+                        </form>
+                    </x-utils.card>
+                @endif
+            </div>
         </div>
+
+        @if (! empty($grant->description))
+            <x-utils.card title="Grant Overview" extraClasses="bg-base-100 shadow border border-base-200">
+                <div class="prose max-w-none">
+                    {!! Str::of($grant->description)->markdown([
+                        'html_input' => 'strip',
+                        'allow_unsafe_links' => false,
+                    ]) !!}
+                </div>
+            </x-utils.card>
+        @endif
     </div>
 @endsection
