@@ -142,7 +142,7 @@
                                 <div class="text-sm text-base-content/50">{{ Str::limit($grant->description, 72) }}</div>
                             </td>
                             <td>
-                                <x-badge : value="$grant->is_enabled ? 'Enabled' : 'Disabled'"
+                                <x-badge :value="$grant->is_enabled ? 'Enabled' : 'Disabled'"
                                          :class="$grant->is_enabled ? 'badge-success badge-sm' : 'badge-ghost badge-sm'" />
                             </td>
                             <td>{{ $grant->is_one_time ? 'Yes' : 'No' }}</td>
@@ -150,7 +150,7 @@
                                 @if (!empty($grant->requirement_summary))
                                     <div class="flex flex-wrap gap-1">
                                         @foreach (array_slice($grant->requirement_summary, 0, 3) as $summary)
-                                            <x-badge : value="$summary" class="badge-ghost badge-sm" />
+                                            <x-badge :value="$summary" class="badge-ghost badge-sm" />
                                         @endforeach
                                         @if (count($grant->requirement_summary) > 3)
                                             <x-badge  value="+{{ count($grant->requirement_summary) - 3 }} more" class="badge-neutral badge-sm" />

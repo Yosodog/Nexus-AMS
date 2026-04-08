@@ -234,7 +234,7 @@
                 <x-slot:title>
                     <div class="flex items-center gap-2">
                         Loan Applications
-                        <x-badge : value="$loanApplicationsEnabled ? 'Open' : 'Closed'"
+                        <x-badge :value="$loanApplicationsEnabled ? 'Open' : 'Closed'"
                                  :class="$loanApplicationsEnabled ? 'badge-success badge-sm' : 'badge-warning badge-sm'" />
                     </div>
                 </x-slot:title>

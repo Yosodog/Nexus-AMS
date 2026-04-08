@@ -1,13 +1,4 @@
-<div>
-    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 pb-4 pt-4">
-        <span class="grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 font-black uppercase tracking-[0.18em] text-primary">
-            {{ str(config('app.name'))->substr(0, 2)->upper() }}
-        </span>
-        <span class="hidden-when-collapsed text-sm font-black uppercase tracking-[0.18em] text-base-content">
-            {{ config('app.name') }}
-        </span>
-    </a>
-
+<div class="pt-2">
     <x-menu activate-by-route>
 
         {{-- Dashboard --}}
@@ -64,13 +55,13 @@
         <x-menu-sub
             title="Grants"
             icon="o-home-modern"
-            :open="request()->routeIs('admin.grants.city', 'admin.grants')"
+            :open="in_array(request()->route()?->getName(), ['admin.grants.city', 'admin.grants'], true)"
         >
             <x-menu-item no-wire-navigate
                 title="City Grants"
                 icon="o-home"
                 :link="route('admin.grants.city')"
-                :active="request()->routeIs('admin.grants.city')"
+                :active="request()->route()?->getName() === 'admin.grants.city'"
                 :badge="($pendingCounts['city_grants'] ?? 0) > 0 ? (string) ($pendingCounts['city_grants'] ?? 0) : null"
                 badge-classes="badge-primary badge-sm"
                 :hidden="! auth()->user()?->can('view-city-grants')"
@@ -79,7 +70,7 @@
                 title="Grants"
                 icon="o-gift"
                 :link="route('admin.grants')"
-                :active="request()->routeIs('admin.grants')"
+                :active="request()->route()?->getName() === 'admin.grants'"
                 :badge="($pendingCounts['grants'] ?? 0) > 0 ? (string) ($pendingCounts['grants'] ?? 0) : null"
                 badge-classes="badge-primary badge-sm"
                 :hidden="! auth()->user()?->can('view-grants')"

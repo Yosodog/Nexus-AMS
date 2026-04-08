@@ -382,7 +382,6 @@ nation.last_active &lt; (now - 86400) // not supported directly; compare against
     </div>
 
     @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.2/dist/cdn.min.js" defer></script>
         <script>
             function projectBitsGenerator(projects) {
                 const normalizedProjects = Object.fromEntries(

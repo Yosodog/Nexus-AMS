@@ -2,8 +2,18 @@ import './bootstrap';
 
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
+const THEME_STORAGE_KEY = 'nexus-theme';
+const DEFAULT_THEME = 'acid';
+const DARK_THEMES = new Set(['night', 'sunset']);
 
 const normalizeValue = (value) => value.replace(/\s+/g, ' ').trim();
+
+const applyTheme = (theme) => {
+    const resolvedTheme = theme || DEFAULT_THEME;
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+    document.documentElement.setAttribute('data-bs-theme', DARK_THEMES.has(resolvedTheme) ? 'dark' : 'light');
+    document.documentElement.dataset.theme = resolvedTheme;
+};
 
 const parseSortableValue = (value) => {
     const normalized = normalizeValue(String(value ?? ''));
@@ -45,8 +55,12 @@ const closeModal = (modal) => {
         return;
     }
 
+    modal.dispatchEvent(new Event('hide.bs.modal'));
+
     if (typeof modal.close === 'function' && modal.tagName === 'DIALOG') {
-        modal.close();
+        if (modal.open) {
+            modal.close();
+        }
         modal.dispatchEvent(new Event('hidden.bs.modal'));
         return;
     }
@@ -63,9 +77,13 @@ const openModal = (modal) => {
         return;
     }
 
+    modal.dispatchEvent(new Event('show.bs.modal'));
+
     if (typeof modal.showModal === 'function' && modal.tagName === 'DIALOG') {
-        modal.showModal();
-        modal.dispatchEvent(new Event('show.bs.modal'));
+        if (!modal.open) {
+            modal.showModal();
+        }
+        modal.dispatchEvent(new Event('shown.bs.modal'));
         return;
     }
 
@@ -73,7 +91,7 @@ const openModal = (modal) => {
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    modal.dispatchEvent(new Event('show.bs.modal'));
+    modal.dispatchEvent(new Event('shown.bs.modal'));
 };
 
 const enableMobileTableScrolling = (root = document) => {
@@ -254,10 +272,38 @@ const enableBootstrapCollapseCompatibility = () => {
     });
 };
 
+const enableThemePicker = (root = document) => {
+    const activeTheme = localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.getAttribute('data-theme') || DEFAULT_THEME;
+    applyTheme(activeTheme);
+
+    root.querySelectorAll('[data-theme-option]').forEach((button) => {
+        if (button.dataset.themeBound === 'true') {
+            button.classList.toggle('menu-active', button.dataset.themeOption === activeTheme);
+            return;
+        }
+
+        button.dataset.themeBound = 'true';
+        button.classList.toggle('menu-active', button.dataset.themeOption === activeTheme);
+
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            const theme = button.dataset.themeOption || DEFAULT_THEME;
+            localStorage.setItem(THEME_STORAGE_KEY, theme);
+            applyTheme(theme);
+
+            document.querySelectorAll('[data-theme-option]').forEach((item) => {
+                item.classList.toggle('menu-active', item.dataset.themeOption === theme);
+            });
+        });
+    });
+};
+
 const initAppUi = (root = document) => {
     enableMobileTableScrolling(root);
     enableBootstrapTooltipCompatibility(root);
     enableSortableTables(root);
+    enableThemePicker(root);
 };
 
 enableBootstrapModalCompatibility();

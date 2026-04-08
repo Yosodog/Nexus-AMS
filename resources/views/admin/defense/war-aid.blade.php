@@ -2,21 +2,17 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row">
-                <div class="col-sm-6"><h3 class="mb-0">War Aid Management</h3></div>
-                <div class="col-sm-6 text-right">
-                    <form method="POST" action="{{ route('admin.war-aid.toggle') }}">
-                        @csrf
-                        <button class="btn btn-{{ $enabled ? 'warning' : 'success' }}">
-                            {{ $enabled ? 'Disable War Aid' : 'Enable War Aid' }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="War Aid Management" separator>
+        <x-slot:subtitle>Review pending requests, issue manual aid, and keep wartime payouts organized.</x-slot:subtitle>
+        <x-slot:actions>
+            <form method="POST" action="{{ route('admin.war-aid.toggle') }}">
+                @csrf
+                <button class="btn btn-{{ $enabled ? 'warning' : 'success' }} btn-sm">
+                    {{ $enabled ? 'Disable War Aid' : 'Enable War Aid' }}
+                </button>
+            </form>
+        </x-slot:actions>
+    </x-header>
 
     <div class="space-y-6">
         <div class="w-full">
@@ -28,13 +24,13 @@
                         <h3 class="card-title">Pending Requests</h3>
                     </div>
                     <div class="card-body">
+                        <div class="space-y-4">
                         @foreach ($pending as $req)
                             @php
                                 $nation = $req->nation;
                                 $account = $req->account;
                             @endphp
-                            <div class="card mb-4 shadow-sm border">
-                                <div class="card-body">
+                            <div class="rounded-2xl border border-base-300 bg-base-200/50 p-4">
 
                                     {{-- Approve Form --}}
                                     <form method="POST" action="{{ route('admin.war-aid.approve', $req) }}">
@@ -103,9 +99,9 @@
                                         <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                                     </form>
 
-                                </div>
                             </div>
                         @endforeach
+                        </div>
                     </div>
                 </div>
             @endif

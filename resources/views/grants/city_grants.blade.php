@@ -216,7 +216,13 @@
                 <span class="text-xs text-base-content/60">Sorted by city then latest activity</span>
             </div>
 
-            <x-utils.card title="Previous City Grant Requests" extraClasses="shadow-sm bg-base-100 text-base-content">
+            <x-card class="border border-base-300/70 bg-base-100/95">
+                <x-slot:title>
+                    <div>
+                        Previous City Grant Requests
+                        <div class="text-sm font-normal text-base-content/60">Every submission with its final review status.</div>
+                    </div>
+                </x-slot:title>
                 @if ($grantRequests->isEmpty())
                     <div class="flex items-center justify-center py-8 text-center text-base-content/70 text-sm">
                         <div>
@@ -259,7 +265,7 @@
                         </table>
                     </div>
                 @endif
-            </x-utils.card>
+            </x-card>
         </section>
 
         <section class="space-y-4">
@@ -277,12 +283,12 @@
                     @endphp
 
                     <article @class([
-                        'card border bg-base-100 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
-                        'border-primary/30 bg-primary/5 ring-1 ring-primary/20' => $isCurrent,
-                        'border-success/30 bg-success/5' => $isPast,
-                        'border-base-300' => ! $isCurrent && ! $isPast,
+                        'rounded-3xl border bg-base-100/95 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                        'border-primary/30 bg-gradient-to-br from-primary/10 via-base-100 to-info/10 ring-1 ring-primary/20' => $isCurrent,
+                        'border-success/30 bg-gradient-to-br from-success/10 via-base-100 to-base-100' => $isPast,
+                        'border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/40' => ! $isCurrent && ! $isPast,
                     ])>
-                        <div class="card-body gap-4">
+                        <div class="space-y-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 class="text-lg font-bold text-base-content">City #{{ $grant->city_number }}</h3>

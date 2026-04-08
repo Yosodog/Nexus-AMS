@@ -57,7 +57,7 @@
                 @if (! is_null($kpi['trend']))
                     <x-slot:figure>
                         <x-badge
-                            : value="($kpi['trend'] >= 0 ? '+' : '') . $formatNumber($kpi['trend'], 1) . '%'"
+                            :value="($kpi['trend'] >= 0 ? '+' : '') . $formatNumber($kpi['trend'], 1) . '%'"
                             :class="$kpi['trend'] >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
                         />
                     </x-slot:figure>
@@ -70,10 +70,10 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="Tax Intake (Money)">
             <x-slot:menu>
-                <x-badge : value="$formatMoney($taxMoneyThisWeek, 0) . ' / 7d'" class="badge-success badge-sm" />
+                <x-badge :value="$formatMoney($taxMoneyThisWeek, 0) . ' / 7d'" class="badge-success badge-sm" />
                 @if (! is_null($taxMoneyTrend))
                     <x-badge
-                        : value="($taxMoneyTrend >= 0 ? '+' : '') . $formatNumber($taxMoneyTrend, 1) . '% vs prior week'"
+                        :value="($taxMoneyTrend >= 0 ? '+' : '') . $formatNumber($taxMoneyTrend, 1) . '% vs prior week'"
                         :class="$taxMoneyTrend >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
                     />
                 @endif
@@ -96,10 +96,10 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="War Tempo & Damage (14 Days)">
             <x-slot:menu>
-                <x-badge : value="$formatNumber($warsThisWeek) . ' wars launched'" class="badge-error badge-sm" />
+                <x-badge :value="$formatNumber($warsThisWeek) . ' wars launched'" class="badge-error badge-sm" />
                 @if (! is_null($warTrend))
                     <x-badge
-                        : value="($warTrend >= 0 ? '+' : '') . $formatNumber($warTrend, 1) . '% vs prior week'"
+                        :value="($warTrend >= 0 ? '+' : '') . $formatNumber($warTrend, 1) . '% vs prior week'"
                         :class="$warTrend >= 0 ? 'badge-error badge-sm' : 'badge-success badge-sm'"
                     />
                 @endif
@@ -113,7 +113,7 @@
         <x-card title="MMR Readiness">
             <x-slot:menu>
                 <x-badge
-                    : value="$formatNumber($mmrCoverage, 1) . '% compliant (' . $mmrCompliantCount . '/' . $formatNumber($totalMembers) . ')'"
+                    :value="$formatNumber($mmrCoverage, 1) . '% compliant (' . $mmrCompliantCount . '/' . $formatNumber($totalMembers) . ')'"
                     class="badge-info badge-sm"
                 />
             </x-slot:menu>
@@ -132,7 +132,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
         <x-card title="Resource Stockpile">
             <x-slot:menu>
-                <x-badge : value="'≈ ' . $formatMoney($resourceTotalValue, 0) . ' total'" class="badge-neutral badge-sm" />
+                <x-badge :value="'≈ ' . $formatMoney($resourceTotalValue, 0) . ' total'" class="badge-neutral badge-sm" />
             </x-slot:menu>
             <canvas id="resourceChart" height="240"></canvas>
             <p class="text-base-content/50 text-sm mt-3 mb-2">
@@ -370,7 +370,7 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <x-badge : value="\Illuminate\Support\Str::headline($war->war_type)" class="badge-error badge-xs" />
+                                <x-badge :value="\Illuminate\Support\Str::headline($war->war_type)" class="badge-error badge-xs" />
                                 <div class="text-base-content/50 text-xs mt-1">Turns: {{ $formatNumber($war->turns_left) }}</div>
                             </div>
                         </div>

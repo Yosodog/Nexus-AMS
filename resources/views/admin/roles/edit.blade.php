@@ -3,201 +3,155 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                    <div class="flex align-items-center gap-2 flex-wrap">
-                        <h3 class="mb-1">Edit Role: {{ Str::headline($role->name) }}</h3>
-                    </div>
-                    <p class="text-base-content/50 mb-0">Update the name or refine the permissions assigned to this role.</p>
-                </div>
-                <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                    <i class="o-arrow-left-circle me-1"></i> Back to roles
-                </a>
-            </div>
-        </div>
-    </div>
+    <x-header :title="'Edit Role: ' . Str::headline($role->name)" separator>
+        <x-slot:subtitle>Update the role name, review assigned members, and tune permissions without leaving the page.</x-slot:subtitle>
+        <x-slot:actions>
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost btn-sm">Back to roles</a>
+        </x-slot:actions>
+    </x-header>
 
-    <form method="POST" action="{{ route('admin.roles.update', $role) }}" class="mt-3">
+    <form method="POST" action="{{ route('admin.roles.update', $role) }}">
         @csrf
         @method('PUT')
 
-        <div class="row g-3">
-            <div class="col-12 col-xl-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="mb-1">Role details</h5>
-                        <p class="text-base-content/50 small mb-4">Keep names purposeful so teammates know when to use this role.</p>
-
-                        @if($role->protected)
-                            <div class="alert alert-warning flex align-items-start gap-2 mb-3">
-                                <i class="o-shield-check-lock-fill fs-5"></i>
-                                <div>
-                                    <div class="font-semibold">Protected role</div>
-                                    <div class="small mb-0">This role is locked to prevent accidental edits. Permissions are read-only.</div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <div class="mb-3">
-                            <label class="form-label" for="role-name">Role name</label>
-                            <input id="role-name"
-                                   type="text"
-                                   name="name"
-                                   value="{{ old('name', $role->name) }}"
-                                   class="form-control @error('name') is-invalid @enderror"
-                                   placeholder="e.g. finance.reviewer"
-                                    {{ $role->protected ? 'readonly disabled' : '' }}>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @else
-                                <div class="form-text">Names appear in audit logs and member management.</div>
-                            @enderror
-                        </div>
-
-                        <div class="bg-body-secondary rounded p-3 border small">
-                            <div class="font-semibold mb-1"><i class="o-clipboard-document-check me-1"></i>Checklist</div>
-                            <ul class="mb-0 ps-3">
-                                <li>Keep responsibilities narrow.</li>
-                                <li>Only enable permissions that are truly required.</li>
-                                <li>Review membership after changing permissions.</li>
-                            </ul>
-                        </div>
-
-                        <div class="mt-4">
-                            @php
-                                $maxUsersToShow = 12;
-                                $totalUsers = $role->users->count();
-                                $visibleUsers = $role->users->take($maxUsersToShow);
-                            @endphp
-                            <div class="flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <div class="font-semibold">Assigned members</div>
-                                    <div class="text-base-content/50 small">
-                                        {{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}
-                                    </div>
-                                </div>
-                                <span class="badge bg-body-secondary border text-base-content/50">
-                                    <i class="o-users me-1"></i>{{ $totalUsers }}
-                                </span>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                @forelse($visibleUsers as $user)
-                                    @php
-                                        $flag = $user->nation?->flag;
-                                        $nationName = $user->nation?->nation_name;
-                                        $initials = collect(explode(' ', $user->name))
-                                            ->filter()
-                                            ->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))
-                                            ->take(2)
-                                            ->implode('');
-                                    @endphp
-                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-decoration-none">
-                                        <div class="flex align-items-center gap-2 border rounded-pill px-2 py-1 bg-body-secondary-subtle">
-                                            @if($flag)
-                                                <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="rounded-circle border" style="width: 36px; height: 36px; object-fit: cover;">
-                                            @else
-                                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary font-semibold" style="width: 36px; height: 36px;">
-                                                    {{ $initials ?: '?' }}
-                                                </div>
-                                            @endif
-                                            <div class="flex flex-column">
-                                                <span class="font-semibold small text-body">{{ $user->name }}</span>
-                                                <span class="text-base-content/50 small">{{ $nationName ?: 'No nation linked' }}</span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                @empty
-                                    <div class="text-base-content/50 small flex align-items-center gap-2">
-                                        <i class="o-users"></i>
-                                        <span>No members have this role yet.</span>
-                                    </div>
-                                @endforelse
-
-                                @if($totalUsers > $maxUsersToShow)
-                                    <span class="badge bg-body-secondary border text-base-content/50">
-                                        +{{ $totalUsers - $maxUsersToShow }} more
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
+        <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <x-card>
+                <x-slot:title>
+                    <div>
+                        Role Details
+                        <div class="text-sm font-normal text-base-content/60">Keep names purposeful so teammates understand when to use this role.</div>
                     </div>
-                </div>
-            </div>
+                </x-slot:title>
 
-            <div class="col-12 col-xl-8">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div>
-                            <h5 class="mb-0">Permissions</h5>
-                            <span class="text-base-content/50 small">Enable the capabilities this role should have.</span>
-                        </div>
-                        <div class="flex align-items-center gap-2 flex-wrap">
-                            <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-body"><i class="o-magnifying-glass"></i></span>
-                                <input type="search" class="form-control" placeholder="Filter permissions" data-permission-search {{ $role->protected ? 'disabled' : '' }}>
-                            </div>
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Permission quick actions">
-                                <button class="btn btn-outline-primary" type="button" data-permission-select="all" {{ $role->protected ? 'disabled' : '' }}>
-                                    <i class="o-check-badge me-1"></i> Select all
-                                </button>
-                                <button class="btn btn-outline-secondary" type="button" data-permission-select="none" {{ $role->protected ? 'disabled' : '' }}>
-                                    <i class="o-x-mark me-1"></i> Clear
-                                </button>
-                            </div>
-                        </div>
+                <div class="space-y-4">
+                    @if($role->protected)
+                        <x-alert class="alert-warning" icon="o-lock-closed">
+                            This role is protected. Its name and permissions are read-only.
+                        </x-alert>
+                    @endif
+
+                    <x-input label="Role Name"
+                             id="role-name"
+                             name="name"
+                             :value="old('name', $role->name)"
+                             placeholder="finance.reviewer"
+                             :readonly="$role->protected"
+                             :disabled="$role->protected" />
+
+                    <div class="rounded-2xl bg-base-200/70 p-4 text-sm text-base-content/75">
+                        <div class="font-semibold text-base-content">Checklist</div>
+                        <ul class="mt-2 space-y-2">
+                            <li>Keep responsibilities narrow.</li>
+                            <li>Only enable permissions that are truly required.</li>
+                            <li>Review membership after saving permission changes.</li>
+                        </ul>
                     </div>
-                    <div class="card-body">
-                        @php $selectedPermissions = old('permissions', $role->permissions->pluck('permission')->toArray()); @endphp
-                        <div class="row g-2" id="permission-grid">
-                            @foreach($permissions as $perm)
+
+                    @php
+                        $maxUsersToShow = 12;
+                        $totalUsers = $role->users->count();
+                        $visibleUsers = $role->users->take($maxUsersToShow);
+                    @endphp
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="font-semibold text-base-content">Assigned Members</div>
+                                <div class="text-sm text-base-content/60">{{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}</div>
+                            </div>
+                            <x-badge :value="(string) $totalUsers" class="badge-ghost badge-sm" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            @forelse($visibleUsers as $user)
                                 @php
-                                    $isChecked = in_array($perm, $selectedPermissions);
-                                    $isView = Str::startsWith($perm, 'view');
-                                    $typeLabel = $isView ? 'View' : 'Manage';
-                                    $typeClass = $isView ? 'bg-info-subtle text-info-emphasis border-info-subtle' : 'bg-primary-subtle text-primary-emphasis border-primary-subtle';
-                                    $typeIcon = $isView ? 'bi-eye' : 'bi-gear';
-                                    $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
+                                    $flag = $user->nation?->flag;
+                                    $nationName = $user->nation?->nation_name;
+                                    $initials = collect(explode(' ', $user->name))
+                                        ->filter()
+                                        ->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))
+                                        ->take(2)
+                                        ->implode('');
                                 @endphp
-                                <div class="col-12 col-md-6 col-lg-4 permission-item" data-permission-label="{{ Str::lower($perm) }}">
-                                    <div class="flex align-items-start gap-3 border rounded p-3 h-100 bg-body-secondary-subtle {{ $role->protected ? 'opacity-75' : '' }}">
-                                        <input type="checkbox"
-                                               name="permissions[]"
-                                               value="{{ $perm }}"
-                                               class="form-check-input position-relative mt-1 flex-shrink-0"
-                                               style="margin-left: 0; margin-right: 0.25rem;"
-                                               id="perm-{{ Str::slug($perm) }}"
-                                                {{ $isChecked ? 'checked' : '' }}
-                                                {{ $role->protected ? 'disabled' : '' }}>
-                                        <label for="perm-{{ Str::slug($perm) }}" class="form-check-label w-100">
-                                            <div class="flex justify-content-between align-items-center">
-                                                <span class="font-semibold">{{ Str::headline($perm) }}</span>
-                                                <span class="badge border {{ $typeClass }}">
-                                                    <i class="bi {{ $typeIcon }} me-1"></i>{{ $typeLabel }}
-                                                </span>
-                                            </div>
-                                            <span class="text-base-content/50 small d-block mt-1">{{ $description }}</span>
-                                        </label>
+                                <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
+                                    @if($flag)
+                                        <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="h-10 w-10 rounded-full border border-base-300 object-cover">
+                                    @else
+                                        <div class="grid h-10 w-10 place-items-center rounded-full bg-primary/15 font-semibold text-primary">{{ $initials ?: '?' }}</div>
+                                    @endif
+                                    <div class="min-w-0">
+                                        <div class="truncate font-semibold text-base-content">{{ $user->name }}</div>
+                                        <div class="truncate text-sm text-base-content/60">{{ $nationName ?: 'No nation linked' }}</div>
                                     </div>
+                                </a>
+                            @empty
+                                <div class="rounded-2xl border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
+                                    No members have this role yet.
                                 </div>
-                            @endforeach
+                            @endforelse
                         </div>
-                        <div class="text-base-content/50 small mt-3">
-                            <i class="o-information-circle me-1"></i>Changes apply as soon as you save the role.
-                        </div>
+
+                        @if($totalUsers > $maxUsersToShow)
+                            <x-badge :value="'+' . ($totalUsers - $maxUsersToShow) . ' more'" class="badge-ghost badge-sm" />
+                        @endif
                     </div>
                 </div>
-            </div>
-        </div>
+            </x-card>
 
-        <div class="flex justify-content-end gap-2 mt-3">
-            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">Back</a>
-            @if(!$role->protected)
-                <button type="submit" class="btn btn-success">
-                    <i class="o-check me-1"></i> Save changes
-                </button>
-            @endif
+            <x-card>
+                <x-slot:title>
+                    <div>
+                        Permissions
+                        <div class="text-sm font-normal text-base-content/60">Enable only the capabilities this role should have.</div>
+                    </div>
+                </x-slot:title>
+                <x-slot:menu>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="join">
+                            <button class="btn btn-outline btn-primary btn-sm join-item" type="button" data-permission-select="all" {{ $role->protected ? 'disabled' : '' }}>Select all</button>
+                            <button class="btn btn-ghost btn-sm join-item" type="button" data-permission-select="none" {{ $role->protected ? 'disabled' : '' }}>Clear</button>
+                        </div>
+                        <x-input placeholder="Filter permissions" icon="o-magnifying-glass" data-permission-search :disabled="$role->protected" class="input-sm w-56" />
+                    </div>
+                </x-slot:menu>
+
+                @php $selectedPermissions = old('permissions', $role->permissions->pluck('permission')->toArray()); @endphp
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" id="permission-grid">
+                    @foreach($permissions as $perm)
+                        @php
+                            $isChecked = in_array($perm, $selectedPermissions);
+                            $isView = Str::startsWith($perm, 'view');
+                            $typeLabel = $isView ? 'View' : 'Manage';
+                            $typeClass = $isView ? 'badge-info badge-outline' : 'badge-primary badge-outline';
+                            $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
+                        @endphp
+                        <label class="permission-item flex cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-4 transition hover:border-primary/30 hover:bg-primary/5 {{ $role->protected ? 'opacity-75' : '' }}"
+                               data-permission-label="{{ Str::lower($perm) }}">
+                            <input type="checkbox"
+                                   name="permissions[]"
+                                   value="{{ $perm }}"
+                                   class="checkbox checkbox-primary mt-1"
+                                   id="perm-{{ Str::slug($perm) }}"
+                                   {{ $isChecked ? 'checked' : '' }}
+                                   {{ $role->protected ? 'disabled' : '' }}>
+                            <span class="min-w-0 flex-1">
+                                <span class="flex flex-wrap items-center justify-between gap-2">
+                                    <span class="font-semibold text-base-content">{{ Str::headline($perm) }}</span>
+                                    <x-badge :value="$typeLabel" class="{{ $typeClass }} badge-sm" />
+                                </span>
+                                <span class="mt-1 block text-sm text-base-content/60">{{ $description }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="mt-4 flex justify-end gap-2 border-t border-base-300 pt-4">
+                    <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost">Back</a>
+                    @if(! $role->protected)
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    @endif
+                </div>
+            </x-card>
         </div>
     </form>
 @endsection
@@ -217,7 +171,7 @@
 
                     items.forEach((item) => {
                         const label = item.getAttribute('data-permission-label') || '';
-                        item.classList.toggle('d-none', term && !label.includes(term));
+                        item.classList.toggle('hidden', term && !label.includes(term));
                     });
                 });
             }

@@ -1,34 +1,15 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Ongoing Wars</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Ongoing Wars" separator>
+        <x-slot:subtitle>Track active conflicts, recent launch tempo, and damage patterns across the alliance battlefield.</x-slot:subtitle>
+    </x-header>
 
-    {{-- Info Boxes --}}
-    <div class="row">
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-fire" bgColor="badge-error" title="Ongoing Wars"
-                              :value="$stats['total_ongoing']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-calendar-days" bgColor="badge-info" title="Wars Last 7 Days"
-                              :value="$stats['wars_last_7_days']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-clock" bgColor="badge-warning" title="Avg Duration (days)"
-                              :value="$stats['avg_duration']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="o-banknotes" bgColor="badge-success" title="Looted (7 Days)"
-                              :value="'$' . number_format($stats['total_looted'], 2)"/>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="Ongoing Wars" :value="number_format($stats['total_ongoing'])" icon="o-fire" color="text-error" description="Current active war records" />
+        <x-stat title="Wars Last 7 Days" :value="number_format($stats['wars_last_7_days'])" icon="o-calendar-days" color="text-info" description="Recent launches across all tracked alliances" />
+        <x-stat title="Avg Duration" :value="number_format((float) $stats['avg_duration'], 1) . ' days'" icon="o-clock" color="text-warning" description="Average age of ongoing wars" />
+        <x-stat title="Looted (7 Days)" :value="'$' . number_format((float) $stats['total_looted'], 2)" icon="o-banknotes" color="text-success" description="Recent looted money in tracked wars" />
     </div>
 
     {{-- Charts --}}

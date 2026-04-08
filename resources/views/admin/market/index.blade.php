@@ -12,65 +12,27 @@
         </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-primary text-white shadow">
-                    <i class="o-archive-box"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-base-content/50 font-semibold">30d Volume</span>
-                    <span class="info-box-number fs-4 font-semibold">
-                        {{ number_format($overview['stats']['volume'], $overview['stats']['volume'] >= 1000 ? 0 : 2) }}
-                    </span>
-                    <span class="text-base-content/50 small">Units sold across all resources.</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-success text-white shadow">
-                    <i class="o-banknotes"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-base-content/50 font-semibold">30d Paid</span>
-                    <span class="info-box-number fs-4 font-semibold">
-                        ${{ number_format($overview['stats']['total_paid'], 2) }}
-                    </span>
-                    <span class="text-base-content/50 small">Total cash paid out.</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-info text-white shadow">
-                    <i class="o-trophy"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-base-content/50 font-semibold">Top Resource</span>
-                    <span class="info-box-number fs-4 font-semibold text-capitalize">
-                        {{ $overview['stats']['top_resource'] ? str_replace('_', ' ', $overview['stats']['top_resource']) : '—' }}
-                    </span>
-                    <span class="text-base-content/50 small">
-                        ${{ number_format($overview['stats']['top_resource_paid'], 2) }} paid in 30d.
-                    </span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-warning text-white shadow">
-                    <i class="o-clipboard-document-check"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-base-content/50 font-semibold">Remaining Cap</span>
-                    <span class="info-box-number fs-4 font-semibold">
-                        {{ number_format($overview['stats']['total_remaining_cap'], $overview['stats']['total_remaining_cap'] >= 1000 ? 0 : 2) }}
-                    </span>
-                    <span class="text-base-content/50 small">Total remaining across resources.</span>
-                </div>
-            </div>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="30d Volume"
+                :value="number_format($overview['stats']['volume'], $overview['stats']['volume'] >= 1000 ? 0 : 2)"
+                icon="o-archive-box"
+                color="text-primary"
+                description="Units sold across all listed resources" />
+        <x-stat title="30d Paid"
+                :value="'$' . number_format($overview['stats']['total_paid'], 2)"
+                icon="o-banknotes"
+                color="text-success"
+                description="Alliance cash paid to sellers" />
+        <x-stat title="Top Resource"
+                :value="$overview['stats']['top_resource'] ? str_replace('_', ' ', $overview['stats']['top_resource']) : '—'"
+                icon="o-trophy"
+                color="text-info"
+                :description="'$' . number_format($overview['stats']['top_resource_paid'], 2) . ' paid in 30d'" />
+        <x-stat title="Remaining Cap"
+                :value="number_format($overview['stats']['total_remaining_cap'], $overview['stats']['total_remaining_cap'] >= 1000 ? 0 : 2)"
+                icon="o-clipboard-document-check"
+                color="text-warning"
+                description="Combined remaining buy cap across resources" />
     </div>
 
     <div class="row g-4 mb-4">

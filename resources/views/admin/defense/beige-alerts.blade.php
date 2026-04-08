@@ -1,18 +1,9 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Beige Alerts</h3>
-                    <div class="text-base-content/50 small">
-                        Tracks enemy alliances for beige sniping windows and early beige exits.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Beige Alerts" separator>
+        <x-slot:subtitle>Track enemy alliances for beige sniping windows, early exits, and next-turn opportunities.</x-slot:subtitle>
+    </x-header>
 
     <div class="card mt-4">
         <div class="card-header">Alert Settings</div>
@@ -51,42 +42,11 @@
         </div>
     </div>
 
-    <div class="row mt-4 g-3">
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="text-base-content/50 small">Tracked Alliances</div>
-                    <div class="fs-4 font-semibold">{{ number_format($trackedAlliances->count()) }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="text-base-content/50 small">Beige Nations</div>
-                    <div class="fs-4 font-semibold">{{ number_format($totalBeigeNations) }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="text-base-content/50 small">Leaving Next Turn</div>
-                    <div class="fs-4 font-semibold text-warning">{{ number_format($nextTurnLeavers) }}</div>
-                    <div class="small text-base-content/50">
-                        Next turn: {{ $nextTurnChangeAt->format('M d, H:i') }}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="text-base-content/50 small">Average Score</div>
-                    <div class="fs-4 font-semibold">{{ number_format($avgScore, 2) }}</div>
-                </div>
-            </div>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" />
+        <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" />
+        <x-stat title="Leaving Next Turn" :value="number_format($nextTurnLeavers)" icon="o-clock" color="text-warning" :description="'Next turn: ' . $nextTurnChangeAt->format('M d, H:i')" />
+        <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" />
     </div>
 
     <div class="card mt-4">

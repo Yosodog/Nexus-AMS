@@ -1,25 +1,23 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row">
-                <div class="col-sm-6"><h3 class="mb-0">Rebuilding Management</h3></div>
-                <div class="col-sm-6 text-right flex justify-content-end gap-2">
-                    <form method="POST" action="{{ route('admin.rebuilding.toggle') }}">
-                        @csrf
-                        <button class="btn btn-{{ $enabled ? 'warning' : 'success' }}">
-                            {{ $enabled ? 'Close Rebuilding' : 'Open Rebuilding' }}
-                        </button>
-                    </form>
-                    <form method="POST" action="{{ route('admin.rebuilding.reset') }}" onsubmit="return confirm('Reset rebuilding for a new cycle?');">
-                        @csrf
-                        <button class="btn btn-outline-danger">Reset Cycle</button>
-                    </form>
-                </div>
+    <x-header title="Rebuilding Management" separator>
+        <x-slot:subtitle>Track estimates, payout throughput, and member eligibility through the current rebuilding cycle.</x-slot:subtitle>
+        <x-slot:actions>
+            <div class="flex flex-wrap justify-end gap-2">
+                <form method="POST" action="{{ route('admin.rebuilding.toggle') }}">
+                    @csrf
+                    <button class="btn btn-{{ $enabled ? 'warning' : 'success' }} btn-sm">
+                        {{ $enabled ? 'Close Rebuilding' : 'Open Rebuilding' }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('admin.rebuilding.reset') }}" onsubmit="return confirm('Reset rebuilding for a new cycle?');">
+                    @csrf
+                    <button class="btn btn-outline-danger btn-sm">Reset Cycle</button>
+                </form>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-header>
 
     <div class="space-y-6">
         <div class="w-full">

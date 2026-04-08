@@ -117,7 +117,7 @@
                             <x-badge  value="{{ number_format((int) $summary['entry_count']) }} entries" class="badge-ghost badge-sm" />
                             <x-badge  value="Income: {{ $formatCurrency($summary['income']) }}" class="badge-success badge-sm" />
                             <x-badge  value="Expense: {{ $formatCurrency($summary['expense']) }}" class="badge-error badge-sm" />
-                            <x-badge : value="'Net: ' . $formatCurrency($summary['net'])"
+                            <x-badge :value="'Net: ' . $formatCurrency($summary['net'])"
                                      :class="$summary['net'] >= 0 ? 'badge-primary badge-sm' : 'badge-warning badge-sm'" />
                         </div>
                     </button>

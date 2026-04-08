@@ -31,7 +31,7 @@
         <x-stat title="Active Today" :value="number_format($stats['active_today'])" icon="o-bolt" color="text-success" description="Seen within the last 24 hours" />
     </div>
 
-    <div class="mb-6 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
+    <div class="mb-6">
         <x-card>
             <x-slot:title>
                 <div>
@@ -158,40 +158,41 @@
                 {{ $users->onEachSide(1)->links() }}
             </div>
         </x-card>
+    </div>
 
-        <x-card>
-            <x-slot:title>
-                <div>
-                    MFA Requirements
-                    <div class="text-sm font-normal text-base-content/60">Control Fortify enrollment requirements without leaving this screen.</div>
-                </div>
-            </x-slot:title>
+    <x-card>
+        <x-slot:title>
+            <div>
+                MFA Requirements
+                <div class="text-sm font-normal text-base-content/60">Control Fortify enrollment requirements without leaving this screen.</div>
+            </div>
+        </x-slot:title>
 
-            <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="space-y-4">
-                @csrf
+        <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="grid gap-4 lg:grid-cols-3">
+            @csrf
 
-                <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
-                    <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-all-users" name="require_mfa_all_users" value="1" @checked($mfaRequirements['all_users'])>
-                    <span>
-                        <span class="block font-semibold text-base-content">Require MFA for all users</span>
-                        <span class="mt-1 block text-sm text-base-content/60">Force every authenticated user to enroll before using the app.</span>
-                    </span>
-                </label>
+            <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
+                <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-all-users" name="require_mfa_all_users" value="1" @checked($mfaRequirements['all_users'])>
+                <span>
+                    <span class="block font-semibold text-base-content">Require MFA for all users</span>
+                    <span class="mt-1 block text-sm text-base-content/60">Force every authenticated user to enroll before using the app.</span>
+                </span>
+            </label>
 
-                <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
-                    <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-admins" name="require_mfa_admins" value="1" @checked($mfaRequirements['admins'])>
-                    <span>
-                        <span class="block font-semibold text-base-content">Require MFA for admins</span>
-                        <span class="mt-1 block text-sm text-base-content/60">Protect privileged accounts even when the global requirement stays off.</span>
-                    </span>
-                </label>
+            <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
+                <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-admins" name="require_mfa_admins" value="1" @checked($mfaRequirements['admins'])>
+                <span>
+                    <span class="block font-semibold text-base-content">Require MFA for admins</span>
+                    <span class="mt-1 block text-sm text-base-content/60">Protect privileged accounts even when the global requirement stays off.</span>
+                </span>
+            </label>
 
-                <div class="rounded-box bg-base-200/70 px-4 py-3 text-sm text-base-content/70">
+            <div class="flex h-full flex-col justify-between rounded-box bg-base-200/70 px-4 py-4">
+                <div class="text-sm text-base-content/70">
                     Administrators should enable MFA first before turning on the all-user requirement.
                 </div>
-
-                <button type="submit" class="btn btn-primary w-full">Save MFA Policy</button>
-            </form>
-        </x-card>
+                <button type="submit" class="btn btn-primary mt-4 w-full">Save MFA Policy</button>
+            </div>
+        </form>
     </div>
 @endsection

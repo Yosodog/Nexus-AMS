@@ -126,7 +126,7 @@
                     </div>
                     <div class="text-sm text-base-content/50">After covering member balances</div>
                 </div>
-                <x-badge : value="$netCashPosition >= 0 ? 'Surplus' : 'Shortfall'"
+                <x-badge :value="$netCashPosition >= 0 ? 'Surplus' : 'Shortfall'"
                          :class="$netCashPosition >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'" />
             </div>
             <x-progress :value="min(100, max(0, $coveragePercent))"

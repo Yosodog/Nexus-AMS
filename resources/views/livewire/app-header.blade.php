@@ -52,9 +52,8 @@
                         <x-icon name="o-bars-3" class="size-5" />
                     </label>
 
-                    <a href="{{ route('home') }}" class="flex items-center gap-2 px-2 text-sm font-black uppercase tracking-[0.22em] text-base-content sm:text-base">
-                        <span class="grid size-9 place-items-center rounded-full bg-primary/15 text-primary">{{ str(config('app.name'))->substr(0, 2)->upper() }}</span>
-                        <span class="hidden sm:block">{{ config('app.name') }}</span>
+                    <a href="{{ route('home') }}" class="px-2 text-sm font-black uppercase tracking-[0.22em] text-base-content sm:text-base">
+                        {{ config('app.name') }}
                     </a>
                 </div>
 
@@ -89,7 +88,7 @@
 
             <x-slot:actions>
                 <div class="flex items-center gap-2">
-                    <x-theme-toggle light-theme="light" dark-theme="night" />
+                    <x-theme-picker />
 
                     @if($user)
                         <x-dropdown class="dropdown-end">
@@ -100,6 +99,23 @@
                                     </div>
                                 </button>
                             </x-slot:trigger>
+
+                            <div class="min-w-72 border-b border-base-300 bg-primary/10 px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar">
+                                        <div class="w-12 rounded-full ring ring-primary/30">
+                                            <img src="{{ data_get($user, 'nation.flag') }}" alt="{{ data_get($user, 'nation.leader_name', 'User') }}" class="object-cover" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-base-content">{{ data_get($user, 'nation.leader_name', $user->name) }}</p>
+                                        <p class="text-xs text-base-content/60">{{ data_get($user, 'nation.nation_name', $user->email) }}</p>
+                                        @if($showPendingIndicator)
+                                            <span class="badge badge-primary badge-xs mt-1">{{ $pendingTotal }} pending</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
 
                             <x-menu-item title="Dashboard" icon="o-squares-2x2" :link="route('user.dashboard')" no-wire-navigate />
                             <x-menu-item title="Settings" icon="o-cog-6-tooth" :link="route('user.settings')" no-wire-navigate />

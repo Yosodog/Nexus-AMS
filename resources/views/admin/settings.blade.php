@@ -1,15 +1,9 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="mb-6">
-        <div class="w-full">
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Admin Settings</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Admin Settings" separator>
+        <x-slot:subtitle>Control sync workflows, diagnostics, public-facing content, and operational toggles from one place.</x-slot:subtitle>
+    </x-header>
 
     {{-- Sync Settings Section --}}
     <div class="row mb-3">
@@ -195,6 +189,20 @@
                             <input type="text" class="form-control" id="homeClosingText" name="home_closing_text"
                                    value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300"
                                    placeholder="If this feels like the right fit, send in your application and come meet the team.">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeHeroBadge">Hero badge</label>
+                            <input type="text" class="form-control" id="homeHeroBadge" name="home_hero_badge"
+                                   value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60"
+                                   placeholder="Recruiting now">
+                            <small class="text-base-content/50">Short status label shown in the hero section.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homeCtaLabel">CTA button label</label>
+                            <input type="text" class="form-control" id="homeCtaLabel" name="home_cta_label"
+                                   value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60"
+                                   placeholder="Start your application">
+                            <small class="text-base-content/50">Text on the main call-to-action button.</small>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Highlights (optional)</label>

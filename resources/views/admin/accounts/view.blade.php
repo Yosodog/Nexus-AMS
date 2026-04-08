@@ -4,7 +4,7 @@
 @section('content')
     <x-header :title="'Account: ' . $account->name" separator>
         <x-slot:actions>
-            <x-badge : value="$account->frozen ? 'Frozen' : 'Active'"
+            <x-badge :value="$account->frozen ? 'Frozen' : 'Active'"
                      :class="$account->frozen ? 'badge-error' : 'badge-success'" />
             @can('manage-accounts')
                 <form method="POST"

@@ -1,58 +1,40 @@
 @php
-    $adminGroups = [
+    $mainLinks = [
+        ['label' => 'Accounts', 'route' => route('accounts'), 'active' => request()->routeIs('accounts')],
+        ['label' => 'Market', 'route' => route('market.index'), 'active' => request()->routeIs('market.*')],
+        ['label' => 'Audits', 'route' => route('audit.index'), 'active' => request()->routeIs('audit.*')],
+        ['label' => 'Loans', 'route' => route('loans.index'), 'active' => request()->routeIs('loans.*')],
+    ];
+
+    $navGroups = [
         [
-            'label' => 'Alliance',
-            'active' => request()->routeIs('admin.members*', 'admin.cities.*', 'admin.users.*', 'admin.roles.*', 'admin.applications.*', 'admin.recruitment.*'),
+            'label' => 'Leaderboards',
+            'active' => request()->routeIs('leaderboards.*'),
             'items' => [
-                ['label' => 'Members', 'route' => route('admin.members')],
-                ['label' => 'Cities', 'route' => route('admin.cities.index')],
-                ['label' => 'Users', 'route' => route('admin.users.index')],
-                ['label' => 'Roles', 'route' => route('admin.roles.index')],
-                ['label' => 'Applications', 'route' => route('admin.applications.index')],
-                ['label' => 'Recruitment', 'route' => route('admin.recruitment.index')],
+                ['label' => 'Dashboard', 'route' => route('leaderboards.index')],
+                ['label' => 'Profitability', 'route' => route('leaderboards.index', ['board' => 'profitability'])],
+                ['label' => 'Raid Performance', 'route' => route('leaderboards.index', ['board' => 'raid-performance'])],
             ],
         ],
         [
-            'label' => 'Finance',
-            'active' => request()->routeIs('admin.accounts.*', 'admin.grants*', 'admin.loans*', 'admin.taxes', 'admin.finance.*', 'admin.payroll.*', 'admin.market.*', 'admin.offshores.*'),
+            'label' => 'Grants',
+            'active' => request()->routeIs('grants.*'),
             'items' => [
-                ['label' => 'Accounts', 'route' => route('admin.accounts.dashboard')],
-                ['label' => 'City Grants', 'route' => route('admin.grants.city')],
-                ['label' => 'Grants', 'route' => route('admin.grants')],
-                ['label' => 'Loans', 'route' => route('admin.loans')],
-                ['label' => 'Taxes', 'route' => route('admin.taxes')],
-                ['label' => 'Finance Ledger', 'route' => route('admin.finance.index')],
-                ['label' => 'Payroll', 'route' => route('admin.payroll.index')],
-                ['label' => 'Alliance Market', 'route' => route('admin.market.index')],
-                ['label' => 'Offshores', 'route' => route('admin.offshores.index')],
+                ['label' => 'City Grants', 'route' => route('grants.city')],
+                ['label' => 'War Aid', 'route' => route('defense.war-aid')],
             ],
         ],
         [
             'label' => 'Defense',
-            'active' => request()->routeIs('admin.war-room*', 'admin.wars', 'admin.war-aid*', 'admin.rebuilding.*', 'admin.raids.*', 'admin.beige-alerts.*', 'admin.spy-campaigns.*', 'admin.mmr.*'),
+            'active' => request()->routeIs('defense.*'),
             'items' => [
-                ['label' => 'War Room', 'route' => route('admin.war-room')],
-                ['label' => 'Wars', 'route' => route('admin.wars')],
-                ['label' => 'War Aid', 'route' => route('admin.war-aid')],
-                ['label' => 'Rebuilding', 'route' => route('admin.rebuilding.index')],
-                ['label' => 'Raids', 'route' => route('admin.raids.index')],
-                ['label' => 'Beige Alerts', 'route' => route('admin.beige-alerts.index')],
-                ['label' => 'Spy Campaigns', 'route' => route('admin.spy-campaigns.index')],
-                ['label' => 'MMR', 'route' => route('admin.mmr.index')],
-            ],
-        ],
-        [
-            'label' => 'System',
-            'active' => request()->routeIs('admin.audits.*', 'admin.audit-logs.*', 'admin.settings', 'admin.nel.docs', 'admin.customization.*') || request()->is('telescope*', 'pulse*', 'log-viewer*'),
-            'items' => [
-                ['label' => 'Audits', 'route' => route('admin.audits.index')],
-                ['label' => 'Audit Logs', 'route' => route('admin.audit-logs.index')],
-                ['label' => 'Settings', 'route' => route('admin.settings')],
-                ['label' => 'NEL Docs', 'route' => route('admin.nel.docs')],
-                ['label' => 'Customize Pages', 'route' => route('admin.customization.index')],
-                ['label' => 'Telescope', 'route' => url('/telescope'), 'external' => true],
-                ['label' => 'Pulse', 'route' => url('/pulse'), 'external' => true],
-                ['label' => 'Log Viewer', 'route' => url('/log-viewer'), 'external' => true],
+                ['label' => 'Counter Finder', 'route' => route('defense.counters')],
+                ['label' => 'Intel Library', 'route' => route('defense.intel')],
+                ['label' => 'War Aid', 'route' => route('defense.war-aid')],
+                ['label' => 'Rebuilding', 'route' => route('defense.rebuilding')],
+                ['label' => 'War Stats', 'route' => route('defense.war-stats')],
+                ['label' => 'War Simulators', 'route' => route('defense.simulators')],
+                ['label' => 'Raid Finder', 'route' => route('defense.raid-finder')],
             ],
         ],
     ];
@@ -65,15 +47,16 @@
                 <x-icon name="o-bars-3" class="size-6 text-base-content/70" />
             </label>
 
-            <a href="{{ route('admin.dashboard') }}" class="hidden items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-base-content lg:flex">
-                <span class="grid size-9 place-items-center rounded-full bg-primary/15 text-primary">{{ str(config('app.name'))->substr(0, 2)->upper() }}</span>
-                <span>{{ config('app.name') }} <span class="font-medium text-base-content/45">/ Admin</span></span>
+            <a href="{{ route('admin.dashboard') }}" class="hidden text-sm font-black uppercase tracking-[0.18em] text-base-content lg:flex">
+                {{ config('app.name') }} <span class="ml-1 font-medium text-base-content/45">/ Admin</span>
             </a>
         </div>
 
         <div class="absolute left-1/2 hidden -translate-x-1/2 xl:flex items-center gap-1">
-            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm rounded-full {{ request()->routeIs('admin.dashboard') ? 'btn-primary' : 'btn-ghost' }}">Dashboard</a>
-            @foreach($adminGroups as $group)
+            @foreach($mainLinks as $link)
+                <a href="{{ $link['route'] }}" class="btn btn-sm rounded-full {{ $link['active'] ? 'btn-primary' : 'btn-ghost' }}">{{ $link['label'] }}</a>
+            @endforeach
+            @foreach($navGroups as $group)
                 <div class="dropdown dropdown-bottom">
                     <button tabindex="0" class="btn btn-sm rounded-full {{ $group['active'] ? 'btn-primary' : 'btn-ghost' }}">
                         {{ $group['label'] }}
@@ -81,11 +64,7 @@
                     </button>
                     <ul tabindex="0" class="menu dropdown-content z-[80] mt-2 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
                         @foreach($group['items'] as $item)
-                            <li>
-                                <a href="{{ $item['route'] }}" @if(! empty($item['external'])) rel="noopener" @endif>
-                                    {{ $item['label'] }}
-                                </a>
-                            </li>
+                            <li><a href="{{ $item['route'] }}">{{ $item['label'] }}</a></li>
                         @endforeach
                     </ul>
                 </div>
@@ -95,7 +74,7 @@
 
     <x-slot:actions>
         <div class="flex items-center gap-2">
-            <x-theme-toggle light-theme="light" dark-theme="night" class="order-1" />
+            <x-theme-picker />
 
             @if($nation)
                 <x-dropdown class="dropdown-end">

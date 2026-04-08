@@ -25,43 +25,22 @@
         </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon badge-primary">
-                    <i class="o-users"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Members</span>
-                    <span class="info-box-number fs-4 font-semibold">{{ $members->count() }}</span>
-                    <span class="text-base-content/50 small">{{ $activeMembers->count() }} active</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon badge-success">
-                    <i class="o-calendar-days"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Weekly Total</span>
-                    <span class="info-box-number fs-4 font-semibold">${{ number_format((float) $weeklyTotal, 2) }}</span>
-                    <span class="text-base-content/50 small">Enabled + active members</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon badge-info">
-                    <i class="o-calendar"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-base-content/50 text-uppercase font-semibold">Daily Total</span>
-                    <span class="info-box-number fs-4 font-semibold">${{ number_format((float) $dailyTotal, 2) }}</span>
-                    <span class="text-base-content/50 small">Weekly / 7</span>
-                </div>
-            </div>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-3">
+        <x-stat title="Members"
+                :value="number_format($members->count())"
+                icon="o-users"
+                color="text-primary"
+                :description="number_format($activeMembers->count()) . ' active members'" />
+        <x-stat title="Weekly Total"
+                :value="'$' . number_format((float) $weeklyTotal, 2)"
+                icon="o-calendar-days"
+                color="text-success"
+                description="Enabled and active payroll commitments" />
+        <x-stat title="Daily Total"
+                :value="'$' . number_format((float) $dailyTotal, 2)"
+                icon="o-calendar"
+                color="text-info"
+                description="Weekly payroll divided across seven days" />
     </div>
 
     <div class="row g-4">
