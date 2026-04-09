@@ -1,6 +1,7 @@
 @php
     use App\Services\PWHelperService;
     use Illuminate\Support\Carbon;
+    use Illuminate\Support\Str;
 
     $resourceList = PWHelperService::resources(false);
     $resourceListWithMoney = PWHelperService::resources(true);
@@ -58,6 +59,83 @@
 
     $offshoreCachedDisplay = $offshoreCachedAt ? $offshoreCachedAt->diffForHumans() : 'Not cached';
     $offshoreCount = $offshoreSnapshots->count();
+    $resourcesWithLimitsCount = $withdrawalLimits->filter(fn ($limit) => (float) $limit->daily_limit > 0)->count();
+    $coverageStatus = $coveragePercent >= 100 ? 'Fully covered' : 'Needs more liquidity';
+    $coverageBadgeClass = $coveragePercent >= 100 ? 'badge-success' : 'badge-warning';
+    $coverageProgressClass = $coveragePercent >= 100 ? 'progress-success' : 'progress-warning';
+    $topAccountName = $topAccounts->isNotEmpty() ? $topAccounts->first()->name : 'No accounts yet';
+    $topAccountBalance = $topAccounts->isNotEmpty() ? (float) $topAccounts->first()->money : 0;
+    $surfaceCardClass = 'overflow-hidden rounded-3xl border border-base-300/60 bg-base-100 shadow-md';
+    $statCardClass = 'rounded-2xl border border-base-300/60 bg-base-100 shadow-sm';
+
+    $kpiCards = [
+        [
+            'title' => 'Tracked Accounts',
+            'value' => number_format($accounts->count()),
+            'icon' => 'o-users',
+            'color' => 'text-primary',
+            'description' => number_format($activeAccounts) . ' assigned · ' . number_format($inactiveAccounts) . ' unassigned',
+        ],
+        [
+            'title' => 'Member Cash',
+            'value' => '$' . number_format($accountsCash, 2),
+            'icon' => 'o-currency-dollar',
+            'color' => 'text-success',
+            'description' => number_format($resourceTotals->count()) . ' tracked resources',
+        ],
+        [
+            'title' => 'Average Balance',
+            'value' => '$' . number_format($accounts->avg('money'), 2),
+            'icon' => 'o-arrow-trending-up',
+            'color' => 'text-warning',
+            'description' => number_format($averageTransactionsPerDay, 1) . ' transactions/day',
+        ],
+        [
+            'title' => 'Top Account',
+            'value' => '$' . number_format($topAccountBalance, 2),
+            'icon' => 'o-trophy',
+            'color' => 'text-info',
+            'description' => $topAccountName,
+        ],
+    ];
+
+    $cashMixChart = [
+        'labels' => ['Member Accounts', 'Main Bank', 'Offshores'],
+        'data' => [
+            round($accountsCash, 2),
+            round($bankCash, 2),
+            round($offshoreCash, 2),
+        ],
+    ];
+
+    $topBalanceChart = [
+        'labels' => $topAccounts
+            ->map(fn ($account) => Str::limit($account->name, 18))
+            ->values()
+            ->all(),
+        'data' => $topAccounts
+            ->map(fn ($account) => round((float) $account->money, 2))
+            ->values()
+            ->all(),
+    ];
+
+    $resourceCushionChart = [
+        'labels' => $netResourcePositions
+            ->except('money')
+            ->sortByDesc(fn ($total) => abs((float) $total))
+            ->take(6)
+            ->keys()
+            ->map(fn ($resource) => Str::headline($resource))
+            ->values()
+            ->all(),
+        'data' => $netResourcePositions
+            ->except('money')
+            ->sortByDesc(fn ($total) => abs((float) $total))
+            ->take(6)
+            ->map(fn ($total) => round((float) $total, 2))
+            ->values()
+            ->all(),
+    ];
 @endphp
 
 @extends('layouts.admin')
@@ -73,72 +151,176 @@
         </x-slot:actions>
     </x-header>
 
-    {{-- KPI Stats --}}
-    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <x-stat title="Total Accounts" :value="number_format($accounts->count())" icon="o-users" color="text-primary"
-                :description="number_format($activeAccounts) . ' assigned · ' . number_format($inactiveAccounts) . ' unassigned'" />
-        <x-stat title="Total Holdings" :value="'$' . number_format($accounts->sum('money'), 2)" icon="o-currency-dollar" color="text-success"
-                :description="$resourceTotals->count() . ' tracked resources'" />
-        <x-stat title="Average Balance" :value="'$' . number_format($accounts->avg('money'), 2)" icon="o-arrow-trending-up" color="text-warning"
-                :description="number_format($averageTransactionsPerDay, 1) . ' transactions/day'" />
-        <x-stat title="Top Account" :value="'$' . number_format($accounts->max('money'), 2)" icon="o-trophy" color="text-info"
-                :description="$topAccounts->isNotEmpty() ? $topAccounts->first()->name : 'N/A'" />
+    <div class="mb-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
+            <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
+                <span class="font-medium text-base-content">Alliance Liquidity</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>Main bank {{ $mainBankCachedDisplay }}</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>{{ $resourcesWithLimitsCount }} resource limits configured</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <x-badge :value="'Coverage ' . number_format($coveragePercent, 0) . '%'" :class="$coverageBadgeClass . ' badge-sm'" />
+                <a href="#alliance-position" class="btn btn-primary btn-sm">Charts</a>
+                <a href="#recent-transactions" class="btn btn-ghost btn-sm">Transactions</a>
+            </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Member Accounts</p>
+                        <p class="mt-2 text-2xl font-extrabold">${{ number_format($accountsCash, 2) }}</p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            {{ number_format($accounts->count()) }} tracked · Avg ${{ number_format($accounts->avg('money'), 2) }}
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                        <x-icon name="o-wallet" class="size-5 text-primary" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Alliance Holdings</p>
+                        <p class="mt-2 text-2xl font-extrabold">${{ number_format($allianceCash, 2) }}</p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
+                        <x-icon name="o-building-library" class="size-5 text-info" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Liquidity Cushion</p>
+                            <span class="badge {{ $coverageBadgeClass }} badge-sm">{{ $coverageStatus }}</span>
+                        </div>
+                        <p class="mt-2 text-2xl font-extrabold {{ $netCashPosition >= 0 ? 'text-success' : 'text-warning' }}">
+                            {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
+                        </p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            Alliance reserves cover {{ number_format($coveragePercent, 0) }}% of member cash balances.
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl {{ $netCashPosition >= 0 ? 'bg-success/10' : 'bg-warning/10' }}">
+                        <x-icon name="o-arrow-trending-up" class="size-5 {{ $netCashPosition >= 0 ? 'text-success' : 'text-warning' }}" />
+                    </div>
+                </div>
+                <x-progress :value="min(100, max(0, $coveragePercent))" class="mt-4 h-2 {{ $coverageProgressClass }}" />
+            </div>
+        </div>
     </div>
 
-    {{-- Ownership Snapshot --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <x-card>
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold">Member Accounts</div>
-                    <div class="text-2xl font-bold">${{ number_format($accountsCash, 2) }}</div>
-                    <div class="text-sm text-base-content/50">{{ number_format($accounts->count()) }} accounts tracked</div>
-                </div>
-                <x-badge  value="Members" icon="o-wallet" class="badge-primary badge-sm" />
-            </div>
-            <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
-                <x-badge  value="Avg ${{ number_format($accounts->avg('money'), 2) }}" class="badge-ghost badge-sm" />
-                <x-badge  value="{{ number_format($activeAccounts) }} assigned" class="badge-ghost badge-sm" />
-            </div>
-        </x-card>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        @foreach($kpiCards as $card)
+            <x-stat
+                :title="$card['title']"
+                :value="$card['value']"
+                :description="$card['description']"
+                :icon="$card['icon']"
+                :color="$card['color']"
+                :class="$statCardClass"
+            />
+        @endforeach
+    </div>
 
-        <x-card>
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold">Alliance Holdings</div>
-                    <div class="text-2xl font-bold">${{ number_format($allianceCash, 2) }}</div>
-                    <div class="text-sm text-base-content/50">Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}</div>
-                </div>
-                <x-badge  value="Bank" icon="o-building-library" class="badge-info badge-sm" />
-            </div>
-            <div class="flex flex-wrap gap-2 text-xs text-base-content/50">
-                <x-badge  value="Bank {{ $mainBankCachedDisplay }}" class="badge-ghost badge-sm" />
-                <x-badge  value="{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}" class="badge-ghost badge-sm" />
-            </div>
-        </x-card>
-
-        <x-card>
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold">Alliance Cushion</div>
-                    <div class="text-2xl font-bold {{ $netCashPosition >= 0 ? 'text-success' : 'text-error' }}">
-                        {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
+    <div id="alliance-position" x-data="{ activeChart: 'liquidity' }" class="mb-6">
+        <div class="{{ $surfaceCardClass }}">
+            <div class="border-b border-base-200 px-5 pt-5 sm:px-6 sm:pt-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold">Alliance Position</h3>
+                        <p class="text-sm text-base-content/50">Visualize cash mix, top balances, and resource cushion without leaving the dashboard.</p>
                     </div>
-                    <div class="text-sm text-base-content/50">After covering member balances</div>
+                    <x-badge :value="'Coverage ' . number_format($coveragePercent, 0) . '%'" :class="$coverageBadgeClass . ' badge-sm'" />
                 </div>
-                <x-badge :value="$netCashPosition >= 0 ? 'Surplus' : 'Shortfall'"
-                         :class="$netCashPosition >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'" />
+
+                <div class="mt-4 flex gap-1 overflow-x-auto pb-px">
+                    @foreach(['liquidity' => 'Liquidity Mix', 'leaders' => 'Top Balances', 'cushion' => 'Resource Cushion'] as $key => $label)
+                        <button
+                            @click="activeChart = '{{ $key }}'; $nextTick(() => window.dispatchEvent(new Event('resize')))"
+                            :class="activeChart === '{{ $key }}'
+                                ? 'border-primary text-primary font-semibold'
+                                : 'border-transparent text-base-content/50 hover:text-base-content/80'"
+                            class="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors"
+                            type="button"
+                        >
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
             </div>
-            <x-progress :value="min(100, max(0, $coveragePercent))"
-                        :class="$coveragePercent >= 100 ? 'progress-success h-2' : 'progress-warning h-2'" />
-            <div class="flex justify-between text-xs text-base-content/50 mt-1">
-                <span>Coverage {{ number_format($coveragePercent, 0) }}%</span>
+
+            <div class="p-5 sm:p-6">
+                <div x-show="activeChart === 'liquidity'" x-transition.opacity>
+                    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
+                        <div class="min-h-[320px]">
+                            <canvas id="accountsLiquidityChart" class="w-full" style="height: 320px"></canvas>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="rounded-2xl border border-base-300/60 bg-base-200/30 p-4">
+                                <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Reserve mix</p>
+                                <p class="mt-1 text-sm text-base-content/60">Separate bank and offshore balances so funding risk is easier to see at a glance.</p>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Members</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($accountsCash, 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Main bank</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($bankCash, 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Offshores</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($offshoreCash, 2) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeChart === 'leaders'" x-cloak x-transition.opacity>
+                    @if($topAccounts->isNotEmpty())
+                        <div class="min-h-[320px]">
+                            <canvas id="topBalancesChart" class="w-full" style="height: 320px"></canvas>
+                        </div>
+                    @else
+                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                            No account balance data is available yet.
+                        </div>
+                    @endif
+                </div>
+
+                <div x-show="activeChart === 'cushion'" x-cloak x-transition.opacity>
+                    @if(!empty($resourceCushionChart['labels']))
+                        <div class="min-h-[320px]">
+                            <canvas id="resourceCushionChart" class="w-full" style="height: 320px"></canvas>
+                        </div>
+                    @else
+                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                            No resource position data is available yet.
+                        </div>
+                    @endif
+                </div>
             </div>
-        </x-card>
+        </div>
     </div>
 
     {{-- Resource Ownership Table --}}
-    <x-card class="mb-6">
+    <x-card class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div>
                 Resource Ownership
@@ -146,12 +328,12 @@
             </div>
         </x-slot:title>
         <x-slot:menu>
-            <span class="text-xs text-base-content/50">Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
+            <span class="badge badge-ghost badge-sm">Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
         </x-slot:menu>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
             <table class="table table-sm table-zebra">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Resource</th>
                         <th class="text-right">Member Accounts</th>
                         <th class="text-right">Alliance Holdings</th>
@@ -181,7 +363,7 @@
     </x-card>
 
     {{-- All Accounts Table --}}
-    <x-card class="mb-6" x-data="{ search: '' }">
+    <x-card class="{{ $surfaceCardClass }} mb-6" x-data="{ search: '' }">
         <x-slot:title>
             <div>
                 All Accounts
@@ -189,13 +371,13 @@
             </div>
         </x-slot:title>
         <x-slot:menu>
-            <x-badge  value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost" />
-            <x-input placeholder="Search..." x-model="search" icon="o-magnifying-glass" class="input-sm w-48" clearable />
+            <x-badge value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost badge-sm" />
+            <x-input placeholder="Search accounts..." x-model="search" icon="o-magnifying-glass" class="input-sm w-56" clearable />
         </x-slot:menu>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
             <table class="table table-sm table-zebra">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Owner</th>
                         <th>Nation ID</th>
                         <th>Name</th>
@@ -245,7 +427,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
         @can('manage-accounts')
             <div class="xl:col-span-2">
-                <x-card class="h-full">
+                <x-card class="{{ $surfaceCardClass }} h-full">
                     <x-slot:title>
                         <div>
                             Automatic Withdrawal Limits
@@ -253,7 +435,7 @@
                         </div>
                     </x-slot:title>
                     <x-slot:menu>
-                        <x-badge  value="Controls" class="badge-info badge-sm" />
+                        <x-badge value="Controls" class="badge-info badge-sm" />
                     </x-slot:menu>
                     <form method="POST" action="{{ route('admin.withdrawals.limits') }}">
                         @csrf
@@ -263,7 +445,7 @@
                                      value="{{ old('max_daily_withdrawals', $maxDailyWithdrawals) }}"
                                      hint="Set to 0 for unlimited." required />
 
-                            <div class="bg-base-200 rounded-box p-4">
+                            <div class="rounded-2xl border border-base-300/60 bg-base-200/40 p-4">
                                 <div class="text-xs uppercase text-base-content/50 mb-3">At-a-glance</div>
                                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                                     <dt class="text-base-content/60">Pending withdrawals</dt>
@@ -271,15 +453,15 @@
                                     <dt class="text-base-content/60">Daily auto limit</dt>
                                     <dd class="font-semibold">{{ $maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited' }}</dd>
                                     <dt class="text-base-content/60">Resources with limits</dt>
-                                    <dd class="font-semibold">{{ number_format($withdrawalLimits->filter(fn($limit) => (float) $limit->daily_limit > 0)->count()) }}</dd>
+                                    <dd class="font-semibold">{{ number_format($resourcesWithLimitsCount) }}</dd>
                                 </dl>
                             </div>
                         </div>
 
-                        <div class="overflow-x-auto border border-base-300 rounded-box mb-4">
+                        <div class="overflow-x-auto rounded-2xl border border-base-300/60 mb-4">
                             <table class="table table-sm">
                                 <thead>
-                                    <tr class="text-base-content/60">
+                                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                                         <th>Resource</th>
                                         <th>Daily Auto-Approval Limit</th>
                                     </tr>
@@ -312,7 +494,7 @@
             </div>
         @endcan
 
-        <x-card class="h-full">
+        <x-card class="{{ $surfaceCardClass }} h-full">
             <x-slot:title>Insights</x-slot:title>
             <x-slot:subtitle>High-impact accounts and aggregate resource positions.</x-slot:subtitle>
 
@@ -361,15 +543,15 @@
         {{-- Withdrawal KPIs --}}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <x-stat title="Pending Withdrawals" :value="number_format($pendingWithdrawals->count())" icon="o-clock"
-                    color="text-warning" description="Awaiting manual review" />
+                    color="text-warning" description="Awaiting manual review" :class="$statCardClass" />
             <x-stat title="Daily Auto Limit" :value="$maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited'"
-                    icon="o-arrow-path" color="text-info" description="Automatic approvals in 24 hours" />
-            <x-stat title="Resources With Limits" :value="number_format($withdrawalLimits->filter(fn($limit) => (float) $limit->daily_limit > 0)->count())"
-                    icon="o-shield-check" color="text-success" description="Have an approval ceiling" />
+                    icon="o-arrow-path" color="text-info" description="Automatic approvals in 24 hours" :class="$statCardClass" />
+            <x-stat title="Resources With Limits" :value="number_format($resourcesWithLimitsCount)"
+                    icon="o-shield-check" color="text-success" description="Have an approval ceiling" :class="$statCardClass" />
         </div>
 
         @if($pendingWithdrawals->isNotEmpty())
-            <x-card class="mb-6">
+            <x-card class="{{ $surfaceCardClass }} mb-6">
                 <x-slot:title>
                     <div>
                         Pending Withdrawal Approvals
@@ -377,12 +559,12 @@
                     </div>
                 </x-slot:title>
                 <x-slot:menu>
-                    <x-badge  value="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning" />
+                    <x-badge value="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning badge-sm" />
                 </x-slot:menu>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto rounded-2xl border border-base-300/60">
                     <table class="table table-sm table-zebra">
                         <thead>
-                            <tr class="text-base-content/60">
+                            <tr class="text-xs uppercase tracking-wider text-base-content/45">
                                 <th>Requested</th>
                                 <th>Member</th>
                                 <th>From Account</th>
@@ -453,10 +635,10 @@
     </div>
 
     {{-- Direct Deposit Logs --}}
-    <x-card id="direct-deposit-logs" class="mb-6">
+    <x-card id="direct-deposit-logs" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge  value="DD" class="badge-primary" />
+                <x-badge value="DD" class="badge-primary badge-sm" />
                 Direct Deposit Logs
             </div>
             <div class="text-sm font-normal text-base-content/50">After-tax payouts with quick links to nations and deposit accounts.</div>
@@ -464,10 +646,10 @@
         <x-slot:menu>
             <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
         </x-slot:menu>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>Nation</th>
                         <th>Deposit Account</th>
@@ -531,10 +713,10 @@
     </x-card>
 
     {{-- MMR Assistant --}}
-    <x-card id="mmr-assistant" class="mb-6">
+    <x-card id="mmr-assistant" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
-                <x-badge  value="MMR" class="badge-neutral" />
+                <x-badge value="MMR" class="badge-neutral badge-sm" />
                 MMR Assistant Purchases
             </div>
             <div class="text-sm font-normal text-base-content/50">Withheld cash reinvested into resources based on player configs.</div>
@@ -542,10 +724,10 @@
         <x-slot:menu>
             <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
         </x-slot:menu>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>Account</th>
                         <th>Nation</th>
@@ -618,15 +800,15 @@
     </x-card>
 
     {{-- Recent Transactions --}}
-    <x-card id="recent-transactions" class="mb-6">
+    <x-card id="recent-transactions" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             Recent Transactions
             <div class="text-sm font-normal text-base-content/50">Paginated, newest-first view of alliance banking activity.</div>
         </x-slot:title>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>From</th>
                         <th>To</th>
@@ -704,3 +886,239 @@
         </x-slot:footer>
     </x-card>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Chart === 'undefined') {
+                return;
+            }
+
+            const rgba = (hex, alpha) => {
+                const normalized = hex.replace('#', '');
+                const value = normalized.length === 3
+                    ? normalized.split('').map((char) => char + char).join('')
+                    : normalized;
+                const int = Number.parseInt(value, 16);
+                const r = (int >> 16) & 255;
+                const g = (int >> 8) & 255;
+                const b = int & 255;
+
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+
+            const chartColors = {
+                primary: '#2563eb',
+                success: '#16a34a',
+                info: '#0891b2',
+                warning: '#d97706',
+                danger: '#dc2626',
+                neutral: '#64748b',
+                text: '#475569',
+                grid: 'rgba(148, 163, 184, 0.16)',
+                tooltipBackground: 'rgba(15, 23, 42, 0.92)',
+                tooltipBorder: 'rgba(148, 163, 184, 0.22)',
+            };
+
+            const tickColor = chartColors.text;
+            const gridColor = chartColors.grid;
+            const tooltipBackground = chartColors.tooltipBackground;
+            const tooltipBorder = chartColors.tooltipBorder;
+            const legendColor = chartColors.text;
+
+            const moneyFormat = (value) => '$' + new Intl.NumberFormat('en-US', {
+                maximumFractionDigits: 2,
+            }).format(value ?? 0);
+
+            const baseFont = {
+                family: "'Inter', 'system-ui', sans-serif",
+                size: 11,
+                weight: 500,
+            };
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: legendColor,
+                            font: baseFont,
+                            boxWidth: 12,
+                            usePointStyle: true,
+                        },
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBackground,
+                        titleColor: '#f8fafc',
+                        bodyColor: '#e2e8f0',
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 10,
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: tickColor, font: baseFont },
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: { color: tickColor, font: baseFont },
+                        beginAtZero: true,
+                    },
+                },
+            };
+
+            const liquidityCanvas = document.getElementById('accountsLiquidityChart');
+            if (liquidityCanvas) {
+                new Chart(liquidityCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: @json($cashMixChart['labels']),
+                        datasets: [{
+                            data: @json($cashMixChart['data']),
+                            backgroundColor: [
+                                rgba(chartColors.primary, 0.88),
+                                rgba(chartColors.success, 0.88),
+                                rgba(chartColors.info, 0.88),
+                            ],
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 10,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        cutout: '62%',
+                        scales: {},
+                        plugins: {
+                            ...commonOptions.plugins,
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        return `${context.label}: ${moneyFormat(context.parsed)}`;
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            const topBalancesCanvas = document.getElementById('topBalancesChart');
+            if (topBalancesCanvas) {
+                new Chart(topBalancesCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($topBalanceChart['labels']),
+                        datasets: [{
+                            label: 'Balance',
+                            data: @json($topBalanceChart['data']),
+                            backgroundColor: rgba(chartColors.primary, 0.72),
+                            hoverBackgroundColor: rgba(chartColors.primary, 0.9),
+                            borderRadius: 10,
+                            borderSkipped: false,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        plugins: {
+                            ...commonOptions.plugins,
+                            legend: { display: false },
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        return `Balance: ${moneyFormat(context.parsed.y)}`;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                ...commonOptions.scales.x,
+                                grid: { display: false },
+                            },
+                            y: {
+                                ...commonOptions.scales.y,
+                                ticks: {
+                                    ...commonOptions.scales.y.ticks,
+                                    callback(value) {
+                                        return moneyFormat(value);
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            const cushionCanvas = document.getElementById('resourceCushionChart');
+            if (cushionCanvas) {
+                new Chart(cushionCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($resourceCushionChart['labels']),
+                        datasets: [{
+                            label: 'Net position',
+                            data: @json($resourceCushionChart['data']),
+                            backgroundColor(context) {
+                                return context.raw >= 0
+                                    ? rgba(chartColors.success, 0.76)
+                                    : rgba(chartColors.warning, 0.82);
+                            },
+                            hoverBackgroundColor(context) {
+                                return context.raw >= 0
+                                    ? rgba(chartColors.success, 0.92)
+                                    : rgba(chartColors.warning, 0.95);
+                            },
+                            borderRadius: 10,
+                            borderSkipped: false,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        indexAxis: 'y',
+                        plugins: {
+                            ...commonOptions.plugins,
+                            legend: { display: false },
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        const value = new Intl.NumberFormat('en-US', {
+                                            maximumFractionDigits: 2,
+                                        }).format(context.parsed.x);
+
+                                        return `Net: ${value}`;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                ...commonOptions.scales.x,
+                                ticks: {
+                                    ...commonOptions.scales.x.ticks,
+                                    callback(value) {
+                                        return new Intl.NumberFormat('en-US', {
+                                            maximumFractionDigits: 0,
+                                        }).format(value);
+                                    },
+                                },
+                            },
+                            y: {
+                                ...commonOptions.scales.y,
+                                grid: { display: false },
+                            },
+                        },
+                    },
+                });
+            }
+        });
+    </script>
+@endpush

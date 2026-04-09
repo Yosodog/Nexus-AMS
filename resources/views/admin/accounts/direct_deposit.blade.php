@@ -4,18 +4,35 @@
         <form method="POST" action="{{ route('admin.dd.settings') }}">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <x-input label="Direct Deposit Tax ID" type="number"
-                         name="direct_deposit_tax_id"
-                         value="{{ old('direct_deposit_tax_id', $ddTaxId) }}"
-                         @cannot('manage-dd') disabled @endcannot
-                         hint="The in-game tax bracket ID members must be assigned to. Must be 100% money and 100% resource taxes."
-                         required />
-                <x-input label="Fallback Tax ID" type="number"
-                         name="direct_deposit_fallback_tax_id"
-                         value="{{ old('direct_deposit_fallback_tax_id', $fallbackTaxId) }}"
-                         @cannot('manage-dd') disabled @endcannot
-                         hint="Used when a member unenrolls and their original bracket cannot be restored."
-                         required />
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium text-base-content">Direct Deposit Tax ID</span>
+                    <input
+                        type="number"
+                        name="direct_deposit_tax_id"
+                        value="{{ old('direct_deposit_tax_id', $ddTaxId) }}"
+                        class="input input-bordered w-full"
+                        @cannot('manage-dd') disabled @endcannot
+                        required
+                    >
+                    <span class="block text-xs text-base-content/60">
+                        The in-game tax bracket ID members must be assigned to. Must be 100% money and 100% resource taxes.
+                    </span>
+                </label>
+
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium text-base-content">Fallback Tax ID</span>
+                    <input
+                        type="number"
+                        name="direct_deposit_fallback_tax_id"
+                        value="{{ old('direct_deposit_fallback_tax_id', $fallbackTaxId) }}"
+                        class="input input-bordered w-full"
+                        @cannot('manage-dd') disabled @endcannot
+                        required
+                    >
+                    <span class="block text-xs text-base-content/60">
+                        Used when a member unenrolls and their original bracket cannot be restored.
+                    </span>
+                </label>
             </div>
             @can('manage-dd')
                 <x-button label="Save Settings" type="submit" icon="o-check" class="btn-primary" />
