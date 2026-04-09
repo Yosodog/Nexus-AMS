@@ -347,6 +347,35 @@ function disableWhileRunning(button, callback) {
     });
 }
 
+/**
+ * Render server-generated preview HTML with the same wrapper used on the public page when needed.
+ *
+ * @param {HTMLElement|null} previewPane
+ * @param {object} page
+ * @param {string} html
+ */
+function renderPreviewHtml(previewPane, page, html) {
+    if (!previewPane) {
+        return;
+    }
+
+    const normalized = typeof html === 'string' ? html : '';
+
+    if ((page?.slug ?? '') === 'apply') {
+        previewPane.innerHTML = `
+            <section class="apply-page-shell">
+                <article class="apply-page-content">
+                    <div class="apply-page-richtext">${normalized}</div>
+                </article>
+            </section>
+        `;
+
+        return;
+    }
+
+    previewPane.innerHTML = normalized;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const holder = document.getElementById('customization-editor');
 
@@ -470,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await postJson(endpoints.preview, csrfToken, payload);
 
                 if (previewPane && typeof response.html === 'string') {
-                    previewPane.innerHTML = response.html;
+                    renderPreviewHtml(previewPane, page, response.html);
                 }
 
                 if (response.version?.created_at) {
@@ -531,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateStatus(statusContainer, response?.page?.status ?? 'published');
                 updateFromVersion(response.version, true);
                 if (previewPane && typeof response.html === 'string') {
-                    previewPane.innerHTML = response.html;
+                    renderPreviewHtml(previewPane, page, response.html);
                 }
                 setStatusBadge(previewStatus, 'Published successfully', 'success');
                 await refreshActivity();
@@ -593,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateStatus(statusContainer, response?.page?.status ?? 'published');
                 updateFromVersion(response.version, true);
                 if (previewPane && typeof response.html === 'string') {
-                    previewPane.innerHTML = response.html;
+                    renderPreviewHtml(previewPane, page, response.html);
                 }
                 setStatusBadge(previewStatus, 'Restored and published', 'success');
             } else {
