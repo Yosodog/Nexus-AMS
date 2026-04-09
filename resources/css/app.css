@@ -592,4 +592,200 @@
         .row-cols-xl-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .row-cols-xl-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     }
+
+    /* ===================================================================
+       NEXUS DESIGN SYSTEM
+       Reusable utility classes for the Nexus AMS design language.
+       All user-facing pages should use these tokens for consistency.
+    =================================================================== */
+
+    /* --- Typography --- */
+    .nexus-page-title {
+        @apply break-words text-2xl font-extrabold leading-tight sm:text-3xl;
+    }
+    .nexus-section-title {
+        @apply text-lg font-bold;
+    }
+    .nexus-overline {
+        @apply text-xs font-medium uppercase tracking-widest text-base-content/50;
+    }
+    .nexus-stat-value {
+        @apply text-xl font-extrabold sm:text-2xl;
+    }
+    .nexus-stat-label {
+        @apply text-xs font-semibold uppercase tracking-wide text-base-content/50;
+    }
+    .nexus-stat-helper {
+        @apply mt-0.5 text-xs text-base-content/50;
+    }
+    .nexus-body-muted {
+        @apply text-sm text-base-content/60;
+    }
+
+    /* --- Hero card (one per page, top of content) --- */
+    .nexus-hero {
+        @apply relative overflow-hidden rounded-3xl border border-base-300/60 bg-base-100 shadow-lg;
+    }
+    .nexus-hero-blur-right {
+        @apply pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl;
+    }
+    .nexus-hero-blur-left {
+        @apply pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-secondary/10 blur-3xl;
+    }
+
+    /* --- Banner (MMR, status, alerts that need prominence) --- */
+    .nexus-banner {
+        @apply rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-base-100 to-base-100 p-5 shadow-md sm:p-6;
+    }
+
+    /* --- Card tiers --- */
+    .nexus-card-base {
+        @apply border border-base-300/60 bg-base-100;
+    }
+    .nexus-card-elevated {
+        @apply border border-base-300/60 bg-base-100;
+    }
+
+    /* --- Stat card (KPIs, metrics) --- */
+    .nexus-stat-card {
+        @apply relative overflow-hidden rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm transition hover:shadow-md sm:p-5;
+    }
+
+    /* --- Icon containers --- */
+    .nexus-icon-box {
+        @apply flex h-8 w-8 items-center justify-center rounded-lg;
+    }
+    .nexus-icon-box-lg {
+        @apply flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl;
+    }
+
+    /* --- Status pills --- */
+    .nexus-status-pill {
+        @apply flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm;
+    }
+    .nexus-status-pill-success {
+        @apply border-success/30 bg-success/5 text-success;
+    }
+    .nexus-status-pill-warning {
+        @apply border-warning/30 bg-warning/5 text-warning;
+    }
+    .nexus-status-pill-error {
+        @apply border-error/30 bg-error/5 text-error;
+    }
+    .nexus-status-pill-info {
+        @apply border-info/30 bg-info/5 text-info;
+    }
+    .nexus-status-pill-neutral {
+        @apply border-base-300 bg-base-200/30 text-base-content/70;
+    }
+
+    /* --- Tables --- */
+    .nexus-table-header {
+        @apply text-xs uppercase tracking-wider text-base-content/40;
+    }
+    .nexus-table-header th {
+        @apply font-semibold;
+    }
+    .nexus-table-row {
+        @apply transition-colors hover:bg-base-200/30;
+    }
+    .nexus-direction-badge {
+        @apply inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold;
+    }
+
+    /* --- Tabs --- */
+    .nexus-tab {
+        @apply whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm text-base-content/50 transition-colors hover:text-base-content/80;
+    }
+    .nexus-tab-active {
+        @apply border-primary text-primary font-semibold;
+    }
+
+    /* --- Empty states --- */
+    .nexus-empty-state {
+        @apply py-12 text-center;
+    }
+
+    /* --- Form sections --- */
+    .nexus-form-section {
+        @apply space-y-5 rounded-3xl border border-base-300/60 bg-base-100 p-5 shadow-sm sm:p-6;
+    }
+    .nexus-form-section-header {
+        @apply border-b border-base-200 pb-4;
+    }
+    .nexus-form-grid {
+        @apply grid gap-4 sm:grid-cols-2;
+    }
+    .nexus-form-actions {
+        @apply flex flex-wrap items-center justify-end gap-2 border-t border-base-200 pt-4;
+    }
+
+    /* --- Detail / key-value pairs --- */
+    .nexus-detail-grid {
+        @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-3;
+    }
+    .nexus-detail-item {
+        @apply rounded-xl border border-base-200/60 bg-base-200/20 px-4 py-3;
+    }
+    .nexus-detail-label {
+        @apply text-xs font-medium uppercase tracking-wider text-base-content/40;
+    }
+    .nexus-detail-value {
+        @apply mt-1 text-sm font-semibold;
+    }
+
+    /* --- List items inside cards --- */
+    .nexus-list-separator {
+        @apply border-t border-base-200/60;
+    }
+
+    /* --- Progress bar (hero-style) --- */
+    .nexus-progress-track {
+        @apply overflow-hidden rounded-full bg-base-300/40;
+    }
+    .nexus-progress-fill {
+        @apply h-2.5 rounded-full transition-all duration-700;
+    }
+
+    /* --- Sidebar layout (content + aside) --- */
+    .nexus-sidebar-layout {
+        @apply grid gap-6 lg:grid-cols-3;
+    }
+    .nexus-sidebar-main {
+        @apply lg:col-span-2 space-y-6;
+    }
+    .nexus-sidebar-aside {
+        @apply space-y-6;
+    }
+
+    /* --- Step / timeline --- */
+    .nexus-step {
+        @apply relative pl-8 pb-6;
+    }
+    .nexus-step::before {
+        content: '';
+        @apply absolute left-3 top-8 bottom-0 w-px bg-base-300;
+    }
+    .nexus-step:last-child::before {
+        @apply hidden;
+    }
+    .nexus-step-dot {
+        @apply absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-base-300 bg-base-100 text-xs font-bold;
+    }
+    .nexus-step-dot-active {
+        @apply border-primary bg-primary text-primary-content;
+    }
+    .nexus-step-dot-complete {
+        @apply border-success bg-success text-success-content;
+    }
+
+    /* --- Confirmation / action modals --- */
+    .nexus-modal-actions {
+        @apply flex flex-wrap items-center justify-end gap-2 pt-4;
+    }
+
+    /* --- Inline metric (used in summaries) --- */
+    .nexus-inline-metric {
+        @apply flex-shrink-0 rounded-2xl border border-base-200 bg-base-200/30 px-5 py-3 text-center;
+    }
 }
