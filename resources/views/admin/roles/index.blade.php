@@ -3,135 +3,91 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col">
-                    <h3 class="mb-1">Manage Roles</h3>
-                    <p class="text-muted mb-0">Review role coverage, update permissions, and keep your access model organized.</p>
-                </div>
-            </div>
-        </div>
+    <x-header title="Manage Roles" separator>
+        <x-slot:subtitle>Review permission coverage, clean up stale roles, and keep access assignments readable.</x-slot:subtitle>
+        <x-slot:actions>
+            <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
+                <x-icon name="o-plus" class="size-4" />
+                New Role
+            </a>
+        </x-slot:actions>
+    </x-header>
+
+    <div class="mb-6 grid gap-4 md:grid-cols-3">
+        <x-stat title="Total Roles" :value="number_format($stats['total_roles'])" icon="o-users" color="text-primary" description="Assignable roles in the system" />
+        <x-stat title="Protected Roles" :value="number_format($stats['protected_roles'])" icon="o-lock-closed" color="text-warning" description="Locked from edits and deletion" />
+        <x-stat title="Unique Permissions" :value="number_format($stats['unique_permissions'])" icon="o-key" color="text-success" description="Distinct capabilities across all roles" />
     </div>
 
-    <div class="container-fluid">
-        <div class="row g-3 mt-1">
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Total roles</span>
-                                <div class="display-6 fw-bold mt-1">{{ $stats['total_roles'] }}</div>
-                            </div>
-                            <span class="text-primary fs-3"><i class="bi bi-people"></i></span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-3">All roles currently available to assign.</p>
-                    </div>
-                </div>
+    <x-card>
+        <x-slot:title>
+            <div>
+                Role Directory
+                <div class="text-sm font-normal text-base-content/60">All role definitions with permission coverage and member counts.</div>
             </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Protected roles</span>
-                                <div class="display-6 fw-bold mt-1">{{ $stats['protected_roles'] }}</div>
-                            </div>
-                            <span class="text-warning fs-3"><i class="bi bi-shield-lock"></i></span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-3">Locked roles that cannot be edited or removed.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small fw-semibold">Unique permissions</span>
-                                <div class="display-6 fw-bold mt-1">{{ $stats['unique_permissions'] }}</div>
-                            </div>
-                            <span class="text-success fs-3"><i class="bi bi-key"></i></span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-3">Distinct capabilities currently in use across roles.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </x-slot:title>
 
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">Role directory</h5>
-                    <span class="text-muted small">Assign, edit, or retire roles as your governance evolves.</span>
-                </div>
-                <a href="{{ route('admin.roles.create') }}" class="btn btn-success">
-                    <i class="bi bi-plus-circle me-1"></i>
-                    New Role
-                </a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+        <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra">
+                <thead>
                     <tr>
-                        <th scope="col">Role</th>
-                        <th scope="col">Permissions</th>
-                        <th scope="col" class="text-center">Members</th>
-                        <th scope="col" class="text-center">Status</th>
-                        <th scope="col" class="text-end">Actions</th>
+                        <th>Role</th>
+                        <th>Permissions</th>
+                        <th>Members</th>
+                        <th>Status</th>
+                        <th data-sortable="false" class="text-right">Actions</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @foreach($roles as $role)
                         <tr>
-                            <td class="fw-semibold text-capitalize">{{ $role->name }}</td>
                             <td>
-                                <div class="d-flex flex-wrap gap-2">
+                                <div class="font-semibold text-base-content">{{ Str::headline($role->name) }}</div>
+                                <div class="text-sm text-base-content/60">{{ $role->permissions->count() }} permission{{ $role->permissions->count() === 1 ? '' : 's' }}</div>
+                            </td>
+                            <td>
+                                <div class="flex flex-wrap gap-2">
                                     @forelse($role->permissions as $permission)
-                                        <span class="badge rounded-pill bg-info text-dark">
-                                            {{ Str::headline($permission->permission) }}
-                                        </span>
+                                        <x-badge :value="Str::headline($permission->permission)" class="badge-primary badge-outline badge-sm" />
                                     @empty
-                                        <span class="text-muted">No permissions assigned</span>
+                                        <span class="text-sm text-base-content/50">No permissions assigned</span>
                                     @endforelse
                                 </div>
                             </td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-dark border">{{ $role->users_count }}</span>
+                            <td>
+                                <x-badge :value="(string) $role->users_count" class="badge-ghost badge-sm" />
                             </td>
-                            <td class="text-center">
+                            <td>
                                 @if($role->protected)
-                                    <span class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>Protected</span>
+                                    <x-badge value="Protected" class="badge-warning badge-sm" />
                                 @else
-                                    <span class="badge bg-success"><i class="bi bi-unlock me-1"></i>Editable</span>
+                                    <x-badge value="Editable" class="badge-success badge-sm" />
                                 @endif
                             </td>
-                            <td class="text-end">
-                                @if(!$role->protected)
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil"></i> Edit
+                            <td class="text-right">
+                                @if(! $role->protected)
+                                    <div class="inline-flex flex-wrap justify-end gap-2">
+                                        <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-outline btn-primary btn-sm">
+                                            <x-icon name="o-pencil-square" class="size-4" />
+                                            Edit
                                         </a>
-                                        <form method="POST" action="{{ route('admin.roles.destroy', $role) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this role?')">
+                                        <form method="POST" action="{{ route('admin.roles.destroy', $role) }}" onsubmit="return confirm('Are you sure you want to delete this role?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i> Delete
+                                            <button type="submit" class="btn btn-outline btn-error btn-sm">
+                                                <x-icon name="o-trash" class="size-4" />
+                                                Delete
                                             </button>
                                         </form>
                                     </div>
                                 @else
-                                    <span class="text-muted">Locked</span>
+                                    <span class="text-sm text-base-content/50">Locked</span>
                                 @endif
                             </td>
                         </tr>
                     @endforeach
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </x-card>
 @endsection
-

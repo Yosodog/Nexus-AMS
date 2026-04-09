@@ -3,19 +3,19 @@
 @endphp
 
 @if ($entries->isEmpty())
-    <p class="text-secondary mb-0">No ledger entries for this day.</p>
+    <p class="text-base-content/50 mb-0">No ledger entries for this day.</p>
 @else
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
+    <div class="overflow-x-auto rounded-box border border-base-300">
+        <table class="table table-zebra table-sm">
+            <thead>
             <tr>
                 <th>Time</th>
                 <th>Direction</th>
                 <th>Category</th>
                 <th>Description</th>
-                <th class="text-end">Money</th>
+                <th class="text-right">Money</th>
                 @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
-                    <th class="text-end text-nowrap text-capitalize">{{ $resource }}</th>
+                    <th class="text-right text-nowrap text-capitalize">{{ $resource }}</th>
                 @endforeach
                 <th>Nation</th>
                 <th>Account</th>
@@ -27,6 +27,13 @@
                 @php
                     $category = $categories[$entry->category] ?? null;
                     $categoryColor = $category['color'] ?? 'secondary';
+                    $categoryBadgeClass = match ($categoryColor) {
+                        'success' => 'badge-success',
+                        'danger' => 'badge-error',
+                        'warning' => 'badge-warning',
+                        'info' => 'badge-info',
+                        default => 'badge-ghost',
+                    };
                     $source = $entry->resolvedSource();
                     $sourceLabel = $entry->source_type ? class_basename($entry->source_type) . ' #' . $entry->source_id : null;
                     $sourceLink = null;
@@ -46,19 +53,19 @@
                 <tr>
                     <td class="text-nowrap">{{ optional($entry->created_at)->format('H:i') ?? '-' }}</td>
                     <td>
-                        <span class="badge text-bg-{{ $entry->isIncome() ? 'success' : 'danger' }}">
+                        <span class="badge {{ $entry->isIncome() ? 'badge-success' : 'badge-error' }}">
                             {{ ucfirst($entry->direction) }}
                         </span>
                     </td>
                     <td>
-                        <span class="badge text-bg-{{ $categoryColor }}">
+                        <span class="badge {{ $categoryBadgeClass }}">
                             {{ $category['label'] ?? ucfirst($entry->category) }}
                         </span>
                     </td>
                     <td class="text-break" style="max-width: 220px;">{{ $entry->description ?? '-' }}</td>
-                    <td class="text-end fw-semibold">{{ $formatCurrency($entry->money) }}</td>
+                    <td class="text-right font-semibold">{{ $formatCurrency($entry->money) }}</td>
                     @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
-                        <td class="text-end text-nowrap">{{ number_format($entry->$resource, 2) }}</td>
+                        <td class="text-right text-nowrap">{{ number_format($entry->$resource, 2) }}</td>
                     @endforeach
                     <td>
                         @if ($entry->nation_id)
@@ -67,21 +74,21 @@
                                 {{ $entry->nation?->nation_name ?? 'Nation #'.$entry->nation_id }}
                             </a>
                         @else
-                            <span class="text-secondary">-</span>
+                            <span class="text-base-content/50">-</span>
                         @endif
                     </td>
                     <td>{{ $entry->account?->name ?? '-' }}</td>
                     <td>
                         @if ($sourceLabel)
                             @if ($sourceLink)
-                                <a href="{{ $sourceLink }}" class="badge bg-dark-subtle text-dark-emphasis text-decoration-none">
+                                <a href="{{ $sourceLink }}" class="badge badge-outline badge-neutral no-underline">
                                     {{ $sourceLabel }}
                                 </a>
                             @else
-                                <span class="badge bg-dark-subtle text-dark-emphasis">{{ $sourceLabel }}</span>
+                                <span class="badge badge-outline badge-neutral">{{ $sourceLabel }}</span>
                             @endif
                         @else
-                            <span class="text-secondary">-</span>
+                            <span class="text-base-content/50">-</span>
                         @endif
                     </td>
                 </tr>

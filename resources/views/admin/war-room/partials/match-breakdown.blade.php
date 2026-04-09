@@ -4,11 +4,11 @@
 @endphp
 
 @if(empty($factors))
-    <p class="small text-muted mb-0">No factor breakdown captured for this match.</p>
+    <p class="small text-base-content/50 mb-0">No factor breakdown captured for this match.</p>
 @else
-    <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-2">
-            <thead class="table-light">
+    <div class="overflow-x-auto rounded-box border border-base-300">
+        <table class="table table-sm table-zebra mb-2">
+            <thead>
             <tr>
                 <th>Factor</th>
                 <th>Value</th>
@@ -30,7 +30,7 @@
                     }
                 @endphp
                 <tr>
-                    <td class="text-uppercase small fw-semibold">{{ str_replace('_', ' ', $key) }}</td>
+                    <td class="text-uppercase small font-semibold">{{ str_replace('_', ' ', $key) }}</td>
                     <td>{{ $value !== null ? number_format((float) $value, 4) : '—' }}</td>
                     <td>{{ number_format((float) $weight, 2) }}</td>
                     <td class="{{ ($impact ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format((float) $impact, 2) }}</td>
@@ -39,9 +39,9 @@
                             <div>{{ $reason }}</div>
                         @endif
                         @if(!empty($extras))
-                            <div class="small text-muted">
+                            <div class="small text-base-content/50">
                                 @foreach($extras as $extraKey => $extraValue)
-                                    <span class="me-2">
+                                    <span class="mr-2 inline-block">
                                         {{ str_replace('_', ' ', $extraKey) }}:
                                         @if(is_array($extraValue))
                                             {{ json_encode($extraValue, JSON_UNESCAPED_SLASHES) }}
@@ -61,21 +61,21 @@
         </table>
     </div>
 
-    <dl class="row small mb-2">
-        <dt class="col-sm-4">Mode</dt>
-        <dd class="col-sm-8 text-uppercase">{{ $meta['mode'] ?? 'auto' }}</dd>
-        <dt class="col-sm-4">Raw score</dt>
-        <dd class="col-sm-8">{{ number_format((float) ($meta['raw_score'] ?? 0), 2) }}</dd>
-        <dt class="col-sm-4">After cap</dt>
-        <dd class="col-sm-8">{{ number_format((float) ($meta['bounded'] ?? 0), 2) }}</dd>
+    <dl class="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,10rem)_1fr]">
+        <dt class="font-medium text-base-content/60">Mode</dt>
+        <dd class="text-uppercase">{{ $meta['mode'] ?? 'auto' }}</dd>
+        <dt class="font-medium text-base-content/60">Raw score</dt>
+        <dd>{{ number_format((float) ($meta['raw_score'] ?? 0), 2) }}</dd>
+        <dt class="font-medium text-base-content/60">After cap</dt>
+        <dd>{{ number_format((float) ($meta['bounded'] ?? 0), 2) }}</dd>
         @if(!empty($meta['caps']['relative_power'] ?? null))
-            <dt class="col-sm-4">Relative cap</dt>
-            <dd class="col-sm-8">{{ number_format((float) $meta['caps']['relative_power'], 2) }}</dd>
+            <dt class="font-medium text-base-content/60">Relative cap</dt>
+            <dd>{{ number_format((float) $meta['caps']['relative_power'], 2) }}</dd>
         @endif
     </dl>
 
     @if(!empty($meta['relative_power_details'] ?? []))
-        <div class="small text-muted">
+        <div class="small text-base-content/50">
             Relative power details:
             {{ json_encode($meta['relative_power_details'], JSON_UNESCAPED_SLASHES) }}
         </div>

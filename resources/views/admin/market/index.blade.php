@@ -1,105 +1,52 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header mb-3">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col-12 col-lg-6">
-                    <h3 class="mb-1">Alliance Market</h3>
-                    <p class="text-secondary mb-0">Manage buyable resources, caps, and pricing adjustments.</p>
-                </div>
-            </div>
-        </div>
+    <x-header title="Alliance Market" separator>
+        <x-slot:subtitle>Manage buyable resources, caps, and pricing adjustments.</x-slot:subtitle>
+    </x-header>
+
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="30d Volume"
+                :value="number_format($overview['stats']['volume'], $overview['stats']['volume'] >= 1000 ? 0 : 2)"
+                icon="o-archive-box"
+                color="text-primary"
+                description="Units sold across all listed resources" />
+        <x-stat title="30d Paid"
+                :value="'$' . number_format($overview['stats']['total_paid'], 2)"
+                icon="o-banknotes"
+                color="text-success"
+                description="Alliance cash paid to sellers" />
+        <x-stat title="Top Resource"
+                :value="$overview['stats']['top_resource'] ? str_replace('_', ' ', $overview['stats']['top_resource']) : '—'"
+                icon="o-trophy"
+                color="text-info"
+                :description="'$' . number_format($overview['stats']['top_resource_paid'], 2) . ' paid in 30d'" />
+        <x-stat title="Remaining Cap"
+                :value="number_format($overview['stats']['total_remaining_cap'], $overview['stats']['total_remaining_cap'] >= 1000 ? 0 : 2)"
+                icon="o-clipboard-document-check"
+                color="text-warning"
+                description="Combined remaining buy cap across resources" />
     </div>
 
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-primary text-white shadow">
-                    <i class="bi bi-box-seam"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-secondary fw-semibold">30d Volume</span>
-                    <span class="info-box-number fs-4 fw-semibold">
-                        {{ number_format($overview['stats']['volume'], $overview['stats']['volume'] >= 1000 ? 0 : 2) }}
-                    </span>
-                    <span class="text-secondary small">Units sold across all resources.</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-success text-white shadow">
-                    <i class="bi bi-cash-stack"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-secondary fw-semibold">30d Paid</span>
-                    <span class="info-box-number fs-4 fw-semibold">
-                        ${{ number_format($overview['stats']['total_paid'], 2) }}
-                    </span>
-                    <span class="text-secondary small">Total cash paid out.</span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-info text-white shadow">
-                    <i class="bi bi-trophy"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-secondary fw-semibold">Top Resource</span>
-                    <span class="info-box-number fs-4 fw-semibold text-capitalize">
-                        {{ $overview['stats']['top_resource'] ? str_replace('_', ' ', $overview['stats']['top_resource']) : '—' }}
-                    </span>
-                    <span class="text-secondary small">
-                        ${{ number_format($overview['stats']['top_resource_paid'], 2) }} paid in 30d.
-                    </span>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="info-box shadow-sm h-100">
-                <span class="info-box-icon bg-warning text-white shadow">
-                    <i class="bi bi-clipboard-check"></i>
-                </span>
-                <div class="info-box-content">
-                    <span class="info-box-text text-uppercase text-secondary fw-semibold">Remaining Cap</span>
-                    <span class="info-box-number fs-4 fw-semibold">
-                        {{ number_format($overview['stats']['total_remaining_cap'], $overview['stats']['total_remaining_cap'] >= 1000 ? 0 : 2) }}
-                    </span>
-                    <span class="text-secondary small">Total remaining across resources.</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">30-Day Cash Paid</div>
-                <div class="card-body">
+    <div class="mb-6 grid gap-4 xl:grid-cols-2">
+        <x-card title="30-Day Cash Paid">
+            <div class="min-h-56">
                     <canvas id="marketPaidChart" height="220"></canvas>
-                </div>
             </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">30-Day Volume by Resource</div>
-                <div class="card-body">
+        </x-card>
+        <x-card title="30-Day Volume by Resource">
+            <div class="min-h-56">
                     <canvas id="marketVolumeChart" height="220"></canvas>
-                </div>
             </div>
-        </div>
+        </x-card>
     </div>
 
-    <div class="card shadow-sm mb-4" id="market-resources">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">Market Resources</span>
-            <span class="text-secondary small">Base prices from 24h averages.</span>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped align-middle" id="marketResourcesTable">
+    <x-card title="Market Resources" id="market-resources" class="mb-6">
+        <x-slot:menu>
+            <span class="text-sm text-base-content/60">Base prices from 24h averages.</span>
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-zebra" id="marketResourcesTable">
                     <thead>
                     <tr>
                         <th>Resource</th>
@@ -118,13 +65,13 @@
                             <td>
                                 <form method="POST" action="{{ route('admin.market.resource.toggle', $resource['id']) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm {{ $resource['is_enabled'] ? 'btn-success' : 'btn-outline-secondary' }}">
+                                    <button type="submit" class="btn btn-sm {{ $resource['is_enabled'] ? 'btn-success' : 'btn-outline' }}">
                                         {{ $resource['is_enabled'] ? 'Enabled' : 'Disabled' }}
                                     </button>
                                 </form>
                             </td>
                             <td>
-                                <input type="number" step="0.01" name="adjustment_percent" class="form-control form-control-sm"
+                                <input type="number" step="0.01" name="adjustment_percent" class="input input-bordered input-sm w-full min-w-28"
                                        value="{{ number_format($resource['adjustment_percent'], 2, '.', '') }}"
                                        data-adjustment-input
                                        data-base-price="{{ $resource['base_price'] }}"
@@ -132,7 +79,7 @@
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
                             <td>
-                                <input type="number" step="0.01" min="0" name="buy_cap_remaining" class="form-control form-control-sm"
+                                <input type="number" step="0.01" min="0" name="buy_cap_remaining" class="input input-bordered input-sm w-full min-w-32"
                                        value="{{ number_format($resource['buy_cap_remaining'], 2, '.', '') }}"
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
@@ -148,25 +95,22 @@
                     @endforeach
                     </tbody>
                 </table>
-            </div>
         </div>
-    </div>
+    </x-card>
 
-    <div class="card shadow-sm">
-        <div class="card-header fw-semibold">Latest Transactions (Last 50)</div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle" id="marketTransactionsTable">
-                    <thead class="table-light">
+    <x-card title="Latest Transactions (Last 50)">
+        <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-sm" id="marketTransactionsTable">
+                    <thead>
                     <tr>
                         <th>Date</th>
                         <th>User</th>
                         <th>Nation</th>
                         <th>Account</th>
                         <th>Resource</th>
-                        <th class="text-end">Amount</th>
-                        <th class="text-end">Final Price</th>
-                        <th class="text-end">Money Paid</th>
+                        <th class="text-right">Amount</th>
+                        <th class="text-right">Final Price</th>
+                        <th class="text-right">Money Paid</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -177,22 +121,21 @@
                             <td>{{ $transaction->nation?->leader_name ?? 'Unknown' }}</td>
                             <td>{{ $transaction->account?->name ?? 'Unknown' }}</td>
                             <td class="text-capitalize">{{ str_replace('_', ' ', $transaction->resource) }}</td>
-                            <td class="text-end">{{ number_format($transaction->amount, 2) }}</td>
-                            <td class="text-end">${{ number_format($transaction->final_price, 4) }}</td>
-                            <td class="text-end">${{ number_format($transaction->money_paid, 2) }}</td>
+                            <td class="text-right">{{ number_format($transaction->amount, 2) }}</td>
+                            <td class="text-right">${{ number_format($transaction->final_price, 4) }}</td>
+                            <td class="text-right">${{ number_format($transaction->money_paid, 2) }}</td>
                         </tr>
                     @endforeach
                     </tbody>
                 </table>
-            </div>
         </div>
-    </div>
+    </x-card>
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const formatPrice = (value) => {
                 return new Intl.NumberFormat(undefined, {
                     minimumFractionDigits: 4,
@@ -217,16 +160,6 @@
 
                 input.addEventListener('input', updateFinal);
                 updateFinal();
-            });
-
-            initAdminDataTable('#marketResourcesTable', {
-                pageLength: 50,
-                responsive: true
-            });
-
-            initAdminDataTable('#marketTransactionsTable', {
-                pageLength: 25,
-                responsive: true
             });
 
             const paidCtx = document.getElementById('marketPaidChart').getContext('2d');

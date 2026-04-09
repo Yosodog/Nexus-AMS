@@ -1,685 +1,516 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header mb-3">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0">Minimum Military Requirements</h3>
-            </div>
+    @php
+        $mmrService = app(\App\Services\MMRService::class);
+        $resourceFields = $mmrService->getResourceFields();
+        $readinessFields = ['barracks', 'factories', 'hangars', 'drydocks', 'missiles', 'nukes', 'spies'];
+        $unitFields = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
+        $weightTotal = array_sum($weights ?? []);
+    @endphp
+
+    <x-header title="Minimum Military Requirements" separator>
+        <x-slot:subtitle>Manage tier definitions, weighting, assistant settings, and member readiness in one place.</x-slot:subtitle>
+    </x-header>
+
+    <div class="space-y-6">
+        <div>
+            <h2 class="text-lg font-semibold">Defined MMR Tiers</h2>
+            <p class="text-sm text-base-content/60">
+                Each city-count tier defines per-city minimum resource and unit expectations. Tier 0 is the fallback and cannot be deleted.
+            </p>
         </div>
-    </div>
 
-    <div class="app-content">
-        <div class="container-fluid">
-            @php
-                $mmrService = app(\App\Services\MMRService::class);
-                $resourceFields = $mmrService->getResourceFields();
-                $readinessFields = ['barracks', 'factories', 'hangars', 'drydocks', 'missiles', 'nukes', 'spies'];
-                $unitFields = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
-                $weightTotal = array_sum($weights ?? []);
-            @endphp
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+            <x-card title="Create a New Tier">
+                <p class="mb-4 text-sm text-base-content/60">Add the city count first, then use the configuration section below to set per-city minimums.</p>
 
-            {{-- Section: Tier Definitions --}}
-            <div class="mb-4">
-                <h4 class="fw-semibold">Defined MMR Tiers</h4>
-                <p class="text-muted mb-2">Each city count tier defines the per-city minimum resource and unit expectations for members. Tier 0 is the fallback and cannot be deleted.</p>
-            </div>
+                <form method="POST" action="{{ route('admin.mmr.store') }}" class="space-y-4">
+                    @csrf
 
-            <div class="row g-3 mb-4">
-                <div class="col-lg-7">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h5 class="card-title mb-0">Create a New Tier</h5>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Add the city count you need, then set resource and readiness minimums in the table.</p>
+                    <label class="block space-y-2">
+                        <span class="text-sm font-medium">City count</span>
+                        <input type="number" id="city_count" name="city_count" class="input input-bordered w-full" placeholder="e.g. 15" min="1" required>
+                    </label>
 
-                            <form method="POST" action="{{ route('admin.mmr.store') }}" class="row g-3 align-items-end">
-                                @csrf
-                                <div class="col-sm-6 col-md-5">
-                                    <label for="city_count" class="form-label mb-1">City count</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-buildings"></i></span>
-                                        <input type="number"
-                                               id="city_count"
-                                               name="city_count"
-                                               class="form-control"
-                                               placeholder="e.g. 15"
-                                               min="1"
-                                               required>
-                                    </div>
-                                </div>
-                                <div class="col-sm-6 col-md-4 d-flex gap-2">
-                                    <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
-                                        <i class="bi bi-plus-circle me-1"></i> Add Tier
-                                    </button>
-                                    <a href="#tier-config-table" class="btn btn-sm btn-outline-secondary" title="Jump to configuration">
-                                        <i class="bi bi-arrow-down-short"></i>
-                                    </a>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center gap-2 text-muted small">
-                                        <i class="bi bi-lightbulb-fill text-warning"></i>
-                                        <span>Use the grouped table below to enter expected resources and readiness for each tier.</span>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <x-icon name="o-plus-circle" class="size-4" />
+                            Add Tier
+                        </button>
+                        <a href="#tier-config-table" class="btn btn-outline btn-sm">Jump to configuration</a>
                     </div>
-                </div>
 
-                <div class="col-lg-5">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h5 class="card-title mb-0">Tier housekeeping</h5>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <p class="text-muted mb-2">Remove tiers you no longer use. Tier 0 is protected.</p>
-                                </div>
-                            </div>
-
-                            {{-- Tier Deletion --}}
-                            <form method="POST"
-                                  action="{{ route('admin.mmr.destroy') }}"
-                                  class="row g-2 align-items-end"
-                                  onsubmit="return confirm('Are you sure you want to delete this tier?')">
-                                @csrf
-                                @method('DELETE')
-                                <div class="col-12">
-                                    <label class="form-label mb-1" for="tier_id">Select tier to delete</label>
-                                    <select name="tier_id" id="tier_id" class="form-select form-select-sm" required>
-                                        <option disabled selected value="">Choose a city count</option>
-                                        @foreach($tiers as $tier)
-                                            @if($tier->city_count !== 0)
-                                                <option value="{{ $tier->id }}">City Count: {{ $tier->city_count }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-12 d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash me-1"></i> Delete Tier
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div class="mt-3 p-2 bg-body-tertiary rounded">
-                                <div class="d-flex align-items-start gap-2 text-muted small">
-                                    <i class="bi bi-info-circle"></i>
-                                    <span>Tier 0 is the default fallback and cannot be deleted.</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="rounded-box border border-base-300 bg-base-200/50 p-3 text-sm text-base-content/60">
+                        Use the grouped forms below to enter expected resources and readiness for each tier.
                     </div>
-                </div>
-            </div>
+                </form>
+            </x-card>
 
-            <div class="card mb-5">
-                <div class="card-header">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="card-title mb-0">Tier Configuration</h5>
-                        <span class="badge bg-info-subtle text-info-emphasis">Values are per city</span>
-                    </div>
-                </div>
-                <div class="card-body table-responsive" id="tier-config-table">
-                    <form method="POST" action="{{ route('admin.mmr.updateAll') }}">
-                        @csrf
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2 text-muted small">
-                                <i class="bi bi-grid-3x3-gap"></i>
-                                <span>Numbers are minimum expectations per tier. Empty values default to 0.</span>
-                            </div>
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="bi bi-save me-1"></i> Save all tiers
-                            </button>
-                        </div>
+            <x-card title="Tier Housekeeping">
+                <p class="mb-4 text-sm text-base-content/60">Remove tiers you no longer use. Tier 0 is protected.</p>
 
-                        <div class="accordion" id="tierAccordion">
+                <form method="POST" action="{{ route('admin.mmr.destroy') }}" class="space-y-4" onsubmit="return confirm('Are you sure you want to delete this tier?')">
+                    @csrf
+                    @method('DELETE')
+
+                    <label class="block space-y-2">
+                        <span class="text-sm font-medium">Select tier to delete</span>
+                        <select name="tier_id" id="tier_id" class="select select-bordered w-full" required>
+                            <option disabled selected value="">Choose a city count</option>
                             @foreach($tiers as $tier)
-                                <div class="accordion-item mb-3 border-0 shadow-sm">
-                                    <h2 class="accordion-header" id="heading{{ $tier->id }}">
-                                        <button class="accordion-button {{ !$loop->first ? 'collapsed' : '' }}" type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#collapse{{ $tier->id }}"
-                                                aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
-                                                aria-controls="collapse{{ $tier->id }}">
-                                            <div class="d-flex align-items-center gap-3">
-                                                <span class="badge bg-primary-subtle text-primary-emphasis fs-6">{{ $tier->city_count }}</span>
-                                                <div class="d-flex flex-column">
-                                                    <span class="fw-semibold">City count {{ $tier->city_count }}</span>
-                                                    <small class="text-muted">Configure per-city resource minimums and readiness</small>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </h2>
-                                    <div id="collapse{{ $tier->id }}" class="accordion-collapse collapse {{ $loop->first ? 'show' : '' }}"
-                                         aria-labelledby="heading{{ $tier->id }}" data-bs-parent="#tierAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row g-4">
-                                                <div class="col-12">
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <span class="fw-semibold">Resource minimums</span>
-                                                        <span class="badge bg-light text-dark">Per city</span>
-                                                    </div>
-                                                    <div class="row g-3">
-                                                        @foreach($resourceFields as $field)
-                                                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                                                                <label class="form-label text-capitalize">{{ $field }}</label>
-                                                                <input type="number"
-                                                                       name="tiers[{{ $tier->id }}][{{ $field }}]"
-                                                                       value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
-                                                                       min="0"
-                                                                       inputmode="numeric"
-                                                                       placeholder="{{ ucfirst($field) }}">
-                                                                @error("tiers.{$tier->id}.{$field}")
-                                                                <div class="invalid-feedback">{{ $message }}</div>
-                                                                @enderror
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-12">
-                                                    <hr class="my-3">
-                                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                                        <span class="fw-semibold">Readiness per city</span>
-                                                        <span class="badge bg-light text-dark">Buildings &amp; slots</span>
-                                                    </div>
-                                                    <div class="row g-3">
-                                                        @foreach($readinessFields as $field)
-                                                            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                                                                <label class="form-label text-capitalize">{{ $field }}</label>
-                                                                <input type="number"
-                                                                       name="tiers[{{ $tier->id }}][{{ $field }}]"
-                                                                       value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                                       class="form-control @error("tiers.{$tier->id}.{$field}") is-invalid @enderror text-end"
-                                                                       min="0"
-                                                                       inputmode="numeric"
-                                                                       placeholder="{{ ucfirst($field) }}">
-                                                                @error("tiers.{$tier->id}.{$field}")
-                                                                <div class="invalid-feedback">{{ $message }}</div>
-                                                                @enderror
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                @if($tier->city_count !== 0)
+                                    <option value="{{ $tier->id }}">City Count: {{ $tier->city_count }}</option>
+                                @endif
                             @endforeach
-                        </div>
+                        </select>
+                    </label>
 
-                        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
-                            <div class="d-flex align-items-center gap-2 text-muted small">
-                                <i class="bi bi-shield-check text-success"></i>
-                                <span>Changes save everything at once—review before submitting.</span>
-                            </div>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-save me-1"></i> Save all tiers
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card mb-5">
-                <div class="card-header">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="card-title mb-0">Bulk Edit Tier Resources</h5>
-                        <span class="badge bg-primary-subtle text-primary-emphasis">Per city updates</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.mmr.bulk-edit-resources') }}" class="row g-4">
-                        @csrf
-
-                        <div class="col-12 col-lg-4">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-semibold">Select tiers</span>
-                                <div class="d-flex align-items-center gap-2">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkSelectAll">Select all</button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mmrBulkClearAll">Clear</button>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach($tiers as $tier)
-                                    <div class="form-check form-check-inline m-0">
-                                        <input class="form-check-input mmr-bulk-tier"
-                                               type="checkbox"
-                                               name="tier_ids[]"
-                                               id="bulk-tier-{{ $tier->id }}"
-                                               value="{{ $tier->id }}"
-                                               @checked(in_array($tier->id, old('tier_ids', [])))>
-                                        <label class="form-check-label" for="bulk-tier-{{ $tier->id }}">
-                                            <span class="badge bg-primary-subtle text-primary-emphasis">{{ $tier->city_count }}</span>
-                                            <span class="text-muted small ms-1">cities</span>
-                                        </label>
-                                    </div>
-                                @endforeach
-                            </div>
-                            @error('tier_ids')
-                            <div class="text-danger small mt-2">{{ $message }}</div>
-                            @enderror
-                            @error('tier_ids.*')
-                            <div class="text-danger small mt-2">{{ $message }}</div>
-                            @enderror
-                            <div class="text-muted small mt-3">
-                                Choose one or more city-count tiers to update together.
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-lg-8">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-semibold">Per-city minimums</span>
-                                <span class="text-muted small">Leave blank to keep current values</span>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="fw-semibold">Resources</span>
-                                        <span class="badge bg-light text-dark">Per city</span>
-                                    </div>
-                                    <div class="row g-3">
-                                        @foreach($resourceFields as $field)
-                                            <div class="col-12 col-md-6 col-xl-4">
-                                                <label class="form-label text-capitalize">{{ $field }}</label>
-                                                <input type="number"
-                                                       name="resources[{{ $field }}]"
-                                                       value="{{ old("resources.{$field}") }}"
-                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
-                                                       min="0"
-                                                       inputmode="numeric"
-                                                       placeholder="Leave blank">
-                                                @error("resources.{$field}")
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <hr class="my-2">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="fw-semibold">Readiness</span>
-                                        <span class="badge bg-light text-dark">Buildings &amp; slots</span>
-                                    </div>
-                                    <div class="row g-3">
-                                        @foreach($readinessFields as $field)
-                                            <div class="col-12 col-md-6 col-xl-4">
-                                                <label class="form-label text-capitalize">{{ $field }}</label>
-                                                <input type="number"
-                                                       name="resources[{{ $field }}]"
-                                                       value="{{ old("resources.{$field}") }}"
-                                                       class="form-control @error("resources.{$field}") is-invalid @enderror text-end"
-                                                       min="0"
-                                                       inputmode="numeric"
-                                                       placeholder="Leave blank">
-                                                @error("resources.{$field}")
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-                            @error('resources')
-                            <div class="text-danger small mt-2">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-start gap-2 text-muted small">
-                                <i class="bi bi-arrow-repeat"></i>
-                                <span>Filled fields replace per-city values on the selected tiers.</span>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check2-circle me-1"></i> Apply Bulk Edit
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {{-- Section: Resource Weighting --}}
-            <div class="card mb-5">
-                <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">Resource Weighting</h5>
-                        <small class="text-muted">Weights must total 100% and control how the MMR score is calculated.</small>
+                        <button type="submit" class="btn btn-outline btn-error btn-sm">
+                            <x-icon name="o-trash" class="size-4" />
+                            Delete Tier
+                        </button>
                     </div>
-                    <span class="badge bg-light text-dark">Current total: {{ number_format($weightTotal, 2) }}%</span>
+                </form>
+
+                <div class="mt-4 rounded-box border border-base-300 bg-base-200/50 p-3 text-sm text-base-content/60">
+                    Tier 0 is the default fallback and cannot be deleted.
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.mmr.weights.update') }}">
-                        @csrf
-                        @error('weights')
-                        <div class="alert alert-warning" role="alert">
-                            {{ $message }}
-                        </div>
-                        @enderror
+            </x-card>
+        </div>
 
-                        <div class="row g-3">
-                            @foreach($resourceFields as $resource)
-                                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                                    <label class="form-label text-capitalize d-flex justify-content-between align-items-center">
-                                        <span>{{ $resource }}</span>
-                                        <span class="text-muted small">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="number"
-                                               name="weights[{{ $resource }}]"
-                                               class="form-control @error("weights.{$resource}") is-invalid @enderror mmr-weight-input"
-                                               step="0.01"
-                                               min="0"
-                                               value="{{ old("weights.{$resource}", $weights[$resource] ?? 0) }}"
-                                               aria-label="{{ ucfirst($resource) }} weight" />
-                                        <span class="input-group-text">%</span>
-                                    </div>
-                                    @error("weights.{$resource}")
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            @endforeach
-                        </div>
+        <x-card title="Tier Configuration" id="tier-config-table">
+            <x-slot:menu>
+                <span class="badge badge-info">Values are per city</span>
+            </x-slot:menu>
 
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div class="text-muted small">
-                                Adjust weights to emphasize specific resources. The live total updates as you type.
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="fw-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-sliders me-1"></i> Save Weights
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <form method="POST" action="{{ route('admin.mmr.updateAll') }}" class="space-y-4">
+                @csrf
 
-            {{-- Section: MMR Assistant Resource Settings --}}
-            <div class="mb-5">
-                <h4 class="fw-semibold d-flex align-items-center">
-                    MMR Assistant Resource Settings
-
-                    {{-- Popover for global helper --}}
-                    <i class="bi bi-info-circle-fill ms-2 text-muted"
-                       style="cursor: pointer;"
-                       tabindex="0"
-                       data-bs-toggle="popover"
-                       data-bs-trigger="focus"
-                       data-bs-placement="right"
-                       data-bs-html="true"
-                       title="What is this?"
-                       data-bs-content="
-               <strong>MMR Assistant</strong> automatically buys resources for members based on their Direct Deposit after-tax income.
-               <br><br>
-               You can globally enable or disable this feature. When disabled, no purchases will be made, regardless of user settings.
-           "></i>
-                </h4>
-
-                <p class="text-muted mb-3">
-                    Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they’re purchasable via MMR Assistant.
-                </p>
-
-                <div class="card">
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('admin.mmr.assistant.update') }}">
-                            @csrf
-
-                            {{-- Global toggle --}}
-                            <div class="form-check form-switch mb-4">
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="mmrEnabledToggle"
-                                       name="enabled"
-                                       value="1"
-                                        @checked(\App\Services\SettingService::getMMRAssistantEnabled()) />
-                                <label class="form-check-label fw-semibold" for="mmrEnabledToggle">
-                                    Enable MMR Assistant Globally
-
-                                    @if(\App\Services\SettingService::getMMRAssistantEnabled())
-                                        <span class="badge bg-success ms-2">Enabled</span>
-                                    @else
-                                        <span class="badge bg-secondary ms-2">Disabled</span>
-                                    @endif
-                                </label>
-                            </div>
-
-                            <div class="table-responsive mb-3">
-                                <table class="table table-bordered align-middle">
-                                    <thead class="table-light">
-                                    <tr>
-                                        <th>Resource</th>
-                                        <th>Enabled</th>
-                                        <th>Surcharge %</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    @foreach(\App\Models\MMRSetting::orderBy('resource')->get() as $setting)
-                                        <tr>
-                                            <td class="text-capitalize">{{ $setting->resource }}</td>
-                                            <td>
-                                                <input type="checkbox"
-                                                       name="resources[{{ $setting->resource }}][enabled]"
-                                                       value="1"
-                                                        @checked($setting->enabled) />
-                                            </td>
-                                            <td>
-                                                <input type="number"
-                                                       name="resources[{{ $setting->resource }}][surcharge_pct]"
-                                                       class="form-control"
-                                                       step="0.01"
-                                                       min="0"
-                                                       value="{{ $setting->surcharge_pct }}" />
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-save me-1"></i> Save Settings
-                                </button>
-
-                                <div class="input-group" style="width: 300px;">
-                                    <span class="input-group-text">Set all surcharges to</span>
-                                    <input type="number" id="setAllSurcharge" class="form-control" step="0.01" min="0">
-                                    <button type="button" class="btn btn-outline-secondary" id="applySurchargeToAll">Apply</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Section: Resource Table --}}
-            <div class="mb-3">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <div>
-                        <h4 class="fw-semibold mb-0">Member Resource Totals</h4>
-                        <p class="text-muted mb-0">Requirements scale by city count (per-city values multiplied by total cities). Resources include on-hand and banked values at the last sign-in; red cells indicate members below required minimums.</p>
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="mmrExportCsv">
-                        <i class="bi bi-download me-1"></i> Export Resources + Units CSV
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="text-sm text-base-content/60">Numbers are minimum expectations per tier. Empty values default to 0.</div>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <x-icon name="o-check" class="size-4" />
+                        Save all tiers
                     </button>
                 </div>
-            </div>
 
-            <div class="card mb-4">
-                <div class="card-body table-responsive">
-                    <table class="table table-hover table-striped align-middle mmr-table" id="mmrResourceTable">
-                        <thead class="table-light sticky-top">
+                <div class="space-y-4">
+                    @foreach($tiers as $tier)
+                        <div class="collapse collapse-arrow border border-base-300 bg-base-100">
+                            <input type="checkbox" @checked($loop->first)>
+                            <div class="collapse-title">
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <span class="badge badge-primary">{{ $tier->city_count }}</span>
+                                    <div>
+                                        <div class="font-semibold">City count {{ $tier->city_count }}</div>
+                                        <div class="text-sm text-base-content/60">Configure per-city resource minimums and readiness.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse-content space-y-6">
+                                <div>
+                                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                                        <span class="font-semibold">Resource minimums</span>
+                                        <span class="badge badge-ghost">Per city</span>
+                                    </div>
+                                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        @foreach($resourceFields as $field)
+                                            <label class="block space-y-2">
+                                                <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                                <input
+                                                    type="number"
+                                                    name="tiers[{{ $tier->id }}][{{ $field }}]"
+                                                    value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
+                                                    class="input input-bordered w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
+                                                    min="0"
+                                                    inputmode="numeric"
+                                                    placeholder="{{ ucfirst($field) }}"
+                                                >
+                                                @error("tiers.{$tier->id}.{$field}")
+                                                    <span class="text-xs text-error">{{ $message }}</span>
+                                                @enderror
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                                        <span class="font-semibold">Readiness per city</span>
+                                        <span class="badge badge-ghost">Buildings and slots</span>
+                                    </div>
+                                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        @foreach($readinessFields as $field)
+                                            <label class="block space-y-2">
+                                                <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                                <input
+                                                    type="number"
+                                                    name="tiers[{{ $tier->id }}][{{ $field }}]"
+                                                    value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
+                                                    class="input input-bordered w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
+                                                    min="0"
+                                                    inputmode="numeric"
+                                                    placeholder="{{ ucfirst($field) }}"
+                                                >
+                                                @error("tiers.{$tier->id}.{$field}")
+                                                    <span class="text-xs text-error">{{ $message }}</span>
+                                                @enderror
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="text-sm text-base-content/60">Changes save everything at once, so review the tiers before submitting.</div>
+                    <button type="submit" class="btn btn-success">
+                        <x-icon name="o-check" class="size-4" />
+                        Save all tiers
+                    </button>
+                </div>
+            </form>
+        </x-card>
+
+        <x-card title="Bulk Edit Tier Resources">
+            <x-slot:menu>
+                <span class="badge badge-primary">Per city updates</span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.mmr.bulk-edit-resources') }}" class="space-y-6">
+                @csrf
+
+                <div class="grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                    <div class="space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="font-semibold">Select tiers</span>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn btn-outline btn-sm" id="mmrBulkSelectAll">Select all</button>
+                                <button type="button" class="btn btn-outline btn-sm" id="mmrBulkClearAll">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($tiers as $tier)
+                                <label class="label cursor-pointer justify-start gap-2 rounded-box border border-base-300 px-3 py-2">
+                                    <input class="checkbox checkbox-sm mmr-bulk-tier" type="checkbox" name="tier_ids[]" value="{{ $tier->id }}" @checked(in_array($tier->id, old('tier_ids', [])))>
+                                    <span class="text-sm">City count {{ $tier->city_count }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        @error('tier_ids')
+                            <div class="text-sm text-error">{{ $message }}</div>
+                        @enderror
+                        @error('tier_ids.*')
+                            <div class="text-sm text-error">{{ $message }}</div>
+                        @enderror
+
+                        <div class="text-sm text-base-content/60">Choose one or more city-count tiers to update together.</div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <div class="mb-3 flex flex-wrap items-center gap-2">
+                                <span class="font-semibold">Resources</span>
+                                <span class="badge badge-ghost">Per city</span>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                @foreach($resourceFields as $field)
+                                    <label class="block space-y-2">
+                                        <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input input-bordered w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
+                                        @error("resources.{$field}")
+                                            <span class="text-xs text-error">{{ $message }}</span>
+                                        @enderror
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="mb-3 flex flex-wrap items-center gap-2">
+                                <span class="font-semibold">Readiness</span>
+                                <span class="badge badge-ghost">Buildings and slots</span>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                @foreach($readinessFields as $field)
+                                    <label class="block space-y-2">
+                                        <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input input-bordered w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
+                                        @error("resources.{$field}")
+                                            <span class="text-xs text-error">{{ $message }}</span>
+                                        @enderror
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @error('resources')
+                    <div class="text-sm text-error">{{ $message }}</div>
+                @enderror
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="text-sm text-base-content/60">Filled fields replace per-city values on the selected tiers.</div>
+                    <button type="submit" class="btn btn-primary">
+                        <x-icon name="o-check-circle" class="size-4" />
+                        Apply Bulk Edit
+                    </button>
+                </div>
+            </form>
+        </x-card>
+
+        <x-card title="Resource Weighting">
+            <x-slot:menu>
+                <span class="badge badge-ghost">Current total: {{ number_format($weightTotal, 2) }}%</span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.mmr.weights.update') }}" class="space-y-4">
+                @csrf
+
+                @error('weights')
+                    <div class="alert alert-warning"><span>{{ $message }}</span></div>
+                @enderror
+
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                    @foreach($resourceFields as $resource)
+                        <label class="block space-y-2">
+                            <span class="flex justify-between text-sm font-medium text-capitalize">
+                                <span>{{ $resource }}</span>
+                                <span class="text-base-content/60">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
+                            </span>
+                            <div class="join w-full">
+                                <input
+                                    type="number"
+                                    name="weights[{{ $resource }}]"
+                                    class="input input-bordered join-item w-full @error("weights.{$resource}") input-error @enderror mmr-weight-input"
+                                    step="0.01"
+                                    min="0"
+                                    value="{{ old("weights.{$resource}", $weights[$resource] ?? 0) }}"
+                                >
+                                <span class="join-item flex items-center border border-base-300 bg-base-200 px-3 text-sm">%</span>
+                            </div>
+                            @error("weights.{$resource}")
+                                <span class="text-xs text-error">{{ $message }}</span>
+                            @enderror
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="text-sm text-base-content/60">Adjust weights to emphasize specific resources. The live total updates as you type.</div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="font-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <x-icon name="o-adjustments-horizontal" class="size-4" />
+                            Save Weights
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </x-card>
+
+        <x-card title="MMR Assistant Resource Settings">
+            <p class="mb-4 text-sm text-base-content/60">
+                Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they are purchasable via MMR Assistant.
+            </p>
+
+            <form method="POST" action="{{ route('admin.mmr.assistant.update') }}" class="space-y-4">
+                @csrf
+
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" id="mmrEnabledToggle" name="enabled" value="1" @checked(\App\Services\SettingService::getMMRAssistantEnabled())>
+                    <span class="label-text">
+                        Enable MMR Assistant Globally
+                        <span class="badge ml-2 {{ \App\Services\SettingService::getMMRAssistantEnabled() ? 'badge-success' : 'badge-ghost' }}">
+                            {{ \App\Services\SettingService::getMMRAssistantEnabled() ? 'Enabled' : 'Disabled' }}
+                        </span>
+                    </span>
+                </label>
+
+                <div class="overflow-x-auto rounded-box border border-base-300">
+                    <table class="table table-zebra">
+                        <thead>
                         <tr>
-                            <th>Leader</th>
-                            <th>Discord</th>
-                            <th>City Count</th>
+                            <th>Resource</th>
+                            <th>Enabled</th>
+                            <th>Surcharge %</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach(\App\Models\MMRSetting::orderBy('resource')->get() as $setting)
+                            <tr>
+                                <td class="text-capitalize">{{ $setting->resource }}</td>
+                                <td>
+                                    <input type="checkbox" class="checkbox checkbox-sm" name="resources[{{ $setting->resource }}][enabled]" value="1" @checked($setting->enabled)>
+                                </td>
+                                <td>
+                                    <input type="number" name="resources[{{ $setting->resource }}][surcharge_pct]" class="input input-bordered input-sm w-full max-w-32" step="0.01" min="0" value="{{ $setting->surcharge_pct }}">
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <button type="submit" class="btn btn-success">
+                        <x-icon name="o-check" class="size-4" />
+                        Save Settings
+                    </button>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm text-base-content/60">Set all surcharges to</span>
+                        <input type="number" id="setAllSurcharge" class="input input-bordered input-sm w-28" step="0.01" min="0">
+                        <button type="button" class="btn btn-outline btn-sm" id="applySurchargeToAll">Apply</button>
+                    </div>
+                </div>
+            </form>
+        </x-card>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold">Member Resource Totals</h2>
+                <p class="text-sm text-base-content/60">
+                    Requirements scale by city count. Resources include on-hand and banked values at the last sign-in; red cells indicate members below the required minimums.
+                </p>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="mmrExportCsv">
+                <x-icon name="o-arrow-down-tray" class="size-4" />
+                Export Resources + Units CSV
+            </button>
+        </div>
+
+        <x-card>
+            <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-zebra mmr-table" id="mmrResourceTable">
+                    <thead>
+                    <tr>
+                        <th>Leader</th>
+                        <th>Discord</th>
+                        <th>City Count</th>
+                        @foreach($resourceFields as $resource)
+                            <th>{{ ucfirst($resource) }}</th>
+                        @endforeach
+                        <th>MMR Score</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($nations as $nation)
+                        @php
+                            $eval = $evaluations[$nation->id] ?? null;
+                            $tier = $mmrService->getTierForNation($nation);
+                            $signIn = $nation->latestSignIn;
+                        @endphp
+                        <tr>
+                            <td>
+                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener" class="link link-hover">
+                                    {{ $nation->leader_name }}
+                                </a>
+                            </td>
+                            <td>{{ $nation->discord ?: '—' }}</td>
+                            <td>{{ $nation->num_cities }}</td>
                             @foreach($resourceFields as $resource)
-                                <th>{{ ucfirst($resource) }}</th>
-                            @endforeach
-                            <th>MMR Score</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($nations as $nation)
-                            @php
-                                $eval = $evaluations[$nation->id] ?? null;
-                                $tier = $mmrService->getTierForNation($nation);
-                                $signIn = $nation->latestSignIn;
-                            @endphp
-                            <tr>
-                                <td>
-                                    <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank">
-                                        {{ $nation->leader_name }}
-                                    </a>
+                                @php
+                                    $have = $signIn->$resource;
+                                    $required = $tier->$resource * $nation->num_cities;
+                                    $meets = $have >= $required;
+                                @endphp
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($required === 0 ? 'text-base-content/50' : '') }}" title="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)">
+                                    {{ number_format($have) }}
                                 </td>
-                                <td>{{ $nation->discord ?: '—' }}</td>
-                                <td>{{ $nation->num_cities }}</td>
-                                @foreach($resourceFields as $resource)
+                            @endforeach
+                            <td>
+                                @if($eval)
                                     @php
-                                        $have = $signIn->$resource;
-                                        $required = $tier->$resource * $nation->num_cities;
-                                        $meets = $have >= $required;
+                                        $score = $eval['mmr_score'] ?? 0;
+                                        $resourceMet = $eval['meets_resource_requirements'] ?? false;
+                                        $unitMet = $eval['meets_unit_requirements'] ?? false;
                                     @endphp
-                                    <td @class([
-                                        'bg-danger-subtle text-danger-emphasis' => !$meets,
-                                        'text-muted' => $required === 0
-                                    ])>
-                                        <span data-bs-toggle="tooltip" title="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)">
-                                            {{ number_format($have) }}
-                                        </span>
-                                    </td>
-                                @endforeach
-                                <td>
-                                    @if($eval)
-                                        @php
-                                            $score = $eval['mmr_score'] ?? 0;
-                                            $resourceMet = $eval['meets_resource_requirements'] ?? false;
-                                            $unitMet = $eval['meets_unit_requirements'] ?? false;
-                                            $barClass = $score >= 90 ? 'bg-success' : ($score >= 70 ? 'bg-warning' : 'bg-danger');
-                                        @endphp
-                                        <div class="d-flex flex-column gap-1">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="fw-semibold">{{ $score }}%</span>
-                                                <span class="badge {{ $resourceMet ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis' }}">
-                                                    Resources {{ $resourceMet ? 'OK' : 'Low' }}
-                                                </span>
-                                                <span class="badge {{ $unitMet ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis' }}">
-                                                    Units {{ $unitMet ? 'OK' : 'Low' }}
-                                                </span>
-                                            </div>
-                                            <div class="progress" style="height: 6px;">
-                                                <div class="progress-bar {{ $barClass }}" role="progressbar" style="width: {{ min($score, 100) }}%" aria-valuenow="{{ $score }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
+                                    <div class="space-y-2">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="font-semibold">{{ $score }}%</span>
+                                            <span class="badge {{ $resourceMet ? 'badge-success' : 'badge-warning' }}">Resources {{ $resourceMet ? 'OK' : 'Low' }}</span>
+                                            <span class="badge {{ $unitMet ? 'badge-success' : 'badge-warning' }}">Units {{ $unitMet ? 'OK' : 'Low' }}</span>
                                         </div>
-                                    @else
-                                        <span class="text-muted">N/A</span>
-                                    @endif
-                                </td>
-                            </tr>
+                                        <progress class="progress {{ $score >= 90 ? 'progress-success' : ($score >= 70 ? 'progress-warning' : 'progress-error') }} h-2 w-full" value="{{ min($score, 100) }}" max="100"></progress>
+                                    </div>
+                                @else
+                                    <span class="text-base-content/60">N/A</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+
+        <div>
+            <h2 class="text-lg font-semibold">Member Military Units</h2>
+            <p class="text-sm text-base-content/60">Military minimums are derived from each member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
+        </div>
+
+        <x-card>
+            <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-zebra mmr-table" id="mmrMilitaryTable">
+                    <thead>
+                    <tr>
+                        <th>Leader</th>
+                        <th>Discord</th>
+                        <th>City Count</th>
+                        @foreach($unitFields as $unit)
+                            <th>{{ ucfirst($unit) }}</th>
                         @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {{-- Section: Military Table --}}
-            <div class="mb-3">
-                <h4 class="fw-semibold">Member Military Units</h4>
-                <p class="text-muted mb-2">Military minimums are derived from the member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
-            </div>
-
-            <div class="card">
-                <div class="card-body table-responsive">
-                    <table class="table table-hover table-striped align-middle mmr-table" id="mmrMilitaryTable">
-                        <thead class="table-light sticky-top">
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($nations as $nation)
+                        @php
+                            $signIn = $nation->latestSignIn;
+                            $tier = $mmrService->getTierForNation($nation);
+                            $required = $mmrService->buildUnitRequirements($tier, $nation->num_cities);
+                        @endphp
                         <tr>
-                            <th>Leader</th>
-                            <th>Discord</th>
-                            <th>City Count</th>
+                            <td>
+                                <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener" class="link link-hover">
+                                    {{ $nation->leader_name }}
+                                </a>
+                            </td>
+                            <td>{{ $nation->discord ?: '—' }}</td>
+                            <td>{{ $nation->num_cities }}</td>
                             @foreach($unitFields as $unit)
-                                <th>{{ ucfirst($unit) }}</th>
+                                @php
+                                    $have = $signIn->$unit;
+                                    $min = $required[$unit];
+                                    $meets = $have >= $min;
+                                @endphp
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($min === 0 ? 'text-base-content/50' : '') }}" title="Required: {{ number_format($min) }}">
+                                    {{ number_format($have) }}
+                                </td>
                             @endforeach
                         </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($nations as $nation)
-                            @php
-                                $signIn = $nation->latestSignIn;
-                                $tier = $mmrService->getTierForNation($nation);
-                                $required = $mmrService->buildUnitRequirements($tier, $nation->num_cities);
-                            @endphp
-                            <tr>
-                                <td>
-                                    <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank">
-                                        {{ $nation->leader_name }}
-                                    </a>
-                                </td>
-                                <td>{{ $nation->discord ?: '—' }}</td>
-                                <td>{{ $nation->num_cities }}</td>
-                                @foreach($unitFields as $unit)
-                                    @php
-                                        $have = $signIn->$unit;
-                                        $min = $required[$unit];
-                                        $meets = $have >= $min;
-                                    @endphp
-                                    <td @class([
-                                        'bg-danger-subtle text-danger-emphasis' => !$meets,
-                                        'text-muted' => $min === 0
-                                    ])>
-                                        <span data-bs-toggle="tooltip" title="Required: {{ number_format($min) }}">
-                                            {{ number_format($have) }}
-                                        </span>
-                                    </td>
-                                @endforeach
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                    @endforeach
+                    </tbody>
+                </table>
             </div>
+        </x-card>
 
-            {{-- Back to Top --}}
-            <div class="text-end mt-4">
-                <a href="#" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-up"></i> Back to Top
-                </a>
-            </div>
+        <div class="text-right">
+            <a href="#" class="btn btn-outline btn-sm">Back to Top</a>
         </div>
     </div>
 @endsection
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                new bootstrap.Tooltip(el);
-            });
-
-            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-                new bootstrap.Popover(el);
-            });
-
-            const resourceTable = initAdminDataTable('#mmrResourceTable', {
-                pageLength: 50,
-                responsive: true
-            });
-
-            const militaryTable = initAdminDataTable('#mmrMilitaryTable', {
-                pageLength: 50,
-                responsive: true
-            });
-
+        document.addEventListener('codex:page-ready', () => {
             const weightInputs = document.querySelectorAll('.mmr-weight-input');
             const weightTotal = document.getElementById('mmrWeightTotal');
 
@@ -687,138 +518,98 @@
                 const total = Array.from(weightInputs).reduce((sum, input) => {
                     const value = parseFloat(input.value);
 
-                    return sum + (isNaN(value) ? 0 : value);
+                    return sum + (Number.isNaN(value) ? 0 : value);
                 }, 0);
 
                 if (weightTotal) {
                     weightTotal.textContent = `Total: ${total.toFixed(2)}%`;
-                    weightTotal.classList.toggle('text-danger', Math.abs(total - 100) > 0.01);
+                    weightTotal.classList.toggle('text-error', Math.abs(total - 100) > 0.01);
                 }
             };
 
-            weightInputs.forEach(input => input.addEventListener('input', updateWeightTotal));
+            weightInputs.forEach((input) => input.addEventListener('input', updateWeightTotal));
             updateWeightTotal();
 
             const surchargeApplyButton = document.getElementById('applySurchargeToAll');
             const surchargeInput = document.getElementById('setAllSurcharge');
 
-            if (surchargeApplyButton && surchargeInput) {
-                surchargeApplyButton.addEventListener('click', () => {
-                    const value = parseFloat(surchargeInput.value);
-                    if (isNaN(value)) {
-                        return;
-                    }
-
-                    document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach(input => {
-                        input.value = value.toFixed(2);
-                    });
-                });
-            }
-
-            const bulkTierCheckboxes = document.querySelectorAll('.mmr-bulk-tier');
-            const bulkSelectAll = document.getElementById('mmrBulkSelectAll');
-            const bulkClearAll = document.getElementById('mmrBulkClearAll');
-
-            if (bulkSelectAll && bulkClearAll && bulkTierCheckboxes.length > 0) {
-                bulkSelectAll.addEventListener('click', () => {
-                    bulkTierCheckboxes.forEach(input => {
-                        input.checked = true;
-                    });
-                });
-
-                bulkClearAll.addEventListener('click', () => {
-                    bulkTierCheckboxes.forEach(input => {
-                        input.checked = false;
-                    });
-                });
-            }
-
-            const exportButton = document.getElementById('mmrExportCsv');
-
-            const stripHtml = (value) => {
-                if (value === null || value === undefined) {
-                    return '';
+            surchargeApplyButton?.addEventListener('click', () => {
+                const value = parseFloat(surchargeInput?.value ?? '');
+                if (Number.isNaN(value)) {
+                    return;
                 }
 
+                document.querySelectorAll('input[name$="[surcharge_pct]"]').forEach((input) => {
+                    input.value = value.toFixed(2);
+                });
+            });
+
+            const bulkTierCheckboxes = document.querySelectorAll('.mmr-bulk-tier');
+            document.getElementById('mmrBulkSelectAll')?.addEventListener('click', () => {
+                bulkTierCheckboxes.forEach((input) => {
+                    input.checked = true;
+                });
+            });
+
+            document.getElementById('mmrBulkClearAll')?.addEventListener('click', () => {
+                bulkTierCheckboxes.forEach((input) => {
+                    input.checked = false;
+                });
+            });
+
+            const stripHtml = (value) => {
                 const div = document.createElement('div');
-                div.innerHTML = String(value);
+                div.innerHTML = String(value ?? '');
 
                 return div.textContent.trim();
             };
 
             const formatCsvLine = (cells) => {
-                return cells.map(cell => {
-                    const text = String(cell ?? '');
-                    const escaped = text.replace(/"/g, '""');
-
-                    return `"${escaped}"`;
-                }).join(',');
+                return cells.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',');
             };
 
-            const getTableSection = (tableId, dataTable) => {
+            const getTableSection = (tableId) => {
                 const table = document.getElementById(tableId);
-                if (!table) {
+                if (! table) {
                     return { headers: [], rows: [] };
                 }
 
-                const headers = Array.from(table.querySelectorAll('thead th')).map(th => stripHtml(th.innerHTML));
-                const rows = dataTable ? dataTable.rows({ search: 'applied' }).data().toArray() : [];
-                let dataRows = [];
+                const headers = Array.from(table.querySelectorAll('thead th')).map((th) => stripHtml(th.innerHTML));
+                const rows = Array.from(table.querySelectorAll('tbody tr')).map((row) => {
+                    return Array.from(row.children).map((cell) => stripHtml(cell.innerHTML));
+                });
 
-                if (rows.length > 0) {
-                    dataRows = rows.map(row => Array.from(row).map(cell => stripHtml(cell)));
-                } else {
-                    dataRows = Array.from(table.querySelectorAll('tbody tr')).map(row => {
-                        return Array.from(row.children).map(cell => stripHtml(cell.innerHTML));
-                    });
-                }
-
-                return { headers, rows: dataRows };
+                return { headers, rows };
             };
 
-            if (exportButton) {
-                exportButton.addEventListener('click', () => {
-                    const resourceSection = getTableSection('mmrResourceTable', resourceTable);
-                    const unitSection = getTableSection('mmrMilitaryTable', militaryTable);
+            document.getElementById('mmrExportCsv')?.addEventListener('click', () => {
+                const resourceSection = getTableSection('mmrResourceTable');
+                const unitSection = getTableSection('mmrMilitaryTable');
 
-                    const combinedHeaders = [
-                        ...resourceSection.headers,
-                        ...unitSection.headers.slice(2),
-                    ];
+                const combinedHeaders = [...resourceSection.headers, ...unitSection.headers.slice(2)];
+                const unitRowMap = new Map();
 
-                    const unitRowMap = new Map();
-                    unitSection.rows.forEach(row => {
-                        const key = `${row[0]}::${row[1]}`;
-                        unitRowMap.set(key, row);
-                    });
-
-                    const combinedRows = resourceSection.rows.map(resourceRow => {
-                        const key = `${resourceRow[0]}::${resourceRow[1]}`;
-                        const unitRow = unitRowMap.get(key) ?? [];
-
-                        return [
-                            ...resourceRow,
-                            ...unitRow.slice(2),
-                        ];
-                    });
-
-                    const sections = [
-                        combinedHeaders,
-                        ...combinedRows,
-                    ];
-
-                    const csv = sections.map(formatCsvLine).join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'mmr-resources-units.csv';
-                    link.click();
-
-                    URL.revokeObjectURL(url);
+                unitSection.rows.forEach((row) => {
+                    unitRowMap.set(`${row[0]}::${row[1]}`, row);
                 });
-            }
+
+                const combinedRows = resourceSection.rows.map((resourceRow) => {
+                    const unitRow = unitRowMap.get(`${resourceRow[0]}::${resourceRow[1]}`) ?? [];
+
+                    return [...resourceRow, ...unitRow.slice(2)];
+                });
+
+                const csv = [combinedHeaders, ...combinedRows].map(formatCsvLine).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+
+                link.href = url;
+                link.download = 'mmr-resources-units.csv';
+                link.click();
+
+                URL.revokeObjectURL(url);
+            });
         });
     </script>
 @endpush

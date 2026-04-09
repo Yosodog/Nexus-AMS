@@ -57,6 +57,8 @@ class SettingsController extends Controller
             'about' => SettingService::getHomepageAbout($appName),
             'highlights' => SettingService::getHomepageHighlights(),
             'stats_intro' => SettingService::getHomepageStatsIntro(),
+            'hero_badge' => SettingService::getHomepageHeroBadge(),
+            'cta_label' => SettingService::getHomepageCtaLabel(),
             'closing_text' => SettingService::getHomepageClosingText($appName),
         ];
 
@@ -232,6 +234,8 @@ class SettingsController extends Controller
             'home_highlights' => SettingService::getHomepageHighlights(),
             'home_stats_intro' => SettingService::getHomepageStatsIntro(),
             'home_closing_text' => SettingService::getHomepageClosingText(config('app.name')),
+            'home_hero_badge' => SettingService::getHomepageHeroBadge(),
+            'home_cta_label' => SettingService::getHomepageCtaLabel(),
         ];
         $validated = $request->validate([
             'home_headline' => ['required', 'string', 'max:160'],
@@ -239,6 +243,8 @@ class SettingsController extends Controller
             'home_about' => ['nullable', 'string', 'max:800'],
             'home_stats_intro' => ['nullable', 'string', 'max:240'],
             'home_closing_text' => ['nullable', 'string', 'max:300'],
+            'home_hero_badge' => ['nullable', 'string', 'max:60'],
+            'home_cta_label' => ['nullable', 'string', 'max:60'],
             'home_highlights' => ['array'],
             'home_highlights.*' => ['nullable', 'string', 'max:140'],
         ]);
@@ -248,6 +254,8 @@ class SettingsController extends Controller
         SettingService::setHomepageAbout($validated['home_about'] ?? '');
         SettingService::setHomepageStatsIntro($validated['home_stats_intro'] ?? '');
         SettingService::setHomepageClosingText($validated['home_closing_text'] ?? '');
+        SettingService::setHomepageHeroBadge($validated['home_hero_badge'] ?? 'Recruiting now');
+        SettingService::setHomepageCtaLabel($validated['home_cta_label'] ?? 'Start your application');
 
         $highlights = collect($validated['home_highlights'] ?? [])
             ->map(fn ($item) => (string) $item)
@@ -265,6 +273,8 @@ class SettingsController extends Controller
                     'home_about' => ['from' => $previous['home_about'], 'to' => $validated['home_about'] ?? ''],
                     'home_stats_intro' => ['from' => $previous['home_stats_intro'], 'to' => $validated['home_stats_intro'] ?? ''],
                     'home_closing_text' => ['from' => $previous['home_closing_text'], 'to' => $validated['home_closing_text'] ?? ''],
+                    'home_hero_badge' => ['from' => $previous['home_hero_badge'], 'to' => $validated['home_hero_badge'] ?? 'Recruiting now'],
+                    'home_cta_label' => ['from' => $previous['home_cta_label'], 'to' => $validated['home_cta_label'] ?? 'Start your application'],
                     'home_highlights' => ['from' => $previous['home_highlights'], 'to' => $highlights],
                 ],
             ],

@@ -4,568 +4,483 @@
     @php
         $formatNumber = static fn (mixed $value, int $decimals = 0): string => number_format(is_numeric($value) ? (float) $value : 0, $decimals);
         $formatMoney = static fn (mixed $value, int $decimals = 0): string => '$' . $formatNumber($value, $decimals);
-    @endphp
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col-12 col-lg-6">
-                    <h3 class="mb-1">Alliance Dashboard</h3>
-                    <p class="text-secondary mb-0">
-                        Telemetry cached {{ $lastRefreshedAt->diffForHumans() }} (expires {{ $lastRefreshedAt->copy()->addMinutes($cacheTtlMinutes)->diffForHumans() }}).
-                    </p>
-                </div>
-                <div class="col-12 col-lg-6 mt-3 mt-lg-0">
-                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center">
-                        <span class="badge bg-primary-subtle text-primary-emphasis">
-                            <i class="bi bi-people me-1"></i> Members: {{ $formatNumber($totalMembers) }}
-                        </span>
-                        <span class="badge bg-success-subtle text-success-emphasis">
-                            <i class="bi bi-building me-1"></i> Cities: {{ $formatNumber($totalCities) }}
-                        </span>
-                        <span class="badge bg-dark-subtle text-dark-emphasis">
-                            <i class="bi bi-cash-stack me-1"></i> Cash: {{ $formatMoney($cashTotal, 0) }}
-                        </span>
-                        <a href="{{ route('admin.dashboard', ['refresh' => 1]) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-4">
-        @foreach ($kpis as $kpi)
-            <div class="col">
-                <div class="info-box shadow-sm h-100">
-                    <span class="info-box-icon {{ $kpi['bg'] }} text-white shadow">
-                        <i class="{{ $kpi['icon'] }}"></i>
-                    </span>
-                    <div class="info-box-content">
-                        <span class="info-box-text text-uppercase text-secondary fw-semibold">{{ $kpi['title'] }}</span>
-                        <div class="d-flex align-items-baseline justify-content-between">
-                            <span class="info-box-number fs-3 fw-semibold">{{ $kpi['value'] }}</span>
-                            @if (! is_null($kpi['trend']))
-                                <span class="badge {{ $kpi['trend'] >= 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis' }}">
-                                    <i class="bi {{ $kpi['trend'] >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
-                                    {{ $kpi['trend'] >= 0 ? '+' : '' }}{{ $formatNumber($kpi['trend'], 1) }}%
-                                </span>
-                            @endif
-                        </div>
-                        @if (! empty($kpi['helper']))
-                            <span class="text-secondary small d-block mt-1">{{ $kpi['helper'] }}</span>
-                        @endif
-                    </div>
-                </div>
+        // Map Bootstrap Icon names → Heroicon names
+        $iconMap = [
+            'o-users'         => 'o-users',
+            'o-arrow-trending-up'      => 'o-arrow-trending-up',
+            'o-shield-check-lock'         => 'o-shield-check',
+            'o-bolt'    => 'o-bolt',
+            'o-banknotes'          => 'o-currency-dollar',
+            'o-exclamation-triangle' => 'o-exclamation-circle',
+        ];
+        // Map Bootstrap bg classes → DaisyUI color classes
+        $colorMap = [
+            'badge-primary' => 'text-primary',
+            'badge-success' => 'text-success',
+            'badge-info'    => 'text-info',
+            'badge-warning' => 'text-warning',
+            'text-bg-dark'    => 'text-neutral-content',
+            'badge-error'  => 'text-error',
+        ];
+        $statCardVariants = [
+            'admin-stat-card admin-stat-card-primary',
+            'admin-stat-card admin-stat-card-success',
+            'admin-stat-card admin-stat-card-info',
+            'admin-stat-card admin-stat-card-warning',
+            'admin-stat-card admin-stat-card-error',
+            'admin-stat-card admin-stat-card-primary',
+        ];
+    @endphp
+
+    {{-- Page Header --}}
+    <x-header title="Alliance Dashboard" separator>
+        <x-slot:subtitle>
+            Telemetry cached {{ $lastRefreshedAt->diffForHumans() }}
+            (expires {{ $lastRefreshedAt->copy()->addMinutes($cacheTtlMinutes)->diffForHumans() }}).
+        </x-slot:subtitle>
+        <x-slot:actions>
+            <div class="flex flex-wrap gap-2 items-center">
+                <x-badge  value="{{ $formatNumber($totalMembers) }} Members" icon="o-users" class="badge-primary badge-lg" />
+                <x-badge  value="{{ $formatNumber($totalCities) }} Cities" icon="o-building-office-2" class="badge-success badge-lg" />
+                <x-badge  value="{{ $formatMoney($cashTotal, 0) }} Cash" icon="o-currency-dollar" class="badge-neutral badge-lg" />
+                <a href="{{ route('admin.dashboard', ['refresh' => 1]) }}" class="btn btn-sm btn-outline btn-primary">
+                    <x-icon name="o-arrow-path" class="size-4" />
+                    Refresh
+                </a>
             </div>
+        </x-slot:actions>
+    </x-header>
+
+    {{-- KPI Stats --}}
+    <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        @foreach ($kpis as $index => $kpi)
+            <x-stat
+                :title="$kpi['title']"
+                :value="$kpi['value']"
+                :description="! empty($kpi['helper']) ? $kpi['helper'] : null"
+                :icon="$iconMap[$kpi['icon']] ?? 'o-chart-bar'"
+                :color="$colorMap[$kpi['bg']] ?? 'text-primary'"
+                :class="$statCardVariants[$index % count($statCardVariants)]"
+            >
+                @if (! is_null($kpi['trend']))
+                    <x-slot:figure>
+                        <x-badge
+                            :value="($kpi['trend'] >= 0 ? '+' : '') . $formatNumber($kpi['trend'], 1) . '%'"
+                            :class="$kpi['trend'] >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
+                        />
+                    </x-slot:figure>
+                @endif
+            </x-stat>
         @endforeach
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Tax Intake (Money)</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success-emphasis">
-                            {{ $formatMoney($taxMoneyThisWeek, 0) }} / 7d
-                        </span>
-                        @if (! is_null($taxMoneyTrend))
-                            <span class="badge {{ $taxMoneyTrend >= 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis' }}">
-                                {{ $taxMoneyTrend >= 0 ? '+' : '' }}{{ $formatNumber($taxMoneyTrend, 1) }}% vs prior week
-                            </span>
-                        @endif
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="taxMoneyChart" height="220"></canvas>
-                    <p class="text-secondary small mt-3 mb-0">
-                        Shows cash delivered into alliance banks (primary + offshore) across the past two weeks.
-                    </p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Tax Intake (Resources)</div>
-                <div class="card-body">
-                    <canvas id="taxResourceChart" height="220"></canvas>
-                    <p class="text-secondary small mt-3 mb-0">
-                        Focused on steel, munitions, aluminum, and food flows captured in the same window.
-                    </p>
-                </div>
-            </div>
-        </div>
+    {{-- Tax Charts --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+        <x-card title="Tax Intake (Money)">
+            <x-slot:menu>
+                <x-badge :value="$formatMoney($taxMoneyThisWeek, 0) . ' / 7d'" class="badge-success badge-sm" />
+                @if (! is_null($taxMoneyTrend))
+                    <x-badge
+                        :value="($taxMoneyTrend >= 0 ? '+' : '') . $formatNumber($taxMoneyTrend, 1) . '% vs prior week'"
+                        :class="$taxMoneyTrend >= 0 ? 'badge-success badge-sm' : 'badge-error badge-sm'"
+                    />
+                @endif
+            </x-slot:menu>
+            <canvas id="taxMoneyChart" height="220"></canvas>
+            <p class="text-base-content/50 text-sm mt-3">
+                Shows cash delivered into alliance banks (primary + offshore) across the past two weeks.
+            </p>
+        </x-card>
+
+        <x-card title="Tax Intake (Resources)">
+            <canvas id="taxResourceChart" height="220"></canvas>
+            <p class="text-base-content/50 text-sm mt-3">
+                Focused on steel, munitions, aluminum, and food flows captured in the same window.
+            </p>
+        </x-card>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">War Tempo & Damage (14 Days)</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-danger-subtle text-danger-emphasis">
-                            {{ $formatNumber($warsThisWeek) }} wars launched
-                        </span>
-                        @if (! is_null($warTrend))
-                            <span class="badge {{ $warTrend >= 0 ? 'bg-danger-subtle text-danger-emphasis' : 'bg-success-subtle text-success-emphasis' }}">
-                                {{ $warTrend >= 0 ? '+' : '' }}{{ $formatNumber($warTrend, 1) }}% vs prior week
-                            </span>
-                        @endif
-                    </div>
+    {{-- War & MMR Charts --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+        <x-card title="War Tempo & Damage (14 Days)">
+            <x-slot:menu>
+                <x-badge :value="$formatNumber($warsThisWeek) . ' wars launched'" class="badge-error badge-sm" />
+                @if (! is_null($warTrend))
+                    <x-badge
+                        :value="($warTrend >= 0 ? '+' : '') . $formatNumber($warTrend, 1) . '% vs prior week'"
+                        :class="$warTrend >= 0 ? 'badge-error badge-sm' : 'badge-success badge-sm'"
+                    />
+                @endif
+            </x-slot:menu>
+            <canvas id="warChart" height="220"></canvas>
+            <p class="text-base-content/50 text-sm mt-3">
+                Tracks wars involving our alliance family only, combining infra destruction and looted cash.
+            </p>
+        </x-card>
+
+        <x-card title="MMR Readiness">
+            <x-slot:menu>
+                <x-badge
+                    :value="$formatNumber($mmrCoverage, 1) . '% compliant (' . $mmrCompliantCount . '/' . $formatNumber($totalMembers) . ')'"
+                    class="badge-info badge-sm"
+                />
+            </x-slot:menu>
+            <canvas id="mmrChart" height="220"></canvas>
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-1 text-sm">
+                    <span class="text-base-content/60">Coverage to {{ $mmrThreshold }} score</span>
+                    <span class="font-semibold">{{ $formatNumber($mmrCoverage, 1) }}%</span>
                 </div>
-                <div class="card-body">
-                    <canvas id="warChart" height="220"></canvas>
-                    <p class="text-secondary small mt-3 mb-0">
-                        Tracks wars involving our alliance family only, combining infra destruction and looted cash.
-                    </p>
-                </div>
+                <x-progress value="{{ (int) min(100, $mmrCoverage) }}" class="progress-info h-2" />
             </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">MMR Readiness</span>
-                    <span class="badge bg-info-subtle text-info-emphasis">
-                        {{ $formatNumber($mmrCoverage, 1) }}% compliant ({{ $mmrCompliantCount }}/{{ $formatNumber($totalMembers) }})
-                    </span>
-                </div>
-                <div class="card-body">
-                    <canvas id="mmrChart" height="220"></canvas>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-secondary small">Coverage to {{ $mmrThreshold }} score</span>
-                            <span class="fw-semibold small">{{ $formatNumber($mmrCoverage, 1) }}%</span>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-info" role="progressbar"
-                                 style="width: {{ min(100, $mmrCoverage) }}%"
-                                 aria-valuenow="{{ $mmrCoverage }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </x-card>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Resource Stockpile</span>
-                    <span class="badge bg-dark-subtle text-dark-emphasis">
-                        Total value ≈ {{ $formatMoney($resourceTotalValue, 0) }}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <canvas id="resourceChart" height="240"></canvas>
-                    <p class="text-secondary small mt-3 mb-2">
-                        {{ $latestTradePriceDate ? "Valued with market snapshot {$latestTradePriceDate}." : 'Market snapshot unavailable; displaying raw tonnage.' }}
-                    </p>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Resource</th>
-                                <th class="text-end">Units</th>
-                                <th class="text-end">Value</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach ($resourceValueBreakdown as $resource => $value)
-                                @php
-                                    $resourceKey = is_string($resource) ? $resource : 'Other';
-                                    $units = $resourceTotals[$resourceKey] ?? null;
-                                @endphp
-                                <tr>
-                                    <td class="text-capitalize">{{ str_replace('_', ' ', $resourceKey) }}</td>
-                                    <td class="text-end">{{ $units !== null ? $formatNumber($units, $units >= 1000 ? 0 : 2) : '—' }}</td>
-                                    <td class="text-end">{{ $formatMoney($value, 0) }}</td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Military Readiness</span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis">
-                        Max posture: 15k soldiers / 1.25k tanks / 75 aircraft / 15 ships (per city) · 60 spies (per nation)
-                    </span>
-                </div>
-                <div class="card-body">
-                    <canvas id="militaryChart" height="240"></canvas>
-                    <div class="row text-secondary small mt-3">
-                        <div class="col-12 col-md-6 mb-3 mb-md-0">
-                            <p class="mb-1">Current vs capacity</p>
-                            <ul class="list-unstyled mb-0">
-                                @foreach ($militaryTotals as $unit => $total)
-                                    <li class="d-flex justify-content-between">
-                                        <span class="text-capitalize">{{ str_replace('_', ' ', $unit) }}</span>
-                                        <span class="text-dark fw-semibold">
-                                            {{ $formatNumber($total) }}
-                                            /
-                                            {{ $formatNumber($militaryCapacity[$unit]) }}
-                                        </span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <p class="mb-1">Average posture</p>
-                            <ul class="list-unstyled mb-0">
-                                <li class="d-flex justify-content-between">
-                                    <span>Soldiers / city</span>
-                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['soldiers']) }}</span>
-                                </li>
-                                <li class="d-flex justify-content-between">
-                                    <span>Tanks / city</span>
-                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['tanks']) }}</span>
-                                </li>
-                                <li class="d-flex justify-content-between">
-                                    <span>Aircraft / city</span>
-                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['aircraft'], 1) }}</span>
-                                </li>
-                                <li class="d-flex justify-content-between">
-                                    <span>Ships / city</span>
-                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['ships'], 2) }}</span>
-                                </li>
-                                <li class="d-flex justify-content-between">
-                                    <span>Spies / member</span>
-                                    <span class="text-dark fw-semibold">{{ $formatNumber($militaryPerUnitAverage['spies'], 1) }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-xl-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Infrastructure Focus</div>
-                <div class="card-body">
-                    <p class="text-secondary small">
-                        Alliance infrastructure totals {{ $formatNumber($totalInfrastructure, 0) }}. Power coverage at {{ $formatNumber($powerCoverage, 1) }}% keeps the network ready.
-                    </p>
-                    <ul class="list-group list-group-flush">
-                        @forelse ($topInfrastructureCities as $city)
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <a href="https://politicsandwar.com/city/id={{ $city->id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                        {{ $city->name }}
-                                    </a>
-                                    <span class="text-secondary small d-block">
-                                        <a href="https://politicsandwar.com/nation/id={{ $city->nation?->id }}" target="_blank" rel="noopener" class="text-decoration-none">
-                                            {{ $city->nation?->leader_name ?? 'Unknown' }}
-                                        </a>
-                                    </span>
-                                </div>
-                                <div class="text-end">
-                                    <div class="fw-semibold">{{ $formatNumber($city->infrastructure, 0) }} infra</div>
-                                    <div class="text-secondary small">{{ $formatNumber($city->land, 0) }} land</div>
-                                </div>
-                            </li>
-                        @empty
-                            <li class="list-group-item text-secondary small">No city telemetry captured yet.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Wealth Concentration</div>
-                <div class="card-body">
-                    <p class="text-secondary small">
-                        Alliance-wide cash reserves average {{ $formatMoney($cashPerMember, 0) }} per member.
-                    </p>
-                    <ul class="list-group list-group-flush">
-                        @forelse ($topCashHolders as $holder)
-                            <li class="list-group-item d-flex justify-content-between">
-                                <div>
-                                    <a href="https://politicsandwar.com/nation/id={{ $holder->nation_id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                        {{ $holder->leader_name }}
-                                    </a>
-                                    <span class="text-secondary small d-block">{{ $holder->nation_name }}</span>
-                                </div>
-                                <div class="text-end">
-                                    <div class="fw-semibold">{{ $formatMoney($holder->money, 0) }}</div>
-                                    <div class="text-secondary small">{{ optional($holder->snapshot_at)->diffForHumans() ?? 'Snapshot pending' }}</div>
-                                </div>
-                            </li>
-                        @empty
-                            <li class="list-group-item text-secondary small">No resource telemetry available yet.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Top Scoring Nations</div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Nation</th>
-                                <th class="text-end">Score</th>
-                                <th class="text-end">Cities</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @forelse ($topScoringNations as $nation)
-                                <tr>
-                                    <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                            {{ $nation->leader_name }}
-                                        </a>
-                                        <span class="text-secondary small d-block">{{ $nation->nation_name }}</span>
-                                    </td>
-                                    <td class="text-end">{{ $formatNumber($nation->score, 2) }}</td>
-                                    <td class="text-end">{{ $formatNumber($nation->num_cities) }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-secondary small">No nations tracked yet.</td>
-                                </tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Loan Program Snapshot</div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-7 text-secondary small text-uppercase">Pending approvals</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['pending']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Active or delinquent</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['active']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Paid-off loans</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($loanStats['paid']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Outstanding balance</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatMoney($loanStats['outstanding_balance'], 0) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Avg interest</dt>
-                        <dd class="col-5 text-end fw-semibold">
-                            {{ $loanStats['avg_interest'] !== null ? $formatNumber($loanStats['avg_interest'], 2).'%' : '—' }}
-                        </dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Avg term (weeks)</dt>
-                        <dd class="col-5 text-end fw-semibold">
-                            {{ $loanStats['avg_term'] !== null ? $formatNumber($loanStats['avg_term'], 1) : '—' }}
-                        </dd>
-                    </dl>
-                    <p class="text-secondary small mt-3 mb-0">
-                        Balances include approved and missed loans across the primary alliance and all offshores.
-                    </p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Grant Program Snapshot</div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-7 text-secondary small text-uppercase">Pending applications</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['pending']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Approved this week</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['approved_this_week']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Total approvals</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatNumber($grantStats['approved_total']) }}</dd>
-
-                        <dt class="col-7 text-secondary small text-uppercase">Money issued (30d)</dt>
-                        <dd class="col-5 text-end fw-semibold">{{ $formatMoney($grantStats['money_disbursed_30d'], 0) }}</dd>
-                    </dl>
-                    <p class="text-secondary small mt-3 mb-0">
-                        Resource payouts are calculated from the latest 30 days of approved grant disbursements.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-xl-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold">Active War Rooms</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        @forelse ($activeWarDetails as $war)
+    {{-- Resource & Military Charts --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+        <x-card title="Resource Stockpile">
+            <x-slot:menu>
+                <x-badge :value="'≈ ' . $formatMoney($resourceTotalValue, 0) . ' total'" class="badge-neutral badge-sm" />
+            </x-slot:menu>
+            <canvas id="resourceChart" height="240"></canvas>
+            <p class="text-base-content/50 text-sm mt-3 mb-2">
+                {{ $latestTradePriceDate ? "Valued with market snapshot {$latestTradePriceDate}." : 'Market snapshot unavailable; displaying raw tonnage.' }}
+            </p>
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th class="text-right">Units</th>
+                            <th class="text-right">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($resourceValueBreakdown as $resource => $value)
                             @php
-                                $attIsMember = in_array($war->att_id, $memberNationIds, true);
-                                $defIsMember = in_array($war->def_id, $memberNationIds, true);
+                                $resourceKey = is_string($resource) ? $resource : 'Other';
+                                $units = $resourceTotals[$resourceKey] ?? null;
                             @endphp
-                            <li class="list-group-item py-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                            {{ $war->attacker?->leader_name ?? 'Unknown' }}
-                                        </a>
-                                        @if ($attIsMember)
-                                            <span class="badge bg-primary-subtle text-primary-emphasis align-middle ms-1"
-                                                  data-bs-toggle="tooltip" title="Alliance member">
-                                                <i class="bi bi-shield-check"></i>
-                                            </span>
-                                        @endif
-                                        <span class="text-secondary small d-block">
-                                            vs <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank" rel="noopener" class="text-decoration-none">
-                                                {{ $war->defender?->leader_name ?? 'Unknown' }}
-                                            </a>
-                                            @if ($defIsMember)
-                                                <span class="badge bg-primary-subtle text-primary-emphasis align-middle ms-1"
-                                                      data-bs-toggle="tooltip" title="Alliance member">
-                                                    <i class="bi bi-shield-check"></i>
-                                                </span>
-                                            @endif
+                            <tr>
+                                <td class="capitalize">{{ str_replace('_', ' ', $resourceKey) }}</td>
+                                <td class="text-right">{{ $units !== null ? $formatNumber($units, $units >= 1000 ? 0 : 2) : '—' }}</td>
+                                <td class="text-right">{{ $formatMoney($value, 0) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+
+        <x-card title="Military Readiness">
+            <x-slot:menu>
+                <x-badge
+                     value="Max: 15k soldiers · 1.25k tanks · 75 aircraft · 15 ships · 60 spies"
+                    class="badge-warning badge-sm"
+                />
+            </x-slot:menu>
+            <canvas id="militaryChart" height="240"></canvas>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm text-base-content/60">
+                <div>
+                    <p class="font-medium text-base-content mb-2">Current vs capacity</p>
+                    <ul class="space-y-1">
+                        @foreach ($militaryTotals as $unit => $total)
+                            <li class="flex justify-between">
+                                <span class="capitalize">{{ str_replace('_', ' ', $unit) }}</span>
+                                <span class="font-semibold text-base-content">
+                                    {{ $formatNumber($total) }} / {{ $formatNumber($militaryCapacity[$unit]) }}
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-medium text-base-content mb-2">Average posture</p>
+                    <ul class="space-y-1">
+                        <li class="flex justify-between"><span>Soldiers / city</span><span class="font-semibold text-base-content">{{ $formatNumber($militaryPerUnitAverage['soldiers']) }}</span></li>
+                        <li class="flex justify-between"><span>Tanks / city</span><span class="font-semibold text-base-content">{{ $formatNumber($militaryPerUnitAverage['tanks']) }}</span></li>
+                        <li class="flex justify-between"><span>Aircraft / city</span><span class="font-semibold text-base-content">{{ $formatNumber($militaryPerUnitAverage['aircraft'], 1) }}</span></li>
+                        <li class="flex justify-between"><span>Ships / city</span><span class="font-semibold text-base-content">{{ $formatNumber($militaryPerUnitAverage['ships'], 2) }}</span></li>
+                        <li class="flex justify-between"><span>Spies / member</span><span class="font-semibold text-base-content">{{ $formatNumber($militaryPerUnitAverage['spies'], 1) }}</span></li>
+                    </ul>
+                </div>
+            </div>
+        </x-card>
+    </div>
+
+    {{-- Infra, Wealth, Nations --}}
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+        <x-card title="Infrastructure Focus">
+            <p class="text-base-content/60 text-sm mb-3">
+                Alliance infrastructure totals {{ $formatNumber($totalInfrastructure, 0) }}.
+                Power coverage at {{ $formatNumber($powerCoverage, 1) }}% keeps the network ready.
+            </p>
+            <ul class="divide-y divide-base-300">
+                @forelse ($topInfrastructureCities as $city)
+                    <li class="flex justify-between items-start py-2.5">
+                        <div>
+                            <a href="https://politicsandwar.com/city/id={{ $city->id }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:underline text-sm">
+                                {{ $city->name }}
+                            </a>
+                            <span class="text-base-content/50 text-xs block">
+                                <a href="https://politicsandwar.com/nation/id={{ $city->nation?->id }}" target="_blank" rel="noopener" class="hover:underline">
+                                    {{ $city->nation?->leader_name ?? 'Unknown' }}
+                                </a>
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-sm">{{ $formatNumber($city->infrastructure, 0) }} infra</div>
+                            <div class="text-base-content/50 text-xs">{{ $formatNumber($city->land, 0) }} land</div>
+                        </div>
+                    </li>
+                @empty
+                    <li class="text-base-content/50 text-sm py-2">No city telemetry captured yet.</li>
+                @endforelse
+            </ul>
+        </x-card>
+
+        <x-card title="Wealth Concentration">
+            <p class="text-base-content/60 text-sm mb-3">
+                Alliance-wide cash reserves average {{ $formatMoney($cashPerMember, 0) }} per member.
+            </p>
+            <ul class="divide-y divide-base-300">
+                @forelse ($topCashHolders as $holder)
+                    <li class="flex justify-between items-start py-2.5">
+                        <div>
+                            <a href="https://politicsandwar.com/nation/id={{ $holder->nation_id }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:underline text-sm">
+                                {{ $holder->leader_name }}
+                            </a>
+                            <span class="text-base-content/50 text-xs block">{{ $holder->nation_name }}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-sm">{{ $formatMoney($holder->money, 0) }}</div>
+                            <div class="text-base-content/50 text-xs">{{ optional($holder->snapshot_at)->diffForHumans() ?? 'Snapshot pending' }}</div>
+                        </div>
+                    </li>
+                @empty
+                    <li class="text-base-content/50 text-sm py-2">No resource telemetry available yet.</li>
+                @endforelse
+            </ul>
+        </x-card>
+
+        <x-card title="Top Scoring Nations">
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Nation</th>
+                            <th class="text-right">Score</th>
+                            <th class="text-right">Cities</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($topScoringNations as $nation)
+                            <tr>
+                                <td>
+                                    <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:underline text-sm">
+                                        {{ $nation->leader_name }}
+                                    </a>
+                                    <span class="text-base-content/50 text-xs block">{{ $nation->nation_name }}</span>
+                                </td>
+                                <td class="text-right text-sm">{{ $formatNumber($nation->score, 2) }}</td>
+                                <td class="text-right text-sm">{{ $formatNumber($nation->num_cities) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="text-base-content/50 text-sm">No nations tracked yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+    </div>
+
+    {{-- Loan & Grant Snapshots --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+        <x-card title="Loan Program Snapshot">
+            <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Pending approvals</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($loanStats['pending']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Active or delinquent</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($loanStats['active']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Paid-off loans</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($loanStats['paid']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Outstanding balance</dt>
+                <dd class="text-right font-semibold">{{ $formatMoney($loanStats['outstanding_balance'], 0) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Avg interest</dt>
+                <dd class="text-right font-semibold">{{ $loanStats['avg_interest'] !== null ? $formatNumber($loanStats['avg_interest'], 2).'%' : '—' }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Avg term (weeks)</dt>
+                <dd class="text-right font-semibold">{{ $loanStats['avg_term'] !== null ? $formatNumber($loanStats['avg_term'], 1) : '—' }}</dd>
+            </dl>
+            <p class="text-base-content/50 text-xs mt-3">
+                Balances include approved and missed loans across the primary alliance and all offshores.
+            </p>
+        </x-card>
+
+        <x-card title="Grant Program Snapshot">
+            <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Pending applications</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($grantStats['pending']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Approved this week</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($grantStats['approved_this_week']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Total approvals</dt>
+                <dd class="text-right font-semibold">{{ $formatNumber($grantStats['approved_total']) }}</dd>
+
+                <dt class="text-base-content/60 text-xs uppercase font-medium">Money issued (30d)</dt>
+                <dd class="text-right font-semibold">{{ $formatMoney($grantStats['money_disbursed_30d'], 0) }}</dd>
+            </dl>
+            <p class="text-base-content/50 text-xs mt-3">
+                Resource payouts are calculated from the latest 30 days of approved grant disbursements.
+            </p>
+        </x-card>
+    </div>
+
+    {{-- Active Wars & Recent War Outcomes --}}
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+        <x-card title="Active War Rooms">
+            <ul class="divide-y divide-base-300">
+                @forelse ($activeWarDetails as $war)
+                    @php
+                        $attIsMember = in_array($war->att_id, $memberNationIds, true);
+                        $defIsMember = in_array($war->def_id, $memberNationIds, true);
+                    @endphp
+                    <li class="py-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank" rel="noopener" class="font-semibold text-sm text-primary hover:underline">
+                                        {{ $war->attacker?->leader_name ?? 'Unknown' }}
+                                    </a>
+                                    @if ($attIsMember)
+                                        <span class="tooltip" data-tip="Alliance member">
+                                            <x-icon name="o-shield-check" class="size-3.5 text-primary" />
                                         </span>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-danger-subtle text-danger-emphasis text-uppercase small">
-                                            {{ \Illuminate\Support\Str::headline($war->war_type) }}
-                                        </span>
-                                        <div class="text-secondary small mt-1">Turns left: {{ $formatNumber($war->turns_left) }}</div>
-                                    </div>
-                                </div>
-                                <div class="mt-2 text-secondary small">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Resistance</span>
-                                        <span>{{ $war->att_resistance }} / {{ $war->def_resistance }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Points</span>
-                                        <span>{{ $war->att_points }} - {{ $war->def_points }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Infra loss</span>
-                                        <span>{{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Bank loot</span>
-                                        <span>{{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}</span>
-                                    </div>
-                                    @if ($war->att_fortify || $war->def_fortify)
-                                        <div class="d-flex justify-content-between">
-                                            <span>Fortify</span>
-                                            <span>{{ $war->att_fortify ? 'Att' : '' }}{{ $war->att_fortify && $war->def_fortify ? ' & ' : '' }}{{ $war->def_fortify ? 'Def' : '' }}</span>
-                                        </div>
                                     @endif
                                 </div>
-                                <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank" rel="noopener" class="d-inline-block mt-2 small">
-                                    View timeline →
-                                </a>
-                            </li>
-                        @empty
-                            <li class="list-group-item text-secondary small">No active conflicts at the moment.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-                    <span>Recent War Outcomes</span>
-                    <span class="text-secondary small">Last {{ count($recentWars) }} wars involving alliance members</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light">
+                                <div class="text-base-content/60 text-xs flex items-center gap-1">
+                                    vs
+                                    <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank" rel="noopener" class="hover:underline">
+                                        {{ $war->defender?->leader_name ?? 'Unknown' }}
+                                    </a>
+                                    @if ($defIsMember)
+                                        <span class="tooltip" data-tip="Alliance member">
+                                            <x-icon name="o-shield-check" class="size-3 text-primary" />
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <x-badge :value="\Illuminate\Support\Str::headline($war->war_type)" class="badge-error badge-xs" />
+                                <div class="text-base-content/50 text-xs mt-1">Turns: {{ $formatNumber($war->turns_left) }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-base-content/60 space-y-0.5">
+                            <div class="flex justify-between">
+                                <span>Resistance</span>
+                                <span>{{ $war->att_resistance }} / {{ $war->def_resistance }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Points</span>
+                                <span>{{ $war->att_points }} - {{ $war->def_points }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Infra loss</span>
+                                <span>{{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Bank loot</span>
+                                <span>{{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}</span>
+                            </div>
+                        </div>
+                        <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank" rel="noopener" class="text-xs text-primary hover:underline mt-1 inline-block">
+                            View timeline →
+                        </a>
+                    </li>
+                @empty
+                    <li class="text-base-content/50 text-sm py-2">No active conflicts at the moment.</li>
+                @endforelse
+            </ul>
+        </x-card>
+
+        <div class="xl:col-span-2">
+            <x-card title="Recent War Outcomes">
+                <x-slot:menu>
+                    <span class="text-base-content/50 text-xs">Last {{ count($recentWars) }} wars involving alliance members</span>
+                </x-slot:menu>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
                             <tr>
                                 <th>Date</th>
                                 <th>Attacker</th>
                                 <th>Defender</th>
-                                <th class="text-end">Infra Loss</th>
-                                <th class="text-end">Bank Loot</th>
+                                <th class="text-right">Infra Loss</th>
+                                <th class="text-right">Bank Loot</th>
                             </tr>
-                            </thead>
-                            <tbody>
+                        </thead>
+                        <tbody>
                             @forelse ($recentWars as $war)
                                 @php
                                     $attIsMember = in_array($war->att_id, $memberNationIds, true);
                                     $defIsMember = in_array($war->def_id, $memberNationIds, true);
                                 @endphp
                                 <tr>
-                                    <td>{{ $war->date ? \Carbon\Carbon::parse($war->date)->format('M d') : '—' }}</td>
+                                    <td class="text-xs text-base-content/60">{{ $war->date ? \Carbon\Carbon::parse($war->date)->format('M d') : '—' }}</td>
                                     <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                            {{ $war->attacker?->leader_name ?? 'Unknown' }}
-                                        </a>
-                                        @if ($attIsMember)
-                                            <span class="badge bg-primary-subtle text-primary-emphasis align-middle ms-1"
-                                                  data-bs-toggle="tooltip" title="Alliance member">
-                                                <i class="bi bi-shield-check"></i>
-                                            </span>
-                                        @endif
-                                        @if ($war->winner_id === $war->att_id)
-                                            <span class="badge bg-success-subtle text-success-emphasis ms-1"
-                                                  data-bs-toggle="tooltip" title="Winner">
-                                                W
-                                            </span>
-                                        @endif
+                                        <div class="flex items-center gap-1">
+                                            <a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank" rel="noopener" class="font-semibold text-sm text-primary hover:underline">
+                                                {{ $war->attacker?->leader_name ?? 'Unknown' }}
+                                            </a>
+                                            @if ($attIsMember)
+                                                <span class="tooltip" data-tip="Alliance member"><x-icon name="o-shield-check" class="size-3 text-primary" /></span>
+                                            @endif
+                                            @if ($war->winner_id === $war->att_id)
+                                                <x-badge  value="W" class="badge-success badge-xs" />
+                                            @endif
+                                        </div>
                                     </td>
                                     <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none">
-                                            {{ $war->defender?->leader_name ?? 'Unknown' }}
-                                        </a>
-                                        @if ($defIsMember)
-                                            <span class="badge bg-primary-subtle text-primary-emphasis align-middle ms-1"
-                                                  data-bs-toggle="tooltip" title="Alliance member">
-                                                <i class="bi bi-shield-check"></i>
-                                            </span>
-                                        @endif
-                                        @if ($war->winner_id === $war->def_id)
-                                            <span class="badge bg-success-subtle text-success-emphasis ms-1"
-                                                  data-bs-toggle="tooltip" title="Winner">
-                                                W
-                                            </span>
-                                        @endif
+                                        <div class="flex items-center gap-1">
+                                            <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank" rel="noopener" class="font-semibold text-sm text-primary hover:underline">
+                                                {{ $war->defender?->leader_name ?? 'Unknown' }}
+                                            </a>
+                                            @if ($defIsMember)
+                                                <span class="tooltip" data-tip="Alliance member"><x-icon name="o-shield-check" class="size-3 text-primary" /></span>
+                                            @endif
+                                            @if ($war->winner_id === $war->def_id)
+                                                <x-badge  value="W" class="badge-success badge-xs" />
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="text-end">
-                                        {{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}
-                                    </td>
-                                    <td class="text-end">
-                                        {{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}
-                                    </td>
+                                    <td class="text-right text-sm">{{ $formatNumber($war->att_infra_destroyed + $war->def_infra_destroyed, 0) }}</td>
+                                    <td class="text-right text-sm">{{ $formatMoney($war->att_money_looted + $war->def_money_looted, 0) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-secondary small">No recent wars recorded.</td>
+                                    <td colspan="5" class="text-base-content/50 text-sm">No recent wars recorded.</td>
                                 </tr>
                             @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            </x-card>
         </div>
     </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('codex:page-ready', () => {
             const palette = {
                 primary: '#2563eb',
                 secondary: '#1d4ed8',
@@ -592,32 +507,22 @@
                     type: 'line',
                     data: {
                         labels: taxMoneyData.map(item => item.day),
-                        datasets: [
-                            {
-                                label: 'Money',
-                                data: taxMoneyData.map(item => item.money),
-                                borderColor: palette.success,
-                                backgroundColor: palette.success + '33',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                        ],
+                        datasets: [{
+                            label: 'Money',
+                            data: taxMoneyData.map(item => item.money),
+                            borderColor: palette.success,
+                            backgroundColor: palette.success + '33',
+                            fill: true,
+                            tension: 0.3,
+                        }],
                     },
                     options: {
                         responsive: true,
                         plugins: {
                             legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        return `${context.dataset.label}: ${currencyFormat(context.parsed.y)}`;
-                                    },
-                                },
-                            },
+                            tooltip: { callbacks: { label(context) { return `${context.dataset.label}: ${currencyFormat(context.parsed.y)}`; } } },
                         },
-                        scales: {
-                            y: { beginAtZero: true },
-                        },
+                        scales: { y: { beginAtZero: true } },
                     },
                 });
             }
@@ -629,55 +534,19 @@
                     data: {
                         labels: taxResourceData.map(item => item.day),
                         datasets: [
-                            {
-                                label: 'Steel',
-                                data: taxResourceData.map(item => item.steel),
-                                borderColor: palette.primary,
-                                backgroundColor: palette.primary + '22',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                            {
-                                label: 'Munitions',
-                                data: taxResourceData.map(item => item.munitions),
-                                borderColor: palette.warning,
-                                backgroundColor: palette.warning + '22',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                            {
-                                label: 'Aluminum',
-                                data: taxResourceData.map(item => item.aluminum),
-                                borderColor: palette.info,
-                                backgroundColor: palette.info + '22',
-                                fill: true,
-                                tension: 0.3,
-                            },
-                            {
-                                label: 'Food',
-                                data: taxResourceData.map(item => item.food),
-                                borderColor: palette.neutral,
-                                backgroundColor: palette.neutral + '22',
-                                fill: true,
-                                tension: 0.3,
-                            },
+                            { label: 'Steel', data: taxResourceData.map(item => item.steel), borderColor: palette.primary, backgroundColor: palette.primary + '22', fill: true, tension: 0.3 },
+                            { label: 'Munitions', data: taxResourceData.map(item => item.munitions), borderColor: palette.warning, backgroundColor: palette.warning + '22', fill: true, tension: 0.3 },
+                            { label: 'Aluminum', data: taxResourceData.map(item => item.aluminum), borderColor: palette.info, backgroundColor: palette.info + '22', fill: true, tension: 0.3 },
+                            { label: 'Food', data: taxResourceData.map(item => item.food), borderColor: palette.neutral, backgroundColor: palette.neutral + '22', fill: true, tension: 0.3 },
                         ],
                     },
                     options: {
                         responsive: true,
                         plugins: {
                             legend: { display: true },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        return `${context.dataset.label}: ${numberFormat(context.parsed.y)}`;
-                                    },
-                                },
-                            },
+                            tooltip: { callbacks: { label(context) { return `${context.dataset.label}: ${numberFormat(context.parsed.y)}`; } } },
                         },
-                        scales: {
-                            y: { beginAtZero: true },
-                        },
+                        scales: { y: { beginAtZero: true } },
                     },
                 });
             }
@@ -688,61 +557,24 @@
                     data: {
                         labels: warData.map(item => item.day),
                         datasets: [
-                            {
-                                type: 'bar',
-                                label: 'Wars Started',
-                                data: warData.map(item => item.wars_started),
-                                backgroundColor: palette.danger + '55',
-                                borderRadius: 6,
-                                yAxisID: 'y',
-                            },
-                            {
-                                type: 'line',
-                                label: 'Infra Destroyed',
-                                data: warData.map(item => item.infra_destroyed),
-                                borderColor: palette.warning,
-                                borderWidth: 2,
-                                tension: 0.3,
-                                yAxisID: 'y1',
-                            },
-                            {
-                                type: 'line',
-                                label: 'Money Looted',
-                                data: warData.map(item => item.money_looted),
-                                borderColor: palette.success,
-                                borderDash: [6, 4],
-                                borderWidth: 2,
-                                tension: 0.3,
-                                yAxisID: 'y1',
-                            },
+                            { type: 'bar', label: 'Wars Started', data: warData.map(item => item.wars_started), backgroundColor: palette.danger + '55', borderRadius: 6, yAxisID: 'y' },
+                            { type: 'line', label: 'Infra Destroyed', data: warData.map(item => item.infra_destroyed), borderColor: palette.warning, borderWidth: 2, tension: 0.3, yAxisID: 'y1' },
+                            { type: 'line', label: 'Money Looted', data: warData.map(item => item.money_looted), borderColor: palette.success, borderDash: [6, 4], borderWidth: 2, tension: 0.3, yAxisID: 'y1' },
                         ],
                     },
                     options: {
                         responsive: true,
                         scales: {
                             y: { beginAtZero: true, position: 'left' },
-                            y1: {
-                                beginAtZero: true,
-                                position: 'right',
-                                grid: { drawOnChartArea: false },
-                            },
+                            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } },
                         },
                         plugins: {
                             legend: { display: true },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        const label = context.dataset.label;
-                                        const value = context.parsed.y;
-
-                                        if (label === 'Money Looted') {
-                                            return `${label}: ${currencyFormat(value)}`;
-                                        }
-
-                                        return `${label}: ${numberFormat(value)}`;
-                                    },
-                                },
-                            },
+                            tooltip: { callbacks: { label(context) {
+                                return context.dataset.label === 'Money Looted'
+                                    ? `${context.dataset.label}: ${currencyFormat(context.parsed.y)}`
+                                    : `${context.dataset.label}: ${numberFormat(context.parsed.y)}`;
+                            }}},
                         },
                     },
                 });
@@ -754,30 +586,12 @@
                     type: 'bar',
                     data: {
                         labels: mmrBuckets.map(item => `${item.bucket}s`),
-                        datasets: [
-                            {
-                                label: 'Nations',
-                                data: mmrBuckets.map(item => item.total),
-                                backgroundColor: palette.info + '66',
-                                borderRadius: 6,
-                            },
-                        ],
+                        datasets: [{ label: 'Nations', data: mmrBuckets.map(item => item.total), backgroundColor: palette.info + '66', borderRadius: 6 }],
                     },
                     options: {
                         responsive: true,
-                        scales: {
-                            y: { beginAtZero: true },
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        return `${context.parsed.y} nations`;
-                                    },
-                                },
-                            },
-                        },
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label(context) { return `${context.parsed.y} nations`; } } } },
                     },
                 });
             }
@@ -790,31 +604,13 @@
                     type: 'doughnut',
                     data: {
                         labels,
-                        datasets: [
-                            {
-                                data: values,
-                                backgroundColor: [
-                                    palette.primary,
-                                    palette.success,
-                                    palette.info,
-                                    palette.warning,
-                                    palette.danger,
-                                    palette.neutral,
-                                ],
-                            },
-                        ],
+                        datasets: [{ data: values, backgroundColor: [palette.primary, palette.success, palette.info, palette.warning, palette.danger, palette.neutral] }],
                     },
                     options: {
                         responsive: true,
                         plugins: {
                             legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        return `${context.label}: ${currencyFormat(context.parsed)}`;
-                                    },
-                                },
-                            },
+                            tooltip: { callbacks: { label(context) { return `${context.label}: ${currencyFormat(context.parsed)}`; } } },
                         },
                     },
                 });
@@ -828,49 +624,15 @@
                     type: 'radar',
                     data: {
                         labels,
-                        datasets: [
-                            {
-                                label: 'Readiness %',
-                                data: readiness,
-                                borderColor: palette.primary,
-                                backgroundColor: palette.primary + '33',
-                                borderWidth: 2,
-                                pointBackgroundColor: palette.primary,
-                            },
-                        ],
+                        datasets: [{ label: 'Readiness %', data: readiness, borderColor: palette.primary, backgroundColor: palette.primary + '33', borderWidth: 2, pointBackgroundColor: palette.primary }],
                     },
                     options: {
                         responsive: true,
-                        scales: {
-                            r: {
-                                beginAtZero: true,
-                                suggestedMax: 100,
-                                ticks: {
-                                    callback(value) {
-                                        return `${value}%`;
-                                    },
-                                },
-                            },
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label(context) {
-                                        return `${context.label}: ${context.parsed.r}%`;
-                                    },
-                                },
-                            },
-                        },
+                        scales: { r: { beginAtZero: true, suggestedMax: 100, ticks: { callback(value) { return `${value}%`; } } } },
+                        plugins: { tooltip: { callbacks: { label(context) { return `${context.label}: ${context.parsed.r}%`; } } } },
                     },
                 });
             }
-
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(triggerEl => {
-                if (window.bootstrap?.Tooltip) {
-                    new bootstrap.Tooltip(triggerEl);
-                }
-            });
         });
     </script>
-@endsection
+@endpush

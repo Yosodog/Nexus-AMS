@@ -1,100 +1,63 @@
-<div class="card shadow-sm mb-4 h-100">
-    <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
-        <div>
-            <h5 class="mb-0 text-primary fw-semibold">Rolling Nation Sync</h5>
-            <p class="mb-0 text-muted small">
-                Scheduled command that staggers nation syncs over ~23 hours (scope: {{ $rollingSchedule['scope'] ? ucfirst($rollingSchedule['scope']) : 'unknown' }}).
-            </p>
+<x-card :title="'Rolling Nation Sync'" separator>
+    <x-slot:menu>
+        @if($batch && ! $batch->finished() && ! $batch->cancelled())
+            <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
+                  onsubmit="return confirm('Cancel the active rolling nation sync?')">
+                @csrf
+                <input type="hidden" name="batch_id" value="{{ $batch->id }}">
+                <input type="hidden" name="type" value="rolling_nation">
+                <x-button label="Cancel Rolling" icon="o-x-circle" type="submit" class="btn-sm btn-error btn-outline" />
+            </form>
+        @else
+            <x-badge :value="($rollingSchedule['scope'] ? ucfirst($rollingSchedule['scope']) : 'Unknown') . ' scope'" class="badge-ghost badge-sm" />
+        @endif
+    </x-slot:menu>
+
+    <p class="mb-4 text-sm text-base-content/60">
+        Scheduled command that staggers nation syncs over roughly 23 hours so the alliance roster refreshes without hammering queue capacity.
+    </p>
+
+    @if($batch)
+        @php
+            $progressPercent = (float) $batch->progress();
+            $statusValue = $batch->cancelled() ? 'Cancelled' : ($batch->finished() ? 'Finished' : 'Running');
+            $statusClass = $batch->cancelled() ? 'badge-error' : ($batch->finished() ? 'badge-success' : 'badge-warning');
+        @endphp
+
+        <div class="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <x-stat title="Status" :value="$statusValue" icon="o-arrow-path" color="text-primary" description="Current rolling sync state" />
+            <x-stat title="Jobs Completed" :value="$batch->processedJobs() . ' / ' . $batch->totalJobs" icon="o-check-circle" color="text-success" description="Processed versus total queued jobs" />
+            <x-stat title="Last Job" :value="$rollingSchedule['lastRunAt'] ? $rollingSchedule['lastRunAt']->format('M d, H:i') : 'Not started'" icon="o-clock" color="text-info" :description="$rollingSchedule['lastRunAt'] ? $rollingSchedule['lastRunAt']->diffForHumans() : 'No rolling job has run yet'" />
+            <x-stat title="Next Job" :value="$rollingSchedule['nextRunAt'] ? $rollingSchedule['nextRunAt']->format('M d, H:i') : ($batch->finished() ? 'Completed' : 'Pending')" icon="o-calendar-days" color="text-warning" :description="$rollingSchedule['nextRunAt'] ? $rollingSchedule['nextRunAt']->diffForHumans() : 'Waiting on scheduler state'" />
         </div>
 
-        @if($batch && !$batch->finished() && !$batch->cancelled())
-            <div class="d-flex gap-2 ms-auto">
-                <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
-                      onsubmit="return confirm('Cancel the active rolling nation sync?')">
-                    @csrf
-                    <input type="hidden" name="batch_id" value="{{ $batch->id }}">
-                    <input type="hidden" name="type" value="rolling_nation">
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="bi bi-x-circle me-1"></i> Cancel Rolling
-                    </button>
-                </form>
+        <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <div class="font-semibold text-base-content">Progress</div>
+                    <div class="text-sm text-base-content/60">{{ round($progressPercent) }}% complete with {{ number_format($batch->failedJobs) }} failed jobs.</div>
+                </div>
+                <x-badge :value="$statusValue" class="{{ $statusClass }} badge-sm" />
             </div>
-
-        @endif
-    </div>
-
-    <div class="card-body small">
-        @if($batch)
-            @php
-                $progressPercent = $batch->progress();
-                $progressBarClasses = match (true) {
-                    $batch->cancelled() => 'bg-secondary',
-                    $batch->finished() => 'bg-success',
-                    default => 'bg-success progress-bar-striped progress-bar-animated',
-                };
-            @endphp
-
-            <dl class="row mb-0">
-                <dt class="col-sm-4 text-muted">Status</dt>
-                <dd class="col-sm-8">
-                    @if($batch->cancelled())
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Cancelled</span>
-                    @elseif($batch->finished())
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Finished</span>
-                    @else
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Running</span>
-                    @endif
-                </dd>
-
-                <dt class="col-sm-4 text-muted">Jobs Completed</dt>
-                <dd class="col-sm-8">{{ $batch->processedJobs() }} / {{ $batch->totalJobs }}</dd>
-
-                <dt class="col-sm-4 text-muted">Progress</dt>
-                <dd class="col-sm-8">
-                    <div class="progress" style="height: 20px;">
-                        <div class="progress-bar {{ $progressBarClasses }}" style="width: {{ $progressPercent }}%;">
-                            {{ round($progressPercent) }}%
-                        </div>
-                    </div>
-                </dd>
-
-                <dt class="col-sm-4 text-muted">Last Job</dt>
-                <dd class="col-sm-8">
-                    @if($rollingSchedule['lastRunAt'])
-                        {{ $rollingSchedule['lastRunAt']->toDayDateTimeString() }} ({{ $rollingSchedule['lastRunAt']->diffForHumans() }})
-                    @else
-                        Not started yet
-                    @endif
-                </dd>
-
-                <dt class="col-sm-4 text-muted">Next Job</dt>
-                <dd class="col-sm-8">
-                    @if($rollingSchedule['nextRunAt'])
-                        {{ $rollingSchedule['nextRunAt']->toDayDateTimeString() }} ({{ $rollingSchedule['nextRunAt']->diffForHumans() }})
-                    @elseif($batch->finished())
-                        Completed
-                    @else
-                        Pending schedule
-                    @endif
-                </dd>
-
-                <dt class="col-sm-4 text-muted">Started</dt>
-                <dd class="col-sm-8">{{ $batch->createdAt->toDayDateTimeString() }} ({{ $batch->createdAt->diffForHumans() }})</dd>
+            <x-progress :value="$progressPercent" class="progress-primary h-3" />
+            <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                <dt class="font-medium text-base-content/60">Started</dt>
+                <dd>{{ $batch->createdAt->toDayDateTimeString() }} ({{ $batch->createdAt->diffForHumans() }})</dd>
 
                 @if($batch->finishedAt)
-                    <dt class="col-sm-4 text-muted">Finished</dt>
-                    <dd class="col-sm-8">{{ $batch->finishedAt->toDayDateTimeString() }} ({{ $batch->finishedAt->diffForHumans() }})</dd>
+                    <dt class="font-medium text-base-content/60">Finished</dt>
+                    <dd>{{ $batch->finishedAt->toDayDateTimeString() }} ({{ $batch->finishedAt->diffForHumans() }})</dd>
                 @endif
 
                 @if($batch->cancelledAt)
-                    <dt class="col-sm-4 text-muted">Cancelled</dt>
-                    <dd class="col-sm-8 text-danger">{{ $batch->cancelledAt->toDayDateTimeString() }} ({{ $batch->cancelledAt->diffForHumans() }})</dd>
+                    <dt class="font-medium text-base-content/60">Cancelled</dt>
+                    <dd class="text-error">{{ $batch->cancelledAt->toDayDateTimeString() }} ({{ $batch->cancelledAt->diffForHumans() }})</dd>
                 @endif
             </dl>
-        @else
-            <p class="mb-0 text-muted">
-                No rolling nation sync is currently scheduled. The nightly scheduler will queue it automatically.
-            </p>
-        @endif
-    </div>
-</div>
+        </div>
+    @else
+        <div class="rounded-2xl border border-dashed border-base-300 px-4 py-6 text-sm text-base-content/60">
+            No rolling nation sync is currently active. The scheduler will queue the next run automatically.
+        </div>
+    @endif
+</x-card>

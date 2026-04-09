@@ -1,393 +1,293 @@
 @extends('layouts.admin')
 
-@section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Loan Management</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+@section('content')
+    <x-header title="Loan Management" separator>
+        <x-slot:actions>
+            @can('manage-loans')
+                <x-button label="New Loan" icon="o-plus" @click="$refs.approveLoanModal.showModal()" class="btn-primary btn-sm" />
+            @endcan
+        </x-slot:actions>
+    </x-header>
 
-    @if (! $loanPaymentsEnabled)
-        <div class="alert alert-warning mt-3">
-            <i class="bi bi-pause-circle me-2"></i>
+    @if (!$loanPaymentsEnabled)
+        <x-alert class="alert-warning mb-4" icon="o-pause-circle">
             Loan payments are currently paused. Required due and weekly accrual are frozen until payments are resumed.
-        </div>
+        </x-alert>
     @endif
 
-    {{-- Info Boxes --}}
-    <div class="row">
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-check-circle" bgColor="text-bg-primary" title="Total Approved Loans"
-                              :value="$totalApproved"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-x-circle" bgColor="text-bg-danger" title="Total Denied Loans"
-                              :value="$totalDenied"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-hourglass-split" bgColor="text-bg-warning" title="Pending Loans"
-                              :value="$pendingCount"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-success" title="Total Loaned Funds"
-                              :value="number_format($totalLoanedFunds, 2)"/>
-        </div>
+    {{-- KPI Stats --}}
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        <x-stat title="Total Approved" :value="$totalApproved" icon="o-check-circle" color="text-primary" />
+        <x-stat title="Total Denied" :value="$totalDenied" icon="o-x-circle" color="text-error" />
+        <x-stat title="Pending Loans" :value="$pendingCount" icon="o-clock" color="text-warning" />
+        <x-stat title="Total Loaned Funds" :value="'$' . number_format($totalLoanedFunds, 2)" icon="o-banknotes" color="text-success" />
+    </div>
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <x-stat title="Outstanding Principal" :value="'$' . number_format((float) $portfolioStats['outstanding_principal'], 2)" icon="o-building-library" color="text-info" />
+        <x-stat title="Current Due (All Active)" :value="'$' . number_format((float) $portfolioStats['current_due_total'], 2)" icon="o-credit-card" color="text-neutral" />
+        <x-stat title="Total Past Due" :value="'$' . number_format((float) $portfolioStats['past_due_total'], 2)" icon="o-exclamation-triangle" color="text-warning" />
+        <x-stat title="Accrued Interest Due" :value="'$' . number_format((float) $portfolioStats['accrued_interest_total'], 2)" icon="o-percent-badge" color="text-base-content" />
     </div>
 
-    <div class="row mt-2">
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-piggy-bank" bgColor="text-bg-info" title="Outstanding Principal"
-                              :value="number_format((float) $portfolioStats['outstanding_principal'], 2)"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-credit-card" bgColor="text-bg-secondary" title="Current Due (All Active)"
-                              :value="number_format((float) $portfolioStats['current_due_total'], 2)"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-exclamation-triangle" bgColor="text-bg-warning" title="Total Past Due"
-                              :value="number_format((float) $portfolioStats['past_due_total'], 2)"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-percent" bgColor="text-bg-dark" title="Accrued Interest Due"
-                              :value="number_format((float) $portfolioStats['accrued_interest_total'], 2)"/>
-        </div>
-    </div>
-
-    <div class="card mt-4">
-        <div class="card-header">Operational Snapshot</div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-lg-4">
-                    <div class="border rounded p-3 h-100">
-                        <p class="mb-1 fw-semibold">Portfolio Health</p>
-                        <p class="mb-1">Active loans: <strong>{{ $portfolioStats['active_count'] }}</strong></p>
-                        <p class="mb-1">Loans in missed status: <strong>{{ $portfolioStats['missed_count'] }}</strong></p>
-                        <p class="mb-0">Total payoff if closed now: <strong>${{ number_format((float) $portfolioStats['total_payoff_now'], 2) }}</strong></p>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="border rounded p-3 h-100">
-                        <p class="mb-1 fw-semibold">Servicing Rules</p>
-                        <ul class="mb-0 ps-3">
-                            <li>Interest accrues weekly at cycle close, not daily.</li>
-                            <li>Cycle interest is locked to opening principal for that cycle.</li>
-                            <li>Payments apply to interest first, then principal.</li>
-                            <li>No penalty fees are added for missed cycles.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="border rounded p-3 h-100">
-                        <p class="mb-1 fw-semibold">Cycle Mechanics</p>
-                        <ul class="mb-0 ps-3">
-                            <li>Partial in-cycle payments reduce that cycle shortfall.</li>
-                            <li>Only unpaid shortfall rolls to past due at closeout.</li>
-                            <li>Early overpayment accelerates principal reduction.</li>
-                            <li>Manual disbursement bypasses borrower eligibility checks.</li>
-                        </ul>
-                    </div>
-                </div>
+    {{-- Operational Snapshot --}}
+    <x-card title="Operational Snapshot" class="mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="border border-base-300 rounded-box p-4">
+                <div class="font-semibold mb-2">Portfolio Health</div>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                    <dt class="text-base-content/60">Active loans</dt>
+                    <dd class="font-semibold">{{ $portfolioStats['active_count'] }}</dd>
+                    <dt class="text-base-content/60">In missed status</dt>
+                    <dd class="font-semibold">{{ $portfolioStats['missed_count'] }}</dd>
+                    <dt class="text-base-content/60">Total payoff now</dt>
+                    <dd class="font-semibold">${{ number_format((float) $portfolioStats['total_payoff_now'], 2) }}</dd>
+                </dl>
+            </div>
+            <div class="border border-base-300 rounded-box p-4">
+                <div class="font-semibold mb-2">Servicing Rules</div>
+                <ul class="text-sm text-base-content/70 space-y-1 list-disc list-inside">
+                    <li>Interest accrues weekly at cycle close, not daily.</li>
+                    <li>Cycle interest is locked to opening principal for that cycle.</li>
+                    <li>Payments apply to interest first, then principal.</li>
+                    <li>No penalty fees are added for missed cycles.</li>
+                </ul>
+            </div>
+            <div class="border border-base-300 rounded-box p-4">
+                <div class="font-semibold mb-2">Cycle Mechanics</div>
+                <ul class="text-sm text-base-content/70 space-y-1 list-disc list-inside">
+                    <li>Partial in-cycle payments reduce that cycle shortfall.</li>
+                    <li>Only unpaid shortfall rolls to past due at closeout.</li>
+                    <li>Early overpayment accelerates principal reduction.</li>
+                    <li>Manual disbursement bypasses borrower eligibility checks.</li>
+                </ul>
             </div>
         </div>
-    </div>
+    </x-card>
 
-    {{-- Pending Loan --}}
-    <div class="card mt-4">
-        <div class="card-header">Pending Loan Applications</div>
-        <div class="card-body">
-            @if($pendingLoans->isEmpty())
-                <p>No pending loan requests.</p>
-            @else
-                <table class="table table-striped">
+    {{-- Pending Loan Applications --}}
+    <x-card title="Pending Loan Applications" class="mb-6">
+        @if($pendingLoans->isEmpty())
+            <p class="text-base-content/50">No pending loan requests.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="table table-sm table-zebra">
                     <thead>
-                    <tr>
-                        <th>Nation</th>
-                        <th>Requested Amount</th>
-                        <th>Requested Term (Weeks)</th>
-                        <th>Requested At</th>
-                        <th>Actions</th>
-                    </tr>
+                        <tr class="text-base-content/60">
+                            <th>Nation</th>
+                            <th>Requested Amount</th>
+                            <th>Term (Weeks)</th>
+                            <th>Requested At</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @foreach ($pendingLoans as $loan)
-                        <tr>
-                            <td>
-                                @if ($loan->nation)
-                                    <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
-                                       target="_blank" rel="noopener noreferrer">
-                                        {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
-                                    </a>
-                                    <div class="small text-muted">
-                                        {{ $loan->nation->nation_name ?? 'Unknown Nation' }}
-                                    </div>
-                                @else
-                                    <span class="text-muted">Unknown Nation</span>
-                                @endif
-                            </td>
-                            <td>${{ number_format($loan->amount) }}</td>
-                            <td>{{ $loan->term_weeks }}</td>
-                            <td>{{ $loan->created_at->format('M d, Y') }}</td>
-                            <td>
-                                <button class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#approveLoanModal"
-                                        onclick="setApproveLoanData({{ json_encode($loan) }})">
-                                    Approve
-                                </button>
-                                <form action="{{ route('admin.loans.deny', $loan) }}" method="POST"
-                                      class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-danger btn-sm">Deny</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforeach
+                        @foreach ($pendingLoans as $loan)
+                            <tr>
+                                <td>
+                                    @if ($loan->nation)
+                                        <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
+                                           target="_blank" class="link link-primary font-medium">
+                                            {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
+                                        </a>
+                                        <div class="text-xs text-base-content/50">{{ $loan->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                    @else
+                                        <span class="text-base-content/50">Unknown Nation</span>
+                                    @endif
+                                </td>
+                                <td>${{ number_format($loan->amount) }}</td>
+                                <td>{{ $loan->term_weeks }}</td>
+                                <td>{{ $loan->created_at->format('M d, Y') }}</td>
+                                <td class="text-right">
+                                    <x-button label="Approve" icon="o-check-circle" class="btn-success btn-sm"
+                                              x-data
+                                              @click="$dispatch('open-approve-loan', @json($loan))" />
+                                    <form action="{{ route('admin.loans.deny', $loan) }}" method="POST" class="inline">
+                                        @csrf
+                                        <x-button label="Deny" type="submit" icon="o-x-circle" class="btn-error btn-outline btn-sm" />
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
-            @endif
-        </div>
-    </div>
+            </div>
+        @endif
+    </x-card>
 
-    {{-- Active Loan --}}
-    <div class="card mt-4">
-        <div class="card-header">Active Loans</div>
-        <div class="card-body">
-            @if($activeLoans->isEmpty())
-                <p>No active loans.</p>
-            @else
-                <div class="table-responsive">
-                <table class="table table-striped table-sm align-middle">
+    {{-- Active Loans --}}
+    <x-card title="Active Loans" class="mb-6">
+        @if($activeLoans->isEmpty())
+            <p class="text-base-content/50">No active loans.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="table table-sm table-zebra text-nowrap">
                     <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Nation</th>
-                        <th>Principal</th>
-                        <th>Interest Rate</th>
-                        <th>Term</th>
-                        <th>Scheduled Weekly Payment</th>
-                        <th>Current Due</th>
-                        <th>Cycle Paid / Remaining</th>
-                        <th>Past Due</th>
-                        <th>Interest Due Now</th>
-                        <th>Total Owed Now</th>
-                        <th>Remaining Principal</th>
-                        <th>Next Due</th>
-                        <th>Actions</th>
-                    </tr>
+                        <tr class="text-base-content/60">
+                            <th>Status</th>
+                            <th>Nation</th>
+                            <th>Principal</th>
+                            <th>Interest</th>
+                            <th>Term</th>
+                            <th>Weekly Payment</th>
+                            <th>Current Due</th>
+                            <th>Cycle Paid</th>
+                            <th>Past Due</th>
+                            <th>Interest Due</th>
+                            <th>Total Owed</th>
+                            <th>Remaining</th>
+                            <th>Next Due</th>
+                            <th>Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @foreach ($activeLoans as $loan)
-                        <tr>
-                            <td>
-                                @if ($loan->status === 'missed')
-                                    <span class="badge text-bg-warning">Missed</span>
-                                @else
-                                    <span class="badge text-bg-success">Approved</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if ($loan->nation)
-                                    <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
-                                       target="_blank" rel="noopener noreferrer">
-                                        {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
+                        @foreach ($activeLoans as $loan)
+                            <tr>
+                                <td>
+                                    @if ($loan->status === 'missed')
+                                        <x-badge  value="Missed" class="badge-warning badge-sm" />
+                                    @else
+                                        <x-badge  value="Active" class="badge-success badge-sm" />
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($loan->nation)
+                                        <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}"
+                                           target="_blank" class="link link-primary font-medium">
+                                            {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
+                                        </a>
+                                        <div class="text-xs text-base-content/50">{{ $loan->nation->nation_name ?? '' }}</div>
+                                    @else
+                                        <span class="text-base-content/50">Unknown</span>
+                                    @endif
+                                </td>
+                                <td>${{ number_format((float) $loan->amount, 2) }}</td>
+                                <td>{{ number_format((float) $loan->interest_rate, 2) }}%</td>
+                                <td>{{ (int) $loan->term_weeks }}w</td>
+                                <td>${{ number_format((float) $loan->scheduled_weekly_payment, 2) }}</td>
+                                <td>${{ number_format((float) $loan->current_amount_due, 2) }}</td>
+                                <td>
+                                    ${{ number_format((float) $loan->cycle_paid, 2) }}
+                                    <div class="text-xs text-base-content/50">rem ${{ number_format((float) $loan->cycle_remaining, 2) }}</div>
+                                </td>
+                                <td>${{ number_format((float) $loan->past_due_amount, 2) }}</td>
+                                <td>${{ number_format((float) $loan->effective_interest_due_now, 2) }}</td>
+                                <td class="font-semibold">${{ number_format((float) $loan->total_owed_now, 2) }}</td>
+                                <td>${{ number_format((float) $loan->remaining_balance, 2) }}</td>
+                                <td>
+                                    {{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}
+                                    @if (!is_null($loan->days_to_due))
+                                        <div class="text-xs {{ $loan->days_to_due < 0 ? 'text-error' : 'text-base-content/50' }}">
+                                            @if ($loan->days_to_due > 0) in {{ $loan->days_to_due }}d
+                                            @elseif ($loan->days_to_due === 0) due today
+                                            @else {{ abs($loan->days_to_due) }}d overdue
+                                            @endif
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('admin.loans.view', $loan) }}">
+                                        <x-button label="View" icon="o-eye" class="btn-primary btn-xs" />
                                     </a>
-                                    <div class="small text-muted">
-                                        {{ $loan->nation->nation_name ?? 'Unknown Nation' }}
-                                    </div>
-                                @else
-                                    <span class="text-muted">Unknown Nation</span>
-                                @endif
-                            </td>
-                            <td>${{ number_format((float) $loan->amount, 2) }}</td>
-                            <td>{{ number_format((float) $loan->interest_rate, 2) }}%</td>
-                            <td>{{ (int) $loan->term_weeks }} weeks</td>
-                            <td>${{ number_format((float) $loan->scheduled_weekly_payment, 2) }}</td>
-                            <td>${{ number_format((float) $loan->current_amount_due, 2) }}</td>
-                            <td>
-                                <div>${{ number_format((float) $loan->cycle_paid, 2) }}</div>
-                                <div class="small text-muted">remaining ${{ number_format((float) $loan->cycle_remaining, 2) }}</div>
-                            </td>
-                            <td>${{ number_format((float) $loan->past_due_amount, 2) }}</td>
-                            <td>${{ number_format((float) $loan->effective_interest_due_now, 2) }}</td>
-                            <td>${{ number_format((float) $loan->total_owed_now, 2) }}</td>
-                            <td>${{ number_format((float) $loan->remaining_balance, 2) }}</td>
-                            <td>
-                                <div>{{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}</div>
-                                @if (! is_null($loan->days_to_due))
-                                    <div class="small text-muted">
-                                        @if ($loan->days_to_due > 0)
-                                            in {{ $loan->days_to_due }} days
-                                        @elseif ($loan->days_to_due === 0)
-                                            due today
-                                        @else
-                                            {{ abs($loan->days_to_due) }} days past due date
-                                        @endif
-                                    </div>
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('admin.loans.view', $loan) }}" class="btn btn-primary btn-sm">
-                                    View Loan
-                                </a>
-                            </td>
-                        </tr>
-                    @endforeach
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
-                </div>
-            @endif
-        </div>
-    </div>
+            </div>
+        @endif
+    </x-card>
 
     @can('manage-loans')
-        <div class="card mt-4">
-            <div class="card-header">Manual Loan Disbursement</div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">
-                    Creates and approves a loan immediately. This bypasses borrower eligibility and duplicate checks—use when an admin needs to push funds without an application.
-                </p>
-                <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}">
+        {{-- Manual Disbursement --}}
+        <x-card title="Manual Loan Disbursement" class="mb-6">
+            <x-slot:subtitle>Creates and approves a loan immediately, bypassing borrower eligibility and duplicate checks.</x-slot:subtitle>
+            <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}">
+                @csrf
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    <x-input label="Nation ID" type="number" name="nation_id" required min="1" :value="old('nation_id')" />
+                    <x-input label="Account ID" type="number" name="account_id" required min="1" :value="old('account_id')" hint="Must belong to the nation above." />
+                    <x-input label="Amount" type="number" name="amount" required step="0.01" min="1" :value="old('amount')" />
+                    <x-input label="Interest %" type="number" name="interest_rate" required step="0.01" min="0" max="100" :value="old('interest_rate')" />
+                    <x-input label="Term (weeks)" type="number" name="term_weeks" required min="1" max="52" :value="old('term_weeks')" />
+                </div>
+                <div class="flex justify-end">
+                    <x-button label="Send Loan" type="submit" icon="o-paper-airplane" class="btn-primary" />
+                </div>
+            </form>
+        </x-card>
+
+        {{-- Settings --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <x-card title="Default Loan Interest Rate">
+                <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
                     @csrf
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Nation ID</label>
-                            <input type="number" name="nation_id" class="form-control" required min="1" value="{{ old('nation_id') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Account ID</label>
-                            <input type="number" name="account_id" class="form-control" required min="1" value="{{ old('account_id') }}">
-                            <small class="text-muted">Must belong to the nation above.</small>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Amount</label>
-                            <input type="number" name="amount" class="form-control" required step="0.01" min="1" value="{{ old('amount') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Interest %</label>
-                            <input type="number" name="interest_rate" class="form-control" required step="0.01" min="0" max="100" value="{{ old('interest_rate') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Term (weeks)</label>
-                            <input type="number" name="term_weeks" class="form-control" required min="1" max="52" value="{{ old('term_weeks') }}">
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-end mt-3">
-                        <button class="btn btn-primary" type="submit">Send Loan</button>
+                    <div class="flex items-end gap-2">
+                        <x-input type="number" name="default_interest_rate" step="0.01" min="0" max="100" required
+                                 :value="old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', ''))"
+                                 hint="Used to prefill approvals; each loan can still be adjusted." class="grow" />
+                        <x-button label="Update" type="submit" icon="o-check" class="btn-primary" />
                     </div>
                 </form>
-            </div>
-        </div>
-    @endcan
+            </x-card>
 
-    @can('manage-loans')
-        <div class="row g-3 mt-4">
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">Default Loan Interest Rate</div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}">
-                            @csrf
-                            <label class="form-label" for="default_interest_rate">Default Interest Rate (%)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="default_interest_rate"
-                                       name="default_interest_rate" step="0.01" min="0" max="100" required
-                                       value="{{ old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', '')) }}">
-                                <button class="btn btn-primary" type="submit">Update Default</button>
-                            </div>
-                            <small class="text-muted d-block mt-2">Used to prefill approvals; each loan can still be adjusted.</small>
-                        </form>
+            <x-card>
+                <x-slot:title>
+                    <div class="flex items-center gap-2">
+                        Loan Applications
+                        <x-badge :value="$loanApplicationsEnabled ? 'Open' : 'Closed'"
+                                 :class="$loanApplicationsEnabled ? 'badge-success badge-sm' : 'badge-warning badge-sm'" />
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Loan Applications</span>
-                        <span class="badge {{ $loanApplicationsEnabled ? 'text-bg-success' : 'text-bg-warning' }}">
-                            {{ $loanApplicationsEnabled ? 'Open' : 'Closed' }}
-                        </span>
+                </x-slot:title>
+                <x-slot:subtitle>Control whether members can submit new loan applications.</x-slot:subtitle>
+                <form method="POST" action="{{ route('admin.loans.applications') }}">
+                    @csrf
+                    <input type="hidden" name="loan_applications_enabled" value="0">
+                    <div class="flex items-center gap-3 mb-4">
+                        <input type="checkbox" id="loanApplicationsEnabled"
+                               class="toggle toggle-primary"
+                               name="loan_applications_enabled" value="1"
+                               @checked($loanApplicationsEnabled)>
+                        <label for="loanApplicationsEnabled" class="cursor-pointer">Accept New Loan Applications</label>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted small mb-3">
-                            Control whether members can submit new loan applications. Existing loans can still be repaid, and
-                            manual disbursements remain available.
-                        </p>
-                        <form method="POST" action="{{ route('admin.loans.applications') }}">
-                            @csrf
-                            <div class="form-check form-switch mb-3">
-                                <input type="hidden" name="loan_applications_enabled" value="0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="loanApplicationsEnabled"
-                                       name="loan_applications_enabled" value="1" @checked($loanApplicationsEnabled)>
-                                <label class="form-check-label" for="loanApplicationsEnabled">Accept New Loan Applications</label>
-                            </div>
-                            <button class="btn btn-primary">Save Loan Application Setting</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+                    <x-button label="Save" type="submit" icon="o-check" class="btn-primary" />
+                </form>
+            </x-card>
         </div>
     @endcan
 
     {{-- Approve Loan Modal --}}
-    <div class="modal fade" id="approveLoanModal" tabindex="-1" aria-labelledby="approveLoanModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="approveLoanModalLabel">Approve Loan Application</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <dialog id="approveLoanModal" class="modal" x-data="{ loanData: {} }" @open-approve-loan.window="loanData = $event.detail; $el.showModal(); setApproveLoanData(loanData)">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Approve Loan Application</h3>
+            <form id="approveLoanForm" method="POST">
+                @csrf
+                <input type="hidden" name="loan_id" id="loan_id">
+                <div class="space-y-3 mb-4">
+                    <x-input label="Loan Amount" type="number" step="0.01" name="amount" id="approve_amount" required />
+                    <x-input label="Interest Rate (%)" type="number" step="0.01" min="0" max="100" name="interest_rate" id="approve_interest_rate" required />
+                    <x-input label="Term (Weeks)" type="number" min="0" max="52" name="term_weeks" id="approve_term_weeks" required />
                 </div>
-                <div class="modal-body">
-                    <form id="approveLoanForm" method="POST">
-                        @csrf
-                        <input type="hidden" name="loan_id" id="loan_id">
-
-                        <div class="mb-3">
-                            <label for="approve_amount" class="form-label">Loan Amount</label>
-                            <input type="number" step="0.01" class="form-control" name="amount" id="approve_amount"
-                                   required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="approve_interest_rate" class="form-label">Interest Rate (%)</label>
-                            <input type="number" step="0.01" min="0" max="100" class="form-control"
-                                   name="interest_rate" id="approve_interest_rate" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="approve_term_weeks" class="form-label">Term (Weeks)</label>
-                            <input type="number" min="0" max="52" class="form-control" name="term_weeks"
-                                   id="approve_term_weeks" required>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Approve Loan</button>
-                        </div>
-                    </form>
+                <div class="modal-action">
+                    <x-button label="Approve Loan" type="submit" icon="o-check-circle" class="btn-success" />
+                    <x-button label="Cancel" onclick="approveLoanModal.close()" class="btn-ghost" />
                 </div>
-            </div>
+            </form>
         </div>
-    </div>
-
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
 @endsection
 
-@section("scripts")
+@push('scripts')
     <script>
         const defaultLoanInterestRate = {{ json_encode($defaultLoanInterestRate) }};
 
         function setApproveLoanData(loan) {
             document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
-
             document.getElementById('loan_id').value = loan.id;
             document.getElementById('approve_amount').value = loan.amount;
             const interestRate = loan.interest_rate ?? defaultLoanInterestRate;
-            document.getElementById('approve_interest_rate').value =
-                interestRate !== null && interestRate !== undefined ? interestRate : '';
+            document.getElementById('approve_interest_rate').value = interestRate ?? '';
             document.getElementById('approve_term_weeks').value = loan.term_weeks;
         }
     </script>
-@endsection
+@endpush

@@ -1,84 +1,73 @@
-<div class="card shadow-sm mb-4 h-100">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0 text-primary fw-semibold">{{ $title }}</h5>
+@props(['title', 'batch', 'route'])
 
+<x-card :title="$title" separator>
+    <x-slot:menu>
         @if($batch && !$batch->finished())
-            <div class="d-flex gap-2 ms-auto">
-                <button class="btn btn-sm btn-outline-secondary" type="button" disabled>
-                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                    Syncing...
-                </button>
+            <div class="flex items-center gap-2">
+                <x-button label="Syncing..." icon="o-arrow-path" class="btn-sm btn-ghost" disabled>
+                    <x-slot:icon>
+                        <span class="loading loading-spinner loading-xs"></span>
+                    </x-slot:icon>
+                </x-button>
                 <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
                       onsubmit="return confirm('Are you sure you want to cancel this sync?')">
                     @csrf
                     <input type="hidden" name="batch_id" value="{{ $batch->id }}">
                     <input type="hidden" name="type" value="{{ strtolower(Str::before($title, ' ')) }}">
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="bi bi-x-circle me-1"></i> Cancel
-                    </button>
+                    <x-button label="Cancel" icon="o-x-circle" type="submit" class="btn-sm btn-error btn-outline" />
                 </form>
             </div>
         @else
-            <form method="POST" action="{{ $route }}" class="ms-auto">
+            <form method="POST" action="{{ $route }}">
                 @csrf
-                <button class="btn btn-sm btn-primary" type="submit">
-                    <i class="bi bi-arrow-repeat me-1"></i> Run Sync
-                </button>
+                <x-button label="Run Sync" icon="o-arrow-path" type="submit" class="btn-sm btn-primary btn-outline" />
             </form>
         @endif
-    </div>
-    <div class="card-body small">
-        <dl class="row mb-0">
-            <dt class="col-sm-4 text-muted">Last Ran</dt>
-            <dd class="col-sm-8">{{ $batch?->finishedAt ?? 'Never' }}</dd>
+    </x-slot:menu>
 
-            <dt class="col-sm-4 text-muted">Status</dt>
-            <dd class="col-sm-8">
-                @if($batch)
-                    @if($batch->cancelled())
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Cancelled</span>
-                    @elseif($batch->finished())
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Finished</span>
-                    @else
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Running</span>
-                    @endif
-                @else
-                    <span class="text-muted">Idle</span>
-                @endif
-            </dd>
+    @if($batch)
+        @php
+            $progressPercent = (float) $batch->progress();
+            $statusValue = $batch->cancelled() ? 'Cancelled' : ($batch->finished() ? 'Finished' : 'Running');
+            $statusClass = $batch->cancelled() ? 'badge-error' : ($batch->finished() ? 'badge-success' : 'badge-warning');
+        @endphp
 
-            @if($batch)
-                <dt class="col-sm-4 text-muted">Jobs Completed</dt>
-                <dd class="col-sm-8">{{ $batch->processedJobs() }} / {{ $batch->totalJobs }}</dd>
+        <div class="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <x-stat title="Status" :value="$statusValue" icon="o-arrow-path" color="text-primary" description="Current sync state" />
+            <x-stat title="Jobs Completed" :value="$batch->processedJobs() . ' / ' . $batch->totalJobs" icon="o-check-circle" color="text-success" description="Processed versus total queued jobs" />
+            <x-stat title="Last Ran" :value="$batch->finishedAt ? $batch->finishedAt->format('M d, H:i') : 'Never'" icon="o-clock" color="text-info" :description="$batch->finishedAt ? $batch->finishedAt->diffForHumans() : 'No completed sync recorded yet'" />
+            <x-stat title="Failed Jobs" :value="number_format($batch->failedJobs)" icon="o-exclamation-circle" color="text-warning" description="Jobs that need inspection or retry" />
+        </div>
 
-                <dt class="col-sm-4 text-muted">Progress</dt>
-                <dd class="col-sm-8">
-                    <div class="progress" style="height: 20px;">
-                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                             style="width: {{ $batch->progress() }}%">
-                            {{ round($batch->progress()) }}%
-                        </div>
-                    </div>
-                </dd>
+        <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <div class="font-semibold text-base-content">Progress</div>
+                    <div class="text-sm text-base-content/60">{{ round($progressPercent) }}% complete.</div>
+                </div>
+                <x-badge :value="$statusValue" class="{{ $statusClass }} badge-sm" />
+            </div>
 
-                <dt class="col-sm-4 text-muted">Failed Jobs</dt>
-                <dd class="col-sm-8 text-danger fw-semibold">
-                    {{ $batch->failedJobs }}
-                </dd>
+            <x-progress :value="$progressPercent" class="progress-primary h-3" />
 
-                <dt class="col-sm-4 text-muted">Started</dt>
-                <dd class="col-sm-8">{{ $batch->createdAt->diffForHumans() }}</dd>
+            <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                <dt class="font-medium text-base-content/60">Started</dt>
+                <dd>{{ $batch->createdAt->toDayDateTimeString() }} ({{ $batch->createdAt->diffForHumans() }})</dd>
 
                 @if($batch->finishedAt)
-                    <dt class="col-sm-4 text-muted">Finished</dt>
-                    <dd class="col-sm-8">{{ $batch->finishedAt->diffForHumans() }}</dd>
+                    <dt class="font-medium text-base-content/60">Finished</dt>
+                    <dd>{{ $batch->finishedAt->toDayDateTimeString() }} ({{ $batch->finishedAt->diffForHumans() }})</dd>
                 @endif
 
                 @if($batch->cancelledAt)
-                    <dt class="col-sm-4 text-muted">Cancelled</dt>
-                    <dd class="col-sm-8 text-danger">{{ $batch->cancelledAt->diffForHumans() }}</dd>
+                    <dt class="font-medium text-base-content/60">Cancelled</dt>
+                    <dd class="text-error">{{ $batch->cancelledAt->toDayDateTimeString() }} ({{ $batch->cancelledAt->diffForHumans() }})</dd>
                 @endif
-            @endif
-        </dl>
-    </div>
-</div>
+            </dl>
+        </div>
+    @else
+        <div class="rounded-2xl border border-dashed border-base-300 px-4 py-6 text-sm text-base-content/60">
+            No sync is currently active.
+        </div>
+    @endif
+</x-card>

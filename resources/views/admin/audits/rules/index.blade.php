@@ -3,42 +3,32 @@
 @section('title', 'Audit Rules')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h3 class="mb-1">Audit Rules</h3>
-                    <p class="text-muted mb-0">Create, update, and retire NEL-powered checks.</p>
-                </div>
-                <div class="col-auto">
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('admin.audits.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i>
-                            Back to overview
-                        </a>
-                        <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>
-                            New Rule
-                        </a>
-                    </div>
-                </div>
+    <x-header title="Audit Rules" separator>
+        <x-slot:subtitle>Create, update, and retire NEL-powered checks.</x-slot:subtitle>
+        <x-slot:actions>
+            <div class="flex gap-2">
+                <a href="{{ route('admin.audits.index') }}" class="btn btn-outline">
+                    <x-icon name="o-arrow-left" class="size-4" />
+                    Back to overview
+                </a>
+                <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
+                    <x-icon name="o-plus-circle" class="size-4" />
+                    New Rule
+                </a>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-header>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-0">Rule library</h5>
-                <span class="text-muted small">Expressions are parsed with NEL; invalid rules are blocked on save.</span>
-            </div>
-            <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-journal-code me-1"></i>NEL Docs
+    <x-card title="Rule library" subtitle="Expressions are parsed with NEL; invalid rules are blocked on save.">
+        <x-slot:menu>
+            <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline btn-sm">
+                <x-icon name="o-document-text" class="size-4" />
+                NEL Docs
             </a>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="table-light">
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra">
+                <thead>
                 <tr>
                     <th scope="col">Rule</th>
                     <th scope="col">Target</th>
@@ -52,12 +42,12 @@
                 @forelse($rules as $rule)
                     <tr>
                         <td>
-                            <div class="fw-semibold">{{ $rule->name }}</div>
-                            <div class="text-muted small">{{ $rule->description ?? 'No description' }}</div>
-                            <code class="small d-block mt-1 text-wrap">{{ $rule->expression }}</code>
+                            <div class="font-semibold">{{ $rule->name }}</div>
+                            <div class="text-base-content/50 small">{{ $rule->description ?? 'No description' }}</div>
+                            <code class="mt-1 block text-wrap text-xs">{{ $rule->expression }}</code>
                         </td>
                         <td>
-                            <span class="badge bg-{{ $rule->target_type->value === 'nation' ? 'primary' : 'info' }}">
+                            <span class="badge {{ $rule->target_type->value === 'nation' ? 'badge-primary' : 'badge-info' }}">
                                 {{ ucfirst($rule->target_type->value) }}
                             </span>
                         </td>
@@ -69,34 +59,40 @@
                                     'low' => 'info',
                                     'info' => 'secondary',
                                 ][$rule->priority->value] ?? 'secondary';
+                                $priorityBadgeClass = match ($priorityClass) {
+                                    'danger' => 'badge-error',
+                                    'warning' => 'badge-warning',
+                                    'info' => 'badge-info',
+                                    default => 'badge-ghost',
+                                };
                             @endphp
-                            <span class="badge bg-{{ $priorityClass }}">
+                            <span class="badge {{ $priorityBadgeClass }}">
                                 {{ ucfirst($rule->priority->value) }}
                             </span>
                         </td>
                         <td>
                             @if($rule->enabled)
-                                <span class="badge bg-success-subtle text-success-emphasis">Yes</span>
+                                <span class="badge badge-success badge-soft">Yes</span>
                             @else
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis">No</span>
+                                <span class="badge badge-ghost">No</span>
                             @endif
                         </td>
                         <td>
-                            <span class="badge bg-light text-dark border">{{ $rule->results_count }}</span>
+                            <span class="badge badge-outline">{{ $rule->results_count }}</span>
                         </td>
                         <td>
-                            <div class="d-flex gap-2">
-                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-pencil"></i>
+                            <div class="flex gap-2">
+                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary">
+                                    <x-icon name="o-pencil" class="size-4" />
                                 </a>
-                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-activity"></i>
+                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline">
+                                    <x-icon name="o-bolt" class="size-4" />
                                 </a>
                                 <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" onsubmit="return confirm('Disable this rule and clear its violations?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-ban"></i>
+                                    <button type="submit" class="btn btn-sm btn-outline btn-error">
+                                        <x-icon name="o-no-symbol" class="size-4" />
                                     </button>
                                 </form>
                             </div>
@@ -104,11 +100,11 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">No audit rules have been configured yet.</td>
+                        <td colspan="6" class="text-center text-base-content/50 py-4">No audit rules have been configured yet.</td>
                     </tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 @endsection

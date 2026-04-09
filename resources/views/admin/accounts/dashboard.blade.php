@@ -1,6 +1,7 @@
 @php
     use App\Services\PWHelperService;
     use Illuminate\Support\Carbon;
+    use Illuminate\Support\Str;
 
     $resourceList = PWHelperService::resources(false);
     $resourceListWithMoney = PWHelperService::resources(true);
@@ -58,194 +59,288 @@
 
     $offshoreCachedDisplay = $offshoreCachedAt ? $offshoreCachedAt->diffForHumans() : 'Not cached';
     $offshoreCount = $offshoreSnapshots->count();
+    $resourcesWithLimitsCount = $withdrawalLimits->filter(fn ($limit) => (float) $limit->daily_limit > 0)->count();
+    $coverageStatus = $coveragePercent >= 100 ? 'Fully covered' : 'Needs more liquidity';
+    $coverageBadgeClass = $coveragePercent >= 100 ? 'badge-success' : 'badge-warning';
+    $coverageProgressClass = $coveragePercent >= 100 ? 'progress-success' : 'progress-warning';
+    $topAccountName = $topAccounts->isNotEmpty() ? $topAccounts->first()->name : 'No accounts yet';
+    $topAccountBalance = $topAccounts->isNotEmpty() ? (float) $topAccounts->first()->money : 0;
+    $surfaceCardClass = 'overflow-hidden rounded-3xl border border-base-300/60 bg-base-100 shadow-md';
+    $statCardClass = 'rounded-2xl border border-base-300/60 bg-base-100 shadow-sm';
+
+    $kpiCards = [
+        [
+            'title' => 'Tracked Accounts',
+            'value' => number_format($accounts->count()),
+            'icon' => 'o-users',
+            'color' => 'text-primary',
+            'description' => number_format($activeAccounts) . ' assigned · ' . number_format($inactiveAccounts) . ' unassigned',
+        ],
+        [
+            'title' => 'Member Cash',
+            'value' => '$' . number_format($accountsCash, 2),
+            'icon' => 'o-currency-dollar',
+            'color' => 'text-success',
+            'description' => number_format($resourceTotals->count()) . ' tracked resources',
+        ],
+        [
+            'title' => 'Average Balance',
+            'value' => '$' . number_format($accounts->avg('money'), 2),
+            'icon' => 'o-arrow-trending-up',
+            'color' => 'text-warning',
+            'description' => number_format($averageTransactionsPerDay, 1) . ' transactions/day',
+        ],
+        [
+            'title' => 'Top Account',
+            'value' => '$' . number_format($topAccountBalance, 2),
+            'icon' => 'o-trophy',
+            'color' => 'text-info',
+            'description' => $topAccountName,
+        ],
+    ];
+
+    $cashMixChart = [
+        'labels' => ['Member Accounts', 'Main Bank', 'Offshores'],
+        'data' => [
+            round($accountsCash, 2),
+            round($bankCash, 2),
+            round($offshoreCash, 2),
+        ],
+    ];
+
+    $topBalanceChart = [
+        'labels' => $topAccounts
+            ->map(fn ($account) => Str::limit($account->name, 18))
+            ->values()
+            ->all(),
+        'data' => $topAccounts
+            ->map(fn ($account) => round((float) $account->money, 2))
+            ->values()
+            ->all(),
+    ];
+
+    $resourceCushionChart = [
+        'labels' => $netResourcePositions
+            ->except('money')
+            ->sortByDesc(fn ($total) => abs((float) $total))
+            ->take(6)
+            ->keys()
+            ->map(fn ($resource) => Str::headline($resource))
+            ->values()
+            ->all(),
+        'data' => $netResourcePositions
+            ->except('money')
+            ->sortByDesc(fn ($total) => abs((float) $total))
+            ->take(6)
+            ->map(fn ($total) => round((float) $total, 2))
+            ->values()
+            ->all(),
+    ];
 @endphp
 
 @extends('layouts.admin')
 
-@section("content")
-    <div class="app-content-header border-0 pb-0">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col-sm-6">
-                    <h3 class="mb-1">Account Management</h3>
-                    <p class="text-muted mb-0 small">Monitor alliance bank performance, approve withdrawals, and review direct deposits at a glance.</p>
+@section('content')
+    <x-header title="Account Management" separator>
+        <x-slot:subtitle>Monitor alliance bank performance, approve withdrawals, and review direct deposits at a glance.</x-slot:subtitle>
+        <x-slot:actions>
+            <a href="#direct-deposit">
+                <x-button label="Direct Deposit Hub" icon="o-building-library" class="btn-outline btn-sm" />
+            </a>
+            <x-button label="Refresh" icon="o-arrow-path" onclick="location.reload()" class="btn-ghost btn-sm" />
+        </x-slot:actions>
+    </x-header>
+
+    <div class="mb-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
+            <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
+                <span class="font-medium text-base-content">Alliance Liquidity</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>Main bank {{ $mainBankCachedDisplay }}</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}</span>
+                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span>{{ $resourcesWithLimitsCount }} resource limits configured</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <x-badge :value="'Coverage ' . number_format($coveragePercent, 0) . '%'" :class="$coverageBadgeClass . ' badge-sm'" />
+                <a href="#alliance-position" class="btn btn-primary btn-sm">Charts</a>
+                <a href="#recent-transactions" class="btn btn-ghost btn-sm">Transactions</a>
+            </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Member Accounts</p>
+                        <p class="mt-2 text-2xl font-extrabold">${{ number_format($accountsCash, 2) }}</p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            {{ number_format($accounts->count()) }} tracked · Avg ${{ number_format($accounts->avg('money'), 2) }}
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                        <x-icon name="o-wallet" class="size-5 text-primary" />
+                    </div>
                 </div>
-                <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
-                    <a href="#direct-deposit" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-bank me-2"></i>Direct Deposit Hub
-                    </a>
-                    <button type="button" class="btn btn-light btn-sm ms-sm-2" onclick="location.reload()">
-                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
-                    </button>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Alliance Holdings</p>
+                        <p class="mt-2 text-2xl font-extrabold">${{ number_format($allianceCash, 2) }}</p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
+                        <x-icon name="o-building-library" class="size-5 text-info" />
+                    </div>
                 </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Liquidity Cushion</p>
+                            <span class="badge {{ $coverageBadgeClass }} badge-sm">{{ $coverageStatus }}</span>
+                        </div>
+                        <p class="mt-2 text-2xl font-extrabold {{ $netCashPosition >= 0 ? 'text-success' : 'text-warning' }}">
+                            {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
+                        </p>
+                        <p class="mt-1 text-sm text-base-content/55">
+                            Alliance reserves cover {{ number_format($coveragePercent, 0) }}% of member cash balances.
+                        </p>
+                    </div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl {{ $netCashPosition >= 0 ? 'bg-success/10' : 'bg-warning/10' }}">
+                        <x-icon name="o-arrow-trending-up" class="size-5 {{ $netCashPosition >= 0 ? 'text-success' : 'text-warning' }}" />
+                    </div>
+                </div>
+                <x-progress :value="min(100, max(0, $coveragePercent))" class="mt-4 h-2 {{ $coverageProgressClass }}" />
             </div>
         </div>
     </div>
 
-    {{-- Overview --}}
-    <div class="row g-3 mb-4">
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-primary text-white bg-gradient">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="text-uppercase fw-semibold text-white-50 small">Total Accounts</span>
-                            <h2 class="fw-bold mb-0">{{ number_format($accounts->count()) }}</h2>
-                        </div>
-                        <span class="badge text-bg-light text-primary-emphasis">
-                            <i class="bi bi-people"></i>
-                        </span>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        @foreach($kpiCards as $card)
+            <x-stat
+                :title="$card['title']"
+                :value="$card['value']"
+                :description="$card['description']"
+                :icon="$card['icon']"
+                :color="$card['color']"
+                :class="$statCardClass"
+            />
+        @endforeach
+    </div>
+
+    <div id="alliance-position" x-data="{ activeChart: 'liquidity' }" class="mb-6">
+        <div class="{{ $surfaceCardClass }}">
+            <div class="border-b border-base-200 px-5 pt-5 sm:px-6 sm:pt-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold">Alliance Position</h3>
+                        <p class="text-sm text-base-content/50">Visualize cash mix, top balances, and resource cushion without leaving the dashboard.</p>
                     </div>
-                    <div class="d-flex flex-wrap gap-3 small text-white-50">
-                        <span><i class="bi bi-person-check me-1"></i>{{ number_format($activeAccounts) }} assigned</span>
-                        <span><i class="bi bi-person-dash me-1"></i>{{ number_format($inactiveAccounts) }} unassigned</span>
-                    </div>
+                    <x-badge :value="'Coverage ' . number_format($coveragePercent, 0) . '%'" :class="$coverageBadgeClass . ' badge-sm'" />
+                </div>
+
+                <div class="mt-4 flex gap-1 overflow-x-auto pb-px">
+                    @foreach(['liquidity' => 'Liquidity Mix', 'leaders' => 'Top Balances', 'cushion' => 'Resource Cushion'] as $key => $label)
+                        <button
+                            @click="activeChart = '{{ $key }}'; $nextTick(() => window.dispatchEvent(new Event('resize')))"
+                            :class="activeChart === '{{ $key }}'
+                                ? 'border-primary text-primary font-semibold'
+                                : 'border-transparent text-base-content/50 hover:text-base-content/80'"
+                            class="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors"
+                            type="button"
+                        >
+                            {{ $label }}
+                        </button>
+                    @endforeach
                 </div>
             </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-success text-white bg-gradient">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="text-uppercase fw-semibold text-white-50 small">Total Holdings</span>
-                            <h2 class="fw-bold mb-0">${{ number_format($accounts->sum('money'), 2) }}</h2>
+
+            <div class="p-5 sm:p-6">
+                <div x-show="activeChart === 'liquidity'" x-transition.opacity>
+                    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
+                        <div class="min-h-[320px]">
+                            <canvas id="accountsLiquidityChart" class="w-full" style="height: 320px"></canvas>
                         </div>
-                        <span class="badge text-bg-light text-success-emphasis">
-                            <i class="bi bi-currency-dollar"></i>
-                        </span>
+                        <div class="space-y-3">
+                            <div class="rounded-2xl border border-base-300/60 bg-base-200/30 p-4">
+                                <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Reserve mix</p>
+                                <p class="mt-1 text-sm text-base-content/60">Separate bank and offshore balances so funding risk is easier to see at a glance.</p>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Members</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($accountsCash, 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Main bank</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($bankCash, 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Offshores</p>
+                                    <p class="mt-2 text-xl font-bold">${{ number_format($offshoreCash, 2) }}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <p class="mb-0 small text-white-50">Across {{ $resourceTotals->count() }} tracked resources in the bank.</p>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-warning text-dark bg-gradient">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="text-uppercase fw-semibold text-dark-50 small">Average Balance</span>
-                            <h2 class="fw-bold mb-0">${{ number_format($accounts->avg('money'), 2) }}</h2>
-                        </div>
-                        <span class="badge text-bg-light text-success-emphasis">
-                            <i class="bi bi-graph-up"></i>
-                        </span>
-                    </div>
-                    <p class="mb-0 small text-muted">{{ number_format($averageTransactionsPerDay, 1) }} transactions/day over the last 50 records.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 bg-info text-dark bg-gradient">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="text-uppercase fw-semibold text-dark-50 small">Top Account</span>
-                            <h2 class="fw-bold mb-0">${{ number_format($accounts->max('money'), 2) }}</h2>
-                        </div>
-                        <span class="badge text-bg-light text-success-emphasis">
-                            <i class="bi bi-trophy"></i>
-                        </span>
-                    </div>
+
+                <div x-show="activeChart === 'leaders'" x-cloak x-transition.opacity>
                     @if($topAccounts->isNotEmpty())
-                        <p class="mb-0 small text-muted">{{ $topAccounts->first()->name }} (Nation #{{ $topAccounts->first()->nation_id }})</p>
+                        <div class="min-h-[320px]">
+                            <canvas id="topBalancesChart" class="w-full" style="height: 320px"></canvas>
+                        </div>
                     @else
-                        <p class="mb-0 small text-muted">No accounts available.</p>
+                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                            No account balance data is available yet.
+                        </div>
+                    @endif
+                </div>
+
+                <div x-show="activeChart === 'cushion'" x-cloak x-transition.opacity>
+                    @if(!empty($resourceCushionChart['labels']))
+                        <div class="min-h-[320px]">
+                            <canvas id="resourceCushionChart" class="w-full" style="height: 320px"></canvas>
+                        </div>
+                    @else
+                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                            No resource position data is available yet.
+                        </div>
                     @endif
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Ownership snapshot --}}
-    <div class="row g-3 mb-4">
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="text-uppercase text-muted small">Member Accounts</span>
-                            <h3 class="fw-bold mb-0">${{ number_format($accountsCash, 2) }}</h3>
-                            <p class="mb-0 text-muted small">{{ number_format($accounts->count()) }} accounts tracked</p>
-                        </div>
-                        <span class="badge text-bg-primary"><i class="bi bi-wallet2"></i></span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 small text-muted">
-                        <span class="badge text-bg-light text-secondary border">Avg balance ${{ number_format($accounts->avg('money'), 2) }}</span>
-                        <span class="badge text-bg-light text-secondary border">{{ number_format($activeAccounts) }} assigned</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="text-uppercase text-muted small">Alliance Holdings</span>
-                            <h3 class="fw-bold mb-0">${{ number_format($allianceCash, 2) }}</h3>
-                            <p class="mb-0 text-muted small">Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}</p>
-                        </div>
-                        <span class="badge text-bg-info"><i class="bi bi-bank"></i></span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 small text-muted">
-                        <span class="badge text-bg-light text-secondary border">Bank cache {{ $mainBankCachedDisplay }}</span>
-                        <span class="badge text-bg-light text-secondary border">{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="text-uppercase text-muted small">Alliance Cushion</span>
-                            <h3 class="fw-bold mb-0 {{ $netCashPosition >= 0 ? 'text-success' : 'text-danger' }}">
-                                {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
-                            </h3>
-                            <p class="mb-0 text-muted small">After covering member balances</p>
-                        </div>
-                        <span class="badge {{ $netCashPosition >= 0 ? 'text-bg-success' : 'text-bg-danger' }}">
-                            <i class="bi bi-graph-up-arrow"></i>
-                        </span>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar {{ $coveragePercent >= 100 ? 'bg-success' : 'bg-warning' }}"
-                             role="progressbar"
-                             style="width: {{ min(100, max(0, $coveragePercent)) }}%;"
-                             aria-valuenow="{{ min(100, max(0, $coveragePercent)) }}"
-                             aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
-                        <span>Coverage {{ number_format($coveragePercent, 0) }}%</span>
-                        <span>{{ $netCashPosition >= 0 ? 'Surplus' : 'Shortfall' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+    {{-- Resource Ownership Table --}}
+    <x-card class="{{ $surfaceCardClass }} mb-6">
+        <x-slot:title>
             <div>
-                <h5 class="mb-1">Resource Ownership</h5>
-                <p class="mb-0 text-muted small">Comparing member-held balances to alliance bank + offshores (cached).</p>
+                Resource Ownership
+                <div class="text-sm font-normal text-base-content/50">Comparing member-held balances to alliance bank + offshores (cached).</div>
             </div>
-            <span class="badge text-bg-light text-secondary border">Updated: Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light">
-                    <tr>
+        </x-slot:title>
+        <x-slot:menu>
+            <span class="badge badge-ghost badge-sm">Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+            <table class="table table-sm table-zebra">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Resource</th>
-                        <th class="text-end">Member Accounts</th>
-                        <th class="text-end">Alliance Holdings</th>
-                        <th class="text-end">Cushion</th>
+                        <th class="text-right">Member Accounts</th>
+                        <th class="text-right">Alliance Holdings</th>
+                        <th class="text-right">Cushion</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @foreach($resourceListWithMoney as $resource)
                         @php
                             $accountTotal = $resourceTotalsWithMoney[$resource] ?? 0;
@@ -254,288 +349,232 @@
                             $isPositive = $net >= 0;
                         @endphp
                         <tr>
-                            <td class="text-capitalize">{{ $resource }}</td>
-                            <td class="text-end">{{ $resource === 'money' ? '$' : '' }}{{ number_format($accountTotal, 2) }}</td>
-                            <td class="text-end">{{ $resource === 'money' ? '$' : '' }}{{ number_format($allianceTotal, 2) }}</td>
-                            <td class="text-end">
-                                <span class="{{ $isPositive ? 'text-success' : 'text-danger' }}">
-                                    {{ $net >= 0 ? '+' : '' }}{{ $resource === 'money' ? '$' : '' }}{{ number_format($net, 2) }}
-                                </span>
+                            <td class="capitalize">{{ $resource }}</td>
+                            <td class="text-right">{{ $resource === 'money' ? '$' : '' }}{{ number_format($accountTotal, 2) }}</td>
+                            <td class="text-right">{{ $resource === 'money' ? '$' : '' }}{{ number_format($allianceTotal, 2) }}</td>
+                            <td class="text-right {{ $isPositive ? 'text-success' : 'text-error' }}">
+                                {{ $net >= 0 ? '+' : '' }}{{ $resource === 'money' ? '$' : '' }}{{ number_format($net, 2) }}
                             </td>
                         </tr>
                     @endforeach
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </x-card>
 
-    {{-- Accounts Table --}}
-    <div class="card shadow-sm border-0">
-        <div class="card-header d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
+    {{-- All Accounts Table --}}
+    <x-card class="{{ $surfaceCardClass }} mb-6" x-data="{ search: '' }">
+        <x-slot:title>
             <div>
-                <h5 class="mb-1">All Accounts</h5>
-                <p class="mb-0 text-muted small">Search, sort, and drill down into every managed bank account.</p>
+                All Accounts
+                <div class="text-sm font-normal text-base-content/50">Search, sort, and drill down into every managed bank account.</div>
             </div>
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="badge text-bg-secondary">{{ number_format($accounts->count()) }} accounts</span>
-                <span class="badge text-bg-light text-secondary-emphasis">Avg balance ${{ number_format($accounts->avg('money'), 2) }}</span>
-            </div>
-        </div>
-
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table id="account_table" class="table table-hover table-striped align-middle mb-0 w-100">
-                    <thead class="table-light">
-                    <tr>
+        </x-slot:title>
+        <x-slot:menu>
+            <x-badge value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost badge-sm" />
+            <x-input placeholder="Search accounts..." x-model="search" icon="o-magnifying-glass" class="input-sm w-56" clearable />
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+            <table class="table table-sm table-zebra">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Owner</th>
                         <th>Nation ID</th>
                         <th>Name</th>
-                        <th class="text-end">Money</th>
+                        <th class="text-right">Money</th>
                         @foreach($resourceList as $resource)
-                            <th class="text-end">{{ ucfirst($resource) }}</th>
+                            <th class="text-right">{{ ucfirst($resource) }}</th>
                         @endforeach
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @foreach ($accounts as $acc)
-                        <tr class="{{ $acc->frozen ? 'table-danger' : '' }}">
+                        <tr :class="{ 'bg-error/10': {{ $acc->frozen ? 'true' : 'false' }} }"
+                            x-show="!search || {{ \Illuminate\Support\Js::from(strtolower($acc->name . ' ' . ($acc->user?->name ?? ''))) }}.includes(search.toLowerCase())">
                             <td>
                                 @if($acc->user)
-                                    <span class="fw-semibold"><a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank" rel="noopener" class="text-decoration-none">{{ $acc->user->name }}</a></span>
+                                    <a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank"
+                                       class="link link-primary font-semibold">{{ $acc->user->name }}</a>
                                 @else
-                                    <span class="text-muted"><i class="bi bi-person-x me-1"></i>Deleted</span>
+                                    <span class="text-base-content/40 flex items-center gap-1">
+                                        <x-icon name="o-user-minus" class="w-4 h-4" /> Deleted
+                                    </span>
                                 @endif
                             </td>
-                            <td data-order="{{ $acc->nation_id }}">{{ $acc->nation_id }}</td>
+                            <td>{{ $acc->nation_id }}</td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link-primary fw-semibold">
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ route('admin.accounts.view', $acc->id) }}" class="link link-primary font-semibold">
                                         {{ $acc->name }}
                                     </a>
                                     @if($acc->frozen)
-                                        <span class="badge text-bg-danger">Frozen</span>
+                                        <x-badge  value="Frozen" class="badge-error badge-sm" />
                                     @endif
                                 </div>
                             </td>
-                            <td class="text-end" data-order="{{ $acc->money }}">${{ number_format($acc->money, 2) }}</td>
+                            <td class="text-right">${{ number_format($acc->money, 2) }}</td>
                             @foreach($resourceList as $resource)
-                                <td class="text-end" data-order="{{ $acc->$resource }}">{{ number_format($acc->$resource, 2) }}</td>
+                                <td class="text-right">{{ number_format($acc->$resource, 2) }}</td>
                             @endforeach
                         </tr>
                     @endforeach
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </x-card>
 
-    <div class="row g-3 mt-4 align-items-stretch">
+    {{-- Withdrawal Limits + Insights --}}
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
         @can('manage-accounts')
-            <div class="col-12 col-xxl-8">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header d-flex flex-column flex-lg-row justify-content-between gap-2 align-items-lg-center">
+            <div class="xl:col-span-2">
+                <x-card class="{{ $surfaceCardClass }} h-full">
+                    <x-slot:title>
                         <div>
-                            <h5 class="mb-1">Automatic Withdrawal Limits</h5>
-                            <p class="mb-0 text-muted small">Fine-tune automatic approvals across money and resource types.</p>
+                            Automatic Withdrawal Limits
+                            <div class="text-sm font-normal text-base-content/50">Fine-tune automatic approvals across money and resource types.</div>
                         </div>
-                        <span class="badge text-bg-info text-uppercase">Controls</span>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('admin.withdrawals.limits') }}" class="row g-4">
-                            @csrf
-                            <div class="col-12 col-lg-6">
-                                <label for="max_daily_withdrawals" class="form-label fw-semibold">Maximum Automatic Withdrawals Per Day</label>
-                                <input type="number" min="0" class="form-control" id="max_daily_withdrawals"
-                                       name="max_daily_withdrawals" value="{{ old('max_daily_withdrawals', $maxDailyWithdrawals) }}"
-                                       required>
-                                <div class="form-text">Set to 0 to allow unlimited automatic approvals.</div>
+                    </x-slot:title>
+                    <x-slot:menu>
+                        <x-badge value="Controls" class="badge-info badge-sm" />
+                    </x-slot:menu>
+                    <form method="POST" action="{{ route('admin.withdrawals.limits') }}">
+                        @csrf
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                            <x-input label="Max Automatic Withdrawals Per Day" type="number" min="0"
+                                     name="max_daily_withdrawals"
+                                     value="{{ old('max_daily_withdrawals', $maxDailyWithdrawals) }}"
+                                     hint="Set to 0 for unlimited." required />
+
+                            <div class="rounded-2xl border border-base-300/60 bg-base-200/40 p-4">
+                                <div class="text-xs uppercase text-base-content/50 mb-3">At-a-glance</div>
+                                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                                    <dt class="text-base-content/60">Pending withdrawals</dt>
+                                    <dd class="font-semibold">{{ number_format($pendingWithdrawals->count()) }}</dd>
+                                    <dt class="text-base-content/60">Daily auto limit</dt>
+                                    <dd class="font-semibold">{{ $maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited' }}</dd>
+                                    <dt class="text-base-content/60">Resources with limits</dt>
+                                    <dd class="font-semibold">{{ number_format($resourcesWithLimitsCount) }}</dd>
+                                </dl>
                             </div>
+                        </div>
 
-                            <div class="col-12 col-lg-6">
-                                <div class="card bg-light border-0 h-100">
-                                    <div class="card-body">
-                                        <p class="mb-2 text-muted text-uppercase small">At-a-glance</p>
-                                        <div class="d-flex flex-column gap-2">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-muted small">Pending withdrawals</span>
-                                                <span class="fw-semibold">{{ number_format($pendingWithdrawals->count()) }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-muted small">Daily auto limit</span>
-                                                <span class="fw-semibold">{{ $maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited' }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-muted small">Resources with limits</span>
-                                                <span class="fw-semibold">{{ number_format($withdrawalLimits->filter(fn($limit) => (float) $limit->daily_limit > 0)->count()) }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-12">
-                                <div class="table-responsive rounded border">
-                                    <table class="table table-sm align-middle mb-0">
-                                        <thead class="table-light">
-                                        <tr>
-                                            <th>Resource</th>
-                                            <th>Daily Auto-Approval Limit</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @foreach(PWHelperService::resources() as $resource)
-                                            @php $limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0 @endphp
-                                            <tr>
-                                                <td class="text-capitalize">{{ $resource }}</td>
-                                                <td>
-                                                    <div class="input-group">
-                                                        <span class="input-group-text">{{ $resource === 'money' ? '$' : '' }}</span>
-                                                        <input type="number" step="0.01" min="0" class="form-control"
-                                                               name="limits[{{ $resource }}]"
-                                                               value="{{ old('limits.' . $resource, $limit) }}">
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div class="col-12 d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save me-2"></i>Save Limits
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        @endcan
-
-        <div class="col-12 col-xxl-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header">
-                    <h5 class="mb-1">Insights</h5>
-                    <p class="mb-0 text-muted small">High-impact accounts and aggregate resource positions.</p>
-                </div>
-                <div class="card-body d-flex flex-column gap-4">
-                    <div>
-                        <h6 class="text-uppercase text-muted small mb-2">Top Balances</h6>
-                        <ul class="list-group list-group-flush">
-                            @forelse($topAccounts as $account)
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div>
-                                        <a href="{{ route('admin.accounts.view', $account->id) }}" class="fw-semibold text-decoration-none">
-                                            {{ $account->name }}
-                                        </a>
-                                        <div class="small text-muted">Nation #{{ $account->nation_id }}</div>
-                                    </div>
-                                    <span class="fw-semibold">${{ number_format($account->money, 2) }}</span>
-                                </li>
-                            @empty
-                                <li class="list-group-item px-0 text-muted">No accounts available.</li>
-                            @endforelse
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h6 class="text-uppercase text-muted small mb-2">Resource Stockpile</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-borderless mb-0">
-                                <tbody>
-                                @foreach($resourceTotals as $resource => $total)
-                                    <tr>
-                                        <td class="text-capitalize text-muted">{{ $resource }}</td>
-                                        <td class="text-end fw-semibold">{{ number_format($total, 2) }}</td>
+                        <div class="overflow-x-auto rounded-2xl border border-base-300/60 mb-4">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                                        <th>Resource</th>
+                                        <th>Daily Auto-Approval Limit</th>
                                     </tr>
-                                @endforeach
+                                </thead>
+                                <tbody>
+                                    @foreach(PWHelperService::resources() as $resource)
+                                        @php $limit = optional($withdrawalLimits->get($resource))->daily_limit ?? 0 @endphp
+                                        <tr>
+                                            <td class="capitalize">{{ $resource }}</td>
+                                            <td>
+                                                <label class="input input-sm flex items-center gap-1">
+                                                    @if($resource === 'money')<span class="text-base-content/50">$</span>@endif
+                                                    <input type="number" step="0.01" min="0"
+                                                           name="limits[{{ $resource }}]"
+                                                           value="{{ old('limits.' . $resource, $limit) }}"
+                                                           class="grow">
+                                                </label>
+                                            </td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                             </table>
                         </div>
-                    </div>
 
-                    <div>
-                        <h6 class="text-uppercase text-muted small mb-2">Engagement</h6>
-                        <p class="mb-1 small text-muted">{{ number_format($activeAccounts) }} accounts are assigned to members and {{ number_format($inactiveAccounts) }} remain unassigned.</p>
-                        <p class="mb-0 small text-muted">Average of {{ number_format($averageTransactionsPerDay, 1) }} transactions processed daily.</p>
+                        <div class="flex justify-end">
+                            <x-button label="Save Limits" type="submit" icon="o-check" class="btn-primary" />
+                        </div>
+                    </form>
+                </x-card>
+            </div>
+        @endcan
+
+        <x-card class="{{ $surfaceCardClass }} h-full">
+            <x-slot:title>Insights</x-slot:title>
+            <x-slot:subtitle>High-impact accounts and aggregate resource positions.</x-slot:subtitle>
+
+            <div class="space-y-5">
+                <div>
+                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Top Balances</div>
+                    <div class="divide-y divide-base-300">
+                        @forelse($topAccounts as $account)
+                            <div class="flex items-center justify-between py-2">
+                                <div>
+                                    <a href="{{ route('admin.accounts.view', $account->id) }}" class="link link-primary font-semibold text-sm">
+                                        {{ $account->name }}
+                                    </a>
+                                    <div class="text-xs text-base-content/50">Nation #{{ $account->nation_id }}</div>
+                                </div>
+                                <span class="font-semibold text-sm">${{ number_format($account->money, 2) }}</span>
+                            </div>
+                        @empty
+                            <p class="text-base-content/50 text-sm py-2">No accounts available.</p>
+                        @endforelse
                     </div>
                 </div>
+
+                <div>
+                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Resource Stockpile</div>
+                    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                        @foreach($resourceTotals as $resource => $total)
+                            <dt class="text-base-content/60 capitalize">{{ $resource }}</dt>
+                            <dd class="text-right font-semibold">{{ number_format($total, 2) }}</dd>
+                        @endforeach
+                    </dl>
+                </div>
+
+                <div>
+                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Engagement</div>
+                    <p class="text-sm text-base-content/60">
+                        {{ number_format($activeAccounts) }} accounts assigned, {{ number_format($inactiveAccounts) }} unassigned.
+                        Average of {{ number_format($averageTransactionsPerDay, 1) }} transactions/day.
+                    </p>
+                </div>
             </div>
-        </div>
+        </x-card>
     </div>
 
     @can('manage-accounts')
-        <div class="row g-3 mt-4">
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small">Pending Withdrawals</span>
-                                <h3 class="fw-bold mb-0">{{ number_format($pendingWithdrawals->count()) }}</h3>
-                            </div>
-                            <span class="badge text-bg-warning"><i class="bi bi-hourglass-split"></i></span>
-                        </div>
-                        <p class="mb-0 small text-muted">Awaiting manual review before funds leave the bank.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small">Daily Auto Limit</span>
-                                <h3 class="fw-bold mb-0">{{ $maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited' }}</h3>
-                            </div>
-                            <span class="badge text-bg-info"><i class="bi bi-arrow-repeat"></i></span>
-                        </div>
-                        <p class="mb-0 small text-muted">Automatic approvals of transactions in the last 24 hours.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-uppercase text-muted small">Resources With Limits</span>
-                                <h3 class="fw-bold mb-0">{{ number_format($withdrawalLimits->filter(fn($limit) => (float) $limit->daily_limit > 0)->count()) }}</h3>
-                            </div>
-                            <span class="badge text-bg-success"><i class="bi bi-shield-lock"></i></span>
-                        </div>
-                        <p class="mb-0 small text-muted">Resources with an automatic approval ceiling configured.</p>
-                    </div>
-                </div>
-            </div>
+        {{-- Withdrawal KPIs --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <x-stat title="Pending Withdrawals" :value="number_format($pendingWithdrawals->count())" icon="o-clock"
+                    color="text-warning" description="Awaiting manual review" :class="$statCardClass" />
+            <x-stat title="Daily Auto Limit" :value="$maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited'"
+                    icon="o-arrow-path" color="text-info" description="Automatic approvals in 24 hours" :class="$statCardClass" />
+            <x-stat title="Resources With Limits" :value="number_format($resourcesWithLimitsCount)"
+                    icon="o-shield-check" color="text-success" description="Have an approval ceiling" :class="$statCardClass" />
         </div>
 
         @if($pendingWithdrawals->isNotEmpty())
-            <div class="card mt-4 shadow-sm border-0">
-                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <x-card class="{{ $surfaceCardClass }} mb-6">
+                <x-slot:title>
                     <div>
-                        <h5 class="mb-1">Pending Withdrawal Approvals</h5>
-                        <p class="mb-0 text-muted small">Review and action outstanding requests submitted by members.</p>
+                        Pending Withdrawal Approvals
+                        <div class="text-sm font-normal text-base-content/50">Review and action outstanding requests submitted by members.</div>
                     </div>
-                    <span class="badge text-bg-warning">{{ number_format($pendingWithdrawals->count()) }} pending</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped align-middle">
-                            <thead>
-                            <tr>
+                </x-slot:title>
+                <x-slot:menu>
+                    <x-badge value="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning badge-sm" />
+                </x-slot:menu>
+                <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+                    <table class="table table-sm table-zebra">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wider text-base-content/45">
                                 <th>Requested</th>
                                 <th>Member</th>
                                 <th>From Account</th>
                                 <th>Nation</th>
                                 <th>Resources</th>
                                 <th>Reason</th>
-                                <th class="text-end">Actions</th>
+                                <th class="text-right">Actions</th>
                             </tr>
-                            </thead>
-                            <tbody>
+                        </thead>
+                        <tbody>
                             @foreach($pendingWithdrawals as $transaction)
                                 <tr>
                                     <td>{{ $transaction->created_at?->format('M d, Y H:i') }}</td>
@@ -544,97 +583,81 @@
                                     <td>
                                         @if ($transaction->nation)
                                             <a href="https://politicsandwar.com/nation/id={{ $transaction->nation->id }}"
-                                               target="_blank" rel="noopener noreferrer">
+                                               target="_blank" class="link link-primary">
                                                 {{ $transaction->nation->leader_name ?? ('Nation #'.$transaction->nation->id) }}
                                             </a>
-                                            <div class="small text-muted">
-                                                {{ $transaction->nation->nation_name ?? 'Unknown Nation' }}
-                                            </div>
+                                            <div class="text-xs text-base-content/50">{{ $transaction->nation->nation_name ?? '' }}</div>
                                         @else
-                                            <span class="text-muted">Unknown Nation</span>
+                                            <span class="text-base-content/50">Unknown</span>
                                         @endif
                                     </td>
                                     <td>
-                                        <ul class="mb-0 ps-3">
+                                        <ul class="text-sm space-y-0.5">
                                             @foreach(PWHelperService::resources() as $resource)
                                                 @php $amount = $transaction->{$resource} @endphp
                                                 @if($amount > 0)
-                                                    <li>
-                                                        {{ ucfirst($resource) }}: {{ $resource === 'money' ? '$' : '' }}{{ number_format($amount, 2) }}
-                                                    </li>
+                                                    <li>{{ ucfirst($resource) }}: {{ $resource === 'money' ? '$' : '' }}{{ number_format($amount, 2) }}</li>
                                                 @endif
                                             @endforeach
                                         </ul>
                                     </td>
                                     <td>{{ $transaction->pending_reason ?? 'Manual approval required' }}</td>
-                                    <td class="text-end">
-                                        <form action="{{ route('admin.withdrawals.approve', $transaction) }}" method="POST"
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-success btn-sm">
-                                                <i class="bi bi-check-circle me-1"></i>Approve
-                                            </button>
-                                        </form>
-                                        <button class="btn btn-outline-danger btn-sm" type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#deny-form-{{ $transaction->id }}"
-                                                aria-expanded="false" aria-controls="deny-form-{{ $transaction->id }}">
-                                            Deny
-                                        </button>
-                                        <div class="collapse mt-2" id="deny-form-{{ $transaction->id }}">
-                                            <form action="{{ route('admin.withdrawals.deny', $transaction) }}" method="POST">
+                                    <td class="text-right">
+                                        <div class="flex flex-col items-end gap-2">
+                                            <form action="{{ route('admin.withdrawals.approve', $transaction) }}" method="POST">
                                                 @csrf
-                                                <div class="mb-2">
-                                                    <label for="deny-reason-{{ $transaction->id }}" class="form-label">Reason</label>
-                                                    <textarea class="form-control" name="reason" id="deny-reason-{{ $transaction->id }}"
-                                                              rows="2" maxlength="500" required></textarea>
-                                                </div>
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="bi bi-x-circle me-1"></i>Confirm Denial
-                                                </button>
+                                                <x-button label="Approve" icon="o-check-circle" type="submit" class="btn-success btn-sm" />
                                             </form>
+                                            <div x-data="{ open: false }">
+                                                <x-button label="Deny" icon="o-x-circle" @click="open = !open" class="btn-error btn-outline btn-sm" />
+                                                <div x-show="open" x-cloak class="mt-2 p-3 bg-base-200 rounded-box w-64">
+                                                    <form action="{{ route('admin.withdrawals.deny', $transaction) }}" method="POST">
+                                                        @csrf
+                                                        <x-textarea label="Reason" name="reason" rows="2" maxlength="500" required class="mb-2" />
+                                                        <x-button label="Confirm Denial" type="submit" icon="o-x-circle" class="btn-error btn-sm w-full" />
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
                             @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            </x-card>
         @endif
     @endcan
 
-    <div id="direct-deposit" class="mt-4">
+    {{-- Direct Deposit --}}
+    <div id="direct-deposit" class="mb-6">
         @include('admin.accounts.direct_deposit')
     </div>
 
     {{-- Direct Deposit Logs --}}
-    <div id="direct-deposit-logs" class="card mt-4 shadow-sm border-0">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-            <div>
-                <h5 class="mb-1 d-flex align-items-center gap-2">
-                    <span class="badge text-bg-primary">DD</span>
-                    Direct Deposit Logs
-                </h5>
-                <p class="mb-0 text-muted small">After-tax payouts with quick links to nations and deposit accounts.</p>
+    <x-card id="direct-deposit-logs" class="{{ $surfaceCardClass }} mb-6">
+        <x-slot:title>
+            <div class="flex items-center gap-2">
+                <x-badge value="DD" class="badge-primary badge-sm" />
+                Direct Deposit Logs
             </div>
-            <a href="#mmr-assistant" class="text-decoration-none small fw-semibold text-primary ms-md-auto">Jump to MMR Assistant <i class="bi bi-arrow-down-right ms-1"></i></a>
-        </div>
-
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover text-nowrap align-middle mb-0">
-                    <thead class="table-light">
-                    <tr>
+            <div class="text-sm font-normal text-base-content/50">After-tax payouts with quick links to nations and deposit accounts.</div>
+        </x-slot:title>
+        <x-slot:menu>
+            <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>Nation</th>
                         <th>Deposit Account</th>
-                        <th class="text-end">Cash Paid</th>
+                        <th class="text-right">Cash Paid</th>
                         <th>Resources Delivered</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @forelse($directDepositLogs as $log)
                         @php
                             $deliveredResources = collect(PWHelperService::resources(false))
@@ -644,83 +667,75 @@
                         <tr>
                             <td>{{ $log->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
                             <td>
-                                <a href="https://politicsandwar.com/nation/id={{ $log->nation_id }}" target="_blank" class="text-decoration-none">
+                                <a href="https://politicsandwar.com/nation/id={{ $log->nation_id }}" target="_blank" class="link link-primary">
                                     Nation #{{ $log->nation_id }}
                                 </a>
                             </td>
                             <td>
                                 @if($log->account)
-                                    <a href="{{ route('admin.accounts.view', $log->account->id) }}" class="fw-semibold text-decoration-none">
+                                    <a href="{{ route('admin.accounts.view', $log->account->id) }}" class="link link-primary font-semibold">
                                         {{ $log->account->name }}
                                     </a>
                                     @if($log->account->user)
-                                        <div class="small text-muted">{{ $log->account->user->name }}</div>
+                                        <div class="text-xs text-base-content/50">{{ $log->account->user->name }}</div>
                                     @endif
                                 @else
-                                    <span class="text-muted">Account removed</span>
+                                    <span class="text-base-content/50">Account removed</span>
                                 @endif
                             </td>
-                            <td class="text-end">${{ number_format((float) $log->money, 2) }}</td>
+                            <td class="text-right">${{ number_format((float) $log->money, 2) }}</td>
                             <td>
                                 @if($deliveredResources->isNotEmpty())
-                                    <div class="d-flex flex-wrap gap-2">
+                                    <div class="flex flex-wrap gap-1">
                                         @foreach($deliveredResources as $resource => $amount)
-                                            <span class="badge text-bg-light text-secondary border">
-                                                {{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}
-                                            </span>
+                                            <x-badge  value="{{ ucfirst($resource) }}: {{ number_format((float) $amount, 2) }}" class="badge-ghost badge-sm" />
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-muted">Money only</span>
+                                    <span class="text-base-content/50">Money only</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No direct deposit activity recorded yet.</td>
+                            <td colspan="5" class="text-center text-base-content/50 py-6">No direct deposit activity recorded yet.</td>
                         </tr>
                     @endforelse
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-
-        <div class="card-footer bg-light">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
-                <div class="small text-muted">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</div>
-                <div class="ms-lg-auto">
-                    {{ $directDepositLogs->withQueryString()->links('vendor.pagination.bootstrap-5') }}
-                </div>
+        <x-slot:footer>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <span class="text-sm text-base-content/50">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</span>
+                <div class="sm:ml-auto">{{ $directDepositLogs->withQueryString()->links() }}</div>
             </div>
-        </div>
-    </div>
+        </x-slot:footer>
+    </x-card>
 
-    {{-- MMR Assistant Logs --}}
-    <div id="mmr-assistant" class="card mt-4 shadow-sm border-0">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-            <div>
-                <h5 class="mb-1 d-flex align-items-center gap-2">
-                    <span class="badge text-bg-dark">MMR</span>
-                    MMR Assistant Purchases
-                </h5>
-                <p class="mb-0 text-muted small">Withheld cash reinvested into resources based on player configs.</p>
+    {{-- MMR Assistant --}}
+    <x-card id="mmr-assistant" class="{{ $surfaceCardClass }} mb-6">
+        <x-slot:title>
+            <div class="flex items-center gap-2">
+                <x-badge value="MMR" class="badge-neutral badge-sm" />
+                MMR Assistant Purchases
             </div>
-            <a href="#direct-deposit-logs" class="text-decoration-none small fw-semibold text-primary ms-md-auto">Back to DD logs <i class="bi bi-arrow-up-left ms-1"></i></a>
-        </div>
-
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover text-nowrap align-middle mb-0">
-                    <thead class="table-light">
-                    <tr>
+            <div class="text-sm font-normal text-base-content/50">Withheld cash reinvested into resources based on player configs.</div>
+        </x-slot:title>
+        <x-slot:menu>
+            <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>Account</th>
                         <th>Nation</th>
-                        <th class="text-end">Total Spent</th>
+                        <th class="text-right">Total Spent</th>
                         <th>Resources Purchased</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @forelse($mmrPurchases as $purchase)
                         @php
                             $purchasedResources = collect(PWHelperService::resources(false))
@@ -734,171 +749,376 @@
                             <td>{{ $purchase->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
                             <td>
                                 @if($purchase->account)
-                                    <a href="{{ route('admin.accounts.view', $purchase->account->id) }}" class="fw-semibold text-decoration-none">
+                                    <a href="{{ route('admin.accounts.view', $purchase->account->id) }}" class="link link-primary font-semibold">
                                         {{ $purchase->account->name }}
                                     </a>
                                 @else
-                                    <span class="text-muted">Account removed</span>
+                                    <span class="text-base-content/50">Account removed</span>
                                 @endif
                             </td>
                             <td>
                                 @if($purchase->account?->nation_id)
-                                    <a href="https://politicsandwar.com/nation/id={{ $purchase->account->nation_id }}" target="_blank" class="text-muted text-decoration-none">
+                                    <a href="https://politicsandwar.com/nation/id={{ $purchase->account->nation_id }}" target="_blank" class="link link-neutral">
                                         Nation #{{ $purchase->account->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <span class="text-base-content/50">—</span>
                                 @endif
                             </td>
-                            <td class="text-end">${{ number_format((float) $purchase->total_spent, 2) }}</td>
+                            <td class="text-right">${{ number_format((float) $purchase->total_spent, 2) }}</td>
                             <td>
                                 @if($purchasedResources->isNotEmpty())
-                                    <div class="d-flex flex-wrap gap-2">
+                                    <div class="flex flex-wrap gap-1">
                                         @foreach($purchasedResources as $resource => $data)
-                                            <span class="badge text-bg-light text-secondary border">
+                                            <x-badge class="badge-ghost badge-sm">
                                                 {{ ucfirst($resource) }}: {{ number_format((float) $data['qty'], 2) }}
                                                 @if($data['ppu'])
-                                                    <span class="text-muted"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
+                                                    <span class="text-base-content/50"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
                                                 @endif
-                                            </span>
+                                            </x-badge>
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-muted">No resources purchased</span>
+                                    <span class="text-base-content/50">No resources purchased</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No MMR Assistant purchases yet.</td>
+                            <td colspan="5" class="text-center text-base-content/50 py-6">No MMR Assistant purchases yet.</td>
                         </tr>
                     @endforelse
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-
-        <div class="card-footer bg-light">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
-                <div class="small text-muted">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</div>
-                <div class="ms-lg-auto">
-                    {{ $mmrPurchases->withQueryString()->links('vendor.pagination.bootstrap-5') }}
-                </div>
+        <x-slot:footer>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <span class="text-sm text-base-content/50">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</span>
+                <div class="sm:ml-auto">{{ $mmrPurchases->withQueryString()->links() }}</div>
             </div>
-        </div>
-    </div>
+        </x-slot:footer>
+    </x-card>
 
     {{-- Recent Transactions --}}
-    <div id="recent-transactions" class="card mt-4 shadow-sm border-0">
-        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-            <div>
-                <h5 class="mb-1">Recent Transactions</h5>
-                <p class="mb-0 text-muted small">Paginated, newest-first view of alliance banking activity.</p>
-            </div>
-        </div>
-
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover text-nowrap align-middle mb-0" id="recent_transactions_table">
-                    <thead class="table-light">
-                    <tr>
+    <x-card id="recent-transactions" class="{{ $surfaceCardClass }} mb-6">
+        <x-slot:title>
+            Recent Transactions
+            <div class="text-sm font-normal text-base-content/50">Paginated, newest-first view of alliance banking activity.</div>
+        </x-slot:title>
+        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
                         <th>From</th>
                         <th>To</th>
                         <th>Type</th>
-                        <th class="text-end">Money</th>
+                        <th class="text-right">Money</th>
                         @foreach(PWHelperService::resources(false) as $resource)
-                            <th class="text-end">{{ ucfirst($resource) }}</th>
+                            <th class="text-right">{{ ucfirst($resource) }}</th>
                         @endforeach
-                        <th class="text-end">Action</th>
+                        <th class="text-right">Action</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @forelse($recentTransactions as $transaction)
                         <tr>
                             <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
                             <td>
                                 @if($transaction->fromAccount)
-                                    <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}" class="text-decoration-none">
+                                    <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}" class="link link-primary">
                                         {{ $transaction->fromAccount->name }}
                                     </a>
                                 @elseif($transaction->nation_id && $transaction->transaction_type === 'deposit')
-                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="text-decoration-none">
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="link link-primary">
                                         Nation #{{ $transaction->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-muted">N/A</span>
+                                    <span class="text-base-content/50">N/A</span>
                                 @endif
                             </td>
                             <td>
                                 @if($transaction->toAccount)
-                                    <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}" class="text-decoration-none">
+                                    <a href="{{ route('admin.accounts.view', $transaction->toAccount->id) }}" class="link link-primary">
                                         {{ $transaction->toAccount->name }}
                                     </a>
                                 @elseif($transaction->nation_id)
-                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="text-decoration-none">
+                                    <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="link link-primary">
                                         Nation #{{ $transaction->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-muted">N/A</span>
+                                    <span class="text-base-content/50">N/A</span>
                                 @endif
                             </td>
                             <td>{{ ucfirst($transaction->transaction_type) }}</td>
-                            <td class="text-end">${{ number_format($transaction->money, 2) }}</td>
+                            <td class="text-right">${{ number_format($transaction->money, 2) }}</td>
                             @foreach(PWHelperService::resources(false) as $resource)
-                                <td class="text-end">{{ number_format($transaction->$resource, 2) }}</td>
+                                <td class="text-right">{{ number_format($transaction->$resource, 2) }}</td>
                             @endforeach
-                            <td class="text-end">
+                            <td class="text-right">
                                 @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
                                     <form method="POST"
                                           action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
                                           onsubmit="return confirm('Are you sure you want to refund this transaction?');">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Refund
-                                        </button>
+                                        <x-button label="Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-xs" />
                                     </form>
                                 @elseif($transaction->isRefunded())
-                                    <span class="badge text-bg-secondary">Refunded</span>
+                                    <x-badge  value="Refunded" class="badge-ghost badge-sm" />
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ 6 + count(PWHelperService::resources(false)) }}" class="text-center text-muted py-4">
+                            <td colspan="{{ 6 + count(PWHelperService::resources(false)) }}" class="text-center text-base-content/50 py-6">
                                 No transactions found.
                             </td>
                         </tr>
                     @endforelse
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-
-        <div class="card-footer bg-light">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center w-100 gap-2">
-                <div class="small text-muted">Showing {{ $recentTransactions->count() }} of {{ $recentTransactions->total() }} transactions</div>
-                <div class="ms-lg-auto">
-                    {{ $recentTransactions->links('vendor.pagination.bootstrap-5') }}
-                </div>
+        <x-slot:footer>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <span class="text-sm text-base-content/50">Showing {{ $recentTransactions->count() }} of {{ $recentTransactions->total() }} transactions</span>
+                <div class="sm:ml-auto">{{ $recentTransactions->links() }}</div>
             </div>
-        </div>
-    </div>
+        </x-slot:footer>
+    </x-card>
 @endsection
 
-@push("scripts")
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        $(function () {
-            initAdminDataTable('#account_table', {
-                pageLength: 25,
-                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'All']],
-                order: [[3, 'desc']],
-                scrollX: true,
-                autoWidth: false,
-                language: {
-                    searchPlaceholder: 'Search accounts...',
-                }
-            });
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Chart === 'undefined') {
+                return;
+            }
+
+            const rgba = (hex, alpha) => {
+                const normalized = hex.replace('#', '');
+                const value = normalized.length === 3
+                    ? normalized.split('').map((char) => char + char).join('')
+                    : normalized;
+                const int = Number.parseInt(value, 16);
+                const r = (int >> 16) & 255;
+                const g = (int >> 8) & 255;
+                const b = int & 255;
+
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+
+            const chartColors = {
+                primary: '#2563eb',
+                success: '#16a34a',
+                info: '#0891b2',
+                warning: '#d97706',
+                danger: '#dc2626',
+                neutral: '#64748b',
+                text: '#475569',
+                grid: 'rgba(148, 163, 184, 0.16)',
+                tooltipBackground: 'rgba(15, 23, 42, 0.92)',
+                tooltipBorder: 'rgba(148, 163, 184, 0.22)',
+            };
+
+            const tickColor = chartColors.text;
+            const gridColor = chartColors.grid;
+            const tooltipBackground = chartColors.tooltipBackground;
+            const tooltipBorder = chartColors.tooltipBorder;
+            const legendColor = chartColors.text;
+
+            const moneyFormat = (value) => '$' + new Intl.NumberFormat('en-US', {
+                maximumFractionDigits: 2,
+            }).format(value ?? 0);
+
+            const baseFont = {
+                family: "'Inter', 'system-ui', sans-serif",
+                size: 11,
+                weight: 500,
+            };
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: legendColor,
+                            font: baseFont,
+                            boxWidth: 12,
+                            usePointStyle: true,
+                        },
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBackground,
+                        titleColor: '#f8fafc',
+                        bodyColor: '#e2e8f0',
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 10,
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: tickColor, font: baseFont },
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: { color: tickColor, font: baseFont },
+                        beginAtZero: true,
+                    },
+                },
+            };
+
+            const liquidityCanvas = document.getElementById('accountsLiquidityChart');
+            if (liquidityCanvas) {
+                new Chart(liquidityCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: @json($cashMixChart['labels']),
+                        datasets: [{
+                            data: @json($cashMixChart['data']),
+                            backgroundColor: [
+                                rgba(chartColors.primary, 0.88),
+                                rgba(chartColors.success, 0.88),
+                                rgba(chartColors.info, 0.88),
+                            ],
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 10,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        cutout: '62%',
+                        scales: {},
+                        plugins: {
+                            ...commonOptions.plugins,
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        return `${context.label}: ${moneyFormat(context.parsed)}`;
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            const topBalancesCanvas = document.getElementById('topBalancesChart');
+            if (topBalancesCanvas) {
+                new Chart(topBalancesCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($topBalanceChart['labels']),
+                        datasets: [{
+                            label: 'Balance',
+                            data: @json($topBalanceChart['data']),
+                            backgroundColor: rgba(chartColors.primary, 0.72),
+                            hoverBackgroundColor: rgba(chartColors.primary, 0.9),
+                            borderRadius: 10,
+                            borderSkipped: false,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        plugins: {
+                            ...commonOptions.plugins,
+                            legend: { display: false },
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        return `Balance: ${moneyFormat(context.parsed.y)}`;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                ...commonOptions.scales.x,
+                                grid: { display: false },
+                            },
+                            y: {
+                                ...commonOptions.scales.y,
+                                ticks: {
+                                    ...commonOptions.scales.y.ticks,
+                                    callback(value) {
+                                        return moneyFormat(value);
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            const cushionCanvas = document.getElementById('resourceCushionChart');
+            if (cushionCanvas) {
+                new Chart(cushionCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($resourceCushionChart['labels']),
+                        datasets: [{
+                            label: 'Net position',
+                            data: @json($resourceCushionChart['data']),
+                            backgroundColor(context) {
+                                return context.raw >= 0
+                                    ? rgba(chartColors.success, 0.76)
+                                    : rgba(chartColors.warning, 0.82);
+                            },
+                            hoverBackgroundColor(context) {
+                                return context.raw >= 0
+                                    ? rgba(chartColors.success, 0.92)
+                                    : rgba(chartColors.warning, 0.95);
+                            },
+                            borderRadius: 10,
+                            borderSkipped: false,
+                        }],
+                    },
+                    options: {
+                        ...commonOptions,
+                        indexAxis: 'y',
+                        plugins: {
+                            ...commonOptions.plugins,
+                            legend: { display: false },
+                            tooltip: {
+                                ...commonOptions.plugins.tooltip,
+                                callbacks: {
+                                    label(context) {
+                                        const value = new Intl.NumberFormat('en-US', {
+                                            maximumFractionDigits: 2,
+                                        }).format(context.parsed.x);
+
+                                        return `Net: ${value}`;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                ...commonOptions.scales.x,
+                                ticks: {
+                                    ...commonOptions.scales.x.ticks,
+                                    callback(value) {
+                                        return new Intl.NumberFormat('en-US', {
+                                            maximumFractionDigits: 0,
+                                        }).format(value);
+                                    },
+                                },
+                            },
+                            y: {
+                                ...commonOptions.scales.y,
+                                grid: { display: false },
+                            },
+                        },
+                    },
+                });
+            }
         });
     </script>
 @endpush

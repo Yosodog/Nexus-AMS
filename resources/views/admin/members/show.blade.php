@@ -1,131 +1,68 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <h3 class="mb-0">Nation Overview: <a href="https://politicsandwar.com/nation/id={{ $nation->id }}"
-                                                 target="_blank">{{ $nation->leader_name }}</a> (ID: {{ $nation->id }})
-            </h3>
-            <p class="text-muted">Last updated: {{ $lastUpdatedAt ? $lastUpdatedAt->diffForHumans() : 'Unknown' }}</p>
-        </div>
-    </div>
+    <x-header :title="'Nation Overview: ' . $nation->leader_name" separator>
+        <x-slot:subtitle>
+            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" class="link link-primary">
+                Nation #{{ $nation->id }}
+            </a>
+            &nbsp;&middot;&nbsp;
+            Last updated: {{ $lastUpdatedAt ? $lastUpdatedAt->diffForHumans() : 'Unknown' }}
+        </x-slot:subtitle>
+    </x-header>
 
-    {{-- Info Boxes --}}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-bar-chart-line" bgColor="text-bg-primary" title="Score"
-                              :value="number_format($lastScore, 2)"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-building" bgColor="text-bg-success" title="Cities"
-                              :value="$lastCities"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash" bgColor="text-bg-info" title="Total Taxes (30d)"
-                              :value="number_format($taxHistory->take(30)->sum('money'))"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-clock-history" bgColor="text-bg-warning" title="Updates"
-                              :value="$scoreHistory->count() . ' records'"/>
-        </div>
+    {{-- Stats --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <x-stat title="Score" :value="number_format($lastScore, 2)" icon="o-chart-bar" color="text-primary" />
+        <x-stat title="Cities" :value="$lastCities" icon="o-building-office-2" color="text-success" />
+        <x-stat title="Total Taxes (30d)" :value="'$' . number_format($taxHistory->take(30)->sum('money'))" icon="o-banknotes" color="text-info" />
+        <x-stat title="Updates" :value="$scoreHistory->count() . ' records'" icon="o-clock" color="text-warning" />
     </div>
 
     {{-- Charts --}}
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Money Tax History</div>
-                <div class="card-body">
-                    <canvas id="moneyTaxChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Food Tax History</div>
-                <div class="card-body">
-                    <canvas id="foodTaxChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Resource Tax History</div>
-                <div class="card-body">
-                    <canvas id="resourceTaxChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">Score History (1 Year)</div>
-                <div class="card-body">
-                    <canvas id="scoreChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Money History (30 Days)</div>
-                <div class="card-body">
-                    <canvas id="moneySignInChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Resource History (30 Days)</div>
-                <div class="card-body">
-                    <canvas id="resourceSignInChart"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <x-card title="Money Tax History">
+            <canvas id="moneyTaxChart" class="max-h-56"></canvas>
+        </x-card>
+        <x-card title="Food Tax History">
+            <canvas id="foodTaxChart" class="max-h-56"></canvas>
+        </x-card>
+        <x-card title="Resource Tax History">
+            <canvas id="resourceTaxChart" class="max-h-56"></canvas>
+        </x-card>
+        <x-card title="Score History (1 Year)">
+            <canvas id="scoreChart" class="max-h-56"></canvas>
+        </x-card>
+        <x-card title="Money History (30 Days)">
+            <canvas id="moneySignInChart" class="max-h-56"></canvas>
+        </x-card>
+        <x-card title="Resource History (30 Days)">
+            <canvas id="resourceSignInChart" class="max-h-56"></canvas>
+        </x-card>
     </div>
 
     {{-- Recent Tables --}}
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Recent Loan Requests</div>
-                <div class="card-body">
-                    @include('admin.members.partials.loans', ['loans' => $recentLoans])
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Recent City Grant Requests</div>
-                <div class="card-body">
-                    @include('admin.members.partials.city_grants', ['requests' => $recentCityGrants])
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-header">Recent Grant Requests</div>
-                <div class="card-body">
-                    @include('admin.members.partials.grants', ['requests' => $recentCustomGrants])
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Recent Taxes Paid</div>
-                <div class="card-body">
-                    @include('admin.members.partials.taxes', ['taxes' => $recentTaxes])
-                </div>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <x-card title="Recent Loan Requests">
+            @include('admin.members.partials.loans', ['loans' => $recentLoans])
+        </x-card>
+        <x-card title="Recent Grant Requests">
+            @include('admin.members.partials.grants', ['requests' => $recentCustomGrants])
+        </x-card>
+        <x-card title="Recent City Grant Requests">
+            @include('admin.members.partials.city_grants', ['requests' => $recentCityGrants])
+        </x-card>
+        <x-card title="Recent Taxes Paid">
+            @include('admin.members.partials.taxes', ['taxes' => $recentTaxes])
+        </x-card>
     </div>
 
-    <div class="card mt-2 mb-4">
-        <div class="card-header">Account Overview</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                    <tr>
+    {{-- Account Overview --}}
+    <x-card title="Account Overview" class="mb-6">
+        <div class="overflow-x-auto">
+            <table class="table table-sm table-zebra">
+                <thead>
+                    <tr class="text-base-content/60">
                         <th>Account</th>
                         <th>Status</th>
                         @foreach(\App\Services\PWHelperService::resources() as $resource)
@@ -133,20 +70,19 @@
                         @endforeach
                         <th>Last Updated</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     @forelse($memberAccounts as $account)
                         <tr>
                             <td>
-                                <a href="{{ route('admin.accounts.view', $account['id']) }}" class="fw-semibold text-decoration-none">
+                                <a href="{{ route('admin.accounts.view', $account['id']) }}" class="link link-primary font-semibold">
                                     {{ $account['name'] ?: 'Account #' . $account['id'] }}
                                 </a>
-                                <div class="text-muted small">#{{ $account['id'] }}</div>
+                                <div class="text-xs text-base-content/50">#{{ $account['id'] }}</div>
                             </td>
                             <td>
-                                <span class="badge {{ $account['frozen'] ? 'text-bg-danger' : 'text-bg-success' }}">
-                                    {{ $account['frozen'] ? 'Frozen' : 'Active' }}
-                                </span>
+                                <x-badge :value="$account['frozen'] ? 'Frozen' : 'Active'"
+                                         :class="$account['frozen'] ? 'badge-error badge-sm' : 'badge-success badge-sm'" />
                             </td>
                             <td>${{ number_format((float) $account['resources']['money'], 2) }}</td>
                             @foreach(\App\Services\PWHelperService::resources(false) as $resource)
@@ -156,184 +92,76 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ count(\App\Services\PWHelperService::resources()) + 3 }}" class="text-center text-muted py-4">
+                            <td colspan="{{ count(\App\Services\PWHelperService::resources()) + 3 }}"
+                                class="text-center text-base-content/50 py-6">
                                 No accounts found for this nation.
                             </td>
                         </tr>
                     @endforelse
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </x-card>
 @endsection
 
-@section('scripts')
+@push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const taxLabels = {!! json_encode($taxHistory->pluck('date')) !!};
+        const signInLabels = {!! json_encode($resourceSignInHistory->pluck('date')) !!};
+        const chartDefaults = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } };
 
-        // Chart 1: Money Only
-        const moneyTaxCtx = document.getElementById('moneyTaxChart');
-        new Chart(moneyTaxCtx, {
+        new Chart(document.getElementById('moneyTaxChart'), {
             type: 'line',
-            data: {
-                labels: taxLabels,
-                datasets: [
-                    {
-                        label: 'Money',
-                        data: {!! json_encode($taxHistory->map(fn($row) => $row['money'])) !!},
-                        fill: false,
-                        tension: 0.3,
-                        borderWidth: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
+            data: { labels: taxLabels, datasets: [{ label: 'Money', data: {!! json_encode($taxHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
+            options: chartDefaults
         });
 
-        // Chart 2: Resources
-        const resourceTaxCtx = document.getElementById('resourceTaxChart');
-        new Chart(resourceTaxCtx, {
+        new Chart(document.getElementById('foodTaxChart'), {
+            type: 'line',
+            data: { labels: taxLabels, datasets: [{ label: 'Food', data: {!! json_encode($taxHistory->map(fn($row) => $row['food'])) !!}, fill: false, tension: 0.3 }] },
+            options: chartDefaults
+        });
+
+        new Chart(document.getElementById('resourceTaxChart'), {
             type: 'line',
             data: {
                 labels: taxLabels,
                 datasets: [
-                        @foreach(['steel', 'gasoline', 'aluminum', 'munitions', 'uranium'] as $res)
-                    {
-                        label: '{{ ucfirst($res) }}',
-                        data: {!! json_encode($taxHistory->map(fn($row) => $row[$res])) !!},
-                        fill: false,
-                        tension: 0.3
-                    },
+                    @foreach(['steel', 'gasoline', 'aluminum', 'munitions', 'uranium'] as $res)
+                    { label: '{{ ucfirst($res) }}', data: {!! json_encode($taxHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3 },
                     @endforeach
                 ]
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
+            options: chartDefaults
         });
 
-        const foodTaxCtx = document.getElementById('foodTaxChart');
-        new Chart(foodTaxCtx, {
-            type: 'line',
-            data: {
-                labels: taxLabels,
-                datasets: [
-                    {
-                        label: 'Food',
-                        data: {!! json_encode($taxHistory->map(fn($row) => $row['food'])) !!},
-                        fill: false,
-                        tension: 0.3
-                    },
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Score Chart
-        const scoreCtx = document.getElementById('scoreChart');
-        new Chart(scoreCtx, {
+        new Chart(document.getElementById('scoreChart'), {
             type: 'line',
             data: {
                 labels: {!! json_encode($scoreHistory->pluck('created_at')->map(fn($d) => $d->format('Y-m-d'))) !!},
-                datasets: [{
-                    label: 'Score',
-                    data: {!! json_encode($scoreHistory->pluck('score')) !!},
-                    fill: false
-                }]
-            }
-        });
-
-        const signInLabels = {!! json_encode($resourceSignInHistory->pluck('date')) !!};
-
-        // Money History (30 Days)
-        const moneySignInCtx = document.getElementById('moneySignInChart');
-        new Chart(moneySignInCtx, {
-            type: 'line',
-            data: {
-                labels: signInLabels,
-                datasets: [{
-                    label: 'Money',
-                    data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row['money'])) !!},
-                    fill: false,
-                    tension: 0.3,
-                    borderWidth: 2
-                }]
+                datasets: [{ label: 'Score', data: {!! json_encode($scoreHistory->pluck('score')) !!}, fill: false }]
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                },
-                scales: {
-                    y: {beginAtZero: true}
-                }
-            }
+            options: { responsive: true }
         });
 
-        // Resource History (30 Days)
-        const resourceSignInCtx = document.getElementById('resourceSignInChart');
-        new Chart(resourceSignInCtx, {
+        new Chart(document.getElementById('moneySignInChart'), {
+            type: 'line',
+            data: { labels: signInLabels, datasets: [{ label: 'Money', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
+            options: chartDefaults
+        });
+
+        new Chart(document.getElementById('resourceSignInChart'), {
             type: 'line',
             data: {
                 labels: signInLabels,
                 datasets: [
-                        @foreach(['steel', 'aluminum', 'gasoline', 'munitions'] as $res)
-                    {
-                        label: '{{ ucfirst($res) }}',
-                        data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row[$res])) !!},
-                        fill: false,
-                        tension: 0.3
-                    },
+                    @foreach(['steel', 'aluminum', 'gasoline', 'munitions'] as $res)
+                    { label: '{{ ucfirst($res) }}', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3 },
                     @endforeach
                 ]
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {position: 'bottom'}
-                },
-                scales: {
-                    y: {beginAtZero: true}
-                }
-            }
+            options: chartDefaults
         });
     </script>
-@endsection
+@endpush

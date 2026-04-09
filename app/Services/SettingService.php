@@ -1154,6 +1154,26 @@ class SettingService
         self::setValue('home_closing_text', $text);
     }
 
+    public static function getHomepageHeroBadge(): string
+    {
+        return self::getStringSetting('home_hero_badge', 'Recruiting now');
+    }
+
+    public static function setHomepageHeroBadge(string $badge): void
+    {
+        self::setValue('home_hero_badge', $badge);
+    }
+
+    public static function getHomepageCtaLabel(): string
+    {
+        return self::getStringSetting('home_cta_label', 'Start your application');
+    }
+
+    public static function setHomepageCtaLabel(string $label): void
+    {
+        self::setValue('home_cta_label', $label);
+    }
+
     protected static function getRecruitmentMessage(string $type, string $default): string
     {
         $message = RecruitmentMessage::query()

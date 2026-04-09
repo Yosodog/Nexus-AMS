@@ -1,80 +1,116 @@
 @extends("layouts.main")
 
 @section("content")
-    <x-utils.card title="Welcome back" extraClasses="mx-auto w-full max-w-md">
-        <p class="text-sm text-base-content/70">Sign in with your {{ config('app.name') }} username to jump back into your dashboard.</p>
+    <section class="mx-auto w-full max-w-5xl">
+        <div class="grid gap-6 lg:grid-cols-2">
+            <div class="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/20 via-base-100 to-base-100 p-6 sm:p-8">
+                <div class="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-primary/20 blur-3xl"></div>
+                <div class="absolute -bottom-16 -left-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl"></div>
 
-        @if (session('status'))
-            <div class="alert alert-success mb-4">
-                {{ session('status') }}
-            </div>
-        @endif
+                <div class="relative space-y-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Alliance Portal</p>
+                    <h1 class="text-3xl font-black leading-tight sm:text-4xl">
+                        Welcome back to {{ config('app.name') }}
+                    </h1>
+                    <p class="text-base text-base-content/70">
+                        Sign in to manage accounts, track readiness, and coordinate support without leaving your dashboard.
+                    </p>
 
-        @if ($errors->any())
-            <div class="alert alert-error mb-4">
-                <div class="flex flex-col gap-1 text-sm">
-                    <span class="font-semibold">We couldn't sign you in.</span>
-                    <span class="text-base-content/80">Double-check the details below.</span>
+                    <div class="space-y-3 pt-2">
+                        <div class="flex items-start gap-3">
+                            <x-icon name="o-shield-check" class="mt-0.5 size-5 text-success" />
+                            <p class="text-sm text-base-content/80">Secure sign-in with your existing account and permissions.</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <x-icon name="o-chart-bar" class="mt-0.5 size-5 text-primary" />
+                            <p class="text-sm text-base-content/80">Live financial, military, and tax snapshots on one screen.</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <x-icon name="o-bolt" class="mt-0.5 size-5 text-warning" />
+                            <p class="text-sm text-base-content/80">Fast access to grants, loans, defense, and coordination tools.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        @endif
 
-        <form method="post" action="{{ route("login") }}" class="">
-            @csrf
+            <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-lg sm:p-8">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold">Sign in</h2>
+                    <p class="mt-1 text-sm text-base-content/60">Use your username and password to continue.</p>
+                </div>
 
-            <div class="form-control">
-                <label class="label" for="name">
-                    <span class="label-text font-medium">Username</span>
-                </label>
-                <label class="input input-bordered flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                         class="w-5 h-5 opacity-70">
-                        <path fill-rule="evenodd"
-                              d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z"
-                              clip-rule="evenodd"/>
-                    </svg>
-                    <input type="text" id="name" name="name" class="grow" placeholder="Username"
-                           value="{{ old('name') }}" autocomplete="username" required autofocus/>
-                </label>
-                @error('name')
-                    <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                @enderror
+                @if (session('status'))
+                    <x-alert class="alert-success mb-4" icon="o-check-circle">
+                        {{ session('status') }}
+                    </x-alert>
+                @endif
+
+                @if ($errors->any())
+                    <x-alert class="alert-error mb-4" icon="o-exclamation-triangle">
+                        <span class="font-semibold">We couldn’t sign you in.</span>
+                        <span class="text-sm text-base-content/80">Check your credentials and try again.</span>
+                    </x-alert>
+                @endif
+
+                <form method="post" action="{{ route("login") }}" class="space-y-4">
+                    @csrf
+
+                    <div class="space-y-1">
+                        <label class="text-sm font-semibold" for="name">Username</label>
+                        <label class="input input-bordered flex items-center gap-2">
+                            <x-icon name="o-user" class="size-4 text-base-content/60" />
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                class="grow"
+                                placeholder="Enter your username"
+                                value="{{ old('name') }}"
+                                autocomplete="username"
+                                required
+                                autofocus
+                            />
+                        </label>
+                        @error('name')
+                            <p class="text-sm text-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-sm font-semibold" for="password">Password</label>
+                        <label class="input input-bordered flex items-center gap-2">
+                            <x-icon name="o-lock-closed" class="size-4 text-base-content/60" />
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                class="grow"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            />
+                        </label>
+                        @error('password')
+                            <p class="text-sm text-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex cursor-pointer items-center gap-2">
+                            <input type="checkbox" name="remember" class="checkbox checkbox-sm checkbox-primary" {{ old('remember') ? 'checked' : '' }}>
+                            <span class="text-base-content/80">Keep me signed in</span>
+                        </label>
+                        <a class="link link-primary" href="{{ route('password.request') }}">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full">Log in</button>
+
+                    <p class="text-center text-sm text-base-content/70">
+                        New here?
+                        <a class="link link-primary font-semibold" href="{{ route('register') }}">Create an account</a>
+                    </p>
+                </form>
             </div>
-
-            <div class="form-control">
-                <label class="label" for="password">
-                    <span class="label-text font-medium">Password</span>
-                </label>
-                <label class="input input-bordered flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                         class="w-4 h-4 opacity-70">
-                        <path fill-rule="evenodd"
-                              d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
-                              clip-rule="evenodd"/>
-                    </svg>
-                    <input type="password" id="password" name="password" class="grow" placeholder="Password"
-                           autocomplete="current-password" required/>
-                </label>
-                @error('password')
-                    <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="flex items-center justify-between text-sm">
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" name="remember" class="checkbox checkbox-sm" {{ old('remember') ? 'checked' : '' }}>
-                    <span class="text-base-content/80">Keep me signed in</span>
-                </label>
-                <a class="link link-primary" href="{{ route('password.request') }}">Forgot your password?</a>
-            </div>
-
-            <div class="card-actions flex-col gap-2">
-                <input type="submit" class="btn btn-primary w-full" value="Log in">
-                <p class="text-sm text-base-content/70 text-center">
-                    New here?
-                    <a class="link link-primary" href="{{ route('register') }}">Create an account</a>
-                </p>
-            </div>
-        </form>
-    </x-utils.card>
+        </div>
+    </section>
 @endsection

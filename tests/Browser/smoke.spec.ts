@@ -3,8 +3,24 @@ import { expect, test } from '@playwright/test';
 test('home page renders', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByText('Applications open')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Start your application' })).toBeVisible();
+  await expect(page.getByText('Recruiting now')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Start your application' }).first()).toBeVisible();
+  await page.getByRole('link', { name: 'Apply' }).first().click();
+
+  await expect(page).toHaveURL(/\/apply$/);
+  await expect(page.getByText('YosoNET Alliance Management System')).toBeVisible();
+});
+
+test('public login route and form actions are interactive', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Login' }).first().click();
+
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel('Username').fill('nobody');
+  await page.getByLabel('Password').fill('wrong-password');
+  await page.getByRole('button', { name: 'Log in' }).click();
+
+  await expect(page.getByText('We couldn’t sign you in.')).toBeVisible();
 });
 
 test('verified user can reach settings and api docs', async ({ page }) => {
@@ -22,8 +38,8 @@ test('verified user can reach settings and api docs', async ({ page }) => {
 test('admin can reach the users index', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/users');
 
-  await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
-  await expect(page.getByText('Member directory')).toBeVisible();
+  await expect(page.getByText('Manage Users').first()).toBeVisible();
+  await expect(page.getByText('User Directory')).toBeVisible();
   await expect(page.getByText('browser.member@example.test')).toBeVisible();
 });
 

@@ -3,187 +3,146 @@
 @section('title', 'Recruitment Messaging')
 
 @section('content')
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Recruitment Messaging</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Recruitment Messaging" separator>
+        <x-slot:subtitle>Manage the primary and follow-up messages sent to eligible recruits.</x-slot:subtitle>
+    </x-header>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Message Templates</h5>
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <x-card title="Message Templates">
+            <form method="POST" action="{{ route('admin.recruitment.update') }}" class="space-y-5">
+                @csrf
+
+                <x-toggle
+                    id="recruitment_enabled"
+                    label="Enable automatic recruitment messages"
+                    name="recruitment_enabled"
+                    value="1"
+                    @checked(old('recruitment_enabled', $recruitmentEnabled))
+                />
+
+                <x-input
+                    id="primary_subject"
+                    label="Primary subject"
+                    name="primary_subject"
+                    :value="old('primary_subject', $primarySubject)"
+                    error-field="primary_subject"
+                    hint="Maximum 50 characters (in-game limit)."
+                    maxlength="50"
+                    required
+                />
+
+                <x-textarea
+                    id="primary_message"
+                    label="Primary message"
+                    name="primary_message"
+                    class="js-ckeditor"
+                    error-field="primary_message"
+                    hint="This message is sent immediately after a nation becomes eligible."
+                    rows="10"
+                    required
+                >{!! old('primary_message', $primaryMessage) !!}</x-textarea>
+
+                <x-toggle
+                    id="follow_up_enabled"
+                    :label="'Enable follow-up message (sent ' . \App\Services\RecruitmentService::FOLLOW_UP_DELAY_HOURS . ' hours later)'"
+                    name="follow_up_enabled"
+                    value="1"
+                    @checked(old('follow_up_enabled', $followUpEnabled))
+                />
+
+                <x-input
+                    id="follow_up_subject"
+                    label="Follow-up subject"
+                    name="follow_up_subject"
+                    :value="old('follow_up_subject', $followUpSubject)"
+                    error-field="follow_up_subject"
+                    hint="Maximum 50 characters (in-game limit)."
+                    maxlength="50"
+                    required
+                />
+
+                <x-textarea
+                    id="follow_up_message"
+                    label="Follow-up message"
+                    name="follow_up_message"
+                    class="js-ckeditor"
+                    error-field="follow_up_message"
+                    hint="The follow-up is only sent if the nation is still unaffiliated when the delay expires."
+                    rows="10"
+                    required
+                >{!! old('follow_up_message', $followUpMessage) !!}</x-textarea>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="btn btn-primary">
+                        Save changes
+                    </button>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.recruitment.update') }}">
+            </form>
+        </x-card>
+
+        <div class="space-y-6">
+            <x-card title="Send Test Message">
+                @if($userNationId)
+                    <p class="text-sm text-base-content/60">
+                        Test messages are sent to your nation (ID {{ $userNationId }}).
+                    </p>
+
+                    <form method="POST" action="{{ route('admin.recruitment.test') }}" class="space-y-4">
                         @csrf
 
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" role="switch" id="recruitment_enabled"
-                                   name="recruitment_enabled" value="1"
-                                   {{ old('recruitment_enabled', $recruitmentEnabled) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="recruitment_enabled">
-                                Enable automatic recruitment messages
-                            </label>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="primary_subject" class="form-label">Primary subject</label>
-                            <input type="text"
-                                   id="primary_subject"
-                                   name="primary_subject"
-                                   class="form-control @error('primary_subject') is-invalid @enderror"
-                                   value="{{ old('primary_subject', $primarySubject) }}"
-                                   maxlength="50"
-                                   required>
-                            @error('primary_subject')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div>
+                            <label for="test_type" class="fieldset-legend mb-0.5">Message type <span class="text-error">*</span></label>
+                            <select id="test_type" name="type" class="select w-full @error('type') !select-error @enderror" required>
+                                <option value="primary" @selected(old('type') === 'primary')>Primary message</option>
+                                <option value="follow_up" @selected(old('type') === 'follow_up')>Follow-up message</option>
+                            </select>
+                            @error('type')
+                            <div class="text-error">{{ $message }}</div>
                             @enderror
-                            <div class="form-text">Maximum 50 characters (in-game limit).</div>
                         </div>
 
-                        <div class="mb-4">
-                            <label for="primary_message" class="form-label">Primary message</label>
-                            <textarea id="primary_message"
-                                      name="primary_message"
-                                      class="form-control js-ckeditor @error('primary_message') is-invalid @enderror"
-                                      rows="10"
-                                      required>{!! old('primary_message', $primaryMessage) !!}</textarea>
-                            @error('primary_message')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                            <p class="form-text mt-2">
-                                This message is sent immediately after a nation becomes eligible.
-                            </p>
-                        </div>
-
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" role="switch" id="follow_up_enabled"
-                                   name="follow_up_enabled" value="1"
-                                   {{ old('follow_up_enabled', $followUpEnabled) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="follow_up_enabled">
-                                Enable follow-up message (sent {{ \App\Services\RecruitmentService::FOLLOW_UP_DELAY_HOURS }} hours later)
-                            </label>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="follow_up_subject" class="form-label">Follow-up subject</label>
-                            <input type="text"
-                                   id="follow_up_subject"
-                                   name="follow_up_subject"
-                                   class="form-control @error('follow_up_subject') is-invalid @enderror"
-                                   value="{{ old('follow_up_subject', $followUpSubject) }}"
-                                   maxlength="50"
-                                   required>
-                            @error('follow_up_subject')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="form-text">Maximum 50 characters (in-game limit).</div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="follow_up_message" class="form-label">Follow-up message</label>
-                            <textarea id="follow_up_message"
-                                      name="follow_up_message"
-                                      class="form-control js-ckeditor @error('follow_up_message') is-invalid @enderror"
-                                      rows="10"
-                                      required>{!! old('follow_up_message', $followUpMessage) !!}</textarea>
-                            @error('follow_up_message')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                            <p class="form-text mt-2">
-                                The follow-up is only sent if the nation is still unaffiliated when the delay expires.
-                            </p>
-                        </div>
-
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary">
-                                Save changes
-                            </button>
-                        </div>
+                        <button type="submit" class="btn btn-outline btn-primary w-full">
+                            Send test message
+                        </button>
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Send Test Message</h5>
-                </div>
-                <div class="card-body">
-                    @if($userNationId)
-                        <p class="text-muted small">
-                            Test messages are sent to your nation (ID {{ $userNationId }}).
-                        </p>
-
-                        <form method="POST" action="{{ route('admin.recruitment.test') }}">
-                            @csrf
-
-                            <div class="mb-3">
-                                <label for="test_type" class="form-label">Message type</label>
-                                <select id="test_type"
-                                        name="type"
-                                        class="form-select @error('type') is-invalid @enderror"
-                                        required>
-                                    <option value="primary" {{ old('type') === 'primary' ? 'selected' : '' }}>
-                                        Primary message
-                                    </option>
-                                    <option value="follow_up" {{ old('type') === 'follow_up' ? 'selected' : '' }}>
-                                        Follow-up message
-                                    </option>
-                                </select>
-                                @error('type')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <button type="submit" class="btn btn-outline-primary w-100">
-                                Send test message
-                            </button>
-                        </form>
-                    @else
-                        <div class="alert alert-warning mb-0">
-                            Add your nation ID to your profile to send test messages.
-                        </div>
-                    @endif
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Latest Recruited Nations</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                            <tr>
-                                <th>Leader</th>
-                                <th>Sent At</th>
-                                <th>Follow Up</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach ($latestNations as $nation)
-                                <tr>
-                                    <td>
-                                        <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank">{{ $nation->nation?->leader_name ?? $nation->nation_id }}</a>@if ($nation->nation?->alliance_id == $primaryAllianceId) ✅ @else ❌ @endif
-                                    </td>
-                                    <td>{{ $nation->primary_sent_at?->diffForHumans() ?? '—' }}</td>
-                                    <td>{{ $nation->follow_up_scheduled_for?->diffForHumans() ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                @else
+                    <div class="alert alert-warning">
+                        Add your nation ID to your profile to send test messages.
                     </div>
+                @endif
+            </x-card>
+
+            <x-card title="Latest Recruited Nations">
+                <div class="overflow-x-auto rounded-box border border-base-300">
+                    <table class="table table-zebra">
+                        <thead>
+                        <tr>
+                            <th>Leader</th>
+                            <th>Sent At</th>
+                            <th>Follow Up</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach ($latestNations as $nation)
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank" rel="noopener">
+                                            {{ $nation->nation?->leader_name ?? $nation->nation_id }}
+                                        </a>
+                                        <span class="badge {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'badge-success' : 'badge-ghost' }}">
+                                            {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'Joined' : 'Pending' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>{{ $nation->primary_sent_at?->diffForHumans() ?? '—' }}</td>
+                                <td>{{ $nation->follow_up_scheduled_for?->diffForHumans() ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            </x-card>
         </div>
     </div>
 @endsection

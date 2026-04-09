@@ -34,7 +34,20 @@ class HomeController extends Controller
             'highlights' => SettingService::getHomepageHighlights(),
             'stats_intro' => SettingService::getHomepageStatsIntro(),
             'closing_text' => SettingService::getHomepageClosingText($allianceName),
+            'hero_badge' => SettingService::getHomepageHeroBadge(),
+            'cta_label' => SettingService::getHomepageCtaLabel(),
         ];
+
+        $totalCities = $activeNationQuery ? (clone $activeNationQuery)->sum('num_cities') : null;
+        $totalWarsWon = $activeNationQuery ? (clone $activeNationQuery)->sum('wars_won') : null;
+        $totalWarsLost = $activeNationQuery ? (clone $activeNationQuery)->sum('wars_lost') : null;
+        $totalPopulation = $activeNationQuery ? (clone $activeNationQuery)->sum('population') : null;
+
+        $winRate = null;
+        if ($totalWarsWon !== null && $totalWarsLost !== null) {
+            $totalWars = $totalWarsWon + $totalWarsLost;
+            $winRate = $totalWars > 0 ? round(($totalWarsWon / $totalWars) * 100, 1) : null;
+        }
 
         $publicStats = [
             'members' => $activeNationQuery?->count(),
@@ -46,6 +59,10 @@ class HomeController extends Controller
             'discord_link' => $alliance?->discord_link,
             'forum_link' => $alliance?->forum_link,
             'wiki_link' => $alliance?->wiki_link,
+            'totalCities' => $totalCities,
+            'totalWarsWon' => $totalWarsWon,
+            'winRate' => $winRate,
+            'totalPopulation' => $totalPopulation,
         ];
 
         return view('home', [

@@ -1,116 +1,60 @@
 @extends('layouts.admin')
 
 @section("content")
-    <div class="app-content-header">
-        <div class="container-fluid">
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Ongoing Wars</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Ongoing Wars" separator>
+        <x-slot:subtitle>Track active conflicts, recent launch tempo, and damage patterns across the alliance battlefield.</x-slot:subtitle>
+    </x-header>
 
-    {{-- Info Boxes --}}
-    <div class="row">
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-fire" bgColor="text-bg-danger" title="Ongoing Wars"
-                              :value="$stats['total_ongoing']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-calendar-week" bgColor="text-bg-info" title="Wars Last 7 Days"
-                              :value="$stats['wars_last_7_days']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-clock-history" bgColor="text-bg-warning" title="Avg Duration (days)"
-                              :value="$stats['avg_duration']"/>
-        </div>
-        <div class="col-md-3">
-            <x-admin.info-box icon="bi bi-cash-stack" bgColor="text-bg-success" title="Looted (7 Days)"
-                              :value="'$' . number_format($stats['total_looted'], 2)"/>
-        </div>
+    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-stat title="Ongoing Wars" :value="number_format($stats['total_ongoing'])" icon="o-fire" color="text-error" description="Current active war records" />
+        <x-stat title="Wars Last 7 Days" :value="number_format($stats['wars_last_7_days'])" icon="o-calendar-days" color="text-info" description="Recent launches across all tracked alliances" />
+        <x-stat title="Avg Duration" :value="number_format((float) $stats['avg_duration'], 1) . ' days'" icon="o-clock" color="text-warning" description="Average age of ongoing wars" />
+        <x-stat title="Looted (7 Days)" :value="'$' . number_format((float) $stats['total_looted'], 2)" icon="o-banknotes" color="text-success" description="Recent looted money in tracked wars" />
     </div>
 
     {{-- Charts --}}
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Wars Started (Last 30 Days)</div>
-                <div class="card-body">
-                    <canvas id="warsLineChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">War Type Distribution</div>
-                <div class="card-body">
-                    <canvas id="warTypePieChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">Top Nations w/ Active Wars</div>
-                <div class="card-body">
-                    <canvas id="topNationsBarChart"></canvas>
-                </div>
-            </div>
-        </div>
-
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)_minmax(280px,1fr)]">
+        <x-card title="Wars Started (Last 30 Days)">
+            <canvas id="warsLineChart" height="260"></canvas>
+        </x-card>
+        <x-card title="War Type Distribution">
+            <canvas id="warTypePieChart" height="260"></canvas>
+        </x-card>
+        <x-card title="Top Nations w/ Active Wars">
+            <canvas id="topNationsBarChart" height="260"></canvas>
+        </x-card>
     </div>
-    <div class="row mt-4">
-        {{-- Resource Usage Breakdown --}}
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Resource Usage Breakdown</div>
-                <div class="card-body">
-                    <canvas id="resourceUsageChart"></canvas>
-                </div>
-            </div>
-        </div>
 
-        {{-- Aggressor vs Defender --}}
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Aggressor vs Defender</div>
-                <div class="card-body">
-                    <canvas id="aggroDefenderChart" style="max-height: 335px;"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="mt-4 grid gap-4 xl:grid-cols-2">
+        <x-card title="Resource Usage Breakdown">
+            <canvas id="resourceUsageChart" height="260"></canvas>
+        </x-card>
+
+        <x-card title="Aggressor vs Defender">
+            <canvas id="aggroDefenderChart" height="260"></canvas>
+        </x-card>
     </div>
 
     {{-- Damage Dealt vs Taken --}}
-    <div class="row mt-4">
+    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         @foreach($damageBreakdown as $type => $data)
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-header">{{ ucfirst(str_replace('_', ' ', $type)) }}: Dealt vs Taken</div>
-                    <div class="card-body">
-                        <canvas id="damageChart_{{ $type }}"></canvas>
-                    </div>
-                </div>
-            </div>
+            <x-card :title="ucfirst(str_replace('_', ' ', $type)) . ': Dealt vs Taken'">
+                <canvas id="damageChart_{{ $type }}" height="220"></canvas>
+            </x-card>
         @endforeach
     </div>
 
     {{-- Active War by Member --}}
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">Active Wars by Member</div>
-                <div class="card-body">
-                    <canvas id="warsByNationChart"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="mt-4">
+        <x-card title="Active Wars by Member">
+            <canvas id="warsByNationChart" height="320"></canvas>
+        </x-card>
     </div>
 
     {{-- War Table --}}
-    <div class="card mt-4">
-        <div class="card-header">Active Wars</div>
-        <div class="card-body table-responsive">
+    <x-card class="mt-4">
+        <x-slot:title>Active Wars</x-slot:title>
+        <div class="overflow-x-auto rounded-box border border-base-300">
             <table class="table table-striped">
                 <thead>
                 <tr>
@@ -132,7 +76,7 @@
                         $isUsDefender = $membershipService->contains($war->def_alliance_id);
                         $ourResistance = $isUsAttacker ? $war->att_resistance : ($isUsDefender ? $war->def_resistance : null);
                     @endphp
-                    <tr @if($ourResistance !== null && $ourResistance < 20) class="table-danger" @endif>
+                    <tr @class(['bg-error/10' => $ourResistance !== null && $ourResistance < 20])>
                         <td>
                             <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank">
                                 {{ $war->id }}
@@ -170,10 +114,10 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 @endsection
 
-@section("scripts")
+@push("scripts")
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const warsLineChartCtx = document.getElementById('warsLineChart').getContext('2d');
@@ -284,4 +228,4 @@
             }
         });
     </script>
-@endsection
+@endpush

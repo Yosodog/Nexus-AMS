@@ -3,24 +3,30 @@
     $amountValue = $guardrail['minimum_amount'] ?? 0;
 @endphp
 
-<div class="row g-2 align-items-end guardrail-row mb-2">
-    <div class="col-md-5">
-        <label class="form-label">Resource</label>
-        <select class="form-select" name="guardrails[{{ $index }}][resource]" required>
+<div class="guardrail-row grid gap-3 rounded-box border border-base-300 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+    <label class="block space-y-2">
+        <span class="text-sm font-medium">Resource</span>
+        <select class="select select-bordered w-full" name="guardrails[{{ $index }}][resource]" required>
             @foreach($resources as $resource)
                 <option value="{{ $resource }}" {{ $resourceValue === $resource ? 'selected' : '' }}>{{ ucfirst($resource) }}</option>
             @endforeach
         </select>
-    </div>
-    <div class="col-md-5">
-        <label class="form-label">Minimum Amount</label>
-        <input type="number" step="0.01" min="0" class="form-control"
-               name="guardrails[{{ $index }}][minimum_amount]"
-               value="{{ $amountValue }}" required>
-    </div>
-    <div class="col-md-2 text-end">
-        <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove-guardrail">
-            <i class="bi bi-trash"></i>
-        </button>
-    </div>
+    </label>
+
+    <label class="block space-y-2">
+        <span class="text-sm font-medium">Minimum Amount</span>
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            class="input input-bordered w-full"
+            name="guardrails[{{ $index }}][minimum_amount]"
+            value="{{ $amountValue }}"
+            required
+        >
+    </label>
+
+    <button type="button" class="btn btn-outline btn-error btn-sm md:self-end" data-action="remove-guardrail">
+        <x-icon name="o-trash" class="size-4" />
+    </button>
 </div>

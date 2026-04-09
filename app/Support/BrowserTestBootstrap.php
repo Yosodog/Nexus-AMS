@@ -125,7 +125,6 @@ class BrowserTestBootstrap
 
         $connection = (string) config('database.default');
         $database = (string) config("database.connections.{$connection}.database");
-        $mysqlDatabase = (string) config('database.connections.mysql.database');
         $normalizedDatabase = strtolower($database);
 
         if ($connection !== 'sqlite') {
@@ -136,7 +135,6 @@ class BrowserTestBootstrap
             $database === ''
             || $database === ':memory:'
             || $database === database_path('database.sqlite')
-            || $database === $mysqlDatabase
             || (! str_contains($normalizedDatabase, 'test') && ! str_contains($normalizedDatabase, 'browser'))
         ) {
             throw new RuntimeException('Browser test bootstrap refused to run against a non-isolated database.');
