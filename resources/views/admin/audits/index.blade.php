@@ -9,14 +9,14 @@
             <div class="flex flex-wrap gap-2">
                 <form method="POST" action="{{ route('admin.audits.run') }}">
                     @csrf
-                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <button type="submit" class="btn btn-outline btn-primary btn-sm">
                         <x-icon name="o-play" class="size-4" />
                         Run audits
                     </button>
                 </form>
                 <form method="POST" action="{{ route('admin.audits.notify') }}">
                     @csrf
-                    <button type="submit" class="btn btn-outline-success btn-sm">
+                    <button type="submit" class="btn btn-outline btn-success btn-sm">
                         <x-icon name="o-paper-airplane" class="size-4" />
                         Notify members
                     </button>
@@ -67,10 +67,10 @@
     <x-card title="Rule coverage" subtitle="Live snapshot of all rules with their current violation counts.">
         <x-slot:menu>
             <div class="flex gap-2">
-                <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline-secondary btn-sm">
+                <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline btn-sm">
                     Manage rules
                 </a>
-                <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline-primary btn-sm">
+                <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline btn-primary btn-sm">
                     NEL syntax
                 </a>
             </div>
@@ -92,7 +92,7 @@
                     <tr>
                         <td>
                             <div class="font-semibold">{{ $rule->name }}</div>
-                            <div class="text-base-content/50 small text-truncate" style="max-width: 420px;">
+                            <div class="max-w-[420px] truncate text-sm text-base-content/50">
                                 {{ $rule->description ?? 'No description provided.' }}
                             </div>
                         </td>
@@ -134,11 +134,13 @@
                         </td>
                         <td class="text-right">
                             <div class="btn-group">
-                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="o-bolt me-1"></i>Violations
+                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline btn-sm">
+                                    <x-icon name="o-bolt" class="size-4" />
+                                    Violations
                                 </a>
-                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="o-pencil me-1"></i>Edit
+                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-outline btn-primary btn-sm">
+                                    <x-icon name="o-pencil" class="size-4" />
+                                    Edit
                                 </a>
                             </div>
                         </td>

@@ -7,11 +7,11 @@
     'required' => false,     // Required attribute
 ])
 
-<div class="form-control w-full mb-4">
+<div class="mb-4 w-full space-y-2">
     <!-- Label (optional) -->
     @if($label)
-        <label for="{{ $name }}" class="label">
-            <span class="label-text">{{ $label }}</span>
+        <label for="{{ $name }}" class="block text-sm font-medium text-base-content">
+            <span>{{ $label }}</span>
         </label>
     @endif
 
@@ -28,6 +28,6 @@
 
     <!-- Error handling -->
     @error($name)
-    <span class="text-sm text-red-600">{{ $message }}</span>
+    <span class="text-sm text-error">{{ $message }}</span>
     @enderror
 </div>

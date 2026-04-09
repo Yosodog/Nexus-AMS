@@ -48,17 +48,21 @@
         <x-card title="Editor" class="min-w-0">
             <x-slot:menu>
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="customization-preview">
-                        <i class="o-eye me-1"></i> Preview
+                    <button type="button" class="btn btn-outline btn-sm" id="customization-preview">
+                        <x-icon name="o-eye" class="size-4" />
+                        Preview
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="customization-save">
-                        <i class="o-document-arrow-down me-1"></i> Save Draft
+                    <button type="button" class="btn btn-outline btn-primary btn-sm" id="customization-save">
+                        <x-icon name="o-document-arrow-down" class="size-4" />
+                        Save Draft
                     </button>
                     <button type="button" class="btn btn-primary btn-sm" id="customization-publish">
-                        <i class="o-signal me-1"></i> Publish
+                        <x-icon name="o-signal" class="size-4" />
+                        Publish
                     </button>
-                    <button type="button" class="btn btn-outline-neutral btn-sm" id="customization-versions">
-                        <i class="o-clock me-1"></i> Versions
+                    <button type="button" class="btn btn-outline btn-neutral btn-sm" id="customization-versions">
+                        <x-icon name="o-clock" class="size-4" />
+                        Versions
                     </button>
                 </div>
             </x-slot:menu>

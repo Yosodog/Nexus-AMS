@@ -54,7 +54,7 @@
     {{-- War Table --}}
     <x-card class="mt-4">
         <x-slot:title>Active Wars</x-slot:title>
-        <div class="table-responsive">
+        <div class="overflow-x-auto rounded-box border border-base-300">
             <table class="table table-striped">
                 <thead>
                 <tr>
@@ -76,7 +76,7 @@
                         $isUsDefender = $membershipService->contains($war->def_alliance_id);
                         $ourResistance = $isUsAttacker ? $war->att_resistance : ($isUsDefender ? $war->def_resistance : null);
                     @endphp
-                    <tr @if($ourResistance !== null && $ourResistance < 20) class="table-danger" @endif>
+                    <tr @class(['bg-error/10' => $ourResistance !== null && $ourResistance < 20])>
                         <td>
                             <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank">
                                 {{ $war->id }}

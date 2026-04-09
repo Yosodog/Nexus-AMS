@@ -101,7 +101,7 @@
                             @enderror
                         </div>
 
-                        <button type="submit" class="btn btn-outline-primary w-full">
+                        <button type="submit" class="btn btn-outline btn-primary w-full">
                             Send test message
                         </button>
                     </form>

@@ -7,10 +7,12 @@
         <x-slot:subtitle>Give the role a clear name and choose the permissions that match its purpose.</x-slot:subtitle>
         <x-slot:actions>
             <span class="badge badge-success badge-soft">
-                <i class="o-wrench-screwdriver me-1"></i>Manage mode
+                <x-icon name="o-wrench-screwdriver" class="size-4" />
+                Manage mode
             </span>
-            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">
-                <i class="o-arrow-left-circle me-1"></i> Back to roles
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline">
+                <x-icon name="o-arrow-left-circle" class="size-4" />
+                Back to roles
             </a>
         </x-slot:actions>
     </x-header>
@@ -34,7 +36,10 @@
                 />
 
                 <div class="mt-5 rounded-box border border-base-300 bg-base-200/40 p-4 text-sm">
-                    <div class="mb-2 font-semibold"><i class="o-light-bulb me-1"></i>Tips</div>
+                    <div class="mb-2 flex items-center gap-2 font-semibold">
+                        <x-icon name="o-light-bulb" class="size-4" />
+                        Tips
+                    </div>
                     <ul class="list-disc space-y-1 pl-5">
                         <li>Match one role to one responsibility.</li>
                         <li>Favor adding permissions as needed instead of starting with too many.</li>
@@ -47,14 +52,16 @@
                 <x-slot:menu>
                     <div class="flex flex-wrap items-center gap-2">
                         <label class="input input-sm w-full max-w-xs">
-                            <i class="o-magnifying-glass"></i>
+                            <x-icon name="o-magnifying-glass" class="size-4" />
                             <input type="search" placeholder="Filter permissions" data-permission-search />
                         </label>
-                        <button class="btn btn-outline-primary btn-sm" type="button" data-permission-select="all">
-                            <i class="o-check-badge me-1"></i> Select all
+                        <button class="btn btn-outline btn-primary btn-sm" type="button" data-permission-select="all">
+                            <x-icon name="o-check-badge" class="size-4" />
+                            Select all
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" data-permission-select="none">
-                            <i class="o-x-mark me-1"></i> Clear
+                        <button class="btn btn-outline btn-sm" type="button" data-permission-select="none">
+                            <x-icon name="o-x-mark" class="size-4" />
+                            Clear
                         </button>
                     </div>
                 </x-slot:menu>
@@ -89,15 +96,17 @@
                 </div>
 
                 <div class="mt-4 text-sm text-base-content/60">
-                    <i class="o-information-circle me-1"></i>Permissions update immediately after saving.
+                    <x-icon name="o-information-circle" class="mr-1 inline size-4 align-text-bottom" />
+                    Permissions update immediately after saving.
                 </div>
             </x-card>
         </div>
 
         <div class="mt-3 flex justify-end gap-2">
-            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-secondary">Cancel</a>
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline">Cancel</a>
             <button type="submit" class="btn btn-success">
-                <i class="o-check me-1"></i> Create role
+                <x-icon name="o-check" class="size-4" />
+                Create role
             </button>
         </div>
     </form>

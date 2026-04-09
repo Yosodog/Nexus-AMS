@@ -157,7 +157,7 @@
                             <td>{{ $application->created_at?->diffForHumans() ?? '—' }}</td>
                             <td><span class="badge badge-warning">Pending</span></td>
                             <td class="text-right">
-                                <a href="{{ route('admin.applications.show', $application) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ route('admin.applications.show', $application) }}" class="btn btn-sm btn-outline btn-primary">
                                     View
                                 </a>
                             </td>
@@ -210,7 +210,7 @@
                             <td><span class="badge {{ $statusClass }}">{{ ucfirst(strtolower($status)) }}</span></td>
                             <td>{{ $application->updated_at?->diffForHumans() ?? '—' }}</td>
                             <td class="text-right">
-                                <a href="{{ route('admin.applications.show', $application) }}" class="btn btn-sm btn-outline-secondary">
+                                <a href="{{ route('admin.applications.show', $application) }}" class="btn btn-sm btn-outline">
                                     Open
                                 </a>
                             </td>

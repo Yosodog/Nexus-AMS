@@ -1,5 +1,6 @@
 @php
     use App\Services\PWHelperService;
+    use Illuminate\Support\Js;
     use Illuminate\Support\Str;
 
     $oldGrantPayload = null;
@@ -136,7 +137,7 @@
                 </thead>
                 <tbody>
                     @forelse ($grants as $grant)
-                        <tr x-data="{ showResources: false }">
+                        <tr>
                             <td>
                                 <div class="font-semibold">{{ $grant->name }}</div>
                                 <div class="text-sm text-base-content/50">{{ Str::limit($grant->description, 72) }}</div>
@@ -161,17 +162,31 @@
                                 @endif
                             </td>
                             <td>
-                                <x-button label="Resources" icon="o-eye" @click="showResources = !showResources" class="btn-xs btn-ghost btn-outline" />
+                                <button
+                                    type="button"
+                                    class="btn btn-xs btn-ghost btn-outline"
+                                    aria-controls="grant-resources-{{ $grant->id }}"
+                                    aria-expanded="false"
+                                    onclick="toggleGrantResources({{ $grant->id }}, this)"
+                                >
+                                    <x-mary-icon name="o-eye" />
+                                    <span>Resources</span>
+                                </button>
                             </td>
                             <td class="text-right">
                                 @can('manage-grants')
-                                    <x-button label="Edit" icon="o-pencil"
-                                              onclick='editGrant(@json($grant)); document.getElementById("grantModal").showModal()'
-                                              class="btn-primary btn-sm" />
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-sm"
+                                        onclick="editGrant({{ Js::from($grant) }}); document.getElementById('grantModal').showModal()"
+                                    >
+                                        <x-mary-icon name="o-pencil" />
+                                        <span>Edit</span>
+                                    </button>
                                 @endcan
                             </td>
                         </tr>
-                        <tr x-data="{ show: false }" x-show="$el.previousElementSibling.__x?.$data.showResources" x-cloak>
+                        <tr id="grant-resources-{{ $grant->id }}" class="hidden">
                             <td colspan="6">
                                 <div class="flex flex-wrap gap-2 py-1">
                                     @foreach (PWHelperService::resources() as $resource)
@@ -253,8 +268,8 @@
                                 <div class="text-sm text-base-content/50">Combine fields, comparisons, project checks, and nested logic.</div>
                             </div>
                             <div class="flex gap-2 shrink-0">
-                                <x-button label="Add Condition" id="addTopLevelCondition" type="button" class="btn-outline btn-primary btn-sm" />
-                                <x-button label="Add Group" id="addTopLevelGroup" type="button" class="btn-outline btn-sm" />
+                                <button type="button" data-grant-action="add-condition" class="btn btn-outline btn-primary btn-sm">Add Condition</button>
+                                <button type="button" data-grant-action="add-group" class="btn btn-outline btn-sm">Add Group</button>
                             </div>
                         </div>
 
@@ -278,7 +293,7 @@
                         <div class="border border-base-300 bg-base-200 rounded-box p-3">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="font-semibold text-sm">Top-level logic</label>
-                                <x-badge id="rootRuleBadge"  value="0 rules" class="badge-neutral badge-sm" />
+                                <div id="rootRuleBadge" class="badge badge-neutral badge-sm">0 rules</div>
                             </div>
                             <select class="select select-bordered select-sm w-full" id="root_group_mode"></select>
                         </div>
@@ -657,13 +672,13 @@
 
         function populateForm(grant) {
             document.getElementById('grant_id').value = grant?.id || '';
-            document.getElementById('grant_name').value = grant?.name || '';
-            document.getElementById('grant_description').value = grant?.description || '';
-            document.getElementById('is_enabled').value = grant?.is_enabled ? '1' : '0';
-            document.getElementById('is_one_time').checked = !!grant?.is_one_time;
-            document.getElementById('grant_money').value = grant?.money || 0;
+            document.querySelector('#grantForm [name="name"]').value = grant?.name || '';
+            document.querySelector('#grantForm [name="description"]').value = grant?.description || '';
+            document.querySelector('#grantForm [name="is_enabled"]').value = grant?.is_enabled ? '1' : '0';
+            document.querySelector('#grantForm [name="is_one_time"]').checked = !!grant?.is_one_time;
+            document.querySelector('#grantForm [name="money"]').value = grant?.money || 0;
             @foreach (PWHelperService::resources(false) as $resource)
-                document.getElementById('grant_{{ $resource }}').value = grant?.{{ $resource }} || 0;
+                document.querySelector('#grantForm [name="{{ $resource }}"]').value = grant?.{{ $resource }} || 0;
             @endforeach
             grantRequirementTree = ensureValidTree(grant?.validation_rules || defaultGrantRequirementTree);
             document.getElementById('root_group_mode').value = grantRequirementTree.group;
@@ -673,6 +688,19 @@
         function editGrant(grant) {
             document.getElementById('grantForm').action = `/admin/grants/${grant.id}/update`;
             populateForm(grant);
+        }
+
+        function toggleGrantResources(grantId, trigger) {
+            const row = document.getElementById(`grant-resources-${grantId}`);
+            if (!row) {
+                return;
+            }
+
+            const isHidden = row.classList.toggle('hidden');
+
+            if (trigger) {
+                trigger.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+            }
         }
 
         function clearGrantForm() {
@@ -685,19 +713,34 @@
         }
 
         document.addEventListener('codex:page-ready', () => {
+            const grantForm = document.getElementById('grantForm');
+            const addTopLevelConditionButton = document.querySelector('[data-grant-action="add-condition"]');
+            const addTopLevelGroupButton = document.querySelector('[data-grant-action="add-group"]');
+            const rootGroupMode = document.getElementById('root_group_mode');
+
+            if (!grantForm || !addTopLevelConditionButton || !addTopLevelGroupButton || !rootGroupMode) {
+                return;
+            }
+
             renderRootGroupModeSelect();
 
-            document.getElementById('addTopLevelCondition').addEventListener('click', () => {
+            if (grantForm.dataset.builderBound === 'true') {
+                return;
+            }
+
+            grantForm.dataset.builderBound = 'true';
+
+            addTopLevelConditionButton.addEventListener('click', () => {
                 grantRequirementTree.rules.push(createEmptyCondition());
                 renderGrantRequirementBuilder();
             });
 
-            document.getElementById('addTopLevelGroup').addEventListener('click', () => {
+            addTopLevelGroupButton.addEventListener('click', () => {
                 grantRequirementTree.rules.push(createEmptyGroup('all'));
                 renderGrantRequirementBuilder();
             });
 
-            document.getElementById('root_group_mode').addEventListener('change', event => {
+            rootGroupMode.addEventListener('change', event => {
                 grantRequirementTree.group = event.target.value;
                 syncGrantRequirementHiddenInput();
                 updateGrantRequirementSummary();
