@@ -15,42 +15,54 @@
                 'value' => '$' . number_format($afterTaxIncomeTotal ?? 0),
                 'desc' => 'Net cash (30 days)',
                 'icon' => 'o-banknotes',
-                'accent' => 'primary',
+                'glow_class' => 'bg-primary/10',
+                'icon_bg_class' => 'bg-primary/10',
+                'icon_text_class' => 'text-primary',
             ],
             [
                 'title' => 'Total Taxed',
                 'value' => '$' . number_format($taxTotal ?? 0),
                 'desc' => 'After deposits',
                 'icon' => 'o-building-library',
-                'accent' => 'accent',
+                'glow_class' => 'bg-accent/10',
+                'icon_bg_class' => 'bg-accent/10',
+                'icon_text_class' => 'text-accent',
             ],
             [
                 'title' => 'Grants Received',
                 'value' => '$' . number_format($grantTotal ?? 0),
                 'desc' => 'Approved to date',
                 'icon' => 'o-gift',
-                'accent' => 'success',
+                'glow_class' => 'bg-success/10',
+                'icon_bg_class' => 'bg-success/10',
+                'icon_text_class' => 'text-success',
             ],
             [
                 'title' => 'Loans',
                 'value' => '$' . number_format($loanTotal ?? 0),
                 'desc' => 'Outstanding',
                 'icon' => 'o-credit-card',
-                'accent' => 'warning',
+                'glow_class' => 'bg-warning/10',
+                'icon_bg_class' => 'bg-warning/10',
+                'icon_text_class' => 'text-warning',
             ],
             [
                 'title' => 'City Count',
                 'value' => $nation->num_cities ?? 0,
                 'desc' => 'Built and online',
                 'icon' => 'o-building-office-2',
-                'accent' => 'info',
+                'glow_class' => 'bg-info/10',
+                'icon_bg_class' => 'bg-info/10',
+                'icon_text_class' => 'text-info',
             ],
             [
                 'title' => 'Last Sync',
                 'value' => $latestSignIn?->created_at?->diffForHumans() ?? 'N/A',
                 'desc' => 'PW data sync',
                 'icon' => 'o-clock',
-                'accent' => 'neutral',
+                'glow_class' => 'bg-neutral/10',
+                'icon_bg_class' => 'bg-neutral/10',
+                'icon_text_class' => 'text-neutral',
             ],
         ];
     @endphp
@@ -147,11 +159,11 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($statCards as $card)
                 <div class="group relative overflow-hidden rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm transition hover:shadow-md sm:p-5">
-                    <div class="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-{{ $card['accent'] }}/10 blur-2xl transition-transform group-hover:scale-150"></div>
+                    <div class="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full {{ $card['glow_class'] }} blur-2xl transition-transform group-hover:scale-150"></div>
                     <div class="relative">
                         <div class="mb-3 flex items-center gap-2">
-                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-{{ $card['accent'] }}/10">
-                                <x-icon name="{{ $card['icon'] }}" class="size-4 text-{{ $card['accent'] }}" />
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg {{ $card['icon_bg_class'] }}">
+                                <x-icon name="{{ $card['icon'] }}" class="size-4 {{ $card['icon_text_class'] }}" />
                             </div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-base-content/50">{{ $card['title'] }}</p>
                         </div>
