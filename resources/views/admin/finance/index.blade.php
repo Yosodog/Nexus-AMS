@@ -113,12 +113,12 @@
                             class="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 text-left hover:bg-base-200 transition-colors rounded-box"
                             @click="open = !open; if (open) $dispatch('open')">
                         <span class="font-semibold">{{ \Carbon\Carbon::parse($date)->toFormattedDateString() }}</span>
-                        <div class="flex flex-wrap gap-2">
-                            <x-badge  value="{{ number_format((int) $summary['entry_count']) }} entries" class="badge-ghost badge-sm" />
-                            <x-badge  value="Income: {{ $formatCurrency($summary['income']) }}" class="badge-success badge-sm" />
-                            <x-badge  value="Expense: {{ $formatCurrency($summary['expense']) }}" class="badge-error badge-sm" />
+                        <div class="flex max-w-full flex-wrap justify-start gap-2 sm:justify-end">
+                            <x-badge value="{{ number_format((int) $summary['entry_count']) }} entries" class="badge-ghost badge-sm whitespace-normal break-words py-3 text-left" />
+                            <x-badge value="Income: {{ $formatCurrency($summary['income']) }}" class="badge-success badge-sm whitespace-normal break-words py-3 text-left" />
+                            <x-badge value="Expense: {{ $formatCurrency($summary['expense']) }}" class="badge-error badge-sm whitespace-normal break-words py-3 text-left" />
                             <x-badge :value="'Net: ' . $formatCurrency($summary['net'])"
-                                     :class="$summary['net'] >= 0 ? 'badge-primary badge-sm' : 'badge-warning badge-sm'" />
+                                     :class="$summary['net'] >= 0 ? 'badge-primary badge-sm whitespace-normal break-words py-3 text-left' : 'badge-warning badge-sm whitespace-normal break-words py-3 text-left'" />
                         </div>
                     </button>
                     <div x-show="open" x-cloak class="border-t border-base-300 p-4">

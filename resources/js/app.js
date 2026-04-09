@@ -175,14 +175,22 @@ const enableThemePicker = (root = document) => {
     const activeThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.dataset.themeMode || DEFAULT_THEME_MODE);
     applyTheme(activeThemeMode);
 
+    const updateThemeButtonState = (button, isActive) => {
+        button.classList.toggle('menu-active', isActive);
+        button.classList.toggle('border-primary', isActive);
+        button.classList.toggle('bg-primary/10', isActive);
+        button.classList.toggle('shadow-sm', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    };
+
     root.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((button) => {
         if (button.dataset.themeBound === 'true') {
-            button.classList.toggle('menu-active', button.dataset.themeMode === activeThemeMode);
+            updateThemeButtonState(button, button.dataset.themeMode === activeThemeMode);
             return;
         }
 
         button.dataset.themeBound = 'true';
-        button.classList.toggle('menu-active', button.dataset.themeMode === activeThemeMode);
+        updateThemeButtonState(button, button.dataset.themeMode === activeThemeMode);
 
         button.addEventListener('click', (event) => {
             event.preventDefault();
@@ -197,8 +205,95 @@ const enableThemePicker = (root = document) => {
             applyTheme(themeMode);
 
             document.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((item) => {
-                item.classList.toggle('menu-active', item.dataset.themeMode === themeMode);
+                updateThemeButtonState(item, item.dataset.themeMode === themeMode);
             });
+        });
+    });
+};
+
+const enableBootstrapCompat = (root = document) => {
+    const openModal = (modal) => {
+        if (!modal || modal.tagName === 'DIALOG') {
+            return;
+        }
+
+        modal.classList.add('show');
+        modal.setAttribute('aria-modal', 'true');
+        modal.removeAttribute('aria-hidden');
+        document.body.classList.add('modal-open');
+    };
+
+    const closeModal = (modal) => {
+        if (!modal || modal.tagName === 'DIALOG') {
+            return;
+        }
+
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+
+        if (!document.querySelector('.modal.show:not(dialog)')) {
+            document.body.classList.remove('modal-open');
+        }
+    };
+
+    root.querySelectorAll('[data-bs-toggle="modal"]').forEach((trigger) => {
+        if (trigger.dataset.bsCompatBound === 'true') {
+            return;
+        }
+
+        trigger.dataset.bsCompatBound = 'true';
+        trigger.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            const targetSelector = trigger.getAttribute('data-bs-target');
+            const modal = targetSelector ? document.querySelector(targetSelector) : null;
+            openModal(modal);
+        });
+    });
+
+    root.querySelectorAll('[data-bs-dismiss="modal"]').forEach((button) => {
+        if (button.dataset.bsCompatBound === 'true') {
+            return;
+        }
+
+        button.dataset.bsCompatBound = 'true';
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            closeModal(button.closest('.modal'));
+        });
+    });
+
+    root.querySelectorAll('.modal:not(dialog)').forEach((modal) => {
+        if (modal.dataset.bsCompatBackdropBound === 'true') {
+            return;
+        }
+
+        modal.dataset.bsCompatBackdropBound = 'true';
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal(modal);
+            }
+        });
+    });
+
+    root.querySelectorAll('[data-bs-toggle="collapse"]').forEach((trigger) => {
+        if (trigger.dataset.bsCompatBound === 'true') {
+            return;
+        }
+
+        trigger.dataset.bsCompatBound = 'true';
+        trigger.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            const targetSelector = trigger.getAttribute('data-bs-target');
+            const collapse = targetSelector ? document.querySelector(targetSelector) : null;
+            if (!collapse) {
+                return;
+            }
+
+            const isOpen = collapse.classList.contains('show');
+            collapse.classList.toggle('show', !isOpen);
+            trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         });
     });
 };
@@ -224,6 +319,7 @@ const initAppUi = (root = document) => {
     enableMobileTableScrolling(root);
     enableSortableTables(root);
     enableThemePicker(root);
+    enableBootstrapCompat(root);
 };
 
 if (document.readyState === 'loading') {

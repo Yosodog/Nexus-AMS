@@ -7,12 +7,12 @@
         <x-slot:subtitle>Create, update, and retire NEL-powered checks.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex gap-2">
-                <a href="{{ route('admin.audits.index') }}" class="btn btn-outline-secondary">
-                    <i class="o-arrow-left me-1"></i>
+                <a href="{{ route('admin.audits.index') }}" class="btn btn-outline">
+                    <x-icon name="o-arrow-left" class="size-4" />
                     Back to overview
                 </a>
                 <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                    <i class="o-plus-circle me-1"></i>
+                    <x-icon name="o-plus-circle" class="size-4" />
                     New Rule
                 </a>
             </div>
@@ -21,8 +21,9 @@
 
     <x-card title="Rule library" subtitle="Expressions are parsed with NEL; invalid rules are blocked on save.">
         <x-slot:menu>
-            <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="o-document-text-code me-1"></i>NEL Docs
+            <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline btn-sm">
+                <x-icon name="o-document-text" class="size-4" />
+                NEL Docs
             </a>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
@@ -43,7 +44,7 @@
                         <td>
                             <div class="font-semibold">{{ $rule->name }}</div>
                             <div class="text-base-content/50 small">{{ $rule->description ?? 'No description' }}</div>
-                            <code class="small d-block mt-1 text-wrap">{{ $rule->expression }}</code>
+                            <code class="mt-1 block text-wrap text-xs">{{ $rule->expression }}</code>
                         </td>
                         <td>
                             <span class="badge {{ $rule->target_type->value === 'nation' ? 'badge-primary' : 'badge-info' }}">
@@ -81,17 +82,17 @@
                         </td>
                         <td>
                             <div class="flex gap-2">
-                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="o-pencil"></i>
+                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary">
+                                    <x-icon name="o-pencil" class="size-4" />
                                 </a>
-                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="o-bolt"></i>
+                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline">
+                                    <x-icon name="o-bolt" class="size-4" />
                                 </a>
                                 <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" onsubmit="return confirm('Disable this rule and clear its violations?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="o-no-symbol"></i>
+                                    <button type="submit" class="btn btn-sm btn-outline btn-error">
+                                        <x-icon name="o-no-symbol" class="size-4" />
                                     </button>
                                 </form>
                             </div>

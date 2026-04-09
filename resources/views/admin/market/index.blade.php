@@ -1,16 +1,9 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="mb-6 mb-3">
-        <div class="w-full">
-            <div class="row align-items-center">
-                <div class="col-12 col-lg-6">
-                    <h3 class="mb-1">Alliance Market</h3>
-                    <p class="text-base-content/50 mb-0">Manage buyable resources, caps, and pricing adjustments.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-header title="Alliance Market" separator>
+        <x-slot:subtitle>Manage buyable resources, caps, and pricing adjustments.</x-slot:subtitle>
+    </x-header>
 
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <x-stat title="30d Volume"
@@ -35,33 +28,25 @@
                 description="Combined remaining buy cap across resources" />
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header font-semibold">30-Day Cash Paid</div>
-                <div class="card-body">
+    <div class="mb-6 grid gap-4 xl:grid-cols-2">
+        <x-card title="30-Day Cash Paid">
+            <div class="min-h-56">
                     <canvas id="marketPaidChart" height="220"></canvas>
-                </div>
             </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header font-semibold">30-Day Volume by Resource</div>
-                <div class="card-body">
+        </x-card>
+        <x-card title="30-Day Volume by Resource">
+            <div class="min-h-56">
                     <canvas id="marketVolumeChart" height="220"></canvas>
-                </div>
             </div>
-        </div>
+        </x-card>
     </div>
 
-    <div class="card shadow-sm mb-4" id="market-resources">
-        <div class="card-header flex justify-content-between align-items-center">
-            <span class="font-semibold">Market Resources</span>
-            <span class="text-base-content/50 small">Base prices from 24h averages.</span>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped align-middle" id="marketResourcesTable">
+    <x-card title="Market Resources" id="market-resources" class="mb-6">
+        <x-slot:menu>
+            <span class="text-sm text-base-content/60">Base prices from 24h averages.</span>
+        </x-slot:menu>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-zebra" id="marketResourcesTable">
                     <thead>
                     <tr>
                         <th>Resource</th>
@@ -80,13 +65,13 @@
                             <td>
                                 <form method="POST" action="{{ route('admin.market.resource.toggle', $resource['id']) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm {{ $resource['is_enabled'] ? 'btn-success' : 'btn-outline-secondary' }}">
+                                    <button type="submit" class="btn btn-sm {{ $resource['is_enabled'] ? 'btn-success' : 'btn-outline' }}">
                                         {{ $resource['is_enabled'] ? 'Enabled' : 'Disabled' }}
                                     </button>
                                 </form>
                             </td>
                             <td>
-                                <input type="number" step="0.01" name="adjustment_percent" class="form-control form-control-sm"
+                                <input type="number" step="0.01" name="adjustment_percent" class="input input-bordered input-sm w-full min-w-28"
                                        value="{{ number_format($resource['adjustment_percent'], 2, '.', '') }}"
                                        data-adjustment-input
                                        data-base-price="{{ $resource['base_price'] }}"
@@ -94,7 +79,7 @@
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
                             <td>
-                                <input type="number" step="0.01" min="0" name="buy_cap_remaining" class="form-control form-control-sm"
+                                <input type="number" step="0.01" min="0" name="buy_cap_remaining" class="input input-bordered input-sm w-full min-w-32"
                                        value="{{ number_format($resource['buy_cap_remaining'], 2, '.', '') }}"
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
@@ -110,16 +95,13 @@
                     @endforeach
                     </tbody>
                 </table>
-            </div>
         </div>
-    </div>
+    </x-card>
 
-    <div class="card shadow-sm">
-        <div class="card-header font-semibold">Latest Transactions (Last 50)</div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle" id="marketTransactionsTable">
-                    <thead class="table-light">
+    <x-card title="Latest Transactions (Last 50)">
+        <div class="overflow-x-auto rounded-box border border-base-300">
+                <table class="table table-sm" id="marketTransactionsTable">
+                    <thead>
                     <tr>
                         <th>Date</th>
                         <th>User</th>
@@ -146,9 +128,8 @@
                     @endforeach
                     </tbody>
                 </table>
-            </div>
         </div>
-    </div>
+    </x-card>
 @endsection
 
 @push('scripts')

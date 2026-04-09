@@ -165,13 +165,13 @@
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Hero badge</span>
                     <input type="text" class="input input-bordered" id="homeHeroBadge" name="home_hero_badge" value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60" placeholder="Recruiting now">
-                    <span class="text-xs text-base-content/60">Short status label shown in the hero section.</span>
+                    <span class="block text-xs text-base-content/60">Short status label shown in the hero section.</span>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">CTA button label</span>
                     <input type="text" class="input input-bordered" id="homeCtaLabel" name="home_cta_label" value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60" placeholder="Start your application">
-                    <span class="text-xs text-base-content/60">Text on the main call-to-action button.</span>
+                    <span class="block text-xs text-base-content/60">Text on the main call-to-action button.</span>
                 </label>
 
                 <div class="space-y-2">
@@ -182,7 +182,9 @@
                     <div class="text-xs text-base-content/60">Short points that tell recruits what they can expect.</div>
                 </div>
 
-                <button class="btn btn-primary" type="submit">Save Homepage Content</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Homepage Content</button>
+                </div>
             </form>
         </x-card>
 
@@ -218,7 +220,9 @@
                         <span class="text-xs text-base-content/60">Recommended: 32x32 or 64x64.</span>
                     </label>
 
-                    <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
+                    <div class="pt-2">
+                        <button class="btn btn-primary" @disabled(! $canUploadFavicon)>Upload Favicon</button>
+                    </div>
 
                     @if (! $canUploadFavicon)
                         <div class="text-sm text-base-content/60">Requires the View Diagnostic permission.</div>
@@ -241,7 +245,9 @@
                     <input class="toggle toggle-primary" type="checkbox" id="requireDiscordVerification" name="require_discord_verification" value="1" @checked($discordVerificationRequired)>
                     <span class="label-text">Require Discord Verification</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Discord Setting</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Discord Setting</button>
+                </div>
             </form>
         </x-card>
 
@@ -264,7 +270,9 @@
                     <input class="toggle toggle-primary" type="checkbox" id="discordAllianceDepartureEnabled" name="discord_alliance_departure_enabled" value="1" @checked($discordDepartureEnabled)>
                     <span class="label-text">Enable departure alerts</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Discord Departure Settings</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Discord Departure Settings</button>
+                </div>
             </form>
         </x-card>
 
@@ -282,7 +290,9 @@
                     <input class="toggle toggle-primary" type="checkbox" id="autoWithdrawEnabled" name="auto_withdraw_enabled" value="1" @checked($autoWithdrawEnabled)>
                     <span class="label-text">Enable Auto Withdraw</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Auto Withdraw Setting</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Auto Withdraw Setting</button>
+                </div>
             </form>
         </x-card>
 
@@ -300,7 +310,9 @@
                     <input class="toggle toggle-primary" type="checkbox" id="backupsEnabled" name="backups_enabled" value="1" @checked($backupsEnabled)>
                     <span class="label-text">Enable Backups</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Backup Setting</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Backup Setting</button>
+                </div>
             </form>
         </x-card>
 
@@ -325,7 +337,9 @@
                         <input class="toggle toggle-primary" type="checkbox" id="loanPaymentsEnabled" name="loan_payments_enabled" value="1" @checked($loanPaymentsEnabled)>
                         <span class="label-text">Enable Loan Payments</span>
                     </label>
-                    <button class="btn btn-primary" type="submit">Save Loan Payment Setting</button>
+                    <div class="pt-2">
+                        <button class="btn btn-primary" type="submit">Save Loan Payment Setting</button>
+                    </div>
                 </form>
             </div>
         </x-card>
@@ -365,7 +379,9 @@
                     >
                     <span class="text-xs text-base-content/60">Default is 90 days (about 3 months).</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Inactivity Auto-Disable</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Inactivity Auto-Disable</button>
+                </div>
             </form>
         </x-card>
 
@@ -383,7 +399,9 @@
                     <input class="toggle toggle-primary" type="checkbox" id="grantApprovalsEnabled" name="grant_approvals_enabled" value="1" @checked($grantApprovalsEnabled)>
                     <span class="label-text">Enable Grant Approvals</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Grant Approval Setting</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Grant Approval Setting</button>
+                </div>
             </form>
         </x-card>
 
@@ -404,7 +422,9 @@
                     >
                     <span class="text-xs text-base-content/60">Use 1–3650 days (up to 10 years).</span>
                 </label>
-                <button class="btn btn-primary" type="submit">Save Audit Retention</button>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Audit Retention</button>
+                </div>
             </form>
         </x-card>
     </div>

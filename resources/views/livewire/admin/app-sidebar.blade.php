@@ -5,7 +5,7 @@
         <x-menu-item no-wire-navigate title="Dashboard" icon="o-squares-2x2" route="admin.dashboard" />
 
         {{-- User Management --}}
-        <x-menu-separator title="Alliance" />
+        <x-menu-separator title="Alliance" class="mary-hideable" />
 
         <x-menu-item no-wire-navigate
             title="Members"
@@ -40,7 +40,7 @@
         </x-menu-sub>
 
         {{-- Economics --}}
-        <x-menu-separator title="Economics" />
+        <x-menu-separator title="Economics" class="mary-hideable" />
 
         <x-menu-item no-wire-navigate
             title="Accounts"
@@ -70,7 +70,7 @@
                 title="Grants"
                 icon="o-gift"
                 :link="route('admin.grants')"
-                :active="request()->route()?->getName() === 'admin.grants'"
+                :active="request()->route()?->getName() === 'admin.grants' && request()->route()?->getName() !== 'admin.grants.city'"
                 :badge="($pendingCounts['grants'] ?? 0) > 0 ? (string) ($pendingCounts['grants'] ?? 0) : null"
                 badge-classes="badge-primary badge-sm"
                 :hidden="! auth()->user()?->can('view-grants')"
@@ -130,7 +130,7 @@
         </x-menu-sub>
 
         {{-- Defense --}}
-        <x-menu-separator title="Defense" />
+        <x-menu-separator title="Defense" class="mary-hideable" />
 
         <x-menu-sub
             title="Wars"
@@ -201,7 +201,7 @@
         />
 
         {{-- Internal Affairs --}}
-        <x-menu-separator title="Internal Affairs" />
+        <x-menu-separator title="Internal Affairs" class="mary-hideable" />
 
         <x-menu-sub
             title="Intake"
@@ -233,7 +233,7 @@
         />
 
         {{-- System --}}
-        <x-menu-separator title="System" />
+        <x-menu-separator title="System" class="mary-hideable" />
 
         <x-menu-sub
             title="Configuration"

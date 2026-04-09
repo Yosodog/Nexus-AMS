@@ -48,7 +48,7 @@
         />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]">
+    <div class="grid gap-6">
         <x-card title="Payroll Grades" :subtitle="$grades->count() . ' grades'">
             <div class="overflow-x-auto rounded-box border border-base-300">
                 <table class="table table-zebra table-sm">
