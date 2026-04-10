@@ -70,7 +70,8 @@ class ApplicationController extends Controller
         try {
             $application = $this->applicationService->approveByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
-                $request->string('moderator_discord_id')->toString()
+                $request->string('moderator_discord_id')->toString(),
+                $request->string('approval_request_id')->toString() ?: null
             );
         } catch (ApplicationException $e) {
             return $this->errorResponse($e);
@@ -88,7 +89,8 @@ class ApplicationController extends Controller
         try {
             $application = $this->applicationService->denyByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
-                $request->string('moderator_discord_id')->toString()
+                $request->string('moderator_discord_id')->toString(),
+                $request->string('denial_request_id')->toString() ?: null
             );
         } catch (ApplicationException $e) {
             return $this->errorResponse($e);

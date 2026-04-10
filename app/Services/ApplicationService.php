@@ -11,8 +11,10 @@ use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -123,12 +125,47 @@ class ApplicationService
      *
      * @throws ApplicationException
      */
-    public function approveByDiscordUser(string $applicantDiscordId, string $moderatorDiscordId): Application
-    {
+    public function approveByDiscordUser(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $approvalRequestId = null
+    ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
-        $application = $this->findPendingApplication($applicantDiscordId);
+        try {
+            return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
+                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator): Application {
+                    $existingApplication = $this->findApprovedApplicationForRetry(
+                        $applicantDiscordId,
+                        $moderatorDiscordId,
+                        $approvalRequestId
+                    );
 
+                    if ($existingApplication) {
+                        return $existingApplication;
+                    }
+
+                    return $this->approvePendingApplication($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator);
+                });
+        } catch (LockTimeoutException) {
+            throw new ApplicationException(
+                'approval_in_progress',
+                'Approval is already in progress for this applicant. Please try again shortly.',
+                409
+            );
+        }
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    private function approvePendingApplication(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $approvalRequestId,
+        User $moderator
+    ): Application {
+        $application = $this->findPendingApplication($applicantDiscordId);
         $nation = $this->fetchNation($application->nation_id);
 
         $this->assertNationInAlliance($nation);
@@ -154,6 +191,7 @@ class ApplicationService
         $application->pending_key = null;
         $application->approved_at = Carbon::now();
         $application->approved_by_discord_id = $moderatorDiscordId;
+        $application->approval_request_id = $approvalRequestId;
         $application->save();
 
         Log::info('Application approved', [
@@ -192,12 +230,47 @@ class ApplicationService
      *
      * @throws ApplicationException
      */
-    public function denyByDiscordUser(string $applicantDiscordId, string $moderatorDiscordId): Application
-    {
+    public function denyByDiscordUser(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $denialRequestId = null
+    ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
-        $application = $this->findPendingApplication($applicantDiscordId);
+        try {
+            return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
+                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator): Application {
+                    $existingApplication = $this->findDeniedApplicationForRetry(
+                        $applicantDiscordId,
+                        $moderatorDiscordId,
+                        $denialRequestId
+                    );
 
+                    if ($existingApplication) {
+                        return $existingApplication;
+                    }
+
+                    return $this->denyPendingApplication($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator);
+                });
+        } catch (LockTimeoutException) {
+            throw new ApplicationException(
+                'denial_in_progress',
+                'Denial is already in progress for this applicant. Please try again shortly.',
+                409
+            );
+        }
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    private function denyPendingApplication(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $denialRequestId,
+        User $moderator
+    ): Application {
+        $application = $this->findPendingApplication($applicantDiscordId);
         $nation = $this->fetchNation($application->nation_id);
         if ($this->isNationInAlliance($nation)) {
             try {
@@ -222,6 +295,7 @@ class ApplicationService
         $application->pending_key = null;
         $application->denied_at = Carbon::now();
         $application->denied_by_discord_id = $moderatorDiscordId;
+        $application->denial_request_id = $denialRequestId;
         $application->save();
 
         Log::info('Application denied', [
@@ -489,6 +563,57 @@ class ApplicationService
         }
 
         return $application;
+    }
+
+    protected function findApprovedApplicationForRetry(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $approvalRequestId
+    ): ?Application {
+        if ($approvalRequestId) {
+            return Application::query()
+                ->where('discord_user_id', $applicantDiscordId)
+                ->where('status', ApplicationStatus::Approved->value)
+                ->where('approval_request_id', $approvalRequestId)
+                ->latest('approved_at')
+                ->first();
+        }
+
+        return Application::query()
+            ->where('discord_user_id', $applicantDiscordId)
+            ->where('status', ApplicationStatus::Approved->value)
+            ->where('approved_by_discord_id', $moderatorDiscordId)
+            ->where('approved_at', '>=', Carbon::now()->subMinutes(10))
+            ->latest('approved_at')
+            ->first();
+    }
+
+    protected function findDeniedApplicationForRetry(
+        string $applicantDiscordId,
+        string $moderatorDiscordId,
+        ?string $denialRequestId
+    ): ?Application {
+        if ($denialRequestId) {
+            return Application::query()
+                ->where('discord_user_id', $applicantDiscordId)
+                ->where('status', ApplicationStatus::Denied->value)
+                ->where('denial_request_id', $denialRequestId)
+                ->latest('denied_at')
+                ->first();
+        }
+
+        return Application::query()
+            ->where('discord_user_id', $applicantDiscordId)
+            ->where('status', ApplicationStatus::Denied->value)
+            ->where('denied_by_discord_id', $moderatorDiscordId)
+            ->where('denied_at', '>=', Carbon::now()->subMinutes(10))
+            ->latest('denied_at')
+            ->first();
+    }
+
+    protected function applicationDecisionLockKey(string $applicantDiscordId): string
+    {
+        return sprintf('applications:decision:%s', $applicantDiscordId);
     }
 
     protected function parseTimestamp(int|string $value): Carbon

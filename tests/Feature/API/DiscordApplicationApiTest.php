@@ -171,6 +171,7 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => 'applicant-approve',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-approve-1',
             ])
             ->assertOk()
             ->assertJsonPath('status', 'approved')
@@ -184,6 +185,40 @@ class DiscordApplicationApiTest extends TestCase
             $moderator->activeDiscordAccount()->discord_id,
             $application->approved_by_discord_id
         );
+        $this->assertSame('interaction-approve-1', $application->approval_request_id);
+    }
+
+    public function test_approve_endpoint_returns_success_for_a_retried_completed_approval(): void
+    {
+        $moderator = $this->createModerator('moderator-approve-retry');
+        $application = Application::query()->create([
+            'nation_id' => 877014,
+            'leader_name_snapshot' => 'Leader 877014',
+            'discord_user_id' => 'applicant-approve-retry',
+            'discord_username' => 'retry-user',
+            'status' => ApplicationStatus::Approved->value,
+            'pending_key' => null,
+            'approved_at' => now(),
+            'approved_by_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+            'approval_request_id' => 'interaction-approve-retry',
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->never())
+            ->method('approveMember');
+
+        $service = $this->makeApplicationService([], $alliancePositionService);
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => 'applicant-approve-retry',
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-approve-retry',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'approved')
+            ->assertJsonPath('application.id', $application->id);
     }
 
     public function test_deny_endpoint_uses_the_mocked_alliance_position_service_and_updates_the_application(): void
@@ -213,6 +248,7 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => 'applicant-deny',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'denial_request_id' => 'interaction-deny-1',
             ])
             ->assertOk()
             ->assertJsonPath('status', 'denied')
@@ -226,6 +262,40 @@ class DiscordApplicationApiTest extends TestCase
             $moderator->activeDiscordAccount()->discord_id,
             $application->denied_by_discord_id
         );
+        $this->assertSame('interaction-deny-1', $application->denial_request_id);
+    }
+
+    public function test_deny_endpoint_returns_success_for_a_retried_completed_denial(): void
+    {
+        $moderator = $this->createModerator('moderator-deny-retry');
+        $application = Application::query()->create([
+            'nation_id' => 877015,
+            'leader_name_snapshot' => 'Leader 877015',
+            'discord_user_id' => 'applicant-deny-retry',
+            'discord_username' => 'retry-deny-user',
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denied_at' => now(),
+            'denied_by_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+            'denial_request_id' => 'interaction-deny-retry',
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->never())
+            ->method('removeMember');
+
+        $service = $this->makeApplicationService([], $alliancePositionService);
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/deny', [
+                'applicant_discord_id' => 'applicant-deny-retry',
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'denial_request_id' => 'interaction-deny-retry',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'denied')
+            ->assertJsonPath('application.id', $application->id);
     }
 
     /**

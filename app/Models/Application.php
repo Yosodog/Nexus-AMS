@@ -22,6 +22,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $approved_by_discord_id
  * @property string|null $denied_by_discord_id
  * @property string|null $cancelled_by_discord_id
+ * @property string|null $approval_request_id
+ * @property string|null $denial_request_id
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
