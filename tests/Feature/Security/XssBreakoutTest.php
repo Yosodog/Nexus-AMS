@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Models\Page;
+use App\Models\RecruitmentMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -11,6 +12,12 @@ use Tests\TestCase;
 class XssBreakoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
 
     /**
      * Test that initial content in the customization editor is escaped to prevent </textarea> breakout.
@@ -41,9 +48,15 @@ class XssBreakoutTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         Gate::define('view-recruitment', fn() => true);
 
-        // Mock setting values
-        config(['settings.recruitment_primary_message' => '</textarea><script>alert("primary")</script>']);
-        config(['settings.recruitment_follow_up_message' => '</textarea><script>alert("followup")</script>']);
+        // Seed recruitment messages
+        RecruitmentMessage::updateOrCreate(
+            ['type' => 'primary'],
+            ['message' => '</textarea><script>alert("primary")</script>']
+        );
+        RecruitmentMessage::updateOrCreate(
+            ['type' => 'follow_up'],
+            ['message' => '</textarea><script>alert("followup")</script>']
+        );
 
         $this->actingAs($admin)
             ->get(route('admin.recruitment.index'))
