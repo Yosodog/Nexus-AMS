@@ -579,6 +579,10 @@ class ApplicationService
                 ->first();
         }
 
+        if ($this->hasPendingApplication($applicantDiscordId)) {
+            return null;
+        }
+
         return Application::query()
             ->where('discord_user_id', $applicantDiscordId)
             ->where('status', ApplicationStatus::Approved->value)
@@ -602,6 +606,10 @@ class ApplicationService
                 ->first();
         }
 
+        if ($this->hasPendingApplication($applicantDiscordId)) {
+            return null;
+        }
+
         return Application::query()
             ->where('discord_user_id', $applicantDiscordId)
             ->where('status', ApplicationStatus::Denied->value)
@@ -609,6 +617,14 @@ class ApplicationService
             ->where('denied_at', '>=', Carbon::now()->subMinutes(10))
             ->latest('denied_at')
             ->first();
+    }
+
+    protected function hasPendingApplication(string $applicantDiscordId): bool
+    {
+        return Application::query()
+            ->where('discord_user_id', $applicantDiscordId)
+            ->where('status', ApplicationStatus::Pending->value)
+            ->exists();
     }
 
     protected function applicationDecisionLockKey(string $applicantDiscordId): string
