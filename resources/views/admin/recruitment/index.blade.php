@@ -40,7 +40,7 @@
                     hint="This message is sent immediately after a nation becomes eligible."
                     rows="10"
                     required
-                >{!! old('primary_message', $primaryMessage) !!}</x-textarea>
+                >{{ old('primary_message', $primaryMessage) }}</x-textarea>
 
                 <x-toggle
                     id="follow_up_enabled"
@@ -70,7 +70,7 @@
                     hint="The follow-up is only sent if the nation is still unaffiliated when the delay expires."
                     rows="10"
                     required
-                >{!! old('follow_up_message', $followUpMessage) !!}</x-textarea>
+                >{{ old('follow_up_message', $followUpMessage) }}</x-textarea>
 
                 <div class="flex justify-end">
                     <button type="submit" class="btn btn-primary">
