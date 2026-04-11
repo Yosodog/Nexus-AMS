@@ -221,6 +221,60 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('application.id', $application->id);
     }
 
+    public function test_approve_endpoint_prefers_a_pending_application_over_recent_approval_without_request_id(): void
+    {
+        $moderator = $this->createModerator('moderator-approve-new-pending');
+        $moderatorDiscordId = $moderator->activeDiscordAccount()->discord_id;
+        $applicantDiscordId = 'applicant-approve-new-pending';
+
+        $previousApplication = Application::query()->create([
+            'nation_id' => 877024,
+            'leader_name_snapshot' => 'Leader 877024',
+            'discord_user_id' => $applicantDiscordId,
+            'discord_username' => 'retry-user',
+            'status' => ApplicationStatus::Approved->value,
+            'pending_key' => null,
+            'approved_at' => now(),
+            'approved_by_discord_id' => $moderatorDiscordId,
+        ]);
+
+        $pendingApplication = Application::query()->create([
+            'nation_id' => 877025,
+            'leader_name_snapshot' => 'Leader 877025',
+            'discord_user_id' => $applicantDiscordId,
+            'discord_username' => 'retry-user',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->once())
+            ->method('approveMember')
+            ->with(877025);
+
+        $service = $this->makeApplicationService(
+            [877025 => $this->makeApplicantNation(877025)],
+            $alliancePositionService
+        );
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => $applicantDiscordId,
+                'moderator_discord_id' => $moderatorDiscordId,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'approved')
+            ->assertJsonPath('application.id', $pendingApplication->id);
+
+        $previousApplication->refresh();
+        $pendingApplication->refresh();
+
+        $this->assertSame(ApplicationStatus::Approved, $previousApplication->status);
+        $this->assertSame(ApplicationStatus::Approved, $pendingApplication->status);
+        $this->assertNull($pendingApplication->pending_key);
+    }
+
     public function test_deny_endpoint_uses_the_mocked_alliance_position_service_and_updates_the_application(): void
     {
         $moderator = $this->createModerator('moderator-deny');
@@ -296,6 +350,60 @@ class DiscordApplicationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'denied')
             ->assertJsonPath('application.id', $application->id);
+    }
+
+    public function test_deny_endpoint_prefers_a_pending_application_over_recent_denial_without_request_id(): void
+    {
+        $moderator = $this->createModerator('moderator-deny-new-pending');
+        $moderatorDiscordId = $moderator->activeDiscordAccount()->discord_id;
+        $applicantDiscordId = 'applicant-deny-new-pending';
+
+        $previousApplication = Application::query()->create([
+            'nation_id' => 877026,
+            'leader_name_snapshot' => 'Leader 877026',
+            'discord_user_id' => $applicantDiscordId,
+            'discord_username' => 'retry-deny-user',
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denied_at' => now(),
+            'denied_by_discord_id' => $moderatorDiscordId,
+        ]);
+
+        $pendingApplication = Application::query()->create([
+            'nation_id' => 877027,
+            'leader_name_snapshot' => 'Leader 877027',
+            'discord_user_id' => $applicantDiscordId,
+            'discord_username' => 'retry-deny-user',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->once())
+            ->method('removeMember')
+            ->with(877027);
+
+        $service = $this->makeApplicationService(
+            [877027 => $this->makeApplicantNation(877027)],
+            $alliancePositionService
+        );
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/deny', [
+                'applicant_discord_id' => $applicantDiscordId,
+                'moderator_discord_id' => $moderatorDiscordId,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'denied')
+            ->assertJsonPath('application.id', $pendingApplication->id);
+
+        $previousApplication->refresh();
+        $pendingApplication->refresh();
+
+        $this->assertSame(ApplicationStatus::Denied, $previousApplication->status);
+        $this->assertSame(ApplicationStatus::Denied, $pendingApplication->status);
+        $this->assertNull($pendingApplication->pending_key);
     }
 
     /**
