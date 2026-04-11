@@ -31,6 +31,7 @@ const applyTheme = (mode) => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.themeMode = resolvedMode;
+    document.documentElement.style.colorScheme = theme === 'night' ? 'dark' : 'light';
 };
 
 const parseSortableValue = (value) => {

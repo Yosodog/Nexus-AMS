@@ -7,6 +7,7 @@
     <title>@yield('title', config('app.name').' - Admin')</title>
     <link rel="icon" href="{{ $faviconUrl }}">
 
+    <x-theme-init />
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
