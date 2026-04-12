@@ -10,6 +10,7 @@ use App\GraphQL\Models\Nation;
 use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
+use App\Models\Nation as NationRecord;
 use App\Models\User;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
@@ -36,7 +37,7 @@ class ApplicationService
     {
         $this->assertApplicationsEnabled();
 
-        $nation = $this->fetchNation($nationId);
+        $nation = $this->fetchEligibleApplicantNation($nationId);
 
         $this->assertApplicantEligible($nation);
 
@@ -194,7 +195,7 @@ class ApplicationService
         User $moderator
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
-        $nation = $this->fetchNation($application->nation_id);
+        $nation = $this->fetchNationInAlliance($application->nation_id);
 
         $this->assertNationInAlliance($nation);
 
@@ -320,7 +321,7 @@ class ApplicationService
         User $moderator
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
-        $nation = $this->fetchNation($application->nation_id);
+        $nation = $this->fetchNationInAlliance($application->nation_id);
         if ($this->isNationInAlliance($nation)) {
             try {
                 $this->alliancePositionService->removeMember($application->nation_id);
@@ -489,8 +490,14 @@ class ApplicationService
      */
     protected function fetchNation(int $nationId): Nation
     {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
         try {
-            return NationQueryService::getNationById($nationId);
+            return $this->queryNationFromApi($nationId);
         } catch (PWEntityDoesNotExist $e) {
             throw new ApplicationException('nation_not_found', 'Nation not found.', 404, context: [
                 'join_url' => $this->joinUrl(),
@@ -507,6 +514,34 @@ class ApplicationService
                 503
             );
         }
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    protected function fetchEligibleApplicantNation(int $nationId): Nation
+    {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation && $this->isLocalNationEligibleApplicant($localNation)) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
+        return $this->fetchNation($nationId);
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    protected function fetchNationInAlliance(int $nationId): Nation
+    {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation && $this->membershipService->contains((int) $localNation->alliance_id)) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
+        return $this->fetchNation($nationId);
     }
 
     /**
@@ -598,9 +633,41 @@ class ApplicationService
         return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 
+    protected function queryNationFromApi(int $nationId): Nation
+    {
+        return NationQueryService::getNationById($nationId);
+    }
+
     private function applicationCreationLockKey(int $nationId, string $discordUserId): string
     {
         return sprintf('applications:create:%d:%s', $nationId, sha1($discordUserId));
+    }
+
+    protected function findLocalNationSnapshot(int $nationId): ?NationRecord
+    {
+        return NationRecord::query()
+            ->select(['id', 'alliance_id', 'alliance_position', 'alliance_position_id', 'leader_name'])
+            ->find($nationId);
+    }
+
+    protected function isLocalNationEligibleApplicant(NationRecord $nation): bool
+    {
+        return $this->membershipService->contains((int) $nation->alliance_id)
+            && $nation->alliance_position === AlliancePositionEnum::APPLICANT->value;
+    }
+
+    protected function mapLocalNationToGraphQl(NationRecord $nation): Nation
+    {
+        $graphQlNation = new Nation;
+        $graphQlNation->id = (int) $nation->id;
+        $graphQlNation->leader_name = $nation->leader_name;
+        $graphQlNation->alliance_id = $nation->alliance_id !== null ? (int) $nation->alliance_id : null;
+        $graphQlNation->alliance_position = $nation->alliance_position;
+        $graphQlNation->alliance_position_id = $nation->alliance_position_id !== null
+            ? (int) $nation->alliance_position_id
+            : null;
+
+        return $graphQlNation;
     }
 
     /**
