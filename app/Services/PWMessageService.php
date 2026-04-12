@@ -14,7 +14,9 @@ class PWMessageService
 
     public function __construct()
     {
-        $this->apiKey = env('PW_API_KEY');
+        // Use config() instead of env() to support configuration caching and ensure
+        // sensitive credentials are reliably retrieved in production.
+        $this->apiKey = config('services.pw.api_key');
     }
 
     public function sendMessage(int $nation_id, string $subject, string $message): bool
