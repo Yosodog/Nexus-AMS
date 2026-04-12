@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ApplicationService
@@ -39,19 +40,46 @@ class ApplicationService
 
         $this->assertApplicantEligible($nation);
 
-        $this->assertNoPendingApplication($nationId, $discordUserId);
-
         try {
-            return Application::query()->create([
-                'nation_id' => $nationId,
-                'leader_name_snapshot' => $nation->leader_name ?? '',
-                'discord_user_id' => $discordUserId,
-                'discord_username' => $discordUsername,
-                'status' => ApplicationStatus::Pending,
-                'pending_key' => 1,
-            ]);
+            return Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
+                ->block(10, function () use ($nationId, $discordUserId, $discordUsername, $nation): Application {
+                    $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+                    if ($existingApplication) {
+                        return $existingApplication;
+                    }
+
+                    $this->assertNoConflictingPendingApplication($nationId, $discordUserId);
+
+                    return Application::query()->create([
+                        'nation_id' => $nationId,
+                        'leader_name_snapshot' => $nation->leader_name ?? '',
+                        'discord_user_id' => $discordUserId,
+                        'discord_username' => $discordUsername,
+                        'status' => ApplicationStatus::Pending,
+                        'pending_key' => 1,
+                    ]);
+                });
+        } catch (LockTimeoutException) {
+            $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+            if ($existingApplication) {
+                return $existingApplication;
+            }
+
+            throw new ApplicationException(
+                'application_creation_in_progress',
+                'Application creation is already in progress for this applicant. Please try again shortly.',
+                409
+            );
         } catch (QueryException $exception) {
             if ($this->isUniqueConstraintViolation($exception)) {
+                $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+                if ($existingApplication) {
+                    return $existingApplication;
+                }
+
                 throw new ApplicationException(
                     'pending_application_exists',
                     'An application is already pending for this nation or Discord user.',
@@ -181,9 +209,30 @@ class ApplicationService
                 'error' => $e->getMessage(),
             ]);
 
+            app(AuditLogger::class)->failure(
+                category: 'applications',
+                action: 'application_approval_sync_failed',
+                subject: $application,
+                context: [
+                    'data' => [
+                        'nation_id' => $application->nation_id,
+                        'applicant_discord_id' => $application->discord_user_id,
+                        'moderator_discord_id' => $moderatorDiscordId,
+                        'error' => Str::limit($e->getMessage(), 500, ''),
+                    ],
+                ],
+                message: 'Application approval could not sync to the alliance service.',
+                actorOverride: [
+                    'type' => 'user',
+                    'id' => $moderator->id,
+                    'name' => $moderator->name,
+                ]
+            );
+
             throw new ApplicationException(
                 'alliance_update_failed',
-                'Unable to update alliance position at this time.'
+                'Unable to update alliance position at this time.',
+                503
             );
         }
 
@@ -284,9 +333,30 @@ class ApplicationService
                     'error' => $e->getMessage(),
                 ]);
 
+                app(AuditLogger::class)->failure(
+                    category: 'applications',
+                    action: 'application_denial_sync_failed',
+                    subject: $application,
+                    context: [
+                        'data' => [
+                            'nation_id' => $application->nation_id,
+                            'applicant_discord_id' => $application->discord_user_id,
+                            'moderator_discord_id' => $moderatorDiscordId,
+                            'error' => Str::limit($e->getMessage(), 500, ''),
+                        ],
+                    ],
+                    message: 'Application denial could not sync to the alliance service.',
+                    actorOverride: [
+                        'type' => 'user',
+                        'id' => $moderator->id,
+                        'name' => $moderator->name,
+                    ]
+                );
+
                 throw new ApplicationException(
                     'alliance_update_failed',
-                    'Unable to update alliance position at this time.'
+                    'Unable to update alliance position at this time.',
+                    503
                 );
             }
         }
@@ -433,7 +503,8 @@ class ApplicationService
 
             throw new ApplicationException(
                 'nation_lookup_failed',
-                'Unable to validate the nation at this time.'
+                'Unable to validate the nation at this time.',
+                503
             );
         }
     }
@@ -489,13 +560,17 @@ class ApplicationService
     /**
      * @throws ApplicationException
      */
-    protected function assertNoPendingApplication(int $nationId, string $discordUserId): void
+    protected function assertNoConflictingPendingApplication(int $nationId, string $discordUserId): void
     {
         $exists = Application::query()
             ->where('status', ApplicationStatus::Pending->value)
             ->where(function ($query) use ($nationId, $discordUserId) {
                 $query->where('nation_id', $nationId)
                     ->orWhere('discord_user_id', $discordUserId);
+            })
+            ->where(function ($query) use ($nationId, $discordUserId) {
+                $query->where('nation_id', '!=', $nationId)
+                    ->orWhere('discord_user_id', '!=', $discordUserId);
             })
             ->exists();
 
@@ -508,9 +583,24 @@ class ApplicationService
         }
     }
 
+    protected function findMatchingPendingApplication(int $nationId, string $discordUserId): ?Application
+    {
+        return Application::query()
+            ->where('nation_id', $nationId)
+            ->where('discord_user_id', $discordUserId)
+            ->where('status', ApplicationStatus::Pending->value)
+            ->latest('created_at')
+            ->first();
+    }
+
     private function isUniqueConstraintViolation(QueryException $exception): bool
     {
         return (string) ($exception->errorInfo[0] ?? '') === '23000';
+    }
+
+    private function applicationCreationLockKey(int $nationId, string $discordUserId): string
+    {
+        return sprintf('applications:create:%d:%s', $nationId, sha1($discordUserId));
     }
 
     /**

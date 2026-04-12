@@ -100,6 +100,25 @@ class ApplicationAdminWorkflowTest extends TestCase
         }
     }
 
+    public function test_discord_application_creation_returns_existing_pending_application_for_the_same_request(): void
+    {
+        $existingApplication = Application::query()->create([
+            'nation_id' => 877007,
+            'leader_name_snapshot' => 'Leader 7',
+            'discord_user_id' => '1000007',
+            'discord_username' => 'existing-user',
+            'status' => ApplicationStatus::Pending,
+            'pending_key' => 1,
+        ]);
+
+        $service = $this->makeApplicationServiceForNation($this->makeApplicantNation(877007));
+
+        $application = $service->createApplicationFromDiscord(877007, '1000007', 'existing-user');
+
+        $this->assertSame($existingApplication->id, $application->id);
+        $this->assertDatabaseCount('applications', 1);
+    }
+
     public function test_admin_can_cancel_a_pending_application(): void
     {
         $application = Application::query()->create([

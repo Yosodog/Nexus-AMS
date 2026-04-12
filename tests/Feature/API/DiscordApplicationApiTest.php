@@ -221,6 +221,44 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('application.id', $application->id);
     }
 
+    public function test_approve_endpoint_returns_a_retryable_failure_when_the_alliance_service_is_unavailable(): void
+    {
+        $moderator = $this->createModerator('moderator-approve-failure');
+        Application::query()->create([
+            'nation_id' => 877015,
+            'leader_name_snapshot' => 'Leader 877015',
+            'discord_user_id' => 'applicant-approve-failure',
+            'discord_username' => 'failure-user',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->once())
+            ->method('approveMember')
+            ->with(877015)
+            ->willThrowException(new \RuntimeException('BK net unavailable'));
+
+        $service = $this->makeApplicationService(
+            [877015 => $this->makeApplicantNation(877015)],
+            $alliancePositionService
+        );
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => 'applicant-approve-failure',
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-approve-failure',
+            ])
+            ->assertStatus(503)
+            ->assertExactJson([
+                'error' => 'alliance_update_failed',
+                'message' => 'Unable to update alliance position at this time.',
+                'context' => [],
+            ]);
+    }
+
     public function test_approve_endpoint_prefers_a_pending_application_over_recent_approval_without_request_id(): void
     {
         $moderator = $this->createModerator('moderator-approve-new-pending');
@@ -350,6 +388,44 @@ class DiscordApplicationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'denied')
             ->assertJsonPath('application.id', $application->id);
+    }
+
+    public function test_deny_endpoint_returns_a_retryable_failure_when_the_alliance_service_is_unavailable(): void
+    {
+        $moderator = $this->createModerator('moderator-deny-failure');
+        Application::query()->create([
+            'nation_id' => 877016,
+            'leader_name_snapshot' => 'Leader 877016',
+            'discord_user_id' => 'applicant-deny-failure',
+            'discord_username' => 'failure-deny-user',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $alliancePositionService = $this->createMock(AlliancePositionService::class);
+        $alliancePositionService->expects($this->once())
+            ->method('removeMember')
+            ->with(877016)
+            ->willThrowException(new \RuntimeException('BK net unavailable'));
+
+        $service = $this->makeApplicationService(
+            [877016 => $this->makeApplicantNation(877016)],
+            $alliancePositionService
+        );
+        $this->app->instance(ApplicationService::class, $service);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/deny', [
+                'applicant_discord_id' => 'applicant-deny-failure',
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'denial_request_id' => 'interaction-deny-failure',
+            ])
+            ->assertStatus(503)
+            ->assertExactJson([
+                'error' => 'alliance_update_failed',
+                'message' => 'Unable to update alliance position at this time.',
+                'context' => [],
+            ]);
     }
 
     public function test_deny_endpoint_prefers_a_pending_application_over_recent_denial_without_request_id(): void

@@ -93,10 +93,14 @@ class ApplicationServiceTest extends FeatureTestCase
             $positionService
         );
 
-        $this->expectException(ApplicationException::class);
-        $this->expectExceptionMessage('Unable to update alliance position at this time.');
-
-        $service->approveByDiscordUser('discord-applicant', $moderator->activeDiscordAccount()->discord_id);
+        try {
+            $service->approveByDiscordUser('discord-applicant', $moderator->activeDiscordAccount()->discord_id);
+            $this->fail('Expected an ApplicationException to be thrown.');
+        } catch (ApplicationException $exception) {
+            $this->assertSame('alliance_update_failed', $exception->error);
+            $this->assertSame(503, $exception->status);
+            $this->assertSame('Unable to update alliance position at this time.', $exception->getMessage());
+        }
     }
 
     public function test_deny_translates_alliance_position_failures(): void
@@ -119,10 +123,14 @@ class ApplicationServiceTest extends FeatureTestCase
             $positionService
         );
 
-        $this->expectException(ApplicationException::class);
-        $this->expectExceptionMessage('Unable to update alliance position at this time.');
-
-        $service->denyByDiscordUser('discord-deny', $moderator->activeDiscordAccount()->discord_id);
+        try {
+            $service->denyByDiscordUser('discord-deny', $moderator->activeDiscordAccount()->discord_id);
+            $this->fail('Expected an ApplicationException to be thrown.');
+        } catch (ApplicationException $exception) {
+            $this->assertSame('alliance_update_failed', $exception->error);
+            $this->assertSame(503, $exception->status);
+            $this->assertSame('Unable to update alliance position at this time.', $exception->getMessage());
+        }
     }
 
     private function createModerator(string $discordId): User
