@@ -42,11 +42,12 @@ class NationVerification extends Notification implements ShouldQueue
      */
     public function toPNW(object $notifiable): array
     {
+        // Use config(), not env(), for security and configuration caching.
         return [
             'nation_id' => $this->user->nation_id,
             'subject' => 'Verify Your Account',
-            'message' => 'Welcome to '.env(
-                'APP_NAME'
+            'message' => 'Welcome to '.config(
+                'app.name'
             )."! \n\nPlease verify your account by clicking the link below:\n\n".
                 '[link='.route('verify', ['code' => $this->verification_code]).']Click here to verify![/link]'.
                 "\n\nYour verification code: {$this->verification_code}",
