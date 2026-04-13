@@ -52,11 +52,44 @@
             :hidden="! auth()->user()?->can('view-accounts')"
         />
 
-        <x-menu-sub
-            title="Grants"
-            icon="o-home-modern"
-            :open="in_array(request()->route()?->getName(), ['admin.grants.city', 'admin.grants'], true)"
+        @php
+            $grantsMenuActive = in_array(request()->route()?->getName(), ['admin.grants.city', 'admin.grants'], true);
+        @endphp
+
+        <li
+            x-data="{
+                show: @js($grantsMenuActive),
+                toggle() {
+                    if (this.collapsed) {
+                        this.show = true;
+                        $dispatch('menu-sub-clicked');
+
+                        return;
+                    }
+
+                    this.show = ! this.show;
+                }
+            }"
         >
+            <details :open="show" @if($grantsMenuActive) open @endif @click.stop>
+                <summary
+                    @click.prevent="toggle()"
+                    @class([
+                        'hover:text-inherit px-4 py-1.5 my-0.5 text-inherit',
+                        'bg-base-300' => $grantsMenuActive,
+                    ])
+                >
+                    <x-mary-icon name="o-home-modern" class="inline-flex my-0.5" />
+
+                    <span class="mary-hideable whitespace-nowrap truncate">
+                        Grants
+                        @if ($grantsPending > 0)
+                            <span class="badge badge-primary badge-sm">{{ $grantsPending }}</span>
+                        @endif
+                    </span>
+                </summary>
+
+                <ul class="mary-hideable">
             <x-menu-item no-wire-navigate
                 title="City Grants"
                 icon="o-home"
@@ -75,7 +108,9 @@
                 badge-classes="badge-primary badge-sm"
                 :hidden="! auth()->user()?->can('view-grants')"
             />
-        </x-menu-sub>
+                </ul>
+            </details>
+        </li>
 
         <x-menu-item no-wire-navigate
             title="Loans"

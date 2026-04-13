@@ -7,9 +7,11 @@ use App\Enums\ApplicationStatus;
 use App\Exceptions\ApplicationException;
 use App\Exceptions\PWEntityDoesNotExist;
 use App\GraphQL\Models\Nation;
+use App\Jobs\SyncApplicationAllianceState;
 use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
+use App\Models\Nation as NationRecord;
 use App\Models\User;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
@@ -35,23 +37,50 @@ class ApplicationService
     {
         $this->assertApplicationsEnabled();
 
-        $nation = $this->fetchNation($nationId);
+        $nation = $this->fetchEligibleApplicantNation($nationId);
 
         $this->assertApplicantEligible($nation);
 
-        $this->assertNoPendingApplication($nationId, $discordUserId);
-
         try {
-            return Application::query()->create([
-                'nation_id' => $nationId,
-                'leader_name_snapshot' => $nation->leader_name ?? '',
-                'discord_user_id' => $discordUserId,
-                'discord_username' => $discordUsername,
-                'status' => ApplicationStatus::Pending,
-                'pending_key' => 1,
-            ]);
+            return Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
+                ->block(10, function () use ($nationId, $discordUserId, $discordUsername, $nation): Application {
+                    $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+                    if ($existingApplication) {
+                        return $existingApplication;
+                    }
+
+                    $this->assertNoConflictingPendingApplication($nationId, $discordUserId);
+
+                    return Application::query()->create([
+                        'nation_id' => $nationId,
+                        'leader_name_snapshot' => $nation->leader_name ?? '',
+                        'discord_user_id' => $discordUserId,
+                        'discord_username' => $discordUsername,
+                        'status' => ApplicationStatus::Pending,
+                        'pending_key' => 1,
+                    ]);
+                });
+        } catch (LockTimeoutException) {
+            $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+            if ($existingApplication) {
+                return $existingApplication;
+            }
+
+            throw new ApplicationException(
+                'application_creation_in_progress',
+                'Application creation is already in progress for this applicant. Please try again shortly.',
+                409
+            );
         } catch (QueryException $exception) {
             if ($this->isUniqueConstraintViolation($exception)) {
+                $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+                if ($existingApplication) {
+                    return $existingApplication;
+                }
+
                 throw new ApplicationException(
                     'pending_application_exists',
                     'An application is already pending for this nation or Discord user.',
@@ -166,26 +195,9 @@ class ApplicationService
         User $moderator
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
-        $nation = $this->fetchNation($application->nation_id);
+        $nation = $this->fetchNationInAlliance($application->nation_id);
 
         $this->assertNationInAlliance($nation);
-
-        try {
-            $this->alliancePositionService->approveMember($application->nation_id);
-        } catch (Throwable $e) {
-            Log::error('Failed to approve applicant in-game', [
-                'application_id' => $application->id,
-                'nation_id' => $application->nation_id,
-                'applicant_discord_id' => $application->discord_user_id,
-                'moderator_discord_id' => $moderatorDiscordId,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw new ApplicationException(
-                'alliance_update_failed',
-                'Unable to update alliance position at this time.'
-            );
-        }
 
         $application->status = ApplicationStatus::Approved;
         $application->pending_key = null;
@@ -193,6 +205,13 @@ class ApplicationService
         $application->approved_by_discord_id = $moderatorDiscordId;
         $application->approval_request_id = $approvalRequestId;
         $application->save();
+
+        SyncApplicationAllianceState::dispatch(
+            applicationId: $application->id,
+            targetStatus: ApplicationStatus::Approved,
+            moderatorUserId: $moderator->id,
+            moderatorName: $moderator->name,
+        )->afterCommit();
 
         Log::info('Application approved', [
             'application_id' => $application->id,
@@ -271,25 +290,6 @@ class ApplicationService
         User $moderator
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
-        $nation = $this->fetchNation($application->nation_id);
-        if ($this->isNationInAlliance($nation)) {
-            try {
-                $this->alliancePositionService->removeMember($application->nation_id);
-            } catch (Throwable $e) {
-                Log::error('Failed to deny applicant in-game', [
-                    'application_id' => $application->id,
-                    'nation_id' => $application->nation_id,
-                    'applicant_discord_id' => $application->discord_user_id,
-                    'moderator_discord_id' => $moderatorDiscordId,
-                    'error' => $e->getMessage(),
-                ]);
-
-                throw new ApplicationException(
-                    'alliance_update_failed',
-                    'Unable to update alliance position at this time.'
-                );
-            }
-        }
 
         $application->status = ApplicationStatus::Denied;
         $application->pending_key = null;
@@ -297,6 +297,13 @@ class ApplicationService
         $application->denied_by_discord_id = $moderatorDiscordId;
         $application->denial_request_id = $denialRequestId;
         $application->save();
+
+        SyncApplicationAllianceState::dispatch(
+            applicationId: $application->id,
+            targetStatus: ApplicationStatus::Denied,
+            moderatorUserId: $moderator->id,
+            moderatorName: $moderator->name,
+        )->afterCommit();
 
         Log::info('Application denied', [
             'application_id' => $application->id,
@@ -419,8 +426,14 @@ class ApplicationService
      */
     protected function fetchNation(int $nationId): Nation
     {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
         try {
-            return NationQueryService::getNationById($nationId);
+            return $this->queryNationFromApi($nationId);
         } catch (PWEntityDoesNotExist $e) {
             throw new ApplicationException('nation_not_found', 'Nation not found.', 404, context: [
                 'join_url' => $this->joinUrl(),
@@ -433,9 +446,38 @@ class ApplicationService
 
             throw new ApplicationException(
                 'nation_lookup_failed',
-                'Unable to validate the nation at this time.'
+                'Unable to validate the nation at this time.',
+                503
             );
         }
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    protected function fetchEligibleApplicantNation(int $nationId): Nation
+    {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation && $this->isLocalNationEligibleApplicant($localNation)) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
+        return $this->fetchNation($nationId);
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    protected function fetchNationInAlliance(int $nationId): Nation
+    {
+        $localNation = $this->findLocalNationSnapshot($nationId);
+
+        if ($localNation && $this->membershipService->contains((int) $localNation->alliance_id)) {
+            return $this->mapLocalNationToGraphQl($localNation);
+        }
+
+        return $this->fetchNation($nationId);
     }
 
     /**
@@ -489,13 +531,17 @@ class ApplicationService
     /**
      * @throws ApplicationException
      */
-    protected function assertNoPendingApplication(int $nationId, string $discordUserId): void
+    protected function assertNoConflictingPendingApplication(int $nationId, string $discordUserId): void
     {
         $exists = Application::query()
             ->where('status', ApplicationStatus::Pending->value)
             ->where(function ($query) use ($nationId, $discordUserId) {
                 $query->where('nation_id', $nationId)
                     ->orWhere('discord_user_id', $discordUserId);
+            })
+            ->where(function ($query) use ($nationId, $discordUserId) {
+                $query->where('nation_id', '!=', $nationId)
+                    ->orWhere('discord_user_id', '!=', $discordUserId);
             })
             ->exists();
 
@@ -508,9 +554,56 @@ class ApplicationService
         }
     }
 
+    protected function findMatchingPendingApplication(int $nationId, string $discordUserId): ?Application
+    {
+        return Application::query()
+            ->where('nation_id', $nationId)
+            ->where('discord_user_id', $discordUserId)
+            ->where('status', ApplicationStatus::Pending->value)
+            ->latest('created_at')
+            ->first();
+    }
+
     private function isUniqueConstraintViolation(QueryException $exception): bool
     {
         return (string) ($exception->errorInfo[0] ?? '') === '23000';
+    }
+
+    protected function queryNationFromApi(int $nationId): Nation
+    {
+        return NationQueryService::getNationById($nationId);
+    }
+
+    private function applicationCreationLockKey(int $nationId, string $discordUserId): string
+    {
+        return sprintf('applications:create:%d:%s', $nationId, sha1($discordUserId));
+    }
+
+    protected function findLocalNationSnapshot(int $nationId): ?NationRecord
+    {
+        return NationRecord::query()
+            ->select(['id', 'alliance_id', 'alliance_position', 'alliance_position_id', 'leader_name'])
+            ->find($nationId);
+    }
+
+    protected function isLocalNationEligibleApplicant(NationRecord $nation): bool
+    {
+        return $this->membershipService->contains((int) $nation->alliance_id)
+            && $nation->alliance_position === AlliancePositionEnum::APPLICANT->value;
+    }
+
+    protected function mapLocalNationToGraphQl(NationRecord $nation): Nation
+    {
+        $graphQlNation = new Nation;
+        $graphQlNation->id = (int) $nation->id;
+        $graphQlNation->leader_name = $nation->leader_name;
+        $graphQlNation->alliance_id = $nation->alliance_id !== null ? (int) $nation->alliance_id : null;
+        $graphQlNation->alliance_position = $nation->alliance_position;
+        $graphQlNation->alliance_position_id = $nation->alliance_position_id !== null
+            ? (int) $nation->alliance_position_id
+            : null;
+
+        return $graphQlNation;
     }
 
     /**
