@@ -5,6 +5,7 @@ namespace Tests\Unit\Services;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\ApplicationException;
 use App\GraphQL\Models\Nation as GraphQlNation;
+use App\Jobs\SyncApplicationAllianceState;
 use App\Models\Application;
 use App\Models\DiscordAccount;
 use App\Models\Nation;
@@ -12,8 +13,10 @@ use App\Models\User;
 use App\Services\AllianceMembershipService;
 use App\Services\AlliancePositionService;
 use App\Services\ApplicationService;
+use App\Services\AuditLogger;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\FeatureTestCase;
@@ -110,10 +113,12 @@ class ApplicationServiceTest extends FeatureTestCase
         $service->publicResolveModerator('discord-no-access');
     }
 
-    public function test_approve_translates_alliance_position_failures(): void
+    public function test_approve_marks_the_application_locally_and_queues_the_alliance_sync_job(): void
     {
+        Queue::fake();
+
         $moderator = $this->createModerator('discord-mod-1');
-        Application::query()->create([
+        $application = Application::query()->create([
             'nation_id' => 877101,
             'leader_name_snapshot' => 'Leader',
             'discord_user_id' => 'discord-applicant',
@@ -122,28 +127,33 @@ class ApplicationServiceTest extends FeatureTestCase
             'pending_key' => 1,
         ]);
 
-        $positionService = $this->createMock(AlliancePositionService::class);
-        $positionService->method('approveMember')->willThrowException(new RuntimeException('PW down'));
-
         $service = $this->makeService(
-            [877101 => $this->makeNation(877101, 877, 'APPLICANT')],
-            $positionService
+            [877101 => $this->makeNation(877101, 877, 'APPLICANT')]
         );
 
-        try {
-            $service->approveByDiscordUser('discord-applicant', $moderator->activeDiscordAccount()->discord_id);
-            $this->fail('Expected an ApplicationException to be thrown.');
-        } catch (ApplicationException $exception) {
-            $this->assertSame('alliance_update_failed', $exception->error);
-            $this->assertSame(503, $exception->status);
-            $this->assertSame('Unable to update alliance position at this time.', $exception->getMessage());
-        }
+        $approvedApplication = $service->approveByDiscordUser('discord-applicant', $moderator->activeDiscordAccount()->discord_id);
+
+        $application->refresh();
+
+        $this->assertSame($application->id, $approvedApplication->id);
+        $this->assertSame(ApplicationStatus::Approved, $application->status);
+        $this->assertNull($application->pending_key);
+        $this->assertSame($moderator->activeDiscordAccount()->discord_id, $application->approved_by_discord_id);
+
+        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($application, $moderator): bool {
+            return $job->applicationId === $application->id
+                && $job->targetStatus === ApplicationStatus::Approved
+                && $job->moderatorUserId === $moderator->id
+                && $job->moderatorName === $moderator->name;
+        });
     }
 
-    public function test_deny_translates_alliance_position_failures(): void
+    public function test_deny_marks_the_application_locally_and_queues_the_alliance_sync_job(): void
     {
+        Queue::fake();
+
         $moderator = $this->createModerator('discord-mod-2');
-        Application::query()->create([
+        $application = Application::query()->create([
             'nation_id' => 877102,
             'leader_name_snapshot' => 'Leader',
             'discord_user_id' => 'discord-deny',
@@ -152,22 +162,96 @@ class ApplicationServiceTest extends FeatureTestCase
             'pending_key' => 1,
         ]);
 
-        $positionService = $this->createMock(AlliancePositionService::class);
-        $positionService->method('removeMember')->willThrowException(new RuntimeException('PW down'));
-
         $service = $this->makeService(
-            [877102 => $this->makeNation(877102, 877, 'APPLICANT')],
-            $positionService
+            [877102 => $this->makeNation(877102, 877, 'APPLICANT')]
         );
 
-        try {
-            $service->denyByDiscordUser('discord-deny', $moderator->activeDiscordAccount()->discord_id);
-            $this->fail('Expected an ApplicationException to be thrown.');
-        } catch (ApplicationException $exception) {
-            $this->assertSame('alliance_update_failed', $exception->error);
-            $this->assertSame(503, $exception->status);
-            $this->assertSame('Unable to update alliance position at this time.', $exception->getMessage());
-        }
+        $deniedApplication = $service->denyByDiscordUser('discord-deny', $moderator->activeDiscordAccount()->discord_id);
+
+        $application->refresh();
+
+        $this->assertSame($application->id, $deniedApplication->id);
+        $this->assertSame(ApplicationStatus::Denied, $application->status);
+        $this->assertNull($application->pending_key);
+        $this->assertSame($moderator->activeDiscordAccount()->discord_id, $application->denied_by_discord_id);
+
+        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($application, $moderator): bool {
+            return $job->applicationId === $application->id
+                && $job->targetStatus === ApplicationStatus::Denied
+                && $job->moderatorUserId === $moderator->id
+                && $job->moderatorName === $moderator->name;
+        });
+    }
+
+    public function test_sync_application_alliance_state_job_approves_the_member_in_politics_and_war(): void
+    {
+        $application = Application::query()->create([
+            'nation_id' => 877105,
+            'leader_name_snapshot' => 'Leader',
+            'discord_user_id' => 'discord-job-approve',
+            'discord_username' => 'applicant',
+            'status' => ApplicationStatus::Approved->value,
+            'pending_key' => null,
+            'approved_at' => now(),
+            'approved_by_discord_id' => 'discord-mod-3',
+        ]);
+
+        $positionService = $this->createMock(AlliancePositionService::class);
+        $positionService->expects($this->once())
+            ->method('approveMember')
+            ->with(877105);
+
+        $auditLogger = $this->createMock(AuditLogger::class);
+        $auditLogger->expects($this->once())
+            ->method('success');
+
+        $job = new SyncApplicationAllianceState(
+            applicationId: $application->id,
+            targetStatus: ApplicationStatus::Approved,
+            moderatorUserId: 55,
+            moderatorName: 'Mod',
+        );
+
+        $job->handle($positionService, app(AllianceMembershipService::class), $auditLogger);
+    }
+
+    public function test_sync_application_alliance_state_job_denies_the_member_in_politics_and_war_when_still_in_alliance(): void
+    {
+        Nation::factory()->create([
+            'id' => 877106,
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
+            'alliance_position' => 'APPLICANT',
+            'alliance_position_id' => 1,
+        ]);
+
+        $application = Application::query()->create([
+            'nation_id' => 877106,
+            'leader_name_snapshot' => 'Leader',
+            'discord_user_id' => 'discord-job-deny',
+            'discord_username' => 'applicant',
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denied_at' => now(),
+            'denied_by_discord_id' => 'discord-mod-4',
+        ]);
+
+        $positionService = $this->createMock(AlliancePositionService::class);
+        $positionService->expects($this->once())
+            ->method('removeMember')
+            ->with(877106);
+
+        $auditLogger = $this->createMock(AuditLogger::class);
+        $auditLogger->expects($this->once())
+            ->method('denied');
+
+        $job = new SyncApplicationAllianceState(
+            applicationId: $application->id,
+            targetStatus: ApplicationStatus::Denied,
+            moderatorUserId: 56,
+            moderatorName: 'Mod 2',
+        );
+
+        $job->handle($positionService, app(AllianceMembershipService::class), $auditLogger);
     }
 
     private function createModerator(string $discordId): User
