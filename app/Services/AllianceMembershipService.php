@@ -87,8 +87,8 @@ class AllianceMembershipService
         $primaryAllianceId = $this->getPrimaryAllianceId();
 
         if ($allianceId === $primaryAllianceId) {
-            $apiKey = env('PW_API_KEY');
-            $mutationKey = env('PW_API_MUTATION_KEY');
+            $apiKey = config('services.pw.api_key');
+            $mutationKey = config('services.pw.mutation_key');
 
             if ($apiKey === null) {
                 return null;

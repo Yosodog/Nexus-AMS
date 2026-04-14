@@ -14,7 +14,7 @@ class PWMessageService
 
     public function __construct()
     {
-        $this->apiKey = env('PW_API_KEY');
+        $this->apiKey = (string) config('services.pw.api_key');
     }
 
     public function sendMessage(int $nation_id, string $subject, string $message): bool
