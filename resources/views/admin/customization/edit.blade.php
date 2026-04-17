@@ -80,7 +80,7 @@
                     class="textarea js-ckeditor w-full"
                     data-editor-input="true"
                     rows="14"
-                >{!! $initialContent !!}</textarea>
+                >{{ $initialContent }}</textarea>
             </div>
 
             <div class="mt-6">

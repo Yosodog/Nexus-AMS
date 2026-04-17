@@ -131,6 +131,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $this->assertNotNull($user->fresh()->verification_code);
         $this->assertSame($user->fresh()->verification_code, $notification->verification_code);
+        $this->assertStringContainsString('Welcome to '.config('app.name').'!', $payload['message']);
         $this->assertStringContainsString($notification->verification_code, $payload['message']);
         $this->assertStringContainsString(route('verify', ['code' => $notification->verification_code]), $payload['message']);
     }
