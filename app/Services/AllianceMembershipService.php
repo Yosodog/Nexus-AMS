@@ -87,16 +87,16 @@ class AllianceMembershipService
         $primaryAllianceId = $this->getPrimaryAllianceId();
 
         if ($allianceId === $primaryAllianceId) {
-            $apiKey = env('PW_API_KEY');
-            $mutationKey = env('PW_API_MUTATION_KEY');
+            $apiKey = config('services.pw.api_key');
+            $mutationKey = config('services.pw.mutation_key');
 
-            if ($apiKey === null) {
+            if (! is_string($apiKey) || $apiKey === '') {
                 return null;
             }
 
             return [
                 'api_key' => $apiKey,
-                'mutation_key' => $mutationKey ?: null,
+                'mutation_key' => is_string($mutationKey) && $mutationKey !== '' ? $mutationKey : null,
             ];
         }
 

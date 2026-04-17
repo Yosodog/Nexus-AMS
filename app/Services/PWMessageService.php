@@ -8,17 +8,31 @@ use Illuminate\Support\Facades\Log;
 
 class PWMessageService
 {
-    protected string $apiKey;
+    protected ?string $apiKey;
 
     protected string $endpoint = 'https://politicsandwar.com/api/send-message/';
 
     public function __construct()
     {
-        $this->apiKey = env('PW_API_KEY');
+        $apiKey = config('services.pw.api_key');
+
+        $this->apiKey = is_string($apiKey) && $apiKey !== ''
+            ? $apiKey
+            : null;
     }
 
     public function sendMessage(int $nation_id, string $subject, string $message): bool
     {
+        if ($this->apiKey === null) {
+            Log::error('PNW Message Failed', [
+                'nation_id' => $nation_id,
+                'subject' => $subject,
+                'reason' => 'missing_api_key',
+            ]);
+
+            return false;
+        }
+
         $payload = [
             'key' => $this->apiKey,
             'to' => $nation_id,
