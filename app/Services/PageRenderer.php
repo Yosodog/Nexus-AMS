@@ -30,7 +30,103 @@ class PageRenderer
 
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (trim($html) === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument;
+        // Suppress errors due to HTML5 tags or malformed HTML
+        libxml_use_internal_errors(true);
+        // Load HTML with UTF-8 encoding
+        $dom->loadHTML('<?xml encoding="UTF-8"><html><body>'.$html.'</body></html>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $allowedTags = [
+            'p', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'img', 'iframe',
+            'pre', 'code', 'blockquote', 'figure', 'figcaption',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br', 'hr',
+        ];
+
+        $allowedAttributes = [
+            'a' => ['href', 'title', 'target'],
+            'img' => ['src', 'alt', 'title', 'width', 'height'],
+            'iframe' => ['src', 'title', 'width', 'height', 'allowfullscreen', 'loading'],
+        ];
+
+        $nodesToRemove = [];
+        $body = $dom->getElementsByTagName('body')->item(0);
+        foreach ($body->childNodes as $node) {
+            $this->sanitizeNode($node, $allowedTags, $allowedAttributes, $nodesToRemove);
+        }
+
+        foreach ($nodesToRemove as $node) {
+            if ($node->parentNode) {
+                $node->parentNode->removeChild($node);
+            }
+        }
+
+        $output = '';
+        foreach ($body->childNodes as $node) {
+            $output .= $dom->saveHTML($node);
+        }
+
+        return trim((string) $output);
+    }
+
+    private function sanitizeNode(\DOMNode $node, array $allowedTags, array $allowedAttributes, array &$nodesToRemove): void
+    {
+        if ($node->nodeType === XML_ELEMENT_NODE) {
+            $tagName = strtolower($node->nodeName);
+
+            if (! in_array($tagName, $allowedTags, true)) {
+                $nodesToRemove[] = $node;
+
+                if ($node->hasChildNodes()) {
+                    foreach (iterator_to_array($node->childNodes) as $child) {
+                        $node->parentNode->insertBefore($child, $node);
+                    }
+                }
+
+                return;
+            }
+
+            if ($node->hasAttributes()) {
+                $attrsToRemove = [];
+                $allowedForTag = $allowedAttributes[$tagName] ?? [];
+
+                foreach ($node->attributes as $attr) {
+                    $attrName = strtolower($attr->nodeName);
+
+                    if (! in_array($attrName, $allowedForTag, true)) {
+                        $attrsToRemove[] = $attrName;
+
+                        continue;
+                    }
+
+                    // Sanitize sensitive attributes
+                    if ($attrName === 'href' || $attrName === 'src') {
+                        $value = trim($attr->nodeValue);
+                        if (preg_match('/^\s*javascript:/i', $value)) {
+                            $attrsToRemove[] = $attrName;
+                        }
+                    }
+
+                    if (str_starts_with($attrName, 'on')) {
+                        $attrsToRemove[] = $attrName;
+                    }
+                }
+
+                foreach ($attrsToRemove as $attrName) {
+                    $node->removeAttribute($attrName);
+                }
+            }
+        }
+
+        if ($node->hasChildNodes()) {
+            foreach (iterator_to_array($node->childNodes) as $child) {
+                $this->sanitizeNode($child, $allowedTags, $allowedAttributes, $nodesToRemove);
+            }
+        }
     }
 
     /**
