@@ -75,4 +75,21 @@ class PageRendererSecurityTest extends UnitTestCase
         $this->assertStringContainsString('https://www.youtube.com/embed/abc123', $html);
         $this->assertSame(1, substr_count($html, '<iframe '));
     }
+
+    public function test_normalize_html_strips_dangerous_tags(): void
+    {
+        $renderer = new PageRenderer;
+
+        $malicious = '<p onmouseover="alert(1)">Safe</p><script>alert(1)</script><iframe src="https://youtube.com/embed/123"></iframe><div onmouseover="alert(1)">Evil</div><a href="javascript:alert(1)">Link</a>';
+        $result = $renderer->render($malicious);
+
+        $this->assertStringContainsString('<p>Safe</p>', $result);
+        $this->assertStringContainsString('<iframe src="https://youtube.com/embed/123"></iframe>', $result);
+        $this->assertStringNotContainsString('<script>', $result);
+        $this->assertStringNotContainsString('onmouseover', $result);
+        $this->assertStringNotContainsString('javascript:', $result);
+        $this->assertStringContainsString('Evil', $result);
+        $this->assertStringContainsString('<a>Link</a>', $result);
+        $this->assertStringContainsString('<div>Evil</div>', $result);
+    }
 }

@@ -210,6 +210,10 @@ class Page extends Model
 
     private function normalizeDecodedEditorValue(mixed $value): ?string
     {
+        if (is_array($value) && array_key_exists('html', $value)) {
+            return (string) $value['html'];
+        }
+
         if (is_array($value) || is_string($value)) {
             return app(PageRenderer::class)->render($value);
         }
