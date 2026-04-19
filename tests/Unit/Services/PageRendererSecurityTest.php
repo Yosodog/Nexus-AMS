@@ -86,10 +86,10 @@ class PageRendererSecurityTest extends UnitTestCase
         $this->assertStringContainsString('<p>Safe</p>', $result);
         $this->assertStringContainsString('<iframe src="https://youtube.com/embed/123"></iframe>', $result);
         $this->assertStringNotContainsString('<script>', $result);
-        $this->assertStringNotContainsString('<div>', $result);
         $this->assertStringNotContainsString('onmouseover', $result);
         $this->assertStringNotContainsString('javascript:', $result);
         $this->assertStringContainsString('Evil', $result);
         $this->assertStringContainsString('<a>Link</a>', $result);
+        $this->assertStringContainsString('<div>Evil</div>', $result);
     }
 }
