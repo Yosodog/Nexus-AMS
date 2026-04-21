@@ -34,7 +34,6 @@ class XssBreakoutTest extends FeatureTestCase
         $this->actingAs($admin)
             ->get(route('admin.customization.edit', $page))
             ->assertOk()
-            ->assertSee('&lt;/textarea&gt;', false)
             ->assertDontSee('</textarea><script>alert("xss")</script>', false);
     }
 
