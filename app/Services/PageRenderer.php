@@ -32,7 +32,7 @@ class PageRenderer
         'p', 'br', 'b', 'i', 'u', 'a', 'ul', 'ol', 'li',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'div', 'span', 'img', 'iframe', 'figure', 'figcaption',
-        'pre', 'code', 'blockquote', 'hr', 'em', 'strong',
+        'pre', 'code', 'blockquote', 'hr', 'em', 'strong', 'textarea',
     ];
 
     private const ALLOWED_ATTRIBUTES = [
@@ -50,9 +50,8 @@ class PageRenderer
         libxml_use_internal_errors(true);
 
         // Load with a wrapper to handle fragments and ensure UTF-8
-        $wrappedHtml = '<div id="renderer-root">'.htmlspecialchars_decode(htmlentities($html, ENT_QUOTES, 'UTF-8', false), ENT_QUOTES).'</div>';
-        // Note: We use a hack to force UTF-8 in DOMDocument
-        $wrappedHtml = '<?xml encoding="utf-8" ?>'.$wrappedHtml;
+        $encodedHtml = mb_encode_numericentity($html, [0x80, 0xffff, 0, 0xffff], 'UTF-8');
+        $wrappedHtml = '<div id="renderer-root">'.$encodedHtml.'</div>';
         $dom->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
 
