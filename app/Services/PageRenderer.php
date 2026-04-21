@@ -28,9 +28,112 @@ class PageRenderer
         return $this->normalizeHtml($content);
     }
 
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'i', 'u', 'a', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'div', 'span', 'img', 'iframe', 'figure', 'figcaption',
+        'pre', 'code', 'blockquote', 'hr', 'em', 'strong',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel',
+        'width', 'height', 'loading', 'allowfullscreen', 'cite',
+    ];
+
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (trim($html) === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+
+        // Load with a wrapper to handle fragments and ensure UTF-8
+        $wrappedHtml = '<div id="renderer-root">'.htmlspecialchars_decode(htmlentities($html, ENT_QUOTES, 'UTF-8', false), ENT_QUOTES).'</div>';
+        // Note: We use a hack to force UTF-8 in DOMDocument
+        $wrappedHtml = '<?xml encoding="utf-8" ?>'.$wrappedHtml;
+        $dom->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $root = $dom->getElementById('renderer-root');
+        if (! $root) {
+            return '';
+        }
+
+        $this->sanitizeNode($root);
+
+        $output = '';
+        foreach ($root->childNodes as $child) {
+            $output .= $dom->saveHTML($child);
+        }
+
+        return trim($output);
+    }
+
+    private function sanitizeNode(\DOMNode $node): void
+    {
+        for ($i = $node->childNodes->length - 1; $i >= 0; $i--) {
+            $child = $node->childNodes->item($i);
+
+            if ($child instanceof \DOMElement) {
+                $tagName = strtolower($child->nodeName);
+
+                if (! in_array($tagName, self::ALLOWED_TAGS)) {
+                    // Strip the tag but preserve its children
+                    while ($child->hasChildNodes()) {
+                        $node->insertBefore($child->firstChild, $child);
+                    }
+                    $node->removeChild($child);
+
+                    continue;
+                }
+
+                // Sanitize attributes
+                for ($j = $child->attributes->length - 1; $j >= 0; $j--) {
+                    $attr = $child->attributes->item($j);
+                    $name = strtolower($attr->nodeName);
+                    $value = $attr->nodeValue;
+
+                    // Whitelist attributes
+                    if (! in_array($name, self::ALLOWED_ATTRIBUTES)) {
+                        $child->removeAttribute($name);
+
+                        continue;
+                    }
+
+                    // Block javascript: and other dangerous URI schemes
+                    if (preg_match('/^\s*(javascript|data|vbscript):/i', $value)) {
+                        $child->removeAttribute($name);
+
+                        continue;
+                    }
+
+                    // Specific attribute validation
+                    if ($name === 'src' && $tagName === 'img') {
+                        $validSrc = $this->normalizeImageSource($value);
+                        if ($validSrc === null) {
+                            $child->removeAttribute($name);
+                        } else {
+                            $child->setAttribute($name, $validSrc);
+                        }
+                    }
+
+                    if ($name === 'src' && $tagName === 'iframe') {
+                        $validSrc = $this->normalizeEmbedSource($value);
+                        if ($validSrc === null) {
+                            $child->removeAttribute($name);
+                        } else {
+                            $child->setAttribute($name, $validSrc);
+                        }
+                    }
+                }
+
+                $this->sanitizeNode($child);
+            } elseif ($child instanceof \DOMComment) {
+                $node->removeChild($child);
+            }
+        }
     }
 
     /**
