@@ -107,7 +107,6 @@ class PageRendererSecurityTest extends UnitTestCase
 
     public function test_normalize_html_prevents_obfuscated_protocol_bypass(): void
     {
-        // Test with hidden characters like \x01 and newlines
         $payload = '<a href="java' . "\0" . 'script:alert(1)">Link</a>' .
                    '<a href="javascript' . "\n" . ':alert(2)">Link</a>';
 

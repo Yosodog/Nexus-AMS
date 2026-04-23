@@ -31,10 +31,12 @@ class XssBreakoutTest extends FeatureTestCase
             'draft' => '</textarea><script>alert("xss")</script>',
         ]);
 
+        // The PageRenderer sanitizer now strips </textarea> (unexpected end tag)
+        // and <script> (not in whitelist), so the draft rendered in the view
+        // will no longer contain the breakout payload.
         $this->actingAs($admin)
             ->get(route('admin.customization.edit', $page))
             ->assertOk()
-            ->assertSee('&lt;/textarea&gt;', false)
             ->assertDontSee('</textarea><script>alert("xss")</script>', false);
     }
 
@@ -53,6 +55,8 @@ class XssBreakoutTest extends FeatureTestCase
             ['message' => '</textarea><script>alert("followup")</script>']
         );
 
+        // Recruitment messages are not processed by PageRenderer in the view (they use e()),
+        // so they should still be escaped as entities.
         $this->actingAs($admin)
             ->get(route('admin.recruitment.index'))
             ->assertOk()
