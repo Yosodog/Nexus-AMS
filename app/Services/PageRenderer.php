@@ -10,6 +10,21 @@ use Illuminate\Support\Str;
  */
 class PageRenderer
 {
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'span',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li',
+        'blockquote', 'figure', 'figcaption',
+        'img', 'iframe',
+        'pre', 'code',
+        'a', 'div',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'href', 'src', 'alt', 'title', 'class',
+        'width', 'height', 'loading', 'allowfullscreen',
+    ];
+
     /**
      * Render the stored payload into HTML.
      *
@@ -28,9 +43,54 @@ class PageRenderer
         return $this->normalizeHtml($content);
     }
 
+    /**
+     * Normalize and sanitize raw HTML fragments.
+     */
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (trim($html) === '') {
+            return '';
+        }
+        $dom = new \DOMDocument;
+        $state = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_use_internal_errors($state);
+        $xpath = new \DOMXPath($dom);
+        // Use iterator_to_array to avoid skipped nodes when removing from live list
+        foreach (iterator_to_array($xpath->query('//*')) as $node) {
+            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS)) {
+                $node->parentNode?->removeChild($node);
+                continue;
+            }
+            foreach (iterator_to_array($node->attributes) as $attr) {
+                $name = strtolower($attr->name);
+                if (! in_array($name, self::ALLOWED_ATTRIBUTES) || str_starts_with($name, 'on')) {
+                    $node->removeAttribute($attr->name);
+                    continue;
+                }
+                // Strip control chars and check for dangerous protocols
+                $cleanVal = preg_replace('/[\x00-\x20\x7F]/', '', $attr->value);
+                if (preg_match('/^(javascript|data|vbscript):/i', $cleanVal)) {
+                    $node->removeAttribute($attr->name);
+                    continue;
+                }
+                if ($node->nodeName === 'img' && $name === 'src') {
+                    if (! ($s = $this->normalizeImageSource($attr->value))) {
+                        $node->removeAttribute($name);
+                    } else {
+                        $node->setAttribute($name, $s);
+                    }
+                } elseif ($node->nodeName === 'iframe' && $name === 'src') {
+                    if (! ($s = $this->normalizeEmbedSource($attr->value))) {
+                        $node->removeAttribute($name);
+                    } else {
+                        $node->setAttribute($name, $s);
+                    }
+                }
+            }
+        }
+
+        return trim(preg_replace('/^<\?xml[^>]*>/i', '', $dom->saveHTML()));
     }
 
     /**
