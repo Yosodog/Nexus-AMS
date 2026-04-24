@@ -10,6 +10,16 @@ use Illuminate\Support\Str;
  */
 class PageRenderer
 {
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'blockquote', 'img', 'iframe', 'pre', 'code', 'a', 'figure', 'figcaption',
+        'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'src', 'alt', 'class', 'loading', 'href', 'title', 'allowfullscreen', 'colspan', 'rowspan',
+    ];
+
     /**
      * Render the stored payload into HTML.
      *
@@ -30,7 +40,39 @@ class PageRenderer
 
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (trim($html) === '') {
+            return '';
+        }
+        $dom = new \DOMDocument;
+        $html = htmlspecialchars_decode(htmlentities($html, ENT_QUOTES, 'UTF-8', false), ENT_QUOTES);
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $xpath = new \DOMXPath($dom);
+        foreach (iterator_to_array($xpath->query('//*')) as $node) {
+            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS)) {
+                $node->parentNode->removeChild($node);
+            }
+        }
+        foreach (iterator_to_array($xpath->query('//@*')) as $attr) {
+            $name = strtolower($attr->nodeName);
+            $val = (string) $attr->nodeValue;
+            $parent = $attr->parentNode;
+            if (! in_array($name, self::ALLOWED_ATTRIBUTES) || str_starts_with($name, 'on')) {
+                $parent->removeAttribute($name);
+                continue;
+            }
+            if (in_array($name, ['href', 'src'])) {
+                if ($name === 'src' && $parent->nodeName === 'img') {
+                    ($n = $this->normalizeImageSource($val)) ? $attr->nodeValue = $n : $parent->removeAttribute($name);
+                } elseif ($name === 'src' && $parent->nodeName === 'iframe') {
+                    ($n = $this->normalizeEmbedSource($val)) ? $attr->nodeValue = $n : $parent->removeAttribute($name);
+                } elseif (preg_match('/^(javascript|data|vbscript|file):/i', preg_replace('/[\x00-\x1F\x7F\s]/u', '', $val))) {
+                    $parent->removeAttribute($name);
+                }
+            }
+        }
+
+        return trim(str_replace('<?xml encoding="utf-8" ?>', '', $dom->saveHTML()));
     }
 
     /**
