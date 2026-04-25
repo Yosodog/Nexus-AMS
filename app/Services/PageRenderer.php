@@ -31,13 +31,15 @@ class PageRenderer
     {
         if (is_array($content)) {
             if (array_key_exists('html', $content) && is_string($content['html'])) {
-                return $this->normalizeHtml($content['html']);
+                $html = $content['html'];
+            } else {
+                $html = $this->renderLegacyBlocks($content);
             }
-
-            return $this->renderLegacyBlocks($content);
+        } else {
+            $html = $content;
         }
 
-        return $this->normalizeHtml($content);
+        return $this->normalizeHtml($html);
     }
 
     private function normalizeHtml(string $html): string
