@@ -10,6 +10,18 @@ use Illuminate\Support\Str;
  */
 class PageRenderer
 {
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'i', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'img', 'iframe',
+        'pre', 'code', 'figure', 'figcaption', 'div', 'span', 'table',
+        'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'href', 'src', 'alt', 'title', 'class', 'loading', 'allowfullscreen',
+        'colspan', 'rowspan',
+    ];
+
     /**
      * Render the stored payload into HTML.
      *
@@ -30,7 +42,83 @@ class PageRenderer
 
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        $html = trim($html);
+        if ($html === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        libxml_use_internal_errors(true);
+
+        // Force UTF-8 parsing using the recommended pattern for PHP 8.3+
+        $encodedHtml = '<?xml encoding="utf-8" ?>'.$html;
+        $dom->loadHTML($encodedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $xpath = new \DOMXPath($dom);
+
+        // Remove tags not in whitelist
+        $nodes = $xpath->query('//*');
+        foreach (iterator_to_array($nodes) as $node) {
+            /** @var \DOMElement $node */
+            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS, true)) {
+                $node->parentNode?->removeChild($node);
+
+                continue;
+            }
+
+            if ($node->hasAttributes()) {
+                $attributes = iterator_to_array($node->attributes);
+                foreach ($attributes as $attr) {
+                    /** @var \DOMAttr $attr */
+                    $name = strtolower($attr->nodeName);
+
+                    if (! in_array($name, self::ALLOWED_ATTRIBUTES, true)) {
+                        $node->removeAttribute($attr->nodeName);
+
+                        continue;
+                    }
+
+                    if (in_array($name, ['href', 'src'], true)) {
+                        $value = $attr->nodeValue;
+                        // Strip whitespace and control characters to prevent obfuscated protocol bypasses
+                        $cleanedValue = preg_replace('/[\x00-\x1F\s]/u', '', (string) $value);
+
+                        if (preg_match('/^(javascript|data|vbscript):/i', $cleanedValue)) {
+                            $node->removeAttribute($attr->nodeName);
+
+                            continue;
+                        }
+
+                        // Apply existing source-specific normalization
+                        if ($node->nodeName === 'img' && $name === 'src') {
+                            $normalized = $this->normalizeImageSource((string) $value);
+                            if ($normalized === null) {
+                                $node->removeAttribute($attr->nodeName);
+
+                                continue;
+                            }
+                            $node->setAttribute($attr->nodeName, $normalized);
+                        }
+
+                        if ($node->nodeName === 'iframe' && $name === 'src') {
+                            $normalized = $this->normalizeEmbedSource((string) $value);
+                            if ($normalized === null) {
+                                $node->removeAttribute($attr->nodeName);
+
+                                continue;
+                            }
+                            $node->setAttribute($attr->nodeName, $normalized);
+                        }
+                    }
+                }
+            }
+        }
+
+        $output = $dom->saveHTML();
+        $output = str_replace('<?xml encoding="utf-8" ?>', '', (string) $output);
+
+        return trim((string) $output);
     }
 
     /**
