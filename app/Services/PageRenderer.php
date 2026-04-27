@@ -46,7 +46,7 @@ class PageRenderer
             return '';
         }
 
-        $dom = new \DOMDocument;
+        $dom = new \DOMDocument();
         libxml_use_internal_errors(true);
         $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
