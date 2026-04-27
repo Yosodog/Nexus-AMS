@@ -28,9 +28,74 @@ class PageRenderer
         return $this->normalizeHtml($content);
     }
 
+    private const ALLOWED_TAGS = [
+        'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'blockquote', 'img', 'iframe',
+        'pre', 'code', 'br', 'hr', 'a', 'strong', 'em', 'u', 's',
+        'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'src', 'alt', 'href', 'title', 'class', 'loading',
+        'allowfullscreen', 'colspan', 'rowspan', 'target', 'rel',
+    ];
+
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (trim($html) === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        foreach (iterator_to_array((new \DOMXPath($dom))->query('//*')) as $node) {
+            $tag = strtolower($node->nodeName);
+            if (! in_array($tag, self::ALLOWED_TAGS)) {
+                if (in_array($tag, ['script', 'style', 'object', 'embed', 'applet', 'link', 'meta'])) {
+                    $node->parentNode->removeChild($node);
+                } else {
+                    while ($node->firstChild) {
+                        $node->parentNode->insertBefore($node->firstChild, $node);
+                    }
+                    $node->parentNode->removeChild($node);
+                }
+
+                continue;
+            }
+
+            if ($node->hasAttributes()) {
+                foreach (iterator_to_array($node->attributes) as $attr) {
+                    $name = strtolower($attr->nodeName);
+                    if (! in_array($name, self::ALLOWED_ATTRIBUTES) || str_starts_with($name, 'on')) {
+                        $node->removeAttribute($attr->nodeName);
+
+                        continue;
+                    }
+                    if (in_array($name, ['src', 'href'])) {
+                        $val = trim(preg_replace('/[\x00-\x1F\x7F]/u', '', $attr->nodeValue));
+                        if ($name === 'src') {
+                            $norm = match ($tag) {
+                                'img' => $this->normalizeImageSource($val),
+                                'iframe' => $this->normalizeEmbedSource($val),
+                                default => null
+                            };
+                            if (! $norm) {
+                                $node->removeAttribute($attr->nodeName);
+                            } else {
+                                $node->setAttribute($attr->nodeName, $norm);
+                            }
+                        } elseif (preg_match('/^\s*(javascript|data|vbscript):/i', $val)) {
+                            $node->removeAttribute($attr->nodeName);
+                        }
+                    }
+                }
+            }
+        }
+
+        return trim(str_replace('<?xml encoding="utf-8" ?>', '', $dom->saveHTML()));
     }
 
     /**
