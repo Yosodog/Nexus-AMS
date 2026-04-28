@@ -15,6 +15,18 @@ class PageRenderer
      *
      * @param  array<int, mixed>|string  $content
      */
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'iframe', 'blockquote',
+        'pre', 'code', 'figure', 'figcaption', 'div', 'span',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'loading', 'allowfullscreen',
+        'colspan', 'rowspan',
+    ];
+
     public function render(array|string $content): string
     {
         if (is_array($content)) {
@@ -28,9 +40,57 @@ class PageRenderer
         return $this->normalizeHtml($content);
     }
 
+    /**
+     * Sanitize HTML content using a whitelist of tags and attributes.
+     */
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (($html = trim($html)) === '') {
+            return '';
+        }
+        $dom = new \DOMDocument;
+        $prevErrors = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        foreach (iterator_to_array($dom->getElementsByTagName('*')) as $node) {
+            $tag = strtolower($node->nodeName);
+            if (! in_array($tag, self::ALLOWED_TAGS)) {
+                if (in_array($tag, ['script', 'style', 'object', 'embed', 'applet', 'meta', 'link'])) {
+                    $node->parentNode?->removeChild($node);
+                } else {
+                    while ($node->firstChild) {
+                        $node->parentNode?->insertBefore($node->firstChild, $node);
+                    }
+                    $node->parentNode?->removeChild($node);
+                }
+                continue;
+            }
+            foreach (iterator_to_array($node->attributes) as $attr) {
+                $name = strtolower($attr->name);
+                if (str_starts_with($name, 'on') || ! in_array($name, self::ALLOWED_ATTRIBUTES)) {
+                    $node->removeAttribute($attr->name);
+                    continue;
+                }
+                if (in_array($name, ['href', 'src'])) {
+                    $clean = preg_replace('/[\x00-\x1F\x7F\s]/u', '', $attr->value) ?? '';
+                    if (preg_match('/^(javascript|data|vbscript):/i', $clean)) {
+                        $node->removeAttribute($attr->name);
+                        continue;
+                    }
+                    if ($tag === 'img' && $name === 'src') {
+                        $src = $this->normalizeImageSource($attr->value);
+                        $src ? $node->setAttribute($attr->name, $src) : $node->removeAttribute($attr->name);
+                    } elseif ($tag === 'iframe' && $name === 'src') {
+                        $src = $this->normalizeEmbedSource($attr->value);
+                        $src ? $node->setAttribute($attr->name, $src) : $node->removeAttribute($attr->name);
+                    }
+                }
+            }
+        }
+        $output = str_replace('<?xml encoding="utf-8" ?>', '', $dom->saveHTML() ?: '');
+        libxml_use_internal_errors($prevErrors);
+
+        return trim($output);
     }
 
     /**
