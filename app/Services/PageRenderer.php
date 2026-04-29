@@ -15,6 +15,19 @@ class PageRenderer
      *
      * @param  array<int, mixed>|string  $content
      */
+    private const ALLOWED_TAGS = [
+        'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
+        'img', 'iframe', 'figure', 'figcaption', 'span', 'div',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ];
+
+    private const ALLOWED_ATTRIBUTES = [
+        'href', 'src', 'alt', 'title', 'class', 'target', 'rel',
+        'width', 'height', 'frameborder', 'allowfullscreen', 'loading',
+        'colspan', 'rowspan',
+    ];
+
     public function render(array|string $content): string
     {
         if (is_array($content)) {
@@ -30,7 +43,87 @@ class PageRenderer
 
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        $trimmed = trim($html);
+
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument;
+        $wrappedHtml = '<?xml encoding="utf-8" ?>'.$trimmed;
+
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $xpath = new \DOMXPath($dom);
+        $nodes = $xpath->query('//*');
+
+        if ($nodes === false) {
+            return '';
+        }
+
+        foreach (iterator_to_array($nodes) as $node) {
+            if (! $node instanceof \DOMElement) {
+                continue;
+            }
+
+            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS)) {
+                $dangerousTags = [
+                    'script', 'style', 'object', 'embed', 'applet', 'link',
+                    'meta', 'base', 'form', 'button', 'input', 'select',
+                    'textarea', 'svg', 'math', 'video', 'audio', 'canvas',
+                ];
+
+                if (in_array(strtolower($node->nodeName), $dangerousTags)) {
+                    $node->parentNode->removeChild($node);
+                } else {
+                    while ($node->hasChildNodes()) {
+                        $node->parentNode->insertBefore($node->firstChild, $node);
+                    }
+                    $node->parentNode->removeChild($node);
+                }
+
+                continue;
+            }
+
+            foreach (iterator_to_array($node->attributes) as $attr) {
+                if (! in_array(strtolower($attr->nodeName), self::ALLOWED_ATTRIBUTES)) {
+                    $node->removeAttribute($attr->nodeName);
+
+                    continue;
+                }
+
+                if (in_array(strtolower($attr->nodeName), ['href', 'src'])) {
+                    $value = preg_replace('/[\x00-\x1F\x7F-\x9F\s]/u', '', $attr->nodeValue);
+
+                    if (preg_match('/^(javascript|data|vbscript|file):/i', $value)) {
+                        $node->removeAttribute($attr->nodeName);
+
+                        continue;
+                    }
+
+                    if (strtolower($node->nodeName) === 'img' && strtolower($attr->nodeName) === 'src') {
+                        $normalized = $this->normalizeImageSource($value);
+                        if ($normalized === null) {
+                            $node->removeAttribute($attr->nodeName);
+                        }
+                    }
+
+                    if (strtolower($node->nodeName) === 'iframe' && strtolower($attr->nodeName) === 'src') {
+                        $normalized = $this->normalizeEmbedSource($value);
+                        if ($normalized === null) {
+                            $node->removeAttribute($attr->nodeName);
+                        }
+                    }
+                }
+            }
+        }
+
+        $output = $dom->saveHTML();
+        $output = str_replace('<?xml encoding="utf-8" ?>', '', (string) $output);
+
+        return trim($output);
     }
 
     /**
