@@ -50,6 +50,7 @@ class PageRenderer
         }
 
         $dom = new \DOMDocument;
+        // Use a prefix to force UTF-8 parsing and prevent unwanted wrapping
         $wrappedHtml = '<?xml encoding="utf-8" ?>'.$trimmed;
 
         libxml_use_internal_errors(true);
@@ -64,18 +65,20 @@ class PageRenderer
         }
 
         foreach (iterator_to_array($nodes) as $node) {
-            if (! $node instanceof \DOMElement) {
+            if (! $node instanceof \DOMElement || ! $node->parentNode) {
                 continue;
             }
 
-            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS)) {
+            $nodeName = strtolower($node->nodeName);
+
+            if (! in_array($nodeName, self::ALLOWED_TAGS)) {
                 $dangerousTags = [
                     'script', 'style', 'object', 'embed', 'applet', 'link',
                     'meta', 'base', 'form', 'button', 'input', 'select',
                     'textarea', 'svg', 'math', 'video', 'audio', 'canvas',
                 ];
 
-                if (in_array(strtolower($node->nodeName), $dangerousTags)) {
+                if (in_array($nodeName, $dangerousTags)) {
                     $node->parentNode->removeChild($node);
                 } else {
                     while ($node->hasChildNodes()) {
@@ -88,30 +91,32 @@ class PageRenderer
             }
 
             foreach (iterator_to_array($node->attributes) as $attr) {
-                if (! in_array(strtolower($attr->nodeName), self::ALLOWED_ATTRIBUTES)) {
+                $attrName = strtolower($attr->nodeName);
+                if (! in_array($attrName, self::ALLOWED_ATTRIBUTES)) {
                     $node->removeAttribute($attr->nodeName);
 
                     continue;
                 }
 
-                if (in_array(strtolower($attr->nodeName), ['href', 'src'])) {
-                    $value = preg_replace('/[\x00-\x1F\x7F-\x9F\s]/u', '', $attr->nodeValue);
+                if (in_array($attrName, ['href', 'src'])) {
+                    $val = rawurldecode($attr->nodeValue);
+                    $val = preg_replace('/\\\\+0|[\x00-\x1F\x7F-\x9F\s]/u', '', $val);
 
-                    if (preg_match('/^(javascript|data|vbscript|file):/i', $value)) {
+                    if (preg_match('/^(javascript|data|vbscript|file):/i', $val)) {
                         $node->removeAttribute($attr->nodeName);
 
                         continue;
                     }
 
-                    if (strtolower($node->nodeName) === 'img' && strtolower($attr->nodeName) === 'src') {
-                        $normalized = $this->normalizeImageSource($value);
+                    if ($nodeName === 'img' && $attrName === 'src') {
+                        $normalized = $this->normalizeImageSource($attr->nodeValue);
                         if ($normalized === null) {
                             $node->removeAttribute($attr->nodeName);
                         }
                     }
 
-                    if (strtolower($node->nodeName) === 'iframe' && strtolower($attr->nodeName) === 'src') {
-                        $normalized = $this->normalizeEmbedSource($value);
+                    if ($nodeName === 'iframe' && $attrName === 'src') {
+                        $normalized = $this->normalizeEmbedSource($attr->nodeValue);
                         if ($normalized === null) {
                             $node->removeAttribute($attr->nodeName);
                         }
@@ -120,8 +125,13 @@ class PageRenderer
             }
         }
 
-        $output = $dom->saveHTML();
-        $output = str_replace('<?xml encoding="utf-8" ?>', '', (string) $output);
+        $output = '';
+        foreach ($dom->childNodes as $node) {
+            if ($node->nodeType === XML_PI_NODE) {
+                continue;
+            }
+            $output .= $dom->saveHTML($node);
+        }
 
         return trim($output);
     }

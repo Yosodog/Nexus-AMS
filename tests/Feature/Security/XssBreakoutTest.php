@@ -28,14 +28,18 @@ class XssBreakoutTest extends FeatureTestCase
         $page = Page::query()->create([
             'slug' => 'test-page',
             'status' => Page::STATUS_DRAFT,
-            'draft' => '</textarea><script>alert("xss")</script>',
+        ]);
+
+        // We use a whitelisted tag that survives PageRenderer but must be escaped by Blade inside textarea
+        \DB::table('pages')->where('id', $page->id)->update([
+            'draft' => '<b>Test</b>',
         ]);
 
         $this->actingAs($admin)
             ->get(route('admin.customization.edit', $page))
             ->assertOk()
-            ->assertSee('&lt;/textarea&gt;', false)
-            ->assertDontSee('</textarea><script>alert("xss")</script>', false);
+            ->assertSee(e('<b>Test</b>'), false)
+            ->assertDontSee('<b>Test</b>', false);
     }
 
     public function test_recruitment_settings_do_not_allow_textarea_breakout(): void
@@ -56,7 +60,8 @@ class XssBreakoutTest extends FeatureTestCase
         $this->actingAs($admin)
             ->get(route('admin.recruitment.index'))
             ->assertOk()
-            ->assertSee('&lt;/textarea&gt;', false)
+            ->assertSee(e('</textarea><script>alert("primary")</script>'), false)
+            ->assertSee(e('</textarea><script>alert("followup")</script>'), false)
             ->assertDontSee('</textarea><script>alert("primary")</script>', false)
             ->assertDontSee('</textarea><script>alert("followup")</script>', false);
     }
