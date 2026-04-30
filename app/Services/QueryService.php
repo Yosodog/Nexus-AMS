@@ -96,6 +96,7 @@ class QueryService
         $lastPage = 1;
         $allResults = collect();
         $rootField = $builder->getRootField();
+        $allowTransientRetries = ! $builder->isMutation();
 
         if ($headers) {
             $headersArray = $this->getHeaders();
@@ -108,7 +109,8 @@ class QueryService
             $builder,
             $variables,
             $rootField,
-            $headersArray
+            $headersArray,
+            $allowTransientRetries
         );
         $paginationEnabled = isset($firstResponse['paginatorInfo']);
         $allResults = $allResults->merge($firstResponse['data']);
@@ -130,7 +132,8 @@ class QueryService
                 $variables,
                 $page,
                 $maxConcurrency,
-                $lastPage
+                $lastPage,
+                $allowTransientRetries
             );
             $responses = Utils::settle($promises)->wait();
 
@@ -169,13 +172,14 @@ class QueryService
         GraphQLQueryBuilder $builder,
         array $variables,
         string $rootField,
-        array $headers = []
+        array $headers = [],
+        bool $allowTransientRetries = true
     ): array {
         $query = $builder->build();
         $retryCount = 0;
         $delay = $this->initialDelay;
 
-        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers)->wait();
+        $response = $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers, $allowTransientRetries)->wait();
 
         if ($response && isset($response['data'][$rootField])) {
             if (isset($response['data'][$rootField]['data'])) {
@@ -205,13 +209,14 @@ class QueryService
         array $variables,
         int &$retryCount,
         int &$delay,
-        array $headers = []
+        array $headers = [],
+        bool $allowTransientRetries = true
     ): PromiseInterface {
         return Http::async()->withHeaders($headers)->post(
             $this->endpoint(),
             ['query' => $query, 'variables' => $variables]
         )->then(
-            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers) {
+            function ($response) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
                 try {
                     if ($response instanceof Response) {
                         $this->sleepForRateLimitRemaining($response);
@@ -231,10 +236,14 @@ class QueryService
                             $retryCount++;
                             $delay *= 2;
 
-                            return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers);
+                            return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers, $allowTransientRetries);
                         }
 
                         if ($this->shouldRetryResponse($response)) {
+                            if (! $allowTransientRetries) {
+                                $this->throwAmbiguousMutationResponse($response);
+                            }
+
                             return $this->retryTransientResponse(
                                 $response,
                                 $query,
@@ -275,7 +284,11 @@ class QueryService
                     throw new ConnectionException('Failed to connect to the Politics & War API.');
                 }
             },
-            function ($reason) use (&$retryCount, &$delay, $query, $variables, $headers) {
+            function ($reason) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
+                if (! $allowTransientRetries) {
+                    $this->throwAmbiguousMutationRejection($reason);
+                }
+
                 return $this->retryRejectedRequest(
                     $reason,
                     $query,
@@ -291,6 +304,40 @@ class QueryService
     protected function shouldRetryResponse(Response $response): bool
     {
         return $response->serverError() || $response->status() === 408;
+    }
+
+    /**
+     * @throws PWQueryFailedException
+     */
+    protected function throwAmbiguousMutationResponse(Response $response): never
+    {
+        $message = sprintf(
+            'GraphQL mutation failed with an ambiguous upstream response and was not retried: status=%d reason=%s body=%s',
+            $response->status(),
+            $response->reason() ?: 'unknown',
+            $response->body() !== '' ? $response->body() : '[empty]'
+        );
+
+        Log::error($message, [
+            'status' => $response->status(),
+            'headers' => $response->headers(),
+        ]);
+
+        throw new PWQueryFailedException($message);
+    }
+
+    /**
+     * @throws ConnectionException
+     */
+    protected function throwAmbiguousMutationRejection(mixed $reason): never
+    {
+        $message = $reason instanceof Throwable ? $reason->getMessage() : (string) $reason;
+
+        Log::error('GraphQL mutation request was rejected and was not retried.', [
+            'reason' => $message,
+        ]);
+
+        throw new ConnectionException("GraphQL mutation request failed without retry because the side effect may have succeeded: {$message}");
     }
 
     protected function retryTransientResponse(
@@ -413,7 +460,8 @@ class QueryService
         array $variables,
         int &$page,
         int $maxConcurrency,
-        int $lastPage
+        int $lastPage,
+        bool $allowTransientRetries = true
     ): array {
         $promises = [];
         $page++; // Increment page because we can assume we are already on page 2 if we hit this function
@@ -434,7 +482,8 @@ class QueryService
                 $currentPageQuery,
                 $variables,
                 $retryCount,
-                $delay
+                $delay,
+                allowTransientRetries: $allowTransientRetries
             );
 
             // Increment page after setting it for this request
@@ -495,7 +544,8 @@ class QueryService
             $builder,
             $variables,
             $rootField,
-            $headersArray
+            $headersArray,
+            ! $builder->isMutation()
         );
 
         $results = $results->merge($firstResponse['paginatorInfo']);

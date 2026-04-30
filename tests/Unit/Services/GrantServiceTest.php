@@ -10,6 +10,7 @@ use App\Services\GrantService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use ReflectionMethod;
 use Tests\FeatureTestCase;
@@ -75,6 +76,44 @@ class GrantServiceTest extends FeatureTestCase
 
         Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => $message === 'Grant approval exceeds configured money alert threshold.'
             && $context['grant_id'] === $grant->id);
+    }
+
+    public function test_deny_grant_rechecks_pending_state_before_updating_status(): void
+    {
+        Notification::fake();
+
+        $grant = $this->createGrant();
+        $nation = $this->createNation();
+        $account = $this->createAccount($nation);
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $staleApplication = GrantApplication::query()->findOrFail($application->id);
+
+        GrantApplication::query()
+            ->whereKey($application->id)
+            ->update([
+                'status' => 'approved',
+                'pending_key' => null,
+                'approved_at' => now(),
+            ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Grant application is not pending.');
+
+        try {
+            GrantService::denyGrant($staleApplication);
+        } finally {
+            $application->refresh();
+
+            $this->assertSame('approved', $application->status);
+            $this->assertNull($application->denied_at);
+            Notification::assertNothingSent();
+        }
     }
 
     private function createNation(): Nation

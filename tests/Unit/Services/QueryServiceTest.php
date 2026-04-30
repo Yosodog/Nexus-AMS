@@ -117,4 +117,34 @@ class QueryServiceTest extends FeatureTestCase
             Http::assertSentCount(3);
         }
     }
+
+    public function test_send_query_does_not_retry_mutations_after_ambiguous_server_error(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push('temporary upstream failure', 503)
+                ->push([
+                    'data' => [
+                        'bankWithdraw' => [
+                            'id' => 987,
+                        ],
+                    ],
+                ], 200),
+        ]);
+
+        $service = new QueryService;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->setMutation()
+            ->addFields(['id']);
+
+        $this->expectException(PWQueryFailedException::class);
+        $this->expectExceptionMessage('GraphQL mutation failed with an ambiguous upstream response and was not retried');
+
+        try {
+            $service->sendQuery($builder);
+        } finally {
+            Http::assertSentCount(1);
+        }
+    }
 }

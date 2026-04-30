@@ -190,6 +190,58 @@ class RebuildingServiceTest extends FeatureTestCase
         $this->makeService()->denyRequest($request);
     }
 
+    public function test_approve_request_rechecks_pending_state_before_crediting_account(): void
+    {
+        $tier = $this->createTier();
+        $nation = Nation::factory()->create([
+            'alliance_id' => 777,
+            'alliance_position' => 'MEMBER',
+            'num_cities' => 5,
+        ]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Primary';
+        $account->save();
+
+        $request = RebuildingRequest::query()->create([
+            'cycle_id' => 7,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'tier_id' => $tier->id,
+            'city_count_snapshot' => 5,
+            'target_infrastructure_snapshot' => 1700,
+            'estimated_amount' => 1000,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $staleRequest = RebuildingRequest::query()->findOrFail($request->id);
+
+        RebuildingRequest::query()
+            ->whereKey($request->id)
+            ->update([
+                'status' => 'denied',
+                'pending_key' => null,
+                'denied_at' => now(),
+            ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Only pending requests can be approved.');
+
+        try {
+            $this->makeService()->approveRequest($staleRequest);
+        } finally {
+            $request->refresh();
+            $account->refresh();
+
+            $this->assertSame('denied', $request->status);
+            $this->assertSame(0.0, (float) $account->money);
+            $this->assertDatabaseMissing('manual_transactions', [
+                'account_id' => $account->id,
+                'money' => 1000,
+            ]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

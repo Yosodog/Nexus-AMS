@@ -34,7 +34,12 @@ Schedule::command('sync:wars')->hourlyAt(10)->runInBackground()
     ->when($whenPWUp);
 
 // Deposits
-Schedule::command(ProcessDeposits::class)->everyMinute()->runInBackground()->when($whenPWUp);
+Schedule::command(ProcessDeposits::class)
+    ->everyMinute()
+    ->runInBackground()
+    ->withoutOverlapping(10)
+    ->onOneServer()
+    ->when($whenPWUp);
 
 // Loan
 Schedule::command('loans:process-payments')->dailyAt('00:15');
@@ -65,7 +70,11 @@ Schedule::command('backup:clean')
     ->when(fn () => SettingService::isBackupsEnabled());
 
 // Taxes
-Schedule::command('taxes:collect')->hourlyAt('15')->when($whenPWUp);
+Schedule::command('taxes:collect')
+    ->hourlyAt('15')
+    ->withoutOverlapping(55)
+    ->onOneServer()
+    ->when($whenPWUp);
 
 Schedule::command('pw:sync-city-average')->dailyAt('00:05')->when($whenPWUp);
 

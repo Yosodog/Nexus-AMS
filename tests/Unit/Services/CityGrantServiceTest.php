@@ -10,6 +10,7 @@ use App\Services\CityGrantService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use ReflectionMethod;
 use Tests\FeatureTestCase;
@@ -90,6 +91,44 @@ class CityGrantServiceTest extends FeatureTestCase
 
         Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => $message === 'City grant approval exceeds configured alert threshold.'
             && $context['request_id'] === $request->id);
+    }
+
+    public function test_deny_grant_rechecks_pending_state_before_updating_status(): void
+    {
+        Notification::fake();
+
+        $nation = $this->createNation();
+        $account = $this->createAccount($nation);
+        $request = CityGrantRequest::query()->create([
+            'city_number' => 6,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $staleRequest = CityGrantRequest::query()->findOrFail($request->id);
+
+        CityGrantRequest::query()
+            ->whereKey($request->id)
+            ->update([
+                'status' => 'approved',
+                'pending_key' => null,
+                'approved_at' => now(),
+            ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Grant is not pending.');
+
+        try {
+            CityGrantService::denyGrant($staleRequest);
+        } finally {
+            $request->refresh();
+
+            $this->assertSame('approved', $request->status);
+            $this->assertNull($request->denied_at);
+            Notification::assertNothingSent();
+        }
     }
 
     private function createNation(): Nation

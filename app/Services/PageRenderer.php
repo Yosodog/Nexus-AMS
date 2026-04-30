@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use DOMDocument;
+use DOMElement;
+use DOMNode;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -11,139 +14,160 @@ use Illuminate\Support\Str;
 class PageRenderer
 {
     /**
+     * @var array<string, bool>
+     */
+    private const ALLOWED_TAGS = [
+        'a' => true,
+        'abbr' => true,
+        'b' => true,
+        'blockquote' => true,
+        'br' => true,
+        'caption' => true,
+        'code' => true,
+        'col' => true,
+        'colgroup' => true,
+        'del' => true,
+        'div' => true,
+        'em' => true,
+        'figcaption' => true,
+        'figure' => true,
+        'h1' => true,
+        'h2' => true,
+        'h3' => true,
+        'h4' => true,
+        'h5' => true,
+        'h6' => true,
+        'hr' => true,
+        'i' => true,
+        'iframe' => true,
+        'img' => true,
+        'input' => true,
+        'label' => true,
+        'li' => true,
+        'mark' => true,
+        'oembed' => true,
+        'ol' => true,
+        'p' => true,
+        'pre' => true,
+        's' => true,
+        'small' => true,
+        'span' => true,
+        'strong' => true,
+        'sub' => true,
+        'sup' => true,
+        'table' => true,
+        'tbody' => true,
+        'td' => true,
+        'tfoot' => true,
+        'th' => true,
+        'thead' => true,
+        'tr' => true,
+        'u' => true,
+        'ul' => true,
+    ];
+
+    /**
+     * @var array<string, bool>
+     */
+    private const DROP_WITH_CONTENT_TAGS = [
+        'base' => true,
+        'applet' => true,
+        'audio' => true,
+        'button' => true,
+        'canvas' => true,
+        'embed' => true,
+        'form' => true,
+        'frame' => true,
+        'frameset' => true,
+        'link' => true,
+        'math' => true,
+        'meta' => true,
+        'object' => true,
+        'script' => true,
+        'select' => true,
+        'style' => true,
+        'svg' => true,
+        'template' => true,
+        'textarea' => true,
+        'video' => true,
+    ];
+
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private const TAG_ATTRIBUTES = [
+        'a' => ['href', 'target', 'rel'],
+        'col' => ['span', 'width'],
+        'iframe' => ['src', 'title', 'width', 'height', 'allow', 'allowfullscreen', 'loading', 'referrerpolicy', 'frameborder'],
+        'img' => ['src', 'alt', 'width', 'height', 'loading'],
+        'input' => ['type', 'checked', 'disabled'],
+        'li' => ['value'],
+        'oembed' => ['url'],
+        'ol' => ['start', 'type'],
+        'td' => ['colspan', 'rowspan'],
+        'th' => ['colspan', 'rowspan', 'scope'],
+    ];
+
+    /**
+     * @var array<int, string>
+     */
+    private const GLOBAL_ATTRIBUTES = [
+        'aria-label',
+        'aria-labelledby',
+        'aria-describedby',
+        'class',
+        'id',
+        'role',
+        'style',
+        'title',
+    ];
+
+    /**
      * Render the stored payload into HTML.
      *
      * @param  array<int, mixed>|string  $content
      */
-    private const ALLOWED_TAGS = [
-        'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
-        'img', 'iframe', 'figure', 'figcaption', 'span', 'div',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td',
-    ];
-
-    private const ALLOWED_ATTRIBUTES = [
-        'href', 'src', 'alt', 'title', 'class', 'target', 'rel',
-        'width', 'height', 'frameborder', 'allowfullscreen', 'loading',
-        'colspan', 'rowspan',
-    ];
-
-    private const DANGEROUS_TAGS = [
-        'script', 'style', 'object', 'embed', 'applet', 'link',
-        'meta', 'base', 'form', 'button', 'input', 'select',
-        'textarea', 'svg', 'math', 'video', 'audio', 'canvas',
-    ];
-
     public function render(array|string $content): string
     {
         if (is_array($content)) {
             if (array_key_exists('html', $content) && is_string($content['html'])) {
-                return $this->normalizeHtml($content['html']);
+                return $this->sanitizeHtml($content['html']);
             }
 
             return $this->renderLegacyBlocks($content);
         }
 
-        return $this->normalizeHtml($content);
+        return $this->sanitizeHtml($content);
     }
 
-    private function normalizeHtml(string $html): string
+    private function sanitizeHtml(string $html): string
     {
-        $trimmed = trim($html);
+        $normalized = trim($html);
 
-        if ($trimmed === '') {
+        if ($normalized === '') {
             return '';
         }
 
-        $dom = new \DOMDocument;
-        $wrappedHtml = '<?xml encoding="utf-8" ?>'.$trimmed;
+        $document = new DOMDocument;
+        $previous = libxml_use_internal_errors(true);
 
-        $previousLibxmlErrorState = libxml_use_internal_errors(true);
-        $dom->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $document->loadHTML(
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div id="nexus-page-render-root">'.$normalized.'</div></body></html>',
+            LIBXML_HTML_NODEFDTD | LIBXML_NOERROR | LIBXML_NOWARNING
+        );
+
         libxml_clear_errors();
-        libxml_use_internal_errors($previousLibxmlErrorState);
+        libxml_use_internal_errors($previous);
 
-        $xpath = new \DOMXPath($dom);
-        $nodes = $xpath->query('//*');
+        $root = $document->getElementById('nexus-page-render-root');
 
-        if ($nodes === false) {
+        if (! $root instanceof DOMElement) {
             return '';
         }
 
-        foreach (iterator_to_array($nodes) as $node) {
-            if (! $node instanceof \DOMElement || ! $node->parentNode) {
-                continue;
-            }
+        $this->sanitizeNode($root);
 
-            $nodeName = strtolower($node->nodeName);
-
-            if (! in_array($nodeName, self::ALLOWED_TAGS, true)) {
-                if (in_array($nodeName, self::DANGEROUS_TAGS, true)) {
-                    $node->parentNode->removeChild($node);
-                } else {
-                    while ($node->hasChildNodes()) {
-                        $node->parentNode->insertBefore($node->firstChild, $node);
-                    }
-                    $node->parentNode->removeChild($node);
-                }
-
-                continue;
-            }
-
-            foreach (iterator_to_array($node->attributes) as $attr) {
-                $attrName = strtolower($attr->nodeName);
-                if (! in_array($attrName, self::ALLOWED_ATTRIBUTES, true)) {
-                    $node->removeAttribute($attr->nodeName);
-
-                    continue;
-                }
-
-                if (in_array($attrName, ['href', 'src'], true)) {
-                    $val = rawurldecode($attr->nodeValue);
-                    $val = preg_replace('/\\\\+0|[\x00-\x1F\x7F-\x9F\s]/u', '', $val);
-
-                    if (preg_match('/^(javascript|data|vbscript|file):/i', $val)) {
-                        $node->removeAttribute($attr->nodeName);
-
-                        continue;
-                    }
-
-                    if ($nodeName === 'img' && $attrName === 'src') {
-                        $normalized = $this->normalizeImageSource($attr->nodeValue);
-                        if ($normalized === null) {
-                            $node->removeAttribute($attr->nodeName);
-                        } else {
-                            $node->setAttribute($attr->nodeName, $normalized);
-                        }
-                    }
-
-                    if ($nodeName === 'iframe' && $attrName === 'src') {
-                        $normalized = $this->normalizeEmbedSource($attr->nodeValue);
-                        if ($normalized === null) {
-                            $node->removeAttribute($attr->nodeName);
-                        } else {
-                            $node->setAttribute($attr->nodeName, $normalized);
-                        }
-                    }
-                }
-            }
-        }
-
-        $output = '';
-        foreach ($dom->childNodes as $node) {
-            if ($node->nodeType === XML_PI_NODE || $this->isEncodingMarkerComment($node)) {
-                continue;
-            }
-            $output .= $dom->saveHTML($node);
-        }
-
-        return trim($output);
-    }
-
-    private function isEncodingMarkerComment(\DOMNode $node): bool
-    {
-        return $node->nodeType === XML_COMMENT_NODE
-            && str_starts_with(trim($node->nodeValue ?? ''), '?xml encoding=');
+        return trim($this->innerHtml($root));
     }
 
     /**
@@ -413,6 +437,214 @@ class PageRenderer
         $trimmed = trim($normalized);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function sanitizeNode(DOMNode $node): void
+    {
+        foreach (iterator_to_array($node->childNodes) as $child) {
+            if (! $child instanceof DOMElement) {
+                if ($child->nodeType === XML_COMMENT_NODE) {
+                    $node->removeChild($child);
+                }
+
+                continue;
+            }
+
+            $tag = strtolower($child->tagName);
+
+            if (! isset(self::ALLOWED_TAGS[$tag])) {
+                if (isset(self::DROP_WITH_CONTENT_TAGS[$tag])) {
+                    $node->removeChild($child);
+                } else {
+                    $this->sanitizeNode($child);
+                    $this->unwrapElement($child);
+                }
+
+                continue;
+            }
+
+            $this->sanitizeElement($child, $tag);
+            $this->sanitizeNode($child);
+
+            if ($this->shouldRemoveAfterSanitizing($child, $tag)) {
+                $child->parentNode?->removeChild($child);
+            }
+        }
+    }
+
+    private function sanitizeElement(DOMElement $element, string $tag): void
+    {
+        foreach (iterator_to_array($element->attributes) as $attribute) {
+            $name = strtolower($attribute->name);
+            $value = $attribute->value;
+
+            if (str_starts_with($name, 'on') || ! $this->isAllowedAttribute($tag, $name)) {
+                $element->removeAttributeNode($attribute);
+
+                continue;
+            }
+
+            $sanitizedValue = $this->sanitizeAttributeValue($tag, $name, $value);
+
+            if ($sanitizedValue === null) {
+                $element->removeAttributeNode($attribute);
+
+                continue;
+            }
+
+            $element->setAttribute($name, $sanitizedValue);
+        }
+
+        if ($tag === 'a' && $element->getAttribute('target') === '_blank') {
+            $rel = collect(explode(' ', strtolower($element->getAttribute('rel'))))
+                ->filter()
+                ->merge(['noopener', 'noreferrer'])
+                ->unique()
+                ->implode(' ');
+
+            $element->setAttribute('rel', $rel);
+        }
+
+        if ($tag === 'input') {
+            $element->setAttribute('type', 'checkbox');
+            $element->setAttribute('disabled', 'disabled');
+        }
+    }
+
+    private function sanitizeAttributeValue(string $tag, string $name, string $value): ?string
+    {
+        $decoded = trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        if ($decoded === '' && ! in_array($name, ['alt', 'checked', 'disabled', 'allowfullscreen'], true)) {
+            return null;
+        }
+
+        if ($name === 'style') {
+            return $this->sanitizeStyle($decoded);
+        }
+
+        if ($tag === 'a' && $name === 'href') {
+            return $this->isSafeUrl($decoded) ? $decoded : null;
+        }
+
+        if ($tag === 'img' && $name === 'src') {
+            return $this->normalizeImageSource($decoded);
+        }
+
+        if ($tag === 'iframe' && $name === 'src') {
+            return $this->normalizeEmbedSource($decoded);
+        }
+
+        if ($tag === 'oembed' && $name === 'url') {
+            return $this->normalizeEmbedSource($decoded);
+        }
+
+        if ($tag === 'input' && $name === 'type') {
+            return strtolower($decoded) === 'checkbox' ? 'checkbox' : null;
+        }
+
+        if ($name === 'target') {
+            return in_array($decoded, ['_blank', '_self'], true) ? $decoded : null;
+        }
+
+        if ($name === 'loading') {
+            return in_array($decoded, ['lazy', 'eager'], true) ? $decoded : null;
+        }
+
+        if ($name === 'referrerpolicy') {
+            return in_array($decoded, ['no-referrer', 'strict-origin', 'strict-origin-when-cross-origin'], true) ? $decoded : null;
+        }
+
+        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', $decoded)) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    private function sanitizeStyle(string $style): ?string
+    {
+        $declarations = [];
+
+        foreach (explode(';', $style) as $declaration) {
+            if (! str_contains($declaration, ':')) {
+                continue;
+            }
+
+            [$property, $value] = array_map('trim', explode(':', $declaration, 2));
+            $property = strtolower($property);
+            $normalizedValue = strtolower(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+            if ($property === '' || $value === '') {
+                continue;
+            }
+
+            if (str_starts_with($property, 'behavior') || $property === '-moz-binding') {
+                continue;
+            }
+
+            if (Str::contains($normalizedValue, ['url(', 'expression', 'javascript:', 'vbscript:', 'data:', '@import'])) {
+                continue;
+            }
+
+            $declarations[] = "{$property}: {$value}";
+        }
+
+        return $declarations === [] ? null : implode('; ', $declarations);
+    }
+
+    private function isAllowedAttribute(string $tag, string $name): bool
+    {
+        if (in_array($name, self::GLOBAL_ATTRIBUTES, true)) {
+            return true;
+        }
+
+        if (str_starts_with($name, 'aria-') || str_starts_with($name, 'data-')) {
+            return true;
+        }
+
+        return in_array($name, self::TAG_ATTRIBUTES[$tag] ?? [], true);
+    }
+
+    private function shouldRemoveAfterSanitizing(DOMElement $element, string $tag): bool
+    {
+        return ($tag === 'img' || $tag === 'iframe') && ! $element->hasAttribute('src')
+            || $tag === 'oembed' && ! $element->hasAttribute('url');
+    }
+
+    private function isSafeUrl(string $url): bool
+    {
+        if (Str::startsWith($url, ['/', '#']) && ! Str::startsWith($url, '//')) {
+            return true;
+        }
+
+        return preg_match('#^(https?://|mailto:|tel:)#i', $url) === 1;
+    }
+
+    private function unwrapElement(DOMElement $element): void
+    {
+        $parent = $element->parentNode;
+
+        if (! $parent) {
+            return;
+        }
+
+        while ($element->firstChild) {
+            $parent->insertBefore($element->firstChild, $element);
+        }
+
+        $parent->removeChild($element);
+    }
+
+    private function innerHtml(DOMElement $element): string
+    {
+        $html = '';
+
+        foreach ($element->childNodes as $child) {
+            $html .= $element->ownerDocument?->saveHTML($child) ?? '';
+        }
+
+        return $html;
     }
 
     private function normalizeImageSource(string $src): ?string

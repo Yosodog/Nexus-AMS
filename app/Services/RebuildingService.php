@@ -211,29 +211,37 @@ class RebuildingService
      */
     public function approveRequest(RebuildingRequest $request, ?float $overrideAmount = null, ?string $reviewNote = null): void
     {
-        if ($request->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'request' => 'Only pending requests can be approved.',
-            ]);
-        }
+        $approvedRequest = null;
+        $approvedAmount = 0;
 
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $request->nation_id,
-            context: 'approve your own rebuilding request'
-        );
+        DB::transaction(function () use ($request, $overrideAmount, $reviewNote, &$approvedRequest, &$approvedAmount) {
+            $lockedRequest = RebuildingRequest::query()
+                ->with(['account', 'nation'])
+                ->lockForUpdate()
+                ->findOrFail($request->id);
 
-        $nation = $request->nation()->firstOrFail();
-        $eligibility = $this->evaluateEligibility($nation, $request->cycle_id);
-        if (! $eligibility['eligible']) {
-            throw ValidationException::withMessages([
-                'request' => $eligibility['reason'] ?? 'Nation is no longer eligible.',
-            ]);
-        }
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'request' => 'Only pending requests can be approved.',
+                ]);
+            }
 
-        $approvedAmount = max(0, (int) round($overrideAmount ?? $request->estimated_amount));
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedRequest->nation_id,
+                context: 'approve your own rebuilding request'
+            );
 
-        DB::transaction(function () use ($request, $approvedAmount, $reviewNote) {
-            $request->update([
+            $nation = $lockedRequest->nation()->firstOrFail();
+            $eligibility = $this->evaluateEligibility($nation, $lockedRequest->cycle_id);
+            if (! $eligibility['eligible']) {
+                throw ValidationException::withMessages([
+                    'request' => $eligibility['reason'] ?? 'Nation is no longer eligible.',
+                ]);
+            }
+
+            $approvedAmount = max(0, (int) round($overrideAmount ?? $lockedRequest->estimated_amount));
+
+            $lockedRequest->update([
                 'approved_amount' => $approvedAmount,
                 'review_note' => $reviewNote,
                 'status' => 'approved',
@@ -243,17 +251,18 @@ class RebuildingService
             ]);
 
             AccountService::adjustAccountBalance(
-                account: $request->account,
+                account: $lockedRequest->account,
                 adjustment: [
                     'money' => $approvedAmount,
-                    'note' => 'Approved rebuilding request ID #'.$request->id,
+                    'note' => 'Approved rebuilding request ID #'.$lockedRequest->id,
                 ],
                 adminId: auth()->id(),
                 ipAddress: request()->ip()
             );
 
-            $request->nation->notify(new RebuildingNotification($request->nation_id, $request->fresh('account'), 'approved'));
-        });
+            $approvedRequest = $lockedRequest->fresh('account');
+            $lockedRequest->nation->notify(new RebuildingNotification($lockedRequest->nation_id, $approvedRequest, 'approved'));
+        }, attempts: 3);
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -262,17 +271,17 @@ class RebuildingService
             action: 'rebuilding_approved',
             outcome: 'success',
             severity: 'info',
-            subject: $request,
+            subject: $approvedRequest,
             context: [
                 'data' => [
-                    'nation_id' => $request->nation_id,
+                    'nation_id' => $approvedRequest?->nation_id,
                     'amount' => $approvedAmount,
                 ],
             ],
             message: 'Rebuilding request approved.'
         );
 
-        $this->dispatchRebuildingExpenseEvent($request->fresh(), $approvedAmount);
+        $this->dispatchRebuildingExpenseEvent($approvedRequest, $approvedAmount);
     }
 
     /**
@@ -280,26 +289,37 @@ class RebuildingService
      */
     public function denyRequest(RebuildingRequest $request, ?string $reviewNote = null): void
     {
-        if ($request->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'request' => 'Only pending requests can be denied.',
+        $deniedRequest = null;
+
+        DB::transaction(function () use ($request, $reviewNote, &$deniedRequest) {
+            $lockedRequest = RebuildingRequest::query()
+                ->with(['account', 'nation'])
+                ->lockForUpdate()
+                ->findOrFail($request->id);
+
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'request' => 'Only pending requests can be denied.',
+                ]);
+            }
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedRequest->nation_id,
+                context: 'deny your own rebuilding request'
+            );
+
+            $lockedRequest->update([
+                'review_note' => $reviewNote,
+                'status' => 'denied',
+                'pending_key' => null,
+                'denied_at' => now(),
+                'denied_by' => auth()->id(),
             ]);
-        }
 
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $request->nation_id,
-            context: 'deny your own rebuilding request'
-        );
+            $deniedRequest = $lockedRequest->fresh('account');
+        }, attempts: 3);
 
-        $request->update([
-            'review_note' => $reviewNote,
-            'status' => 'denied',
-            'pending_key' => null,
-            'denied_at' => now(),
-            'denied_by' => auth()->id(),
-        ]);
-
-        $request->nation->notify(new RebuildingNotification($request->nation_id, $request->fresh('account'), 'denied'));
+        $deniedRequest->nation->notify(new RebuildingNotification($deniedRequest->nation_id, $deniedRequest, 'denied'));
         app(PendingRequestsService::class)->flushCache();
 
         app(AuditLogger::class)->recordAfterCommit(
@@ -307,10 +327,10 @@ class RebuildingService
             action: 'rebuilding_denied',
             outcome: 'denied',
             severity: 'warning',
-            subject: $request,
+            subject: $deniedRequest,
             context: [
                 'data' => [
-                    'nation_id' => $request->nation_id,
+                    'nation_id' => $deniedRequest->nation_id,
                 ],
             ],
             message: 'Rebuilding request denied.'

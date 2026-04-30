@@ -1,66 +1,70 @@
 @props(['nation', 'latestSignIn' => null, 'requirements' => [], 'meets' => false])
 
-<div class="card bg-base-100 shadow">
-    <div class="card-body">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="card-title">Military vs Required</h3>
-                <p class="text-sm text-base-content/70">Minimum counts based on your current city tier.</p>
-            </div>
-            <span class="badge {{ $meets ? 'badge-success badge-outline badge-nowrap' : 'badge-warning badge-outline badge-nowrap' }}">
-                {{ $meets ? 'Ready for duty' : 'Needs build' }}
-            </span>
+<div>
+    <div class="nexus-user-section-head">
+        <div>
+            <p class="nexus-user-eyebrow">Force posture</p>
+            <h3 class="nexus-user-section-title">Military compliance</h3>
+            <p class="nexus-user-section-copy">Minimum counts are derived from your current city tier and latest sync.</p>
         </div>
+        <span class="nexus-user-status-pill {{ $meets ? 'nexus-user-status-pill-success' : 'nexus-user-status-pill-warning' }}">
+            {{ $meets ? 'Ready for ops' : 'Needs build' }}
+        </span>
+    </div>
 
-        @php
-            $units = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
-        @endphp
+    @php
+        $units = ['soldiers', 'tanks', 'aircraft', 'ships', 'missiles', 'nukes', 'spies'];
+    @endphp
 
-        <div class="mt-3 space-y-3 xl:hidden">
-            @foreach ($units as $unit)
-                @php
-                    $current = $latestSignIn->$unit ?? $nation->$unit ?? 0;
-                    $required = $requirements[$unit] ?? 0;
-                    $percent = $required > 0 ? min(100, round(($current / $required) * 100, 1)) : 100;
-                    $met = $required === 0 ? true : $current >= $required;
-                @endphp
-                <div class="rounded-xl border border-base-200 p-3">
-                    <div class="flex items-center justify-between gap-2">
-                        <p class="text-sm font-semibold capitalize">{{ $unit }}</p>
-                        <span class="badge {{ $met ? 'badge-success badge-outline badge-nowrap' : 'badge-warning badge-outline badge-nowrap' }}">
-                            {{ $met ? 'On target' : 'Needs build' }}
-                        </span>
-                    </div>
-                    <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <div class="rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Current</p>
-                            <p class="font-semibold text-sm">{{ number_format($current) }}</p>
-                        </div>
-                        <div class="rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Required</p>
-                            <p class="font-semibold text-sm">{{ number_format($required) }}</p>
-                        </div>
-                        <div class="col-span-2 rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Progress</p>
-                            <p class="font-semibold text-sm">{{ $percent }}%</p>
-                        </div>
-                    </div>
-                    <progress class="progress {{ $met ? 'progress-primary' : 'progress-warning' }} mt-2 w-full" value="{{ $percent }}" max="100"></progress>
+    <div class="mt-5 space-y-4 xl:hidden">
+        @foreach ($units as $unit)
+            @php
+                $current = $latestSignIn->$unit ?? $nation->$unit ?? 0;
+                $required = $requirements[$unit] ?? 0;
+                $percent = $required > 0 ? min(100, round(($current / $required) * 100, 1)) : 100;
+                $met = $required === 0 ? true : $current >= $required;
+            @endphp
+            <div class="nexus-user-divider-y pt-4 first:border-t-0 first:pt-0">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="font-semibold capitalize text-base-content">{{ $unit }}</p>
+                    <span class="nexus-user-status-pill {{ $met ? 'nexus-user-status-pill-success' : 'nexus-user-status-pill-warning' }}">
+                        {{ $met ? 'On target' : 'Needs build' }}
+                    </span>
                 </div>
-            @endforeach
-        </div>
 
-        <div class="mt-3 hidden overflow-x-auto xl:block">
-            <table class="table table-zebra md:table-fixed">
-                <thead>
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="nexus-user-data-label">Current</p>
+                        <p class="mt-1 font-semibold text-base-content">{{ number_format($current) }}</p>
+                    </div>
+                    <div>
+                        <p class="nexus-user-data-label">Required</p>
+                        <p class="mt-1 font-semibold text-base-content">{{ number_format($required) }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="nexus-user-data-label">Progress</p>
+                        <p class="mt-1 font-semibold text-base-content">{{ $percent }}%</p>
+                    </div>
+                </div>
+
+                <div class="mt-3 nexus-user-progress">
+                    <span style="width: {{ $percent }}%"></span>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
+    <div class="mt-5 hidden overflow-x-auto xl:block">
+        <table class="table nexus-user-table">
+            <thead>
                 <tr>
                     <th>Unit</th>
-                    <th>Current</th>
-                    <th>Required</th>
-                    <th>Status</th>
+                    <th class="text-right">Current</th>
+                    <th class="text-right">Required</th>
+                    <th class="w-56">Status</th>
                 </tr>
-                </thead>
-                <tbody>
+            </thead>
+            <tbody>
                 @foreach ($units as $unit)
                     @php
                         $current = $latestSignIn->$unit ?? $nation->$unit ?? 0;
@@ -69,24 +73,25 @@
                         $met = $required === 0 ? true : $current >= $required;
                     @endphp
                     <tr>
-                        <td class="capitalize">{{ $unit }}</td>
-                        <td>{{ number_format($current) }}</td>
-                        <td>{{ number_format($required) }}</td>
-                        <td>
-                            <div class="flex flex-col gap-1">
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="font-semibold">{{ $percent }}%</span>
-                                    <span class="badge {{ $met ? 'badge-success badge-outline badge-nowrap' : 'badge-warning badge-outline badge-nowrap' }}">
+                        <td class="font-semibold capitalize text-base-content">{{ $unit }}</td>
+                        <td class="text-right tabular-nums">{{ number_format($current) }}</td>
+                        <td class="text-right tabular-nums">{{ number_format($required) }}</td>
+                        <td class="w-56">
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center justify-between gap-3 text-sm">
+                                    <span class="font-semibold text-base-content">{{ $percent }}%</span>
+                                    <span class="nexus-user-status-pill {{ $met ? 'nexus-user-status-pill-success' : 'nexus-user-status-pill-warning' }}">
                                         {{ $met ? 'On target' : 'Needs build' }}
                                     </span>
                                 </div>
-                                <progress class="progress {{ $met ? 'progress-primary' : 'progress-warning' }} w-full" value="{{ $percent }}" max="100"></progress>
+                                <div class="nexus-user-progress">
+                                    <span style="width: {{ $percent }}%"></span>
+                                </div>
                             </div>
                         </td>
                     </tr>
                 @endforeach
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
     </div>
 </div>
