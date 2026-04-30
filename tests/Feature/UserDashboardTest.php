@@ -13,6 +13,8 @@ class UserDashboardTest extends FeatureTestCase
 
     public function test_verified_member_can_view_the_dashboard(): void
     {
+        $this->withoutVite();
+
         $nation = Nation::factory()->create([
             'leader_name' => 'Dashboard Leader',
             'nation_name' => 'Dashboard Nation',
