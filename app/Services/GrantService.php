@@ -283,18 +283,35 @@ class GrantService
 
     public static function denyGrant(GrantApplication $application): void
     {
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $application->nation_id,
-            context: 'deny your own grant request'
-        );
+        $deniedApplication = null;
 
-        $application->update([
-            'status' => 'denied',
-            'denied_at' => now(),
-            'pending_key' => null,
-        ]);
+        DB::transaction(function () use ($application, &$deniedApplication) {
+            $lockedApplication = GrantApplication::query()
+                ->with('nation')
+                ->lockForUpdate()
+                ->findOrFail($application->id);
 
-        $application->nation->notify(new GrantNotification($application->nation_id, $application, 'denied'));
+            if ($lockedApplication->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'application' => 'Grant application is not pending.',
+                ]);
+            }
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedApplication->nation_id,
+                context: 'deny your own grant request'
+            );
+
+            $lockedApplication->update([
+                'status' => 'denied',
+                'denied_at' => now(),
+                'pending_key' => null,
+            ]);
+
+            $deniedApplication = $lockedApplication->fresh();
+        }, attempts: 3);
+
+        $deniedApplication->nation->notify(new GrantNotification($deniedApplication->nation_id, $deniedApplication, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -303,14 +320,14 @@ class GrantService
             action: 'grant_application_denied',
             outcome: 'denied',
             severity: 'warning',
-            subject: $application,
+            subject: $deniedApplication,
             context: [
                 'related' => [
-                    ['type' => 'Grant', 'id' => (string) $application->grant_id, 'role' => 'grant'],
-                    ['type' => 'Account', 'id' => (string) $application->account_id, 'role' => 'account'],
+                    ['type' => 'Grant', 'id' => (string) $deniedApplication->grant_id, 'role' => 'grant'],
+                    ['type' => 'Account', 'id' => (string) $deniedApplication->account_id, 'role' => 'account'],
                 ],
                 'data' => [
-                    'nation_id' => $application->nation_id,
+                    'nation_id' => $deniedApplication->nation_id,
                 ],
             ],
             message: 'Grant application denied.'

@@ -27,6 +27,11 @@ class GraphQLQueryBuilder
         return $this->rootField;
     }
 
+    public function isMutation(): bool
+    {
+        return $this->isMutation;
+    }
+
     /**
      * Set the root field of the query (e.g., 'nations').
      */

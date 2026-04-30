@@ -4,11 +4,10 @@
     <x-slot:menu>
         @if($batch && !$batch->finished())
             <div class="flex items-center gap-2">
-                <x-button label="Syncing..." icon="o-arrow-path" class="btn-sm btn-ghost" disabled>
-                    <x-slot:icon>
-                        <span class="loading loading-spinner loading-xs"></span>
-                    </x-slot:icon>
-                </x-button>
+                <button type="button" class="btn btn-sm btn-ghost" disabled>
+                    <span class="loading loading-spinner loading-xs"></span>
+                    <span>Syncing...</span>
+                </button>
                 <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
                       onsubmit="return confirm('Are you sure you want to cancel this sync?')">
                     @csrf

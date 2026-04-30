@@ -277,18 +277,35 @@ class CityGrantService
      */
     public static function denyGrant(CityGrantRequest $request): void
     {
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $request->nation_id,
-            context: 'deny your own city grant request'
-        );
+        $deniedRequest = null;
 
-        $request->update([
-            'status' => 'denied',
-            'denied_at' => now(),
-            'pending_key' => null,
-        ]);
+        DB::transaction(function () use ($request, &$deniedRequest) {
+            $lockedRequest = CityGrantRequest::query()
+                ->with('nation')
+                ->lockForUpdate()
+                ->findOrFail($request->id);
 
-        $request->nation->notify(new CityGrantNotification($request->nation_id, $request, 'denied'));
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'request' => 'Grant is not pending.',
+                ]);
+            }
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedRequest->nation_id,
+                context: 'deny your own city grant request'
+            );
+
+            $lockedRequest->update([
+                'status' => 'denied',
+                'denied_at' => now(),
+                'pending_key' => null,
+            ]);
+
+            $deniedRequest = $lockedRequest->fresh();
+        }, attempts: 3);
+
+        $deniedRequest->nation->notify(new CityGrantNotification($deniedRequest->nation_id, $deniedRequest, 'denied'));
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -297,14 +314,14 @@ class CityGrantService
             action: 'city_grant_denied',
             outcome: 'denied',
             severity: 'warning',
-            subject: $request,
+            subject: $deniedRequest,
             context: [
                 'related' => [
-                    ['type' => 'Account', 'id' => (string) $request->account_id, 'role' => 'account'],
+                    ['type' => 'Account', 'id' => (string) $deniedRequest->account_id, 'role' => 'account'],
                 ],
                 'data' => [
-                    'nation_id' => $request->nation_id,
-                    'city_number' => $request->city_number,
+                    'nation_id' => $deniedRequest->nation_id,
+                    'city_number' => $deniedRequest->city_number,
                 ],
             ],
             message: 'City grant denied.'

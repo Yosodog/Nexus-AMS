@@ -116,8 +116,16 @@ class CityGrantController
             ]);
         }
 
-        // Call service to deny grant
-        CityGrantService::denyGrant($grantRequest);
+        try {
+            CityGrantService::denyGrant($grantRequest);
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return redirect()->back()->with([
+                'alert-message' => $details ?: 'Unable to deny this city grant request.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return redirect()->back()->with([
             'alert-message' => "City Grant for City #{$grantRequest->city_number} has been denied.",

@@ -251,7 +251,16 @@ class GrantController
             ]);
         }
 
-        GrantService::denyGrant($application);
+        try {
+            GrantService::denyGrant($application);
+        } catch (ValidationException $exception) {
+            $details = collect($exception->errors())->flatten()->implode(' ');
+
+            return redirect()->back()->with([
+                'alert-message' => $details ?: 'Unable to deny this grant application.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return redirect()->back()
             ->with('alert-message', 'Grant application denied.')
