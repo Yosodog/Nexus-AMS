@@ -18,7 +18,9 @@ class VerificationController extends Controller
      */
     public function verify(string $code)
     {
-        if (Auth::user()->verification_code != $code) {
+        $userCode = Auth::user()->verification_code;
+
+        if (! is_string($userCode) || $userCode === '' || ! hash_equals($userCode, $code)) {
             return redirect()
                 ->route('home')
                 ->with([
