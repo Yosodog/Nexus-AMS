@@ -1,4 +1,0 @@
-## 2026-04-29 - Robust CMS HTML Sanitization
-**Vulnerability:** XSS via unsanitized HTML in CMS pages (e.g., `/apply`). The `PageRenderer` service was returning raw HTML strings without filtering.
-**Learning:** Even when using rich-text editors, server-side sanitization is mandatory as clients can bypass editor-side filtering. Using `DOMDocument` for fragment parsing requires specific flags and UTF-8 handling to avoid common pitfalls like unwanted `<html>` wrapping or encoding issues.
-**Prevention:** Implement a whitelist-based sanitizer using `DOMDocument`/`DOMXPath`. Ensure all tags and attributes are validated against a safe list, and strip dangerous URI schemes (like `javascript:`) after removing hidden/control characters. Use `iterator_to_array` when removing nodes to avoid index shifting in live collections.

@@ -28,6 +28,12 @@ class PageRenderer
         'colspan', 'rowspan',
     ];
 
+    private const DANGEROUS_TAGS = [
+        'script', 'style', 'object', 'embed', 'applet', 'link',
+        'meta', 'base', 'form', 'button', 'input', 'select',
+        'textarea', 'svg', 'math', 'video', 'audio', 'canvas',
+    ];
+
     public function render(array|string $content): string
     {
         if (is_array($content)) {
@@ -50,12 +56,12 @@ class PageRenderer
         }
 
         $dom = new \DOMDocument;
-        // Use a prefix to force UTF-8 parsing and prevent unwanted wrapping
         $wrappedHtml = '<?xml encoding="utf-8" ?>'.$trimmed;
 
-        libxml_use_internal_errors(true);
+        $previousLibxmlErrorState = libxml_use_internal_errors(true);
         $dom->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxmlErrorState);
 
         $xpath = new \DOMXPath($dom);
         $nodes = $xpath->query('//*');
@@ -71,14 +77,8 @@ class PageRenderer
 
             $nodeName = strtolower($node->nodeName);
 
-            if (! in_array($nodeName, self::ALLOWED_TAGS)) {
-                $dangerousTags = [
-                    'script', 'style', 'object', 'embed', 'applet', 'link',
-                    'meta', 'base', 'form', 'button', 'input', 'select',
-                    'textarea', 'svg', 'math', 'video', 'audio', 'canvas',
-                ];
-
-                if (in_array($nodeName, $dangerousTags)) {
+            if (! in_array($nodeName, self::ALLOWED_TAGS, true)) {
+                if (in_array($nodeName, self::DANGEROUS_TAGS, true)) {
                     $node->parentNode->removeChild($node);
                 } else {
                     while ($node->hasChildNodes()) {
@@ -92,13 +92,13 @@ class PageRenderer
 
             foreach (iterator_to_array($node->attributes) as $attr) {
                 $attrName = strtolower($attr->nodeName);
-                if (! in_array($attrName, self::ALLOWED_ATTRIBUTES)) {
+                if (! in_array($attrName, self::ALLOWED_ATTRIBUTES, true)) {
                     $node->removeAttribute($attr->nodeName);
 
                     continue;
                 }
 
-                if (in_array($attrName, ['href', 'src'])) {
+                if (in_array($attrName, ['href', 'src'], true)) {
                     $val = rawurldecode($attr->nodeValue);
                     $val = preg_replace('/\\\\+0|[\x00-\x1F\x7F-\x9F\s]/u', '', $val);
 
@@ -112,6 +112,8 @@ class PageRenderer
                         $normalized = $this->normalizeImageSource($attr->nodeValue);
                         if ($normalized === null) {
                             $node->removeAttribute($attr->nodeName);
+                        } else {
+                            $node->setAttribute($attr->nodeName, $normalized);
                         }
                     }
 
@@ -119,6 +121,8 @@ class PageRenderer
                         $normalized = $this->normalizeEmbedSource($attr->nodeValue);
                         if ($normalized === null) {
                             $node->removeAttribute($attr->nodeName);
+                        } else {
+                            $node->setAttribute($attr->nodeName, $normalized);
                         }
                     }
                 }
@@ -127,13 +131,19 @@ class PageRenderer
 
         $output = '';
         foreach ($dom->childNodes as $node) {
-            if ($node->nodeType === XML_PI_NODE) {
+            if ($node->nodeType === XML_PI_NODE || $this->isEncodingMarkerComment($node)) {
                 continue;
             }
             $output .= $dom->saveHTML($node);
         }
 
         return trim($output);
+    }
+
+    private function isEncodingMarkerComment(\DOMNode $node): bool
+    {
+        return $node->nodeType === XML_COMMENT_NODE
+            && str_starts_with(trim($node->nodeValue ?? ''), '?xml encoding=');
     }
 
     /**
