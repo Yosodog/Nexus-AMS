@@ -25,17 +25,19 @@ class XssBreakoutTest extends FeatureTestCase
         $admin = User::factory()->admin()->create();
         Gate::define('manage-custom-pages', fn (): bool => true);
 
+        // We use a payload that is valid HTML text but contains an escaped breakout attempt.
+        // PageRenderer will preserve the escaped text, which then gets double-escaped by Blade.
         $page = Page::query()->create([
             'slug' => 'test-page',
             'status' => Page::STATUS_DRAFT,
-            'draft' => '</textarea><script>alert("xss")</script>',
+            'draft' => ' &lt;/textarea&gt;<script>alert("xss")</script>',
         ]);
 
         $this->actingAs($admin)
             ->get(route('admin.customization.edit', $page))
             ->assertOk()
-            ->assertSee('&lt;/textarea&gt;', false)
-            ->assertDontSee('</textarea><script>alert("xss")</script>', false);
+            ->assertSee('&amp;lt;/textarea&amp;gt;', false)
+            ->assertDontSee('<script>alert("xss")</script>', false);
     }
 
     public function test_recruitment_settings_do_not_allow_textarea_breakout(): void
