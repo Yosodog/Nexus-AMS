@@ -28,9 +28,54 @@ class PageRenderer
         return $this->normalizeHtml($content);
     }
 
+    private const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 's', 'a', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'img', 'iframe', 'figure', 'figcaption', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
+
+    private const ALLOWED_ATTRS = ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'colspan', 'rowspan', 'loading', 'allowfullscreen'];
+
     private function normalizeHtml(string $html): string
     {
-        return trim($html);
+        if (($t = trim($html)) === '') {
+            return '';
+        }
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>'.$t, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        foreach (iterator_to_array((new \DOMXPath($dom))->query('//*')) as $node) {
+            if (! in_array(strtolower($node->nodeName), self::ALLOWED_TAGS)) {
+                while ($node->firstChild) {
+                    $node->parentNode->insertBefore($node->firstChild, $node);
+                }
+                $node->parentNode->removeChild($node);
+
+                continue;
+            }
+            foreach (iterator_to_array($node->attributes) as $attr) {
+                $name = strtolower($attr->name);
+                if (! in_array($name, self::ALLOWED_ATTRS) || str_starts_with($name, 'on')) {
+                    $node->removeAttribute($attr->name);
+
+                    continue;
+                }
+                if (in_array($name, ['href', 'src'])) {
+                    $val = preg_replace('/[\x00-\x1F\s]/u', '', $attr->value);
+                    if (preg_match('/(javascript|data|vbscript):/i', $val)) {
+                        $node->removeAttribute($attr->name);
+
+                        continue;
+                    }
+                    if ($name === 'src') {
+                        $n = (strtolower($node->nodeName) === 'img') ? $this->normalizeImageSource($attr->value) : $this->normalizeEmbedSource($attr->value);
+                        if (! $n) {
+                            $node->removeAttribute($attr->name);
+                        } else {
+                            $node->setAttribute($attr->name, $n);
+                        }
+                    }
+                }
+            }
+        }
+
+        return preg_replace('/^<\?xml[^>]*>/i', '', trim($dom->saveHTML()));
     }
 
     /**
