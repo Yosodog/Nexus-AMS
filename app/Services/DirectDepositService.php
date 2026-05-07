@@ -10,6 +10,7 @@ use App\Models\AllianceFinanceEntry;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -212,10 +213,18 @@ class DirectDepositService
         $ddTaxId = $this->ddTaxId;
         $currentTaxId = $nation->tax_id;
 
-        // Determine previous tax ID
-        $previousTaxId = ($currentTaxId === $ddTaxId)
-            ? SettingService::getDirectDepositFallbackId()
-            : $currentTaxId;
+        // Determine previous tax ID. If a Growth Circles enrollment exists,
+        // capture its previous_tax_id (the *original* pre-program bracket)
+        // and disenroll from Growth Circles before proceeding. The capture
+        // happens FIRST so the disenroll side effect cannot lose the value.
+        if ($gcEnrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first()) {
+            $previousTaxId = (int) $gcEnrollment->previous_tax_id;
+            app(GrowthCircleService::class)->disenroll($nation);
+        } else {
+            $previousTaxId = ($currentTaxId === $ddTaxId)
+                ? SettingService::getDirectDepositFallbackId()
+                : $currentTaxId;
+        }
 
         // Save enrollment
         DirectDepositEnrollment::updateOrCreate(
