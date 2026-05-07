@@ -61,7 +61,7 @@ The program runs in parallel with DirectDeposit. A nation can be enrolled in at 
 │   → GrowthCircleService::runDailyDistribution()              │
 │      foreach enrollment (chunked):                           │
 │        • re-check 5 eligibility gates                        │
-│        • NationProfitabilityService::getDailyConsumption     │
+│        • NationProfitabilityService::getDailyResourceShortfall     │
 │        • DB::transaction:                                    │
 │           – lock account, credit food + uranium              │
 │           – insert GrowthCircleDistribution row              │
@@ -80,7 +80,7 @@ The program runs in parallel with DirectDeposit. A nation can be enrolled in at 
 
 - The Growth Circle service does not import `DirectDepositService` for any purpose other than calling its public `disenroll()` method during auto-switch. No shared state, no shared tables.
 - A symmetric ~5-line addition to `DirectDepositService::enroll()` checks for an existing Growth Circles enrollment and disenrolls it before proceeding. This is the only DD code change in this feature.
-- Consumption math is read-only against `NationProfitabilityService`. We add a thin `getDailyConsumption(Nation): array{food, uranium}` accessor; we do not duplicate or fork the existing computation.
+- Consumption math is read-only against `NationProfitabilityService`. We add a thin `getDailyResourceShortfall(Nation): array{food, uranium}` accessor; we do not duplicate or fork the existing computation.
 - All P&W tax bracket mutations go through the existing `TaxBracketService`.
 
 ## 5. Data model
@@ -96,7 +96,7 @@ The program runs in parallel with DirectDeposit. A nation can be enrolled in at 
 | `enrolled_at` | timestamp | |
 | `created_at` / `updated_at` | timestamps | |
 
-Concurrency: unique constraint on `nation_id` plus a try/catch on the unique-violation in the controller, converted to a `UserErrorException`.
+Concurrency: unique constraint on `nation_id`. The service uses `updateOrCreate` keyed on `nation_id`, which is naturally idempotent across double-submits — the constraint is a defense-in-depth backstop, not the primary guard.
 
 No `pending_key` pattern: enrollment is instantaneous, not request/approval.
 
@@ -108,10 +108,8 @@ No `pending_key` pattern: enrollment is instantaneous, not request/approval.
 | `nation_id` | unsigned bigint, FK → `nations.id` | |
 | `account_id` | unsigned bigint, FK → `accounts.id` | snapshot — preserved if account later deleted |
 | `enrollment_id` | unsigned bigint, **nullable** FK → `growth_circle_enrollments.id` | nulled on enrollment deletion |
-| `food` | decimal(20,2) | shipped this cycle |
-| `uranium` | decimal(20,2) | shipped this cycle |
-| `food_consumption_per_day` | decimal(20,4) | snapshot of profitability output |
-| `uranium_consumption_per_day` | decimal(20,4) | snapshot of profitability output |
+| `food` | decimal(20,2) | shipped this cycle (= the shortfall at cycle time) |
+| `uranium` | decimal(20,2) | shipped this cycle (= the shortfall at cycle time) |
 | `cycle_date` | date | |
 | `created_at` | timestamp | |
 
@@ -192,7 +190,11 @@ GrowthCircleService::enroll(Nation $nation, Account $account)
   DB::transaction:
     GrowthCircleEnrollment::updateOrCreate(
       ['nation_id' => $nation->id],
-      ['account_id', 'previous_tax_id' => $previousTaxId, 'enrolled_at' => now()]
+      [
+        'account_id'      => $account->id,
+        'previous_tax_id' => $previousTaxId,
+        'enrolled_at'     => now(),
+      ]
     )
 
   // Step 4: assign new bracket in P&W. Failure leaves the row in place; the
@@ -296,10 +298,11 @@ try {
             return;
         }
 
-        // 2. Pull daily gross consumption from snapshot columns.
-        $consumption = app(NationProfitabilityService::class)
-            ->getDailyConsumption($nation);
-        if ($consumption === null) {
+        // 2. Pull daily shortfall (consumption above production) from the
+        //    nation's latest profitability snapshot.
+        $shortfall = app(NationProfitabilityService::class)
+            ->getDailyResourceShortfall($nation);
+        if ($shortfall === null) {
             Log::warning('growth_circles.no_snapshot', ['nation_id' => $nation->id]);
             return;
         }
@@ -312,34 +315,31 @@ try {
             return;
         }
 
-        $account->food    += $consumption['food'];
-        $account->uranium += $consumption['uranium'];
+        $account->food    += $shortfall['food'];
+        $account->uranium += $shortfall['uranium'];
         $account->save();
 
         GrowthCircleDistribution::create([
-            'nation_id'                   => $nation->id,
-            'account_id'                  => $account->id,
-            'enrollment_id'               => $enrollment->id,
-            'food'                        => $consumption['food'],
-            'uranium'                     => $consumption['uranium'],
-            'food_consumption_per_day'    => $consumption['food'],
-            'uranium_consumption_per_day' => $consumption['uranium'],
-            'cycle_date'                  => $cycleDate,
+            'nation_id'     => $nation->id,
+            'account_id'    => $account->id,
+            'enrollment_id' => $enrollment->id,
+            'food'          => $shortfall['food'],
+            'uranium'       => $shortfall['uranium'],
+            'cycle_date'    => $cycleDate,
         ]);
 
         // 4. Emit alliance expense for finance reporting.
         event(new AllianceExpenseOccurred(
-            AllianceFinanceData::forGrowthCircleDistribution($nation, $account, $consumption)
+            AllianceFinanceData::forGrowthCircleDistribution($nation, $account, $shortfall)
                 ->toArray()
         ));
     });
-} catch (QueryException $e) {
-    if ($e->errorInfo[1] === 1062) {
-        // Already distributed for this cycle_date — idempotent skip.
-        // Transaction has already rolled back at this point.
-        return;
-    }
-    throw $e;
+} catch (UniqueConstraintViolationException $e) {
+    // Already distributed for this cycle_date — idempotent skip.
+    // Transaction has already rolled back at this point.
+    // Use Laravel's portable wrapper rather than catching driver-specific
+    // SQLSTATE / errno values.
+    return;
 } catch (Throwable $e) {
     Log::error('growth_circles.distribute.failed', [
         'nation_id' => $enrollment->nation_id,
@@ -361,7 +361,7 @@ try {
  *         For each resource: max(0, -resource_profit_per_day[$resource]).
  *         Net producers receive 0; net consumers receive their deficit.
  */
-public function getDailyConsumption(Nation $nation): ?array
+public function getDailyResourceShortfall(Nation $nation): ?array
 ```
 
 Implementation reads `NationProfitabilitySnapshot::query()->where('nation_id', $nation->id)->first()`. If no snapshot exists, returns `null` and the daily distribution skips the member with a `growth_circles.no_snapshot` warning. The accessor does not trigger snapshot regeneration — snapshots are produced by the existing scheduled job and we accept whatever the most recent one says.
@@ -480,7 +480,7 @@ Page-level action:
 ### 10.3 Distribution history (`/admin/growth-circles/history`)
 
 Audit trail across all members. Columns:
-- `cycle_date`, nation, account, food shipped, uranium shipped, `food_consumption_per_day` snapshot, `uranium_consumption_per_day` snapshot.
+- `cycle_date`, nation, account, food shipped, uranium shipped.
 
 Filters: date range, nation, account.
 Pagination: 50/page.
@@ -520,7 +520,8 @@ The "no per-distribution notification" choice keeps Discord channel noise low; w
 | `TaxBracketService` fails on enroll | service | DB row exists; throw → user sees error. Admin "Reapply tax bracket" can retry. |
 | `TaxBracketService` fails on disenroll | service | retry with `fallback_tax_id`; on second failure, log and still delete the enrollment row (mirrors DD; dangling row would freeze the user). |
 | `NationProfitabilityService` returns null | distribute | log warning, skip member for the cycle. |
-| Unique violation `(nation_id, cycle_date)` | distribute | catch, treat as already-done, skip silently. |
+| Unique violation `(nation_id, cycle_date)` | distribute | catch `UniqueConstraintViolationException`, treat as already-done, skip silently. |
+| Manual "Distribute now" while scheduled run is in flight | admin controller | `withoutOverlapping(120)` blocks the manual command; admin sees a flash message: "A scheduled distribution is currently running — manual run skipped." |
 | Account locked / missing | distribute | log error, skip member, continue cycle. |
 | One member's distribution throws | distribute | per-member try/catch isolates it; cycle continues. |
 | `growth_circles.tax_id` not configured | enroll | block with admin-facing error: "Growth Circles tax bracket is not configured." |
@@ -571,7 +572,7 @@ Per `CLAUDE.md` "no automated tests" policy:
 - `routes/console.php` — daily schedule entry.
 - `config/permissions.php` — `view-growth-circles`, `manage-growth-circles`.
 - `app/Services/DirectDepositService.php` — symmetric ~5-line auto-switch in `enroll()`.
-- `app/Services/NationProfitabilityService.php` — add `getDailyConsumption(Nation): ?array`.
+- `app/Services/NationProfitabilityService.php` — add `getDailyResourceShortfall(Nation): ?array`.
 - `app/Services/SettingService.php` — add `getGrowthCirclesTaxId(): ?int` and `getGrowthCirclesFallbackTaxId(): ?int` (mirroring `getDirectDepositId()` / `getDirectDepositFallbackId()`).
 - `resources/views/dashboard.blade.php` (or wherever the DD card lives) — include the Growth Circles card.
 - `resources/views/admin/settings/*` — settings section partial.
