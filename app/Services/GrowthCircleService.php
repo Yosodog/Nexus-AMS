@@ -118,7 +118,7 @@ class GrowthCircleService
         );
     }
 
-    public function disenroll(Nation $nation): void
+    public function disenroll(Nation $nation, bool $logAudit = true): void
     {
         $enrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first();
         if (! $enrollment) {
@@ -153,18 +153,20 @@ class GrowthCircleService
 
         $enrollment->delete();
 
-        app(AuditLogger::class)->recordAfterCommit(
-            category: 'growth_circles',
-            action: 'disenrolled',
-            subject: $enrollment,
-            context: [
-                'data' => [
-                    'nation_id' => $nation->id,
-                    'restored_tax_id' => $targetTaxId,
+        if ($logAudit) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'growth_circles',
+                action: 'disenrolled',
+                subject: $enrollment,
+                context: [
+                    'data' => [
+                        'nation_id' => $nation->id,
+                        'restored_tax_id' => $targetTaxId,
+                    ],
                 ],
-            ],
-            message: "Disenrolled nation {$nation->nation_name} from Growth Circles.",
-        );
+                message: "Disenrolled nation {$nation->nation_name} from Growth Circles.",
+            );
+        }
     }
 
     /**

@@ -132,7 +132,7 @@ class GrowthCirclesController extends Controller
     {
         $this->authorize('manage-growth-circles');
 
-        $this->growthCircles->disenroll($nation);
+        $this->growthCircles->disenroll($nation, logAudit: false);
 
         $this->auditLogger->success(
             category: 'growth_circles',
