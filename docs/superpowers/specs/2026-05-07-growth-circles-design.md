@@ -408,10 +408,6 @@ Route::post('/admin/growth-circles/enrollments/{nation}/disenroll',
 Route::post('/admin/growth-circles/enrollments/{nation}/reapply-bracket',
     [Admin\GrowthCirclesController::class, 'reapplyBracket']
 )->middleware('can:manage-growth-circles,view-diagnostic-info');
-
-Route::post('/admin/growth-circles/distribute-now',
-    [Admin\GrowthCirclesController::class, 'distributeNow']
-)->middleware('can:manage-growth-circles,view-diagnostic-info');
 ```
 
 ## 9. User-facing UI (Tailwind + DaisyUI)
@@ -478,8 +474,7 @@ Per-row actions (gated `manage-growth-circles`):
 - **Force-disenroll** — runs `GrowthCircleService::disenroll`.
 - **Reapply tax bracket** — recovery tool: re-runs `TaxBracketService` from the existing enrollment row. Behind `view-diagnostic-info`.
 
-Page-level action:
-- **Distribute now** — triggers `growth-circles:distribute` for the current UTC `cycle_date`. Safe within the same UTC day due to the unique `(nation_id, cycle_date)` constraint. **UI warning shown when current UTC time is after 21:00**: "It is late in the UTC day. Running this now and letting the 03:00 UTC scheduler run tomorrow will produce two distributions within ~6 hours. Confirm only if you intend to skip the next scheduled run." The button still proceeds on confirmation; cycle-date-spanning double-distribution is the operator's responsibility, not the system's. Behind `manage-growth-circles` + `view-diagnostic-info`.
+Manual distribution is performed via the existing artisan command (`php artisan growth-circles:distribute`) using whatever operations tooling the project already uses for one-off scheduled-job runs — no admin-UI button is added. The unique `(nation_id, cycle_date)` constraint keeps repeated same-day invocations idempotent.
 
 ### 10.3 Distribution history (`/admin/growth-circles/history`)
 
@@ -502,7 +497,6 @@ All write actions log via `AuditLogger`, using `recordAfterCommit()` for transac
 | User enrolls in DD via auto-switch from GC | `direct_deposit.switched_from_growth_circles` (replaces `direct_deposit.enrolled`; not in addition to) |
 | Admin force-disenroll | `growth_circles.admin_disenrolled` |
 | Admin reapply bracket | `growth_circles.bracket_reapplied` |
-| Admin manual distribute | `growth_circles.manual_distribution_triggered` |
 | Settings updated | `growth_circles.settings_updated` |
 
 The switch events **replace** the underlying enroll events rather than being emitted alongside them — single audit row per user-visible action, with payload distinguishing the auto-switch case.
@@ -525,7 +519,6 @@ The "no per-distribution notification" choice keeps Discord channel noise low; w
 | `TaxBracketService` fails on disenroll | service | retry with `fallback_tax_id`; on second failure, log and still delete the enrollment row (mirrors DD; dangling row would freeze the user). |
 | `NationProfitabilityService` returns null | distribute | log warning, skip member for the cycle. |
 | Unique violation `(nation_id, cycle_date)` | distribute | catch `UniqueConstraintViolationException`, treat as already-done, skip silently. |
-| Manual "Distribute now" while scheduled run is in flight | admin controller | `withoutOverlapping(120)` blocks the manual command; admin sees a flash message: "A scheduled distribution is currently running — manual run skipped." |
 | Account locked / missing | distribute | log error, skip member, continue cycle. |
 | One member's distribution throws | distribute | per-member try/catch isolates it; cycle continues. |
 | `growth_circles.tax_id` not configured | enroll | block with admin-facing error: "Growth Circles tax bracket is not configured." |
