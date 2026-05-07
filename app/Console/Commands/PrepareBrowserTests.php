@@ -3,14 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Support\BrowserTestBootstrap;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
+#[Signature('app:prepare-browser-tests')]
+#[Description('Prepare the lightweight browser-test database fixtures')]
 class PrepareBrowserTests extends Command
 {
-    protected $signature = 'app:prepare-browser-tests';
-
-    protected $description = 'Prepare the lightweight browser-test database fixtures';
-
     public function __construct(private readonly BrowserTestBootstrap $browserTestBootstrap)
     {
         parent::__construct();

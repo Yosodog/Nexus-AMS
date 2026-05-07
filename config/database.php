@@ -5,7 +5,7 @@ use Pdo\Mysql;
 
 $mysqlSslCaOption = defined('Pdo\\Mysql::ATTR_SSL_CA')
     ? Mysql::ATTR_SSL_CA
-    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : null);
+    : PDO::MYSQL_ATTR_SSL_CA;
 
 return [
 
