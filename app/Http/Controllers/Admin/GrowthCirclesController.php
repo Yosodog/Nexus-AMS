@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SaveGrowthCirclesSettingsRequest;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
@@ -88,14 +89,9 @@ class GrowthCirclesController extends Controller
         ]);
     }
 
-    public function saveSettings(Request $request): RedirectResponse
+    public function saveSettings(SaveGrowthCirclesSettingsRequest $request): RedirectResponse
     {
-        $this->authorize('manage-growth-circles');
-
-        $validated = $request->validate([
-            'growth_circles_tax_id' => 'required|integer|min:1',
-            'growth_circles_fallback_tax_id' => 'required|integer|min:1',
-        ]);
+        $validated = $request->validated();
 
         $previous = [
             'growth_circles_tax_id' => SettingService::getGrowthCirclesTaxId(),
