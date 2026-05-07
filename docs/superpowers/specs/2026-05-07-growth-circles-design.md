@@ -315,6 +315,10 @@ try {
             return;
         }
 
+        // Direct column increment matches the existing pattern used by
+        // DirectDepositService::process() (see Account columns: each P&W
+        // resource — money, food, uranium, etc. — is a plain decimal column
+        // on `accounts`, mutated in-place under a row lock).
         $account->food    += $shortfall['food'];
         $account->uranium += $shortfall['uranium'];
         $account->save();
@@ -364,7 +368,7 @@ try {
 public function getDailyResourceShortfall(Nation $nation): ?array
 ```
 
-Implementation reads `NationProfitabilitySnapshot::query()->where('nation_id', $nation->id)->first()`. If no snapshot exists, returns `null` and the daily distribution skips the member with a `growth_circles.no_snapshot` warning. The accessor does not trigger snapshot regeneration — snapshots are produced by the existing scheduled job and we accept whatever the most recent one says.
+Implementation reads `NationProfitabilitySnapshot::query()->where('nation_id', $nation->id)->latest('calculated_at')->first()` — the explicit ordering matches the docblock's "latest snapshot" guarantee (the table currently only stores one row per nation via `updateOrCreate`, but the ordering protects against a future change to that). If no snapshot exists, returns `null` and the daily distribution skips the member with a `growth_circles.no_snapshot` warning. The accessor does not trigger snapshot regeneration — snapshots are produced by the existing scheduled job and we accept whatever the most recent one says.
 
 ## 8. Routes
 
