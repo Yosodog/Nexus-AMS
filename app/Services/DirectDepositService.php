@@ -217,9 +217,11 @@ class DirectDepositService
         // capture its previous_tax_id (the *original* pre-program bracket)
         // and disenroll from Growth Circles before proceeding. The capture
         // happens FIRST so the disenroll side effect cannot lose the value.
+        $switchedFromGrowthCircles = false;
         if ($gcEnrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first()) {
             $previousTaxId = (int) $gcEnrollment->previous_tax_id;
-            app(GrowthCircleService::class)->disenroll($nation);
+            app(GrowthCircleService::class)->disenroll($nation, logAudit: false);
+            $switchedFromGrowthCircles = true;
         } else {
             $previousTaxId = ($currentTaxId === $ddTaxId)
                 ? SettingService::getDirectDepositFallbackId()
@@ -227,7 +229,7 @@ class DirectDepositService
         }
 
         // Save enrollment
-        DirectDepositEnrollment::updateOrCreate(
+        $enrollment = DirectDepositEnrollment::updateOrCreate(
             ['nation_id' => $nation->id],
             [
                 'account_id' => $account->id,
@@ -241,6 +243,23 @@ class DirectDepositService
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;
         $mutation->send();
+
+        if ($switchedFromGrowthCircles) {
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'direct_deposit',
+                action: 'switched_from_growth_circles',
+                subject: $enrollment,
+                context: [
+                    'data' => [
+                        'nation_id' => $nation->id,
+                        'account_id' => $account->id,
+                        'previous_tax_id' => $previousTaxId,
+                        'new_tax_id' => $ddTaxId,
+                    ],
+                ],
+                message: "Switched nation {$nation->nation_name} from Growth Circles to DirectDeposit.",
+            );
+        }
     }
 
     public function disenroll(Nation $nation): void
