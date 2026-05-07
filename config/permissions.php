@@ -36,6 +36,8 @@ return [
     'manage-rebuilding',
     'view-dd',
     'manage-dd',
+    'view-growth-circles',
+    'manage-growth-circles',
     'manage-mmr',
     'view-mmr',
     'manage-custom-pages',
