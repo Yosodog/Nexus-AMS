@@ -9,6 +9,8 @@ use App\Models\DirectDepositEnrollment;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class GrowthCircleService
 {
@@ -108,6 +110,55 @@ class GrowthCircleService
             message: $auditAction === 'switched_from_dd'
                 ? "Switched nation {$nation->nation_name} from DirectDeposit to Growth Circles."
                 : "Enrolled nation {$nation->nation_name} in Growth Circles.",
+        );
+    }
+
+    public function disenroll(Nation $nation): void
+    {
+        $enrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first();
+        if (! $enrollment) {
+            return;
+        }
+
+        $targetTaxId = (int) $enrollment->previous_tax_id;
+        $fallbackTaxId = SettingService::getGrowthCirclesFallbackTaxId();
+
+        try {
+            $mutation = new TaxBracketService;
+            $mutation->id = $targetTaxId > 0 ? $targetTaxId : $fallbackTaxId;
+            $mutation->target_id = (int) $nation->id;
+            $mutation->send();
+        } catch (Throwable $e) {
+            Log::warning(
+                "GrowthCircles: failed to assign previous tax ID {$targetTaxId} for nation {$nation->id}, retrying with fallback {$fallbackTaxId}.",
+                ['exception' => $e->getMessage()],
+            );
+            try {
+                $fallbackMutation = new TaxBracketService;
+                $fallbackMutation->id = $fallbackTaxId;
+                $fallbackMutation->target_id = (int) $nation->id;
+                $fallbackMutation->send();
+            } catch (Throwable $fallbackException) {
+                Log::error(
+                    "GrowthCircles: fallback tax-id assign also failed for nation {$nation->id}; deleting enrollment row anyway.",
+                    ['exception' => $fallbackException->getMessage()],
+                );
+            }
+        }
+
+        $enrollment->delete();
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'growth_circles',
+            action: 'disenrolled',
+            subject: $enrollment,
+            context: [
+                'data' => [
+                    'nation_id' => $nation->id,
+                    'restored_tax_id' => $targetTaxId,
+                ],
+            ],
+            message: "Disenrolled nation {$nation->nation_name} from Growth Circles.",
         );
     }
 }
