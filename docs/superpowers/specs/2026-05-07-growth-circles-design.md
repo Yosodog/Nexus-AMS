@@ -28,7 +28,7 @@ The program runs in parallel with DirectDeposit. A nation can be enrolled in at 
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| What does "need" mean? | Computed game consumption (food + uranium per day) from `NationProfitabilityService` | Not gameable by selling/depositing/gifting stockpile. Reuses already-cached snapshots. |
+| What does "need" mean? | Computed daily **shortfall**: `max(0, -resource_profit_per_day[$resource])` for food and uranium, from `NationProfitabilityService` snapshots | Not gameable by selling/depositing/gifting stockpile. P&W consumes from production *before* tax, so a net producer breaks even at 100% tax (alliance receives the surplus, member's stockpile stays steady) and needs nothing shipped. A net consumer's stockpile drops by the shortfall amount per day; the alliance ships exactly that to keep them whole. |
 | Distribution cadence | Daily, scheduled at 03:00 UTC | Matches existing scheduler patterns; bounded burst size; low log noise. |
 | Delivery destination | Internal `Account` selected by the member at enrollment | No in-game bank API calls in the daily job; reuses existing withdrawal flow with its blockade and rate-limit handling. |
 | DD ↔ Growth Circles conflict | Auto-switch | Smoother UX. Auto-switch always preserves the *original* `previous_tax_id`, never the other program's bracket. |
@@ -124,7 +124,30 @@ Constraints:
 - `growth_circles.tax_id` — the P&W bracket ID with 100% retention across all resources. Admin must create the bracket in P&W and enter the ID here.
 - `growth_circles.fallback_tax_id` — bracket assigned on disenroll if `previous_tax_id` is null or invalid (mirrors DD's fallback pattern).
 
-### 5.4 Permissions (new entries in `config/permissions.php`)
+Add the following accessors on `SettingService` (mirroring the DD pattern of `getDirectDepositId()` / `getDirectDepositFallbackId()`):
+
+```php
+public static function getGrowthCirclesTaxId(): ?int
+public static function getGrowthCirclesFallbackTaxId(): ?int
+```
+
+The service, the admin Settings view, and the command all read through these accessors — no ad-hoc `config()` or `Setting::get()` calls scattered across the feature.
+
+### 5.4 No new columns on `nation_profitability_snapshots`
+
+The shortfall metric is read directly from the existing `resource_profit_per_day` JSON column on `nation_profitability_snapshots` (already populated for every member nation by the existing snapshot pipeline — see `app/Services/NationProfitabilityService.php` line 316). No schema change to that table is required.
+
+For each enrolled nation per cycle:
+
+```php
+$net = $snapshot->resource_profit_per_day;          // array<string, float>
+$foodShortfall    = max(0, -(float) ($net['food']    ?? 0));
+$uraniumShortfall = max(0, -(float) ($net['uranium'] ?? 0));
+```
+
+Net producers (`food` >= 0) get `0`. Net consumers get the absolute value of their daily deficit.
+
+### 5.5 Permissions (new entries in `config/permissions.php`)
 
 - `view-growth-circles`
 - `manage-growth-circles`
@@ -138,6 +161,8 @@ Diagnostic actions (manual distribution trigger, reapply bracket) additionally r
 ```
 GrowthCircleService::enroll(Nation $nation, Account $account)
 
+  // Step 1: eligibility gates run FIRST, before any state capture or
+  // side effect. If any gate fails the operation aborts immediately.
   guard: 5 eligibility gates
     – AllianceMembershipService::contains($nation->alliance_id)
     – $nation->alliance_position !== APPLICANT
@@ -146,25 +171,40 @@ GrowthCircleService::enroll(Nation $nation, Account $account)
     – $nation->num_cities > 0
   on failure → throw UserErrorException with the failing gate
 
-  resolve previous_tax_id:
-    if DirectDepositEnrollment exists:
-       previousTaxId = ddEnrollment.previous_tax_id    // the *original*
-       app(DirectDepositService)->disenroll($nation)   // restores bracket
-    else if existing GrowthCircleEnrollment exists:
-       previousTaxId = existing.previous_tax_id        // idempotent re-enroll
-    else:
-       previousTaxId = $nation->tax_id
+  // Step 2: capture previous_tax_id BEFORE any disenroll side effect.
+  // Variable order is load-and-snapshot-first, mutate-second.
+  if ($ddEnrollment = DirectDepositEnrollment::where('nation_id', $nation->id)->first()) {
+      $previousTaxId = $ddEnrollment->previous_tax_id;          // capture FIRST
+      app(DirectDepositService::class)->disenroll($nation);     // then mutate
 
+      // If DD disenroll fell through to fallback (logged warning) the bracket
+      // is currently the fallback, but we still proceed with the captured
+      // previousTaxId — the final disenroll-from-GC at some future point will
+      // restore the original. Aborting here would leave the user with the
+      // fallback bracket and no enrollment.
+  } elseif ($existing = GrowthCircleEnrollment::where('nation_id', $nation->id)->first()) {
+      $previousTaxId = $existing->previous_tax_id;              // idempotent re-enroll
+  } else {
+      $previousTaxId = $nation->tax_id;
+  }
+
+  // Step 3: persist enrollment.
   DB::transaction:
     GrowthCircleEnrollment::updateOrCreate(
       ['nation_id' => $nation->id],
-      ['account_id', 'previous_tax_id', 'enrolled_at' => now()]
+      ['account_id', 'previous_tax_id' => $previousTaxId, 'enrolled_at' => now()]
     )
 
+  // Step 4: assign new bracket in P&W. Failure leaves the row in place; the
+  // admin "Reapply tax bracket" recovery action retries.
   TaxBracketService → P&W: assign growth_circles.tax_id
 
   AuditLogger::recordAfterCommit('growth_circles.enrolled', actor, payload)
 ```
+
+**Switch failure semantics.** During an auto-switch from DD → GC, if `DirectDepositService::disenroll()` falls back (its primary `TaxBracketService` call fails and it retries with the DD fallback bracket), the GC enroll proceeds anyway. The user ends up enrolled in GC with the captured original `previous_tax_id` — a final disenroll from GC will restore the original bracket. Aborting the enroll on a partial DD-disenroll failure would leave the user disenrolled from DD but not enrolled in GC, which is worse. The same logic applies symmetrically to GC → DD switches in `DirectDepositService::enroll()`.
+
+If the GC `TaxBracketService` call itself fails after the row is written (Step 4), the error is surfaced to the user; the enrollment row exists but the in-game bracket isn't set. The admin "Reapply tax bracket" recovery action handles this case.
 
 ### 6.2 Disenroll
 
@@ -185,12 +225,14 @@ GrowthCircleService::disenroll(Nation $nation)
 
 ### 6.3 Symmetric DD change
 
-`DirectDepositService::enroll()` gains, at the top:
+`DirectDepositService::enroll()` gains, at the top (capture-then-mutate ordering — same pattern as §6.1):
 
-```
+```php
 if ($gcEnrollment = GrowthCircleEnrollment::where('nation_id', $nation->id)->first()) {
-    $previousTaxId = $gcEnrollment->previous_tax_id;
-    app(GrowthCircleService::class)->disenroll($nation);
+    $previousTaxId = $gcEnrollment->previous_tax_id;          // capture FIRST
+    app(GrowthCircleService::class)->disenroll($nation);      // then mutate
+    // Same fallback semantics: proceed with DD enroll even if GC disenroll
+    // fell through to GC's fallback bracket.
 } else {
     $previousTaxId = ($currentTaxId === $ddTaxId)
         ? SettingService::getDirectDepositFallbackId()
@@ -241,6 +283,8 @@ GrowthCircleEnrollment::query()
 
 Each member is wrapped in its own try/catch + DB transaction so one bad nation cannot kill the cycle.
 
+**Transaction-and-catch ordering matters.** The `try/catch` is **outside** the `DB::transaction()`, never inside it. On a unique-violation (`1062`) the transaction rolls back first, then the exception bubbles to the outer catch which logs-and-skips. Moving the catch *inside* the transaction would attempt a write after the violation and break idempotency.
+
 ```php
 try {
     DB::transaction(function () use ($enrollment, $cycleDate) {
@@ -252,7 +296,7 @@ try {
             return;
         }
 
-        // 2. Pull daily consumption from existing profitability snapshots.
+        // 2. Pull daily gross consumption from snapshot columns.
         $consumption = app(NationProfitabilityService::class)
             ->getDailyConsumption($nation);
         if ($consumption === null) {
@@ -291,7 +335,8 @@ try {
     });
 } catch (QueryException $e) {
     if ($e->errorInfo[1] === 1062) {
-        // Already distributed for this cycle_date — idempotent skip
+        // Already distributed for this cycle_date — idempotent skip.
+        // Transaction has already rolled back at this point.
         return;
     }
     throw $e;
@@ -307,10 +352,19 @@ try {
 ### 7.5 New method on `NationProfitabilityService`
 
 ```php
+/**
+ * Daily food/uranium shortfall (consumption above production) for the
+ * given nation, read from its latest profitability snapshot.
+ *
+ * @return array{food: float, uranium: float}|null
+ *         Null if no snapshot exists for this nation.
+ *         For each resource: max(0, -resource_profit_per_day[$resource]).
+ *         Net producers receive 0; net consumers receive their deficit.
+ */
 public function getDailyConsumption(Nation $nation): ?array
 ```
 
-Returns `['food' => float, 'uranium' => float]` from the most recent snapshot, or `null` if no snapshot exists. Thin read accessor — does not re-compute. Internals already exist (`food_cost_per_day`, plus uranium consumption already tracked).
+Implementation reads `NationProfitabilitySnapshot::query()->where('nation_id', $nation->id)->first()`. If no snapshot exists, returns `null` and the daily distribution skips the member with a `growth_circles.no_snapshot` warning. The accessor does not trigger snapshot regeneration — snapshots are produced by the existing scheduled job and we accept whatever the most recent one says.
 
 ## 8. Routes
 
@@ -368,13 +422,22 @@ Dashboard card alongside the existing DirectDeposit card.
 - Eligibility line — green if all five gates pass, red with the specific failing gate if not (e.g. "Not available while in vacation mode").
 - "Enroll" button — disabled when ineligible.
 
-### 9.2 Enrolled in Growth Circles
+### 9.2 Enrolled in Growth Circles (active)
 
 - Status: "Enrolled — depositing into *Account Name*."
 - Last distribution: date, food shipped, uranium shipped.
 - Next distribution: "tomorrow ~03:00 UTC."
 - Recent history: collapsible list, last 7 cycles.
 - "Disenroll" button.
+
+### 9.2.1 Enrolled in Growth Circles (paused — eligibility gate failing)
+
+When a nation is enrolled but the daily distribution is skipping it because one of the 5 gates currently fails:
+
+- Status banner (warning color): "Paused — *reason*" (e.g. "Paused — vacation mode," "Paused — beige," "Paused — applicant rank").
+- Explainer: "You will resume receiving distributions automatically when this condition clears."
+- Recent history still shown; the paused-cycle days simply have no distribution row.
+- "Disenroll" button still available — enrollment is not auto-cancelled by a pause.
 
 ### 9.3 Enrolled in DirectDeposit
 
@@ -412,7 +475,7 @@ Per-row actions (gated `manage-growth-circles`):
 - **Reapply tax bracket** — recovery tool: re-runs `TaxBracketService` from the existing enrollment row. Behind `view-diagnostic-info`.
 
 Page-level action:
-- **Distribute now** — triggers `growth-circles:distribute` for the current `cycle_date`. Safe due to the unique `(nation_id, cycle_date)` constraint. Behind `manage-growth-circles` + `view-diagnostic-info`.
+- **Distribute now** — triggers `growth-circles:distribute` for the current UTC `cycle_date`. Safe within the same UTC day due to the unique `(nation_id, cycle_date)` constraint. **UI warning shown when current UTC time is after 21:00**: "It is late in the UTC day. Running this now and letting the 03:00 UTC scheduler run tomorrow will produce two distributions within ~6 hours. Confirm only if you intend to skip the next scheduled run." The button still proceeds on confirmation; cycle-date-spanning double-distribution is the operator's responsibility, not the system's. Behind `manage-growth-circles` + `view-diagnostic-info`.
 
 ### 10.3 Distribution history (`/admin/growth-circles/history`)
 
@@ -429,14 +492,16 @@ All write actions log via `AuditLogger`, using `recordAfterCommit()` for transac
 
 | Action | Event key |
 |---|---|
-| User enrolls | `growth_circles.enrolled` |
+| User enrolls (no prior DD) | `growth_circles.enrolled` |
+| User enrolls via auto-switch from DD | `growth_circles.switched_from_dd` (replaces `growth_circles.enrolled`; not in addition to) |
 | User disenrolls | `growth_circles.disenrolled` |
-| Auto-switch from DD → GC | `growth_circles.switched_from_dd` |
-| Auto-switch from GC → DD | `direct_deposit.switched_from_growth_circles` |
+| User enrolls in DD via auto-switch from GC | `direct_deposit.switched_from_growth_circles` (replaces `direct_deposit.enrolled`; not in addition to) |
 | Admin force-disenroll | `growth_circles.admin_disenrolled` |
 | Admin reapply bracket | `growth_circles.bracket_reapplied` |
 | Admin manual distribute | `growth_circles.manual_distribution_triggered` |
 | Settings updated | `growth_circles.settings_updated` |
+
+The switch events **replace** the underlying enroll events rather than being emitted alongside them — single audit row per user-visible action, with payload distinguishing the auto-switch case.
 
 The daily distribution is **not** audit-logged per row (would be noisy). The `growth_circle_distributions` table itself is the audit trail.
 
@@ -460,7 +525,8 @@ The "no per-distribution notification" choice keeps Discord channel noise low; w
 | One member's distribution throws | distribute | per-member try/catch isolates it; cycle continues. |
 | `growth_circles.tax_id` not configured | enroll | block with admin-facing error: "Growth Circles tax bracket is not configured." |
 | P&W API down at scheduled time | scheduler | `->skip()` skips the cycle entirely; resumes next day. |
-| Concurrent enrollment (double-click) | controller | unique constraint catches it; converted to friendly error. |
+| Concurrent enrollment (double-click, same `account_id`) | service | `updateOrCreate` on `nation_id` is naturally idempotent — last write wins, no constraint violation. |
+| Concurrent enrollment (double-submit, *different* `account_id`) | service | `updateOrCreate` last-write-wins on `account_id`; both calls succeed serially and the second-clicked account becomes active. Acceptable: this is recoverable by the user re-submitting with their preferred account. |
 
 ## 14. Cache invalidation
 
@@ -506,13 +572,13 @@ Per `CLAUDE.md` "no automated tests" policy:
 - `config/permissions.php` — `view-growth-circles`, `manage-growth-circles`.
 - `app/Services/DirectDepositService.php` — symmetric ~5-line auto-switch in `enroll()`.
 - `app/Services/NationProfitabilityService.php` — add `getDailyConsumption(Nation): ?array`.
-- `app/Services/SettingService.php` — accessors for `growth_circles.tax_id` / `growth_circles.fallback_tax_id`.
+- `app/Services/SettingService.php` — add `getGrowthCirclesTaxId(): ?int` and `getGrowthCirclesFallbackTaxId(): ?int` (mirroring `getDirectDepositId()` / `getDirectDepositFallbackId()`).
 - `resources/views/dashboard.blade.php` (or wherever the DD card lives) — include the Growth Circles card.
 - `resources/views/admin/settings/*` — settings section partial.
 - `app/DataTransferObjects/AllianceFinanceData.php` — `forGrowthCircleDistribution()` factory method (or equivalent existing pattern).
 
 ## 17. Open questions / future work
 
-- **Abuse detection.** Computed-consumption math is structurally abuse-resistant for this version. If a member-with-no-farms exploit emerges, consider gating distribution on minimum farm count or military presence.
-- **Multi-resource expansion.** The schema is food/uranium-specific by intent. If the program later expands to more resources, the migration adds columns and the service reads more keys from `NationProfitabilityService::getDailyConsumption`.
+- **Abuse vector — "skip the farms, get free food."** Because shortfall scales inversely with farm coverage, a member who builds zero farms maximizes their daily food shipment (population/military still eat; nothing offsets it). Same logic for uranium with no uranium-mine coverage and high military. This is a known consequence of the shortfall model — the alliance is effectively subsidizing under-built infrastructure. Mitigations to consider as a follow-up: minimum farms-per-city threshold for eligibility, or a per-cycle cap proportional to expected shortfall at recommended farm coverage.
+- **Multi-resource expansion.** The schema is food/uranium-specific by intent. If the program later expands to more resources, the migration adds columns to `growth_circle_distributions` and the service reads more keys from `resource_profit_per_day`.
 - **Distribution history retention.** No purge policy in this design; rows persist indefinitely. If table size becomes a concern, add a periodic archive command.
