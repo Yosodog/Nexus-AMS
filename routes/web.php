@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
+use App\Http\Controllers\Admin\GrowthCirclesController as AdminGrowthCirclesController;
 use App\Http\Controllers\Admin\LoansController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MarketController as AdminMarketController;
@@ -343,6 +344,24 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
         Route::post('/admin/direct-deposit/brackets/delete', [AccountController::class, 'deleteDirectDepositBrackets'])
             ->name('admin.dd.brackets.delete');
+
+        // Growth Circles
+        Route::get('/admin/growth-circles', [AdminGrowthCirclesController::class, 'index'])
+            ->name('admin.growth-circles.index');
+
+        Route::get('/admin/growth-circles/history', [AdminGrowthCirclesController::class, 'history'])
+            ->name('admin.growth-circles.history');
+
+        Route::post('/admin/growth-circles/settings', [AdminGrowthCirclesController::class, 'saveSettings'])
+            ->name('admin.growth-circles.settings');
+
+        Route::post('/admin/growth-circles/enrollments/{nation}/disenroll', [AdminGrowthCirclesController::class, 'forceDisenroll'])
+            ->name('admin.growth-circles.force-disenroll')
+            ->middleware(BlockWhenPWDown::class);
+
+        Route::post('/admin/growth-circles/enrollments/{nation}/reapply-bracket', [AdminGrowthCirclesController::class, 'reapplyBracket'])
+            ->name('admin.growth-circles.reapply-bracket')
+            ->middleware(BlockWhenPWDown::class);
 
         // Withdrawals
         Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('admin.withdrawals.index');
