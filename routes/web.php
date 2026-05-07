@@ -45,6 +45,7 @@ use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
 use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
+use App\Http\Controllers\GrowthCirclesController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LeaderboardsController;
@@ -159,6 +160,14 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')
         ->middleware(BlockWhenPWDown::class);
     Route::post('/direct-deposit/disenroll', [DirectDepositController::class, 'disenroll'])->name('dd.disenroll')
+        ->middleware(BlockWhenPWDown::class);
+
+    // Growth Circles
+    Route::post('/growth-circles/enroll', [GrowthCirclesController::class, 'enroll'])
+        ->name('growth-circles.enroll')
+        ->middleware(BlockWhenPWDown::class);
+    Route::post('/growth-circles/disenroll', [GrowthCirclesController::class, 'disenroll'])
+        ->name('growth-circles.disenroll')
         ->middleware(BlockWhenPWDown::class);
 
     // MMR Assistant
