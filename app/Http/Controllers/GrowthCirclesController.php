@@ -34,16 +34,4 @@ class GrowthCirclesController extends Controller
             'alert-type' => 'success',
         ]);
     }
-
-    public function disenroll(): RedirectResponse
-    {
-        $nation = Auth::user()->nation;
-
-        $this->growthCircles->disenroll($nation);
-
-        return back()->with([
-            'alert-message' => 'You have been disenrolled from Growth Circles.',
-            'alert-type' => 'success',
-        ]);
-    }
 }

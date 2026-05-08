@@ -167,9 +167,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/growth-circles/enroll', [GrowthCirclesController::class, 'enroll'])
         ->name('growth-circles.enroll')
         ->middleware(BlockWhenPWDown::class);
-    Route::post('/growth-circles/disenroll', [GrowthCirclesController::class, 'disenroll'])
-        ->name('growth-circles.disenroll')
-        ->middleware(BlockWhenPWDown::class);
 
     // MMR Assistant
     Route::post('/mmr-assistant/update', [DirectDepositController::class, 'updateMMRA'])

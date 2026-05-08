@@ -52,10 +52,7 @@
 
         <p class="text-xs text-base-content/60">Next distribution: tomorrow ~03:00 UTC.</p>
 
-        <form method="POST" action="{{ route('growth-circles.disenroll') }}">
-            @csrf
-            <button class="btn btn-error w-full" type="submit">Disenroll from Growth Circles</button>
-        </form>
+        <p class="text-xs text-base-content/60">Contact an admin if you need to leave the program.</p>
 
     @elseif ($isPaused)
         {{-- Enrolled but paused --}}
@@ -101,10 +98,7 @@
             </details>
         @endif
 
-        <form method="POST" action="{{ route('growth-circles.disenroll') }}">
-            @csrf
-            <button class="btn btn-outline btn-error w-full" type="submit">Disenroll from Growth Circles</button>
-        </form>
+        <p class="text-xs text-base-content/60">Contact an admin if you need to leave the program.</p>
 
     @else
         {{-- Not enrolled --}}
