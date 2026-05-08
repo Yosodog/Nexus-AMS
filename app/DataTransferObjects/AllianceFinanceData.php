@@ -2,6 +2,10 @@
 
 namespace App\DataTransferObjects;
 
+use App\Models\Account;
+use App\Models\AllianceFinanceEntry;
+use App\Models\GrowthCircleDistribution;
+use App\Models\Nation;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -102,6 +106,31 @@ final class AllianceFinanceData
             aluminum: (float) ($payload['aluminum'] ?? 0.0),
             food: (float) ($payload['food'] ?? 0.0),
             meta: $payload['meta'] ?? [],
+        );
+    }
+
+    public static function forGrowthCircleDistribution(
+        Nation $nation,
+        Account $account,
+        GrowthCircleDistribution $distribution,
+        float $food,
+        float $uranium,
+    ): self {
+        return new self(
+            direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
+            category: 'growth_circles_distribution',
+            description: "Growth Circles distribution for {$nation->nation_name}",
+            date: Carbon::parse($distribution->cycle_date),
+            nationId: $nation->id,
+            accountId: $account->id,
+            source: $distribution,
+            food: $food,
+            uranium: $uranium,
+            meta: [
+                'cycle_date' => $distribution->cycle_date instanceof CarbonInterface
+                    ? $distribution->cycle_date->toDateString()
+                    : (string) $distribution->cycle_date,
+            ],
         );
     }
 

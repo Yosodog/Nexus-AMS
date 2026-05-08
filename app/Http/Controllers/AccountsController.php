@@ -7,6 +7,8 @@ use App\Http\Requests\TransferRequest;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
+use App\Models\GrowthCircleDistribution;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Loan;
 use App\Models\MemberTransfer;
 use App\Models\MMRAssistantPurchase;
@@ -15,6 +17,7 @@ use App\Models\MMRSetting;
 use App\Services\AccountService;
 use App\Services\AutoWithdrawService;
 use App\Services\DirectDepositService;
+use App\Services\GrowthCircleService;
 use App\Services\LoanService;
 use App\Services\MemberTransferService;
 use App\Services\PWHelperService;
@@ -419,10 +422,26 @@ class AccountsController extends Controller
             ->latest('created_at')
             ->get();
 
+        $ddEnrollment = DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first();
+        $ddEnrolled = $ddEnrollment !== null;
+
+        $gcEnrollment = GrowthCircleEnrollment::with('account')
+            ->where('nation_id', $nationId)
+            ->first();
+
+        $gcEligibility = app(GrowthCircleService::class)
+            ->evaluateEligibility(Auth::user()->nation);
+
+        $gcRecentDistributions = GrowthCircleDistribution::query()
+            ->where('nation_id', $nationId)
+            ->orderByDesc('cycle_date')
+            ->limit(7)
+            ->get();
+
         return [
             'accounts' => $accounts,
             'activeLoans' => $activeLoans,
-            'enrollment' => DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first(),
+            'enrollment' => $ddEnrollment,
             'bracket' => $ddService->getApplicableBracket(Auth::user()->nation),
             'mmrConfig' => $config,
             'mmrSettings' => $settings,
@@ -433,6 +452,10 @@ class AccountsController extends Controller
             'mmrPrices' => $mmrPrices,
             'incomingMemberTransfers' => $incomingMemberTransfers,
             'outgoingMemberTransfers' => $outgoingMemberTransfers,
+            'gcEnrollment' => $gcEnrollment,
+            'gcEligibility' => $gcEligibility,
+            'gcRecentDistributions' => $gcRecentDistributions,
+            'ddEnrolled' => $ddEnrolled,
         ];
     }
 }

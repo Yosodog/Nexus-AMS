@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\DataTransferObjects\AllianceFinanceData;
 use App\Events\AllianceIncomeOccurred;
+use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -209,15 +211,19 @@ class DirectDepositService
 
     public function enroll(Nation $nation, Account $account): void
     {
+        if (GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->exists()) {
+            throw new UserErrorException(
+                'You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining DirectDeposit.'
+            );
+        }
+
         $ddTaxId = $this->ddTaxId;
         $currentTaxId = $nation->tax_id;
 
-        // Determine previous tax ID
         $previousTaxId = ($currentTaxId === $ddTaxId)
             ? SettingService::getDirectDepositFallbackId()
             : $currentTaxId;
 
-        // Save enrollment
         DirectDepositEnrollment::updateOrCreate(
             ['nation_id' => $nation->id],
             [
@@ -227,7 +233,6 @@ class DirectDepositService
             ]
         );
 
-        // Queue GraphQL mutation to assign DD bracket
         $mutation = new TaxBracketService;
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;

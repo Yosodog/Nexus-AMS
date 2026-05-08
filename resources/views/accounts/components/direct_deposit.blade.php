@@ -43,6 +43,13 @@
         </form>
 
         @include("accounts.components.mmr_assistant")
+    @elseif (! empty($gcEnrollment))
+        <div class="rounded-xl bg-info/10 border border-info/30 p-4">
+            <p class="mb-1 text-info font-semibold">Unavailable while in Growth Circles</p>
+            <p class="text-sm text-base-content/80">
+                You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining Direct Deposit.
+            </p>
+        </div>
     @else
         <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
             <p class="mb-1 text-warning font-semibold">Not enrolled</p>

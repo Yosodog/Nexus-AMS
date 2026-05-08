@@ -32,6 +32,7 @@
             @include("accounts.components.transfer")
             @include("accounts.components.member_transfers")
             @include("accounts.components.direct_deposit")
+            @include("accounts.components.growth_circles")
             @include("accounts.components.auto_withdraw")
             <div class="grid gap-6 md:grid-cols-2">
                 @include("accounts.components.create")

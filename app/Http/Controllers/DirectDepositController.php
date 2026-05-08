@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\MMRConfig;
 use App\Services\DirectDepositService;
@@ -37,7 +38,14 @@ class DirectDepositController extends Controller
 
         $account = Account::findOrFail($request->account_id);
 
-        $this->directDepositService->enroll($nation, $account);
+        try {
+            $this->directDepositService->enroll($nation, $account);
+        } catch (UserErrorException $e) {
+            return back()->with([
+                'alert-message' => $e->getMessage(),
+                'alert-type' => 'error',
+            ]);
+        }
 
         return back()->with([
             'alert-message' => 'You have been enrolled in Direct Deposit.',
