@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DataTransferObjects\AllianceFinanceData;
 use App\Events\AllianceIncomeOccurred;
+use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
@@ -210,26 +211,20 @@ class DirectDepositService
 
     public function enroll(Nation $nation, Account $account): void
     {
+        if (GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->exists()) {
+            throw new UserErrorException(
+                'You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining DirectDeposit.'
+            );
+        }
+
         $ddTaxId = $this->ddTaxId;
         $currentTaxId = $nation->tax_id;
 
-        // Determine previous tax ID. If a Growth Circles enrollment exists,
-        // capture its previous_tax_id (the *original* pre-program bracket)
-        // and disenroll from Growth Circles before proceeding. The capture
-        // happens FIRST so the disenroll side effect cannot lose the value.
-        $switchedFromGrowthCircles = false;
-        if ($gcEnrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first()) {
-            $previousTaxId = (int) $gcEnrollment->previous_tax_id;
-            app(GrowthCircleService::class)->disenroll($nation, logAudit: false);
-            $switchedFromGrowthCircles = true;
-        } else {
-            $previousTaxId = ($currentTaxId === $ddTaxId)
-                ? SettingService::getDirectDepositFallbackId()
-                : $currentTaxId;
-        }
+        $previousTaxId = ($currentTaxId === $ddTaxId)
+            ? SettingService::getDirectDepositFallbackId()
+            : $currentTaxId;
 
-        // Save enrollment
-        $enrollment = DirectDepositEnrollment::updateOrCreate(
+        DirectDepositEnrollment::updateOrCreate(
             ['nation_id' => $nation->id],
             [
                 'account_id' => $account->id,
@@ -238,28 +233,10 @@ class DirectDepositService
             ]
         );
 
-        // Queue GraphQL mutation to assign DD bracket
         $mutation = new TaxBracketService;
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;
         $mutation->send();
-
-        if ($switchedFromGrowthCircles) {
-            app(AuditLogger::class)->recordAfterCommit(
-                category: 'direct_deposit',
-                action: 'switched_from_growth_circles',
-                subject: $enrollment,
-                context: [
-                    'data' => [
-                        'nation_id' => $nation->id,
-                        'account_id' => $account->id,
-                        'previous_tax_id' => $previousTaxId,
-                        'new_tax_id' => $ddTaxId,
-                    ],
-                ],
-                message: "Switched nation {$nation->nation_name} from Growth Circles to DirectDeposit.",
-            );
-        }
     }
 
     public function disenroll(Nation $nation): void
