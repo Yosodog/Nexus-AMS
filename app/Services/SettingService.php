@@ -454,6 +454,47 @@ class SettingService
         return self::getDirectDepositId() > 0;
     }
 
+    public static function getGrowthCirclesTaxId(): int
+    {
+        $value = self::getValue('growth_circles_tax_id');
+
+        if (is_null($value)) {
+            self::setGrowthCirclesTaxId(0);
+
+            return 0;
+        }
+
+        return (int) $value;
+    }
+
+    public static function setGrowthCirclesTaxId(int $taxId): void
+    {
+        self::setValue('growth_circles_tax_id', $taxId);
+    }
+
+    public static function getGrowthCirclesFallbackTaxId(): int
+    {
+        $value = self::getValue('growth_circles_fallback_tax_id');
+
+        if (is_null($value)) {
+            self::setGrowthCirclesFallbackTaxId(0);
+
+            return 0;
+        }
+
+        return (int) $value;
+    }
+
+    public static function setGrowthCirclesFallbackTaxId(int $taxId): void
+    {
+        self::setValue('growth_circles_fallback_tax_id', $taxId);
+    }
+
+    public static function isGrowthCirclesEnabled(): bool
+    {
+        return self::getGrowthCirclesTaxId() > 0;
+    }
+
     public static function isInactivityModeEnabled(): bool
     {
         $value = self::getValue('inactivity_mode_enabled');

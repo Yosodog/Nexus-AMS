@@ -49,6 +49,13 @@ Schedule::command('payroll:run-daily')
     ->dailyAt('00:30')
     ->timezone('America/Chicago');
 
+// Growth Circles
+Schedule::command('growth-circles:distribute')
+    ->dailyAt('03:00')
+    ->timezone('UTC')
+    ->withoutOverlapping(120)
+    ->when($whenPWUp);
+
 // Other system stuff
 Schedule::command('telescope:prune --hours=72')->dailyAt('23:45');
 Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('23:30');

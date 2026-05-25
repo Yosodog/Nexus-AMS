@@ -36,6 +36,35 @@ class NationProfitabilityService
     ) {}
 
     /**
+     * Daily food and uranium shortfall (consumption above production) for the
+     * given nation, read from its latest profitability snapshot.
+     *
+     * Net producers (production >= consumption) receive 0 for that resource.
+     * Net consumers receive their daily deficit (a positive float).
+     *
+     * @return array{food: float, uranium: float}|null
+     *                                                 Null if no snapshot exists for this nation.
+     */
+    public function getDailyResourceShortfall(Nation $nation): ?array
+    {
+        $snapshot = NationProfitabilitySnapshot::query()
+            ->where('nation_id', $nation->id)
+            ->latest('calculated_at')
+            ->first();
+
+        if (! $snapshot) {
+            return null;
+        }
+
+        $perDay = $snapshot->resource_profit_per_day ?? [];
+
+        return [
+            'food' => max(0.0, -(float) ($perDay['food'] ?? 0.0)),
+            'uranium' => max(0.0, -(float) ($perDay['uranium'] ?? 0.0)),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function getLeaderboard(): array
