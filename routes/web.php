@@ -343,20 +343,20 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->name('admin.dd.brackets.delete');
 
         // Growth Circles
-        Route::get('/admin/growth-circles', [AdminGrowthCirclesController::class, 'index'])
+        Route::get('/growth-circles', [AdminGrowthCirclesController::class, 'index'])
             ->name('admin.growth-circles.index');
 
-        Route::get('/admin/growth-circles/history', [AdminGrowthCirclesController::class, 'history'])
+        Route::get('/growth-circles/history', [AdminGrowthCirclesController::class, 'history'])
             ->name('admin.growth-circles.history');
 
-        Route::post('/admin/growth-circles/settings', [AdminGrowthCirclesController::class, 'saveSettings'])
+        Route::post('/growth-circles/settings', [AdminGrowthCirclesController::class, 'saveSettings'])
             ->name('admin.growth-circles.settings');
 
-        Route::post('/admin/growth-circles/enrollments/{nation}/disenroll', [AdminGrowthCirclesController::class, 'forceDisenroll'])
+        Route::post('/growth-circles/enrollments/{nation}/disenroll', [AdminGrowthCirclesController::class, 'forceDisenroll'])
             ->name('admin.growth-circles.force-disenroll')
             ->middleware(BlockWhenPWDown::class);
 
-        Route::post('/admin/growth-circles/enrollments/{nation}/reapply-bracket', [AdminGrowthCirclesController::class, 'reapplyBracket'])
+        Route::post('/growth-circles/enrollments/{nation}/reapply-bracket', [AdminGrowthCirclesController::class, 'reapplyBracket'])
             ->name('admin.growth-circles.reapply-bracket')
             ->middleware(BlockWhenPWDown::class);
 

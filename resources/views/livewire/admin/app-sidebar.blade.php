@@ -129,6 +129,14 @@
             :hidden="! auth()->user()?->can('view-taxes')"
         />
 
+        <x-menu-item no-wire-navigate
+            title="Growth Circles"
+            icon="o-arrow-trending-up"
+            :link="route('admin.growth-circles.index')"
+            :active="request()->routeIs('admin.growth-circles.*')"
+            :hidden="! auth()->user()?->can('view-growth-circles')"
+        />
+
         <x-menu-sub
             title="Finance"
             icon="o-currency-dollar"
