@@ -72,27 +72,34 @@ class GrowthCircleService
             throw new UserErrorException('Growth Circles is not configured. Contact an admin.');
         }
 
-        if ($ddEnrollment = DirectDepositEnrollment::query()->where('nation_id', $nation->id)->first()) {
-            $previousTaxId = (int) $ddEnrollment->previous_tax_id;
-            app(DirectDepositService::class)->disenroll($nation);
-            $auditAction = 'switched_from_dd';
-        } elseif ($existing = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first()) {
-            $previousTaxId = (int) $existing->previous_tax_id;
-            $auditAction = 'enrolled';
-        } else {
-            $previousTaxId = (int) $nation->tax_id;
-            $auditAction = 'enrolled';
-        }
+        [$enrollment, $previousTaxId, $auditAction] = DB::transaction(function () use ($nation, $account): array {
+            $lockedNation = Nation::query()->whereKey($nation->id)->lockForUpdate()->first();
+            if (! $lockedNation) {
+                throw new UserErrorException('Nation was not found.');
+            }
 
-        $enrollment = DB::transaction(function () use ($nation, $account, $previousTaxId): GrowthCircleEnrollment {
-            return GrowthCircleEnrollment::query()->updateOrCreate(
-                ['nation_id' => $nation->id],
+            $auditAction = 'enrolled';
+
+            if ($ddEnrollment = DirectDepositEnrollment::query()->where('nation_id', $lockedNation->id)->first()) {
+                $previousTaxId = (int) $ddEnrollment->previous_tax_id;
+                $ddEnrollment->delete();
+                $auditAction = 'switched_from_dd';
+            } elseif ($existing = GrowthCircleEnrollment::query()->where('nation_id', $lockedNation->id)->first()) {
+                $previousTaxId = (int) $existing->previous_tax_id;
+            } else {
+                $previousTaxId = (int) $lockedNation->tax_id;
+            }
+
+            $enrollment = GrowthCircleEnrollment::query()->updateOrCreate(
+                ['nation_id' => $lockedNation->id],
                 [
                     'account_id' => $account->id,
                     'previous_tax_id' => $previousTaxId,
                     'enrolled_at' => now(),
                 ],
             );
+
+            return [$enrollment, $previousTaxId, $auditAction];
         });
 
         $mutation = new TaxBracketService;
@@ -217,6 +224,29 @@ class GrowthCircleService
                     Log::info('growth_circles.skip', [
                         'nation_id' => $nation->id,
                         'reason' => $eligibility['reason'],
+                        'cycle_date' => $cycleDate,
+                    ]);
+
+                    return 'skipped';
+                }
+
+                $growthCirclesTaxId = SettingService::getGrowthCirclesTaxId();
+                if ((int) $nation->tax_id !== $growthCirclesTaxId) {
+                    Log::warning('growth_circles.skip', [
+                        'nation_id' => $nation->id,
+                        'reason' => 'tax_mismatch',
+                        'cycle_date' => $cycleDate,
+                        'expected_tax_id' => $growthCirclesTaxId,
+                        'actual_tax_id' => (int) $nation->tax_id,
+                    ]);
+
+                    return 'skipped';
+                }
+
+                if (DirectDepositEnrollment::query()->where('nation_id', $nation->id)->exists()) {
+                    Log::warning('growth_circles.skip', [
+                        'nation_id' => $nation->id,
+                        'reason' => 'direct_deposit_enrolled',
                         'cycle_date' => $cycleDate,
                     ]);
 

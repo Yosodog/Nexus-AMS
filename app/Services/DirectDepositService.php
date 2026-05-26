@@ -211,27 +211,33 @@ class DirectDepositService
 
     public function enroll(Nation $nation, Account $account): void
     {
-        if (GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->exists()) {
-            throw new UserErrorException(
-                'You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining DirectDeposit.'
-            );
-        }
-
         $ddTaxId = $this->ddTaxId;
-        $currentTaxId = $nation->tax_id;
 
-        $previousTaxId = ($currentTaxId === $ddTaxId)
-            ? SettingService::getDirectDepositFallbackId()
-            : $currentTaxId;
+        DB::transaction(function () use ($nation, $account, $ddTaxId): void {
+            $lockedNation = Nation::query()->whereKey($nation->id)->lockForUpdate()->first();
+            if (! $lockedNation) {
+                throw new UserErrorException('Nation was not found.');
+            }
 
-        DirectDepositEnrollment::updateOrCreate(
-            ['nation_id' => $nation->id],
-            [
-                'account_id' => $account->id,
-                'previous_tax_id' => $previousTaxId,
-                'enrolled_at' => now(),
-            ]
-        );
+            if (GrowthCircleEnrollment::query()->where('nation_id', $lockedNation->id)->exists()) {
+                throw new UserErrorException(
+                    'You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining DirectDeposit.'
+                );
+            }
+
+            $previousTaxId = ((int) $lockedNation->tax_id === $ddTaxId)
+                ? SettingService::getDirectDepositFallbackId()
+                : (int) $lockedNation->tax_id;
+
+            DirectDepositEnrollment::query()->updateOrCreate(
+                ['nation_id' => $lockedNation->id],
+                [
+                    'account_id' => $account->id,
+                    'previous_tax_id' => $previousTaxId,
+                    'enrolled_at' => now(),
+                ]
+            );
+        });
 
         $mutation = new TaxBracketService;
         $mutation->id = $ddTaxId;
