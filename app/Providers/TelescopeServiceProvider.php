@@ -28,7 +28,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                 $entry->isFailedJob() ||
                 $entry->isScheduledTask() ||
                 $entry->hasMonitoredTag() ||
-                $entry->isRequest() ||
                 $entry->isSlowQuery();
         });
 
@@ -55,11 +54,33 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return;
         }
 
-        Telescope::hideRequestParameters(['_token']);
+        Telescope::hideRequestParameters([
+            '_token',
+            'apiKey',
+            'api_key',
+            'code',
+            'current_password',
+            'key',
+            'mutationKey',
+            'mutation_key',
+            'password',
+            'password_confirmation',
+            'recovery_code',
+            'token',
+            'two_factor_code',
+            'verification_code',
+        ]);
 
         Telescope::hideRequestHeaders([
+            'authorization',
             'cookie',
+            'php-auth-pw',
+            'x-api-key',
+            'x-bot-key',
             'x-csrf-token',
+            'x-discord-signature',
+            'x-discord-timestamp',
+            'x-nexus-api-key',
             'x-xsrf-token',
         ]);
     }
