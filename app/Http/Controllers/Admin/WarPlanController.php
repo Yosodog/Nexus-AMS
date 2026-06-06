@@ -18,6 +18,7 @@ use App\Services\War\LiveFeedQueryService;
 use App\Services\War\NationMatchService;
 use App\Services\War\NotificationService;
 use App\Services\War\PlanOrchestratorService;
+use App\Support\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -341,7 +342,7 @@ class WarPlanController extends Controller
                 return;
             }
 
-            fputcsv($handle, [
+            CsvExport::writeRow($handle, [
                 'target_id',
                 'nation_id',
                 'leader_name',
@@ -361,7 +362,7 @@ class WarPlanController extends Controller
             ]);
 
             foreach ($targets as $target) {
-                fputcsv($handle, [
+                CsvExport::writeRow($handle, [
                     $target->id,
                     $target->nation_id,
                     $target->nation?->leader_name,
@@ -413,7 +414,7 @@ class WarPlanController extends Controller
                 return;
             }
 
-            fputcsv($handle, [
+            CsvExport::writeRow($handle, [
                 'assignment_id',
                 'target_id',
                 'target_nation_id',
@@ -445,7 +446,7 @@ class WarPlanController extends Controller
             ]);
 
             foreach ($assignments as $assignment) {
-                fputcsv($handle, [
+                CsvExport::writeRow($handle, [
                     $assignment->id,
                     $assignment->war_plan_target_id,
                     $assignment->target?->nation_id,

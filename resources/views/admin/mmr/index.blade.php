@@ -564,8 +564,22 @@
                 return div.textContent.trim();
             };
 
+            const sanitizeCsvCell = (cell) => {
+                const value = String(cell ?? '');
+
+                if (value.startsWith("'")) {
+                    return value;
+                }
+
+                if (/^[\t\r\n=+\-@]/.test(value) || /^\s+[=+\-@]/.test(value)) {
+                    return `'${value}`;
+                }
+
+                return value;
+            };
+
             const formatCsvLine = (cells) => {
-                return cells.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',');
+                return cells.map((cell) => `"${sanitizeCsvCell(cell).replace(/"/g, '""')}"`).join(',');
             };
 
             const getTableSection = (tableId) => {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AllianceFinanceEntry;
 use App\Services\Finance\AllianceFinanceService;
 use App\Services\Finance\FinanceCategoryRegistry;
+use App\Support\CsvExport;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
@@ -118,7 +119,7 @@ final class AllianceFinanceController extends Controller
         $callback = function () use ($financeService, $filterBag): void {
             $handle = fopen('php://output', 'w');
 
-            fputcsv($handle, [
+            CsvExport::writeRow($handle, [
                 'Date',
                 'Time',
                 'Direction',
@@ -143,7 +144,7 @@ final class AllianceFinanceController extends Controller
             ]);
 
             foreach ($financeService->streamEntries($filterBag['from'], $filterBag['to'], $filterBag['filters']) as $entry) {
-                fputcsv($handle, [
+                CsvExport::writeRow($handle, [
                     $entry->date?->toDateString(),
                     optional($entry->created_at)->format('H:i'),
                     ucfirst($entry->direction),
