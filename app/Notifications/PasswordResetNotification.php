@@ -2,14 +2,10 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class PasswordResetNotification extends Notification implements ShouldQueue
+class PasswordResetNotification extends Notification
 {
-    use Queueable;
-
     protected string $token;
 
     public function __construct(string $token)

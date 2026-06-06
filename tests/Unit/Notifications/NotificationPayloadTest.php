@@ -20,6 +20,7 @@ use App\Notifications\NationVerification;
 use App\Notifications\PasswordResetNotification;
 use App\Notifications\RebuildingNotification;
 use App\Notifications\WarAidNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\FeatureTestCase;
 
@@ -112,8 +113,10 @@ class NotificationPayloadTest extends FeatureTestCase
             'nation_id' => 777001,
         ]);
 
-        $payload = (new PasswordResetNotification('reset-token'))->toPNW($user);
+        $notification = new PasswordResetNotification('reset-token');
+        $payload = $notification->toPNW($user);
 
+        $this->assertNotInstanceOf(ShouldQueue::class, $notification);
         $this->assertSame('Reset Your Password', $payload['subject']);
         $this->assertStringContainsString('reset-token', $payload['message']);
         $this->assertStringContainsString('security%40example.test', $payload['message']);
