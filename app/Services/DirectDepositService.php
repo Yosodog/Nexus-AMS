@@ -13,6 +13,7 @@ use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -35,9 +36,12 @@ class DirectDepositService
             return $record; // Not a DD tax record
         }
 
-        if (DirectDepositLog::where('bank_record_id', $record->id)->exists()) {
-            // Already processed; prevent duplicate credits on retries.
-            return $record;
+        $existingLog = DirectDepositLog::query()
+            ->where('bank_record_id', $record->id)
+            ->first();
+
+        if ($existingLog) {
+            return $this->returnRetainedTaxRecord($record, $existingLog);
         }
 
         $nation = Nation::find($record->sender_id);
@@ -119,6 +123,16 @@ class DirectDepositService
                     $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
                 }
             });
+        } catch (UniqueConstraintViolationException $exception) {
+            $existingLog = DirectDepositLog::query()
+                ->where('bank_record_id', $record->id)
+                ->first();
+
+            if ($existingLog) {
+                return $this->returnRetainedTaxRecord($record, $existingLog);
+            }
+
+            throw $exception;
         } catch (Throwable $exception) {
             Log::warning('DirectDeposit: failed to persist deposit', [
                 'bank_record_id' => $record->id,
@@ -126,7 +140,7 @@ class DirectDepositService
                 'message' => $exception->getMessage(),
             ]);
 
-            return $record;
+            throw $exception;
         }
 
         // Apply MMR plan: credit resources on the configured MMR account
@@ -143,6 +157,15 @@ class DirectDepositService
         // IMPORTANT: Return the *retained* (tax) values for the tax record
         foreach ($fields as $field) {
             $record->$field = $retained[$field];
+        }
+
+        return $record;
+    }
+
+    private function returnRetainedTaxRecord(BankRecord $record, DirectDepositLog $log): BankRecord
+    {
+        foreach (PWHelperService::resources() as $field) {
+            $record->{$field} = max(0.0, round((float) $record->{$field} - (float) $log->{$field}, 2));
         }
 
         return $record;
