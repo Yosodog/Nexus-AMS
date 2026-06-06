@@ -219,9 +219,11 @@ class QueryService
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
                 try {
                     if ($response instanceof Response) {
-                        $this->sleepForRateLimitRemaining($response);
-
                         if ($response->status() === 429) {
+                            if (! $allowTransientRetries) {
+                                $this->throwAmbiguousMutationResponse($response);
+                            }
+
                             $resetAfter = $this->getRateLimitResetAfter($response) ?? $delay;
                             if ($retryCount >= $this->maxRetries) {
                                 Log::error('Rate limit retry limit reached.', [
@@ -238,6 +240,8 @@ class QueryService
 
                             return $this->sendPageQuery($query, $variables, $retryCount, $delay, $headers, $allowTransientRetries);
                         }
+
+                        $this->sleepForRateLimitRemaining($response);
 
                         if ($this->shouldRetryResponse($response)) {
                             if (! $allowTransientRetries) {
