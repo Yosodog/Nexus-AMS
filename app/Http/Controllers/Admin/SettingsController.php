@@ -20,11 +20,13 @@ use Illuminate\Bus\Batch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -541,7 +543,7 @@ class SettingsController extends Controller
         $this->authorize('view-diagnostic-info');
 
         $file = $request->file('favicon');
-        $extension = strtolower((string) $file->getClientOriginalExtension());
+        $extension = $this->faviconExtension($file);
         $path = $file->storeAs('branding', "favicon.{$extension}", 'public');
 
         $previousPath = SettingService::getFaviconPath();
@@ -570,6 +572,18 @@ class SettingsController extends Controller
             'alert-message' => 'Favicon updated.',
             'alert-type' => 'success',
         ]);
+    }
+
+    private function faviconExtension(UploadedFile $file): string
+    {
+        return match ($file->getMimeType()) {
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/x-icon', 'image/vnd.microsoft.icon' => 'ico',
+            default => throw ValidationException::withMessages([
+                'favicon' => 'The favicon must be a PNG, JPG, or ICO file.',
+            ]),
+        };
     }
 
     public function releaseStalePending(Request $request): RedirectResponse

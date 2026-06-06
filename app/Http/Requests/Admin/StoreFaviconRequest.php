@@ -18,7 +18,7 @@ class StoreFaviconRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'favicon' => ['required', 'file', 'mimes:png,ico,svg,jpg,jpeg', 'max:1024'],
+            'favicon' => ['required', 'file', 'mimes:png,ico,jpg,jpeg', 'max:1024'],
         ];
     }
 }

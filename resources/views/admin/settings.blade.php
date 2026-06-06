@@ -213,7 +213,7 @@
                             class="file-input file-input-bordered"
                             id="faviconUpload"
                             name="favicon"
-                            accept=".png,.ico,.svg,.jpg,.jpeg"
+                            accept=".png,.ico,.jpg,.jpeg"
                             @disabled(! $canUploadFavicon)
                             required
                         >
