@@ -24,3 +24,4 @@ yarn-error.log
 /playwright-report
 /test-results
 .codex
+.serena/*
