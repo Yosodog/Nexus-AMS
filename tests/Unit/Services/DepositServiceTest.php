@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\Nation;
@@ -41,6 +42,22 @@ class DepositServiceTest extends FeatureTestCase
         $this->assertSame(8, strlen($deposit->deposit_code));
     }
 
+    public function test_create_request_rejects_frozen_accounts_even_with_existing_pending_code(): void
+    {
+        $account = $this->createAccount(frozen: true);
+        DepositRequest::query()->create([
+            'account_id' => $account->id,
+            'deposit_code' => 'FROZEN12',
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+
+        $this->expectException(UserErrorException::class);
+        $this->expectExceptionMessage('This account is frozen. Deposits are disabled.');
+
+        DepositService::createRequest($account);
+    }
+
     public function test_set_deposit_completed_marks_request_complete_and_clears_pending_key(): void
     {
         $account = $this->createAccount();
@@ -59,12 +76,13 @@ class DepositServiceTest extends FeatureTestCase
         $this->assertNull($deposit->pending_key);
     }
 
-    private function createAccount(): Account
+    private function createAccount(bool $frozen = false): Account
     {
         $nation = Nation::factory()->create();
         $account = new Account;
         $account->nation_id = $nation->id;
         $account->name = 'Primary';
+        $account->frozen = $frozen;
         $account->save();
 
         return $account;

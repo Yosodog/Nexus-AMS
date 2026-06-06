@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\PWQueryFailedException;
+use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Notifications\DepositCompletedNotification;
@@ -131,6 +132,10 @@ class DepositService
      */
     public static function createRequest(Account $account): DepositRequest
     {
+        if ($account->frozen) {
+            throw new UserErrorException('This account is frozen. Deposits are disabled.');
+        }
+
         // Reuse existing pending request so members see the original code
         $existing = DepositRequest::where('account_id', $account->id)
             ->where('status', 'pending')

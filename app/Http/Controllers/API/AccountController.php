@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Exceptions\UserErrorException;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Services\AccountService;
@@ -36,7 +37,11 @@ class AccountController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $deposit = AccountService::createDepositRequest($account);
+        try {
+            $deposit = AccountService::createDepositRequest($account);
+        } catch (UserErrorException $exception) {
+            return response()->json(['error' => $exception->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => $deposit->wasRecentlyCreated
