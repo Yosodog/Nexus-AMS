@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreApiTokenRequest;
 use App\Models\TrustedDevice;
+use App\Rules\UniqueCanonicalUsername;
 use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
@@ -63,7 +64,7 @@ class UserController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:users,name,'.$user->id], // Ensure unique name
+            'name' => ['required', 'string', 'max:255', new UniqueCanonicalUsername($user->id)],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id], // Ensure unique email
             'password' => ['nullable', Password::defaults(), 'confirmed'],
             'current_password' => ['nullable', 'required_with:password', 'current_password:web'],

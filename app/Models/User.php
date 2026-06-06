@@ -45,6 +45,7 @@ class User extends Authenticatable
         'discord_verification_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'name_canonical',
     ];
 
     protected $casts = [

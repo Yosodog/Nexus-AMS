@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
+use App\Rules\UniqueCanonicalUsername;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -22,7 +23,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('users', 'name')->ignore($user->id),
+                new UniqueCanonicalUsername($user->id),
             ],
 
             'email' => [

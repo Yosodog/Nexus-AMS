@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Transaction;
 use App\Models\TrustedDevice;
 use App\Models\User;
+use App\Rules\UniqueCanonicalUsername;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
@@ -178,7 +179,7 @@ class UserController extends Controller
         $this->authorize('edit-users');
 
         $validated = $request->validate([
-            'name' => ['required', 'string', Rule::unique('users', 'name')->ignore($user->id)],
+            'name' => ['required', 'string', new UniqueCanonicalUsername($user->id)],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'is_admin' => ['required', 'boolean'],
             'disabled' => ['required', 'boolean'],

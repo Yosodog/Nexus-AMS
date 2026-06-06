@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Models\User;
 use App\Notifications\NationVerification;
 use App\Rules\InAllianceAndMember;
+use App\Rules\UniqueCanonicalUsername;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,7 @@ class CreateNewUser implements CreatesNewUsers
                     'required',
                     'string',
                     'max:255',
-                    Rule::unique(User::class, 'name'),
+                    new UniqueCanonicalUsername,
                 ],
                 'email' => [
                     'required',
