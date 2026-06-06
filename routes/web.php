@@ -253,17 +253,21 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
 
         // Audits
-        Route::get('/audits', [AdminAuditController::class, 'index'])->name('admin.audits.index');
-        Route::get('/audits/rules', [AuditRuleController::class, 'index'])->name('admin.audits.rules.index');
-        Route::get('/audits/rules/create', [AuditRuleController::class, 'create'])->name('admin.audits.rules.create');
-        Route::post('/audits/rules', [AuditRuleController::class, 'store'])->name('admin.audits.rules.store');
-        Route::get('/audits/rules/{auditRule}/edit', [AuditRuleController::class, 'edit'])->name('admin.audits.rules.edit');
-        Route::put('/audits/rules/{auditRule}', [AuditRuleController::class, 'update'])->name('admin.audits.rules.update');
-        Route::delete('/audits/rules/{auditRule}', [AuditRuleController::class, 'destroy'])->name('admin.audits.rules.destroy');
-        Route::get('/audits/rules/{auditRule}/violations', [AdminAuditController::class, 'violations'])
-            ->name('admin.audits.rules.violations');
-        Route::post('/audits/run', [AdminAuditController::class, 'run'])->name('admin.audits.run');
-        Route::post('/audits/notify', [AdminAuditController::class, 'notify'])->name('admin.audits.notify');
+        Route::middleware('can:view-audits')->group(function () {
+            Route::get('/audits', [AdminAuditController::class, 'index'])->name('admin.audits.index');
+            Route::get('/audits/rules', [AuditRuleController::class, 'index'])->name('admin.audits.rules.index');
+            Route::get('/audits/rules/{auditRule}/violations', [AdminAuditController::class, 'violations'])
+                ->name('admin.audits.rules.violations');
+        });
+        Route::middleware('can:manage-audits')->group(function () {
+            Route::get('/audits/rules/create', [AuditRuleController::class, 'create'])->name('admin.audits.rules.create');
+            Route::post('/audits/rules', [AuditRuleController::class, 'store'])->name('admin.audits.rules.store');
+            Route::get('/audits/rules/{auditRule}/edit', [AuditRuleController::class, 'edit'])->name('admin.audits.rules.edit');
+            Route::put('/audits/rules/{auditRule}', [AuditRuleController::class, 'update'])->name('admin.audits.rules.update');
+            Route::delete('/audits/rules/{auditRule}', [AuditRuleController::class, 'destroy'])->name('admin.audits.rules.destroy');
+            Route::post('/audits/run', [AdminAuditController::class, 'run'])->name('admin.audits.run');
+            Route::post('/audits/notify', [AdminAuditController::class, 'notify'])->name('admin.audits.notify');
+        });
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
 
         // Account

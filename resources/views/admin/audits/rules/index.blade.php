@@ -11,10 +11,12 @@
                     <x-icon name="o-arrow-left" class="size-4" />
                     Back to overview
                 </a>
-                <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
-                    <x-icon name="o-plus-circle" class="size-4" />
-                    New Rule
-                </a>
+                @can('manage-audits')
+                    <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary">
+                        <x-icon name="o-plus-circle" class="size-4" />
+                        New Rule
+                    </a>
+                @endcan
             </div>
         </x-slot:actions>
     </x-header>
@@ -82,19 +84,21 @@
                         </td>
                         <td>
                             <div class="flex gap-2">
-                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary">
-                                    <x-icon name="o-pencil" class="size-4" />
-                                </a>
                                 <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline">
                                     <x-icon name="o-bolt" class="size-4" />
                                 </a>
-                                <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" onsubmit="return confirm('Disable this rule and clear its violations?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline btn-error">
-                                        <x-icon name="o-no-symbol" class="size-4" />
-                                    </button>
-                                </form>
+                                @can('manage-audits')
+                                    <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                    </a>
+                                    <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" onsubmit="return confirm('Disable this rule and clear its violations?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline btn-error">
+                                            <x-icon name="o-no-symbol" class="size-4" />
+                                        </button>
+                                    </form>
+                                @endcan
                             </div>
                         </td>
                     </tr>

@@ -45,4 +45,6 @@ return [
     'manage-spies',
     'view-market',
     'manage-market',
+    'view-audits',
+    'manage-audits',
 ];

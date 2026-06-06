@@ -16,10 +16,12 @@
         <x-slot:subtitle>Live offenders for this rule. Rows clear automatically when targets comply.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-primary btn-outline btn-sm">
-                    <x-icon name="o-pencil" class="size-4" />
-                    Edit rule
-                </a>
+                @can('manage-audits')
+                    <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-primary btn-outline btn-sm">
+                        <x-icon name="o-pencil" class="size-4" />
+                        Edit rule
+                    </a>
+                @endcan
                 <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-ghost btn-sm">Back to rules</a>
             </div>
         </x-slot:actions>

@@ -272,7 +272,7 @@
             icon="o-shield-check"
             :link="route('admin.audits.index')"
             :active="request()->routeIs('admin.audits.*')"
-            :hidden="! auth()->user()?->can('view-diagnostic-info')"
+            :hidden="! auth()->user()?->can('view-audits')"
         />
 
         {{-- System --}}

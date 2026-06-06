@@ -5,28 +5,30 @@
 @section('content')
     <x-header title="Audit Overview" separator>
         <x-slot:subtitle>Track active rules, triage live violations, and manage member notifications from one place.</x-slot:subtitle>
-        <x-slot:actions>
-            <div class="flex flex-wrap gap-2">
-                <form method="POST" action="{{ route('admin.audits.run') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline btn-primary btn-sm">
-                        <x-icon name="o-play" class="size-4" />
-                        Run audits
-                    </button>
-                </form>
-                <form method="POST" action="{{ route('admin.audits.notify') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline btn-success btn-sm">
-                        <x-icon name="o-paper-airplane" class="size-4" />
-                        Notify members
-                    </button>
-                </form>
-                <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary btn-sm">
-                    <x-icon name="o-plus-circle" class="size-4" />
-                    New rule
-                </a>
-            </div>
-        </x-slot:actions>
+        @can('manage-audits')
+            <x-slot:actions>
+                <div class="flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('admin.audits.run') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-outline btn-primary btn-sm">
+                            <x-icon name="o-play" class="size-4" />
+                            Run audits
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.audits.notify') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-outline btn-success btn-sm">
+                            <x-icon name="o-paper-airplane" class="size-4" />
+                            Notify members
+                        </button>
+                    </form>
+                    <a href="{{ route('admin.audits.rules.create') }}" class="btn btn-primary btn-sm">
+                        <x-icon name="o-plus-circle" class="size-4" />
+                        New rule
+                    </a>
+                </div>
+            </x-slot:actions>
+        @endcan
     </x-header>
 
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -68,7 +70,7 @@
         <x-slot:menu>
             <div class="flex gap-2">
                 <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline btn-sm">
-                    Manage rules
+                    Rules
                 </a>
                 <a href="{{ route('admin.nel.docs') }}" class="btn btn-outline btn-primary btn-sm">
                     NEL syntax
@@ -138,10 +140,12 @@
                                     <x-icon name="o-bolt" class="size-4" />
                                     Violations
                                 </a>
-                                <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-outline btn-primary btn-sm">
-                                    <x-icon name="o-pencil" class="size-4" />
-                                    Edit
-                                </a>
+                                @can('manage-audits')
+                                    <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-outline btn-primary btn-sm">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                        Edit
+                                    </a>
+                                @endcan
                             </div>
                         </td>
                     </tr>

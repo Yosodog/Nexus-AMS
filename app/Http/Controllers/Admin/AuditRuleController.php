@@ -15,7 +15,9 @@ class AuditRuleController extends Controller
 {
     public function index(): View
     {
-        $priorityOrder = "FIELD(priority, 'high', 'medium', 'low', 'info')";
+        $this->authorize('view-audits');
+
+        $priorityOrder = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 WHEN 'info' THEN 3 ELSE 4 END";
 
         $rules = AuditRule::query()
             ->withCount('results')
@@ -30,6 +32,8 @@ class AuditRuleController extends Controller
 
     public function create(): View
     {
+        $this->authorize('manage-audits');
+
         return view('admin.audits.rules.create', [
             'rule' => new AuditRule,
             'priorities' => AuditPriority::cases(),
@@ -39,6 +43,8 @@ class AuditRuleController extends Controller
 
     public function store(AuditRuleRequest $request): RedirectResponse
     {
+        $this->authorize('manage-audits');
+
         $data = $request->validated();
 
         AuditRule::query()->create([
@@ -60,6 +66,8 @@ class AuditRuleController extends Controller
 
     public function edit(AuditRule $auditRule): View
     {
+        $this->authorize('manage-audits');
+
         return view('admin.audits.rules.edit', [
             'rule' => $auditRule,
             'priorities' => AuditPriority::cases(),
@@ -69,6 +77,8 @@ class AuditRuleController extends Controller
 
     public function update(AuditRuleRequest $request, AuditRule $auditRule): RedirectResponse
     {
+        $this->authorize('manage-audits');
+
         $data = $request->validated();
 
         $originalTarget = $auditRule->target_type;
@@ -98,6 +108,8 @@ class AuditRuleController extends Controller
 
     public function destroy(AuditRule $auditRule): RedirectResponse
     {
+        $this->authorize('manage-audits');
+
         $auditRule->update([
             'enabled' => false,
             'updated_by' => auth()->id(),

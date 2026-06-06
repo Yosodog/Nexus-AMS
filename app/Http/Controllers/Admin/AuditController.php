@@ -19,7 +19,9 @@ class AuditController extends Controller
 
     public function index(): View
     {
-        $priorityOrder = "FIELD(priority, 'high', 'medium', 'low', 'info')";
+        $this->authorize('view-audits');
+
+        $priorityOrder = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 WHEN 'info' THEN 3 ELSE 4 END";
 
         $rules = AuditRule::query()
             ->withCount('results')
@@ -56,6 +58,8 @@ class AuditController extends Controller
 
     public function violations(AuditRule $auditRule): View
     {
+        $this->authorize('view-audits');
+
         $violations = $auditRule->results()
             ->with([
                 'nation:id,leader_name,nation_name,score,num_cities,color',
@@ -72,6 +76,8 @@ class AuditController extends Controller
 
     public function run(): RedirectResponse
     {
+        $this->authorize('manage-audits');
+
         RunAuditsJob::dispatch();
 
         return redirect()->route('admin.audits.index')->with([
@@ -82,6 +88,8 @@ class AuditController extends Controller
 
     public function notify(): RedirectResponse
     {
+        $this->authorize('manage-audits');
+
         $violations = AuditResult::query()
             ->with(['rule', 'city:id,name,infrastructure,land,powered', 'nation:id,leader_name,nation_name'])
             ->get();
