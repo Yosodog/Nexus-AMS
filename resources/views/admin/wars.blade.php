@@ -118,7 +118,7 @@
 @endsection
 
 @push("scripts")
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <x-chart-js />
     <script>
         const warsLineChartCtx = document.getElementById('warsLineChart').getContext('2d');
         new Chart(warsLineChartCtx, {

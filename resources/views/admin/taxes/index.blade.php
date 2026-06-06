@@ -55,7 +55,7 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <x-chart-js />
     <script>
         @foreach ($charts as $resource => $data)
         new Chart(document.getElementById('chart-{{ $resource }}').getContext('2d'), {

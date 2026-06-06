@@ -277,7 +277,7 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <x-chart-js />
     <script>
         new Chart(document.getElementById('cityTierChart').getContext('2d'), {
             type: 'bar',

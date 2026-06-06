@@ -888,7 +888,7 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <x-chart-js />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof Chart === 'undefined') {

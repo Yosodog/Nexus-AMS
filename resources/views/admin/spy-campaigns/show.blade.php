@@ -369,7 +369,7 @@
 @endsection
 
 @pushOnce('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <x-chart-js />
     <script>
         const odds = {{ Js::from($oddsDistribution->all()) }};
         const impacts = {{ Js::from($impactSeries->all()) }};
