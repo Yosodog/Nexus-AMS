@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\Offshore;
+use App\Models\OffshoreGuardrail;
 use App\Models\Page;
 use App\Models\RecruitmentMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ViewErrorBag;
 use Tests\FeatureTestCase;
 
 class XssBreakoutTest extends FeatureTestCase
@@ -64,5 +67,43 @@ class XssBreakoutTest extends FeatureTestCase
             ->assertSee(e('</textarea><script>alert("followup")</script>'), false)
             ->assertDontSee('</textarea><script>alert("primary")</script>', false)
             ->assertDontSee('</textarea><script>alert("followup")</script>', false);
+    }
+
+    public function test_offshore_confirmations_encode_names_for_javascript_context(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Gate::define('view-offshores', fn (): bool => true);
+        Gate::define('manage-offshores', fn (): bool => true);
+        view()->share('errors', new ViewErrorBag);
+
+        $offshore = new Offshore([
+            'name' => "Offshore');alert(1);//",
+            'alliance_id' => 1,
+            'enabled' => true,
+            'priority' => 0,
+        ]);
+        $offshore->id = 123;
+        $offshore->exists = true;
+        $offshore->setRelation('guardrails', collect());
+
+        $this->actingAs($admin);
+
+        $html = view('admin.offshores.index', [
+            'offshores' => collect([$offshore]),
+            'snapshots' => [
+                $offshore->id => ['balances' => [], 'cached_at' => null],
+            ],
+            'transfers' => collect(),
+            'resources' => ['money'],
+            'guardrailResources' => OffshoreGuardrail::RESOURCES,
+            'mainBankSnapshot' => ['balances' => [], 'cached_at' => null],
+            'showCreateModal' => false,
+            'editOffshoreId' => null,
+        ])
+            ->render();
+
+        $this->assertStringNotContainsString("confirm('Sweep the entire main bank into Offshore');alert(1);//", $html);
+        $this->assertStringNotContainsString("confirm('Delete Offshore');alert(1);//", $html);
+        $this->assertStringContainsString('\u0027);alert(1);\/\/', $html);
     }
 }

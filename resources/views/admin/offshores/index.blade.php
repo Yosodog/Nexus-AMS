@@ -129,6 +129,10 @@
                             </td>
                             @if($canManageOffshores)
                                 <td class="text-right">
+                                    @php
+                                        $sweepConfirmation = "Sweep the entire main bank into {$offshore->name}? This cannot be undone.";
+                                        $deleteConfirmation = "Delete {$offshore->name}? This action cannot be undone.";
+                                    @endphp
                                     <div class="flex flex-wrap justify-end gap-2">
                                         <button class="btn btn-outline btn-sm" type="button" data-dialog-open="editOffshoreModal-{{ $offshore->id }}" title="Edit offshore">
                                             <x-icon name="o-pencil" class="size-4" />
@@ -161,7 +165,7 @@
                                         >
                                             <x-icon name="o-arrow-down-tray" class="size-4" />
                                         </button>
-                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" onsubmit="return confirm('Sweep the entire main bank into {{ $offshore->name }}? This cannot be undone.');">
+                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" onsubmit="return confirm(@js($sweepConfirmation));">
                                             @csrf
                                             <button type="submit" class="btn btn-outline btn-neutral btn-sm" title="Sweep main bank">
                                                 <x-icon name="o-building-library" class="size-4" />
@@ -173,7 +177,7 @@
                                                 <x-icon name="o-power" class="size-4" />
                                             </button>
                                         </form>
-                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" onsubmit="return confirm('Delete {{ $offshore->name }}? This action cannot be undone.');">
+                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" onsubmit="return confirm(@js($deleteConfirmation));">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline btn-error btn-sm" title="Delete offshore">
