@@ -71,7 +71,7 @@
                                 </form>
                             </td>
                             <td>
-                                <input type="number" step="0.01" name="adjustment_percent" class="input input-bordered input-sm w-full min-w-28"
+                                <input type="number" step="0.01" min="{{ $marketLimits['min_adjustment_percent'] }}" max="{{ $marketLimits['max_adjustment_percent'] }}" name="adjustment_percent" class="input input-bordered input-sm w-full min-w-28"
                                        value="{{ number_format($resource['adjustment_percent'], 2, '.', '') }}"
                                        data-adjustment-input
                                        data-base-price="{{ $resource['base_price'] }}"
@@ -79,7 +79,7 @@
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
                             <td>
-                                <input type="number" step="0.01" min="0" name="buy_cap_remaining" class="input input-bordered input-sm w-full min-w-32"
+                                <input type="number" step="0.01" min="0" max="{{ $marketLimits['max_buy_cap_remaining'] }}" name="buy_cap_remaining" class="input input-bordered input-sm w-full min-w-32"
                                        value="{{ number_format($resource['buy_cap_remaining'], 2, '.', '') }}"
                                        form="update-market-{{ $resource['id'] }}">
                             </td>

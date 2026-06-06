@@ -30,6 +30,11 @@ class MarketController extends Controller
 
         return view('admin.market.index', [
             'marketResources' => $marketResources,
+            'marketLimits' => [
+                'min_adjustment_percent' => MarketResource::MIN_ADJUSTMENT_PERCENT,
+                'max_adjustment_percent' => MarketResource::MAX_ADJUSTMENT_PERCENT,
+                'max_buy_cap_remaining' => MarketResource::MAX_BUY_CAP_REMAINING,
+            ],
             'overview' => $overview,
             'recentTransactions' => $recentTransactions,
         ]);

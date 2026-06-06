@@ -72,9 +72,13 @@ class MarketService
 
     public function computeFinalPrice(string $resource, float $adjustmentPercent, ?float $basePrice = null): float
     {
-        if ($adjustmentPercent <= -100) {
+        if ($adjustmentPercent < MarketResource::MIN_ADJUSTMENT_PERCENT || $adjustmentPercent > MarketResource::MAX_ADJUSTMENT_PERCENT) {
             throw ValidationException::withMessages([
-                'adjustment_percent' => 'Adjustment percent must be greater than -100.00.',
+                'adjustment_percent' => sprintf(
+                    'Adjustment percent must be between %.2f and %.2f.',
+                    MarketResource::MIN_ADJUSTMENT_PERCENT,
+                    MarketResource::MAX_ADJUSTMENT_PERCENT
+                ),
             ]);
         }
 
