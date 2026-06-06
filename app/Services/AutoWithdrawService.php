@@ -8,6 +8,7 @@ use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\AutoWithdrawSetting;
 use App\Models\Nation;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -141,63 +142,79 @@ class AutoWithdrawService
                 $lockedAccount = null;
                 $evaluation = null;
 
-                DB::transaction(function () use (
-                    &$transaction,
-                    &$lockedAccount,
-                    &$evaluation,
-                    $nation,
-                    $account,
-                    $items,
-                    $now
-                ) {
-                    $lockedAccount = Account::query()
-                        ->lockForUpdate()
-                        ->findOrFail($account->id);
+                try {
+                    DB::transaction(function () use (
+                        &$transaction,
+                        &$lockedAccount,
+                        &$evaluation,
+                        $nation,
+                        $account,
+                        $items,
+                        $now
+                    ) {
+                        $lockedAccount = Account::query()
+                            ->lockForUpdate()
+                            ->findOrFail($account->id);
 
-                    $resourcePayload = collect(PWHelperService::resources())->mapWithKeys(
-                        fn (string $resource) => [$resource => 0]
-                    )->toArray();
+                        if (TransactionService::hasPendingTransaction($nation->id)) {
+                            Log::info('Auto withdraw skipped because nation already has a pending transaction.', [
+                                'nation_id' => $nation->id,
+                                'account_id' => $lockedAccount->id,
+                            ]);
 
-                    $noteParts = [];
-
-                    foreach ($items as $item) {
-                        $resource = $item['resource'];
-                        $available = (int) floor($lockedAccount->{$resource});
-                        $amount = min((int) $item['amount'], $available);
-
-                        if ($amount <= 0) {
-                            continue;
+                            return;
                         }
 
-                        $lockedAccount->{$resource} -= $amount;
-                        $resourcePayload[$resource] = $amount;
-                        $noteParts[] = $resource.'='.$amount;
+                        $resourcePayload = collect(PWHelperService::resources())->mapWithKeys(
+                            fn (string $resource) => [$resource => 0]
+                        )->toArray();
 
-                        $item['setting']->last_withdraw_at = $now;
-                        $item['setting']->save();
-                    }
+                        $noteParts = [];
 
-                    if (collect($resourcePayload)->sum() <= 0) {
-                        return;
-                    }
+                        foreach ($items as $item) {
+                            $resource = $item['resource'];
+                            $available = (int) floor($lockedAccount->{$resource});
+                            $amount = min((int) $item['amount'], $available);
 
-                    $lockedAccount->save();
+                            if ($amount <= 0) {
+                                continue;
+                            }
 
-                    $evaluation = WithdrawalLimitService::evaluate($nation->id, $resourcePayload);
-                    $note = 'Withdraw: '.implode(', ', $noteParts);
+                            $lockedAccount->{$resource} -= $amount;
+                            $resourcePayload[$resource] = $amount;
+                            $noteParts[] = $resource.'='.$amount;
 
-                    $transaction = TransactionService::createTransaction(
-                        $resourcePayload,
-                        $nation->id,
-                        $lockedAccount->id,
-                        'withdrawal',
-                        null,
-                        true,
-                        $note,
-                        $evaluation['requires_approval'],
-                        $evaluation['pending_reason']
-                    );
-                });
+                            $item['setting']->last_withdraw_at = $now;
+                            $item['setting']->save();
+                        }
+
+                        if (collect($resourcePayload)->sum() <= 0) {
+                            return;
+                        }
+
+                        $lockedAccount->save();
+
+                        $evaluation = WithdrawalLimitService::evaluate($nation->id, $resourcePayload);
+                        $note = 'Withdraw: '.implode(', ', $noteParts);
+
+                        $transaction = TransactionService::createTransaction(
+                            $resourcePayload,
+                            $nation->id,
+                            $lockedAccount->id,
+                            'withdrawal',
+                            null,
+                            true,
+                            $note,
+                            $evaluation['requires_approval'],
+                            $evaluation['pending_reason']
+                        );
+                    });
+                } catch (UniqueConstraintViolationException) {
+                    Log::info('Auto withdraw skipped because a pending withdrawal already exists.', [
+                        'nation_id' => $nation->id,
+                        'account_id' => $account->id,
+                    ]);
+                }
 
                 if ($transaction && $lockedAccount && $evaluation && ! $evaluation['requires_approval']) {
                     AccountService::dispatchWithdrawal($transaction, $lockedAccount);

@@ -10,11 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
+    public const PENDING_WITHDRAWAL_KEY_VALUE = 1;
+
     public $table = 'transactions';
 
     protected $casts = [
         'is_pending' => 'bool',
         'requires_admin_approval' => 'bool',
+        'pending_withdrawal_key' => 'int',
         'approved_at' => 'datetime',
         'denied_at' => 'datetime',
         'refunded_at' => 'datetime',
@@ -24,6 +27,15 @@ class Transaction extends Model
         'offshore_fulfillment_details' => 'array',
         'payroll_run_date' => 'date',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Transaction $transaction): void {
+            $transaction->pending_withdrawal_key = $transaction->shouldHoldPendingWithdrawalKey()
+                ? self::PENDING_WITHDRAWAL_KEY_VALUE
+                : null;
+        });
+    }
 
     /**
      * @return BelongsTo
@@ -107,6 +119,13 @@ class Transaction extends Model
     public function isNationWithdrawal(): bool
     {
         return $this->transaction_type === 'withdrawal' && is_null($this->to_account_id);
+    }
+
+    public function shouldHoldPendingWithdrawalKey(): bool
+    {
+        return (bool) $this->is_pending
+            && $this->isNationWithdrawal()
+            && ! is_null($this->nation_id);
     }
 
     public function isRefunded(): bool
