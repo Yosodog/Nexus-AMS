@@ -9,6 +9,7 @@ use App\Models\Page;
 use App\Models\RecruitmentMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ViewErrorBag;
 use Tests\FeatureTestCase;
@@ -44,6 +45,41 @@ class XssBreakoutTest extends FeatureTestCase
             ->assertOk()
             ->assertSee(e('<b>Test</b>'), false)
             ->assertDontSee('<b>Test</b>', false);
+    }
+
+    public function test_customization_drafts_store_sanitized_html_server_side(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Gate::define('manage-custom-pages', fn (): bool => true);
+
+        $page = Page::query()->create([
+            'slug' => 'test-page',
+            'status' => Page::STATUS_DRAFT,
+        ]);
+
+        $payload = <<<'HTML'
+            <p onclick="alert(1)">Safe</p>
+            <script>alert("xss")</script>
+            <img src="javascript:alert(1)" onerror="alert(1)">
+        HTML;
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.customization.draft', $page), [
+                'content' => $payload,
+            ])
+            ->assertOk()
+            ->assertJsonPath('version.status', 'draft');
+
+        $storedDraft = (string) DB::table('pages')->where('id', $page->id)->value('draft');
+        $storedVersion = (string) DB::table('page_versions')->where('page_id', $page->id)->value('editor_state');
+
+        foreach ([$storedDraft, $storedVersion] as $storedHtml) {
+            $this->assertStringContainsString('<p>Safe</p>', $storedHtml);
+            $this->assertStringNotContainsString('<script', $storedHtml);
+            $this->assertStringNotContainsString('onclick=', $storedHtml);
+            $this->assertStringNotContainsString('onerror=', $storedHtml);
+            $this->assertStringNotContainsString('javascript:', $storedHtml);
+        }
     }
 
     public function test_recruitment_settings_do_not_allow_textarea_breakout(): void

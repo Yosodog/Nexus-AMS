@@ -12,7 +12,6 @@ import {
     Heading,
     Highlight,
     HorizontalLine,
-    HtmlEmbed,
     Image,
     ImageCaption,
     ImageInsert,
@@ -29,7 +28,6 @@ import {
     PageBreak,
     Paragraph,
     RemoveFormat,
-    SourceEditing,
     SpecialCharacters,
     SpecialCharactersEssentials,
     Strikethrough,
@@ -73,8 +71,6 @@ const editorPlugins = [
     HorizontalLine,
     CodeBlock,
     MediaEmbed,
-    HtmlEmbed,
-    SourceEditing,
     SpecialCharacters,
     SpecialCharactersEssentials,
     Table,
@@ -93,7 +89,7 @@ const editorPlugins = [
 
 const toolbarItems = [
     'undo', 'redo', '|',
-    'findAndReplace', 'sourceEditing', '|',
+    'findAndReplace', '|',
     'heading', '|',
     'fontFamily', 'fontSize', 'fontColor', 'fontBackgroundColor', 'highlight', '|',
     'bold', 'italic', 'underline', 'strikethrough', 'code', 'removeFormat', '|',
@@ -103,7 +99,7 @@ const toolbarItems = [
     'outdent', 'indent', '|',
     'link', 'blockQuote', 'codeBlock', '|',
     'insertTable', 'horizontalLine', 'pageBreak', '|',
-    'insertImage', 'mediaEmbed', 'htmlEmbed', 'specialCharacters',
+    'insertImage', 'mediaEmbed', 'specialCharacters',
 ];
 
 const imageConfig = {
@@ -195,9 +191,6 @@ const initCkeditors = () => {
             table: tableConfig,
             mediaEmbed: {
                 previewsInData: true,
-            },
-            htmlEmbed: {
-                showPreviews: true,
             },
         })
             .then((editor) => {

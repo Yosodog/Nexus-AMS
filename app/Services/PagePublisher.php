@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class PagePublisher
 {
+    public function __construct(private readonly PageRenderer $renderer) {}
+
     /**
      * Save a draft revision for the provided page.
      */
@@ -33,6 +35,7 @@ class PagePublisher
         $this->authorize($user);
 
         $normalized = $this->normalizeContent($content);
+        $renderedHtml = $this->renderer->render($normalized);
 
         return $page->publish($normalized, $renderedHtml, $user, $publishedAt);
     }
@@ -58,13 +61,13 @@ class PagePublisher
     }
 
     /**
-     * Trim editor content and normalize line endings.
+     * Normalize editor content and apply the server-side HTML allowlist.
      */
     public function normalizeContent(string $content): string
     {
         $normalized = str_replace(["\r\n", "\r"], "\n", $content);
 
-        return trim($normalized);
+        return $this->renderer->render(trim($normalized));
     }
 
     /**
