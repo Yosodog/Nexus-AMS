@@ -30,7 +30,7 @@ class AccessControlTest extends FeatureTestCase
             ->get('/_testing/user-area', fn () => response('ok'))
             ->name('testing.user-area');
 
-        Route::middleware(['api', 'auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class, 'can:view-members'])
+        Route::middleware(['api', 'auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class, AdminMiddleware::class, 'can:view-members'])
             ->get('/api/_testing/members', fn () => response()->json(['ok' => true]));
     }
 
@@ -85,6 +85,50 @@ class AccessControlTest extends FeatureTestCase
         $this->actingAs($admin)
             ->get('/_testing/user-area')
             ->assertOk();
+    }
+
+    public function test_authenticated_api_routes_return_json_when_mfa_is_required(): void
+    {
+        $user = $this->createVerifiedUser();
+        Setting::query()->create(['key' => 'require_mfa_all_users', 'value' => '1']);
+
+        $this->actingAsSanctum($user);
+
+        $this->getJson('/api/v1/user')
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Multi-factor authentication is required. Configure it before continuing.',
+            ]);
+    }
+
+    public function test_authenticated_api_routes_allow_users_with_confirmed_mfa_when_required(): void
+    {
+        $user = $this->enableTwoFactor($this->createVerifiedUser());
+        Setting::query()->create(['key' => 'require_mfa_all_users', 'value' => '1']);
+
+        $this->actingAsSanctum($user);
+
+        $this->getJson('/api/v1/user')->assertOk();
+    }
+
+    public function test_sanctum_api_routes_register_mfa_configuration_middleware(): void
+    {
+        $protectedUris = [
+            'api/v1/nations/{nationId}/profitability',
+            'api/v1/user',
+            'api/v1/war-plans/{plan}/targets',
+        ];
+
+        foreach ($protectedUris as $uri) {
+            $route = collect(Route::getRoutes())->first(fn ($route) => $route->uri() === $uri);
+
+            $this->assertNotNull($route, "Expected route [{$uri}] to be registered.");
+            $this->assertContains(
+                EnsureMfaConfigured::class,
+                $route->middleware(),
+                "Expected route [{$uri}] to require MFA configuration."
+            );
+        }
     }
 
     public function test_permission_gated_api_routes_require_the_assigned_permission(): void

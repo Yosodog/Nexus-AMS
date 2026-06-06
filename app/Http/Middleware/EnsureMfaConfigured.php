@@ -47,9 +47,15 @@ class EnsureMfaConfigured
             return $next($request);
         }
 
+        $message = 'Multi-factor authentication is required. Configure it before continuing.';
+
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json(['message' => $message], Response::HTTP_FORBIDDEN);
+        }
+
         return redirect()
             ->route('user.settings')
-            ->with('alert-message', 'Multi-factor authentication is required. Configure it before continuing.')
+            ->with('alert-message', $message)
             ->with('alert-type', 'warning');
     }
 }

@@ -16,17 +16,18 @@ use App\Http\Controllers\API\TradePriceController;
 use App\Http\Controllers\API\WarSimulatorController as ApiWarSimulatorController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
+use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+Route::middleware(['auth:sanctum', EnsureMfaConfigured::class])->prefix('v1')->group(function () {
     Route::get('/nations/{nationId}/profitability', [NationProfitabilityController::class, 'show']);
 });
 
-Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -84,7 +85,7 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
 });
 
-Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, AdminMiddleware::class])
+Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class, AdminMiddleware::class])
     ->prefix('v1/war-plans')
     ->group(function () {
         Route::get('/{plan}/targets', [WarPlanController::class, 'targetsData'])->name('api.admin.war-plans.targets');
