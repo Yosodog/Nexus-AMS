@@ -18,6 +18,7 @@ use App\Models\WarCounterReimbursement;
 use App\Services\AccountService;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
+use App\Services\SelfApprovalGuard;
 use App\Services\War\CounterAssignmentService;
 use App\Services\War\CounterReimbursementService;
 use App\Services\War\NotificationService;
@@ -26,11 +27,13 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -441,6 +444,7 @@ class WarCounterController extends Controller
         WarCounter $counter,
         AllianceMembershipService $membershipService,
         CounterReimbursementService $counterReimbursementService,
+        SelfApprovalGuard $selfApprovalGuard,
         AuditLogger $auditLogger
     ): RedirectResponse {
         $this->authorize('manage-war-room');
@@ -453,7 +457,8 @@ class WarCounterController extends Controller
                 ->withInput();
         }
 
-        $costing = $counterReimbursementService->buildCostingSnapshot($counter, $membershipService->getAllianceIds());
+        $friendlyAllianceIds = $membershipService->getAllianceIds();
+        $costing = $counterReimbursementService->buildCostingSnapshot($counter, $friendlyAllianceIds);
 
         $nationId = (int) $request->integer('nation_id');
         $participant = $costing['participants_by_nation']->get($nationId);
@@ -464,6 +469,8 @@ class WarCounterController extends Controller
                 ->with('alert-message', 'Selected member is not currently involved in this counter.')
                 ->withInput();
         }
+
+        $selfApprovalGuard->ensureNotSelf($nationId, null, 'record a counter reimbursement for your own nation');
 
         $account = Account::query()->find($request->integer('account_id'));
 
@@ -499,8 +506,24 @@ class WarCounterController extends Controller
                 ->withInput();
         }
 
+        try {
+            $this->ensureReimbursementWithinOutstanding(
+                $resourceAdjustments,
+                $unitLossCost,
+                $infraLossCost,
+                $participant
+            );
+        } catch (ValidationException $exception) {
+            return $this->invalidReimbursementRedirect($exception);
+        }
+
         $note = $this->sanitizeWarReason($request->input('note'));
         $correlationId = (string) Str::uuid();
+        $idempotencyKey = hash('sha256', implode('|', [
+            $counter->id,
+            $nationId,
+            (string) $request->string('idempotency_key'),
+        ]));
         $transactionNote = sprintf('Counter reimbursement #%d for Nation #%d', $counter->id, $nationId);
 
         if ($note) {
@@ -531,72 +554,112 @@ class WarCounterController extends Controller
         ];
 
         /** @var WarCounterReimbursement $reimbursement */
-        $reimbursement = DB::transaction(function () use (
-            $counter,
-            $nationId,
-            $account,
-            $resourceAdjustments,
-            $resourcesCost,
-            $unitLossCost,
-            $infraLossCost,
-            $totalCost,
-            $note,
-            $request,
-            $correlationId,
-            $meta,
-            $transactionNote
-        ): WarCounterReimbursement {
-            $record = WarCounterReimbursement::query()->create([
-                'war_counter_id' => $counter->id,
-                'nation_id' => $nationId,
-                'account_id' => $account->id,
-                'reimbursed_by' => auth()->id(),
-                'gasoline' => $resourceAdjustments['gasoline'],
-                'munitions' => $resourceAdjustments['munitions'],
-                'steel' => $resourceAdjustments['steel'],
-                'aluminum' => $resourceAdjustments['aluminum'],
-                'resources_cost' => $resourcesCost,
-                'unit_loss_cost' => $unitLossCost,
-                'infra_loss_cost' => $infraLossCost,
-                'total_cost' => $totalCost,
-                'note' => $note,
-                'meta' => $meta,
-            ]);
-
-            $manualTransaction = AccountService::adjustAccountBalance(
+        try {
+            $reimbursement = DB::transaction(function () use (
                 $account,
-                [
-                    'money' => $totalCost,
+                $counter,
+                $counterReimbursementService,
+                $friendlyAllianceIds,
+                $idempotencyKey,
+                $infraLossCost,
+                $meta,
+                $nationId,
+                $note,
+                $request,
+                $resourceAdjustments,
+                $resourcesCost,
+                $totalCost,
+                $transactionNote,
+                $unitLossCost,
+                $correlationId
+            ): WarCounterReimbursement {
+                $lockedCounter = WarCounter::query()
+                    ->whereKey($counter->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($lockedCounter->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'counter' => 'Reimbursements are only available while a counter is active.',
+                    ]);
+                }
+
+                $lockedCosting = $counterReimbursementService->buildCostingSnapshot($lockedCounter, $friendlyAllianceIds);
+                $lockedParticipant = $lockedCosting['participants_by_nation']->get($nationId);
+
+                if (! $lockedParticipant) {
+                    throw ValidationException::withMessages([
+                        'nation_id' => 'Selected member is not currently involved in this counter.',
+                    ]);
+                }
+
+                $this->ensureReimbursementWithinOutstanding(
+                    $resourceAdjustments,
+                    $unitLossCost,
+                    $infraLossCost,
+                    $lockedParticipant
+                );
+
+                $record = WarCounterReimbursement::query()->create([
+                    'war_counter_id' => $lockedCounter->id,
+                    'nation_id' => $nationId,
+                    'account_id' => $account->id,
+                    'manual_transaction_id' => null,
+                    'reimbursed_by' => auth()->id(),
                     'gasoline' => $resourceAdjustments['gasoline'],
                     'munitions' => $resourceAdjustments['munitions'],
                     'steel' => $resourceAdjustments['steel'],
                     'aluminum' => $resourceAdjustments['aluminum'],
-                    'note' => $transactionNote,
-                ],
-                auth()->id(),
-                $request->ip(),
-                [
-                    'correlation_id' => $correlationId,
-                    'war_counter_id' => $counter->id,
-                    'war_counter_reimbursement_id' => $record->id,
-                    'nation_id' => $nationId,
-                    'category_breakdown' => [
-                        'resource_amounts' => $resourceAdjustments,
-                        'resource_value_cost' => $resourcesCost,
-                        'resources_cost' => $resourcesCost,
-                        'unit_loss_cost' => $unitLossCost,
-                        'infra_loss_cost' => $infraLossCost,
-                        'money_total' => $totalCost,
+                    'resources_cost' => $resourcesCost,
+                    'unit_loss_cost' => $unitLossCost,
+                    'infra_loss_cost' => $infraLossCost,
+                    'total_cost' => $totalCost,
+                    'note' => $note,
+                    'meta' => $meta,
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                $manualTransaction = AccountService::adjustAccountBalance(
+                    $account,
+                    [
+                        'money' => $totalCost,
+                        'gasoline' => $resourceAdjustments['gasoline'],
+                        'munitions' => $resourceAdjustments['munitions'],
+                        'steel' => $resourceAdjustments['steel'],
+                        'aluminum' => $resourceAdjustments['aluminum'],
+                        'note' => $transactionNote,
                     ],
-                ]
-            );
+                    auth()->id(),
+                    $request->ip(),
+                    [
+                        'correlation_id' => $correlationId,
+                        'war_counter_id' => $lockedCounter->id,
+                        'war_counter_reimbursement_id' => $record->id,
+                        'nation_id' => $nationId,
+                        'category_breakdown' => [
+                            'resource_amounts' => $resourceAdjustments,
+                            'resource_value_cost' => $resourcesCost,
+                            'resources_cost' => $resourcesCost,
+                            'unit_loss_cost' => $unitLossCost,
+                            'infra_loss_cost' => $infraLossCost,
+                            'money_total' => $totalCost,
+                        ],
+                    ]
+                );
 
-            $record->update([
-                'manual_transaction_id' => $manualTransaction->id,
-            ]);
+                $record->update([
+                    'manual_transaction_id' => $manualTransaction->id,
+                ]);
 
-            return $record->fresh(['nation', 'account', 'manualTransaction']);
-        });
+                return $record->fresh(['nation', 'account', 'manualTransaction']);
+            });
+        } catch (UniqueConstraintViolationException) {
+            return Redirect::back()
+                ->with('alert-type', 'info')
+                ->with('alert-message', 'That reimbursement request was already processed.');
+        } catch (ValidationException $exception) {
+            return $this->invalidReimbursementRedirect($exception);
+        }
 
         event(new AllianceExpenseOccurred(new AllianceFinanceData(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
@@ -730,6 +793,64 @@ class WarCounterController extends Controller
             ->latest('updated_at')
             ->latest('id')
             ->first();
+    }
+
+    /**
+     * @param  array<string, float>  $resourceAdjustments
+     * @param  array<string, mixed>  $participant
+     *
+     * @throws ValidationException
+     */
+    private function ensureReimbursementWithinOutstanding(
+        array $resourceAdjustments,
+        float $unitLossCost,
+        float $infraLossCost,
+        array $participant
+    ): void {
+        $messages = [];
+        $resources = ['gasoline', 'munitions', 'steel', 'aluminum'];
+
+        foreach ($resources as $resource) {
+            $requested = round((float) ($resourceAdjustments[$resource] ?? 0), 2);
+            $outstanding = round((float) ($participant['outstanding_resources'][$resource] ?? 0), 2);
+
+            if ($requested > $outstanding) {
+                $messages[$resource] = sprintf(
+                    '%s reimbursement cannot exceed the verified outstanding amount of %s.',
+                    Str::headline($resource),
+                    number_format($outstanding, 2)
+                );
+            }
+        }
+
+        $outstandingUnitLossCost = round((float) ($participant['outstanding_unit_loss_cost'] ?? 0), 2);
+        if ($unitLossCost > $outstandingUnitLossCost) {
+            $messages['unit_loss_cost'] = sprintf(
+                'Military loss reimbursement cannot exceed the verified outstanding amount of $%s.',
+                number_format($outstandingUnitLossCost, 2)
+            );
+        }
+
+        $outstandingInfraLossCost = round((float) ($participant['outstanding_infra_loss_cost'] ?? 0), 2);
+        if ($infraLossCost > $outstandingInfraLossCost) {
+            $messages['infra_loss_cost'] = sprintf(
+                'Infrastructure reimbursement cannot exceed the verified outstanding amount of $%s.',
+                number_format($outstandingInfraLossCost, 2)
+            );
+        }
+
+        if ($messages !== []) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    private function invalidReimbursementRedirect(ValidationException $exception): RedirectResponse
+    {
+        return Redirect::back()
+            ->withErrors($exception->errors())
+            ->with('alert-type', 'warning')
+            ->with('alert-message', Arr::first(Arr::flatten($exception->errors())) ?? 'Reimbursement exceeds verified outstanding losses.')
+            ->withInput();
     }
 
     /**

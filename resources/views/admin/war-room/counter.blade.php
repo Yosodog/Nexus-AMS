@@ -672,6 +672,7 @@
                                         $rowAccounts = $participant['accounts'] ?? collect();
                                         $rowRecommendedAccountId = $participant['recommended_account_id'] ?? null;
                                         $rowSelectedAccountId = (int) ($isActiveRow ? old('account_id', $rowRecommendedAccountId) : $rowRecommendedAccountId);
+                                        $rowIdempotencyKey = $isActiveRow ? old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) : (string) \Illuminate\Support\Str::uuid();
                                         $rowCanSubmit = $canManageAccounts && $rowAccounts->isNotEmpty();
                                         $rowTotalTargetId = 'reimbursement-total-'.$nationId;
                                         $reimbursementFormId = 'counter-reimbursement-form-'.$nationId;
@@ -745,6 +746,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_resources']['gasoline'] ?? 0), 2, '.', '') }}"
                                                            name="gasoline"
                                                            value="{{ number_format($rowGasoline, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -756,6 +758,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_resources']['munitions'] ?? 0), 2, '.', '') }}"
                                                            name="munitions"
                                                            value="{{ number_format($rowMunitions, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -767,6 +770,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_resources']['steel'] ?? 0), 2, '.', '') }}"
                                                            name="steel"
                                                            value="{{ number_format($rowSteel, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -778,6 +782,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_resources']['aluminum'] ?? 0), 2, '.', '') }}"
                                                            name="aluminum"
                                                            value="{{ number_format($rowAluminum, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -789,6 +794,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_unit_loss_cost'] ?? 0), 2, '.', '') }}"
                                                            name="unit_loss_cost"
                                                            value="{{ number_format($rowUnits, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -800,6 +806,7 @@
                                                     <input type="number"
                                                            step="0.01"
                                                            min="0"
+                                                           max="{{ number_format((float) ($participant['outstanding_infra_loss_cost'] ?? 0), 2, '.', '') }}"
                                                            name="infra_loss_cost"
                                                            value="{{ number_format($rowInfra, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
@@ -823,6 +830,7 @@
                                             <form id="{{ $reimbursementFormId }}" method="post" action="{{ route('admin.war-counters.reimbursements.store', $counter) }}" class="hidden">
                                                 @csrf
                                                 <input type="hidden" name="nation_id" value="{{ $nationId }}">
+                                                <input type="hidden" name="idempotency_key" value="{{ $rowIdempotencyKey }}">
                                             </form>
                                             <div class="mb-1 text-sm text-base-content/60">Money reimbursement total</div>
                                             <div class="font-semibold mb-2" id="{{ $rowTotalTargetId }}">${{ number_format($rowTotal, 2) }}</div>

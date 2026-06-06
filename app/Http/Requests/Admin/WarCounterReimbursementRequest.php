@@ -32,6 +32,7 @@ class WarCounterReimbursementRequest extends FormRequest
             'unit_loss_cost' => ['required', 'numeric', 'min:0', 'max:1000000000'],
             'infra_loss_cost' => ['required', 'numeric', 'min:0', 'max:1000000000'],
             'note' => ['nullable', 'string', 'max:255'],
+            'idempotency_key' => ['required', 'uuid'],
         ];
     }
 
