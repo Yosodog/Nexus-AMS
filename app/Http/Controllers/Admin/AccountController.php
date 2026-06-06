@@ -244,6 +244,13 @@ class AccountController extends Controller
             abort(403, 'Denied withdrawals cannot be refunded.');
         }
 
+        if ($transaction->sent_at || $transaction->bank_record_id || $transaction->bank_processing_at) {
+            return back()->with([
+                'alert-message' => 'This withdrawal is already processing or sent and cannot be refunded automatically.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         if ($transaction->isRefunded()) {
             return back()->with([
                 'alert-message' => 'This transaction has already been refunded.',
@@ -275,10 +282,23 @@ class AccountController extends Controller
                 return 'refunded';
             }
 
+            if ($lockedTransaction->sent_at || $lockedTransaction->bank_record_id) {
+                return 'sent';
+            }
+
+            if ($lockedTransaction->bank_processing_at) {
+                return 'processing';
+            }
+
             $fromAccount = $lockedTransaction->fromAccount;
             if (! $fromAccount) {
                 return 'account-missing';
             }
+
+            $lockedTransaction->is_pending = false;
+            $lockedTransaction->refunded_at = now();
+            $lockedTransaction->bank_processing_at = null;
+            $lockedTransaction->save();
 
             AccountService::adjustAccountBalance(
                 $fromAccount,
@@ -286,10 +306,6 @@ class AccountController extends Controller
                 auth()->id(),
                 RequestFacade::ip()
             );
-
-            $lockedTransaction->is_pending = false;
-            $lockedTransaction->refunded_at = now();
-            $lockedTransaction->save();
 
             return 'ok';
         });
@@ -311,6 +327,13 @@ class AccountController extends Controller
         if ($result === 'denied') {
             return back()->with([
                 'alert-message' => 'Denied withdrawals cannot be refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'processing' || $result === 'sent') {
+            return back()->with([
+                'alert-message' => 'This withdrawal is already processing or sent and cannot be refunded automatically.',
                 'alert-type' => 'error',
             ]);
         }
@@ -363,6 +386,13 @@ class AccountController extends Controller
             abort(403, 'A sent transaction cannot be unstuck/refunded.');
         }
 
+        if ($transaction->bank_processing_at) {
+            return back()->with([
+                'alert-message' => 'This withdrawal is currently processing and cannot be unstuck/refunded automatically.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         if ($transaction->isRefunded()) {
             return back()->with([
                 'alert-message' => 'This transaction has already been refunded.',
@@ -398,10 +428,23 @@ class AccountController extends Controller
                 return 'sent';
             }
 
+            if ($lockedTransaction->bank_record_id) {
+                return 'sent';
+            }
+
+            if ($lockedTransaction->bank_processing_at) {
+                return 'processing';
+            }
+
             $fromAccount = $lockedTransaction->fromAccount;
             if (! $fromAccount) {
                 return 'account-missing';
             }
+
+            $lockedTransaction->is_pending = false;
+            $lockedTransaction->refunded_at = now();
+            $lockedTransaction->bank_processing_at = null;
+            $lockedTransaction->save();
 
             AccountService::adjustAccountBalance(
                 $fromAccount,
@@ -409,10 +452,6 @@ class AccountController extends Controller
                 auth()->id(),
                 RequestFacade::ip()
             );
-
-            $lockedTransaction->is_pending = false;
-            $lockedTransaction->refunded_at = now();
-            $lockedTransaction->save();
 
             return 'ok';
         });
@@ -441,6 +480,13 @@ class AccountController extends Controller
         if ($result === 'sent') {
             return back()->with([
                 'alert-message' => 'Sent withdrawals cannot be unstuck/refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'processing') {
+            return back()->with([
+                'alert-message' => 'This withdrawal is currently processing and cannot be unstuck/refunded automatically.',
                 'alert-type' => 'error',
             ]);
         }

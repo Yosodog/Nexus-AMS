@@ -106,17 +106,30 @@ class SendBank implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            DB::transaction(function () use ($transaction, $bankRecord) {
+            $markedSent = false;
+
+            DB::transaction(function () use ($transaction, $bankRecord, &$markedSent) {
                 $lockedTransaction = Transaction::query()
                     ->lockForUpdate()
                     ->find($transaction->id);
 
-                if (! $lockedTransaction || $lockedTransaction->sent_at || $lockedTransaction->bank_record_id) {
+                if (! $lockedTransaction
+                    || $lockedTransaction->sent_at
+                    || $lockedTransaction->bank_record_id
+                    || $lockedTransaction->refunded_at
+                    || $lockedTransaction->denied_at
+                    || $lockedTransaction->requires_admin_approval
+                    || ! $lockedTransaction->is_pending) {
                     return;
                 }
 
                 $lockedTransaction->setSent($bankRecord);
+                $markedSent = true;
             });
+
+            if (! $markedSent) {
+                return;
+            }
 
             $sentTransaction = Transaction::query()
                 ->with(['nation', 'fromAccount'])
