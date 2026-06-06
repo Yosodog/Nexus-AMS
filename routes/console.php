@@ -47,7 +47,9 @@ Schedule::command('loans:process-payments')->dailyAt('00:15');
 // Payroll
 Schedule::command('payroll:run-daily')
     ->dailyAt('00:30')
-    ->timezone('America/Chicago');
+    ->timezone('America/Chicago')
+    ->withoutOverlapping(120)
+    ->onOneServer();
 
 // Growth Circles
 Schedule::command('growth-circles:distribute')

@@ -32,12 +32,13 @@ class RunDailyPayroll extends Command
         $summary = $payrollService->runDailyPayroll($runDate);
 
         $message = sprintf(
-            'Payroll run complete: %d total, %d paid, %d removed, %d skipped (no account), %d skipped (disabled), %d skipped (other).',
+            'Payroll run complete: %d total, %d paid, %d removed, %d skipped (no account), %d skipped (disabled), %d skipped (already paid), %d skipped (other).',
             $summary['total'],
             $summary['paid'],
             $summary['removed'],
             $summary['skipped_no_account'],
             $summary['skipped_disabled'],
+            $summary['skipped_already_paid'],
             $summary['skipped_other']
         );
 

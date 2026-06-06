@@ -7,8 +7,10 @@ use App\Models\PayrollGrade;
 use App\Models\PayrollMember;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PayrollService
@@ -19,7 +21,7 @@ class PayrollService
     ) {}
 
     /**
-     * @return array{total:int, paid:int, removed:int, skipped_no_account:int, skipped_disabled:int, skipped_other:int}
+     * @return array{total:int, paid:int, removed:int, skipped_no_account:int, skipped_disabled:int, skipped_already_paid:int, skipped_other:int}
      */
     public function runDailyPayroll(Carbon $date): array
     {
@@ -29,6 +31,7 @@ class PayrollService
             'removed' => 0,
             'skipped_no_account' => 0,
             'skipped_disabled' => 0,
+            'skipped_already_paid' => 0,
             'skipped_other' => 0,
         ];
 
@@ -65,6 +68,14 @@ class PayrollService
                         continue;
                     }
 
+                    $idempotencyKey = $this->payrollIdempotencyKey($member->id, $runDate);
+
+                    if ($this->payrollPayoutExists($member->id, $runDate, $idempotencyKey)) {
+                        $summary['skipped_already_paid']++;
+
+                        continue;
+                    }
+
                     $account = Account::query()
                         ->where('nation_id', $member->nation_id)
                         ->where('frozen', false)
@@ -78,7 +89,7 @@ class PayrollService
                     }
 
                     try {
-                        DB::transaction(function () use ($account, $dailyAmount, $member, $runDate): void {
+                        DB::transaction(function () use ($account, $dailyAmount, $idempotencyKey, $member, $runDate): void {
                             $lockedAccount = Account::query()
                                 ->whereKey($account->id)
                                 ->lockForUpdate()
@@ -103,6 +114,7 @@ class PayrollService
                             $transaction->payroll_grade_id = $member->payroll_grade_id;
                             $transaction->payroll_member_id = $member->id;
                             $transaction->payroll_run_date = $runDate;
+                            $transaction->payroll_idempotency_key = $idempotencyKey;
 
                             foreach (PWHelperService::resources(false) as $resource) {
                                 $transaction->{$resource} = 0;
@@ -112,6 +124,15 @@ class PayrollService
                         });
 
                         $summary['paid']++;
+                    } catch (UniqueConstraintViolationException $exception) {
+                        Log::info('Payroll payout skipped because it was already recorded', [
+                            'nation_id' => $member->nation_id,
+                            'payroll_member_id' => $member->id,
+                            'run_date' => $runDate,
+                            'idempotency_key' => $idempotencyKey,
+                        ]);
+
+                        $summary['skipped_already_paid']++;
                     } catch (Throwable $exception) {
                         Log::warning('Payroll payout failed', [
                             'nation_id' => $member->nation_id,
@@ -125,6 +146,25 @@ class PayrollService
             });
 
         return $summary;
+    }
+
+    private function payrollIdempotencyKey(int $payrollMemberId, string $runDate): string
+    {
+        return "payroll:{$payrollMemberId}:{$runDate}";
+    }
+
+    private function payrollPayoutExists(int $payrollMemberId, string $runDate, string $idempotencyKey): bool
+    {
+        return Transaction::query()
+            ->where('transaction_type', 'payroll')
+            ->where(function ($query) use ($idempotencyKey, $payrollMemberId, $runDate): void {
+                $query->where('payroll_idempotency_key', $idempotencyKey)
+                    ->orWhere(function ($query) use ($payrollMemberId, $runDate): void {
+                        $query->where('payroll_member_id', $payrollMemberId)
+                            ->whereDate('payroll_run_date', $runDate);
+                    });
+            })
+            ->exists();
     }
 
     public function createGrade(array $payload, ?User $admin): PayrollGrade
