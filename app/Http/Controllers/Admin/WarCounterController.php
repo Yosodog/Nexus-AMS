@@ -23,6 +23,7 @@ use App\Services\War\CounterReimbursementService;
 use App\Services\War\NotificationService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -177,14 +178,26 @@ class WarCounterController extends Controller
                 ->with('alert-message', 'Counter suppressed by an active war plan.');
         }
 
-        $counter = WarCounter::query()->create([
-            'aggressor_nation_id' => $aggressor->id,
-            'team_size' => $data['team_size'] ?? config('war.counters.default_team_size', 3),
-            'war_declaration_type' => $this->sanitizeWarType($data['war_declaration_type'] ?? null),
-            'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
-            'war_reason' => $this->sanitizeWarReason($data['war_reason'] ?? $this->defaultWarReason($membershipService)),
-            'status' => 'draft',
-        ]);
+        try {
+            $counter = WarCounter::query()->create([
+                'aggressor_nation_id' => $aggressor->id,
+                'team_size' => $data['team_size'] ?? config('war.counters.default_team_size', 3),
+                'war_declaration_type' => $this->sanitizeWarType($data['war_declaration_type'] ?? null),
+                'discord_forum_channel_id' => $data['discord_forum_channel_id'] ?? null,
+                'war_reason' => $this->sanitizeWarReason($data['war_reason'] ?? $this->defaultWarReason($membershipService)),
+                'status' => 'draft',
+            ]);
+        } catch (UniqueConstraintViolationException $exception) {
+            $counter = $this->findOpenCounterForAggressor($aggressor->id);
+
+            if (! $counter) {
+                throw $exception;
+            }
+
+            return Redirect::route('admin.war-counters.show', $counter)
+                ->with('alert-type', 'info')
+                ->with('alert-message', 'An open counter already exists for this aggressor.');
+        }
 
         return Redirect::route('admin.war-counters.show', $counter)
             ->with('alert-type', 'success')
@@ -706,6 +719,17 @@ class WarCounterController extends Controller
         return Redirect::back()
             ->with('alert-type', 'success')
             ->with('alert-message', 'Counter settings updated.');
+    }
+
+    private function findOpenCounterForAggressor(int $aggressorNationId): ?WarCounter
+    {
+        return WarCounter::query()
+            ->where('aggressor_nation_id', $aggressorNationId)
+            ->where('active_key', WarCounter::ACTIVE_KEY_VALUE)
+            ->latest('last_war_declared_at')
+            ->latest('updated_at')
+            ->latest('id')
+            ->first();
     }
 
     /**

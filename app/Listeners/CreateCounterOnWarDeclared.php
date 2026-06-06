@@ -15,6 +15,7 @@ use App\Services\SettingService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -77,19 +78,36 @@ class CreateCounterOnWarDeclared
                         ->first();
 
                     if (! $counter) {
-                        $counter = WarCounter::query()->create([
-                            'aggressor_nation_id' => $event->attackerNationId,
-                            'team_size' => config('war.counters.default_team_size', 3),
-                            'war_declaration_type' => config('war.plan_defaults.plan_type', 'ordinary'),
-                            'status' => 'draft',
-                        ]);
+                        try {
+                            $counter = WarCounter::query()->create([
+                                'aggressor_nation_id' => $event->attackerNationId,
+                                'team_size' => config('war.counters.default_team_size', 3),
+                                'war_declaration_type' => config('war.plan_defaults.plan_type', 'ordinary'),
+                                'status' => 'draft',
+                            ]);
+                        } catch (UniqueConstraintViolationException) {
+                            $counter = WarCounter::query()
+                                ->where('aggressor_nation_id', $event->attackerNationId)
+                                ->where('active_key', WarCounter::ACTIVE_KEY_VALUE)
+                                ->latest('last_war_declared_at')
+                                ->latest('updated_at')
+                                ->latest('id')
+                                ->first();
+                        }
                     }
 
-                    $counter->update([
-                        'last_war_declared_at' => now(),
-                    ]);
+                    if (! $counter) {
+                        Log::warning('War counter auto-creation failed to resolve an open counter after duplicate guard.', [
+                            'attacker_nation_id' => $event->attackerNationId,
+                            'war_id' => $event->warId,
+                        ]);
+                    } else {
+                        $counter->update([
+                            'last_war_declared_at' => now(),
+                        ]);
 
-                    AutoPickCounterAssignmentsJob::dispatch($counter->id);
+                        AutoPickCounterAssignmentsJob::dispatch($counter->id);
+                    }
                 }
 
                 $this->queueDiscordWarAlert($event, $counter);

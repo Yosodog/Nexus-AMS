@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class WarCounter extends Model
 {
+    public const ACTIVE_KEY_VALUE = 1;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -33,7 +35,30 @@ class WarCounter extends Model
         'finalized_at' => 'datetime',
         'archived_at' => 'datetime',
         'last_war_declared_at' => 'datetime',
+        'active_key' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (WarCounter $counter): void {
+            $counter->active_key = $counter->isOpenStatus()
+                ? self::ACTIVE_KEY_VALUE
+                : null;
+        });
+    }
+
+    public function isOpenStatus(): bool
+    {
+        return in_array($this->status, self::openStatuses(), true);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function openStatuses(): array
+    {
+        return ['draft', 'active'];
+    }
 
     /**
      * @return BelongsTo<Nation, self>
