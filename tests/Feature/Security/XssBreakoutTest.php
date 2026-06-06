@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\Alliance;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
 use App\Models\Page;
@@ -105,5 +106,22 @@ class XssBreakoutTest extends FeatureTestCase
         $this->assertStringNotContainsString("confirm('Sweep the entire main bank into Offshore');alert(1);//", $html);
         $this->assertStringNotContainsString("confirm('Delete Offshore');alert(1);//", $html);
         $this->assertStringContainsString('\u0027);alert(1);\/\/', $html);
+    }
+
+    public function test_homepage_omits_unsafe_alliance_links(): void
+    {
+        config()->set('services.pw.alliance_id', 123);
+
+        Alliance::factory()->create([
+            'id' => 123,
+            'discord_link' => 'javascript:alert(1)',
+            'forum_link' => 'https://forums.example.test',
+            'wiki_link' => 'https://wiki.example.test',
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertDontSee('javascript:alert(1)', false)
+            ->assertSee('https://forums.example.test', false);
     }
 }

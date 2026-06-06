@@ -56,9 +56,9 @@ class HomeController extends Controller
             'rank' => $alliance?->rank,
             'color' => $alliance?->color,
             'flag' => $alliance?->flag,
-            'discord_link' => $alliance?->discord_link,
-            'forum_link' => $alliance?->forum_link,
-            'wiki_link' => $alliance?->wiki_link,
+            'discord_link' => $this->safePublicUrl($alliance?->discord_link),
+            'forum_link' => $this->safePublicUrl($alliance?->forum_link),
+            'wiki_link' => $this->safePublicUrl($alliance?->wiki_link),
             'totalCities' => $totalCities,
             'totalWarsWon' => $totalWarsWon,
             'winRate' => $winRate,
@@ -72,5 +72,22 @@ class HomeController extends Controller
             'homeContent' => $homeContent,
             'publicStats' => $publicStats,
         ]);
+    }
+
+    private function safePublicUrl(?string $url): ?string
+    {
+        $url = is_string($url) ? trim($url) : '';
+
+        if ($url === '' || preg_match('/[\x00-\x1F\x7F]/', $url) === 1) {
+            return null;
+        }
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        return filter_var($url, FILTER_VALIDATE_URL) !== false ? $url : null;
     }
 }
