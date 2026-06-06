@@ -39,7 +39,12 @@ final readonly class MMRAssistantService
             return $result;
         }
 
-        $mmrAccount = $config->account; // requires relation on MMRConfig: account()
+        $mmrAccount = Account::query()
+            ->whereKey($config->account_id)
+            ->where('nation_id', $nation->id)
+            ->where('frozen', false)
+            ->first();
+
         if (! $mmrAccount) {
             return $result;
         }

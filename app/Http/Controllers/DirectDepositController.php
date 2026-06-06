@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class DirectDepositController extends Controller
 {
@@ -32,11 +33,11 @@ class DirectDepositController extends Controller
         $request->validate([
             'account_id' => [
                 'required',
-                Rule::exists('accounts', 'id')->where('nation_id', $nation->id),
+                $this->activeOwnedAccountRule($nation->id),
             ],
         ]);
 
-        $account = Account::findOrFail($request->account_id);
+        $account = Account::query()->findOrFail($request->integer('account_id'));
 
         try {
             $this->directDepositService->enroll($nation, $account);
@@ -79,7 +80,7 @@ class DirectDepositController extends Controller
 
         $data = $request->validate(array_merge([
             'enabled' => 'nullable|boolean',
-            'account_id' => ['required', Rule::exists('accounts', 'id')->where('nation_id', $nationId)],
+            'account_id' => ['required', $this->activeOwnedAccountRule($nationId)],
         ],
             collect(PWHelperService::resources(false))->mapWithKeys(fn ($r) => [
                 "{$r}_pct" => 'nullable|numeric|min:0|max:100',
@@ -121,5 +122,13 @@ class DirectDepositController extends Controller
             'alert-message' => 'MMR Assistant preferences saved.',
             'alert-type' => 'success',
         ]);
+    }
+
+    private function activeOwnedAccountRule(int $nationId): Exists
+    {
+        return Rule::exists('accounts', 'id')
+            ->where('nation_id', $nationId)
+            ->where('frozen', false)
+            ->whereNull('deleted_at');
     }
 }

@@ -164,13 +164,24 @@ class DirectDepositService
      */
     public function getDepositAccount(Nation $nation): Account
     {
-        $enrollment = DirectDepositEnrollment::where('nation_id', $nation->id)->first();
+        $enrollment = DirectDepositEnrollment::query()
+            ->with('account')
+            ->where('nation_id', $nation->id)
+            ->first();
 
-        if ($enrollment) {
+        if ($enrollment && $this->isUsableDepositAccount($enrollment->account, $nation)) {
             return $enrollment->account;
         }
 
-        $fallback = $nation->accounts()->first();
+        if ($enrollment) {
+            $enrollment->delete();
+        }
+
+        $fallback = Account::query()
+            ->where('nation_id', $nation->id)
+            ->where('frozen', false)
+            ->orderBy('id')
+            ->first();
 
         if ($fallback) {
             return $fallback;
@@ -225,6 +236,17 @@ class DirectDepositService
                 );
             }
 
+            $lockedAccount = Account::query()
+                ->whereKey($account->id)
+                ->where('nation_id', $lockedNation->id)
+                ->where('frozen', false)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedAccount) {
+                throw new UserErrorException('Select an active account that belongs to your nation.');
+            }
+
             $previousTaxId = ((int) $lockedNation->tax_id === $ddTaxId)
                 ? SettingService::getDirectDepositFallbackId()
                 : (int) $lockedNation->tax_id;
@@ -232,7 +254,7 @@ class DirectDepositService
             DirectDepositEnrollment::query()->updateOrCreate(
                 ['nation_id' => $lockedNation->id],
                 [
-                    'account_id' => $account->id,
+                    'account_id' => $lockedAccount->id,
                     'previous_tax_id' => $previousTaxId,
                     'enrolled_at' => now(),
                 ]
@@ -243,6 +265,14 @@ class DirectDepositService
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;
         $mutation->send();
+    }
+
+    private function isUsableDepositAccount(?Account $account, Nation $nation): bool
+    {
+        return $account !== null
+            && (int) $account->nation_id === (int) $nation->id
+            && ! $account->frozen
+            && ! $account->trashed();
     }
 
     public function disenroll(Nation $nation): void
