@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkEditMMRTiersRequest;
+use App\Http\Requests\Admin\UpdateMMRAssistantSettingsRequest;
 use App\Models\MMRSetting;
 use App\Models\MMRTier;
 use App\Models\Nation;
@@ -228,21 +229,23 @@ class MMRController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function updateAssistantSettings(Request $request): RedirectResponse
+    public function updateAssistantSettings(UpdateMMRAssistantSettingsRequest $request): RedirectResponse
     {
         $this->authorize('manage-mmr');
 
+        $validated = $request->validated();
+        $resourceSettings = $validated['resources'] ?? [];
         $previousEnabled = SettingService::getMMRAssistantEnabled();
         $previousSettings = MMRSetting::query()->get()->keyBy('resource');
 
-        SettingService::setMMRAssistantEnabled($request->input('enabled', false));
+        SettingService::setMMRAssistantEnabled((bool) ($validated['enabled'] ?? false));
 
-        foreach ($request->input('resources', []) as $resource => $data) {
+        foreach ($resourceSettings as $resource => $data) {
             MMRSetting::updateOrCreate(
                 ['resource' => $resource],
                 [
                     'enabled' => isset($data['enabled']),
-                    'surcharge_pct' => floatval($data['surcharge_pct'] ?? 0),
+                    'surcharge_pct' => MMRSetting::normalizeSurchargePercentage((float) ($data['surcharge_pct'] ?? 0)),
                 ]
             );
         }
@@ -250,11 +253,12 @@ class MMRController extends Controller
         $changes = [
             'mmr_assistant_enabled' => [
                 'from' => $previousEnabled,
-                'to' => (bool) $request->input('enabled', false),
+                'to' => (bool) ($validated['enabled'] ?? false),
             ],
-            'resources' => collect($request->input('resources', []))
+            'resources' => collect($resourceSettings)
                 ->mapWithKeys(function ($data, $resource) use ($previousSettings) {
                     $previous = $previousSettings[$resource] ?? null;
+                    $surchargePercentage = MMRSetting::normalizeSurchargePercentage((float) ($data['surcharge_pct'] ?? 0));
 
                     return [
                         $resource => [
@@ -264,7 +268,7 @@ class MMRController extends Controller
                             ] : null,
                             'to' => [
                                 'enabled' => isset($data['enabled']),
-                                'surcharge_pct' => (float) ($data['surcharge_pct'] ?? 0),
+                                'surcharge_pct' => $surchargePercentage,
                             ],
                         ],
                     ];

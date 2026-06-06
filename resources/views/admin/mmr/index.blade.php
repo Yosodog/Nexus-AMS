@@ -351,7 +351,7 @@
                                     <input type="checkbox" class="checkbox checkbox-sm" name="resources[{{ $setting->resource }}][enabled]" value="1" @checked($setting->enabled)>
                                 </td>
                                 <td>
-                                    <input type="number" name="resources[{{ $setting->resource }}][surcharge_pct]" class="input input-bordered input-sm w-full max-w-32" step="0.01" min="0" value="{{ $setting->surcharge_pct }}">
+                                    <input type="number" name="resources[{{ $setting->resource }}][surcharge_pct]" class="input input-bordered input-sm w-full max-w-32" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}" value="{{ $setting->surcharge_pct }}">
                                 </td>
                             </tr>
                         @endforeach
@@ -367,7 +367,7 @@
 
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm text-base-content/60">Set all surcharges to</span>
-                        <input type="number" id="setAllSurcharge" class="input input-bordered input-sm w-28" step="0.01" min="0">
+                        <input type="number" id="setAllSurcharge" class="input input-bordered input-sm w-28" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}">
                         <button type="button" class="btn btn-outline btn-sm" id="applySurchargeToAll">Apply</button>
                     </div>
                 </div>

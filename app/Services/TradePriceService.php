@@ -75,7 +75,7 @@ class TradePriceService
 
         foreach (PWHelperService::resources(false) as $resource) {
             $base = $average->{$resource} ?? 0;
-            $surcharge = $surcharges[$resource] ?? 0;
+            $surcharge = MMRSetting::normalizeSurchargePercentage((float) ($surcharges[$resource] ?? 0));
 
             $result[$resource] = round($base * (1 + ($surcharge / 100)), 2);
         }
