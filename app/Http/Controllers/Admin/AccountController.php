@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateDirectDepositBracketsRequest;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
@@ -626,21 +627,19 @@ class AccountController extends Controller
      *
      * @throws AuthorizationException
      */
-    public function updateDirectDepositBrackets(Request $request)
+    public function updateDirectDepositBrackets(UpdateDirectDepositBracketsRequest $request)
     {
         $this->authorize('manage-dd');
 
-        $request->validate([
-            'selected' => 'required|array',
-            'selected.*' => 'exists:direct_deposit_tax_brackets,id',
-            'rates' => 'required|array',
-        ]);
+        $validated = $request->validated();
 
-        $rates = collect(PWHelperService::resources())
-            ->mapWithKeys(function ($resource) use ($request) {
-                $value = $request->input("rates.$resource");
+        $rates = collect(DirectDepositTaxBracket::rateFields())
+            ->mapWithKeys(function ($resource) use ($validated) {
+                $value = $validated['rates'][$resource] ?? null;
 
-                return $value !== null ? [$resource => (float) $value] : [];
+                return $value !== null && $value !== ''
+                    ? [$resource => DirectDepositTaxBracket::normalizeTaxRate((float) $value)]
+                    : [];
             })->toArray();
 
         if (empty($rates)) {
@@ -650,7 +649,7 @@ class AccountController extends Controller
             ]);
         }
 
-        DirectDepositTaxBracket::whereIn('id', $request->input('selected'))
+        DirectDepositTaxBracket::whereIn('id', $validated['selected'])
             ->update($rates);
 
         $this->auditLogger->success(
@@ -658,7 +657,7 @@ class AccountController extends Controller
             action: 'direct_deposit_brackets_updated',
             context: [
                 'data' => [
-                    'selected' => $request->input('selected'),
+                    'selected' => $validated['selected'],
                     'rates' => $rates,
                 ],
             ],

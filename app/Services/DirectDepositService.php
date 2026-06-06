@@ -67,7 +67,7 @@ class DirectDepositService
 
         foreach ($fields as $field) {
             $amount = (float) $record->$field;
-            $rate = (float) $bracket->$field;
+            $rate = DirectDepositTaxBracket::normalizeTaxRate((float) $bracket->$field);
 
             $taxed = round($amount * ($rate / 100), 2);
             $kept = round($amount - $taxed, 2);
