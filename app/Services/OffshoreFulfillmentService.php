@@ -81,8 +81,8 @@ class OffshoreFulfillmentService
     }
 
     /**
-     * Calculate the resource gaps and sequentially top them up from the
-     * prioritized offshore list.
+     * Calculate the resource gaps and top them up from a fully planned
+     * prioritized offshore withdrawal set.
      */
     protected function performFulfillment(Transaction $transaction): OffshoreFulfillmentResult
     {
@@ -138,21 +138,70 @@ class OffshoreFulfillmentService
             );
         }
 
+        /** @var Offshore[] $offshores */
+        $offshores = $this->offshoreService->all();
         $initialDeficits = $deficits;
-        $transfers = [];
+        $plan = $this->buildFulfillmentPlan($transaction, $offshores, $deficits);
+
+        if (! empty($plan['remaining_deficits'])) {
+            Log::warning('Unable to fully cover transaction shortfall via offshores', [
+                'transaction_id' => $transaction->id,
+                'remaining_deficits' => $plan['remaining_deficits'],
+            ]);
+
+            return new OffshoreFulfillmentResult(
+                OffshoreFulfillmentResult::STATUS_FAILED,
+                'Insufficient offshore liquidity to fulfill this transaction automatically.',
+                errors: $plan['errors'],
+                guardrailBlocks: $plan['guardrail_blocks'],
+                remainingDeficits: $plan['remaining_deficits'],
+                initialDeficits: $initialDeficits,
+                plannedTransfers: $this->markPlannedTransfersAsNotSent($plan['planned_transfers'])
+            );
+        }
+
+        return $this->executeFulfillmentPlan(
+            $transaction,
+            $plan['execution_plan'],
+            $initialDeficits,
+            $plan['planned_transfers'],
+            $plan['errors'],
+            $plan['guardrail_blocks']
+        );
+    }
+
+    /**
+     * @param  iterable<int, Offshore>  $offshores
+     * @param  array<string, float>  $deficits
+     * @return array{
+     *     execution_plan: array<int, array{offshore: Offshore, resources: array<string, float>}>,
+     *     planned_transfers: array<int, array<string, mixed>>,
+     *     remaining_deficits: array<string, float>,
+     *     errors: array<int, array<string, mixed>>,
+     *     guardrail_blocks: array<int, array<string, mixed>>
+     * }
+     */
+    protected function buildFulfillmentPlan(Transaction $transaction, iterable $offshores, array $deficits): array
+    {
+        $executionPlan = [];
+        $plannedTransfers = [];
         $errors = [];
         $guardrailBlocks = [];
 
-        /** @var Offshore[] $offshores */
-        $offshores = $this->offshoreService->all();
-
-        // Offshores are already ordered by priority; walk them until the deficit disappears.
         foreach ($offshores as $offshore) {
             if (empty($deficits)) {
                 break;
             }
 
-            $balances = $this->offshoreService->getBalances($offshore);
+            $credentialError = $this->credentialErrorFor($offshore);
+
+            if ($credentialError) {
+                $errors[] = $credentialError;
+
+                continue;
+            }
+
+            $balances = $this->offshoreService->refreshBalances($offshore);
             $withdrawalPayload = [];
 
             // Walk the outstanding deficit list to see what this offshore can cover.
@@ -205,25 +254,66 @@ class OffshoreFulfillmentService
                 continue;
             }
 
+            $executionPlan[] = [
+                'offshore' => $offshore,
+                'resources' => $withdrawalPayload,
+            ];
+
+            $plannedTransfers[] = [
+                'offshore_id' => $offshore->id,
+                'offshore_name' => $offshore->name,
+                'resources' => $withdrawalPayload,
+                'status' => 'planned',
+            ];
+
+            $deficits = $this->subtractPayloadFromDeficits($deficits, $withdrawalPayload);
+        }
+
+        return [
+            'execution_plan' => $executionPlan,
+            'planned_transfers' => $plannedTransfers,
+            'remaining_deficits' => $deficits,
+            'errors' => $errors,
+            'guardrail_blocks' => $guardrailBlocks,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{offshore: Offshore, resources: array<string, float>}>  $executionPlan
+     * @param  array<string, float>  $initialDeficits
+     * @param  array<int, array<string, mixed>>  $plannedTransfers
+     * @param  array<int, array<string, mixed>>  $errors
+     * @param  array<int, array<string, mixed>>  $guardrailBlocks
+     */
+    protected function executeFulfillmentPlan(
+        Transaction $transaction,
+        array $executionPlan,
+        array $initialDeficits,
+        array $plannedTransfers,
+        array $errors,
+        array $guardrailBlocks
+    ): OffshoreFulfillmentResult {
+        $remainingDeficits = $initialDeficits;
+        $transfers = [];
+
+        foreach ($executionPlan as $index => $step) {
+            $offshore = $step['offshore'];
+            $withdrawalPayload = $step['resources'];
+
             try {
-                // Issue the targeted withdrawal before re-checking the next offshore.
                 $this->sendOffshoreWithdrawal($offshore, $transaction, $withdrawalPayload);
                 $this->offshoreService->refreshBalances($offshore);
 
-                foreach ($withdrawalPayload as $resource => $amount) {
-                    $deficits[$resource] -= $amount;
+                $remainingDeficits = $this->subtractPayloadFromDeficits($remainingDeficits, $withdrawalPayload);
 
-                    if ($deficits[$resource] <= 0.0001) {
-                        unset($deficits[$resource]);
-                    }
-                }
-
-                // Capture every successful transfer so admins can review the path taken.
                 $transfers[] = [
                     'offshore_id' => $offshore->id,
                     'offshore_name' => $offshore->name,
                     'resources' => $withdrawalPayload,
                 ];
+
+                $plannedTransfers[$index]['status'] = 'sent';
+                $plannedTransfers[$index]['sent_at'] = now()->toISOString();
             } catch (ConnectionException|PWQueryFailedException $exception) {
                 Log::error('Failed to withdraw from offshore during fulfillment', [
                     'transaction_id' => $transaction->id,
@@ -236,6 +326,19 @@ class OffshoreFulfillmentService
                     'offshore_name' => $offshore->name,
                     'message' => $exception->getMessage(),
                 ];
+
+                $plannedTransfers = $this->markExecutionFailure($plannedTransfers, $index, $exception->getMessage());
+
+                return new OffshoreFulfillmentResult(
+                    OffshoreFulfillmentResult::STATUS_FAILED,
+                    'Offshore fulfillment stopped after a transfer failed. Manual reconciliation is required before retrying.',
+                    transfers: $transfers,
+                    errors: $errors,
+                    guardrailBlocks: $guardrailBlocks,
+                    remainingDeficits: $remainingDeficits,
+                    initialDeficits: $initialDeficits,
+                    plannedTransfers: $plannedTransfers
+                );
             } catch (Throwable $exception) {
                 Log::error('Unexpected error during offshore fulfillment', [
                     'transaction_id' => $transaction->id,
@@ -243,29 +346,27 @@ class OffshoreFulfillmentService
                     'message' => $exception->getMessage(),
                 ]);
 
+                $message = 'Unexpected error: '.$exception->getMessage();
+
                 $errors[] = [
                     'offshore_id' => $offshore->id,
                     'offshore_name' => $offshore->name,
-                    'message' => 'Unexpected error: '.$exception->getMessage(),
+                    'message' => $message,
                 ];
+
+                $plannedTransfers = $this->markExecutionFailure($plannedTransfers, $index, $message);
+
+                return new OffshoreFulfillmentResult(
+                    OffshoreFulfillmentResult::STATUS_FAILED,
+                    'Offshore fulfillment stopped after a transfer failed. Manual reconciliation is required before retrying.',
+                    transfers: $transfers,
+                    errors: $errors,
+                    guardrailBlocks: $guardrailBlocks,
+                    remainingDeficits: $remainingDeficits,
+                    initialDeficits: $initialDeficits,
+                    plannedTransfers: $plannedTransfers
+                );
             }
-        }
-
-        if (! empty($deficits)) {
-            Log::warning('Unable to fully cover transaction shortfall via offshores', [
-                'transaction_id' => $transaction->id,
-                'remaining_deficits' => $deficits,
-            ]);
-
-            return new OffshoreFulfillmentResult(
-                OffshoreFulfillmentResult::STATUS_FAILED,
-                'Insufficient offshore liquidity to fulfill this transaction automatically.',
-                transfers: $transfers,
-                errors: $errors,
-                guardrailBlocks: $guardrailBlocks,
-                remainingDeficits: $deficits,
-                initialDeficits: $initialDeficits
-            );
         }
 
         return new OffshoreFulfillmentResult(
@@ -274,9 +375,92 @@ class OffshoreFulfillmentService
             transfers: $transfers,
             errors: $errors,
             guardrailBlocks: $guardrailBlocks,
-            remainingDeficits: $deficits,
-            initialDeficits: $initialDeficits
+            remainingDeficits: $remainingDeficits,
+            initialDeficits: $initialDeficits,
+            plannedTransfers: $plannedTransfers
         );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function credentialErrorFor(Offshore $offshore): ?array
+    {
+        $missingApiKey = empty($offshore->api_key_decrypted);
+        $missingMutationKey = empty($offshore->mutation_key_decrypted);
+
+        if (! $missingApiKey && ! $missingMutationKey) {
+            return null;
+        }
+
+        Log::error('Missing offshore credentials for fulfillment plan', [
+            'offshore_id' => $offshore->id,
+            'missing_api_key' => $missingApiKey,
+            'missing_mutation_key' => $missingMutationKey,
+        ]);
+
+        return [
+            'offshore_id' => $offshore->id,
+            'offshore_name' => $offshore->name,
+            'message' => 'Offshore credentials are missing or invalid.',
+        ];
+    }
+
+    /**
+     * @param  array<string, float>  $deficits
+     * @param  array<string, float>  $payload
+     * @return array<string, float>
+     */
+    protected function subtractPayloadFromDeficits(array $deficits, array $payload): array
+    {
+        foreach ($payload as $resource => $amount) {
+            $deficits[$resource] -= $amount;
+
+            if ($deficits[$resource] <= 0.0001) {
+                unset($deficits[$resource]);
+            }
+        }
+
+        return $deficits;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $plannedTransfers
+     * @return array<int, array<string, mixed>>
+     */
+    protected function markPlannedTransfersAsNotSent(array $plannedTransfers): array
+    {
+        foreach ($plannedTransfers as $index => $plannedTransfer) {
+            $plannedTransfers[$index]['status'] = 'not_sent';
+            $plannedTransfers[$index]['blocked_reason'] = 'Fulfillment plan could not cover the full transaction shortfall.';
+        }
+
+        return $plannedTransfers;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $plannedTransfers
+     * @return array<int, array<string, mixed>>
+     */
+    protected function markExecutionFailure(array $plannedTransfers, int $failedIndex, string $message): array
+    {
+        foreach ($plannedTransfers as $index => $plannedTransfer) {
+            if ($index < $failedIndex) {
+                continue;
+            }
+
+            if ($index === $failedIndex) {
+                $plannedTransfers[$index]['status'] = 'review_required';
+                $plannedTransfers[$index]['error'] = $message;
+
+                continue;
+            }
+
+            $plannedTransfers[$index]['status'] = 'blocked';
+            $plannedTransfers[$index]['blocked_reason'] = 'Earlier offshore transfer requires reconciliation.';
+        }
+
+        return $plannedTransfers;
     }
 
     /**

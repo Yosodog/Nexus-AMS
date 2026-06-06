@@ -19,7 +19,8 @@ readonly class OffshoreFulfillmentResult
         public array $errors = [],
         public array $guardrailBlocks = [],
         public array $remainingDeficits = [],
-        public array $initialDeficits = []
+        public array $initialDeficits = [],
+        public array $plannedTransfers = []
     ) {}
 
     public function shouldSendWithdrawal(): bool
@@ -45,6 +46,7 @@ readonly class OffshoreFulfillmentResult
             'guardrail_blocks' => $this->guardrailBlocks,
             'remaining_deficits' => $this->remainingDeficits,
             'initial_deficits' => $this->initialDeficits,
+            'planned_transfers' => $this->plannedTransfers,
         ];
     }
 }
