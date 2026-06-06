@@ -42,11 +42,11 @@ class TaxService
                 continue;
             }
 
-            // Process DD. If the tax_id matches the DD tax ID, then it will process the DD and return what is left for taxes.
-            $record = $ddService->process($record);
-            $recordedAt = self::parseApiTimestamp($record->date);
-
             try {
+                // Process DD. If the tax_id matches the DD tax ID, then it will process the DD and return what is left for taxes.
+                $record = $ddService->process($record);
+                $recordedAt = self::parseApiTimestamp($record->date);
+
                 $taxModel = DB::transaction(function () use ($record, $recordedAt) {
                     return Taxes::create([
                         'id' => $record->id, // Use PW tax record ID as our primary key
@@ -79,10 +79,12 @@ class TaxService
 
                 $newLastId = max($newLastId, $record->id);
             } catch (Throwable $e) {
-                Log::error('Failed to insert tax record', [
+                Log::error('Failed to process tax record', [
                     'tax_id' => $record->id,
                     'error' => $e->getMessage(),
                 ]);
+
+                break;
             }
         }
 
