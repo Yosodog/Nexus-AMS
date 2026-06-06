@@ -3,9 +3,6 @@
 namespace App\Nel;
 
 use App\Nel\Exception\NelUnknownVariableException;
-use ArrayAccess;
-use ReflectionException;
-use ReflectionMethod;
 
 final class DefaultVariableResolver implements VariableResolver
 {
@@ -24,29 +21,11 @@ final class DefaultVariableResolver implements VariableResolver
                 continue;
             }
 
-            if ($current instanceof ArrayAccess && $current->offsetExists($segment)) {
-                $current = $current[$segment];
-
-                continue;
-            }
-
             if (is_object($current)) {
-                if (property_exists($current, $segment) || isset($current->{$segment})) {
-                    $current = $current->{$segment};
+                $properties = get_object_vars($current);
 
-                    continue;
-                }
-
-                $getter = 'get'.ucfirst($segment);
-
-                if ($this->canCallWithoutParameters($current, $getter)) {
-                    $current = $current->{$getter}();
-
-                    continue;
-                }
-
-                if ($this->canCallWithoutParameters($current, $segment)) {
-                    $current = $current->{$segment}();
+                if (array_key_exists($segment, $properties)) {
+                    $current = $properties[$segment];
 
                     continue;
                 }
@@ -56,20 +35,5 @@ final class DefaultVariableResolver implements VariableResolver
         }
 
         return $current;
-    }
-
-    private function canCallWithoutParameters(object $object, string $method): bool
-    {
-        if (! is_callable([$object, $method])) {
-            return false;
-        }
-
-        try {
-            $reflection = new ReflectionMethod($object, $method);
-
-            return $reflection->getNumberOfRequiredParameters() === 0;
-        } catch (ReflectionException) {
-            return false;
-        }
     }
 }

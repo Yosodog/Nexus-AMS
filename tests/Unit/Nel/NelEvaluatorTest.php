@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Nel;
 
+use App\Nel\Exception\NelUnknownVariableException;
 use App\Nel\NelEngine;
 use App\Nel\NelEvaluator;
 use App\Nel\NelParser;
@@ -51,6 +52,57 @@ class NelEvaluatorTest extends TestCase
 
         $this->assertTrue($this->engine->evaluate('nation.score > 1000', $variables));
         $this->assertTrue($this->engine->evaluate('nation.military.soldiers < 60000', $variables));
+    }
+
+    public function test_resolves_public_dto_properties(): void
+    {
+        $variables = [
+            'nation' => (object) [
+                'score' => 1200,
+                'military' => (object) [
+                    'soldiers' => 50000,
+                ],
+            ],
+        ];
+
+        $this->assertTrue($this->engine->evaluate('nation.score > 1000', $variables));
+        $this->assertTrue($this->engine->evaluate('nation.military.soldiers < 60000', $variables));
+    }
+
+    public function test_does_not_call_object_getters_or_methods_when_resolving_variables(): void
+    {
+        $probe = new class
+        {
+            public bool $getterCalled = false;
+
+            public bool $methodCalled = false;
+
+            public function getSecret(): int
+            {
+                $this->getterCalled = true;
+
+                return 1;
+            }
+
+            public function destroy(): int
+            {
+                $this->methodCalled = true;
+
+                return 1;
+            }
+        };
+
+        foreach (['probe.secret == 1', 'probe.destroy == 1'] as $expression) {
+            try {
+                $this->engine->evaluate($expression, ['probe' => $probe]);
+                $this->fail('NEL variable resolution should not execute object methods.');
+            } catch (NelUnknownVariableException $exception) {
+                $this->assertStringStartsWith('Unknown variable path: probe.', $exception->getMessage());
+            }
+        }
+
+        $this->assertFalse($probe->getterCalled);
+        $this->assertFalse($probe->methodCalled);
     }
 
     public function test_calls_helpers(): void
