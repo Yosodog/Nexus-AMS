@@ -12,26 +12,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('audit_results', function (Blueprint $table): void {
-            $table->string('target_key')->nullable()->after('target_type');
-        });
+        if (! Schema::hasColumn('audit_results', 'target_key')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->string('target_key')->nullable()->after('target_type');
+            });
+        }
 
         $this->deleteRowsWithoutConcreteTargets();
         $this->backfillTargetKeys();
         $this->deleteDuplicateTargets();
 
-        Schema::table('audit_results', function (Blueprint $table): void {
-            $table->dropUnique('audit_results_unique_target');
-            $table->unique(['audit_rule_id', 'target_type', 'target_key'], 'audit_results_rule_target_unique');
-        });
+        if (! Schema::hasIndex('audit_results', 'audit_results_rule_target_unique')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->unique(['audit_rule_id', 'target_type', 'target_key'], 'audit_results_rule_target_unique');
+            });
+        }
 
-        Schema::table('audit_rules', function (Blueprint $table): void {
-            $table->index(['enabled', 'target_type'], 'audit_rules_enabled_target_idx');
-        });
+        if (Schema::hasIndex('audit_results', 'audit_results_unique_target')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->dropUnique('audit_results_unique_target');
+            });
+        }
 
-        Schema::table('nations', function (Blueprint $table): void {
-            $table->index(['alliance_id', 'alliance_position', 'vacation_mode_turns'], 'nations_member_scope_idx');
-        });
+        if (! Schema::hasIndex('audit_rules', 'audit_rules_enabled_target_idx')) {
+            Schema::table('audit_rules', function (Blueprint $table): void {
+                $table->index(['enabled', 'target_type'], 'audit_rules_enabled_target_idx');
+            });
+        }
+
+        if (! Schema::hasIndex('nations', 'nations_member_scope_idx')) {
+            Schema::table('nations', function (Blueprint $table): void {
+                $table->index(['alliance_id', 'alliance_position', 'vacation_mode_turns'], 'nations_member_scope_idx');
+            });
+        }
     }
 
     /**
@@ -39,19 +52,50 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('nations', function (Blueprint $table): void {
-            $table->dropIndex('nations_member_scope_idx');
-        });
+        if (Schema::hasIndex('nations', 'nations_member_scope_idx')) {
+            Schema::table('nations', function (Blueprint $table): void {
+                $table->dropIndex('nations_member_scope_idx');
+            });
+        }
 
-        Schema::table('audit_rules', function (Blueprint $table): void {
-            $table->dropIndex('audit_rules_enabled_target_idx');
-        });
+        if (Schema::hasIndex('audit_rules', 'audit_rules_enabled_target_idx')) {
+            Schema::table('audit_rules', function (Blueprint $table): void {
+                $table->dropIndex('audit_rules_enabled_target_idx');
+            });
+        }
 
-        Schema::table('audit_results', function (Blueprint $table): void {
-            $table->dropUnique('audit_results_rule_target_unique');
-            $table->dropColumn('target_key');
-            $table->unique(['audit_rule_id', 'target_type', 'nation_id', 'city_id'], 'audit_results_unique_target');
-        });
+        if (
+            Schema::hasIndex('audit_results', 'audit_results_rule_target_unique')
+            && ! Schema::hasIndex('audit_results', 'audit_results_rollback_audit_rule_idx')
+        ) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->index('audit_rule_id', 'audit_results_rollback_audit_rule_idx');
+            });
+        }
+
+        if (Schema::hasIndex('audit_results', 'audit_results_rule_target_unique')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->dropUnique('audit_results_rule_target_unique');
+            });
+        }
+
+        if (Schema::hasColumn('audit_results', 'target_key')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->dropColumn('target_key');
+            });
+        }
+
+        if (! Schema::hasIndex('audit_results', 'audit_results_unique_target')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->unique(['audit_rule_id', 'target_type', 'nation_id', 'city_id'], 'audit_results_unique_target');
+            });
+        }
+
+        if (Schema::hasIndex('audit_results', 'audit_results_rollback_audit_rule_idx')) {
+            Schema::table('audit_results', function (Blueprint $table): void {
+                $table->dropIndex('audit_results_rollback_audit_rule_idx');
+            });
+        }
     }
 
     private function deleteRowsWithoutConcreteTargets(): void
