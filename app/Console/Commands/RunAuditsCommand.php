@@ -41,7 +41,13 @@ class RunAuditsCommand extends Command
         }
 
         $this->info("Running {$ruleCount} audit rules...");
-        $this->auditService->runAllEnabledRules();
+
+        if (! $this->auditService->runAllEnabledRules()) {
+            $this->warn('Audit run skipped because another audit run is already in progress.');
+
+            return self::SUCCESS;
+        }
+
         $this->info('Audit run complete.');
 
         return self::SUCCESS;

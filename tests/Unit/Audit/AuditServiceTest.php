@@ -33,8 +33,6 @@ class AuditServiceTest extends TestCase
 
     public function test_creates_and_clears_violations_for_targets(): void
     {
-        $this->markTestSkipped('Audit service integration test requires full database schema; skipped in lightweight test environment.');
-
         $nation = $this->createNation(score: 900);
         $city = $this->createCity($nation, infrastructure: 510);
 
@@ -42,7 +40,7 @@ class AuditServiceTest extends TestCase
             'name' => 'Score threshold',
             'target_type' => AuditTargetType::Nation,
             'priority' => AuditPriority::High,
-            'expression' => 'nation.score > 1000',
+            'expression' => 'nation.score < 1000',
             'enabled' => true,
         ]);
 
@@ -50,10 +48,11 @@ class AuditServiceTest extends TestCase
             'name' => 'Infra alignment',
             'target_type' => AuditTargetType::City,
             'priority' => AuditPriority::Medium,
-            'expression' => 'city.infrastructure % 50 == 0',
+            'expression' => 'city.infrastructure % 50 != 0',
             'enabled' => true,
         ]);
 
+        app(AuditService::class)->runAllEnabledRules();
         app(AuditService::class)->runAllEnabledRules();
 
         $this->assertDatabaseCount('audit_results', 2);
@@ -61,11 +60,13 @@ class AuditServiceTest extends TestCase
             'audit_rule_id' => $nationRule->id,
             'nation_id' => $nation->id,
             'target_type' => 'nation',
+            'target_key' => "nation:{$nation->id}",
         ]);
         $this->assertDatabaseHas('audit_results', [
             'audit_rule_id' => $cityRule->id,
             'city_id' => $city->id,
             'target_type' => 'city',
+            'target_key' => "city:{$city->id}",
         ]);
 
         $nation->update(['score' => 1500]);
@@ -246,6 +247,55 @@ class AuditServiceTest extends TestCase
             $table->softDeletes();
         });
 
+        Schema::create('nation_resources', function ($table): void {
+            $table->id();
+            $table->foreignId('nation_id')->unique()->constrained('nations')->cascadeOnDelete();
+            $table->float('money')->default(0);
+            $table->float('coal')->default(0);
+            $table->float('oil')->default(0);
+            $table->float('uranium')->default(0);
+            $table->float('iron')->default(0);
+            $table->float('bauxite')->default(0);
+            $table->float('lead')->default(0);
+            $table->float('gasoline')->default(0);
+            $table->float('munitions')->default(0);
+            $table->float('steel')->default(0);
+            $table->float('aluminum')->default(0);
+            $table->float('food')->default(0);
+            $table->unsignedTinyInteger('credits')->default(0);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('nation_military', function ($table): void {
+            $table->id();
+            $table->foreignId('nation_id')->unique()->constrained('nations')->cascadeOnDelete();
+            $table->unsignedInteger('soldiers')->default(0);
+            $table->unsignedInteger('tanks')->default(0);
+            $table->unsignedInteger('aircraft')->default(0);
+            $table->unsignedInteger('ships')->default(0);
+            $table->unsignedInteger('missiles')->default(0);
+            $table->unsignedInteger('nukes')->default(0);
+            $table->unsignedInteger('spies')->default(0);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('nation_accounts', function ($table): void {
+            $table->unsignedBigInteger('nation_id')->primary();
+            $table->unsignedInteger('credits')->nullable();
+            $table->timestamp('last_active')->nullable();
+            $table->string('discord_id', 32)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('nation_sign_ins', function ($table): void {
+            $table->id();
+            $table->foreignId('nation_id')->constrained('nations')->cascadeOnDelete();
+            $table->unsignedInteger('mmr_score')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
         Schema::create('audit_rules', function ($table): void {
             $table->id();
             $table->string('name');
@@ -263,13 +313,14 @@ class AuditServiceTest extends TestCase
             $table->id();
             $table->foreignId('audit_rule_id')->constrained('audit_rules')->cascadeOnDelete();
             $table->string('target_type');
+            $table->string('target_key')->nullable();
             $table->foreignId('nation_id')->nullable()->constrained('nations')->nullOnDelete();
             $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
             $table->json('details')->nullable();
             $table->timestamp('first_detected_at');
             $table->timestamp('last_evaluated_at');
             $table->timestamps();
-            $table->unique(['audit_rule_id', 'target_type', 'nation_id', 'city_id']);
+            $table->unique(['audit_rule_id', 'target_type', 'target_key']);
         });
 
         Schema::create('offshores', function ($table): void {

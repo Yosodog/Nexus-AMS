@@ -32,7 +32,7 @@ class NationAuditMapper
                 'num_cities' => $nation->num_cities,
                 'score' => $nation->score,
                 'population' => $nation->population,
-                'projects_count' => $nation->projects,
+                'projects_count' => (int) $nation->getRawOriginal('projects'),
                 'project_bits' => $nation->project_bits,
                 'wars_won' => $nation->wars_won,
                 'wars_lost' => $nation->wars_lost,

@@ -103,9 +103,10 @@ Schedule::command('auto:withdraw')->everyOddHour('54')->runInBackground()
 
 // Audits
 Schedule::command('audits:run')
-    ->everyFifteenMinutes()
+    ->hourlyAt(30)
     ->runInBackground()
-    ->withoutOverlapping(10);
+    ->withoutOverlapping(90)
+    ->onOneServer();
 
 // Recruitment
 Schedule::command('recruit:nations')->everyMinute()->runInBackground()->when($whenPWUp);
