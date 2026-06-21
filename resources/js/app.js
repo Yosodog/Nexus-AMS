@@ -299,6 +299,214 @@ const enableBootstrapCompat = (root = document) => {
     });
 };
 
+const getCookie = (name) => {
+    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+
+    return match ? decodeURIComponent(match[2]) : null;
+};
+
+const setDepositButtonBusy = (button, isBusy) => {
+    button.disabled = isBusy;
+    button.dataset.depositPending = isBusy ? 'true' : 'false';
+    button.classList.toggle('cursor-not-allowed', isBusy);
+    button.classList.toggle('opacity-50', isBusy);
+};
+
+const resetDepositTooltip = (tooltip, originalText) => {
+    if (!tooltip) {
+        return;
+    }
+
+    tooltip.classList.remove('tooltip-success');
+
+    if (originalText !== null) {
+        tooltip.setAttribute('data-tip', originalText);
+    }
+};
+
+const showToast = (title, message, depositCode = null, type = 'success') => {
+    const toastContainer = document.getElementById('toast-container');
+
+    if (!toastContainer) {
+        return;
+    }
+
+    toastContainer.classList.remove('hidden');
+
+    const toast = document.createElement('div');
+    toast.className = `alert shadow-lg pointer-events-auto w-full sm:w-[28rem] max-w-full ${type === 'error' ? 'alert-error' : 'alert-success'}`;
+
+    const content = document.createElement('div');
+    content.className = 'flex flex-col sm:flex-row sm:items-start gap-3 w-full';
+
+    const textContainer = document.createElement('div');
+    textContainer.className = 'flex-1 text-sm space-y-1 break-words';
+
+    const titleElement = document.createElement('div');
+    titleElement.className = 'font-semibold';
+    titleElement.textContent = title;
+
+    const messageElement = document.createElement('div');
+    messageElement.textContent = message;
+
+    textContainer.appendChild(titleElement);
+    textContainer.appendChild(messageElement);
+
+    const actions = document.createElement('div');
+    actions.className = 'flex flex-col sm:flex-row gap-2 w-full sm:w-auto';
+
+    if (depositCode) {
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'btn btn-sm btn-outline w-full sm:w-auto';
+        copyButton.innerText = 'Copy Code';
+        copyButton.addEventListener('click', () => {
+            copyToClipboard(depositCode);
+            copyButton.innerText = 'Copied!';
+
+            setTimeout(() => {
+                copyButton.innerText = 'Copy Code';
+            }, 2000);
+        });
+
+        actions.appendChild(copyButton);
+    }
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn btn-sm btn-ghost text-base-content border border-base-300 w-full sm:w-auto';
+    closeButton.innerText = 'Dismiss';
+    closeButton.addEventListener('click', () => {
+        toast.remove();
+
+        if (toastContainer.childElementCount === 0) {
+            toastContainer.classList.add('hidden');
+        }
+    });
+
+    actions.appendChild(closeButton);
+    content.appendChild(textContainer);
+    content.appendChild(actions);
+    toast.appendChild(content);
+    toastContainer.appendChild(toast);
+};
+
+const copyToClipboard = (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch((error) => {
+            console.error('Clipboard API failed', error);
+        });
+
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+};
+
+const parseDepositResponse = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+        return response.json();
+    }
+
+    return { error: await response.text() };
+};
+
+const handleDepositRequestClick = async (event) => {
+    const button = event.target.closest('.deposit-request-btn');
+
+    if (!button) {
+        return;
+    }
+
+    event.preventDefault();
+
+    if (button.disabled || button.dataset.depositPending === 'true') {
+        return;
+    }
+
+    const accountId = button.getAttribute('data-account-id');
+
+    if (!accountId) {
+        return;
+    }
+
+    const tooltip = button.closest('.tooltip');
+    const originalTooltipText = tooltip ? tooltip.getAttribute('data-tip') : null;
+
+    setDepositButtonBusy(button, true);
+
+    if (tooltip) {
+        tooltip.classList.add('tooltip-success');
+        tooltip.setAttribute('data-tip', 'Processing deposit...');
+    }
+
+    try {
+        await fetch('/sanctum/csrf-cookie', {
+            method: 'GET',
+            credentials: 'include',
+        });
+
+        const xsrfToken = getCookie('XSRF-TOKEN');
+        const headers = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        };
+
+        if (xsrfToken) {
+            headers['X-XSRF-TOKEN'] = xsrfToken;
+        }
+
+        const response = await fetch(`/api/v1/accounts/${accountId}/deposit-request`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+        });
+
+        const data = await parseDepositResponse(response);
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to process deposit request.');
+        }
+
+        if (!data.deposit_code) {
+            throw new Error('Deposit request succeeded, but no deposit code was returned.');
+        }
+
+        if (tooltip) {
+            tooltip.setAttribute('data-tip', 'Deposit request sent!');
+        }
+
+        showToast('Deposit request created!', `Your deposit code is: ${data.deposit_code}`, data.deposit_code);
+
+        setTimeout(() => {
+            resetDepositTooltip(tooltip, originalTooltipText);
+            setDepositButtonBusy(button, false);
+        }, 3000);
+    } catch (error) {
+        console.error('Deposit request failed:', error);
+        resetDepositTooltip(tooltip, originalTooltipText);
+        setDepositButtonBusy(button, false);
+        showToast('Deposit request failed', error.message || 'Please try again.', null, 'error');
+    }
+};
+
+const enableDepositRequests = () => {
+    if (document.documentElement.dataset.depositRequestsBound === 'true') {
+        return;
+    }
+
+    document.documentElement.dataset.depositRequestsBound = 'true';
+    document.addEventListener('click', handleDepositRequestClick);
+};
+
 const signalPageReady = (source = 'app') => {
     document.dispatchEvent(new CustomEvent('codex:page-ready', {
         detail: { source },
@@ -321,6 +529,7 @@ const initAppUi = (root = document) => {
     enableSortableTables(root);
     enableThemePicker(root);
     enableBootstrapCompat(root);
+    enableDepositRequests();
 };
 
 if (document.readyState === 'loading') {

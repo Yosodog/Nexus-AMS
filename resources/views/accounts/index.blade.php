@@ -39,8 +39,6 @@
                 @include("accounts.components.delete")
             </div>
         </div>
-
-        @include("accounts.components.deposit_js")
     </div>
 @endsection
 

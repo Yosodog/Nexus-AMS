@@ -36,7 +36,8 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <div class="tooltip" data-tip="{{ $account->frozen ? 'Account is frozen' : 'Create a fresh deposit code for this account' }}">
-                        <button class="btn btn-primary deposit-request-btn"
+                        <button type="button"
+                                class="btn btn-primary deposit-request-btn"
                                 data-account-id="{{ $account->id }}"
                                 @disabled($account->frozen)>
                             Create deposit
@@ -232,7 +233,5 @@
                 </div>
             </x-utils.card>
         @endif
-
-        @include("accounts.components.deposit_js")
     </div>
 @endsection

@@ -32,7 +32,8 @@
                         @endif
 
                         <div class="tooltip" data-tip="{{ $account->frozen ? 'Account is frozen' : 'Generate deposit code' }}">
-                            <button class="btn btn-square btn-ghost btn-xs deposit-request-btn"
+                            <button type="button"
+                                    class="btn btn-square btn-ghost btn-xs deposit-request-btn"
                                     data-account-id="{{ $account->id }}"
                                     @disabled($account->frozen)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
