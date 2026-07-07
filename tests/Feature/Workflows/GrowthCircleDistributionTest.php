@@ -83,18 +83,17 @@ class GrowthCircleDistributionTest extends TestCase
         $this->assertSame(0.0, (float) $account->steel);
         $this->assertSame(0.0, (float) $account->aluminum);
 
-        $this->assertDatabaseHas('growth_circle_distributions', [
-            'nation_id' => $nation->id,
-            'account_id' => $account->id,
-            'cycle_date' => '2026-07-06',
-            'coal' => 12.5,
-            'oil' => 4.25,
-            'uranium' => 7.0,
-            'iron' => 8.75,
-            'bauxite' => 2.0,
-            'lead' => 1.5,
-            'food' => 9.0,
-        ]);
+        $distribution = GrowthCircleDistribution::query()
+            ->where('nation_id', $nation->id)
+            ->where('account_id', $account->id)
+            ->whereDate('cycle_date', '2026-07-06')
+            ->first();
+
+        $this->assertNotNull($distribution);
+
+        foreach (GrowthCircleDistribution::distributionResourceKeys() as $resource) {
+            $this->assertSame($expected[$resource] ?? 0.0, (float) $distribution->{$resource}, $resource.' was not stored correctly.');
+        }
 
         $this->assertDatabaseHas('alliance_finance_entries', [
             'category' => 'growth_circles_distribution',
