@@ -65,7 +65,7 @@ class GrowthCircleDistributionTest extends TestCase
         $profitability = Mockery::mock(NationProfitabilityService::class);
         $profitability->shouldReceive('getDailyGrowthCircleShortfalls')
             ->once()
-            ->with($nation)
+            ->with(Mockery::on(fn (Nation $distributionNation): bool => (int) $distributionNation->id === (int) $nation->id))
             ->andReturn($shortfalls);
         $this->app->instance(NationProfitabilityService::class, $profitability);
 
