@@ -3,6 +3,9 @@
 @section('content')
     <div class="space-y-6">
         @can('view-growth-circles')
+            @php
+                $resourceLabels = $resourceLabels ?? \App\Models\GrowthCircleDistribution::distributionResourceLabels();
+            @endphp
             <x-card title="Growth Circles Distribution History">
                 <form method="GET" action="{{ route('admin.growth-circles.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                     <label class="block">
@@ -38,8 +41,9 @@
                                 <th>Cycle</th>
                                 <th>Nation</th>
                                 <th>Account</th>
-                                <th class="text-right">Food</th>
-                                <th class="text-right">Uranium</th>
+                                @foreach ($resourceLabels as $resource => $label)
+                                    <th class="text-right">{{ $label }}</th>
+                                @endforeach
                             </tr>
                             </thead>
                             <tbody>
@@ -48,8 +52,9 @@
                                     <td>{{ $row->cycle_date->toDateString() }}</td>
                                     <td>{{ $row->nation?->nation_name ?? '(deleted)' }}</td>
                                     <td>{{ $row->account?->name ?? '(deleted)' }}</td>
-                                    <td class="text-right">{{ number_format($row->food, 2) }}</td>
-                                    <td class="text-right">{{ number_format($row->uranium, 2) }}</td>
+                                    @foreach ($resourceLabels as $resource => $label)
+                                        <td class="text-right">{{ number_format($row->{$resource}, 2) }}</td>
+                                    @endforeach
                                 </tr>
                             @endforeach
                             </tbody>

@@ -253,7 +253,7 @@ class GrowthCircleService
                     return 'skipped';
                 }
 
-                $shortfall = app(NationProfitabilityService::class)->getDailyResourceShortfall($nation);
+                $shortfall = app(NationProfitabilityService::class)->getDailyGrowthCircleShortfalls($nation);
                 if ($shortfall === null) {
                     Log::warning('growth_circles.no_snapshot', [
                         'nation_id' => $nation->id,
@@ -263,7 +263,7 @@ class GrowthCircleService
                     return 'skipped';
                 }
 
-                if ($shortfall['food'] <= 0.0 && $shortfall['uranium'] <= 0.0) {
+                if (collect(GrowthCircleDistribution::distributionResourceKeys())->every(fn (string $resource): bool => ($shortfall[$resource] ?? 0.0) <= 0.0)) {
                     Log::info('growth_circles.no_shortfall', [
                         'nation_id' => $nation->id,
                         'cycle_date' => $cycleDate,
@@ -291,16 +291,16 @@ class GrowthCircleService
                 // (RecordAllianceExpense) writes only an
                 // AllianceFinanceEntry for reporting; it does not touch
                 // Account balances. This matches DirectDepositService::process.
-                $account->food += $shortfall['food'];
-                $account->uranium += $shortfall['uranium'];
+                foreach (GrowthCircleDistribution::distributionResourceKeys() as $resource) {
+                    $account->{$resource} += $shortfall[$resource] ?? 0.0;
+                }
                 $account->save();
 
                 $distribution = GrowthCircleDistribution::query()->create([
                     'nation_id' => $nation->id,
                     'account_id' => $account->id,
                     'enrollment_id' => $enrollment->id,
-                    'food' => $shortfall['food'],
-                    'uranium' => $shortfall['uranium'],
+                    ...$shortfall,
                     'cycle_date' => $cycleDate,
                 ]);
 
@@ -309,8 +309,7 @@ class GrowthCircleService
                         $nation,
                         $account,
                         $distribution,
-                        $shortfall['food'],
-                        $shortfall['uranium'],
+                        $shortfall,
                     )->toArray()
                 ));
 

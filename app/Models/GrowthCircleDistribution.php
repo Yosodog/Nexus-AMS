@@ -12,18 +12,52 @@ class GrowthCircleDistribution extends Model
 
     public $timestamps = false;
 
+    /**
+     * @return array<int, string>
+     */
+    public static function distributionResourceKeys(): array
+    {
+        return ['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'food'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function distributionResourceLabels(): array
+    {
+        return [
+            'coal' => 'Coal',
+            'oil' => 'Oil',
+            'uranium' => 'Uranium',
+            'iron' => 'Iron',
+            'bauxite' => 'Bauxite',
+            'lead' => 'Lead',
+            'food' => 'Food',
+        ];
+    }
+
     protected $fillable = [
         'nation_id',
         'account_id',
         'enrollment_id',
-        'food',
+        'coal',
+        'oil',
         'uranium',
+        'iron',
+        'bauxite',
+        'lead',
+        'food',
         'cycle_date',
     ];
 
     protected $casts = [
-        'food' => 'float',
+        'coal' => 'float',
+        'oil' => 'float',
         'uranium' => 'float',
+        'iron' => 'float',
+        'bauxite' => 'float',
+        'lead' => 'float',
+        'food' => 'float',
         'cycle_date' => 'date',
         'created_at' => 'datetime',
     ];
