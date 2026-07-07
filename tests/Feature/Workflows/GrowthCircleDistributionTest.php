@@ -6,13 +6,13 @@ use App\Models\Account;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
-use App\Models\NationProfitabilitySnapshot;
 use App\Models\User;
 use App\Services\GrowthCircleService;
+use App\Services\NationProfitabilityService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Mockery;
 use Tests\TestCase;
 
 class GrowthCircleDistributionTest extends TestCase
@@ -49,7 +49,7 @@ class GrowthCircleDistributionTest extends TestCase
             'nation_id' => $nation->id,
             'account_id' => $account->id,
             'previous_tax_id' => 321,
-            'enrolled_at' => Carbon::parse('2026-07-05 03:00:00'),
+            'enrolled_at' => now(),
         ]);
 
         $shortfalls = [
@@ -62,28 +62,12 @@ class GrowthCircleDistributionTest extends TestCase
             'food' => 9.0,
         ];
 
-        NationProfitabilitySnapshot::query()->create([
-            'nation_id' => $nation->id,
-            'alliance_id' => 777,
-            'leader_name' => 'Leader',
-            'nation_name' => 'Nation',
-            'cities' => 5,
-            'converted_profit_per_day' => -45,
-            'money_profit_per_day' => 0,
-            'city_income_per_day' => 0,
-            'power_cost_per_day' => 0,
-            'food_cost_per_day' => 0,
-            'military_upkeep_per_day' => 0,
-            'resource_profit_per_day' => array_merge($shortfalls, [
-                'gasoline' => -100,
-                'munitions' => -50,
-                'steel' => 15,
-                'aluminum' => 20,
-                'money' => 0,
-            ]),
-            'price_basis' => '24h average trade prices',
-            'calculated_at' => Carbon::parse('2026-07-06 01:00:00'),
-        ]);
+        $profitability = Mockery::mock(NationProfitabilityService::class);
+        $profitability->shouldReceive('getDailyGrowthCircleShortfalls')
+            ->once()
+            ->with($nation)
+            ->andReturn($shortfalls);
+        $this->app->instance(NationProfitabilityService::class, $profitability);
 
         app(GrowthCircleService::class)->runDailyDistribution('2026-07-06');
 
