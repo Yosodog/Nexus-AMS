@@ -46,7 +46,7 @@ class GrowthCirclesController extends Controller
                 $sevenDayTotal = GrowthCircleDistribution::query()
                     ->where('nation_id', $enrollment->nation_id)
                     ->where('cycle_date', '>=', now()->subDays(7)->toDateString())
-                    ->selectRaw(collect($resourceKeys)->map(fn (string $resource): string => "COALESCE(SUM({$resource}), 0) as {$resource}")->implode(', '))
+                    ->selectRaw(collect($resourceKeys)->map(fn (string $resource): string => "COALESCE(SUM(`{$resource}`), 0) as `{$resource}`")->implode(', '))
                     ->first();
 
                 $sevenDayResources = collect($resourceKeys)
