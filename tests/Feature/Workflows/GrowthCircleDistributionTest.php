@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
+use App\Models\NationProfitabilitySnapshot;
 use App\Models\User;
 use App\Services\GrowthCircleService;
 use App\Services\NationProfitabilityService;
@@ -108,5 +109,65 @@ class GrowthCircleDistributionTest extends TestCase
             'lead' => 1.5,
             'food' => 9.0,
         ]);
+    }
+
+    public function test_daily_growth_circle_shortfalls_are_read_from_the_target_nation_snapshot(): void
+    {
+        $nation = Nation::factory()->create([
+            'id' => 777002,
+        ]);
+
+        $otherNation = Nation::factory()->create([
+            'id' => 777003,
+        ]);
+
+        NationProfitabilitySnapshot::query()->create([
+            'nation_id' => $otherNation->id,
+            'leader_name' => 'Other Leader',
+            'nation_name' => 'Other Nation',
+            'cities' => 10,
+            'resource_profit_per_day' => [
+                'coal' => -999.0,
+                'oil' => -999.0,
+                'uranium' => -999.0,
+                'iron' => -999.0,
+                'bauxite' => -999.0,
+                'lead' => -999.0,
+                'food' => -999.0,
+            ],
+            'calculated_at' => now()->addDay(),
+        ]);
+
+        NationProfitabilitySnapshot::query()->create([
+            'nation_id' => $nation->id,
+            'leader_name' => 'Growth Leader',
+            'nation_name' => 'Growth Nation',
+            'cities' => 8,
+            'resource_profit_per_day' => [
+                'coal' => -12.5,
+                'oil' => 4.25,
+                'uranium' => -7.0,
+                'iron' => -8.75,
+                'bauxite' => 2.0,
+                'gasoline' => -99.0,
+                'munitions' => -88.0,
+                'steel' => -77.0,
+                'aluminum' => -66.0,
+                'food' => -9.0,
+            ],
+            'calculated_at' => now(),
+        ]);
+
+        $shortfalls = app(NationProfitabilityService::class)->getDailyGrowthCircleShortfalls($nation);
+
+        $this->assertSame([
+            'coal' => 12.5,
+            'oil' => 0.0,
+            'uranium' => 7.0,
+            'iron' => 8.75,
+            'bauxite' => 0.0,
+            'lead' => 0.0,
+            'food' => 9.0,
+        ], $shortfalls);
     }
 }
