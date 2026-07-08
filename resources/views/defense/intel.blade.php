@@ -5,8 +5,8 @@
         <div class="card bg-gradient-to-br from-secondary via-primary to-accent text-primary-content shadow-xl">
             <div class="card-body grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
                 <div class="lg:col-span-2 space-y-3">
-                    <p class="text-xs uppercase tracking-[0.25em] text-primary-content/70">Defense • Shared Intel</p>
-                    <h1 class="text-3xl font-black sm:text-4xl">Alliance Intel Library</h1>
+                    <p class="text-xs uppercase tracking-[0.25em] text-primary-content/70">Defense • Shared intel</p>
+                    <h1 class="text-3xl font-black sm:text-4xl">Alliance intel library</h1>
                     <p class="text-sm sm:text-base text-primary-content/80 max-w-3xl">
                         Drop spy reports, auto-parse the resource haul, and give everyone a searchable feed of the latest intel.
                         Filter by nation ID, check detection risk, and keep operations moving fast.
@@ -19,7 +19,7 @@
                         <p class="text-sm text-primary-content/70">intel reports on file</p>
                         <div class="mt-4 flex flex-wrap gap-2 text-xs">
                             <span class="badge badge-ghost badge-sm bg-base-100/20 border-primary-content/20">
-                                Latest: {{ optional($reports->first())->created_at?->diffForHumans() ?? '—' }}
+                                Latest: {{ optional($reports->first())->created_at?->diffForHumans() ?? 'None yet' }}
                             </span>
                             @if($selectedNation)
                                 <span class="badge badge-outline badge-sm">
@@ -37,7 +37,7 @@
                 <div class="card-body space-y-4">
                     <div>
                         <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Search</p>
-                        <h2 class="card-title">Filter by Nation ID</h2>
+                        <h2 class="card-title">Filter by nation ID</h2>
                         <p class="text-sm text-base-content/70">Jump to intel tied to a specific nation. We match reports by nation name automatically.</p>
                     </div>
                     <div class="join w-full">
@@ -85,7 +85,7 @@
                     @enderror
                     <div class="flex items-center justify-between gap-3">
                         <div class="text-sm text-base-content/70">
-                            We’ll parse the nation name, cash, and resources automatically. Keep the original text intact.
+                            We will parse the nation name, cash, and resources automatically. Keep the original text intact.
                         </div>
                         <button class="btn btn-primary" type="submit">Save intel</button>
                     </div>

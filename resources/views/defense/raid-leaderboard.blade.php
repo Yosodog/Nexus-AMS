@@ -33,10 +33,9 @@
             <div class="card-body grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
                 <div class="lg:col-span-2 space-y-3">
                     <p class="text-xs uppercase tracking-[0.3em] text-primary-content/70">Defense • Raid Leaderboard</p>
-                    <h1 class="text-3xl sm:text-4xl font-black">Raid Hall of Fame</h1>
+                    <h1 class="text-3xl sm:text-4xl font-black">Raid leaderboard</h1>
                     <p class="text-sm sm:text-base text-primary-content/80 max-w-3xl">
-                        Who is printing cash and wiping cities? This board ranks raiders by loot value, infra damage, and battlefield
-                        dominance. Bring receipts and climb the ladder.
+                        See who is bringing in loot, burning infra, and closing wars across the selected window.
                     </p>
                 </div>
                 <div class="w-full">
@@ -113,7 +112,7 @@
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
                     <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">MVP</p>
-                    <h2 class="card-title">Top Looter</h2>
+                    <h2 class="card-title">Top looter</h2>
                     @if($topLooter)
                         <p class="text-2xl font-bold">{{ $topLooter['leader_name'] }}</p>
                         <p class="text-sm text-base-content/60">{{ $topLooter['nation_name'] }}</p>
@@ -127,7 +126,7 @@
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
                     <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Closer</p>
-                    <h2 class="card-title">Most Victories</h2>
+                    <h2 class="card-title">Most victories</h2>
                     @if($topCloser)
                         <p class="text-2xl font-bold">{{ $topCloser['leader_name'] }}</p>
                         <p class="text-sm text-base-content/60">{{ $topCloser['nation_name'] }}</p>
@@ -141,7 +140,7 @@
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
                     <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Damage</p>
-                    <h2 class="card-title">Infra per Attack</h2>
+                    <h2 class="card-title">Infra per attack</h2>
                     <p class="text-3xl font-bold">${{ number_format($totals['avg_infra_per_attack'] ?? 0, 0) }}</p>
                     <p class="text-xs text-base-content/60">Average value burned per hit</p>
                 </div>
@@ -159,7 +158,7 @@
                     <input type="date" name="to" class="input input-bordered w-full" value="{{ $filters['to'] }}">
                 </div>
                 <div class="flex items-end gap-3">
-                    <button class="btn btn-primary w-full" type="submit">Update Range</button>
+                    <button class="btn btn-primary w-full" type="submit">Update range</button>
                 </div>
                 <div class="flex items-end gap-3">
                     <button class="btn btn-outline w-full" type="button" onclick="window.location='{{ route('defense.raid-leaderboard') }}'">

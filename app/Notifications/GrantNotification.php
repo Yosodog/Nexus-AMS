@@ -44,14 +44,13 @@ class GrantNotification extends Notification
         $grantName = $this->application->grant->name;
 
         if ($this->status === 'approved') {
-            $subject = 'Grant Approved!';
-            $message = "Your application for the [b]{$grantName}[/b] has been approved! 🎉\n\n"
-                ."The grant resources have been deposited into your selected account.\n\n"
-                .'Please use these funds as intended and reach out to leadership if you have questions.';
+            $subject = 'Grant approved';
+            $message = "Your application for [b]{$grantName}[/b] has been approved.\n\n"
+                .'The grant resources have been deposited into your selected account.';
         } else {
-            $subject = 'Grant Denied';
-            $message = "Unfortunately, your application for the [b]{$grantName}[/b] has been denied. ❌\n\n"
-                ."If you believe this was an error, please contact leadership for clarification.\n\n"
+            $subject = 'Grant denied';
+            $message = "Your application for [b]{$grantName}[/b] was denied.\n\n"
+                ."Contact leadership if you need the reason reviewed.\n\n"
                 .'You may apply again if you are still eligible.';
         }
 

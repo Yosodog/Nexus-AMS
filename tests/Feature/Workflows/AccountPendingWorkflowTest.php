@@ -36,7 +36,7 @@ class AccountPendingWorkflowTest extends TestCase
         $secondResponse = $this->postJson("/api/v1/accounts/{$account->id}/deposit-request");
 
         $firstResponse->assertOk()->assertJson([
-            'message' => 'Deposit request created successfully.',
+            'message' => 'Deposit request created.',
         ]);
         $secondResponse->assertOk()->assertJson([
             'message' => 'You already have a pending deposit request for this account.',

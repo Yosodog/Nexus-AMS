@@ -113,7 +113,7 @@ class UserController extends Controller
             message: 'User settings updated.'
         );
 
-        return redirect()->route('user.settings')->with('alert-message', 'Setting updated successfully!')->with(
+        return redirect()->route('user.settings')->with('alert-message', 'Settings updated.')->with(
             'alert-type',
             'success'
         );

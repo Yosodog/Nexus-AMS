@@ -51,7 +51,7 @@ class WithdrawalSentNotification extends Notification implements ShouldQueue
             });
 
         $messageParts = [
-            "Your withdrawal from [b]{$accountLabel}[/b] was sent successfully. ✅",
+            "Your withdrawal from [b]{$accountLabel}[/b] was sent.",
         ];
 
         if ($this->transaction->approved_at) {
@@ -76,7 +76,7 @@ class WithdrawalSentNotification extends Notification implements ShouldQueue
 
         return [
             'nation_id' => $this->nationId,
-            'subject' => 'Withdrawal Sent',
+            'subject' => 'Withdrawal sent',
             'message' => implode("\n\n", $messageParts),
         ];
     }

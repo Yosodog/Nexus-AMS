@@ -56,7 +56,7 @@ class DepositCompletedNotification extends Notification implements ShouldQueue
 
         return [
             'nation_id' => $this->nationId,
-            'subject' => 'Deposit Confirmed',
+            'subject' => 'Deposit confirmed',
             'message' => implode("\n\n", $messageParts),
         ];
     }

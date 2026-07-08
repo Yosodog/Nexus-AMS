@@ -1,5 +1,5 @@
 <x-utils.card title="Create an account" extraClasses="w-full">
-    <p class="text-sm text-base-content/70 mb-4">Spin up a dedicated bucket for projects, war prep, or repayment.</p>
+    <p class="text-sm text-base-content/70 mb-4">Create a separate account for projects, war prep, or repayment.</p>
     <form action="/accounts/create" method="POST" class="space-y-3">
         @csrf
         <div class="form-control">

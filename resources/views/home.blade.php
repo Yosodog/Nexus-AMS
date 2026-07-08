@@ -9,7 +9,7 @@
         $highlights = $homeContent['highlights'] ?? [];
         $highlights = is_array($highlights) ? $highlights : [];
         $appLabel = $appName ?? config('app.name');
-        $statsIntro = $homeContent['stats_intro'] ?? 'A quick look at the alliance as it stands today.';
+        $statsIntro = $homeContent['stats_intro'] ?? 'A quick look at where the alliance stands today.';
         $closingText = $homeContent['closing_text'] ?? "If {$allianceName} feels like the right fit, send in your application and come meet the team.";
         $heroBadge = $homeContent['hero_badge'] ?? 'Recruiting now';
         $ctaLabel = $homeContent['cta_label'] ?? 'Start your application';
@@ -75,7 +75,7 @@
             [
                 'number' => '01',
                 'title' => 'Apply',
-                'description' => 'Fill out a short application. No essay required — just enough to know you are serious.',
+                'description' => 'Fill out a short application. No essay required, just enough for us to know you are serious.',
                 'numClasses' => 'bg-primary/10 text-primary ring-1 ring-primary/20',
             ],
             [
@@ -87,7 +87,7 @@
             [
                 'number' => '03',
                 'title' => 'Start building',
-                'description' => 'Access grants, war support, growth programs, and everything else from day one.',
+                'description' => 'Use grants, war support, growth programs, and the other tools members rely on.',
                 'numClasses' => 'bg-accent/10 text-accent ring-1 ring-accent/20',
             ],
         ];
@@ -95,19 +95,19 @@
         $programs = [
             [
                 'title' => 'Grants & Aid',
-                'description' => 'Financial support for new and growing nations. Build faster with backing from the alliance.',
+                'description' => 'Financial help for new and growing nations. Build faster with alliance backing.',
                 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
                 'iconClasses' => 'bg-primary/10 text-primary ring-1 ring-primary/15',
             ],
             [
                 'title' => 'War Coordination',
-                'description' => 'Organized military response when it counts. Clear chains of command and rapid mobilization.',
+                'description' => 'Military help when it counts. Clear orders, fast responses, and people who show up.',
                 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd"/></svg>',
                 'iconClasses' => 'bg-error/10 text-error ring-1 ring-error/15',
             ],
             [
                 'title' => 'Growth Programs',
-                'description' => 'Structured paths to help nations grow. Mentorship, city guides, and build optimization.',
+                'description' => 'Practical help for growing nations: mentoring, city guides, and better builds.',
                 'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"/></svg>',
                 'iconClasses' => 'bg-success/10 text-success ring-1 ring-success/15',
             ],
@@ -190,7 +190,7 @@
                             @foreach($metaStats as $stat)
                                 @php
                                     $value = $stat['value'];
-                                    $formatted = '—';
+                                    $formatted = 'N/A';
                                     if (is_numeric($value)) {
                                         $formatted = $stat['format'] === 'float'
                                             ? number_format((float) $value, 1)
@@ -255,7 +255,7 @@
     </section>
 
     {{-- ═══════════════════════════════════════════════════════════════
-         STATS — deeper numbers (different from hero row)
+         STATS: deeper numbers (different from hero row)
     ═══════════════════════════════════════════════════════════════ --}}
     @if($alliance)
         @php
@@ -305,8 +305,8 @@
 
         <section class="mt-12 sm:mt-16">
             <div class="mb-8 max-w-2xl">
-                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Beyond the basics</p>
-                <h2 class="mt-2 text-3xl font-black tracking-tight sm:text-4xl">What the alliance has built.</h2>
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">The numbers</p>
+                <h2 class="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Where things stand.</h2>
                 <p class="mt-3 text-base leading-7 text-base-content/60">{{ $statsIntro }}</p>
             </div>
 
@@ -314,7 +314,7 @@
                 @foreach($deepStats as $stat)
                     @php
                         $value = $stat['value'];
-                        $formatted = '—';
+                        $formatted = 'N/A';
                         if (is_numeric($value)) {
                             if ($stat['format'] === 'percent') {
                                 $formatted = number_format((float) $value, 1) . '%';
@@ -353,7 +353,7 @@
         <div class="rounded-[2rem] border border-base-300/50 bg-base-100 p-6 shadow-xl sm:p-8">
             <p class="text-sm font-semibold uppercase tracking-[0.2em] text-secondary/80">Getting started</p>
             <h2 class="mt-2 text-3xl font-black tracking-tight">Three steps to get in.</h2>
-            <p class="mt-3 text-base leading-7 text-base-content/60">No hoops to jump through. The process is built to be fast and straightforward.</p>
+            <p class="mt-3 text-base leading-7 text-base-content/60">No hoops. The application is short, and someone will look it over.</p>
 
             <div class="mt-8 space-y-4">
                 @foreach($steps as $step)
@@ -373,8 +373,8 @@
         {{-- Programs --}}
         <div class="rounded-[2rem] border border-base-300/50 bg-gradient-to-br from-base-100 via-base-100 to-primary/5 p-6 shadow-xl sm:p-8">
             <p class="text-sm font-semibold uppercase tracking-[0.2em] text-accent/80">What you get</p>
-            <h2 class="mt-2 text-3xl font-black tracking-tight">Built for nations that want to grow.</h2>
-            <p class="mt-3 text-base leading-7 text-base-content/60">Every program exists to make your time in the alliance productive and worthwhile.</p>
+            <h2 class="mt-2 text-3xl font-black tracking-tight">For nations that want to grow.</h2>
+            <p class="mt-3 text-base leading-7 text-base-content/60">The programs are practical: money where it helps, guidance when you need it, and coordination when things get messy.</p>
 
             <div class="mt-8 grid gap-4 sm:grid-cols-2">
                 @foreach($programs as $program)
@@ -439,7 +439,7 @@
                             </li>
                             <li class="flex items-start gap-3 text-sm leading-6 text-base-content/65">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary/60" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                Applications are reviewed quickly — expect a response soon
+                                Applications are usually reviewed quickly, so keep an eye out
                             </li>
                         </ul>
                     </div>

@@ -45,7 +45,7 @@ class AccountController extends Controller
 
         return response()->json([
             'message' => $deposit->wasRecentlyCreated
-                ? 'Deposit request created successfully.'
+                ? 'Deposit request created.'
                 : 'You already have a pending deposit request for this account.',
             'deposit_code' => $deposit->deposit_code,
         ]);

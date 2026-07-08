@@ -13,13 +13,13 @@
                         Welcome back to {{ config('app.name') }}
                     </h1>
                     <p class="text-base text-base-content/70">
-                        Sign in to manage accounts, track readiness, and coordinate support without leaving your dashboard.
+                        Sign in to manage accounts, check readiness, and coordinate support from your dashboard.
                     </p>
 
                     <div class="space-y-3 pt-2">
                         <div class="flex items-start gap-3">
                             <x-icon name="o-shield-check" class="mt-0.5 size-5 text-success" />
-                            <p class="text-sm text-base-content/80">Secure sign-in with your existing account and permissions.</p>
+                            <p class="text-sm text-base-content/80">Sign in with your existing account and permissions.</p>
                         </div>
                         <div class="flex items-start gap-3">
                             <x-icon name="o-chart-bar" class="mt-0.5 size-5 text-primary" />
@@ -47,7 +47,7 @@
 
                 @if ($errors->any())
                     <x-alert class="alert-error mb-4" icon="o-exclamation-triangle">
-                        <span class="font-semibold">We couldn’t sign you in.</span>
+                        <span class="font-semibold">We could not sign you in.</span>
                         <span class="text-sm text-base-content/80">Check your credentials and try again.</span>
                     </x-alert>
                 @endif

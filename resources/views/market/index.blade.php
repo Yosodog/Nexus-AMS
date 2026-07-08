@@ -5,12 +5,12 @@
         <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow-md">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Alliance Market</p>
+                    <p class="text-xs uppercase tracking-wide text-base-content/60">Alliance market</p>
                     <h1 class="text-2xl font-bold">Sell resources at alliance buy prices</h1>
                     <p class="text-sm text-base-content/70">Prices refresh hourly from the 24h average with admin adjustments.</p>
                 </div>
                 <div class="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 text-primary">
-                    <p class="text-xs uppercase">Available Resources</p>
+                    <p class="text-xs uppercase">Available resources</p>
                     <p class="text-xl font-bold">{{ count($marketResources) }}</p>
                 </div>
             </div>
@@ -164,7 +164,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary w-full md:w-auto" x-bind:disabled="isSubmitting">
-                        <span x-show="!isSubmitting">Sell to Alliance</span>
+                        <span x-show="!isSubmitting">Sell to alliance</span>
                         <span x-show="isSubmitting">Processing...</span>
                     </button>
                 </form>

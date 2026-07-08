@@ -22,12 +22,12 @@
                         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-emerald-700">
                             <span>{{ $activeBoard['eyebrow'] }}</span>
                             <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
-                            <span>Live Snapshot</span>
+                            <span>Live snapshot</span>
                         </div>
                         <div class="space-y-2">
                             <h2 class="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ $activeBoard['title'] }}</h2>
                             <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                                This board ranks eligible alliance members by current net profit per day, blending city income, manufacturing, power, food, military upkeep, prices, and radiation into one clean daily number.
+                                This board ranks eligible alliance members by current net profit per day. It combines city income, manufacturing, power, food, military upkeep, prices, and radiation into a daily estimate.
                             </p>
                         </div>
                     </div>
@@ -51,7 +51,7 @@
                         <div class="rounded-[1.6rem] border border-slate-950 bg-slate-950 p-5 text-white shadow-xl">
                             <div class="flex flex-wrap items-start justify-between gap-4">
                                 <div class="space-y-2">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">Top Performer</p>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">Top performer</p>
                                     <div class="space-y-1">
                                         <a href="{{ $topNation['nation_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-white transition hover:text-emerald-300">
                                             <span>{{ $topNation['nation_name'] }}</span>

@@ -7,7 +7,7 @@
                 <div class="space-y-3">
                     <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
                         <span class="badge badge-outline">API</span>
-                        <span class="badge badge-outline">User Access</span>
+                        <span class="badge badge-outline">User access</span>
                         <span class="badge badge-outline">v1</span>
                     </div>
                     <h1 class="text-3xl font-bold leading-tight sm:text-4xl">{{ config('app.name') }} API reference</h1>
@@ -186,7 +186,7 @@
                     <h3 class="text-lg font-semibold">Deposit request response</h3>
                     <div class="rounded-box bg-base-200 p-4 font-mono text-xs text-base-content/80 overflow-x-auto">
                         <pre><code>{
-    "message": "Deposit request created successfully.",
+    "message": "Deposit request created.",
     "deposit_code": "ABC123"
 }</code></pre>
                     </div>

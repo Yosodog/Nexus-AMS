@@ -7,7 +7,7 @@
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
                     <h1 class="text-3xl font-bold leading-tight">Rebuilding</h1>
-                    <p class="text-sm text-base-content/70">Apply for post-war infrastructure rebuilding assistance.</p>
+                    <p class="text-sm text-base-content/70">Apply for help rebuilding infrastructure after war.</p>
                 </div>
                 <button
                     class="btn btn-primary"
@@ -17,7 +17,7 @@
                         disabled
                     @endif
                 >
-                    Apply for Rebuilding
+                    Apply for rebuilding
                 </button>
             </div>
         </div>
@@ -33,7 +33,7 @@
                     <p class="text-2xl font-semibold">{{ $enabled ? 'Open' : 'Closed' }}</p>
                 </div>
                 <div class="rounded-xl border border-base-300 p-4">
-                    <p class="text-xs uppercase text-base-content/60">Estimated Rebuild</p>
+                    <p class="text-xs uppercase text-base-content/60">Estimated rebuild</p>
                     <p class="text-2xl font-semibold">${{ number_format((float) $estimate['amount']) }}</p>
                 </div>
             </div>
@@ -46,7 +46,7 @@
                 @endif
             </div>
 
-            <h2 class="text-xl font-bold mt-8 mb-2">Recent Rebuilding Requests</h2>
+            <h2 class="text-xl font-bold mt-8 mb-2">Recent rebuilding requests</h2>
             <div class="overflow-x-auto">
                 <table class="table w-full">
                     <thead>
@@ -89,7 +89,7 @@
             <div class="modal-box w-11/12 max-w-2xl">
                 <form method="POST" action="{{ route('defense.rebuilding.store') }}" class="space-y-4">
                     @csrf
-                    <h3 class="font-bold text-lg">Apply for Rebuilding</h3>
+                    <h3 class="font-bold text-lg">Apply for rebuilding</h3>
 
                     <div class="form-control">
                         <label class="label">Send funds to account</label>

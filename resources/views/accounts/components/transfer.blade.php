@@ -17,7 +17,7 @@
                     class="btn join-item flex-1 md:flex-none"
                     :class="destinationMode === 'alliance' ? 'btn-primary' : 'btn-outline'"
                     @click="switchToAlliance()">
-                Transfer to Alliance Member
+                    Transfer to alliance member
             </button>
         </div>
     </div>
@@ -94,10 +94,10 @@
                             >
                             <button type="button" class="btn btn-outline h-12 px-6" @click="search" :disabled="isLoading || query.length < 2">
                                 <span x-show="!isLoading">Search</span>
-                                <span x-show="isLoading">Searching…</span>
+                                <span x-show="isLoading">Searching...</span>
                             </button>
                         </div>
-                        <p class="mt-2 text-xs text-base-content/60">We only show alliance members and their account names—no balances.</p>
+                        <p class="mt-2 text-xs text-base-content/60">We only show alliance members and their account names. Balances stay private.</p>
 
                         <div class="mt-3 space-y-2" x-show="results.length > 0">
                             <template x-for="result in results" :key="result.nation_id">
@@ -218,7 +218,7 @@
                 }
 
                 this.selectedAccount = id;
-                this.selectedLabel = `${nationName} — ${accountName}`;
+                this.selectedLabel = `${nationName} - ${accountName}`;
                 this.results = [];
             },
             clearSelection() {

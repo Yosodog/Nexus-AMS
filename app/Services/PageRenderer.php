@@ -306,7 +306,7 @@ class PageRenderer
         }
 
         return $quote.sprintf(
-            '<p class="ml-4 text-sm text-base-content/60">— %s</p>',
+            '<p class="ml-4 text-sm text-base-content/60">- %s</p>',
             e($caption)
         );
     }

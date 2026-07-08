@@ -1127,7 +1127,7 @@ class SettingService
 
     public static function getHomepageAbout(string $allianceName): string
     {
-        $default = "{$allianceName} is built for members who want a steady alliance, active leadership, and a community that knows how to work together.";
+        $default = "{$allianceName} is for members who want a steady alliance, active leadership, and a community that works well together.";
 
         return self::getStringSetting('home_about', $default);
     }
@@ -1154,9 +1154,9 @@ class SettingService
         }
 
         return [
-            'A straightforward application process and a clear path into the alliance.',
-            'Support for growth, coordination, and day-to-day progress once you are in.',
-            'An alliance culture that feels active, stable, and easy to settle into.',
+            'A short application and a clear next step after you apply.',
+            'Help with growth, coordination, and the day-to-day work of building a nation.',
+            'An active alliance that is easy to settle into.',
         ];
     }
 
@@ -1173,7 +1173,7 @@ class SettingService
 
     public static function getHomepageStatsIntro(): string
     {
-        $default = 'A quick look at the alliance as it stands today.';
+        $default = 'A quick look at where the alliance stands today.';
 
         return self::getStringSetting('home_stats_intro', $default);
     }

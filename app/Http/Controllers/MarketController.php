@@ -73,7 +73,7 @@ class MarketController extends Controller
             );
 
             return redirect()->back()->with([
-                'alert-message' => 'Sale completed successfully.',
+                'alert-message' => 'Sale completed.',
                 'alert-type' => 'success',
             ]);
         } catch (ValidationException $exception) {

@@ -40,12 +40,12 @@
                     <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-amber-700">
                         <span>{{ $activeBoard['eyebrow'] }}</span>
                         <span class="h-1 w-1 rounded-full bg-amber-500"></span>
-                        <span>Live Window</span>
+                        <span>Live window</span>
                     </div>
                     <div class="space-y-2">
                         <h2 class="max-w-4xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ $activeBoard['title'] }}</h2>
                         <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                            Compare loot, infra pressure, finishing power, and raid tempo across the alliance without wading through multiple separate reports.
+                            Compare loot, infra pressure, finishing power, and raid tempo across the alliance in one place.
                         </p>
                     </div>
                 </div>
@@ -207,7 +207,7 @@
                 <div class="space-y-3 xl:col-span-2">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Your raid performance</p>
-                        <h3 class="mt-1 text-2xl font-black text-base-content">Personal Trophy Case</h3>
+                        <h3 class="mt-1 text-2xl font-black text-base-content">Your raid stats</h3>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="rounded-2xl border border-secondary/30 bg-secondary/10 p-4">

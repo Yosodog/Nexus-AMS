@@ -39,7 +39,7 @@
                     </div>
 
                     <p class="text-sm text-base-content/70">
-                        Paste the command exactly as shown in the Discord server. The bot will confirm and your access here will be unlocked automatically.
+                        Paste the command exactly as shown in Discord. Once the bot confirms it, you can continue here.
                     </p>
 
                     <div class="flex flex-wrap gap-3">

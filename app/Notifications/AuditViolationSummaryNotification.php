@@ -38,11 +38,11 @@ class AuditViolationSummaryNotification extends Notification implements ShouldQu
             ->map(fn (string $line) => "- {$line}")
             ->implode("\n");
 
-        $footer = 'Please address these issues to clear the alerts. If you believe any are inaccurate, contact leadership.';
+        $footer = 'Fix these issues to clear the alerts. Contact leadership if any finding looks wrong.';
 
         return [
             'nation_id' => $this->nationId,
-            'subject' => 'Nation Audit: Violations Summary',
+            'subject' => 'Nation audit findings',
             'message' => "{$header}\n\n{$bodyLines}\n\n{$footer}",
         ];
     }

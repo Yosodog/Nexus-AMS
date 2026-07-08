@@ -10,7 +10,7 @@
         {{-- Active enrollment --}}
         <div class="rounded-xl bg-success/10 border border-success/30 p-4">
             <p class="text-success font-semibold">
-                Enrolled — depositing into
+                Enrolled, depositing into
                 <span class="font-bold">{{ $gcEnrollment->account?->name ?? '(deleted account)' }}</span>.
             </p>
         </div>
@@ -18,7 +18,7 @@
         @if ($lastDistribution)
             <p class="text-sm">
                 <span class="font-semibold">Last distribution:</span>
-                {{ $lastDistribution->cycle_date->toDateString() }} —
+                {{ $lastDistribution->cycle_date->toDateString() }} -
                 {{ number_format($lastDistribution->food, 2) }} food,
                 {{ number_format($lastDistribution->uranium, 2) }} uranium
             </p>
@@ -57,7 +57,7 @@
     @elseif ($isPaused)
         {{-- Enrolled but paused --}}
         <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
-            <p class="mb-1 text-warning font-semibold">Paused — {{ $gcEligibility['reason'] }}</p>
+            <p class="mb-1 text-warning font-semibold">Paused: {{ $gcEligibility['reason'] }}</p>
             <p class="text-sm text-base-content/80">
                 Distributions will resume automatically when this condition clears.
                 You are still enrolled and depositing into
@@ -68,7 +68,7 @@
         @if ($lastDistribution)
             <p class="text-sm">
                 <span class="font-semibold">Last distribution:</span>
-                {{ $lastDistribution->cycle_date->toDateString() }} —
+                {{ $lastDistribution->cycle_date->toDateString() }} -
                 {{ number_format($lastDistribution->food, 2) }} food,
                 {{ number_format($lastDistribution->uranium, 2) }} uranium
             </p>
@@ -132,12 +132,12 @@
 
             @if ($ddEnrolled)
                 <p class="text-xs text-base-content/70">
-                    You are currently enrolled in DirectDeposit. Enrolling here will switch you over; your original pre-program tax bracket is preserved for restoration.
+                    You are currently enrolled in Direct Deposit. Enrolling here will switch you over; your original pre-program tax bracket is kept so admins can restore it later.
                 </p>
                 <button class="btn btn-primary w-full" type="submit"
                         @if (! $isEligible) disabled @endif
-                        onclick="return confirm('This will disenroll you from DirectDeposit and enroll you in Growth Circles. Your tax bracket will change to the 100% Growth Circles bracket. Continue?');">
-                    Switch from DirectDeposit
+                        onclick="return confirm('This will disenroll you from Direct Deposit and enroll you in Growth Circles. Your tax bracket will change to the 100% Growth Circles bracket. Continue?');">
+                    Switch from Direct Deposit
                 </button>
             @else
                 <button class="btn btn-primary w-full" type="submit"

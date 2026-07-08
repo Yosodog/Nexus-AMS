@@ -58,7 +58,7 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
             });
 
         $messageParts = [
-            "Your withdrawal request from [b]{$accountLabel}[/b] has been denied. ❌",
+            "Your withdrawal request from [b]{$accountLabel}[/b] was denied.",
         ];
 
         if ($submittedAt) {
@@ -73,11 +73,11 @@ class WithdrawalDeniedNotification extends Notification implements ShouldQueue
             $messageParts[] = "[b]Reason provided:[/b]\n".$this->transaction->denial_reason;
         }
 
-        $messageParts[] = 'The funds have been returned to the source account. Please reach out to leadership if you have questions.';
+        $messageParts[] = 'The funds have been returned to the source account. Contact leadership if you have questions.';
 
         return [
             'nation_id' => $this->nationId,
-            'subject' => 'Withdrawal Denied',
+            'subject' => 'Withdrawal denied',
             'message' => implode("\n\n", $messageParts),
         ];
     }
