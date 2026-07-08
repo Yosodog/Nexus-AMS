@@ -38,13 +38,13 @@ class WarAidNotification extends Notification implements ShouldQueue
     public function toPNW(object $notifiable): array
     {
         if ($this->status === 'approved') {
-            $subject = 'War Aid Approved!';
-            $message = "Your war aid request has been approved! 🎖️\n\n"
+            $subject = 'War aid approved';
+            $message = "Your war aid request has been approved.\n\n"
                 ."Funds and resources have been deposited into your account.\n\n";
         } else {
-            $subject = 'War Aid Denied';
-            $message = "Unfortunately, your war aid request has been denied. ❌\n\n"
-                ."If you need clarification, please reach out to alliance leadership.\n\n";
+            $subject = 'War aid denied';
+            $message = "Your war aid request was denied.\n\n"
+                ."Contact alliance leadership if you need the reason reviewed.\n\n";
         }
 
         return [

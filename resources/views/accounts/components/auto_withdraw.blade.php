@@ -7,7 +7,7 @@
     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-2">
             <h2 class="text-xl font-bold">Auto Withdraw</h2>
-            <div class="tooltip tooltip-bottom" data-tip="Before each turn we check your nation. If a resource is under your threshold, we pull from the chosen account to top it up. One account is used for all enabled resources, there’s a 24h cooldown per resource, and we’ll only move what the account actually has. If admins pause the feature, nothing moves.">
+            <div class="tooltip tooltip-bottom" data-tip="Before each turn, we check your nation. If a resource is under your threshold, we pull from the chosen account to top it up. One account is used for all enabled resources, there is a 24h cooldown per resource, and we only move what the account has. If admins pause the feature, nothing moves.">
                 <span class="btn btn-circle btn-ghost btn-xs border border-base-300 text-base-content/70" aria-label="How Auto Withdraw works">
                     ?
                 </span>
@@ -20,7 +20,7 @@
     </div>
 
     <p class="text-sm text-base-content/70">
-        Set a threshold and a pull amount for each resource. We’ll try to top you off right before a turn using your chosen account, up to the amount you set or the balance that’s available.
+        Set a threshold and a pull amount for each resource. We will try to top you off right before a turn using your chosen account, up to the amount you set or the available balance.
     </p>
 
     @if($disabledByAdmin)
@@ -101,7 +101,7 @@
         <div class="flex items-center justify-end gap-3">
             <p class="text-sm text-base-content/60">Only runs when resources fall below thresholds and accounts have funds.</p>
             <button class="btn btn-primary" @disabled($disabledByAdmin)>
-                Save Auto Withdraw
+                Save auto withdraw
             </button>
         </div>
     </form>

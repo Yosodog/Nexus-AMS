@@ -37,7 +37,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $payload = (new GrantNotification(1, $application, 'approved'))->toPNW(new \stdClass);
 
-        $this->assertSame('Grant Approved!', $payload['subject']);
+        $this->assertSame('Grant approved', $payload['subject']);
         $this->assertStringContainsString('Growth Grant', $payload['message']);
     }
 
@@ -47,7 +47,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $payload = (new CityGrantNotification(1, $request, 'denied'))->toPNW(new \stdClass);
 
-        $this->assertSame('City Grant Denied', $payload['subject']);
+        $this->assertSame('City grant denied', $payload['subject']);
         $this->assertStringContainsString('City #7', $payload['message']);
     }
 
@@ -60,7 +60,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $payload = (new RebuildingNotification(1, $request, 'approved'))->toPNW(new \stdClass);
 
-        $this->assertSame('Rebuilding Approved', $payload['subject']);
+        $this->assertSame('Rebuilding approved', $payload['subject']);
         $this->assertStringContainsString('$125,000', $payload['message']);
         $this->assertStringContainsString('Primary', $payload['message']);
     }
@@ -69,7 +69,7 @@ class NotificationPayloadTest extends FeatureTestCase
     {
         $payload = (new WarAidNotification(1, new WarAidRequest, 'denied'))->toPNW(new \stdClass);
 
-        $this->assertSame('War Aid Denied', $payload['subject']);
+        $this->assertSame('War aid denied', $payload['subject']);
         $this->assertStringContainsString('denied', strtolower($payload['message']));
     }
 
@@ -83,7 +83,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $payload = (new LoanNotification(1, $loan, 'payment_success', 75))->toPNW(new \stdClass);
 
-        $this->assertSame('Loan Payment Successful!', $payload['subject']);
+        $this->assertSame('Loan payment received', $payload['subject']);
         $this->assertStringContainsString('$75.00', $payload['message']);
         $this->assertStringContainsString('$200.00', $payload['message']);
     }
@@ -99,9 +99,9 @@ class NotificationPayloadTest extends FeatureTestCase
         $completedPayload = (new DepositCompletedNotification(1, 'Primary', ['money' => 1000, 'food' => 50]))
             ->toPNW(new \stdClass);
 
-        $this->assertSame('Deposit Request Created', $createdPayload['subject']);
+        $this->assertSame('Deposit request created', $createdPayload['subject']);
         $this->assertStringContainsString('CODE1234', $createdPayload['message']);
-        $this->assertSame('Deposit Confirmed', $completedPayload['subject']);
+        $this->assertSame('Deposit confirmed', $completedPayload['subject']);
         $this->assertStringContainsString('Money: $1,000.00', $completedPayload['message']);
         $this->assertStringContainsString('Food: 50.00', $completedPayload['message']);
     }
@@ -117,7 +117,7 @@ class NotificationPayloadTest extends FeatureTestCase
         $payload = $notification->toPNW($user);
 
         $this->assertNotInstanceOf(ShouldQueue::class, $notification);
-        $this->assertSame('Reset Your Password', $payload['subject']);
+        $this->assertSame('Reset your password', $payload['subject']);
         $this->assertStringContainsString('reset-token', $payload['message']);
         $this->assertStringContainsString('security%40example.test', $payload['message']);
     }
@@ -134,7 +134,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $this->assertNotNull($user->fresh()->verification_code);
         $this->assertSame($user->fresh()->verification_code, $notification->verification_code);
-        $this->assertStringContainsString('Welcome to '.config('app.name').'!', $payload['message']);
+        $this->assertStringContainsString('Welcome to '.config('app.name').'.', $payload['message']);
         $this->assertStringContainsString($notification->verification_code, $payload['message']);
         $this->assertStringContainsString(route('verify', ['code' => $notification->verification_code]), $payload['message']);
     }

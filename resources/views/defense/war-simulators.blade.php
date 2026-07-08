@@ -7,7 +7,7 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
                     <p class="text-xs uppercase tracking-[0.3em] text-base-content/60">Defense desk</p>
-                    <h1 class="text-3xl font-bold leading-tight">War Simulators</h1>
+                    <h1 class="text-3xl font-bold leading-tight">War simulators</h1>
                     <p class="text-sm text-base-content/70">Run RNG-accurate battle sims and export results for ops.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
@@ -179,10 +179,10 @@
             </div>
 
             <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
-                <h2 class="text-lg font-semibold">War Context</h2>
+                <h2 class="text-lg font-semibold">War context</h2>
                 <div class="space-y-3">
                     <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Controls infra and loot multipliers for both sides.">War Type</span>
+                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Controls infra and loot multipliers for both sides.">War type</span>
                         <select class="select select-bordered" x-model="context.war_type">
                             <option value="ORDINARY">Ordinary</option>
                             <option value="ATTRITION">Attrition</option>
@@ -190,7 +190,7 @@
                         </select>
                     </label>
                     <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Attacker Policy</span>
+                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Attacker policy</span>
                         <select class="select select-bordered" x-model="attacker.war_policy">
                             <template x-for="policy in warPolicies" :key="policy">
                                 <option :value="policy" x-text="policy"></option>
@@ -198,7 +198,7 @@
                         </select>
                     </label>
                     <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Defender Policy</span>
+                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Defender policy</span>
                         <select class="select select-bordered" x-model="defender.war_policy">
                             <template x-for="policy in warPolicies" :key="policy">
                                 <option :value="policy" x-text="policy"></option>
@@ -207,7 +207,7 @@
                     </label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner halves opposing tank strength (0.5x).">Air Superiority</span>
+                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner halves opposing tank strength (0.5x).">Air superiority</span>
                             <select class="select select-bordered" x-model="context.air_superiority_owner">
                                 <option value="none">None</option>
                                 <option value="attacker">Attacker</option>
@@ -215,7 +215,7 @@
                             </select>
                         </label>
                         <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner causes extra aircraft losses after ground wins.">Ground Control</span>
+                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner causes extra aircraft losses after ground wins.">Ground control</span>
                             <select class="select select-bordered" x-model="context.ground_control_owner">
                                 <option value="none">None</option>
                                 <option value="attacker">Attacker</option>
@@ -254,7 +254,7 @@
         </div>
         <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <h2 class="text-lg font-semibold">Attack Configuration</h2>
+                <h2 class="text-lg font-semibold">Attack configuration</h2>
                 <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/60">
                     <span class="badge badge-outline">Defaults to attacker totals</span>
                     <span class="badge badge-outline">3-roll RNG per battle</span>
@@ -1003,7 +1003,7 @@ Naval:  gas = ships*2, munitions = ships*3
                 },
                 formatSummary(summary) {
                     if (!summary) {
-                        return '—';
+                        return 'N/A';
                     }
                     const mean = this.formatNumber(summary.mean);
                     const p10 = this.formatNumber(summary.p10);
@@ -1013,13 +1013,13 @@ Naval:  gas = ships*2, munitions = ships*3
                 },
                 formatNumber(value) {
                     if (value === null || value === undefined) {
-                        return '—';
+                        return 'N/A';
                     }
                     return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
                 },
                 formatCurrency(value) {
                     if (value === null || value === undefined) {
-                        return '—';
+                        return 'N/A';
                     }
                     return `$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
                 },
@@ -1035,19 +1035,19 @@ Naval:  gas = ships*2, munitions = ships*3
                 },
                 summaryField(summary, field) {
                     if (!summary || summary[field] === null || summary[field] === undefined) {
-                        return '—';
+                        return 'N/A';
                     }
                     return this.formatNumber(summary[field]);
                 },
                 summaryFieldCurrency(summary, field) {
                     if (!summary || summary[field] === null || summary[field] === undefined) {
-                        return '—';
+                        return 'N/A';
                     }
                     return this.formatCurrency(summary[field]);
                 },
                 summaryFieldPercent(summary, field) {
                     if (!summary || summary[field] === null || summary[field] === undefined) {
-                        return '—';
+                        return 'N/A';
                     }
                     return `${this.formatNumber(summary[field])}%`;
                 },

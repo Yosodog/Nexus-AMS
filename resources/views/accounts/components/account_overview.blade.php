@@ -5,7 +5,7 @@
 @endphp
 <x-utils.card title="Your accounts" extraClasses="mb-2">
     <div class="flex items-center justify-between mb-3 text-sm text-base-content/70">
-        <p>Snapshot of balances across every account with quick deposit requests.</p>
+        <p>Balances across your accounts, with deposit requests close by.</p>
         <span class="badge badge-outline">{{ $accounts->count() }} active</span>
     </div>
     <div class="overflow-x-auto rounded-xl border border-base-300">

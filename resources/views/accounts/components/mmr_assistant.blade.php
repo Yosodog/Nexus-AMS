@@ -26,7 +26,7 @@
                 <input type="hidden" name="{{ $resource }}_pct" value="{{ $mmrConfig["{$resource}_pct"] }}">
             @endforeach
             <button type="submit" class="btn btn-sm btn-outline-error">
-                <i class="o-x-circle me-1"></i> Disable Assistant
+                <i class="o-x-circle me-1"></i> Disable assistant
             </button>
         </form>
     @endif
@@ -37,14 +37,14 @@
         <p class="text-lg font-medium text-base-content">
             The <strong>MMR Assistant</strong> system is currently <span class="text-warning font-semibold">disabled</span> by an administrator.
         </p>
-        <p class="text-sm text-base-content/70 mt-2">Once re-enabled, this page will allow you to automate resource purchases from your Direct Deposit income.</p>
+        <p class="text-sm text-base-content/70 mt-2">When admins turn it back on, you can automate resource purchases from your Direct Deposit income.</p>
     </div>
 @elseif (!$mmrConfig || !$mmrConfig->enabled)
     <form method="POST" action="{{ route('mmra.update') }}" class="space-y-4">
         @csrf
 
         <div>
-            <label class="label font-semibold">Select the account to deposit purchased resources into</label>
+            <label class="label font-semibold">Choose where purchased resources go</label>
             <select name="account_id" class="select select-bordered w-full" required>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
@@ -55,7 +55,7 @@
         <input type="hidden" name="enabled" value="1" />
 
         <button type="submit" class="btn btn-primary">
-            <i class="o-bolt me-1"></i> Enable MMR Assistant
+            <i class="o-bolt me-1"></i> Enable MMR assistant
         </button>
     </form>
 @else
@@ -63,7 +63,7 @@
         @csrf
 
         <div>
-            <label class="label font-semibold">Deposit Resources Into</label>
+            <label class="label font-semibold">Deposit resources into</label>
             <select name="account_id" class="select select-bordered w-full" required>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}" @selected($account->id === $mmrConfig->account_id)>
@@ -97,7 +97,7 @@
                         <td class="capitalize font-medium">{{ $resource }}</td>
                         <td>
                             @if(!$setting->enabled)
-                                <span class="badge badge-warning tooltip" data-tip="Admins have disabled this resource. You can still set a % but it won’t be purchased.">
+                                <span class="badge badge-warning tooltip" data-tip="Admins have disabled this resource. You can still set a %, but it will not be purchased.">
                                     Disabled
                                 </span>
                             @else
@@ -138,12 +138,12 @@
 
         <div class="flex justify-end">
             <button type="submit" class="btn btn-success">
-                <i class="o-check me-1"></i> Save Preferences
+                <i class="o-check me-1"></i> Save preferences
             </button>
         </div>
     </form>
 
-    <div class="divider mt-10 mb-4">Recent MMR Assistant Logs</div>
+    <div class="divider mt-10 mb-4">Recent MMR Assistant logs</div>
 
     @if($mmrLogs->isEmpty())
         <p class="text-sm text-base-content/70">No MMR Assistant logs found yet.</p>

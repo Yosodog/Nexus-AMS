@@ -7,7 +7,7 @@
         <div class="flex flex-col gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
             <div class="w-full flex-1 min-w-0 sm:min-w-[220px]">
                 <label class="label">
-                    <span class="label-text font-semibold">Target Nation ID</span>
+                    <span class="label-text font-semibold">Target nation ID</span>
                 </label>
                 <div class="join w-full">
                     <input
@@ -104,7 +104,7 @@
                     @endphp
 
                     <div class="mt-6 border border-info rounded-lg p-4 bg-base-100">
-                        <h3 class="text-sm font-semibold text-info mb-1 uppercase">War Range</h3>
+                        <h3 class="text-sm font-semibold text-info mb-1 uppercase">War range</h3>
                         <p class="text-sm">
                             Nations with a score between
                             <span class="font-bold text-info">{{ $minRange }}</span> and
@@ -117,7 +117,7 @@
         @endif
 
         {{-- Nation Table --}}
-        <x-utils.card :title="$target ? 'Matching Nation' : 'All Alliance Nations'">
+        <x-utils.card :title="$target ? 'Matching nation' : 'All alliance nations'">
             <div class="overflow-x-auto">
                 <table class="table w-full">
                     <thead>
@@ -132,7 +132,7 @@
                         <th>Off. Wars</th>
                         <th>Def. Wars</th>
                         @if($target)
-                            <th>Match Score</th>
+                            <th>Match score</th>
                         @endif
                     </tr>
                     </thead>

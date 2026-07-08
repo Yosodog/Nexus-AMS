@@ -32,7 +32,7 @@ class RebuildingNotification extends Notification
     public function toPNW(object $notifiable): array
     {
         if ($this->status === 'approved') {
-            $subject = 'Rebuilding Approved';
+            $subject = 'Rebuilding approved';
             $amount = (int) round($this->request->approved_amount ?? $this->request->estimated_amount ?? 0);
             $message = "Your rebuilding request has been approved.\n\n"
                 .'Approved amount: $'.number_format($amount)."\n"
@@ -46,9 +46,9 @@ class RebuildingNotification extends Notification
             ];
         }
 
-        $subject = 'Rebuilding Denied';
+        $subject = 'Rebuilding denied';
         $message = "Your rebuilding request has been denied.\n\n"
-            .'If you need clarification, contact alliance leadership. You may reapply if eligible.';
+            .'Contact alliance leadership if you need the reason reviewed. You may reapply if eligible.';
 
         return [
             'nation_id' => $this->nationId,

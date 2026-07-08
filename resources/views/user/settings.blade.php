@@ -425,7 +425,7 @@
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div>
                             <h2 class="text-lg font-semibold">Discord</h2>
-                            <p class="text-sm text-base-content/70">Link to verify your identity and unlock coordination tools.</p>
+                            <p class="text-sm text-base-content/70">Link Discord so the app can verify you and route coordination alerts correctly.</p>
                         </div>
                         <span class="badge badge-outline">{{ $discordAccount ? 'Connected' : 'Not linked' }}</span>
                     </div>

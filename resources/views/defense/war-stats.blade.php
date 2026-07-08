@@ -15,8 +15,7 @@
                     <p class="text-xs uppercase tracking-[0.2em] text-primary-content/80">Defense • War Storyboard</p>
                     <h1 class="text-3xl sm:text-4xl font-black">War Stats for {{ $nation->leader_name }}</h1>
                     <p class="max-w-4xl text-sm sm:text-base text-primary-content/80">
-                        Track every battle, watch the unit trades, and flex your haul. Live view of active wars plus a deep dive
-                        into your full war history with charts tailored for quick decision making.
+                        Track active wars, unit trades, loot, and your full war history in one view.
                     </p>
                 </div>
                 <div class="w-full">
@@ -304,7 +303,7 @@
                     </div>
                 @empty
                     <div class="p-6 rounded-2xl bg-base-100 border border-dashed border-base-300 text-base-content/70">
-                        No active wars right now. Enjoy the peace — or queue up a raid.
+                        No active wars right now. Enjoy the peace, or queue up a raid.
                     </div>
                 @endforelse
             </div>

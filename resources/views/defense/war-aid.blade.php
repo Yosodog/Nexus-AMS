@@ -10,7 +10,7 @@
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
-                    <h1 class="text-3xl font-bold leading-tight">War Aid Dashboard</h1>
+                    <h1 class="text-3xl font-bold leading-tight">War aid dashboard</h1>
                     <p class="text-sm text-base-content/70">Request support, review active wars, and track past aid.</p>
                 </div>
                 <div class="tooltip" data-tip="{{ $settings::isWarAidEnabled() ? '' : 'War aid is disabled' }}">
@@ -22,7 +22,7 @@
                                 disabled
                             @endif
                     >
-                        Request War Aid
+                        Request war aid
                     </button>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                 </div>
             @endif
 
-            <h2 class="text-xl font-bold mt-8 mb-2">Previous War Aid Requests</h2>
+            <h2 class="text-xl font-bold mt-8 mb-2">Previous war aid requests</h2>
             <div class="overflow-x-auto">
                 <table class="table w-full">
                     <thead>
@@ -110,7 +110,7 @@
             <div class="modal-box w-11/12 max-w-5xl max-h-[calc(100dvh-3rem)] overflow-y-auto">
                 <form method="POST" action="{{ route('defense.war-aid.store') }}">
                     @csrf
-                    <h3 class="font-bold text-lg">Request War Aid</h3>
+                    <h3 class="font-bold text-lg">Request war aid</h3>
 
                     <div class="form-control mt-4">
                         <label class="label">Account</label>

@@ -20,11 +20,11 @@ class ApplyPageSeeder extends Seeder
     {
         $content = <<<'HTML'
 <h2>Apply to Join Nexus</h2>
-<p>Tell prospective members about your alliance and how to get in touch.</p>
+<p>Tell applicants what kind of alliance they are joining and how to reach you.</p>
 <ul>
-    <li>Share the minimum requirements for applicants.</li>
-    <li>Explain how long the review process usually takes.</li>
-    <li>Provide a Discord or in-game contact for follow-up questions.</li>
+    <li>List the minimum requirements.</li>
+    <li>Say how long reviews usually take.</li>
+    <li>Add a Discord or in-game contact for questions.</li>
 </ul>
 HTML;
 

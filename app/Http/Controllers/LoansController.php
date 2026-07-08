@@ -41,7 +41,7 @@ class LoansController extends Controller
 
             $this->loanService->applyForLoan($nation, $account, $request->amount, $request->term_weeks);
 
-            return redirect()->back()->with('alert-message', 'Loan application submitted! ✅')->with(
+            return redirect()->back()->with('alert-message', 'Loan application submitted.')->with(
                 'alert-type',
                 'success'
             );
@@ -139,7 +139,7 @@ class LoansController extends Controller
         try {
             $this->loanService->repayLoan($loan, $account, $request->amount);
 
-            return redirect()->back()->with('alert-message', 'Loan payment successful! ✅')->with(
+            return redirect()->back()->with('alert-message', 'Loan payment received.')->with(
                 'alert-type',
                 'success'
             );

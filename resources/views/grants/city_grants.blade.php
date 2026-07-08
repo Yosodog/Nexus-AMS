@@ -88,7 +88,7 @@
                     <div class="card-body space-y-5">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <h2 class="text-xl font-bold text-base-content">Request City #{{ $nextCity }} Grant</h2>
+                                <h2 class="text-xl font-bold text-base-content">Request City #{{ $nextCity }} grant</h2>
                                 <p class="text-sm text-base-content/70">
                                     Select a destination account and submit for economics review.
                                 </p>
@@ -148,7 +148,7 @@
                                 class="btn btn-primary w-full"
                                 @disabled($nextGrantAmount === null || $hasPendingRequest)
                             >
-                                {{ $hasPendingRequest ? 'Request Pending' : 'Request Grant' }}
+                                {{ $hasPendingRequest ? 'Request pending' : 'Request grant' }}
                             </button>
                         </form>
 
@@ -170,8 +170,8 @@
             <div class="xl:col-span-2">
                 <div class="card h-full border border-base-300 bg-base-100 shadow-sm">
                     <div class="card-body space-y-3">
-                        <h3 class="text-base font-bold text-base-content">Quick Checklist</h3>
-                        <p class="text-sm text-base-content/70">Fast validation before you submit.</p>
+                        <h3 class="text-base font-bold text-base-content">Quick checklist</h3>
+                        <p class="text-sm text-base-content/70">Check these before you submit.</p>
                         <ul class="space-y-2 text-sm text-base-content">
                             <li class="flex items-start gap-2">
                                 <span class="mt-1 h-2 w-2 rounded-full bg-primary"></span>
@@ -212,14 +212,14 @@
 
         <section class="space-y-4">
             <div class="flex items-center justify-between gap-2">
-                <h2 class="text-xl font-semibold text-base-content">Request History</h2>
+                <h2 class="text-xl font-semibold text-base-content">Request history</h2>
                 <span class="text-xs text-base-content/60">Sorted by city then latest activity</span>
             </div>
 
             <x-card class="border border-base-300/70 bg-base-100/95">
                 <x-slot:title>
                     <div>
-                        Previous City Grant Requests
+                        Previous city grant requests
                         <div class="text-sm font-normal text-base-content/60">Every submission with its final review status.</div>
                     </div>
                 </x-slot:title>

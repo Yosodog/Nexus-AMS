@@ -53,7 +53,7 @@
     @else
         <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
             <p class="mb-1 text-warning font-semibold">Not enrolled</p>
-            <p class="text-sm text-base-content/80">Enroll to automate deposits and unlock the MMR assistant.</p>
+            <p class="text-sm text-base-content/80">Enroll to automate deposits and use the MMR assistant.</p>
         </div>
 
         <form method="POST" action="{{ route('dd.enroll') }}" class="space-y-3">

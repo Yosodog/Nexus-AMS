@@ -64,13 +64,13 @@
                             <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-600">
                                 <span>Leaderboards</span>
                                 <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
-                                <span>Alliance Dashboard</span>
+                                <span>Alliance dashboard</span>
                             </div>
                             <h1 class="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
                                 The best nations, at a glance.
                             </h1>
                             <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                                Start on the dashboard to see the current #1 nation on each live leaderboard, then drill straight into the board you want. This gives the alliance one obvious home for rankings without burying people in menus.
+                                See the current #1 nation on each live leaderboard, then open the board you care about. Rankings live here instead of being scattered across menus.
                             </p>
                         </div>
 
@@ -91,7 +91,7 @@
                             <p class="mt-3 text-2xl font-black text-slate-950">Economy + Raiding</p>
                         </div>
                         <div class="rounded-[1.5rem] border border-white/70 bg-slate-950 p-5 text-white shadow-xl">
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Use It Fast</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Use it fast</p>
                             <p class="mt-3 text-lg font-bold">Open the board that matches the question you are asking.</p>
                         </div>
                     </div>
@@ -105,7 +105,7 @@
                         <h2 class="mt-1 text-3xl font-black text-base-content">Current #1 nations</h2>
                     </div>
                     <p class="max-w-2xl text-sm leading-6 text-base-content/65">
-                        Each card shows the current leader for that board, the key metric they lead in, and the fastest way to open the full leaderboard page.
+                        Each card shows the current leader, the metric they lead in, and a direct link to the full board.
                     </p>
                 </div>
 
@@ -167,7 +167,7 @@
             @if (! empty($plannedBoards))
                 <section class="space-y-5">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Coming Next</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Coming next</p>
                         <h2 class="mt-1 text-2xl font-black text-base-content">Planned leaderboard families</h2>
                     </div>
 

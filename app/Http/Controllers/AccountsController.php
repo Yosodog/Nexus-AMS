@@ -288,7 +288,7 @@ class AccountsController extends Controller
         return redirect()
             ->route('accounts')
             ->with([
-                'alert-message' => 'Account created successfully.',
+                'alert-message' => 'Account created.',
                 'alert-type' => 'success',
             ]);
     }

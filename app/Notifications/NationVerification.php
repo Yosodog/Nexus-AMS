@@ -44,9 +44,9 @@ class NationVerification extends Notification implements ShouldQueue
     {
         return [
             'nation_id' => $this->user->nation_id,
-            'subject' => 'Verify Your Account',
-            'message' => 'Welcome to '.config('app.name')."! \n\nPlease verify your account by clicking the link below:\n\n".
-                '[link='.route('verify', ['code' => $this->verification_code]).']Click here to verify![/link]'.
+            'subject' => 'Verify your account',
+            'message' => 'Welcome to '.config('app.name').".\n\nVerify your account with the link below:\n\n".
+                '[link='.route('verify', ['code' => $this->verification_code]).']Verify account[/link]'.
                 "\n\nYour verification code: {$this->verification_code}",
         ];
     }

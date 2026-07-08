@@ -43,14 +43,13 @@ class CityGrantNotification extends Notification implements ShouldQueue
     public function toPNW(object $notifiable)
     {
         if ($this->status === 'approved') {
-            $subject = 'City Grant Approved!';
-            $message = "Your city grant request for City #{$this->request->city_number} has been approved! 🎉 \n\n"
-                ."Funds have been deposited into your selected account.\n\n"
-                .'Please withdraw these funds as soon as possible and purchase your city.';
+            $subject = 'City grant approved';
+            $message = "Your city grant request for City #{$this->request->city_number} has been approved.\n\n"
+                .'Funds have been deposited into your selected account. Withdraw them when you are ready to buy the city.';
         } else {
-            $subject = 'City Grant Denied';
-            $message = "Unfortunately, your city grant request for City #{$this->request->city_number} has been denied. ❌\n\n"
-                ."If you believe this was an error, please contact leadership for clarification.\n\n"
+            $subject = 'City grant denied';
+            $message = "Your city grant request for City #{$this->request->city_number} was denied.\n\n"
+                ."Contact leadership if you need the reason reviewed.\n\n"
                 .'You may apply again if eligible.';
         }
 

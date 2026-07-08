@@ -12,7 +12,7 @@
             <div class="alert alert-error shadow-sm">
                 <div>
                     <h3 class="font-semibold">Account frozen</h3>
-                    <p class="text-sm">Withdrawals and transfers are disabled for this account. Please contact an administrator for assistance.</p>
+                    <p class="text-sm">Withdrawals and transfers are disabled for this account. Contact an administrator if you need help.</p>
                 </div>
             </div>
         @endif
@@ -159,7 +159,7 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="Manual Adjustments" extraClasses="mb-2">
+        <x-utils.card title="Manual adjustments" extraClasses="mb-2">
             @if($manualTransactions->count())
                 <div class="overflow-x-auto rounded-xl border border-base-300">
                     <table class="table w-full table-zebra">
@@ -206,7 +206,7 @@
         </x-utils.card>
 
         @if($ddLogs->count())
-            <x-utils.card title="Direct Deposit Activity" extraClasses="mb-2">
+            <x-utils.card title="Direct Deposit activity" extraClasses="mb-2">
                 <div class="overflow-x-auto rounded-xl border border-base-300">
                     <table class="table w-full table-zebra">
                         <thead class="bg-base-200">

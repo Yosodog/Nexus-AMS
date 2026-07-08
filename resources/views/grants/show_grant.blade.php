@@ -24,7 +24,7 @@
     </div>
 
     <div class="space-y-6">
-        <x-utils.card title="Grant Details" extraClasses="shadow-xl border border-base-300">
+        <x-utils.card title="Grant details" extraClasses="shadow-xl border border-base-300">
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 @if ($grant->money > 0)
                     <div class="rounded-xl bg-base-200 p-4">
@@ -88,15 +88,15 @@
             <div class="space-y-6 lg:self-start">
                 @if ($alreadyApplied)
                     <div class="alert alert-info shadow-lg">
-                        <span class="text-lg">You’ve already received this grant.</span>
+                    <span class="text-lg">You have already received this grant.</span>
                     </div>
                 @else
-                    <x-utils.card title="Apply for this Grant" extraClasses="shadow-xl border border-base-300">
+                    <x-utils.card title="Apply for this grant" extraClasses="shadow-xl border border-base-300">
                         <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="apply-form" class="space-y-4">
                             @csrf
 
                             <div class="form-control w-full">
-                                <label class="label font-semibold text-base-content" for="account_id">Select Bank Account</label>
+                                <label class="label font-semibold text-base-content" for="account_id">Select bank account</label>
                                 <select name="account_id" id="account_id" class="select select-bordered w-full">
                                     <option value="">-- Choose an account --</option>
                                     @foreach ($accounts as $account)
@@ -109,7 +109,7 @@
                             </div>
 
                             <button type="submit" class="btn btn-primary w-full sm:w-auto" @disabled(! empty($eligibilityReport['failures']))>
-                                Apply for Grant
+                                Apply for grant
                             </button>
                         </form>
                     </x-utils.card>
@@ -118,7 +118,7 @@
         </div>
 
         @if (! empty($grant->description))
-            <x-utils.card title="Grant Overview" extraClasses="bg-base-100 shadow border border-base-200">
+            <x-utils.card title="Grant overview" extraClasses="bg-base-100 shadow border border-base-200">
                 <div class="prose max-w-none">
                     {!! Str::of($grant->description)->markdown([
                         'html_input' => 'strip',

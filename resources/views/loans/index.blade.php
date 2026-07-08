@@ -7,26 +7,26 @@
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Funding Desk</p>
                     <h1 class="text-3xl font-bold leading-tight">Loans</h1>
-                    <p class="text-sm text-base-content/70">Weekly amortized loans with transparent payment math.</p>
+                    <p class="text-sm text-base-content/70">Weekly amortized loans with clear payment math.</p>
                 </div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Active Loans</p>
+                        <p class="text-xs uppercase text-base-content/60">Active loans</p>
                         <p class="text-xl font-bold">{{ $activeLoans->count() }}</p>
                     </div>
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Outstanding Principal</p>
+                        <p class="text-xs uppercase text-base-content/60">Outstanding principal</p>
                         <p class="text-xl font-bold">${{ number_format((float) $activeLoans->sum('remaining_balance'), 2) }}</p>
                     </div>
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Total Currently Due</p>
+                        <p class="text-xs uppercase text-base-content/60">Total currently due</p>
                         <p class="text-xl font-bold">${{ number_format((float) $activeLoans->sum('next_payment_due'), 2) }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <x-utils.card title="Loan In 30 Seconds" extraClasses="shadow-lg">
+        <x-utils.card title="Loans in 30 seconds" extraClasses="shadow-lg">
             <div class="grid gap-4 text-sm text-base-content/85 md:grid-cols-2">
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4">
                     <p class="font-semibold">What happens</p>
@@ -73,13 +73,13 @@
         @endif
 
         <div class="grid gap-6 lg:grid-cols-2">
-            <x-utils.card title="Apply for a Loan" extraClasses="shadow-lg">
+            <x-utils.card title="Apply for a loan" extraClasses="shadow-lg">
                 @if ($loanApplicationsEnabled)
                     <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
                         @csrf
                         <div class="form-control">
                             <label class="label" for="amount">
-                                <span class="label-text font-semibold">Loan Amount</span>
+                                <span class="label-text font-semibold">Loan amount</span>
                             </label>
                             <input type="number" name="amount" id="amount" min="100000" step="0.01" required
                                    class="input input-bordered w-full" placeholder="Enter amount">
@@ -87,7 +87,7 @@
 
                         <div class="form-control">
                             <label class="label" for="account_id">
-                                <span class="label-text font-semibold">Deposit Account</span>
+                                <span class="label-text font-semibold">Deposit account</span>
                             </label>
                             <select name="account_id" id="account_id" class="select select-bordered w-full" required>
                                 @foreach ($accounts as $account)
@@ -100,20 +100,20 @@
 
                         <div class="form-control">
                             <label class="label" for="term_weeks">
-                                <span class="label-text font-semibold">Term (Weeks)</span>
+                                <span class="label-text font-semibold">Term (weeks)</span>
                             </label>
                             <input type="number" id="term_weeks" name="term_weeks" min="1" max="52" step="1" required
                                    class="input input-bordered w-full" placeholder="1-52">
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-full">Submit Application</button>
+                        <button type="submit" class="btn btn-primary w-full">Submit application</button>
                     </form>
                 @else
                     <p class="text-sm text-base-content/70">Applications are closed right now.</p>
                 @endif
             </x-utils.card>
 
-            <x-utils.card title="Make a Payment" extraClasses="shadow-lg">
+            <x-utils.card title="Make a payment" extraClasses="shadow-lg">
                 @if ($activeLoans->isEmpty())
                     <p class="text-sm text-base-content/70">No active loans available for repayment.</p>
                 @else
@@ -132,7 +132,7 @@
 
                         <div class="form-control">
                             <label class="label" for="repayment_account_id">
-                                <span class="label-text font-semibold">Payment Account</span>
+                                <span class="label-text font-semibold">Payment account</span>
                             </label>
                             <select name="account_id" id="repayment_account_id" class="select select-bordered w-full" required>
                                 @foreach ($accounts as $account)
@@ -145,13 +145,13 @@
 
                         <div class="form-control">
                             <label class="label" for="repayment_amount">
-                                <span class="label-text font-semibold">Payment Amount</span>
+                                <span class="label-text font-semibold">Payment amount</span>
                             </label>
                             <input type="number" name="amount" id="repayment_amount" min="0.01" step="0.01" required
                                    class="input input-bordered w-full" placeholder="Enter amount">
                             <div class="mt-2 flex items-center justify-between gap-2">
                                 <button type="button" id="use_min_due" class="btn btn-outline btn-sm">
-                                    Use Minimum Due
+                                    Use minimum due
                                 </button>
                                 <span id="use_min_due_hint" class="text-xs text-base-content/60">Current due: $0.00</span>
                             </div>
@@ -159,7 +159,7 @@
 
                         <div class="form-control">
                             <label class="label" for="repayment_slider">
-                                <span class="label-text font-semibold">What Happens If I Pay This Amount?</span>
+                                <span class="label-text font-semibold">What happens if I pay this amount?</span>
                             </label>
                             <input type="range" id="repayment_slider" min="0" max="100" value="0" class="range range-primary">
                             <div class="mt-1 flex justify-between text-xs text-base-content/60">
@@ -169,24 +169,24 @@
                         </div>
 
                         <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
-                            <p class="font-semibold">Payment Preview</p>
+                            <p class="font-semibold">Payment preview</p>
                             <div class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                                <p>Current Amount Due: <span id="preview_due" class="font-semibold">$0.00</span></p>
-                                <p>Total Owed Right Now: <span id="preview_total" class="font-semibold">$0.00</span></p>
-                                <p>Estimated Interest: <span id="preview_interest" class="font-semibold">$0.00</span></p>
-                                <p>Estimated Principal: <span id="preview_principal" class="font-semibold">$0.00</span></p>
-                                <p>Estimated Remaining Principal: <span id="preview_remaining" class="font-semibold">$0.00</span></p>
-                                <p>Estimated Weeks Saved: <span id="preview_weeks_saved" class="font-semibold">0</span></p>
+                                <p>Current amount due: <span id="preview_due" class="font-semibold">$0.00</span></p>
+                                <p>Total owed right now: <span id="preview_total" class="font-semibold">$0.00</span></p>
+                                <p>Estimated interest: <span id="preview_interest" class="font-semibold">$0.00</span></p>
+                                <p>Estimated principal: <span id="preview_principal" class="font-semibold">$0.00</span></p>
+                                <p>Estimated remaining principal: <span id="preview_remaining" class="font-semibold">$0.00</span></p>
+                                <p>Estimated weeks saved: <span id="preview_weeks_saved" class="font-semibold">0</span></p>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-full">Submit Payment</button>
+                        <button type="submit" class="btn btn-success w-full">Submit payment</button>
                     </form>
                 @endif
             </x-utils.card>
         </div>
 
-        <x-utils.card title="Loan Formula and Rules" extraClasses="shadow-lg">
+        <x-utils.card title="Loan formula and rules" extraClasses="shadow-lg">
             <div class="space-y-4 text-sm text-base-content/80">
                 <p>
                     The scheduled weekly payment uses standard amortization with a weekly rate:
@@ -206,10 +206,10 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="How Loan Payments Work" extraClasses="shadow-lg">
+        <x-utils.card title="How loan payments work" extraClasses="shadow-lg">
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
-                    <h3 class="text-base font-semibold">Payment Cycle</h3>
+                    <h3 class="text-base font-semibold">Payment cycle</h3>
                     <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
                         <li>First payment is due 7 days after approval.</li>
                         <li>Then payments are due every 7 days.</li>
@@ -218,7 +218,7 @@
                     </ul>
                 </div>
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
-                    <h3 class="text-base font-semibold">If Payments Are Frozen</h3>
+                    <h3 class="text-base font-semibold">If payments are frozen</h3>
                     <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
                         <li>Automatic deductions are paused.</li>
                         <li>Weekly accrual and required dues are frozen while paused.</li>
@@ -227,7 +227,7 @@
                     </ul>
                 </div>
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
-                    <h3 class="text-base font-semibold">Missed Payments (No Penalties)</h3>
+                    <h3 class="text-base font-semibold">Missed payments (no penalties)</h3>
                     <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
                         <li>Missed installments are moved into past due.</li>
                         <li>Interest for each missed weekly cycle is added to accrued interest due.</li>
@@ -236,7 +236,7 @@
                     </ul>
                 </div>
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
-                    <h3 class="text-base font-semibold">Early Repayment</h3>
+                    <h3 class="text-base font-semibold">Early repayment</h3>
                     <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
                         <li>You can pay early at any time.</li>
                         <li>Early payments immediately reduce principal (after any accrued interest due).</li>
@@ -554,7 +554,7 @@
                         ['q' => 'What does the schedule table date mean?', 'a' => 'The planned due date for that weekly installment under the original schedule.'],
                         ['q' => 'Can my term end earlier than shown?', 'a' => 'Yes, if you pay extra principal, payoff can happen sooner.'],
                         ['q' => 'What is total payoff now?', 'a' => 'Remaining principal plus accrued interest due as of now.'],
-                        ['q' => 'Why can’t I overpay beyond payoff?', 'a' => 'System caps payment at what is owed to avoid accidental overpayment.'],
+                        ['q' => 'Why can\'t I overpay beyond payoff?', 'a' => 'The system caps payment at what is owed to avoid accidental overpayment.'],
                         ['q' => 'Does this follow US mortgage rules?', 'a' => 'It follows general amortization math but is simplified for weekly game cycles.'],
                         ['q' => 'Can admins change loan settings after approval?', 'a' => 'Admins can update loan settings in admin tools, which can affect schedule projections.'],
                     ];
@@ -569,7 +569,7 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="Loan History" extraClasses="shadow-lg">
+        <x-utils.card title="Loan history" extraClasses="shadow-lg">
             @if ($loanHistory->isEmpty())
                 <p class="text-base-content/70">No previous loan applications found.</p>
             @else
