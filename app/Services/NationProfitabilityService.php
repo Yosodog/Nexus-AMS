@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\GraphQL\Models\Nation as GraphQLNation;
 use App\Models\City;
+use App\Models\GrowthCircleDistribution;
 use App\Models\Nation;
 use App\Models\NationMilitary;
 use App\Models\NationProfitabilitySnapshot;
@@ -44,6 +45,7 @@ class NationProfitabilityService
      *
      * @return array{food: float, uranium: float}|null
      *                                                 Null if no snapshot exists for this nation.
+     * @deprecated Growth Circles now uses getDailyGrowthCircleShortfalls().
      */
     public function getDailyResourceShortfall(Nation $nation): ?array
     {
@@ -62,6 +64,35 @@ class NationProfitabilityService
             'food' => max(0.0, -(float) ($perDay['food'] ?? 0.0)),
             'uranium' => max(0.0, -(float) ($perDay['uranium'] ?? 0.0)),
         ];
+    }
+
+    /**
+     * Daily shortfall (consumption above production) for the resources
+     * Growth Circles distributes.
+     *
+     * Net producers (production >= consumption) receive 0 for that resource.
+     * Net consumers receive their daily deficit (a positive float).
+     *
+     * @return array{coal: float, oil: float, uranium: float, iron: float, bauxite: float, lead: float, food: float}|null
+     */
+    public function getDailyGrowthCircleShortfalls(Nation $nation): ?array
+    {
+        $snapshot = NationProfitabilitySnapshot::query()
+            ->where('nation_id', $nation->id)
+            ->latest('calculated_at')
+            ->first();
+
+        if (! $snapshot) {
+            return null;
+        }
+
+        $perDay = $snapshot->resource_profit_per_day ?? [];
+
+        return collect(GrowthCircleDistribution::distributionResourceKeys())
+            ->mapWithKeys(fn (string $resource): array => [
+                $resource => max(0.0, -(float) ($perDay[$resource] ?? 0.0)),
+            ])
+            ->all();
     }
 
     /**

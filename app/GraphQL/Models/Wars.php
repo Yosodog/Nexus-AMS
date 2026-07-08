@@ -44,4 +44,9 @@ class Wars implements Iterator
     {
         $this->wars[] = $war;
     }
+
+    public function count(): int
+    {
+        return count($this->wars);
+    }
 }

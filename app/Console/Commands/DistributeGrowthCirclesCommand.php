@@ -11,7 +11,7 @@ class DistributeGrowthCirclesCommand extends Command
 {
     protected $signature = 'growth-circles:distribute {--cycle-date= : Override the cycle date (YYYY-MM-DD UTC). Defaults to today UTC.}';
 
-    protected $description = 'Run the daily Growth Circles distribution: credit each enrolled member their food and uranium shortfall.';
+    protected $description = 'Run the daily Growth Circles distribution: credit each enrolled member their resource shortfalls.';
 
     public function handle(GrowthCircleService $service): int
     {

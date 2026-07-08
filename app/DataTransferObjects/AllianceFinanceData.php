@@ -113,8 +113,7 @@ final class AllianceFinanceData
         Nation $nation,
         Account $account,
         GrowthCircleDistribution $distribution,
-        float $food,
-        float $uranium,
+        array $resources,
     ): self {
         return new self(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
@@ -124,8 +123,13 @@ final class AllianceFinanceData
             nationId: $nation->id,
             accountId: $account->id,
             source: $distribution,
-            food: $food,
-            uranium: $uranium,
+            coal: (float) ($resources['coal'] ?? 0.0),
+            oil: (float) ($resources['oil'] ?? 0.0),
+            uranium: (float) ($resources['uranium'] ?? 0.0),
+            iron: (float) ($resources['iron'] ?? 0.0),
+            bauxite: (float) ($resources['bauxite'] ?? 0.0),
+            lead: (float) ($resources['lead'] ?? 0.0),
+            food: (float) ($resources['food'] ?? 0.0),
             meta: [
                 'cycle_date' => $distribution->cycle_date instanceof CarbonInterface
                     ? $distribution->cycle_date->toDateString()

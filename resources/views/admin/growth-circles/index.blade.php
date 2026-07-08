@@ -3,6 +3,9 @@
 @section('content')
     <div class="space-y-6">
         @can('view-growth-circles')
+            @php
+                $resourceLabels = $resourceLabels ?? \App\Models\GrowthCircleDistribution::distributionResourceLabels();
+            @endphp
 
             {{-- Settings card --}}
             <x-card title="Growth Circles Settings">
@@ -59,8 +62,9 @@
                                 <th>Account</th>
                                 <th>Enrolled</th>
                                 <th>Last distribution</th>
-                                <th class="text-right">7-day food</th>
-                                <th class="text-right">7-day uranium</th>
+                                @foreach ($resourceLabels as $resource => $label)
+                                    <th class="text-right">7-day {{ strtolower($label) }}</th>
+                                @endforeach
                                 <th>Status</th>
                                 @can('manage-growth-circles')
                                     <th class="text-right">Actions</th>
@@ -82,15 +86,18 @@
                                     <td>
                                         @if ($row['last'])
                                             {{ $row['last']->cycle_date->toDateString() }}
-                                            <span class="text-xs text-base-content/60">
-                                                ({{ number_format($row['last']->food, 2) }} F, {{ number_format($row['last']->uranium, 2) }} U)
+                                            <span class="mt-1 flex flex-wrap gap-1 text-xs text-base-content/60">
+                                                @foreach ($resourceLabels as $resource => $label)
+                                                    <span>{{ $label }} {{ number_format($row['last']->{$resource}, 2) }}</span>
+                                                @endforeach
                                             </span>
                                         @else
                                             <span class="text-base-content/50">—</span>
                                         @endif
                                     </td>
-                                    <td class="text-right">{{ number_format($row['seven_day_food'], 2) }}</td>
-                                    <td class="text-right">{{ number_format($row['seven_day_uranium'], 2) }}</td>
+                                    @foreach ($resourceLabels as $resource => $label)
+                                        <td class="text-right">{{ number_format($row['seven_day_resources'][$resource] ?? 0, 2) }}</td>
+                                    @endforeach
                                     <td>
                                         @if ($eligibility['eligible'])
                                             <span class="badge badge-success badge-sm">Active</span>

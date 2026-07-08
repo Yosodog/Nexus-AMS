@@ -26,11 +26,14 @@ class GrowthCirclesController extends Controller
     {
         $this->authorize('view-growth-circles');
 
+        $resourceKeys = GrowthCircleDistribution::distributionResourceKeys();
+        $resourceLabels = GrowthCircleDistribution::distributionResourceLabels();
+
         $enrollments = GrowthCircleEnrollment::query()
             ->with(['nation', 'account'])
             ->orderBy('enrolled_at')
             ->get()
-            ->map(function (GrowthCircleEnrollment $enrollment): array {
+            ->map(function (GrowthCircleEnrollment $enrollment) use ($resourceKeys): array {
                 $eligibility = $enrollment->nation
                     ? $this->growthCircles->evaluateEligibility($enrollment->nation)
                     : ['eligible' => false, 'reason' => 'Nation no longer exists.'];
@@ -43,21 +46,27 @@ class GrowthCirclesController extends Controller
                 $sevenDayTotal = GrowthCircleDistribution::query()
                     ->where('nation_id', $enrollment->nation_id)
                     ->where('cycle_date', '>=', now()->subDays(7)->toDateString())
-                    ->selectRaw('COALESCE(SUM(food), 0) as food, COALESCE(SUM(uranium), 0) as uranium')
+                    ->selectRaw(collect($resourceKeys)->map(fn (string $resource): string => "COALESCE(SUM({$resource}), 0) as {$resource}")->implode(', '))
                     ->first();
+
+                $sevenDayResources = collect($resourceKeys)
+                    ->mapWithKeys(fn (string $resource): array => [
+                        $resource => (float) ($sevenDayTotal->{$resource} ?? 0),
+                    ])
+                    ->all();
 
                 return [
                     'enrollment' => $enrollment,
                     'eligibility' => $eligibility,
                     'last' => $last,
-                    'seven_day_food' => (float) ($sevenDayTotal->food ?? 0),
-                    'seven_day_uranium' => (float) ($sevenDayTotal->uranium ?? 0),
+                    'seven_day_resources' => $sevenDayResources,
                 ];
             });
 
         return view('admin.growth-circles.index', [
             'taxId' => SettingService::getGrowthCirclesTaxId(),
             'fallbackTaxId' => SettingService::getGrowthCirclesFallbackTaxId(),
+            'resourceLabels' => $resourceLabels,
             'rows' => $enrollments,
         ]);
     }
@@ -85,6 +94,7 @@ class GrowthCirclesController extends Controller
         }
 
         return view('admin.growth-circles.history', [
+            'resourceLabels' => GrowthCircleDistribution::distributionResourceLabels(),
             'rows' => $query->paginate(50)->withQueryString(),
         ]);
     }

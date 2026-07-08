@@ -6,6 +6,11 @@ use stdClass;
 
 class War
 {
+    /**
+     * @var array<int, Attack>
+     */
+    public array $attacks = [];
+
     public int $id;
 
     public string $reason;
