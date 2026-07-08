@@ -30,26 +30,28 @@
         @if ($gcRecentDistributions->isNotEmpty())
             <details class="rounded-lg border border-base-300 p-3">
                 <summary class="cursor-pointer text-sm font-medium">Recent distributions (last 7 cycles)</summary>
-                <table class="table table-xs mt-2 w-full">
-                    <thead>
-                    <tr>
-                        <th>Cycle</th>
-                        @foreach ($resourceLabels as $resource => $label)
-                            <th class="text-right">{{ $label }}</th>
-                        @endforeach
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach ($gcRecentDistributions as $row)
+                <div class="mt-2 overflow-x-auto">
+                    <table class="table table-xs w-full">
+                        <thead>
                         <tr>
-                            <td>{{ $row->cycle_date->toDateString() }}</td>
+                            <th>Cycle</th>
                             @foreach ($resourceLabels as $resource => $label)
-                                <td class="text-right">{{ number_format($row->{$resource}, 2) }}</td>
+                                <th class="text-right">{{ $label }}</th>
                             @endforeach
                         </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        @foreach ($gcRecentDistributions as $row)
+                            <tr>
+                                <td>{{ $row->cycle_date->toDateString() }}</td>
+                                @foreach ($resourceLabels as $resource => $label)
+                                    <td class="text-right">{{ number_format($row->{$resource}, 2) }}</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </details>
         @endif
 
@@ -79,26 +81,28 @@
         @if ($gcRecentDistributions->isNotEmpty())
             <details class="rounded-lg border border-base-300 p-3">
                 <summary class="cursor-pointer text-sm font-medium">Recent distributions (last 7 cycles)</summary>
-                <table class="table table-xs mt-2 w-full">
-                    <thead>
-                    <tr>
-                        <th>Cycle</th>
-                        @foreach ($resourceLabels as $resource => $label)
-                            <th class="text-right">{{ $label }}</th>
-                        @endforeach
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach ($gcRecentDistributions as $row)
+                <div class="mt-2 overflow-x-auto">
+                    <table class="table table-xs w-full">
+                        <thead>
                         <tr>
-                            <td>{{ $row->cycle_date->toDateString() }}</td>
+                            <th>Cycle</th>
                             @foreach ($resourceLabels as $resource => $label)
-                                <td class="text-right">{{ number_format($row->{$resource}, 2) }}</td>
+                                <th class="text-right">{{ $label }}</th>
                             @endforeach
                         </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        @foreach ($gcRecentDistributions as $row)
+                            <tr>
+                                <td>{{ $row->cycle_date->toDateString() }}</td>
+                                @foreach ($resourceLabels as $resource => $label)
+                                    <td class="text-right">{{ number_format($row->{$resource}, 2) }}</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </details>
         @endif
 
