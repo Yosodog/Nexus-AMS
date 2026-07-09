@@ -45,6 +45,7 @@ class NationProfitabilityService
      *
      * @return array{food: float, uranium: float}|null
      *                                                 Null if no snapshot exists for this nation.
+     *
      * @deprecated Growth Circles now uses getDailyGrowthCircleShortfalls().
      */
     public function getDailyResourceShortfall(Nation $nation): ?array
@@ -947,7 +948,7 @@ class NationProfitabilityService
     {
         [$cap, $baseInput, $project, $boost, $inputs] = match ($resource) {
             'gasoline' => [5, 3.0, 'emergency_gasoline_reserve', 2.0, ['oil']],
-            'munitions' => [5, 6.0, 'arms_stockpile', 1.2, ['lead']],
+            'munitions' => [5, 6.0, null, 1.0, ['lead']],
             'steel' => [5, 3.0, 'iron_works', 1.36, ['iron', 'coal']],
             'aluminum' => [5, 3.0, 'bauxite_works', 1.36, ['bauxite']],
             default => [1, 0.0, null, 1.0, []],
@@ -1059,7 +1060,7 @@ class NationProfitabilityService
         [$resource, $baseInfra, $maxInfra, $amountPerLevel] = match ($powerPlant) {
             'coal_power' => ['coal', 100, 500, 1.2],
             'oil_power' => ['oil', 100, 500, 1.2],
-            'nuclear_power' => ['uranium', 1000, 2000, 3.125],
+            'nuclear_power' => ['uranium', 1000, 2000, 3.0],
             default => [null, 0, 0, 0.0],
         };
 

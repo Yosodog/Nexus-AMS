@@ -5,7 +5,7 @@ use Pdo\Mysql;
 
 $mysqlSslCaOption = defined('Pdo\\Mysql::ATTR_SSL_CA')
     ? Mysql::ATTR_SSL_CA
-    : PDO::MYSQL_ATTR_SSL_CA;
+    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : null);
 
 return [
 
@@ -63,7 +63,7 @@ return [
             'strict' => true,
             'timezone' => env('DB_TIMEZONE', '+00:00'),
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
+            'options' => extension_loaded('pdo_mysql') && $mysqlSslCaOption !== null ? array_filter([
                 $mysqlSslCaOption => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],

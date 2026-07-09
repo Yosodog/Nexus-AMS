@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\GraphQL\Models\Nation as NationGraphQL;
+use App\Services\PWHelperService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -332,15 +333,22 @@ class Nation extends Model
      */
     public function getProjectsAttribute(): array
     {
-        $projects = [];
-        $bitString = str_pad($this->project_bits, count($this->defaultProjectsArray), '0', STR_PAD_LEFT);
+        $ownedProjects = collect(PWHelperService::getNationProjects((int) ($this->project_bits ?? 0)))
+            ->mapWithKeys(fn (string $project): array => [$this->normalizeProjectName($project) => true]);
 
-        foreach (array_reverse(str_split($bitString)) as $index => $bit) {
-            $projects[$this->defaultProjectsArray[$index]] = $bit === '1';
-        }
+        $projects = collect($this->defaultProjectsArray)
+            ->mapWithKeys(fn (string $project): array => [
+                $project => $ownedProjects->has($this->normalizeProjectName($project)),
+            ])
+            ->all();
 
         $this->projectsArray = $projects;
 
         return $projects;
+    }
+
+    private function normalizeProjectName(string $project): string
+    {
+        return (string) preg_replace('/[^a-z0-9]/', '', strtolower($project));
     }
 }
