@@ -70,7 +70,7 @@
                         <p class="mt-1 text-sm text-base-content/60">Unknown nation · Nation #{{ $request->nation_id }}</p>
                     @endif
                     <p class="mt-1 text-xs text-base-content/55">
-                        Requested <time datetime="{{ $request->created_at->toIso8601String() }}" title="{{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
+                        Requested <time datetime="{{ $request->created_at->toIso8601String() }}" class="tooltip tooltip-bottom cursor-help" data-tip="{{ $request->created_at->toDayDateTimeString() }}" tabindex="0" aria-label="Requested {{ $request->created_at->diffForHumans() }}, {{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
                         · Account #{{ $request->account_id }}
                     </p>
                 </div>

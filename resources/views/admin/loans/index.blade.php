@@ -75,7 +75,7 @@
                         {{ $loan->nation?->nation_name ?? 'Unknown nation name' }} · Nation #{{ $loan->nation_id }} · Account #{{ $loan->account_id }}
                     </p>
                     <p class="mt-1 text-xs text-base-content/55">
-                        Requested <time datetime="{{ $loan->created_at->toIso8601String() }}" title="{{ $loan->created_at->toDayDateTimeString() }}">{{ $loan->created_at->diffForHumans() }}</time>
+                        Requested <time datetime="{{ $loan->created_at->toIso8601String() }}" class="tooltip tooltip-bottom cursor-help" data-tip="{{ $loan->created_at->toDayDateTimeString() }}" tabindex="0" aria-label="Requested {{ $loan->created_at->diffForHumans() }}, {{ $loan->created_at->toDayDateTimeString() }}">{{ $loan->created_at->diffForHumans() }}</time>
                     </p>
                 </div>
 

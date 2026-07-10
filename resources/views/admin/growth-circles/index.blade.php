@@ -102,7 +102,12 @@
                                         @if ($eligibility['eligible'])
                                             <span class="badge badge-success badge-sm">Active</span>
                                         @else
-                                            <span class="badge badge-warning badge-sm" title="{{ $eligibility['reason'] }}">Paused</span>
+                                            <span
+                                                class="badge badge-warning badge-sm tooltip tooltip-left cursor-help"
+                                                data-tip="{{ $eligibility['reason'] }}"
+                                                tabindex="0"
+                                                aria-label="Paused: {{ $eligibility['reason'] }}"
+                                            >Paused</span>
                                             <span class="block text-xs text-base-content/60">{{ $eligibility['reason'] }}</span>
                                         @endif
                                     </td>

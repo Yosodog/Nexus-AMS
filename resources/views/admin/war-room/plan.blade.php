@@ -11,7 +11,11 @@
         <x-slot:subtitle>
             {{ $plan->name }}
             <span class="mx-2 text-base-content/40">•</span>
-            <span class="badge badge-primary badge-sm uppercase" title="Plan type drives the default war declaration when our members engage targets.">
+            <span
+                class="badge badge-primary badge-sm uppercase tooltip tooltip-bottom cursor-help"
+                data-tip="Plan type drives the default war declaration when our members engage targets."
+                tabindex="0"
+            >
                 {{ $plan->status }}
             </span>
         </x-slot:subtitle>
@@ -26,28 +30,28 @@
                 <div class="text-sm text-base-content/60">Targets</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $enemyCount }}</span>
-                    <span class="badge badge-ghost" role="img" aria-label="Enemy nations tracked with TPS" title="Enemy nations tracked with TPS"><x-icon name="o-bolt" class="size-4" aria-hidden="true" /></span>
+                    <span class="badge badge-ghost tooltip tooltip-left cursor-help" role="img" aria-label="Enemy nations tracked with Target Priority Scores" data-tip="Enemy nations tracked with Target Priority Scores" tabindex="0"><x-icon name="o-bolt" class="size-4" aria-hidden="true" /></span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="text-sm text-base-content/60">Assign coverage</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $coverage !== null ? $coverage.'%' : 'n/a' }}</span>
-                    <span class="badge badge-primary" title="Assignments / preferred slots">{{ $assignmentCount }} / {{ $preferredSlotsTotal }}</span>
+                    <span class="badge badge-primary tooltip tooltip-left cursor-help" data-tip="Assignments / preferred slots" tabindex="0" aria-label="{{ $assignmentCount }} assignments out of {{ $preferredSlotsTotal }} preferred slots">{{ $assignmentCount }} / {{ $preferredSlotsTotal }}</span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="text-sm text-base-content/60">Locked slots</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $lockedCount }}</span>
-                    <span class="badge badge-success" title="Locked or overridden assignments remain untouched">Safe</span>
+                    <span class="badge badge-success tooltip tooltip-left cursor-help" data-tip="Locked or overridden assignments remain untouched" tabindex="0">Safe</span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div class="text-sm text-base-content/60">Preferred wars / nation</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $preferredTargetsPerNation }}</span>
-                    <span class="badge badge-info" title="Activity window drives readiness weighting">{{ $plan->activity_window_hours }}h</span>
+                    <span class="badge badge-info tooltip tooltip-left cursor-help" data-tip="Activity window drives readiness weighting" tabindex="0" aria-label="{{ $plan->activity_window_hours }} hour activity window">{{ $plan->activity_window_hours }}h</span>
                 </div>
             </div>
         </div>
@@ -55,23 +59,23 @@
         <div class="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
             <x-card title="Plan Options">
                 <x-slot:menu>
-                    <span role="img" aria-label="Baseline settings that influence automation heuristics" title="Baseline settings that influence automation heuristics."><x-icon name="o-question-mark-circle" class="size-4" aria-hidden="true" /></span>
+                    <span class="tooltip tooltip-left cursor-help" role="img" aria-label="Baseline settings that influence automation heuristics" data-tip="Baseline settings that influence automation heuristics." tabindex="0"><x-icon name="o-question-mark-circle" class="size-4" aria-hidden="true" /></span>
                 </x-slot:menu>
 
                 <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-3 text-sm">
                     <div class="font-medium text-base-content/70">Plan Type</div>
                     <div class="text-right uppercase">{{ $warTypes[strtolower($plan->plan_type ?? '')] ?? ucfirst($plan->plan_type ?? 'Unknown') }}</div>
 
-                    <div class="font-medium text-base-content/70" title="Offensive wars we aim to give each friendly before applying slot caps.">Preferred targets / nation</div>
+                    <div class="font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Offensive wars we aim to give each friendly before applying slot caps." tabindex="0">Preferred targets / nation</div>
                     <div class="text-right">{{ $preferredTargetsPerNation }}</div>
 
-                    <div class="font-medium text-base-content/70" title="Upper bound when forming automatic strike squads.">Max Squad Size</div>
+                    <div class="font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Upper bound when forming automatic strike squads." tabindex="0">Max Squad Size</div>
                     <div class="text-right">{{ $plan->max_squad_size }}</div>
 
-                    <div class="font-medium text-base-content/70" title="Tolerance (±) that keeps squads aligned on readiness.">Cohesion tolerance</div>
+                    <div class="font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Tolerance (±) that keeps squads aligned on readiness." tabindex="0">Cohesion tolerance</div>
                     <div class="text-right">±{{ $plan->squad_cohesion_tolerance }}</div>
 
-                    <div class="font-medium text-base-content/70" title="Recent activity (hours) factored into Target Priority Score.">Activity window</div>
+                    <div class="font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Recent activity (hours) factored into Target Priority Score." tabindex="0">Activity window</div>
                     <div class="text-right">{{ $plan->activity_window_hours }}h</div>
 
                     <div class="font-medium text-base-content/70">Discord forum override</div>
@@ -100,11 +104,12 @@
                         <div class="grid gap-4 md:grid-cols-2">
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Plan type</span>
-                                <select name="plan_type" class="select w-full" title="Default declaration applied to new targets.">
+                                <select name="plan_type" class="select w-full" aria-describedby="plan-type-help">
                                     @foreach ($warTypes as $key => $label)
                                         <option value="{{ $key }}" @selected(old('plan_type', $plan->plan_type) === $key)>{{ $label }}</option>
                                     @endforeach
                                 </select>
+                                <span id="plan-type-help" class="text-xs text-base-content/60">Default declaration applied to new targets.</span>
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Preferred targets / nation</span>
@@ -142,7 +147,7 @@
 
             <x-card title="Alliances">
                 <x-slot:menu>
-                    <span role="img" aria-label="Alliance assignment guidance" title="Friendly alliances supply our assignment pool. Enemy alliances seed targets."><x-icon name="o-information-circle" class="size-4" aria-hidden="true" /></span>
+                    <span class="tooltip tooltip-left cursor-help" role="img" aria-label="Alliance assignment guidance" data-tip="Friendly alliances supply our assignment pool. Enemy alliances seed targets." tabindex="0"><x-icon name="o-information-circle" class="size-4" aria-hidden="true" /></span>
                 </x-slot:menu>
 
                 <div class="space-y-6">
@@ -152,10 +157,10 @@
                             @forelse ($plan->friendlyAlliances as $alliance)
                                 <li class="flex items-center justify-between rounded-box border border-base-300 px-3 py-2">
                                     <span>{{ $alliance->alliance->name ?? 'Alliance #'.$alliance->alliance_id }}</span>
-                                    <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" data-confirm="Remove this friendly alliance from the plan's assignment pool?" data-confirm-title="Remove friendly alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
+                                    <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" class="tooltip tooltip-left" data-tip="Remove friendly alliance" data-confirm="Remove this friendly alliance from the plan's assignment pool?" data-confirm-title="Remove friendly alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-ghost btn-sm text-error" type="submit" title="Remove" aria-label="Remove friendly alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
+                                        <button class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove friendly alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
                                             <x-icon name="o-x-circle" class="size-4" aria-hidden="true" />
                                         </button>
                                     </form>
@@ -172,10 +177,10 @@
                             @forelse ($plan->enemyAlliances as $alliance)
                                 <li class="flex items-center justify-between rounded-box border border-base-300 px-3 py-2">
                                     <span>{{ $alliance->alliance->name ?? 'Alliance #'.$alliance->alliance_id }}</span>
-                                    <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" data-confirm="Remove this enemy alliance from the plan's target pool?" data-confirm-title="Remove enemy alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
+                                    <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" class="tooltip tooltip-left" data-tip="Remove enemy alliance" data-confirm="Remove this enemy alliance from the plan's target pool?" data-confirm-title="Remove enemy alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-ghost btn-sm text-error" type="submit" title="Remove" aria-label="Remove enemy alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
+                                        <button class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove enemy alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
                                             <x-icon name="o-x-circle" class="size-4" aria-hidden="true" />
                                         </button>
                                     </form>
@@ -211,13 +216,13 @@
 
             <x-card title="Automation & Notifications">
                 <div class="space-y-2">
-                    <form method="post" action="{{ route('admin.war-plans.recompute', $plan) }}">
+                    <form method="post" action="{{ route('admin.war-plans.recompute', $plan) }}" class="tooltip tooltip-left w-full" data-tip="Refresh Target Priority Scores using the latest intelligence.">
                         @csrf
-                        <button class="btn btn-outline btn-sm w-full" type="submit" title="Refresh Target Priority Scores using the latest intelligence.">Recompute priorities</button>
+                        <button class="btn btn-outline btn-sm w-full" type="submit">Recompute priorities</button>
                     </form>
-                    <form method="post" action="{{ route('admin.war-plans.auto-assign', $plan) }}">
+                    <form method="post" action="{{ route('admin.war-plans.auto-assign', $plan) }}" class="tooltip tooltip-left w-full" data-tip="Regenerate assignments for unlocked slots.">
                         @csrf
-                        <button class="btn btn-outline btn-sm w-full" type="submit" title="Regenerate assignments for unlocked slots.">Auto-generate assignments</button>
+                        <button class="btn btn-outline btn-sm w-full" type="submit">Auto-generate assignments</button>
                     </form>
                     <form method="post" action="{{ route('admin.war-plans.activate', $plan) }}" data-confirm="Activate this war plan and make it the current operational plan?" data-confirm-title="Activate war plan?" data-confirm-label="Activate plan">
                         @csrf
@@ -307,12 +312,12 @@
                 <div class="nexus-panel__header flex-col lg:flex-row lg:items-center">
                     <div>
                         <h5 class="nexus-section-title">Targets</h5>
-                        <small class="text-base-content/50">TPS = Target Priority Score. Hover the badge to inspect factor breakdowns.</small>
+                        <small class="text-base-content/50">TPS = Target Priority Score. Hover or focus the badge to inspect factor breakdowns.</small>
                     </div>
                     <form class="ml-auto flex flex-wrap gap-2" method="post" action="{{ route('admin.war-plans.targets.store', $plan) }}">
                         @csrf
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium text-base-content/70" title="Nation ID pulled from PW profile">Nation ID</span>
+                            <span class="text-sm font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Nation ID pulled from the Politics & War profile" tabindex="0">Nation ID</span>
                             <input type="number" class="input w-full" name="nation_id" min="1" placeholder="e.g. 123456" required>
                         </div>
                         <select name="preferred_war_type" class="select select-sm">
@@ -406,21 +411,22 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge badge-error" title="Stored TPS meta" x-text="formatNumber(target.target_priority_score, 1)"></span>
+                                        <span class="badge badge-error tooltip tooltip-left cursor-help" data-tip="Stored Target Priority Score metadata" tabindex="0" x-text="formatNumber(target.target_priority_score, 1)"></span>
                                     </td>
                                     <td>
-                                        <span class="badge"
+                                        <span class="badge tooltip tooltip-left cursor-help"
                                               :class="badgeForSlots(target)"
-                                              title="Assigned friendlies / preferred slots"
+                                              data-tip="Assigned friendlies / preferred slots"
+                                              tabindex="0"
                                               x-text="`${target.assignments_count ?? 0} / ${slotsFor(target)}`">
                                         </span>
                                     </td>
                                     <td>
                                         <template x-if="target.nation">
                                             <div class="flex flex-wrap gap-1">
-                                                <span class="badge badge-warning" title="In vacation mode" x-show="(target.nation.vacation_mode_turns ?? 0) > 0">VM</span>
-                                                <span class="badge badge-ghost" title="On beige" x-show="(target.nation.beige_turns ?? 0) > 0" x-text="`${target.nation.beige_turns} beige`"></span>
-                                                <span class="badge badge-info" title="Active wars"
+                                                <span class="badge badge-warning tooltip tooltip-left cursor-help" data-tip="In vacation mode" tabindex="0" x-show="(target.nation.vacation_mode_turns ?? 0) > 0">VM</span>
+                                                <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="On beige" tabindex="0" x-show="(target.nation.beige_turns ?? 0) > 0" x-text="`${target.nation.beige_turns} beige`"></span>
+                                                <span class="badge badge-info tooltip tooltip-left cursor-help" data-tip="Offensive / defensive active wars" tabindex="0"
                                                       x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) > 0"
                                                       x-text="`Wars ${target.nation.offensive_wars_count ?? 0} / ${target.nation.defensive_wars_count ?? 0}`"></span>
                                                 <span class="text-sm text-base-content/50" x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) === 0 && (target.nation.beige_turns ?? 0) === 0 && (target.nation.vacation_mode_turns ?? 0) === 0">No flags</span>
@@ -432,11 +438,11 @@
                                     </td>
                                     <td x-text="lastActive(target)"></td>
                                     <td style="width: 180px;">
-                                        <form method="post" :action="routes.updateTargetWarType(target.id)">
+                                        <form method="post" :action="routes.updateTargetWarType(target.id)" class="tooltip tooltip-left" data-tip="Preferred declaration for this enemy">
                                             @csrf
                                             <select class="select select-sm"
                                                     name="preferred_war_type"
-                                                    title="Preferred declaration for this enemy"
+                                                    aria-label="Preferred declaration for this enemy"
                                                     @change="$event.target.form.submit()">
                                                 <template x-for="(label, value) in warTypes" :key="value">
                                                     <option :value="value" :selected="target.preferred_war_type === value" x-text="label"></option>
@@ -562,7 +568,7 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge badge-ghost" title="Offensive / defensive wars">
+                                                    <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Offensive / defensive wars" tabindex="0">
                                                         <span x-text="candidate.friendly.offensive_wars_count ?? 0"></span>
                                                         /
                                                         <span x-text="candidate.friendly.defensive_wars_count ?? 0"></span>
@@ -735,14 +741,14 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge badge-ghost" title="Offensive / defensive wars currently active">
+                                        <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Offensive / defensive wars currently active" tabindex="0">
                                             <span x-text="assignment.friendly_nation?.offensive_wars_count ?? 0"></span>
                                             /
                                             <span x-text="assignment.friendly_nation?.defensive_wars_count ?? 0"></span>
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge badge-ghost" title="Assigned targets vs capacity"
+                                        <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Assigned targets vs capacity" tabindex="0"
                                               x-text="assignmentCapacity(assignment)">
                                         </span>
                                     </td>
@@ -758,8 +764,8 @@
                                             <button class="btn btn-outline btn-sm" type="button" @click="toggleAssignmentMeta(assignment.id)">
                                                 Details
                                             </button>
-                                            <span class="badge badge-ghost" title="Manual override" x-show="assignment.is_overridden">Manual</span>
-                                            <span class="badge badge-success" title="Locked assignment" x-show="assignment.is_locked">Locked</span>
+                                            <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Manual override" tabindex="0" x-show="assignment.is_overridden">Manual</span>
+                                            <span class="badge badge-success tooltip tooltip-left cursor-help" data-tip="Locked assignment" tabindex="0" x-show="assignment.is_locked">Locked</span>
                                         </div>
                                         <div class="mt-2" x-show="isAssignmentMetaOpen(assignment.id)" x-transition>
                                             <pre class="mb-0 text-sm text-base-content/50" x-text="prettyMeta(assignment.meta)"></pre>
@@ -768,7 +774,7 @@
                                     <td>
                                         <div class="flex flex-wrap gap-1">
                                             <span class="badge badge-ghost uppercase" x-text="assignment.status"></span>
-                                            <span class="badge badge-ghost" title="Friendly on beige" x-show="(assignment.friendly_nation?.beige_turns ?? 0) > 0">Beige</span>
+                                            <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Friendly nation is on beige" tabindex="0" x-show="(assignment.friendly_nation?.beige_turns ?? 0) > 0">Beige</span>
                                         </div>
                                     </td>
                                     <td class="text-right">
@@ -884,12 +890,19 @@
                                 <span>Cities</span>
                                 <span class="text-sm text-base-content/50">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
                             </h6>
-                            <div class="h-2.5 overflow-hidden rounded-full bg-base-200" aria-label="Cities share">
+                            <div
+                                class="tooltip tooltip-bottom cursor-help w-full"
+                                data-tip="Friendly avg {{ number_format($friendlyCityAvg ?? 0, 1) }} | Enemy avg {{ number_format($enemyCityAvg ?? 0, 1) }}"
+                                tabindex="0"
+                                aria-label="Friendly average {{ number_format($friendlyCityAvg ?? 0, 1) }} cities; enemy average {{ number_format($enemyCityAvg ?? 0, 1) }} cities"
+                            >
                                 @php
                                     $cityTotal = max(1, $friendlyCityTotal + $enemyCityTotal);
                                     $friendlyCityPct = round(($friendlyCityTotal / $cityTotal) * 100, 1);
                                 @endphp
-                                <div class="h-full bg-primary" style="width: {{ $friendlyCityPct }}%" title="Friendly avg {{ number_format($friendlyCityAvg ?? 0, 1) }} | Enemy avg {{ number_format($enemyCityAvg ?? 0, 1) }}"></div>
+                                <div class="h-2.5 overflow-hidden rounded-full bg-base-200" aria-hidden="true">
+                                    <div class="h-full bg-primary" style="width: {{ $friendlyCityPct }}%"></div>
+                                </div>
                             </div>
                         </div>
                         <div>
@@ -915,9 +928,16 @@
                                         <span>{{ $label }}</span>
                                         <span class="text-base-content/50">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
                                     </div>
-                                    <div class="flex h-2 overflow-hidden rounded-full bg-base-200">
-                                        <div class="h-full bg-primary" style="width: {{ $friendlyPct }}%" title="Friendly {{ number_format($friendlyVal) }} units ({{ $friendlyPct }}% share)"></div>
-                                        <div class="h-full bg-error" style="width: {{ $enemyPct }}%" title="Enemy {{ number_format($enemyVal) }} units ({{ $enemyPct }}% share)"></div>
+                                    <div
+                                        class="tooltip tooltip-bottom cursor-help w-full"
+                                        data-tip="Friendly {{ number_format($friendlyVal) }} ({{ $friendlyPct }}%) | Enemy {{ number_format($enemyVal) }} ({{ $enemyPct }}%)"
+                                        tabindex="0"
+                                        aria-label="{{ $label }}: friendly {{ number_format($friendlyVal) }} units, {{ $friendlyPct }} percent; enemy {{ number_format($enemyVal) }} units, {{ $enemyPct }} percent"
+                                    >
+                                        <div class="flex h-2 overflow-hidden rounded-full bg-base-200" aria-hidden="true">
+                                            <div class="h-full bg-primary" style="width: {{ $friendlyPct }}%"></div>
+                                            <div class="h-full bg-error" style="width: {{ $enemyPct }}%"></div>
+                                        </div>
                                     </div>
                                 </div>
                             @endforeach
@@ -929,8 +949,15 @@
                         </div>
                         <div>
                             <h6 class="font-semibold">Assignments Coverage</h6>
-                            <div class="h-2.5 overflow-hidden rounded-full bg-base-200">
-                                <div class="h-full bg-success" style="width: {{ $coverage ?? 0 }}%" title="Assignments {{ $assignmentCount }} / Desired {{ $preferredSlotsTotal ?? 0 }}"></div>
+                            <div
+                                class="tooltip tooltip-bottom cursor-help w-full"
+                                data-tip="Assignments {{ $assignmentCount }} / Desired {{ $preferredSlotsTotal ?? 0 }}"
+                                tabindex="0"
+                                aria-label="{{ $assignmentCount }} assignments out of {{ $preferredSlotsTotal ?? 0 }} desired"
+                            >
+                                <div class="h-2.5 overflow-hidden rounded-full bg-base-200" aria-hidden="true">
+                                    <div class="h-full bg-success" style="width: {{ $coverage ?? 0 }}%"></div>
+                                </div>
                             </div>
                             <small class="text-base-content/50">
                                 Remaining gap: {{ $preferredSlotsTotal > 0 ? max(0, $preferredSlotsTotal - $assignmentCount).' slots' : 'n/a' }}.
@@ -1013,7 +1040,7 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <span class="badge badge-ghost" title="Offensive / defensive">
+                                        <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Offensive / defensive wars" tabindex="0">
                                             <span x-text="friendly.offensive_wars_count ?? 0"></span>
                                             /
                                             <span x-text="friendly.defensive_wars_count ?? 0"></span>

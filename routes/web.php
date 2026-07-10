@@ -56,7 +56,6 @@ use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
 use App\Http\Controllers\RebuildingController;
-use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
@@ -208,7 +207,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/intel', [IntelReportController::class, 'index'])->name('defense.intel');
         Route::post('/intel', [IntelReportController::class, 'store'])->name('defense.intel.store');
     });
-    Route::get('/spy-ops', [SpyAssignmentController::class, 'index'])->name('spy.assignments');
     // Counters
 
     // Grants

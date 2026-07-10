@@ -57,6 +57,8 @@
 @push('scripts')
     <x-chart-js />
     <script>
+        const seriesColors = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
+
         @foreach ($charts as $resource => $data)
         new Chart(document.getElementById('chart-{{ $resource }}').getContext('2d'), {
             type: 'line',
@@ -64,10 +66,13 @@
                 labels: {!! json_encode($data['labels']) !!},
                 datasets: [{
                     label: '{{ ucfirst($resource) }}',
+                    nexusColor: seriesColors[{{ $loop->index }} % seriesColors.length],
                     data: {!! json_encode($data['data']) !!},
-                    fill: true,
+                    fill: false,
                     tension: 0.3,
-                    pointRadius: 2
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
                 }]
             },
             options: {

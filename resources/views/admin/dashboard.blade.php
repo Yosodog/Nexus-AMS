@@ -47,7 +47,13 @@
             <p class="nexus-page-summary">
                 Current alliance workload and readiness signals, limited to the areas you are authorized to review.
                 Snapshot updated
-                <time datetime="{{ $lastRefreshedAt->toIso8601String() }}" title="{{ $lastRefreshedAt->format('M j, Y g:i A T') }}">
+                <time
+                    datetime="{{ $lastRefreshedAt->toIso8601String() }}"
+                    class="tooltip tooltip-bottom cursor-help"
+                    data-tip="{{ $lastRefreshedAt->format('M j, Y g:i A T') }}"
+                    tabindex="0"
+                    aria-label="Updated {{ $lastRefreshedAt->diffForHumans() }}, {{ $lastRefreshedAt->format('M j, Y g:i A T') }}"
+                >
                     {{ $lastRefreshedAt->diffForHumans() }}
                 </time>.
             </p>

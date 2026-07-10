@@ -5,7 +5,7 @@
         </label>
 
         <a href="{{ route('admin.dashboard') }}" class="admin-topbar__brand">
-            <span class="admin-topbar__mark" aria-hidden="true">N</span>
+            <span class="admin-topbar__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
             <span class="min-w-0">
                 <span class="admin-topbar__name">{{ config('app.name') }}</span>
                 <span class="admin-topbar__descriptor">Administration</span>

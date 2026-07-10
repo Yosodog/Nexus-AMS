@@ -21,7 +21,7 @@
                 @endif
 
                 <a href="{{ $showMemberNavigation ? route('user.dashboard') : route('home') }}" class="member-brand">
-                    <span class="member-brand__mark" aria-hidden="true">N</span>
+                    <span class="member-brand__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
                     <span class="min-w-0">
                         <span class="member-brand__name">{{ config('app.name') }}</span>
                         <span class="member-brand__descriptor">Member operations</span>

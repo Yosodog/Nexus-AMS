@@ -283,7 +283,13 @@
             type: 'bar',
             data: {
                 labels: {!! json_encode(array_keys($cityTiers)) !!},
-                datasets: [{ label: 'Members', data: {!! json_encode(array_values($cityTiers)) !!}, borderWidth: 1 }]
+                datasets: [{
+                    label: 'Members',
+                    nexusColor: 'primary',
+                    data: {!! json_encode(array_values($cityTiers)) !!},
+                    borderWidth: 0,
+                    borderRadius: 6,
+                }]
             },
             options: { responsive: true, plugins: { legend: { display: false } } }
         });
@@ -292,7 +298,16 @@
             type: 'line',
             data: {
                 labels: {!! json_encode(array_keys($cityGrowthHistory)) !!},
-                datasets: [{ label: 'Total Cities', data: {!! json_encode(array_values($cityGrowthHistory)) !!}, fill: false, tension: 0.3 }]
+                datasets: [{
+                    label: 'Total Cities',
+                    nexusColor: 'success',
+                    data: {!! json_encode(array_values($cityGrowthHistory)) !!},
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                }]
             },
             options: { responsive: true }
         });

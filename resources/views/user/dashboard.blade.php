@@ -53,7 +53,13 @@
                     @if($latestSignIn && $nation->updated_at)
                         <p class="text-xs text-base-content/60">
                             Member record updated
-                            <time datetime="{{ $nation->updated_at->toIso8601String() }}" title="{{ $nation->updated_at->format('M j, Y g:i A T') }}">
+                            <time
+                                datetime="{{ $nation->updated_at->toIso8601String() }}"
+                                class="tooltip tooltip-bottom cursor-help"
+                                data-tip="{{ $nation->updated_at->format('M j, Y g:i A T') }}"
+                                tabindex="0"
+                                aria-label="Updated {{ $nation->updated_at->diffForHumans() }}, {{ $nation->updated_at->format('M j, Y g:i A T') }}"
+                            >
                                 {{ $nation->updated_at->diffForHumans() }}
                             </time>
                         </p>
@@ -223,7 +229,13 @@
                     <dt class="nexus-stat-label">Last nation sync</dt>
                     <dd class="mt-2 text-lg font-bold leading-tight">
                         @if($latestSignIn?->created_at)
-                            <time datetime="{{ $latestSignIn->created_at->toIso8601String() }}" title="{{ $latestSignIn->created_at->format('M j, Y g:i A T') }}">
+                            <time
+                                datetime="{{ $latestSignIn->created_at->toIso8601String() }}"
+                                class="tooltip tooltip-bottom cursor-help"
+                                data-tip="{{ $latestSignIn->created_at->format('M j, Y g:i A T') }}"
+                                tabindex="0"
+                                aria-label="Signed in {{ $latestSignIn->created_at->diffForHumans() }}, {{ $latestSignIn->created_at->format('M j, Y g:i A T') }}"
+                            >
                                 {{ $latestSignIn->created_at->diffForHumans() }}
                             </time>
                         @else
@@ -351,7 +363,13 @@
                                 @endphp
                                 <tr>
                                     <td class="whitespace-nowrap">
-                                        <time datetime="{{ $tx->created_at->toIso8601String() }}" title="{{ $tx->created_at->format('M j, Y g:i A T') }}">
+                                        <time
+                                            datetime="{{ $tx->created_at->toIso8601String() }}"
+                                            class="tooltip tooltip-right cursor-help"
+                                            data-tip="{{ $tx->created_at->format('M j, Y g:i A T') }}"
+                                            tabindex="0"
+                                            aria-label="Transaction {{ $tx->created_at->diffForHumans() }}, {{ $tx->created_at->format('M j, Y g:i A T') }}"
+                                        >
                                             {{ $tx->created_at->format('M j, Y H:i') }}
                                         </time>
                                     </td>
@@ -364,7 +382,11 @@
                                     <td class="whitespace-nowrap text-right font-bold tabular-nums {{ $isSent ? 'text-base-content/75' : 'text-success' }}">
                                         {{ $isSent ? '-' : '+' }}${{ number_format($tx->money, 2) }}
                                     </td>
-                                    <td class="max-w-sm truncate" title="{{ $tx->note ?? 'No note provided' }}">{{ $tx->note ?? 'No note provided' }}</td>
+                                    <td class="max-w-sm">
+                                        <span class="tooltip tooltip-left cursor-help max-w-sm" data-tip="{{ $tx->note ?? 'No note provided' }}" tabindex="0">
+                                            <span class="block max-w-sm truncate">{{ $tx->note ?? 'No note provided' }}</span>
+                                        </span>
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

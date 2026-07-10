@@ -16,7 +16,7 @@
     <header class="border-b border-base-300 bg-base-100">
         <div class="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <a href="{{ url('/') }}" class="public-brand" aria-label="{{ config('app.name') }} home">
-                <span class="public-brand__mark" aria-hidden="true">N</span>
+                <span class="public-brand__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
                 <span class="min-w-0">
                     <span class="public-brand__name">{{ config('app.name') }}</span>
                     <span class="public-brand__descriptor">Alliance operations</span>

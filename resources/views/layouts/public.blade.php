@@ -20,7 +20,7 @@
     <header class="public-nav">
         <div class="public-nav__inner">
             <a href="{{ route('home') }}" class="public-brand" aria-label="{{ config('app.name') }} home">
-                <span class="public-brand__mark" aria-hidden="true">N</span>
+                <span class="public-brand__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
                 <span class="min-w-0">
                     <span class="public-brand__name">{{ config('app.name') }}</span>
                     <span class="public-brand__descriptor">Alliance operations</span>

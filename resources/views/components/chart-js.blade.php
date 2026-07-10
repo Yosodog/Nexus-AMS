@@ -18,11 +18,11 @@
         };
 
         const colors = () => ({
-            text: cssColor('--color-base-content', '#24332f'),
-            muted: `color-mix(in oklch, ${cssColor('--color-base-content', '#24332f')} 62%, transparent)`,
-            grid: `color-mix(in oklch, ${cssColor('--color-base-content', '#24332f')} 13%, transparent)`,
+            text: cssColor('--color-base-content', '#191c28'),
+            muted: `color-mix(in oklch, ${cssColor('--color-base-content', '#191c28')} 62%, transparent)`,
+            grid: `color-mix(in oklch, ${cssColor('--color-base-content', '#191c28')} 13%, transparent)`,
             surface: cssColor('--color-base-100', '#ffffff'),
-            primary: cssColor('--color-primary', '#28755f'),
+            primary: cssColor('--color-primary', '#475194'),
             secondary: cssColor('--color-secondary', '#a87621'),
             success: cssColor('--color-success', '#2f7d45'),
             warning: cssColor('--color-warning', '#c28c24'),
@@ -34,7 +34,7 @@
 
         const applyTheme = (chart) => {
             const palette = colors();
-            const options = chart.options ?? {};
+            const options = chart.config.options ?? {};
 
             options.color = palette.text;
 
@@ -121,7 +121,7 @@
         Chart.defaults.borderColor = colors().grid;
         Chart.register({
             id: 'nexusTheme',
-            beforeUpdate: applyTheme,
+            beforeInit: applyTheme,
         });
 
         window.addEventListener('nexus:theme-changed', () => {

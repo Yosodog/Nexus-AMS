@@ -2,7 +2,127 @@ import './bootstrap';
 
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
+const PAGE_LOADING_DELAY_MS = 140;
 const themeApi = window.NexusTheme;
+let pageLoadingTimeoutId = null;
+
+const hasDirective = (element, directive) => element
+    .getAttributeNames()
+    .some((attribute) => attribute === directive || attribute.startsWith(`${directive}.`));
+
+const hidePageLoadingIndicator = () => {
+    if (pageLoadingTimeoutId !== null) {
+        window.clearTimeout(pageLoadingTimeoutId);
+        pageLoadingTimeoutId = null;
+    }
+
+    document.documentElement.removeAttribute('data-page-loading');
+};
+
+const queuePageLoadingIndicator = () => {
+    if (pageLoadingTimeoutId !== null) {
+        window.clearTimeout(pageLoadingTimeoutId);
+    }
+
+    pageLoadingTimeoutId = window.setTimeout(() => {
+        document.documentElement.setAttribute('data-page-loading', 'true');
+        pageLoadingTimeoutId = null;
+    }, PAGE_LOADING_DELAY_MS);
+};
+
+const isTrackableNavigationLink = (event, link) => {
+    if (
+        event.button !== 0
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey
+        || event.altKey
+        || link.hasAttribute('download')
+        || link.hasAttribute('data-no-page-loading')
+        || link.getAttribute('aria-disabled') === 'true'
+        || hasDirective(link, 'wire:navigate')
+    ) {
+        return false;
+    }
+
+    const target = link.getAttribute('target');
+    if (target && target.toLowerCase() !== '_self') {
+        return false;
+    }
+
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#')) {
+        return false;
+    }
+
+    const destination = new URL(link.href, window.location.href);
+    if (!['http:', 'https:'].includes(destination.protocol) || destination.origin !== window.location.origin) {
+        return false;
+    }
+
+    const isSameDocumentFragment = destination.pathname === window.location.pathname
+        && destination.search === window.location.search
+        && destination.hash !== '';
+
+    return !isSameDocumentFragment;
+};
+
+const isTrackableNavigationForm = (form, submitter = null) => {
+    const method = submitter?.getAttribute('formmethod') || form.method;
+
+    if (
+        form.hasAttribute('data-no-page-loading')
+        || submitter?.hasAttribute('data-no-page-loading')
+        || method.toLowerCase() === 'dialog'
+        || hasDirective(form, 'wire:submit')
+    ) {
+        return false;
+    }
+
+    const target = submitter?.getAttribute('formtarget') || form.getAttribute('target');
+    if (target && target.toLowerCase() !== '_self') {
+        return false;
+    }
+
+    const action = submitter?.getAttribute('formaction') ? submitter.formAction : form.action;
+    const destination = new URL(action || window.location.href, window.location.href);
+
+    return ['http:', 'https:'].includes(destination.protocol)
+        && destination.origin === window.location.origin;
+};
+
+const queueIndicatorAfterEvent = (event) => {
+    queueMicrotask(() => {
+        if (!event.defaultPrevented) {
+            queuePageLoadingIndicator();
+        }
+    });
+};
+
+const enablePageLoadingIndicator = () => {
+    document.addEventListener('click', (event) => {
+        if (!(event.target instanceof Element)) {
+            return;
+        }
+
+        const link = event.target.closest('a[href]');
+        if (link instanceof HTMLAnchorElement && isTrackableNavigationLink(event, link)) {
+            queueIndicatorAfterEvent(event);
+        }
+    });
+
+    document.addEventListener('submit', (event) => {
+        if (
+            event.target instanceof HTMLFormElement
+            && isTrackableNavigationForm(event.target, event.submitter)
+        ) {
+            queueIndicatorAfterEvent(event);
+        }
+    });
+
+    window.addEventListener('pageshow', hidePageLoadingIndicator);
+    document.addEventListener('livewire:navigated', hidePageLoadingIndicator);
+};
 
 const normalizeValue = (value) => value.replace(/\s+/g, ' ').trim();
 
@@ -164,6 +284,29 @@ const enableThemePicker = (root = document) => {
             });
 
             button.closest('details')?.removeAttribute('open');
+        });
+    });
+};
+
+const enableExclusiveMemberDropdowns = (root = document) => {
+    root.querySelectorAll('[data-member-navigation] .member-header details').forEach((dropdown) => {
+        if (dropdown.dataset.exclusiveDropdownBound === 'true') {
+            return;
+        }
+
+        dropdown.dataset.exclusiveDropdownBound = 'true';
+        dropdown.addEventListener('toggle', () => {
+            if (!dropdown.open) {
+                return;
+            }
+
+            dropdown.closest('[data-member-navigation]')
+                ?.querySelectorAll('.member-header details[open]')
+                .forEach((openDropdown) => {
+                    if (openDropdown !== dropdown) {
+                        openDropdown.removeAttribute('open');
+                    }
+                });
         });
     });
 };
@@ -513,9 +656,12 @@ themeApi.systemDarkQuery.addEventListener('change', () => {
     }
 });
 
+enablePageLoadingIndicator();
+
 const initAppUi = (root = document) => {
     enableSortableTables(root);
     enableThemePicker(root);
+    enableExclusiveMemberDropdowns(root);
     enableDepositRequests();
     enableConfirmations();
 };

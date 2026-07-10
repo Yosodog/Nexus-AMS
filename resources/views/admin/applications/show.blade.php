@@ -142,7 +142,13 @@
                             </div>
                             <p class="truncate text-xs text-base-content/55">Discord {{ $message->discord_user_id }}</p>
                         </div>
-                        <time class="text-xs text-base-content/60" datetime="{{ $message->sent_at?->toIso8601String() }}" title="{{ $message->sent_at?->toDayDateTimeString() }}">
+                        <time
+                            class="tooltip tooltip-bottom cursor-help text-xs text-base-content/60"
+                            datetime="{{ $message->sent_at?->toIso8601String() }}"
+                            data-tip="{{ $message->sent_at?->toDayDateTimeString() }}"
+                            tabindex="0"
+                            aria-label="Sent {{ $message->sent_at?->diffForHumans() }}, {{ $message->sent_at?->toDayDateTimeString() }}"
+                        >
                             {{ $message->sent_at?->diffForHumans() ?? 'Unknown time' }}
                         </time>
                     </header>

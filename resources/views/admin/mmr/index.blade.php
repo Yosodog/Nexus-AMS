@@ -422,8 +422,15 @@
                                     $required = $tier->$resource * $nation->num_cities;
                                     $meets = $have >= $required;
                                 @endphp
-                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($required === 0 ? 'text-base-content/50' : '') }}" title="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)">
-                                    {{ number_format($have) }}
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($required === 0 ? 'text-base-content/50' : '') }}">
+                                    <span
+                                        class="tooltip tooltip-left cursor-help"
+                                        data-tip="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)"
+                                        tabindex="0"
+                                        aria-label="{{ number_format($have) }} available; {{ number_format($required) }} required, {{ number_format($tier->$resource) }} per city"
+                                    >
+                                        {{ number_format($have) }}
+                                    </span>
                                 </td>
                             @endforeach
                             <td>
@@ -491,8 +498,15 @@
                                     $min = $required[$unit];
                                     $meets = $have >= $min;
                                 @endphp
-                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($min === 0 ? 'text-base-content/50' : '') }}" title="Required: {{ number_format($min) }}">
-                                    {{ number_format($have) }}
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($min === 0 ? 'text-base-content/50' : '') }}">
+                                    <span
+                                        class="tooltip tooltip-left cursor-help"
+                                        data-tip="Required: {{ number_format($min) }}"
+                                        tabindex="0"
+                                        aria-label="{{ number_format($have) }} available; {{ number_format($min) }} required"
+                                    >
+                                        {{ number_format($have) }}
+                                    </span>
                                 </td>
                             @endforeach
                         </tr>

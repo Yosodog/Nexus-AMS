@@ -47,7 +47,13 @@
                     <p class="truncate text-base-content/60">Discord {{ $application->discord_user_id }}</p>
                     <p class="mt-1 text-xs text-base-content/55">
                         Submitted
-                        <time datetime="{{ $application->created_at?->toIso8601String() }}" title="{{ $application->created_at?->toDayDateTimeString() }}">
+                        <time
+                            datetime="{{ $application->created_at?->toIso8601String() }}"
+                            class="tooltip tooltip-bottom cursor-help"
+                            data-tip="{{ $application->created_at?->toDayDateTimeString() }}"
+                            tabindex="0"
+                            aria-label="Submitted {{ $application->created_at?->diffForHumans() }}, {{ $application->created_at?->toDayDateTimeString() }}"
+                        >
                             {{ $application->created_at?->diffForHumans() ?? 'at an unknown time' }}
                         </time>
                     </p>
@@ -116,7 +122,13 @@
                                 </td>
                                 <td><span class="nexus-status {{ $statusClass }}">{{ ucfirst(strtolower($status)) }}</span></td>
                                 <td>
-                                    <time datetime="{{ $application->updated_at?->toIso8601String() }}" title="{{ $application->updated_at?->toDayDateTimeString() }}">
+                                    <time
+                                        datetime="{{ $application->updated_at?->toIso8601String() }}"
+                                        class="tooltip tooltip-left cursor-help"
+                                        data-tip="{{ $application->updated_at?->toDayDateTimeString() }}"
+                                        tabindex="0"
+                                        aria-label="Updated {{ $application->updated_at?->diffForHumans() }}, {{ $application->updated_at?->toDayDateTimeString() }}"
+                                    >
                                         {{ $application->updated_at?->diffForHumans() ?? '—' }}
                                     </time>
                                 </td>

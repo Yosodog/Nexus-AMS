@@ -400,7 +400,7 @@
             const resourceUsage = @json($resourceUsage);
             const warTypeBreakdown = @json($warTypeBreakdown);
             const chartPalette = window.NexusCharts?.colors?.() ?? {
-                primary: '#28755f',
+                primary: '#475194',
                 secondary: '#a87621',
                 success: '#2f7d45',
                 warning: '#c28c24',

@@ -112,10 +112,9 @@ class AppHeader extends Component
             [
                 'label' => 'Intelligence',
                 'icon' => 'o-magnifying-glass',
-                'active' => request()->routeIs('defense.intel*', 'defense.raid-finder*', 'spy.assignments*'),
+                'active' => request()->routeIs('defense.intel*', 'defense.raid-finder*'),
                 'items' => [
                     ['label' => 'Intel library', 'route' => route('defense.intel'), 'active' => request()->routeIs('defense.intel*')],
-                    ['label' => 'Spy assignments', 'route' => route('spy.assignments'), 'active' => request()->routeIs('spy.assignments*')],
                     ['label' => 'Raid finder', 'route' => route('defense.raid-finder'), 'active' => request()->routeIs('defense.raid-finder*')],
                 ],
             ],
@@ -124,7 +123,8 @@ class AppHeader extends Component
                 'icon' => 'o-chart-bar',
                 'active' => request()->routeIs('leaderboards.*', 'defense.raid-leaderboard*'),
                 'items' => [
-                    ['label' => 'Leaderboards', 'route' => route('leaderboards.index'), 'active' => request()->routeIs('leaderboards.*')],
+                    ['label' => 'Leaderboards', 'route' => route('leaderboards.index'), 'active' => request()->routeIs('leaderboards.*') && in_array(request()->route('board'), [null, 'dashboard'], true)],
+                    ['label' => 'Profitability leaderboard', 'route' => route('leaderboards.index', ['board' => 'profitability']), 'active' => request()->routeIs('leaderboards.*') && request()->route('board') === 'profitability'],
                     ['label' => 'Raid leaderboard', 'route' => route('defense.raid-leaderboard'), 'active' => request()->routeIs('defense.raid-leaderboard*')],
                 ],
             ],

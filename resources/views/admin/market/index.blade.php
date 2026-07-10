@@ -143,6 +143,8 @@
                 }).format(value);
             };
 
+            const seriesColors = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
+
             document.querySelectorAll('[data-adjustment-input]').forEach((input) => {
                 const basePrice = parseFloat(input.dataset.basePrice || '0');
                 const targetId = input.dataset.finalTarget;
@@ -169,12 +171,22 @@
                     labels: {!! json_encode($overview['money_paid_chart']['labels']) !!},
                     datasets: [{
                         label: 'Money Paid',
+                        nexusColor: 'primary',
                         data: {!! json_encode($overview['money_paid_chart']['data']) !!},
                         borderWidth: 2,
+                        pointRadius: 2,
+                        pointHoverRadius: 4,
                         tension: 0.3,
                         fill: false
                     }]
                 }
+            });
+
+            const volumeDatasets = {!! json_encode($overview['volume_chart']['datasets']) !!};
+            volumeDatasets.forEach((dataset, index) => {
+                dataset.nexusColor = seriesColors[index % seriesColors.length];
+                dataset.borderWidth = 0;
+                dataset.borderRadius = 4;
             });
 
             const volumeCtx = document.getElementById('marketVolumeChart').getContext('2d');
@@ -182,7 +194,7 @@
                 type: 'bar',
                 data: {
                     labels: {!! json_encode($overview['volume_chart']['labels']) !!},
-                    datasets: {!! json_encode($overview['volume_chart']['datasets']) !!}
+                    datasets: volumeDatasets
                 },
                 options: {
                     responsive: true,

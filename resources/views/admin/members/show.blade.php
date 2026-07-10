@@ -109,17 +109,18 @@
     <script>
         const taxLabels = {!! json_encode($taxHistory->pluck('date')) !!};
         const signInLabels = {!! json_encode($resourceSignInHistory->pluck('date')) !!};
+        const seriesColors = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
         const chartDefaults = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } };
 
         new Chart(document.getElementById('moneyTaxChart'), {
             type: 'line',
-            data: { labels: taxLabels, datasets: [{ label: 'Money', data: {!! json_encode($taxHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
+            data: { labels: taxLabels, datasets: [{ label: 'Money', nexusColor: 'primary', data: {!! json_encode($taxHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
             options: chartDefaults
         });
 
         new Chart(document.getElementById('foodTaxChart'), {
             type: 'line',
-            data: { labels: taxLabels, datasets: [{ label: 'Food', data: {!! json_encode($taxHistory->map(fn($row) => $row['food'])) !!}, fill: false, tension: 0.3 }] },
+            data: { labels: taxLabels, datasets: [{ label: 'Food', nexusColor: 'success', data: {!! json_encode($taxHistory->map(fn($row) => $row['food'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
             options: chartDefaults
         });
 
@@ -129,7 +130,7 @@
                 labels: taxLabels,
                 datasets: [
                     @foreach(['steel', 'gasoline', 'aluminum', 'munitions', 'uranium'] as $res)
-                    { label: '{{ ucfirst($res) }}', data: {!! json_encode($taxHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3 },
+                    { label: '{{ ucfirst($res) }}', nexusColor: seriesColors[{{ $loop->index }} % seriesColors.length], data: {!! json_encode($taxHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3, borderWidth: 2 },
                     @endforeach
                 ]
             },
@@ -140,14 +141,14 @@
             type: 'line',
             data: {
                 labels: {!! json_encode($scoreHistory->pluck('created_at')->map(fn($d) => $d->format('Y-m-d'))) !!},
-                datasets: [{ label: 'Score', data: {!! json_encode($scoreHistory->pluck('score')) !!}, fill: false }]
+                datasets: [{ label: 'Score', nexusColor: 'info', data: {!! json_encode($scoreHistory->pluck('score')) !!}, fill: false, tension: 0.3, borderWidth: 2 }]
             },
             options: { responsive: true }
         });
 
         new Chart(document.getElementById('moneySignInChart'), {
             type: 'line',
-            data: { labels: signInLabels, datasets: [{ label: 'Money', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
+            data: { labels: signInLabels, datasets: [{ label: 'Money', nexusColor: 'primary', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
             options: chartDefaults
         });
 
@@ -157,7 +158,7 @@
                 labels: signInLabels,
                 datasets: [
                     @foreach(['steel', 'aluminum', 'gasoline', 'munitions'] as $res)
-                    { label: '{{ ucfirst($res) }}', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3 },
+                    { label: '{{ ucfirst($res) }}', nexusColor: seriesColors[{{ $loop->index }} % seriesColors.length], data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row[$res])) !!}, fill: false, tension: 0.3, borderWidth: 2 },
                     @endforeach
                 ]
             },

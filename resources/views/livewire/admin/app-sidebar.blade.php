@@ -26,15 +26,18 @@
                         <li>
                             <a
                                 href="{{ $item['route'] }}"
-                                @class(['admin-nav-link', 'is-active' => $item['active']])
+                                @class(['admin-nav-link', 'tooltip', 'tooltip-right', 'is-active' => $item['active']])
                                 @if($item['active']) aria-current="page" @endif
-                                title="{{ $item['label'] }}"
+                                aria-label="{{ $item['label'] }}"
+                                :data-tip="collapsed ? @js($item['label']) : ''"
                             >
                                 <x-icon :name="$item['icon']" class="admin-nav-link__icon size-5" />
                                 <span class="admin-nav-link__label mary-hideable">{{ $item['label'] }}</span>
                                 @if($item['badge'])
-                                    <span class="admin-nav-link__badge mary-hideable" aria-label="{{ $item['badge'] }} pending">
-                                        {{ $item['badge'] }}
+                                    <span class="admin-nav-link__badge-slot mary-hideable">
+                                        <span class="admin-nav-link__badge" aria-label="{{ $item['badge'] }} pending">
+                                            {{ $item['badge'] }}
+                                        </span>
                                     </span>
                                 @endif
                             </a>

@@ -134,53 +134,59 @@
                                         $deleteConfirmation = "Delete {$offshore->name}? This action cannot be undone.";
                                     @endphp
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button class="btn btn-outline btn-sm" type="button" data-dialog-open="editOffshoreModal-{{ $offshore->id }}" title="Edit offshore">
-                                            <x-icon name="o-pencil" class="size-4" />
-                                        </button>
-                                        <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST">
+                                        <div class="tooltip tooltip-left" data-tip="Edit {{ $offshore->name }}">
+                                            <button class="btn btn-outline btn-sm" type="button" data-dialog-open="editOffshoreModal-{{ $offshore->id }}" aria-label="Edit {{ $offshore->name }}">
+                                                <x-icon name="o-pencil" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Refresh balances for {{ $offshore->name }}">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-primary btn-sm" title="Refresh balances">
+                                            <button type="submit" class="btn btn-outline btn-primary btn-sm" aria-label="Refresh balances for {{ $offshore->name }}">
                                                 <x-icon name="o-arrow-path" class="size-4" />
                                             </button>
                                         </form>
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline btn-info btn-sm"
-                                            data-action="open-transfer"
-                                            data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
-                                            data-source-id="{{ $offshore->id }}"
-                                            data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
-                                            title="Transfer to main bank"
-                                        >
-                                            <x-icon name="o-arrow-up-tray" class="size-4" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline btn-success btn-sm"
-                                            data-action="open-transfer"
-                                            data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
-                                            data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
-                                            data-destination-id="{{ $offshore->id }}"
-                                            title="Send funds from main bank"
-                                        >
-                                            <x-icon name="o-arrow-down-tray" class="size-4" />
-                                        </button>
-                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" data-confirm="{{ $sweepConfirmation }}" data-confirm-title="Sweep offshore funds?" data-confirm-label="Sweep funds">
+                                        <div class="tooltip tooltip-left" data-tip="Transfer funds from {{ $offshore->name }} to the main bank">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline btn-info btn-sm"
+                                                data-action="open-transfer"
+                                                data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
+                                                data-source-id="{{ $offshore->id }}"
+                                                data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
+                                                aria-label="Transfer funds from {{ $offshore->name }} to the main bank"
+                                            >
+                                                <x-icon name="o-arrow-up-tray" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <div class="tooltip tooltip-left" data-tip="Send funds from the main bank to {{ $offshore->name }}">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline btn-success btn-sm"
+                                                data-action="open-transfer"
+                                                data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
+                                                data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
+                                                data-destination-id="{{ $offshore->id }}"
+                                                aria-label="Send funds from the main bank to {{ $offshore->name }}"
+                                            >
+                                                <x-icon name="o-arrow-down-tray" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Sweep the main bank into {{ $offshore->name }}" data-confirm="{{ $sweepConfirmation }}" data-confirm-title="Sweep offshore funds?" data-confirm-label="Sweep funds">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-neutral btn-sm" title="Sweep main bank">
+                                            <button type="submit" class="btn btn-outline btn-neutral btn-sm" aria-label="Sweep the main bank into {{ $offshore->name }}">
                                                 <x-icon name="o-building-library" class="size-4" />
                                             </button>
                                         </form>
-                                        <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST">
+                                        <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="{{ $offshore->enabled ? 'Disable' : 'Enable' }} {{ $offshore->name }}">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-warning btn-sm" title="Toggle availability">
+                                            <button type="submit" class="btn btn-outline btn-warning btn-sm" aria-label="{{ $offshore->enabled ? 'Disable' : 'Enable' }} {{ $offshore->name }}">
                                                 <x-icon name="o-power" class="size-4" />
                                             </button>
                                         </form>
-                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" data-confirm="{{ $deleteConfirmation }}" data-confirm-title="Delete offshore?" data-confirm-label="Delete offshore" data-confirm-tone="error">
+                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Delete {{ $offshore->name }}" data-confirm="{{ $deleteConfirmation }}" data-confirm-title="Delete offshore?" data-confirm-label="Delete offshore" data-confirm-tone="error">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-outline btn-error btn-sm" title="Delete offshore">
+                                            <button type="submit" class="btn btn-outline btn-error btn-sm" aria-label="Delete {{ $offshore->name }}">
                                                 <x-icon name="o-trash" class="size-4" />
                                             </button>
                                         </form>

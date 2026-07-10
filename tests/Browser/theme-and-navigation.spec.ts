@@ -147,3 +147,27 @@ test('night theme persists across authenticated member and admin shells', async 
     colorScheme: document.documentElement.style.colorScheme,
   }))).toEqual({ theme: 'night', mode: 'night', colorScheme: 'dark' });
 });
+
+test('member header keeps only one dropdown open at a time', async ({ page }) => {
+  await page.goto('/_browser/login/member?redirect=/user/dashboard');
+
+  const financeDropdown = page.locator('.member-domain').filter({ hasText: 'Finance' });
+  const assistanceDropdown = page.locator('.member-domain').filter({ hasText: 'Assistance' });
+  const themeDropdown = page.locator('details.theme-control');
+  const accountDropdown = page.locator('details.account-control');
+
+  await financeDropdown.locator('summary').click();
+  await expect(financeDropdown).toHaveAttribute('open', '');
+
+  await assistanceDropdown.locator('summary').click();
+  await expect(assistanceDropdown).toHaveAttribute('open', '');
+  await expect(financeDropdown).not.toHaveAttribute('open', '');
+
+  await themeDropdown.locator('summary').click();
+  await expect(themeDropdown).toHaveAttribute('open', '');
+  await expect(assistanceDropdown).not.toHaveAttribute('open', '');
+
+  await accountDropdown.locator('summary').click();
+  await expect(accountDropdown).toHaveAttribute('open', '');
+  await expect(themeDropdown).not.toHaveAttribute('open', '');
+});

@@ -206,7 +206,12 @@
                                         <div class="text-sm text-base-content/60">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge badge-ghost" title="Offensive / defensive wars">
+                                        <span
+                                            class="badge badge-ghost tooltip tooltip-left cursor-help"
+                                            data-tip="Offensive / defensive wars"
+                                            tabindex="0"
+                                            aria-label="{{ $friendly->offensive_wars_count ?? 0 }} offensive wars, {{ $friendly->defensive_wars_count ?? 0 }} defensive wars"
+                                        >
                                             {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                         </span>
                                     </td>
@@ -334,7 +339,12 @@
                                                 <div class="text-sm text-base-content/60">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                             </td>
                                             <td>
-                                                <span class="badge badge-ghost" title="Offensive / defensive wars">
+                                                <span
+                                                    class="badge badge-ghost tooltip tooltip-left cursor-help"
+                                                    data-tip="Offensive / defensive wars"
+                                                    tabindex="0"
+                                                    aria-label="{{ $friendly->offensive_wars_count ?? 0 }} offensive wars, {{ $friendly->defensive_wars_count ?? 0 }} defensive wars"
+                                                >
                                                     {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                                 </span>
                                             </td>
