@@ -6,7 +6,6 @@ use App\Jobs\FinalizeNationSyncJob;
 use App\Jobs\SyncNationsJob;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
-use App\Services\SelectionSetHelper;
 use App\Services\SettingService;
 use Carbon\Carbon;
 use Illuminate\Bus\Batch;
@@ -32,13 +31,14 @@ class SyncNations extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $this->info('Queuing nation sync jobs...');
         $this->cancelRollingBatchIfActive();
 
         $perPage = 100;
         $page = 1;
+        $lastPage = 1;
         $jobs = [];
 
         do {
@@ -49,11 +49,11 @@ class SyncNations extends Command
                 $builder = (new GraphQLQueryBuilder)
                     ->setRootField('nations')
                     ->addArgument('first', $perPage)
-                    ->addNestedField('data', fn ($b) => $b->addFields(SelectionSetHelper::nationSet()))
+                    ->addNestedField('data', fn (GraphQLQueryBuilder $builder) => $builder->addFields(['id']))
                     ->withPaginationInfo();
 
                 $response = $client->getPaginationInfo($builder);
-                $lastPage = $response['lastPage'] ?? 1;
+                $lastPage = max(1, (int) ($response['lastPage'] ?? 1));
             }
 
             $page++;
@@ -68,8 +68,10 @@ class SyncNations extends Command
 
         SettingService::setLastManualNationSyncBatchId($batch->id);
 
-        $this->info("Queued {$page} nation sync jobs in a batch.");
+        $this->info("Queued {$lastPage} nation sync jobs in a batch.");
         $this->info('All nation sync jobs have been queued.');
+
+        return self::SUCCESS;
     }
 
     private function cancelRollingBatchIfActive(): void

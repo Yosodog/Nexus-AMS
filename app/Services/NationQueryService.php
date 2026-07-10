@@ -113,4 +113,48 @@ class NationQueryService
 
         return $nations;
     }
+
+    /**
+     * Fetch one page of nations without hydrating GraphQL model objects.
+     *
+     * This path is intended for bulk synchronization, where the response is
+     * immediately transformed into database rows.
+     *
+     * @param  array<string, mixed>  $arguments
+     * @param  list<string>  $nationFields
+     * @param  list<string>  $cityFields
+     * @return list<array<string, mixed>>
+     *
+     * @throws ConnectionException
+     * @throws PWQueryFailedException
+     */
+    public static function getRawNationPage(
+        array $arguments,
+        int $perPage,
+        array $nationFields,
+        array $cityFields = []
+    ): array {
+        $client = new QueryService;
+
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('nations')
+            ->addArgument('first', $perPage)
+            ->addArgument($arguments)
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) use ($nationFields, $cityFields) {
+                $builder->addFields($nationFields);
+
+                if ($cityFields !== []) {
+                    $builder->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder) use ($cityFields) {
+                        $cityBuilder->addFields($cityFields);
+                    });
+                }
+            });
+
+        $response = $client->sendQuery($builder, handlePagination: false);
+
+        return array_map(
+            static fn (mixed $nation): array => (array) $nation,
+            array_values((array) $response)
+        );
+    }
 }

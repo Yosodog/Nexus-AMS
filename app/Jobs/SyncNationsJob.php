@@ -12,14 +12,14 @@ namespace App\Jobs;
 
 use App\Models\City;
 use App\Services\NationQueryService;
-use Carbon\CarbonImmutable;
-use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Laravel\Telescope\Telescope;
+use RuntimeException;
+use Throwable;
 
 /**
  * Queue job that synchronizes a slice of nation, resource, military, and city data.
@@ -50,8 +50,6 @@ class SyncNationsJob implements ShouldQueue
     public int $perPage;
 
     public ?int $minScore;
-
-    private CarbonImmutable $syncTimestamp;
 
     private string $syncTimestampString;
 
@@ -147,6 +145,7 @@ class SyncNationsJob implements ShouldQueue
         'total_infrastructure_destroyed',
         'total_infrastructure_lost',
         'updated_at',
+        'deleted_at',
     ];
 
     private const RESOURCE_COLUMNS = [
@@ -180,6 +179,7 @@ class SyncNationsJob implements ShouldQueue
         'food',
         'credits',
         'updated_at',
+        'deleted_at',
     ];
 
     private const MILITARY_COLUMNS = [
@@ -190,6 +190,46 @@ class SyncNationsJob implements ShouldQueue
         'missiles',
         'nukes',
         'spies',
+        'soldiers_today',
+        'tanks_today',
+        'aircraft_today',
+        'ships_today',
+        'missiles_today',
+        'nukes_today',
+        'spies_today',
+        'soldier_casualties',
+        'soldier_kills',
+        'tank_casualties',
+        'tank_kills',
+        'aircraft_casualties',
+        'aircraft_kills',
+        'ship_casualties',
+        'ship_kills',
+        'missile_casualties',
+        'missile_kills',
+        'nuke_casualties',
+        'nuke_kills',
+        'spy_casualties',
+        'spy_kills',
+        'spy_attacks',
+    ];
+
+    /**
+     * The sync only needs persisted fields, not the generic 127-field nation projection.
+     */
+    private const NATION_QUERY_FIELDS = [
+        ...self::NATION_COLUMNS,
+        ...self::RESOURCE_COLUMNS,
+        ...self::MILITARY_COLUMNS,
+    ];
+
+    /**
+     * Fields whose GraphQL hydration historically converted missing or null values to zero.
+     */
+    private const ZERO_DEFAULT_COLUMNS = [
+        'vip',
+        'commendations',
+        'denouncements',
         'soldiers_today',
         'tanks_today',
         'aircraft_today',
@@ -245,6 +285,7 @@ class SyncNationsJob implements ShouldQueue
         'spy_kills',
         'spy_attacks',
         'updated_at',
+        'deleted_at',
     ];
 
     private const CITY_COLUMNS = [
@@ -321,6 +362,7 @@ class SyncNationsJob implements ShouldQueue
         'hangar',
         'drydock',
         'updated_at',
+        'deleted_at',
     ];
 
     /**
@@ -352,28 +394,32 @@ class SyncNationsJob implements ShouldQueue
             return;
         }
 
+        $jobStartedAt = hrtime(true);
+        $stage = 'fetch';
+
         try {
-            $this->syncTimestamp = now()->toImmutable();
-            $this->syncTimestampString = $this->syncTimestamp->toDateTimeString();
+            $this->syncTimestampString = now()->toDateTimeString();
 
             $filters = ['page' => $this->page];
             if ($this->minScore !== null) {
                 $filters['min_score'] = $this->minScore;
             }
 
-            // Fetch nations from the API using the NationQueryService with pagination parameters
-            $nations = NationQueryService::getMultipleNations(
-                $filters,
-                $this->perPage,
-                true,
-                handlePagination: false
+            $stageStartedAt = hrtime(true);
+            $nations = NationQueryService::getRawNationPage(
+                arguments: $filters,
+                perPage: $this->perPage,
+                nationFields: self::NATION_QUERY_FIELDS,
+                cityFields: self::CITY_COLUMNS,
             );
+            $apiMilliseconds = $this->elapsedMilliseconds($stageStartedAt);
 
-            if (empty($nations)) {
-                Log::warning("SyncNationsJob received no nations for page {$this->page}.");
-
-                return;
+            if ($nations === []) {
+                throw new RuntimeException("Nation sync page {$this->page} returned no records.");
             }
+
+            $stage = 'transform';
+            $stageStartedAt = hrtime(true);
 
             // Initialize arrays to hold transformed data for nations, resources, military, and cities
             $nationData = [];
@@ -383,50 +429,82 @@ class SyncNationsJob implements ShouldQueue
 
             // Process each nation and extract necessary data
             foreach ($nations as $nation) {
-                // Convert objects coming back from GraphQL into arrays once to minimise property access costs.
-                $nationArray = is_array($nation) ? $nation : (array) $nation;
+                $nation = $this->normalizeNationPayload($nation);
 
                 // Extract nation core data
-                $nationData[] = $this->extractNationData($nationArray);
+                $nationData[] = $this->extractNationData($nation);
 
                 // Extract resource data if available
-                $resourceData = $this->extractResourceData($nationArray);
+                $resourceData = $this->extractResourceData($nation);
                 if (! is_null($resourceData)) {
                     $resourcesData[] = $resourceData;
                 }
 
                 // Extract military data
-                $militaryDataArray = $this->extractMilitaryData($nationArray);
-                if (! empty($militaryDataArray)) {
-                    $militaryData[] = $militaryDataArray;
-                }
+                $militaryData[] = $this->extractMilitaryData($nation);
 
-                // Extract cities data
-                $citiesDataArray = $this->extractCitiesData($nationArray);
-                if (! empty($citiesDataArray)) {
-                    foreach ($citiesDataArray as $cityData) {
-                        $citiesData[] = $cityData;
-                    }
-                }
+                // Append cities directly to avoid an intermediate array per nation.
+                $this->appendCitiesData($nation, $citiesData);
             }
+            $transformMilliseconds = $this->elapsedMilliseconds($stageStartedAt);
 
             // Perform bulk upsert operations in a single transaction for improved performance and atomicity
+            $stage = 'persist';
+            $stageStartedAt = hrtime(true);
             $this->bulkUpsert($nationData, $resourcesData, $militaryData, $citiesData);
+            $databaseMilliseconds = $this->elapsedMilliseconds($stageStartedAt);
 
-            $this->recordProcessedCount(count($nationData));
+            Log::info('Nation sync page completed', [
+                'page' => $this->page,
+                'per_page' => $this->perPage,
+                'nation_count' => count($nationData),
+                'resource_count' => count($resourcesData),
+                'military_count' => count($militaryData),
+                'city_count' => count($citiesData),
+                'api_ms' => $apiMilliseconds,
+                'transform_ms' => $transformMilliseconds,
+                'database_ms' => $databaseMilliseconds,
+                'total_ms' => $this->elapsedMilliseconds($jobStartedAt),
+                'peak_memory_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+            ]);
 
-            // Clean up variables and force garbage collection to free memory
-            unset($nations, $nationData, $resourcesData, $militaryData, $citiesData);
-            gc_collect_cycles();
-        } catch (Exception $e) {
-            // Log any exceptions encountered during the synchronization process
+        } catch (Throwable $exception) {
             Log::error('Failed to fetch nations batch', [
                 'page' => $this->page,
                 'per_page' => $this->perPage,
-                'exception' => $e,
+                'stage' => $stage,
+                'elapsed_ms' => $this->elapsedMilliseconds($jobStartedAt),
+                'exception' => $exception,
             ]);
+
+            throw $exception;
+        }
+    }
+
+    private function elapsedMilliseconds(int $startedAt): float
+    {
+        return round((hrtime(true) - $startedAt) / 1_000_000, 2);
+    }
+
+    /**
+     * Preserve the defaults and bounds previously applied by GraphQL model hydration.
+     *
+     * @param  array<string, mixed>  $nation
+     * @return array<string, mixed>
+     */
+    private function normalizeNationPayload(array $nation): array
+    {
+        foreach (self::ZERO_DEFAULT_COLUMNS as $column) {
+            if (! isset($nation[$column])) {
+                $nation[$column] = 0;
+            }
         }
 
+        if (isset($nation['vacation_mode_turns']) && (int) $nation['vacation_mode_turns'] > 65000) {
+            $nation['vacation_mode_turns'] = 65000;
+        }
+
+        return $nation;
     }
 
     /**
@@ -436,9 +514,10 @@ class SyncNationsJob implements ShouldQueue
      */
     private function extractNationData(array $nation): array
     {
-        $data = $this->mapValues($nation, self::NATION_COLUMNS);
+        $data = $this->mapValues($nation, self::NATION_COLUMNS, 'nation');
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
+        $data['deleted_at'] = null;
 
         return $data;
     }
@@ -453,13 +532,14 @@ class SyncNationsJob implements ShouldQueue
         if (! array_key_exists('money', $nation) || $nation['money'] === null) {
             return null;
         }
-        $data = $this->mapValues($nation, self::RESOURCE_COLUMNS);
+        $data = $this->mapValues($nation, self::RESOURCE_COLUMNS, 'resources');
         if ($data['credits'] === null) {
             $data['credits'] = 0;
         }
         $data['nation_id'] = $nation['id'];
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
+        $data['deleted_at'] = null;
 
         return $data;
     }
@@ -471,10 +551,11 @@ class SyncNationsJob implements ShouldQueue
      */
     private function extractMilitaryData(array $nation): array
     {
-        $data = $this->mapValues($nation, self::MILITARY_COLUMNS);
+        $data = $this->mapValues($nation, self::MILITARY_COLUMNS, 'military');
         $data['nation_id'] = $nation['id'];
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
+        $data['deleted_at'] = null;
 
         return $data;
     }
@@ -482,55 +563,60 @@ class SyncNationsJob implements ShouldQueue
     /**
      * Extract cities data from a nation payload.
      *
-     * @return array<int, array<string, mixed>>
+     * @param  array<string, mixed>  $nation
+     * @param  list<array<string, mixed>>  $cities
      */
-    private function extractCitiesData(array $nation): array
+    private function appendCitiesData(array $nation, array &$cities): void
     {
-        $cities = [];
         if (empty($nation['cities'])) {
-            return $cities;
+            return;
         }
+
         foreach ($nation['cities'] as $city) {
             $cityArray = is_array($city) ? $city : (array) $city;
-            $cityData = $this->mapValues($cityArray, self::CITY_COLUMNS);
+            $cityData = $this->mapValues($cityArray, self::CITY_COLUMNS, 'city');
             $cityData = City::normalizeApiPayload($cityData);
             $cityData['nation_id'] = $nation['id'];
             $cityData['updated_at'] = $this->syncTimestampString;
             $cityData['created_at'] = $this->syncTimestampString;
+            $cityData['deleted_at'] = null;
             $cities[] = $cityData;
         }
-
-        return $cities;
     }
 
     /**
-     * Perform bulk upsert operations within a database transaction.
+     * Perform bulk upserts without Telescope expanding every bound value into the SQL string.
+     *
+     * A city chunk contains tens of thousands of bindings. Telescope's query watcher replaces
+     * those placeholders one at a time, which is substantially slower than the MySQL statement.
+     * Recording resumes before the job finishes, so the job itself remains observable.
      */
     private function bulkUpsert(array $nationData, array $resourcesData, array $militaryData, array $citiesData): void
     {
-        DB::transaction(function () use ($nationData, $resourcesData, $militaryData, $citiesData) {
-            if (! empty($nationData)) {
-                foreach (array_chunk($nationData, self::UPSERT_CHUNK_SIZE) as $chunk) {
-                    // Query builder upserts avoid the overhead of hydrating Eloquent models per row.
-                    DB::table(self::TABLE_NATIONS)->upsert($chunk, ['id'], self::NATION_UPDATE_COLUMNS);
+        Telescope::withoutRecording(function () use ($nationData, $resourcesData, $militaryData, $citiesData): void {
+            DB::transaction(function () use ($nationData, $resourcesData, $militaryData, $citiesData) {
+                if (! empty($nationData)) {
+                    foreach (array_chunk($nationData, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                        // Query builder upserts avoid the overhead of hydrating Eloquent models per row.
+                        DB::table(self::TABLE_NATIONS)->upsert($chunk, ['id'], self::NATION_UPDATE_COLUMNS);
+                    }
                 }
-            }
-            if (! empty($resourcesData)) {
-                foreach (array_chunk($resourcesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
-                    DB::table(self::TABLE_NATION_RESOURCES)->upsert($chunk, ['nation_id'], self::RESOURCE_UPDATE_COLUMNS);
+                if (! empty($resourcesData)) {
+                    foreach (array_chunk($resourcesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                        DB::table(self::TABLE_NATION_RESOURCES)->upsert($chunk, ['nation_id'], self::RESOURCE_UPDATE_COLUMNS);
+                    }
                 }
-            }
-            if (! empty($militaryData)) {
-                foreach (array_chunk($militaryData, self::UPSERT_CHUNK_SIZE) as $chunk) {
-                    DB::table(self::TABLE_NATION_MILITARY)->upsert($chunk, ['nation_id'], self::MILITARY_UPDATE_COLUMNS);
+                if (! empty($militaryData)) {
+                    foreach (array_chunk($militaryData, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                        DB::table(self::TABLE_NATION_MILITARY)->upsert($chunk, ['nation_id'], self::MILITARY_UPDATE_COLUMNS);
+                    }
                 }
-            }
-            if (! empty($citiesData)) {
-                foreach (array_chunk($citiesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
-                    $chunk = array_map(fn (array $cityData): array => City::normalizeApiPayload($cityData), $chunk);
-                    DB::table(self::TABLE_CITIES)->upsert($chunk, ['id'], self::CITY_UPDATE_COLUMNS);
+                if (! empty($citiesData)) {
+                    foreach (array_chunk($citiesData, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                        DB::table(self::TABLE_CITIES)->upsert($chunk, ['id'], self::CITY_UPDATE_COLUMNS);
+                    }
                 }
-            }
+            }, 3);
         });
     }
 
@@ -542,33 +628,16 @@ class SyncNationsJob implements ShouldQueue
      *
      * @return array<string, mixed>
      */
-    private function mapValues(array $source, array $columns): array
+    private function mapValues(array $source, array $columns, string $templateKey): array
     {
         static $templates = [];
 
-        $key = md5(implode('|', $columns));
-
-        if (! isset($templates[$key])) {
-            $templates[$key] = array_fill_keys($columns, null);
+        if (! isset($templates[$templateKey])) {
+            $templates[$templateKey] = array_fill_keys($columns, null);
         }
 
-        $template = $templates[$key];
+        $template = $templates[$templateKey];
 
         return array_replace($template, array_intersect_key($source, $template));
-    }
-
-    /**
-     * Track how many records were persisted so the finalizer knows the batch made progress.
-     */
-    private function recordProcessedCount(int $count): void
-    {
-        if (! isset($this->batchId) || $count === 0) {
-            return;
-        }
-
-        $cacheKey = "sync_batch:{$this->batchId}:nations_processed";
-
-        Cache::add($cacheKey, 0, now()->addHours(6));
-        Cache::increment($cacheKey, $count);
     }
 }

@@ -11,7 +11,7 @@ use Illuminate\Bus\Batch;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FinalizeNationSyncJob implements ShouldQueue
@@ -32,7 +32,6 @@ class FinalizeNationSyncJob implements ShouldQueue
 
         if (! $batch) {
             Log::warning("FinalizeNationSyncJob skipped — batch {$this->batchId} could not be found.");
-            Cache::forget("sync_batch:{$this->batchId}:nations_processed");
             $this->recordBatchId($mode);
 
             return;
@@ -40,7 +39,6 @@ class FinalizeNationSyncJob implements ShouldQueue
 
         if ($batch->cancelled()) {
             Log::warning("FinalizeNationSyncJob skipped — batch {$this->batchId} was cancelled.");
-            Cache::forget("sync_batch:{$this->batchId}:nations_processed");
             $this->recordBatchId($mode);
 
             return;
@@ -48,16 +46,6 @@ class FinalizeNationSyncJob implements ShouldQueue
 
         if ($batch->failedJobs > 0) {
             Log::warning("FinalizeNationSyncJob skipped — batch {$this->batchId} had {$batch->failedJobs} failure(s).");
-            Cache::forget("sync_batch:{$this->batchId}:nations_processed");
-            $this->recordBatchId($mode);
-
-            return;
-        }
-
-        $processedCount = Cache::pull("sync_batch:{$this->batchId}:nations_processed", 0);
-
-        if ($processedCount === 0) {
-            Log::warning("FinalizeNationSyncJob skipped — no nations were recorded as processed for batch {$this->batchId}.");
             $this->recordBatchId($mode);
 
             return;
@@ -65,7 +53,10 @@ class FinalizeNationSyncJob implements ShouldQueue
 
         $cutoff = now()->subDays(30);
 
-        $staleNationCount = Nation::where('updated_at', '<', $cutoff)->count();
+        $staleNationIds = Nation::query()
+            ->where('updated_at', '<', $cutoff)
+            ->pluck('id');
+        $staleNationCount = $staleNationIds->count();
         $totalNationCount = Nation::count();
 
         if ($totalNationCount > 0 && $staleNationCount >= $totalNationCount) {
@@ -75,12 +66,28 @@ class FinalizeNationSyncJob implements ShouldQueue
             return;
         }
 
-        Nation::where('updated_at', '<', $cutoff)->delete();
-        NationResources::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
-        NationMilitary::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
-        City::whereHas('nation', fn ($q) => $q->where('updated_at', '<', $cutoff))->delete();
+        foreach ($staleNationIds->chunk(1000) as $nationIds) {
+            DB::transaction(function () use ($nationIds, $cutoff): void {
+                $stillStaleNationIds = Nation::query()
+                    ->whereKey($nationIds)
+                    ->where('updated_at', '<', $cutoff)
+                    ->lockForUpdate()
+                    ->pluck('id');
 
-        Log::info("🧹 FinalizeNationSyncJob: Soft-deleted {$staleNationCount} nations not updated since {$cutoff->toDateTimeString()} (processed {$processedCount}).");
+                if ($stillStaleNationIds->isEmpty()) {
+                    return;
+                }
+
+                NationResources::whereIn('nation_id', $stillStaleNationIds)->delete();
+                NationMilitary::whereIn('nation_id', $stillStaleNationIds)->delete();
+                City::whereIn('nation_id', $stillStaleNationIds)->delete();
+                Nation::whereKey($stillStaleNationIds)
+                    ->where('updated_at', '<', $cutoff)
+                    ->delete();
+            });
+        }
+
+        Log::info("🧹 FinalizeNationSyncJob: Soft-deleted {$staleNationCount} nations not updated since {$cutoff->toDateTimeString()} after {$batch->totalJobs} completed pages.");
 
         $this->recordBatchId($mode);
     }
