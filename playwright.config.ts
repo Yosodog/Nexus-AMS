@@ -1,5 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
+const shellEscape = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+const phpBinary = shellEscape(process.env.PLAYWRIGHT_PHP_BINARY ?? 'php');
+
 const browserEnvironment = [
   'APP_ENV=testing',
   'APP_NAME=YosoNET',
@@ -32,7 +35,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: `npm run build && ${browserEnvironment} php artisan app:prepare-browser-tests --no-interaction && ${browserEnvironment} php -S 127.0.0.1:8011 -t public public/index.php`,
+        command: `npm run build && ${browserEnvironment} ${phpBinary} artisan app:prepare-browser-tests --no-interaction && ${browserEnvironment} ${phpBinary} -S 127.0.0.1:8011 -t public public/index.php`,
         url: 'http://127.0.0.1:8011',
         reuseExistingServer: false,
         timeout: 120_000,
