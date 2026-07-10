@@ -1,6 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
+    <x-chart-js />
+
     @php
         $lootLeaders = $leaderboards['loot'] ?? [];
         $lootRateLeaders = $leaderboards['loot_rate'] ?? [];

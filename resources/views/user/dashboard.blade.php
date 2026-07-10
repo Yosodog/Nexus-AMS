@@ -1,6 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
+    <x-chart-js />
+
     @php
         $greeting = match (true) {
             now()->hour < 12 => 'Good morning',
