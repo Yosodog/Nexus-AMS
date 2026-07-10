@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section("content")
-    <x-header title="Ongoing Wars" separator>
+    <x-header title="Ongoing Wars" separator use-h1>
         <x-slot:subtitle>Track active conflicts, recent launch tempo, and damage patterns across the alliance battlefield.</x-slot:subtitle>
     </x-header>
 
@@ -55,7 +55,7 @@
     <x-card class="mt-4">
         <x-slot:title>Active Wars</x-slot:title>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-striped">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th>ID</th>
@@ -127,7 +127,14 @@
                 labels: {!! json_encode(array_keys($warStartHistory)) !!},
                 datasets: [{
                     label: 'War Started',
+                    nexusColor: 'primary',
                     data: {!! json_encode(array_values($warStartHistory)) !!},
+                    pointBackgroundColor: context => window.NexusCharts.colors().surface,
+                    pointBorderColor: context => window.NexusCharts.colors().primary,
+                    pointHoverBackgroundColor: context => window.NexusCharts.colors().primary,
+                    pointHoverBorderColor: context => window.NexusCharts.colors().surface,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
                     borderWidth: 2,
                     fill: false,
                     tension: 0.3
@@ -141,7 +148,10 @@
             data: {
                 labels: {!! json_encode(array_keys($warTypeDistribution)) !!},
                 datasets: [{
+                    nexusPalette: true,
                     data: {!! json_encode(array_values($warTypeDistribution)) !!},
+                    borderColor: context => window.NexusCharts.colors().surface,
+                    borderWidth: 2,
                 }]
             }
         });
@@ -153,8 +163,10 @@
                 labels: {!! json_encode(array_keys($topNations)) !!},
                 datasets: [{
                     label: 'Active War',
+                    nexusColor: 'info',
                     data: {!! json_encode(array_values($topNations)) !!},
-                    borderWidth: 1
+                    borderWidth: 0,
+                    borderRadius: 6,
                 }]
             }
         });
@@ -166,8 +178,10 @@
                 labels: {!! json_encode(array_keys($resourceUsage)) !!},
                 datasets: [{
                     label: 'Used',
+                    nexusPalette: true,
                     data: {!! json_encode(array_map(fn($r) => $r['used'], $resourceUsage)) !!},
-                    borderWidth: 1
+                    borderWidth: 0,
+                    borderRadius: 6,
                 }]
             },
             options: {
@@ -185,6 +199,13 @@
                 labels: {!! json_encode(array_keys($aggroDefenderSplit)) !!},
                 datasets: [{
                     data: {!! json_encode(array_values($aggroDefenderSplit)) !!},
+                    backgroundColor: context => {
+                        const palette = window.NexusCharts.colors();
+
+                        return [palette.error, palette.info][context.dataIndex % 2];
+                    },
+                    borderColor: context => window.NexusCharts.colors().surface,
+                    borderWidth: 2,
                 }]
             }
         });
@@ -198,7 +219,13 @@
                 datasets: [{
                     label: '{{ ucfirst(str_replace('_', ' ', $type)) }}',
                     data: [{{ $data['dealt'] }}, {{ $data['taken'] }}],
-                    borderWidth: 1
+                    backgroundColor: context => {
+                        const palette = window.NexusCharts.colors();
+
+                        return [palette.success, palette.error][context.dataIndex % 2];
+                    },
+                    borderWidth: 0,
+                    borderRadius: 6,
                 }]
             },
             options: {
@@ -216,8 +243,10 @@
                 labels: {!! json_encode(array_keys($warsByNation)) !!},
                 datasets: [{
                     label: 'Active War',
+                    nexusPalette: true,
                     data: {!! json_encode(array_values($warsByNation)) !!},
-                    borderWidth: 1
+                    borderWidth: 0,
+                    borderRadius: 6,
                 }]
             },
             options: {

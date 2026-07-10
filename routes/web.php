@@ -56,7 +56,6 @@ use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
 use App\Http\Controllers\RebuildingController;
-use App\Http\Controllers\SpyAssignmentController;
 use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
@@ -76,7 +75,7 @@ Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
 if (app()->environment('testing')) {
     Route::get('/_browser/login/{persona}', [BrowserTestController::class, 'login'])
-        ->whereIn('persona', ['admin', 'member'])
+        ->whereIn('persona', ['admin', 'limited', 'member'])
         ->name('browser.login');
 }
 
@@ -208,7 +207,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/intel', [IntelReportController::class, 'index'])->name('defense.intel');
         Route::post('/intel', [IntelReportController::class, 'store'])->name('defense.intel.store');
     });
-    Route::get('/spy-ops', [SpyAssignmentController::class, 'index'])->name('spy.assignments');
     // Counters
 
     // Grants
@@ -324,9 +322,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/offshores/{offshore}/refresh', [OffshoreController::class, 'refresh'])
             ->name('admin.offshores.refresh')
             ->middleware(BlockWhenPWDown::class);
-        Route::post('/offshores/main-bank/refresh', [OffshoreController::class, 'refreshMainBank'])
-            ->name('admin.offshores.main-bank.refresh')
-            ->middleware(BlockWhenPWDown::class);
         Route::post('/offshores/{offshore}/sweep', [OffshoreController::class, 'sweepToOffshore'])
             ->name('admin.offshores.sweep')
             ->middleware(BlockWhenPWDown::class);
@@ -334,16 +329,16 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->name('admin.offshores.transfer')
             ->middleware(BlockWhenPWDown::class);
 
-        Route::post('/admin/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
+        Route::post('/direct-deposit/settings', [AccountController::class, 'saveDirectDepositSettings'])
             ->name('admin.dd.settings');
 
-        Route::post('/admin/direct-deposit/brackets/create', [AccountController::class, 'createDirectDepositBracket'])
+        Route::post('/direct-deposit/brackets/create', [AccountController::class, 'createDirectDepositBracket'])
             ->name('admin.dd.brackets.create');
 
-        Route::post('/admin/direct-deposit/brackets/update', [AccountController::class, 'updateDirectDepositBrackets'])
+        Route::post('/direct-deposit/brackets/update', [AccountController::class, 'updateDirectDepositBrackets'])
             ->name('admin.dd.brackets.update');
 
-        Route::post('/admin/direct-deposit/brackets/delete', [AccountController::class, 'deleteDirectDepositBrackets'])
+        Route::post('/direct-deposit/brackets/delete', [AccountController::class, 'deleteDirectDepositBrackets'])
             ->name('admin.dd.brackets.delete');
 
         // Growth Circles

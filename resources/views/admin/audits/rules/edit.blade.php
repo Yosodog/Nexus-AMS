@@ -3,7 +3,7 @@
 @section('title', 'Edit Audit Rule')
 
 @section('content')
-    <x-header title="Edit Audit Rule" separator>
+    <x-header title="Edit Audit Rule" separator use-h1>
         <x-slot:subtitle>Update the expression or priority and keep violations in sync.</x-slot:subtitle>
         <x-slot:actions>
             <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-primary btn-outline btn-sm">

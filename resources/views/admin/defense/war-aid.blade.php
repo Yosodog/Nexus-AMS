@@ -2,7 +2,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="War Aid Management" separator>
+    <x-header title="War Aid Management" separator use-h1>
         <x-slot:subtitle>Review pending requests, issue manual aid, and keep wartime payouts organized.</x-slot:subtitle>
         <x-slot:actions>
             <form method="POST" action="{{ route('admin.war-aid.toggle') }}">
@@ -25,7 +25,7 @@
                         @endphp
 
                         <div class="rounded-box border border-base-300 bg-base-100 p-4">
-                            <form method="POST" action="{{ route('admin.war-aid.approve', $req) }}" class="space-y-4">
+                            <form method="POST" action="{{ route('admin.war-aid.approve', $req) }}" class="space-y-4" data-confirm="Approve this war-aid request and deposit the displayed resources into the selected account?" data-confirm-title="Approve war aid?" data-confirm-label="Approve and deposit">
                                 @csrf
                                 @method('PATCH')
 
@@ -74,7 +74,7 @@
                                             <input
                                                 type="number"
                                                 name="{{ $resource }}"
-                                                class="input input-bordered input-sm w-full"
+                                                class="input input-sm w-full"
                                                 min="0"
                                                 value="{{ $req->$resource }}"
                                             >
@@ -86,7 +86,7 @@
                                 </div>
                             </form>
 
-                            <form method="POST" action="{{ route('admin.war-aid.deny', $req) }}" class="mt-4">
+                            <form method="POST" action="{{ route('admin.war-aid.deny', $req) }}" class="mt-4" data-confirm="Deny this war-aid request? No resources will be deposited." data-confirm-title="Deny war aid?" data-confirm-label="Deny request" data-confirm-tone="error">
                                 @csrf
                                 @method('PATCH')
                                 <button type="submit" class="btn btn-error btn-outline btn-sm">Deny</button>
@@ -110,11 +110,11 @@
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Nation ID</span>
-                            <input type="number" name="nation_id" class="input input-bordered w-full" required min="1" value="{{ old('nation_id') }}">
+                            <input type="number" name="nation_id" class="input w-full" required min="1" value="{{ old('nation_id') }}">
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Account ID</span>
-                            <input type="number" name="account_id" class="input input-bordered w-full" required min="1" value="{{ old('account_id') }}">
+                            <input type="number" name="account_id" class="input w-full" required min="1" value="{{ old('account_id') }}">
                             <span class="text-xs text-base-content/60">Must belong to the nation above.</span>
                         </label>
                     </div>
@@ -124,7 +124,7 @@
                         <input
                             type="text"
                             name="note"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             maxlength="255"
                             value="{{ old('note') }}"
                             placeholder="Shown in request history"
@@ -134,8 +134,8 @@
                     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         @foreach(PWHelperService::resources() as $resource)
                             <label class="block space-y-2">
-                                <span class="text-sm font-medium text-capitalize">{{ $resource }}</span>
-                                <input type="number" min="0" name="{{ $resource }}" class="input input-bordered w-full" value="{{ old($resource, 0) }}">
+                                <span class="text-sm font-medium capitalize">{{ $resource }}</span>
+                                <input type="number" min="0" name="{{ $resource }}" class="input w-full" value="{{ old($resource, 0) }}">
                             </label>
                         @endforeach
                     </div>
@@ -149,7 +149,7 @@
 
         <x-card title="Past Requests">
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra table-sm">
+                <table class="table table-zebra table-sm" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Nation</th>

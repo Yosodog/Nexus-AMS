@@ -28,7 +28,7 @@
 @section('title', 'Customize ' . $page->slug)
 
 @section('content')
-    <x-header :title="'Customize Page: /' . $page->slug" separator>
+    <x-header :title="'Customize Page: /' . $page->slug" separator use-h1>
         <x-slot:subtitle>Use the editor to update headings, narrative copy, embeds, and media for this page.</x-slot:subtitle>
         <x-slot:actions>
             <div class="w-full sm:w-72">
@@ -146,14 +146,14 @@
                 Loading version history...
             </div>
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra table-sm">
+                <table class="table table-zebra table-sm" data-sortable="false">
                     <thead>
                     <tr>
                         <th>ID</th>
                         <th>Status</th>
                         <th>Timestamp</th>
                         <th>User</th>
-                        <th class="text-right">Actions</th>
+                        <th class="text-right" data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody id="customization-versions-table"></tbody>

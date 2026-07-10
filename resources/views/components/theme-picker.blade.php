@@ -1,56 +1,41 @@
-<div class="dropdown dropdown-end">
-    <button tabindex="0" class="btn btn-ghost btn-circle" aria-label="Choose theme mode">
+<details class="theme-control">
+    <summary class="btn btn-ghost btn-circle btn-sm" aria-label="Choose appearance">
         <x-icon name="o-swatch" class="size-5" />
-    </button>
+    </summary>
 
-    <div tabindex="0" class="dropdown-content z-[90] mt-2 w-72 rounded-2xl border border-base-300 bg-base-100 p-3 shadow-2xl">
-        <div class="mb-3">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">Theme Mode</div>
-            <p class="mt-1 text-sm text-base-content/60">Switch the admin UI between system, light, and night modes.</p>
+    <div class="theme-control__panel" aria-label="Appearance options">
+        <div class="theme-control__header">
+            <p class="nexus-kicker">Appearance</p>
+            <p>Use your device setting or choose a mode for this browser.</p>
         </div>
 
-        <div class="space-y-2">
-            <button
-                type="button"
-                data-theme-mode="auto"
-                class="flex w-full items-center justify-between rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-base-200"
-            >
-                <span class="min-w-0">
-                    <span class="block font-semibold text-base-content">Auto</span>
-                    <span class="block text-xs text-base-content/60">Follow your system preference.</span>
+        <div class="theme-control__options">
+            <button type="button" data-theme-mode="auto" class="theme-option">
+                <x-icon name="o-computer-desktop" class="size-5" aria-hidden="true" />
+                <span>
+                    <span class="theme-option__label">System</span>
+                    <span class="theme-option__hint">Follow this device</span>
                 </span>
-                <span class="badge badge-ghost badge-sm shrink-0">System</span>
+                <x-icon name="o-check" class="theme-option__check size-4" aria-hidden="true" />
             </button>
 
-            <button
-                type="button"
-                data-theme-mode="light"
-                class="flex w-full items-center justify-between rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-base-200"
-            >
-                <span class="min-w-0">
-                    <span class="block font-semibold text-base-content">Light</span>
-                    <span class="block text-xs text-base-content/60">Bright surfaces with higher contrast.</span>
+            <button type="button" data-theme-mode="light" class="theme-option">
+                <x-icon name="o-sun" class="size-5" aria-hidden="true" />
+                <span>
+                    <span class="theme-option__label">Light</span>
+                    <span class="theme-option__hint">Bright workspaces</span>
                 </span>
-                <span class="flex shrink-0 items-center gap-1">
-                    <span class="h-3 w-3 rounded-full bg-slate-100 ring-1 ring-slate-300"></span>
-                    <span class="badge badge-ghost badge-sm">Light</span>
-                </span>
+                <x-icon name="o-check" class="theme-option__check size-4" aria-hidden="true" />
             </button>
 
-            <button
-                type="button"
-                data-theme-mode="night"
-                class="flex w-full items-center justify-between rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-base-200"
-            >
-                <span class="min-w-0">
-                    <span class="block font-semibold text-base-content">Night</span>
-                    <span class="block text-xs text-base-content/60">Dark surfaces tuned for lower glare.</span>
+            <button type="button" data-theme-mode="night" class="theme-option">
+                <x-icon name="o-moon" class="size-5" aria-hidden="true" />
+                <span>
+                    <span class="theme-option__label">Dark</span>
+                    <span class="theme-option__hint">Lower-glare workspaces</span>
                 </span>
-                <span class="flex shrink-0 items-center gap-1">
-                    <span class="h-3 w-3 rounded-full bg-slate-900 ring-1 ring-slate-600"></span>
-                    <span class="badge badge-ghost badge-sm">Dark</span>
-                </span>
+                <x-icon name="o-check" class="theme-option__check size-4" aria-hidden="true" />
             </button>
         </div>
     </div>
-</div>
+</details>

@@ -18,7 +18,7 @@
                                 type="number"
                                 name="growth_circles_tax_id"
                                 value="{{ old('growth_circles_tax_id', $taxId) }}"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                                 @cannot('manage-growth-circles') disabled @endcannot
                                 required
                             >
@@ -33,7 +33,7 @@
                                 type="number"
                                 name="growth_circles_fallback_tax_id"
                                 value="{{ old('growth_circles_fallback_tax_id', $fallbackTaxId) }}"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                                 @cannot('manage-growth-circles') disabled @endcannot
                                 required
                             >
@@ -54,7 +54,7 @@
                     <p class="text-base-content/60 text-sm">No nations are currently enrolled in Growth Circles.</p>
                 @else
                     <div class="overflow-x-auto">
-                        <table class="table table-sm w-full">
+                        <table class="table table-sm w-full" data-sortable="true">
                             <thead>
                             <tr>
                                 <th>Nation</th>
@@ -67,7 +67,7 @@
                                 @endforeach
                                 <th>Status</th>
                                 @can('manage-growth-circles')
-                                    <th class="text-right">Actions</th>
+                                    <th class="text-right" data-sortable="false">Actions</th>
                                 @endcan
                             </tr>
                             </thead>
@@ -82,8 +82,8 @@
                                     <td>{{ $nation?->nation_name ?? '(deleted)' }}</td>
                                     <td class="text-right">{{ $nation?->num_cities ?? '—' }}</td>
                                     <td>{{ $enrollment->account?->name ?? '(deleted account)' }}</td>
-                                    <td>{{ $enrollment->enrolled_at?->toDateString() }}</td>
-                                    <td>
+                                    <td data-order="{{ $enrollment->enrolled_at?->timestamp ?? 0 }}">{{ $enrollment->enrolled_at?->toDateString() }}</td>
+                                    <td data-order="{{ $row['last']?->cycle_date?->timestamp ?? 0 }}">
                                         @if ($row['last'])
                                             {{ $row['last']->cycle_date->toDateString() }}
                                             <span class="mt-1 flex flex-wrap gap-1 text-xs text-base-content/60">
@@ -102,7 +102,12 @@
                                         @if ($eligibility['eligible'])
                                             <span class="badge badge-success badge-sm">Active</span>
                                         @else
-                                            <span class="badge badge-warning badge-sm" title="{{ $eligibility['reason'] }}">Paused</span>
+                                            <span
+                                                class="badge badge-warning badge-sm tooltip tooltip-left cursor-help"
+                                                data-tip="{{ $eligibility['reason'] }}"
+                                                tabindex="0"
+                                                aria-label="Paused: {{ $eligibility['reason'] }}"
+                                            >Paused</span>
                                             <span class="block text-xs text-base-content/60">{{ $eligibility['reason'] }}</span>
                                         @endif
                                     </td>
@@ -111,7 +116,10 @@
                                             <div class="flex justify-end gap-2">
                                                 <form method="POST"
                                                       action="{{ route('admin.growth-circles.force-disenroll', $nation?->id ?? 0) }}"
-                                                      onsubmit="return confirm('Force-disenroll {{ $nation?->nation_name ?? 'this nation' }} from Growth Circles?');"
+                                                      data-confirm="Force-disenroll {{ $nation?->nation_name ?? 'this nation' }} from Growth Circles?"
+                                                      data-confirm-title="Force disenrollment?"
+                                                      data-confirm-label="Disenroll nation"
+                                                      data-confirm-tone="error"
                                                       @if (! $nation) style="display:none" @endif>
                                                     @csrf
                                                     <button class="btn btn-xs btn-error">Force-disenroll</button>

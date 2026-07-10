@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
     <title>@yield('title', config('app.name').' - Admin')</title>
     <link rel="icon" href="{{ $faviconUrl }}">
 
@@ -14,25 +15,29 @@
     @stack('styles')
 </head>
 
-<body class="min-h-screen bg-base-200/40 font-sans">
+<body data-surface="admin" class="admin-app">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    {{-- Top Navigation --}}
+    <x-system-status-banner :down="$pwApiDown" :checked-at="$pwApiLastChecked" />
     <livewire:admin.app-navbar />
 
-    {{-- Main with Sidebar --}}
-    <x-main full-width with-nav>
-        <x-slot:sidebar drawer="admin-sidebar" collapsible class="bg-base-100 border-r border-base-300 pt-2">
+    <x-main full-width with-nav class="admin-shell">
+        <x-slot:sidebar drawer="admin-sidebar" collapsible class="admin-sidebar">
             <livewire:admin.app-sidebar />
         </x-slot:sidebar>
 
-        <x-slot:content class="min-w-0 overflow-x-hidden px-4 py-5 lg:px-6 lg:py-6">
-            @if (session('alert-message') || $errors->any())
-                <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
-            @endif
+        <x-slot:content class="admin-content min-w-0 overflow-x-hidden">
+            <main id="main-content" class="admin-content__inner nexus-stack" tabindex="-1">
+                @if (session('alert-message') || $errors->any())
+                    <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
+                @endif
 
-            @yield('content')
+                @yield('content')
+            </main>
         </x-slot:content>
     </x-main>
+
+    <x-confirmation-dialog />
 
     @livewireScripts
     @stack('modals')

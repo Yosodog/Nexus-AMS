@@ -1,12 +1,12 @@
 @extends('layouts.main')
 
 @section("content")
-    <div class="mx-auto space-y-8">
+    <div class="mx-auto w-full min-w-0 space-y-8">
         @php
             $totalCash = $accounts->sum('money');
         @endphp
 
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow-md">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Banking workspace</p>
@@ -78,8 +78,9 @@
                 const isOver = total > 100;
                 const isUnder = total < 0;
 
-                badge.classList.toggle('bg-error', isOver || isUnder);
-                badge.classList.toggle('bg-success', !isOver && !isUnder);
+                badge.classList.remove('badge-neutral');
+                badge.classList.toggle('badge-error', isOver || isUnder);
+                badge.classList.toggle('badge-success', !isOver && !isUnder);
                 badge.classList.toggle('animate-pulse', isOver);
             }
 

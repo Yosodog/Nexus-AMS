@@ -26,6 +26,7 @@ use App\Services\SelfApprovalGuard;
 use App\Services\WarAidService;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -86,6 +87,15 @@ class ManualDisbursementController extends Controller
                 'alert-message' => $details ?: 'Unable to send this grant manually.',
                 'alert-type' => 'error',
             ]);
+        } catch (QueryException $exception) {
+            if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
+                return back()->with([
+                    'alert-message' => 'This nation already has a pending application for that grant.',
+                    'alert-type' => 'error',
+                ]);
+            }
+
+            throw $exception;
         }
 
         if ($created) {
@@ -172,6 +182,15 @@ class ManualDisbursementController extends Controller
                 'alert-message' => $details ?: 'Unable to send this city grant manually.',
                 'alert-type' => 'error',
             ]);
+        } catch (QueryException $exception) {
+            if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
+                return back()->with([
+                    'alert-message' => 'This nation already has a pending city grant request.',
+                    'alert-type' => 'error',
+                ]);
+            }
+
+            throw $exception;
         }
 
         if ($created) {

@@ -55,8 +55,6 @@ final class AllianceFinanceController extends Controller
 
         $categoryDatasets = $this->buildCategoryDatasets($categoryBreakdown, $dateLabels, $categoryRegistry);
 
-        $infoCards = $this->buildInfoCards($totals, $bestDay, $worstDay);
-
         return view('admin.finance.index', [
             'categories' => $categoryRegistry->all(),
             'selectedDirection' => $filterBag['direction'],
@@ -68,7 +66,6 @@ final class AllianceFinanceController extends Controller
             'totals' => $totals,
             'netChart' => $netChart,
             'categoryDatasets' => $categoryDatasets,
-            'infoCards' => $infoCards,
             'bestDay' => $bestDay,
             'worstDay' => $worstDay,
             'exportUrl' => route('admin.finance.export', $request->query()),
@@ -243,7 +240,9 @@ final class AllianceFinanceController extends Controller
      */
     private function buildDailyNet(Collection $dailySummary, array $dateLabels): Collection
     {
-        $grouped = $dailySummary->groupBy('date');
+        $grouped = $dailySummary->groupBy(
+            fn ($row): string => $this->dateKey($row->date)
+        );
 
         return collect($dateLabels)->mapWithKeys(function (string $date) use ($grouped) {
             /** @var Collection<int, mixed> $rows */
@@ -272,7 +271,7 @@ final class AllianceFinanceController extends Controller
     private function buildDailyTotals(Collection $dailySummary): Collection
     {
         return $dailySummary
-            ->groupBy('date')
+            ->groupBy(fn ($row): string => $this->dateKey($row->date))
             ->map(function (Collection $rows) {
                 $incomeRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_INCOME);
                 $expenseRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_EXPENSE);
@@ -304,8 +303,11 @@ final class AllianceFinanceController extends Controller
         $datasets = [];
 
         foreach ($grouped as $category => $rows) {
-            $data = collect($labels)->map(function (string $date) use ($rows) {
-                $match = $rows->firstWhere('date', $date);
+            $rowsByDate = $rows->keyBy(
+                fn ($row): string => $this->dateKey($row->date)
+            );
+            $data = collect($labels)->map(function (string $date) use ($rowsByDate) {
+                $match = $rowsByDate->get($date);
 
                 return $match ? (float) $match->money : 0.0;
             })->all();
@@ -321,47 +323,12 @@ final class AllianceFinanceController extends Controller
         return $datasets;
     }
 
-    /**
-     * @param  array{income: float, expense: float, net: float}  $totals
-     * @param  array<string, mixed>|null  $bestDay
-     * @param  array<string, mixed>|null  $worstDay
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildInfoCards(array $totals, ?array $bestDay, ?array $worstDay): array
+    private function dateKey(mixed $value): string
     {
-        return [
-            [
-                'title' => 'Total Income',
-                'value' => $totals['income'],
-                'variant' => 'success',
-                'icon' => 'bi bi-arrow-down-left',
-            ],
-            [
-                'title' => 'Total Expenses',
-                'value' => $totals['expense'],
-                'variant' => 'danger',
-                'icon' => 'bi bi-arrow-up-right',
-            ],
-            [
-                'title' => 'Net Position',
-                'value' => $totals['net'],
-                'variant' => $totals['net'] >= 0 ? 'primary' : 'warning',
-                'icon' => 'bi bi-bank',
-            ],
-            [
-                'title' => 'Best Day',
-                'value' => $bestDay['net'] ?? 0.0,
-                'variant' => 'info',
-                'icon' => 'bi bi-emoji-smile',
-                'helper' => $bestDay['date'] ?? null,
-            ],
-            [
-                'title' => 'Worst Day',
-                'value' => $worstDay['net'] ?? 0.0,
-                'variant' => 'secondary',
-                'icon' => 'bi bi-emoji-frown',
-                'helper' => $worstDay['date'] ?? null,
-            ],
-        ];
+        if ($value instanceof CarbonInterface) {
+            return $value->toDateString();
+        }
+
+        return Carbon::parse((string) $value)->toDateString();
     }
 }

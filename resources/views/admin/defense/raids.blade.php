@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Raid Finder" separator>
+    <x-header title="Raid Finder" separator use-h1>
         <x-slot:subtitle>Manage the global no-raid alliance list and the top-alliance exclusion cap.</x-slot:subtitle>
     </x-header>
 
@@ -13,7 +13,7 @@
                     <span class="text-sm font-medium">Exclude top alliances</span>
                     <input
                         type="number"
-                        class="input input-bordered"
+                        class="input"
                         name="top_cap"
                         id="top_cap"
                         value="{{ $topCap }}"
@@ -32,20 +32,20 @@
                     @csrf
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Alliance ID</span>
-                        <input type="number" class="input input-bordered input-sm" name="alliance_id" placeholder="1234" required>
+                        <input type="number" class="input input-sm" name="alliance_id" placeholder="1234" required>
                     </label>
                     <button class="btn btn-primary btn-sm" type="submit">Add</button>
                 </form>
             </x-slot:menu>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra table-sm">
+                <table class="table table-zebra table-sm" data-sortable="true">
                     <thead>
                     <tr>
                         <th>#</th>
                         <th>Alliance ID</th>
                         <th>Alliance Name</th>
-                        <th class="text-right">Actions</th>
+                            <th class="text-right" data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -59,7 +59,7 @@
                                 </a>
                             </td>
                             <td class="text-right">
-                                <form method="POST" action="{{ route('admin.raids.no-raid.destroy', $entry->id) }}" onsubmit="return confirm('Are you sure you want to remove this alliance?')" class="inline">
+                                <form method="POST" action="{{ route('admin.raids.no-raid.destroy', $entry->id) }}" data-confirm="Remove this alliance from the no-raid list?" data-confirm-title="Remove alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-error btn-outline btn-xs">Remove</button>

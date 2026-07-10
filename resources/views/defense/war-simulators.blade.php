@@ -2,8 +2,8 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto space-y-6" x-data="warSim()" x-init="init()">
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
+    <div class="mx-auto w-full min-w-0 space-y-6" x-data="warSim()" x-init="init()">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
                     <p class="text-xs uppercase tracking-[0.3em] text-base-content/60">Defense desk</p>
@@ -11,19 +11,19 @@
                     <p class="text-sm text-base-content/70">Run RNG-accurate battle sims and export results for ops.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Iterations = number of simulated battles. Higher = smoother probabilities but slower. Range 100-20000.">Iterations</span>
+                    <div class="grid gap-2">
+                        <label class="label" for="simulationIterations">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Iterations = number of simulated battles. Higher = smoother probabilities but slower. Range 100-20000.">Iterations</span>
                         </label>
-                        <input type="number" min="100" max="20000" step="100" x-model.number="iterations"
+                        <input id="simulationIterations" type="number" min="100" max="20000" step="100" x-model.number="iterations"
                                @blur="normalizeIterations()"
-                               class="input input-bordered w-32"/>
+                               class="input w-32"/>
                     </div>
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Seed makes RNG deterministic. Same inputs + seed = same results. Leave blank for true random.">Seed (optional)</span>
+                    <div class="grid gap-2">
+                        <label class="label" for="simulationSeed">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Seed makes RNG deterministic. Same inputs + seed = same results. Leave blank for true random.">Seed (optional)</span>
                         </label>
-                        <input type="number" x-model.number="seed" class="input input-bordered w-40"/>
+                        <input id="simulationSeed" type="number" x-model.number="seed" class="input w-40"/>
                     </div>
                 </div>
             </div>
@@ -36,7 +36,7 @@
         </template>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
+            <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold">Attacker</h2>
                     <span class="badge badge-outline" x-text="attacker.nation_id ? `#${attacker.nation_id}` : 'Manual'"></span>
@@ -57,49 +57,49 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Load a different attacker by nation ID. Defaults to your nation.">Fetch Attacker Nation ID</span>
+                <div class="grid gap-2">
+                    <label class="label" for="attackerNationLookup">
+                        <span class="text-xs uppercase tracking-wide tooltip" data-tip="Load a different attacker by nation ID. Defaults to your nation.">Fetch Attacker Nation ID</span>
                     </label>
                     <div class="flex gap-2">
-                        <input type="number" min="1" x-model.number="lookupAttackerId" class="input input-bordered flex-1"/>
+                        <input id="attackerNationLookup" type="number" min="1" x-model.number="lookupAttackerId" class="input flex-1"/>
                         <button class="btn btn-outline" @click="loadAttacker()">Fetch</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="form-control">
-                        <span class="label-text text-xs">Soldiers</span>
-                        <input type="number" min="0" x-model.number="attacker.soldiers" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Soldiers</span>
+                        <input type="number" min="0" x-model.number="attacker.soldiers" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Tanks</span>
-                        <input type="number" min="0" x-model.number="attacker.tanks" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Tanks</span>
+                        <input type="number" min="0" x-model.number="attacker.tanks" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Aircraft</span>
-                        <input type="number" min="0" x-model.number="attacker.aircraft" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Aircraft</span>
+                        <input type="number" min="0" x-model.number="attacker.aircraft" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Ships</span>
-                        <input type="number" min="0" x-model.number="attacker.ships" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Ships</span>
+                        <input type="number" min="0" x-model.number="attacker.ships" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Cities</span>
-                        <input type="number" min="0" x-model.number="attacker.cities" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Cities</span>
+                        <input type="number" min="0" x-model.number="attacker.cities" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Highest Infra</span>
-                        <input type="number" min="0" step="0.01" x-model.number="attacker.highest_city_infra" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Highest Infra</span>
+                        <input type="number" min="0" step="0.01" x-model.number="attacker.highest_city_infra" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs tooltip" data-tip="Population from the highest-infra city. Used for resistance bonus.">Highest City Pop</span>
-                        <input type="number" min="0" x-model.number="attacker.highest_city_population" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs tooltip" data-tip="Population from the highest-infra city. Used for resistance bonus.">Highest City Pop</span>
+                        <input type="number" min="0" x-model.number="attacker.highest_city_population" class="input"/>
                     </label>
-                    <label class="form-control">
+                    <label class="grid gap-2">
                 </div>
             </div>
 
-            <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
+            <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold">Defender</h2>
                     <span class="badge badge-outline" x-text="defender.nation_id ? `#${defender.nation_id}` : 'Manual'"></span>
@@ -121,12 +121,12 @@
                     </div>
                 </div>
                 <div class="space-y-3">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-xs uppercase tracking-wide">Load Active War</span>
+                    <div class="grid gap-2">
+                        <label class="label" for="activeWarLookup">
+                            <span class="text-xs uppercase tracking-wide">Load Active War</span>
                         </label>
                         <div class="flex gap-2">
-                            <select class="select select-bordered flex-1" x-model="selectedWarId">
+                            <select id="activeWarLookup" class="select flex-1" x-model="selectedWarId">
                                 <option value="">Select war</option>
                                 <template x-for="war in activeWars" :key="war.war_id">
                                     <option :value="war.war_id" x-text="`${war.war_id} • ${war.opponent_leader_name ?? 'Unknown'} (${war.war_type})`"></option>
@@ -135,96 +135,96 @@
                             <button class="btn btn-outline" @click="loadWar()">Load</button>
                         </div>
                     </div>
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-xs uppercase tracking-wide">Fetch Nation ID</span>
+                    <div class="grid gap-2">
+                        <label class="label" for="defenderNationLookup">
+                            <span class="text-xs uppercase tracking-wide">Fetch Nation ID</span>
                         </label>
                         <div class="flex gap-2">
-                            <input type="number" min="1" x-model.number="lookupNationId" class="input input-bordered flex-1"/>
+                            <input id="defenderNationLookup" type="number" min="1" x-model.number="lookupNationId" class="input flex-1"/>
                             <button class="btn btn-outline" @click="loadNation()">Fetch</button>
                         </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="form-control">
-                        <span class="label-text text-xs">Soldiers</span>
-                        <input type="number" min="0" x-model.number="defender.soldiers" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Soldiers</span>
+                        <input type="number" min="0" x-model.number="defender.soldiers" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Tanks</span>
-                        <input type="number" min="0" x-model.number="defender.tanks" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Tanks</span>
+                        <input type="number" min="0" x-model.number="defender.tanks" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Aircraft</span>
-                        <input type="number" min="0" x-model.number="defender.aircraft" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Aircraft</span>
+                        <input type="number" min="0" x-model.number="defender.aircraft" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Ships</span>
-                        <input type="number" min="0" x-model.number="defender.ships" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Ships</span>
+                        <input type="number" min="0" x-model.number="defender.ships" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Cities</span>
-                        <input type="number" min="0" x-model.number="defender.cities" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Cities</span>
+                        <input type="number" min="0" x-model.number="defender.cities" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs">Highest Infra</span>
-                        <input type="number" min="0" step="0.01" x-model.number="defender.highest_city_infra" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs">Highest Infra</span>
+                        <input type="number" min="0" step="0.01" x-model.number="defender.highest_city_infra" class="input"/>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs tooltip" data-tip="Population from the highest-infra city. Used for resistance bonus.">Highest City Pop</span>
-                        <input type="number" min="0" x-model.number="defender.highest_city_population" class="input input-bordered"/>
+                    <label class="grid gap-2">
+                        <span class="text-xs tooltip" data-tip="Population from the highest-infra city. Used for resistance bonus.">Highest City Pop</span>
+                        <input type="number" min="0" x-model.number="defender.highest_city_population" class="input"/>
                     </label>
-                    <label class="form-control">
+                    <label class="grid gap-2">
                 </div>
             </div>
 
-            <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
+            <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-4">
                 <h2 class="text-lg font-semibold">War context</h2>
                 <div class="space-y-3">
-                    <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Controls infra and loot multipliers for both sides.">War type</span>
-                        <select class="select select-bordered" x-model="context.war_type">
+                    <label class="grid gap-2">
+                        <span class="text-xs uppercase tracking-wide tooltip" data-tip="Controls infra and loot multipliers for both sides.">War type</span>
+                        <select class="select" x-model="context.war_type">
                             <option value="ORDINARY">Ordinary</option>
                             <option value="ATTRITION">Attrition</option>
                             <option value="RAID">Raid</option>
                         </select>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Attacker policy</span>
-                        <select class="select select-bordered" x-model="attacker.war_policy">
+                    <label class="grid gap-2">
+                        <span class="text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Attacker policy</span>
+                        <select class="select" x-model="attacker.war_policy">
                             <template x-for="policy in warPolicies" :key="policy">
                                 <option :value="policy" x-text="policy"></option>
                             </template>
                         </select>
                     </label>
-                    <label class="form-control">
-                        <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Defender policy</span>
-                        <select class="select select-bordered" x-model="defender.war_policy">
+                    <label class="grid gap-2">
+                        <span class="text-xs uppercase tracking-wide tooltip" data-tip="Policies modify loot/infra multipliers. See Help.">Defender policy</span>
+                        <select class="select" x-model="defender.war_policy">
                             <template x-for="policy in warPolicies" :key="policy">
                                 <option :value="policy" x-text="policy"></option>
                             </template>
                         </select>
                     </label>
                     <div class="grid grid-cols-2 gap-3">
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner halves opposing tank strength (0.5x).">Air superiority</span>
-                            <select class="select select-bordered" x-model="context.air_superiority_owner">
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Owner halves opposing tank strength (0.5x).">Air superiority</span>
+                            <select class="select" x-model="context.air_superiority_owner">
                                 <option value="none">None</option>
                                 <option value="attacker">Attacker</option>
                                 <option value="defender">Defender</option>
                             </select>
                         </label>
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Owner causes extra aircraft losses after ground wins.">Ground control</span>
-                            <select class="select select-bordered" x-model="context.ground_control_owner">
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Owner causes extra aircraft losses after ground wins.">Ground control</span>
+                            <select class="select" x-model="context.ground_control_owner">
                                 <option value="none">None</option>
                                 <option value="attacker">Attacker</option>
                                 <option value="defender">Defender</option>
                             </select>
                         </label>
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Tracked for context only (no single-battle effect).">Blockade</span>
-                            <select class="select select-bordered" x-model="context.blockade_owner">
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Tracked for context only (no single-battle effect).">Blockade</span>
+                            <select class="select" x-model="context.blockade_owner">
                                 <option value="none">None</option>
                                 <option value="attacker">Attacker</option>
                                 <option value="defender">Defender</option>
@@ -252,7 +252,7 @@
                 </div>
             </div>
         </div>
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-4">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-4">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <h2 class="text-lg font-semibold">Attack configuration</h2>
                 <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/60">
@@ -260,7 +260,7 @@
                     <span class="badge badge-outline">3-roll RNG per battle</span>
                 </div>
             </div>
-            <div class="tabs tabs-boxed">
+            <div class="tabs tabs-box">
                 <a class="tab" :class="activeTab === 'ground' ? 'tab-active' : ''" @click="activeTab = 'ground'">Ground</a>
                 <a class="tab" :class="activeTab === 'air' ? 'tab-active' : ''" @click="activeTab = 'air'">Air</a>
                 <a class="tab" :class="activeTab === 'naval' ? 'tab-active' : ''" @click="activeTab = 'naval'">Naval</a>
@@ -268,13 +268,13 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <template x-if="activeTab === 'ground'">
                     <div class="space-y-3">
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker soldiers. You can exceed to simulate larger sends.">Attacking Soldiers</span>
-                            <input type="number" min="0" x-model.number="action.attacking_soldiers" class="input input-bordered"/>
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker soldiers. You can exceed to simulate larger sends.">Attacking Soldiers</span>
+                            <input type="number" min="0" x-model.number="action.attacking_soldiers" class="input"/>
                         </label>
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker tanks. No max cap for hypothetical sims.">Attacking Tanks</span>
-                            <input type="number" min="0" x-model.number="action.attacking_tanks" class="input input-bordered"/>
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker tanks. No max cap for hypothetical sims.">Attacking Tanks</span>
+                            <input type="number" min="0" x-model.number="action.attacking_tanks" class="input"/>
                         </label>
                         <label class="cursor-pointer flex items-center gap-2">
                             <input type="checkbox" class="checkbox checkbox-sm" x-model="action.arm_soldiers_with_munitions"/>
@@ -284,13 +284,13 @@
                 </template>
                 <template x-if="activeTab === 'air'">
                     <div class="space-y-3">
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker aircraft.">Attacking Aircraft</span>
-                            <input type="number" min="0" x-model.number="action.attacking_aircraft" class="input input-bordered"/>
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker aircraft.">Attacking Aircraft</span>
+                            <input type="number" min="0" x-model.number="action.attacking_aircraft" class="input"/>
                         </label>
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Target controls non-air infra damage scaling and unit kill formulas.">Target</span>
-                            <select class="select select-bordered" x-model="action.target">
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Target controls non-air infra damage scaling and unit kill formulas.">Target</span>
+                            <select class="select" x-model="action.target">
                                 <option value="infra">Infrastructure</option>
                                 <option value="aircraft">Aircraft</option>
                                 <option value="soldiers">Soldiers</option>
@@ -303,9 +303,9 @@
                 </template>
                 <template x-if="activeTab === 'naval'">
                     <div class="space-y-3">
-                        <label class="form-control">
-                            <span class="label-text text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker ships.">Attacking Ships</span>
-                            <input type="number" min="0" x-model.number="action.attacking_ships" class="input input-bordered"/>
+                        <label class="grid gap-2">
+                            <span class="text-xs uppercase tracking-wide tooltip" data-tip="Defaults to attacker ships.">Attacking Ships</span>
+                            <input type="number" min="0" x-model.number="action.attacking_ships" class="input"/>
                         </label>
                     </div>
                 </template>
@@ -337,7 +337,7 @@
             </div>
         </div>
 
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-6">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-6">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <h2 class="text-lg font-semibold">Results</h2>
                 <div class="flex items-center gap-3">
@@ -383,7 +383,7 @@
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-success">Attacker Losses</h3>
                             <div class="overflow-x-auto">
-                            <table class="table table-sm">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
                                     <th>Unit</th>
@@ -410,7 +410,7 @@
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-error">Defender Losses</h3>
                             <div class="overflow-x-auto">
-                            <table class="table table-sm">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
                                     <th>Unit</th>
@@ -458,7 +458,7 @@
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Damage & Loot</h3>
                             <div class="overflow-x-auto">
-                            <table class="table table-sm">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
                                     <th>Metric</th>
@@ -497,7 +497,7 @@
                         <div class="rounded-xl border border-base-300 p-4 space-y-3">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Resources & Costs</h3>
                             <div class="overflow-x-auto">
-                            <table class="table table-sm">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
                                     <th>Metric</th>
@@ -538,7 +538,7 @@
                         <div class="rounded-xl border border-base-300 p-4 space-y-3" x-show="results.metrics.improvement_destroy_chance">
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">Improvement Destroy Chance</h3>
                             <div class="overflow-x-auto">
-                            <table class="table table-sm">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                 <tr class="text-xs uppercase text-base-content/50">
                                     <th>Metric</th>
@@ -574,7 +574,7 @@
             </template>
         </div>
 
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow space-y-6">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow space-y-6">
             <div class="flex items-center gap-3">
                 <h2 class="text-lg font-semibold">Simulator Help & Formulas</h2>
                 <span class="badge badge-outline">Everything explained</span>

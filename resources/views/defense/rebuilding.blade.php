@@ -1,8 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto space-y-6">
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
+    <div class="mx-auto w-full min-w-0 space-y-6">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
@@ -48,7 +48,7 @@
 
             <h2 class="text-xl font-bold mt-8 mb-2">Recent rebuilding requests</h2>
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table w-full" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Created</th>
@@ -75,7 +75,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-gray-500">No rebuilding requests yet.</td>
+                            <td colspan="6" class="text-center text-base-content/55">No rebuilding requests yet.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -85,24 +85,24 @@
     </div>
 
     @if ($enabled && $estimate['eligible'])
-        <dialog id="rebuilding-request-modal" class="modal">
+        <dialog id="rebuilding-request-modal" class="modal" aria-label="Apply for rebuilding">
             <div class="modal-box w-11/12 max-w-2xl">
                 <form method="POST" action="{{ route('defense.rebuilding.store') }}" class="space-y-4">
                     @csrf
                     <h3 class="font-bold text-lg">Apply for rebuilding</h3>
 
-                    <div class="form-control">
+                    <div class="grid gap-2">
                         <label class="label">Send funds to account</label>
-                        <select class="select select-bordered" name="account_id" required>
+                        <select class="select" name="account_id" required>
                             @foreach($nation->accounts as $account)
                                 <option value="{{ $account->id }}">{{ $account->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="form-control">
+                    <div class="grid gap-2">
                         <label class="label">Optional note</label>
-                        <textarea class="textarea textarea-bordered" name="note" maxlength="255" placeholder="Any context for admins"></textarea>
+                        <textarea class="textarea" name="note" maxlength="255" placeholder="Any context for admins"></textarea>
                     </div>
 
                     <div class="rounded-xl border border-base-300 p-3 text-sm">

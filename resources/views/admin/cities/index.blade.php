@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Alliance City Overview" separator>
+    <x-header title="Alliance City Overview" separator use-h1>
         <x-slot:subtitle>Live roster of every city in the alliance umbrella, including offshore partners.</x-slot:subtitle>
     </x-header>
 
@@ -32,13 +32,13 @@
             </div>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table id="citiesTable" class="table table-zebra table-sm" style="width: 100%">
+            <table id="citiesTable" class="table table-zebra table-sm" style="width: 100%" data-sortable="true">
                 <thead>
                 <tr>
                     <th>City</th>
                     <th>Nation</th>
                     <th>Alliance</th>
-                    <th>Founded</th>
+                    <th data-sortable="false">Founded</th>
                     <th>Infrastructure</th>
                     <th>Land</th>
                     <th>Power</th>
@@ -69,7 +69,7 @@
                     <th>Factory</th>
                     <th>Hangar</th>
                     <th>Drydock</th>
-                    <th>Last Updated</th>
+                    <th data-sortable="false">Last Updated</th>
                 </tr>
                 </thead>
                 <tbody>

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Beige Alerts" separator>
+    <x-header title="Beige Alerts" separator use-h1>
         <x-slot:subtitle>Track enemy alliances for beige sniping windows, early exits, and next-turn opportunities.</x-slot:subtitle>
     </x-header>
 
@@ -32,10 +32,10 @@
     </x-card>
 
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" class="admin-stat-card admin-stat-card-primary" />
-        <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" class="admin-stat-card admin-stat-card-info" />
-        <x-stat title="Leaving Next Turn" :value="number_format($nextTurnLeavers)" icon="o-clock" color="text-warning" :description="'Next turn: ' . $nextTurnChangeAt->format('M d, H:i')" class="admin-stat-card admin-stat-card-warning" />
-        <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" class="admin-stat-card admin-stat-card-success" />
+        <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" class="border-t-2 border-primary" />
+        <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" class="border-t-2 border-info" />
+        <x-stat title="Leaving Next Turn" :value="number_format($nextTurnLeavers)" icon="o-clock" color="text-warning" :description="'Next turn: ' . $nextTurnChangeAt->format('M d, H:i')" class="border-t-2 border-warning" />
+        <x-stat title="Average Score" :value="number_format($avgScore, 2)" icon="o-scale" color="text-success" description="Average score of tracked beige nations" class="border-t-2 border-success" />
     </div>
 
     <x-card title="Beige Turn Breakdown" class="mb-6">
@@ -67,14 +67,14 @@
         </x-slot:menu>
 
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Alliance ID</th>
                     <th>Name</th>
                     <th>Currently Beige</th>
                     <th>Leaving Next Turn</th>
-                    <th class="text-right">Actions</th>
+                        <th class="text-right" data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -96,7 +96,7 @@
                         <td>{{ number_format((int) ($beigeCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
                         <td>{{ number_format((int) ($nextTurnCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
                         <td class="text-right">
-                            <form method="POST" action="{{ route('admin.beige-alerts.alliances.destroy', $trackedAlliance) }}" onsubmit="return confirm('Remove this alliance from beige alerts?');">
+                            <form method="POST" action="{{ route('admin.beige-alerts.alliances.destroy', $trackedAlliance) }}" data-confirm="Remove this alliance from beige alerts?" data-confirm-title="Remove tracked alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-error btn-sm">Remove</button>
@@ -117,7 +117,7 @@
 
     <x-card title="Tracked Beige Nations" subtitle="Sorted by earliest beige exit.">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="false">
                 <thead>
                 <tr>
                     <th>Leader</th>

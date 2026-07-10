@@ -3,7 +3,7 @@
 @section('title', 'Custom Page Management')
 
 @section('content')
-    <x-header title="Custom Page Management" separator>
+    <x-header title="Custom Page Management" separator use-h1>
         <x-slot:subtitle>Review existing custom pages and open them in the editor to update content.</x-slot:subtitle>
         <x-slot:actions>
             @if($pages->isNotEmpty())
@@ -22,13 +22,13 @@
 
     <x-card title="Managed pages" :subtitle="$pages->count() . ' total'">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Slug</th>
                     <th>Status</th>
-                    <th>Last Updated</th>
-                    <th class="text-right">Actions</th>
+                    <th data-sortable="false">Last Updated</th>
+                    <th class="text-right" data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -43,7 +43,7 @@
                                 {{ $page->status === \App\Models\Page::STATUS_PUBLISHED ? 'Published' : 'Draft' }}
                             </span>
                         </td>
-                        <td>
+                        <td data-order="{{ $page->updated_at?->timestamp ?? 0 }}">
                             <div class="text-sm text-base-content/60">
                                 Updated {{ $page->updated_at?->diffForHumans() ?? 'recently' }}
                             </div>

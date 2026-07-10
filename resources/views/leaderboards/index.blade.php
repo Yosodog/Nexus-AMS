@@ -2,232 +2,126 @@
 
 @section('content')
     @php
-        $accentMap = [
-            'emerald' => [
-                'ring' => 'ring-emerald-200',
-                'panel' => 'from-emerald-50 via-white to-emerald-100/70',
-                'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-                'icon' => 'bg-emerald-600 text-white',
-                'button' => 'btn-primary',
-                'text' => 'text-emerald-700',
-            ],
-            'amber' => [
-                'ring' => 'ring-amber-200',
-                'panel' => 'from-amber-50 via-white to-amber-100/70',
-                'badge' => 'border-amber-200 bg-amber-50 text-amber-800',
-                'icon' => 'bg-amber-500 text-slate-950',
-                'button' => 'btn-warning',
-                'text' => 'text-amber-700',
-            ],
-            'sky' => [
-                'ring' => 'ring-sky-200',
-                'panel' => 'from-sky-50 via-white to-sky-100/70',
-                'badge' => 'border-sky-200 bg-sky-50 text-sky-800',
-                'icon' => 'bg-sky-600 text-white',
-                'button' => 'btn-info',
-                'text' => 'text-sky-700',
-            ],
-            'rose' => [
-                'ring' => 'ring-rose-200',
-                'panel' => 'from-rose-50 via-white to-rose-100/70',
-                'badge' => 'border-rose-200 bg-rose-50 text-rose-800',
-                'icon' => 'bg-rose-600 text-white',
-                'button' => 'btn-error',
-                'text' => 'text-rose-700',
-            ],
-            'violet' => [
-                'ring' => 'ring-violet-200',
-                'panel' => 'from-violet-50 via-white to-violet-100/70',
-                'badge' => 'border-violet-200 bg-violet-50 text-violet-800',
-                'icon' => 'bg-violet-600 text-white',
-                'button' => 'btn-primary',
-                'text' => 'text-violet-700',
-            ],
-            'orange' => [
-                'ring' => 'ring-orange-200',
-                'panel' => 'from-orange-50 via-white to-orange-100/70',
-                'badge' => 'border-orange-200 bg-orange-50 text-orange-800',
-                'icon' => 'bg-orange-500 text-slate-950',
-                'button' => 'btn-warning',
-                'text' => 'text-orange-700',
-            ],
-        ];
+        $isDirectory = $activeBoard['slug'] === 'dashboard';
     @endphp
 
-    <div class="mx-auto max-w-7xl space-y-8">
-        @if ($activeBoard['slug'] === 'dashboard')
-            <section class="relative overflow-hidden rounded-[2rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(248,250,252,0.97),rgba(255,247,237,0.94))] shadow-2xl">
-                <div class="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.04),transparent)] lg:block"></div>
-                <div class="relative grid gap-8 p-6 lg:grid-cols-[1.45fr,0.9fr] lg:p-8">
-                    <div class="space-y-5">
-                        <div class="space-y-3">
-                            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-600">
-                                <span>Leaderboards</span>
-                                <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
-                                <span>Alliance dashboard</span>
-                            </div>
-                            <h1 class="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-                                The best nations, at a glance.
-                            </h1>
-                            <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
-                                See the current #1 nation on each live leaderboard, then open the board you care about. Rankings live here instead of being scattered across menus.
-                            </p>
-                        </div>
+    <div class="nexus-stack">
+        <header class="nexus-page-header sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div class="nexus-page-header__copy">
+                <p class="nexus-kicker">Alliance performance</p>
+                <h1 class="nexus-page-title">{{ $isDirectory ? 'Leaderboards' : $activeBoard['title'] }}</h1>
+                <p class="nexus-page-summary">
+                    {{ $isDirectory
+                        ? 'Compare current economic and raiding performance, then open a board for its full methodology and ranking.'
+                        : $activeBoard['description'] }}
+                </p>
+            </div>
 
-                        <div class="flex flex-wrap gap-3">
-                            <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($dashboardBoards ?? []) }} live boards</span>
-                            <span class="badge border-slate-300 bg-white/80 px-3 py-3 text-slate-700">{{ count($plannedBoards ?? []) }} upcoming</span>
-                            <span class="badge border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">Dashboard selected</span>
-                        </div>
-                    </div>
+            <div class="nexus-page-header__actions">
+                @if($isDirectory)
+                    <span class="nexus-status nexus-status--neutral">{{ count($liveBoards) }} live boards</span>
+                @else
+                    <a href="{{ route('leaderboards.index') }}" class="btn btn-ghost btn-sm">
+                        <x-icon name="o-arrow-left" class="size-4" aria-hidden="true" />
+                        All leaderboards
+                    </a>
+                @endif
+            </div>
+        </header>
 
-                    <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-                        <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Live Boards</p>
-                            <p class="mt-3 text-2xl font-black text-slate-950">{{ number_format(count($dashboardBoards ?? [])) }}</p>
-                        </div>
-                        <div class="rounded-[1.5rem] border border-white/70 bg-white/85 p-5 shadow-lg backdrop-blur">
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Top Categories</p>
-                            <p class="mt-3 text-2xl font-black text-slate-950">Economy + Raiding</p>
-                        </div>
-                        <div class="rounded-[1.5rem] border border-white/70 bg-slate-950 p-5 text-white shadow-xl">
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Use it fast</p>
-                            <p class="mt-3 text-lg font-bold">Open the board that matches the question you are asking.</p>
-                        </div>
-                    </div>
+        <nav class="nexus-panel overflow-hidden" aria-label="Leaderboard directory">
+            <div class="nexus-panel__header">
+                <div>
+                    <h2 class="nexus-section-title">Live boards</h2>
+                    <p class="nexus-body-muted mt-1">Rankings are scoped to current alliance data.</p>
                 </div>
-            </section>
+            </div>
+            <div class="grid gap-px bg-base-300 sm:grid-cols-2">
+                @foreach ($liveBoards as $board)
+                    @php($isActiveBoard = $board['slug'] === $activeBoard['slug'])
+                    <a
+                        href="{{ route('leaderboards.index', ['board' => $board['slug']]) }}"
+                        @if($isActiveBoard) aria-current="page" @endif
+                        class="group flex min-h-20 items-center gap-4 bg-base-100 px-5 py-4 transition-colors hover:bg-base-200/70 {{ $isActiveBoard ? 'border-l-4 border-primary' : '' }}"
+                    >
+                        <span class="grid size-10 shrink-0 place-items-center rounded-md bg-primary/12 font-display text-lg font-bold text-primary" aria-hidden="true">
+                            {{ $board['icon'] }}
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">{{ $board['eyebrow'] }}</span>
+                            <span class="mt-1 block font-semibold text-base-content group-hover:text-primary">{{ $board['name'] }}</span>
+                        </span>
+                        <x-icon name="o-chevron-right" class="ml-auto size-4 shrink-0 text-base-content/40" aria-hidden="true" />
+                    </a>
+                @endforeach
+            </div>
+        </nav>
 
-            <section class="space-y-5">
-                <div class="flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Live Leaderboards</p>
-                        <h2 class="mt-1 text-3xl font-black text-base-content">Current #1 nations</h2>
-                    </div>
-                    <p class="max-w-2xl text-sm leading-6 text-base-content/65">
-                        Each card shows the current leader, the metric they lead in, and a direct link to the full board.
-                    </p>
-                </div>
-
-                <div class="grid gap-5 lg:grid-cols-2">
-                    @foreach ($dashboardBoards as $board)
-                        @php
-                            $boardAccent = $accentMap[$board['accent']] ?? $accentMap['emerald'];
-                            $champion = $board['champion'] ?? null;
-                        @endphp
-                        <article class="group overflow-hidden rounded-[2rem] border border-base-300 bg-gradient-to-br {{ $boardAccent['panel'] }} p-6 shadow-lg transition hover:-translate-y-1 hover:shadow-2xl">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-black shadow-lg {{ $boardAccent['icon'] }}">
-                                        {{ $board['icon'] }}
-                                    </div>
-                                    <div>
-                                        <p class="text-xs font-semibold uppercase tracking-[0.26em] {{ $boardAccent['text'] }}">{{ $board['eyebrow'] }}</p>
-                                        <h3 class="mt-1 text-2xl font-black text-slate-950">{{ $board['name'] }}</h3>
-                                    </div>
-                                </div>
-                                <span class="badge {{ $boardAccent['badge'] }}">Live</span>
-                            </div>
-
-                            <p class="mt-4 text-sm leading-6 text-slate-700">{{ $board['description'] }}</p>
-
-                            @if ($champion)
-                                <div class="mt-6 rounded-[1.5rem] border border-white/80 bg-white/85 p-5 shadow-md">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">#1 Right Now</p>
-                                    <a href="{{ $champion['nation_url'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-3xl font-black text-slate-950 transition hover:text-primary">
-                                        <span>{{ $champion['nation_name'] }}</span>
-                                        <span class="text-sm opacity-50">-&gt;</span>
-                                    </a>
-                                    <p class="mt-2 text-sm text-slate-600">{{ $champion['leader_name'] }}</p>
-                                    <div class="mt-5 flex flex-wrap items-end justify-between gap-3">
-                                        <div>
-                                            <p class="text-xs uppercase tracking-[0.22em] text-slate-500">{{ $champion['metric_label'] }}</p>
-                                            <p class="mt-1 text-3xl font-black text-slate-950">{{ $champion['metric_value'] }}</p>
-                                        </div>
-                                        <a href="{{ route('leaderboards.index', ['board' => $board['slug']]) }}" class="btn {{ $boardAccent['button'] }}">Open Board</a>
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if (! empty($board['kpis']))
-                                <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                                    @foreach ($board['kpis'] as $kpi)
-                                        <div class="rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm">
-                                            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{{ $kpi['label'] }}</p>
-                                            <p class="mt-2 text-sm font-bold text-slate-950">{{ $kpi['value'] }}</p>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </article>
-                    @endforeach
-                </div>
-            </section>
-
-            @if (! empty($plannedBoards))
-                <section class="space-y-5">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Coming next</p>
-                        <h2 class="mt-1 text-2xl font-black text-base-content">Planned leaderboard families</h2>
-                    </div>
-
-                    <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-                        @foreach ($plannedBoards as $board)
-                            @php
-                                $boardAccent = $accentMap[$board['accent']] ?? $accentMap['emerald'];
-                            @endphp
-                            <article class="rounded-[1.5rem] border border-base-300 bg-gradient-to-br {{ $boardAccent['panel'] }} p-5 shadow-sm">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-black shadow-lg {{ $boardAccent['icon'] }}">
-                                        {{ $board['icon'] }}
-                                    </div>
-                                    <div>
-                                        <p class="text-xs font-semibold uppercase tracking-[0.22em] {{ $boardAccent['text'] }}">{{ $board['eyebrow'] }}</p>
-                                        <h3 class="text-lg font-black text-slate-950">{{ $board['name'] }}</h3>
-                                    </div>
-                                </div>
-                                <p class="mt-4 text-sm leading-6 text-slate-700">{{ $board['summary'] }}</p>
-                            </article>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-        @else
-            <section class="space-y-5">
-                <div class="overflow-hidden rounded-[1.75rem] border border-base-300 bg-base-100 shadow-sm">
-                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-5 py-4 sm:px-6">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Live Boards</p>
-                            <p class="mt-1 text-sm text-base-content/70">Jump directly between leaderboard families without going back through the dashboard.</p>
-                        </div>
-                        <a href="{{ route('leaderboards.index') }}" class="btn btn-ghost btn-sm">Back to Dashboard</a>
-                    </div>
-                    <div class="flex flex-wrap gap-3 px-5 py-4 sm:px-6">
-                        @foreach ($liveBoards as $board)
-                            @php
-                                $boardAccent = $accentMap[$board['accent']] ?? $accentMap['emerald'];
-                                $isActiveBoard = $board['slug'] === $activeBoard['slug'];
-                            @endphp
-                            <a
-                                href="{{ route('leaderboards.index', ['board' => $board['slug']]) }}"
-                                class="{{ $isActiveBoard ? 'border-transparent bg-slate-950 text-white shadow-lg' : 'border-base-300 bg-base-100 text-base-content hover:border-base-content/20 hover:bg-base-200/70' }} inline-flex items-center gap-3 rounded-2xl border px-4 py-3 transition"
-                            >
-                                <span class="{{ $isActiveBoard ? 'bg-white/15 text-white' : $boardAccent['icon'] }} flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black shadow-sm">
+        @if($isDirectory)
+            <section class="grid gap-5 lg:grid-cols-2" aria-label="Current leaderboard leaders">
+                @foreach ($dashboardBoards as $board)
+                    @php($champion = $board['champion'] ?? null)
+                    <article class="nexus-panel overflow-hidden">
+                        <div class="nexus-panel__header">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="grid size-10 shrink-0 place-items-center rounded-md bg-primary/12 font-display text-lg font-bold text-primary" aria-hidden="true">
                                     {{ $board['icon'] }}
                                 </span>
-                                <span class="space-y-1">
-                                    <span class="block text-[11px] font-semibold uppercase tracking-[0.24em] {{ $isActiveBoard ? 'text-white/60' : 'text-base-content/50' }}">{{ $board['eyebrow'] }}</span>
-                                    <span class="block text-sm font-bold">{{ $board['name'] }}</span>
-                                </span>
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
+                                <div class="min-w-0">
+                                    <p class="nexus-kicker">{{ $board['eyebrow'] }}</p>
+                                    <h2 class="nexus-section-title">{{ $board['name'] }}</h2>
+                                </div>
+                            </div>
+                            <span class="nexus-status nexus-status--success">Live</span>
+                        </div>
 
-                @if (! empty($activeBoard['partial']))
-                    @include($activeBoard['partial'], ['activeBoard' => $activeBoard, 'activePayload' => $activePayload])
-                @endif
+                        <div class="nexus-panel__body grid gap-5">
+                            <p class="text-sm leading-6 text-base-content/70">{{ $board['description'] }}</p>
+
+                            @if($champion)
+                                <div class="grid gap-4 border-y border-base-300 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div class="min-w-0">
+                                        <p class="nexus-stat-label">Current leader</p>
+                                        <a href="{{ $champion['nation_url'] }}" target="_blank" rel="noopener noreferrer" class="mt-2 block truncate text-xl font-bold text-primary hover:underline">
+                                            {{ $champion['nation_name'] }}
+                                        </a>
+                                        <p class="mt-1 truncate text-sm text-base-content/60">{{ $champion['leader_name'] }}</p>
+                                    </div>
+                                    <div class="sm:text-right">
+                                        <p class="nexus-stat-label">{{ $champion['metric_label'] }}</p>
+                                        <p class="mt-2 font-display text-2xl font-bold tabular-nums text-base-content">{{ $champion['metric_value'] }}</p>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="nexus-empty-state min-h-0 py-5">
+                                    <p class="font-semibold">No ranking data yet</p>
+                                    <p class="text-sm text-base-content/60">This board will populate after its source data is refreshed.</p>
+                                </div>
+                            @endif
+
+                            @if(! empty($board['kpis']))
+                                <dl class="grid gap-px overflow-hidden rounded-md border border-base-300 bg-base-300 sm:grid-cols-3">
+                                    @foreach($board['kpis'] as $kpi)
+                                        <div class="bg-base-100 p-3">
+                                            <dt class="nexus-stat-label">{{ $kpi['label'] }}</dt>
+                                            <dd class="mt-1 break-words text-sm font-semibold tabular-nums text-base-content">{{ $kpi['value'] }}</dd>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            @endif
+
+                            <div class="flex justify-end">
+                                <a href="{{ route('leaderboards.index', ['board' => $board['slug']]) }}" class="btn btn-primary btn-sm">
+                                    Open {{ $board['name'] }}
+                                    <x-icon name="o-arrow-right" class="size-4" aria-hidden="true" />
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
             </section>
+        @elseif(! empty($activeBoard['partial']))
+            @include($activeBoard['partial'], ['activeBoard' => $activeBoard, 'activePayload' => $activePayload])
         @endif
     </div>
 @endsection

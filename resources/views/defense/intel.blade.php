@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="space-y-6">
-        <div class="card bg-gradient-to-br from-secondary via-primary to-accent text-primary-content shadow-xl">
+        <div class="card border-primary bg-primary text-primary-content shadow-sm">
             <div class="card-body grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
                 <div class="lg:col-span-2 space-y-3">
                     <p class="text-xs uppercase tracking-[0.25em] text-primary-content/70">Defense • Shared intel</p>
@@ -13,7 +13,7 @@
                     </p>
                 </div>
                 <div class="w-full">
-                    <div class="rounded-2xl bg-base-100/10 border border-primary-content/20 p-4 backdrop-blur">
+                    <div class="rounded-lg bg-base-100/10 border border-primary-content/20 p-4 backdrop-blur">
                         <p class="text-xs uppercase text-primary-content/70">Quick status</p>
                         <div class="mt-2 text-4xl font-black leading-none">{{ number_format($reports->total()) }}</div>
                         <p class="text-sm text-primary-content/70">intel reports on file</p>
@@ -45,7 +45,7 @@
                             type="number"
                             name="nation_id"
                             value="{{ $nationId }}"
-                            class="input input-bordered join-item w-full"
+                            class="input join-item w-full"
                             placeholder="e.g. 123456"
                             min="1"
                         />
@@ -77,7 +77,7 @@
                     <textarea
                         name="report"
                         rows="5"
-                        class="textarea textarea-bordered w-full"
+                        class="textarea w-full"
                         placeholder="Paste the full intel result text here"
                     >{{ old('report') }}</textarea>
                     @error('report')
@@ -104,7 +104,7 @@
                 </div>
                 <div class="mt-4 space-y-3">
                     @forelse($reports as $report)
-                        <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                        <div class="rounded-lg border border-base-300 bg-base-200/60 p-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div class="space-y-1">
                                     <div class="flex items-center gap-2">

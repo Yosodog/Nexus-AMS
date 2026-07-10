@@ -143,3 +143,5 @@ jobs:
 
       - name: Run browser smoke suite
         run: npm run test:browser
+        env:
+          PLAYWRIGHT_PHP_COMMAND: php

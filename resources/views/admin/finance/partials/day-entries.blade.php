@@ -6,7 +6,7 @@
     <p class="text-base-content/50 mb-0">No ledger entries for this day.</p>
 @else
     <div class="overflow-x-auto rounded-box border border-base-300">
-        <table class="table table-zebra table-sm">
+        <table class="table table-zebra table-sm" data-sortable="false">
             <thead>
             <tr>
                 <th>Time</th>
@@ -15,7 +15,7 @@
                 <th>Description</th>
                 <th class="text-right">Money</th>
                 @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
-                    <th class="text-right text-nowrap text-capitalize">{{ $resource }}</th>
+                    <th class="text-right text-nowrap capitalize">{{ $resource }}</th>
                 @endforeach
                 <th>Nation</th>
                 <th>Account</th>
@@ -62,7 +62,7 @@
                             {{ $category['label'] ?? ucfirst($entry->category) }}
                         </span>
                     </td>
-                    <td class="text-break" style="max-width: 220px;">{{ $entry->description ?? '-' }}</td>
+                    <td class="max-w-56 break-words">{{ $entry->description ?? '-' }}</td>
                     <td class="text-right font-semibold">{{ $formatCurrency($entry->money) }}</td>
                     @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
                         <td class="text-right text-nowrap">{{ number_format($entry->$resource, 2) }}</td>
@@ -70,7 +70,7 @@
                     <td>
                         @if ($entry->nation_id)
                             <a href="https://politicsandwar.com/nation/id={{ $entry->nation_id }}" target="_blank" rel="noopener"
-                               class="text-decoration-none">
+                               class="no-underline">
                                 {{ $entry->nation?->nation_name ?? 'Nation #'.$entry->nation_id }}
                             </a>
                         @else

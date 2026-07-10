@@ -2,12 +2,12 @@
     <p class="text-sm text-base-content/70 mb-4">Create a separate account for projects, war prep, or repayment.</p>
     <form action="/accounts/create" method="POST" class="space-y-3">
         @csrf
-        <div class="form-control">
+        <div class="grid gap-2">
             <label class="label" for="account_name">
-                <span class="label-text font-semibold">Account name</span>
-                <span class="label-text-alt text-base-content/60">Keep it short and clear</span>
+                <span class="font-semibold">Account name</span>
+                <span class="text-base-content/60">Keep it short and clear</span>
             </label>
-            <input type="text" id="account_name" name="name" class="input input-bordered w-full"
+            <input type="text" id="account_name" name="name" class="input w-full"
                    placeholder="e.g. War Chest" required>
         </div>
         <button type="submit" class="btn btn-primary w-full">Create account</button>

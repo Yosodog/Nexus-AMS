@@ -225,6 +225,55 @@ class CityGrantWorkflowTest extends TestCase
         $this->assertSame('pending', $request->status);
     }
 
+    public function test_admin_city_grant_queue_explains_when_approvals_are_disabled(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [, $nation, $account] = $this->createMemberWithAccount(777606);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        CityGrantRequest::query()->create([
+            'city_number' => $grant->city_number,
+            'grant_amount' => 320000,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+        $admin = $this->grantPermissions($admin, ['view-city-grants']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.grants.city'))
+            ->assertOk()
+            ->assertSee('City grant approvals are paused')
+            ->assertSee('Approval paused')
+            ->assertSee('Manual city grant disbursements are unavailable while grant approvals are paused.')
+            ->assertDontSee('>Approve and deposit<', false);
+    }
+
+    public function test_paused_manual_city_grant_attempt_does_not_leave_a_pending_request(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [, $nation, $account] = $this->createMemberWithAccount(777607);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.manual-disbursements.city-grants'), [
+                'city_grant_id' => $grant->id,
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant approvals are currently paused.');
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+        $this->assertSame(0.0, (float) $account->fresh()->money);
+    }
+
     public function test_city_grant_approval_denies_when_account_ownership_does_not_match(): void
     {
         [$user, $nation, $account] = $this->createMemberWithAccount(777604);

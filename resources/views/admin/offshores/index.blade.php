@@ -14,7 +14,7 @@
 @section('title', 'Offshore Management')
 
 @section('content')
-    <x-header title="Offshore Management" separator>
+    <x-header title="Offshore Management" separator use-h1>
         <x-slot:subtitle>Monitor cached balances, adjust guardrails, and trigger manual transfers.</x-slot:subtitle>
         @if($canManageOffshores)
             <x-slot:actions>
@@ -42,7 +42,7 @@
             </form>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra">
+                <table class="table table-zebra" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Priority</th>
@@ -52,7 +52,7 @@
                         <th>Cached Balances</th>
                         <th>Guardrails</th>
                         @if($canManageOffshores)
-                            <th class="text-right">Actions</th>
+                            <th class="text-right" data-sortable="false">Actions</th>
                         @endif
                     </tr>
                     </thead>
@@ -69,7 +69,7 @@
                                         type="number"
                                         name="order[{{ $offshore->id }}]"
                                         value="{{ old('order.' . $offshore->id, $offshore->priority) }}"
-                                        class="input input-bordered input-sm w-24"
+                                        class="input input-sm w-24"
                                         min="0"
                                         aria-label="Priority for {{ $offshore->name }}"
                                         form="offshore-priority-form"
@@ -134,53 +134,59 @@
                                         $deleteConfirmation = "Delete {$offshore->name}? This action cannot be undone.";
                                     @endphp
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button class="btn btn-outline btn-sm" type="button" data-dialog-open="editOffshoreModal-{{ $offshore->id }}" title="Edit offshore">
-                                            <x-icon name="o-pencil" class="size-4" />
-                                        </button>
-                                        <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST">
+                                        <div class="tooltip tooltip-left" data-tip="Edit {{ $offshore->name }}">
+                                            <button class="btn btn-outline btn-sm" type="button" data-dialog-open="editOffshoreModal-{{ $offshore->id }}" aria-label="Edit {{ $offshore->name }}">
+                                                <x-icon name="o-pencil" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <form action="{{ route('admin.offshores.refresh', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Refresh balances for {{ $offshore->name }}">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-primary btn-sm" title="Refresh balances">
+                                            <button type="submit" class="btn btn-outline btn-primary btn-sm" aria-label="Refresh balances for {{ $offshore->name }}">
                                                 <x-icon name="o-arrow-path" class="size-4" />
                                             </button>
                                         </form>
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline btn-info btn-sm"
-                                            data-action="open-transfer"
-                                            data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
-                                            data-source-id="{{ $offshore->id }}"
-                                            data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
-                                            title="Transfer to main bank"
-                                        >
-                                            <x-icon name="o-arrow-up-tray" class="size-4" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline btn-success btn-sm"
-                                            data-action="open-transfer"
-                                            data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
-                                            data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
-                                            data-destination-id="{{ $offshore->id }}"
-                                            title="Send funds from main bank"
-                                        >
-                                            <x-icon name="o-arrow-down-tray" class="size-4" />
-                                        </button>
-                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" onsubmit="return confirm(@js($sweepConfirmation));">
+                                        <div class="tooltip tooltip-left" data-tip="Transfer funds from {{ $offshore->name }} to the main bank">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline btn-info btn-sm"
+                                                data-action="open-transfer"
+                                                data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
+                                                data-source-id="{{ $offshore->id }}"
+                                                data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
+                                                aria-label="Transfer funds from {{ $offshore->name }} to the main bank"
+                                            >
+                                                <x-icon name="o-arrow-up-tray" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <div class="tooltip tooltip-left" data-tip="Send funds from the main bank to {{ $offshore->name }}">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline btn-success btn-sm"
+                                                data-action="open-transfer"
+                                                data-source-type="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}"
+                                                data-destination-type="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}"
+                                                data-destination-id="{{ $offshore->id }}"
+                                                aria-label="Send funds from the main bank to {{ $offshore->name }}"
+                                            >
+                                                <x-icon name="o-arrow-down-tray" class="size-4" />
+                                            </button>
+                                        </div>
+                                        <form action="{{ route('admin.offshores.sweep', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Sweep the main bank into {{ $offshore->name }}" data-confirm="{{ $sweepConfirmation }}" data-confirm-title="Sweep offshore funds?" data-confirm-label="Sweep funds">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-neutral btn-sm" title="Sweep main bank">
+                                            <button type="submit" class="btn btn-outline btn-neutral btn-sm" aria-label="Sweep the main bank into {{ $offshore->name }}">
                                                 <x-icon name="o-building-library" class="size-4" />
                                             </button>
                                         </form>
-                                        <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST">
+                                        <form action="{{ route('admin.offshores.toggle', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="{{ $offshore->enabled ? 'Disable' : 'Enable' }} {{ $offshore->name }}">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline btn-warning btn-sm" title="Toggle availability">
+                                            <button type="submit" class="btn btn-outline btn-warning btn-sm" aria-label="{{ $offshore->enabled ? 'Disable' : 'Enable' }} {{ $offshore->name }}">
                                                 <x-icon name="o-power" class="size-4" />
                                             </button>
                                         </form>
-                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" onsubmit="return confirm(@js($deleteConfirmation));">
+                                        <form action="{{ route('admin.offshores.destroy', $offshore) }}" method="POST" class="tooltip tooltip-left" data-tip="Delete {{ $offshore->name }}" data-confirm="{{ $deleteConfirmation }}" data-confirm-title="Delete offshore?" data-confirm-label="Delete offshore" data-confirm-tone="error">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-outline btn-error btn-sm" title="Delete offshore">
+                                            <button type="submit" class="btn btn-outline btn-error btn-sm" aria-label="Delete {{ $offshore->name }}">
                                                 <x-icon name="o-trash" class="size-4" />
                                             </button>
                                         </form>
@@ -250,7 +256,7 @@
 
             <x-card title="Recent Manual Transfers" :subtitle="'Last ' . $transfers->count() . ' records'">
                 <div class="overflow-x-auto rounded-box border border-base-300">
-                    <table class="table table-zebra">
+                    <table class="table table-zebra" data-sortable="false">
                         <thead>
                         <tr>
                             <th>When</th>
@@ -311,7 +317,7 @@
     </div>
 
     @if($canManageOffshores)
-        <dialog id="createOffshoreModal" class="modal">
+        <dialog id="createOffshoreModal" class="modal" aria-label="Create offshore">
             <div class="modal-box max-w-4xl">
                 <form action="{{ route('admin.offshores.store') }}" method="POST" autocomplete="off" class="space-y-6">
                     @csrf
@@ -322,35 +328,35 @@
                             <h3 class="text-lg font-semibold">Add Offshore</h3>
                             <p class="text-sm text-base-content/60">Create an offshore entry and define any transfer guardrails.</p>
                         </div>
-                        <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="createOffshoreModal">✕</button>
+                        <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="createOffshoreModal" aria-label="Close offshore creation dialog">✕</button>
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Name</span>
-                            <input type="text" class="input input-bordered w-full" name="name" value="{{ $modalContext === 'create' ? old('name') : '' }}" required>
+                            <input type="text" class="input w-full" name="name" value="{{ $modalContext === 'create' ? old('name') : '' }}" required>
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Alliance ID</span>
-                            <input type="number" class="input input-bordered w-full" name="alliance_id" value="{{ $modalContext === 'create' ? old('alliance_id') : '' }}" min="1" required>
+                            <input type="number" class="input w-full" name="alliance_id" value="{{ $modalContext === 'create' ? old('alliance_id') : '' }}" min="1" required>
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">API Key</span>
-                            <input type="text" class="input input-bordered w-full" name="api_key" value="{{ $modalContext === 'create' ? old('api_key') : '' }}" required>
+                            <input type="text" class="input w-full" name="api_key" value="{{ $modalContext === 'create' ? old('api_key') : '' }}" required>
                             <span class="text-xs text-base-content/60">Stored encrypted. Paste the offshore bot API key.</span>
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Mutation Key</span>
-                            <input type="text" class="input input-bordered w-full" name="mutation_key" value="{{ $modalContext === 'create' ? old('mutation_key') : '' }}" required>
+                            <input type="text" class="input w-full" name="mutation_key" value="{{ $modalContext === 'create' ? old('mutation_key') : '' }}" required>
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Priority</span>
-                            <input type="number" class="input input-bordered w-full" name="priority" value="{{ $modalContext === 'create' ? old('priority', 0) : 0 }}" min="0">
+                            <input type="number" class="input w-full" name="priority" value="{{ $modalContext === 'create' ? old('priority', 0) : 0 }}" min="0">
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Enabled</span>
                             @php $createEnabled = $modalContext === 'create' ? (int) old('enabled', 1) : 1; @endphp
-                            <select class="select select-bordered w-full" name="enabled">
+                            <select class="select w-full" name="enabled">
                                 <option value="1" {{ $createEnabled === 1 ? 'selected' : '' }}>Yes</option>
                                 <option value="0" {{ $createEnabled === 0 ? 'selected' : '' }}>No</option>
                             </select>
@@ -387,7 +393,7 @@
         </dialog>
 
         @foreach($offshores as $offshore)
-            <dialog id="editOffshoreModal-{{ $offshore->id }}" class="modal">
+            <dialog id="editOffshoreModal-{{ $offshore->id }}" class="modal" aria-label="Edit offshore {{ $offshore->name }}">
                 <div class="modal-box max-w-4xl">
                     <form action="{{ route('admin.offshores.update', $offshore) }}" method="POST" autocomplete="off" class="space-y-6">
                         @csrf
@@ -399,35 +405,35 @@
                                 <h3 class="text-lg font-semibold">Edit {{ $offshore->name }}</h3>
                                 <p class="text-sm text-base-content/60">Update credentials, ordering, and resource guardrails.</p>
                             </div>
-                            <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="editOffshoreModal-{{ $offshore->id }}">✕</button>
+                            <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="editOffshoreModal-{{ $offshore->id }}" aria-label="Close offshore editing dialog">✕</button>
                         </div>
 
                         @php $editContext = $modalContext === 'edit-' . $offshore->id; @endphp
                         <div class="grid gap-4 md:grid-cols-2">
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Name</span>
-                                <input type="text" class="input input-bordered w-full" name="name" value="{{ $editContext ? old('name', $offshore->name) : $offshore->name }}">
+                                <input type="text" class="input w-full" name="name" value="{{ $editContext ? old('name', $offshore->name) : $offshore->name }}">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Alliance ID</span>
-                                <input type="number" class="input input-bordered w-full" name="alliance_id" value="{{ $editContext ? old('alliance_id', $offshore->alliance_id) : $offshore->alliance_id }}" min="1">
+                                <input type="number" class="input w-full" name="alliance_id" value="{{ $editContext ? old('alliance_id', $offshore->alliance_id) : $offshore->alliance_id }}" min="1">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">API Key</span>
-                                <input type="text" class="input input-bordered w-full" name="api_key" placeholder="Leave blank to keep current key">
+                                <input type="text" class="input w-full" name="api_key" placeholder="Leave blank to keep current key">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Mutation Key</span>
-                                <input type="text" class="input input-bordered w-full" name="mutation_key" placeholder="Leave blank to keep current key">
+                                <input type="text" class="input w-full" name="mutation_key" placeholder="Leave blank to keep current key">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Priority</span>
-                                <input type="number" class="input input-bordered w-full" name="priority" value="{{ $editContext ? old('priority', $offshore->priority) : $offshore->priority }}" min="0">
+                                <input type="number" class="input w-full" name="priority" value="{{ $editContext ? old('priority', $offshore->priority) : $offshore->priority }}" min="0">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Enabled</span>
                                 @php $editEnabled = $editContext ? (int) old('enabled', $offshore->enabled ? 1 : 0) : ($offshore->enabled ? 1 : 0); @endphp
-                                <select class="select select-bordered w-full" name="enabled">
+                                <select class="select w-full" name="enabled">
                                     <option value="1" {{ $editEnabled === 1 ? 'selected' : '' }}>Yes</option>
                                     <option value="0" {{ $editEnabled === 0 ? 'selected' : '' }}>No</option>
                                 </select>
@@ -471,7 +477,7 @@
             </dialog>
         @endforeach
 
-        <dialog id="manualTransferModal" class="modal">
+        <dialog id="manualTransferModal" class="modal" aria-label="Transfer offshore funds">
             <div class="modal-box max-w-4xl">
                 <form action="{{ route('admin.offshores.transfer') }}" method="POST" autocomplete="off" class="space-y-6">
                     @csrf
@@ -481,13 +487,13 @@
                             <h3 class="text-lg font-semibold">Manual Offshore Transfer</h3>
                             <p class="text-sm text-base-content/60">Move funds between the main bank and offshores.</p>
                         </div>
-                        <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="manualTransferModal">✕</button>
+                        <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="manualTransferModal" aria-label="Close transfer dialog">✕</button>
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Source</span>
-                            <select class="select select-bordered w-full" name="source_type" id="transfer-source-type" required>
+                            <select class="select w-full" name="source_type" id="transfer-source-type" required>
                                 <option value="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}">Main Bank</option>
                                 @foreach($offshores as $offshore)
                                     <option value="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}" data-offshore-id="{{ $offshore->id }}">
@@ -499,7 +505,7 @@
                         </label>
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Destination</span>
-                            <select class="select select-bordered w-full" name="destination_type" id="transfer-destination-type" required>
+                            <select class="select w-full" name="destination_type" id="transfer-destination-type" required>
                                 <option value="{{ \App\Models\OffshoreTransfer::TYPE_MAIN }}">Main Bank</option>
                                 @foreach($offshores as $offshore)
                                     <option value="{{ \App\Models\OffshoreTransfer::TYPE_OFFSHORE }}" data-offshore-id="{{ $offshore->id }}">
@@ -513,13 +519,13 @@
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Operator Note <span class="text-base-content/60">(optional)</span></span>
-                        <input type="text" class="input input-bordered w-full" name="note" placeholder="Visible in bank records and audit logs">
+                        <input type="text" class="input w-full" name="note" placeholder="Visible in bank records and audit logs">
                     </label>
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach($resources as $resource)
                             <label class="block space-y-2">
-                                <span class="text-sm font-medium text-capitalize">{{ $resource }}</span>
+                                <span class="text-sm font-medium capitalize">{{ $resource }}</span>
                                 <div class="join w-full">
                                     @if($resource === 'money')
                                         <span class="join-item flex items-center border border-base-300 bg-base-200 px-3 text-sm">$</span>
@@ -528,7 +534,7 @@
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        class="input input-bordered join-item w-full"
+                                        class="input join-item w-full"
                                         name="resources[{{ $resource }}]"
                                         placeholder="0.00"
                                     >
@@ -553,7 +559,7 @@
         <div class="guardrail-row grid gap-3 rounded-box border border-base-300 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
             <label class="block space-y-2">
                 <span class="text-sm font-medium">Resource</span>
-                <select class="select select-bordered w-full" name="guardrails[__INDEX__][resource]" required>
+                <select class="select w-full" name="guardrails[__INDEX__][resource]" required>
                     @foreach($guardrailResources as $resource)
                         <option value="{{ $resource }}">{{ ucfirst($resource) }}</option>
                     @endforeach
@@ -561,9 +567,9 @@
             </label>
             <label class="block space-y-2">
                 <span class="text-sm font-medium">Minimum Amount</span>
-                <input type="number" step="0.01" min="0" class="input input-bordered w-full" name="guardrails[__INDEX__][minimum_amount]" required>
+                <input type="number" step="0.01" min="0" class="input w-full" name="guardrails[__INDEX__][minimum_amount]" required>
             </label>
-            <button type="button" class="btn btn-outline btn-error btn-sm md:self-end" data-action="remove-guardrail">
+            <button type="button" class="btn btn-outline btn-error btn-sm md:self-end" data-action="remove-guardrail" aria-label="Remove guardrail">
                 <x-icon name="o-trash" class="size-4" />
             </button>
         </div>

@@ -2,14 +2,16 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header :title="'Account: ' . $account->name" separator>
+    <x-header :title="'Account: ' . $account->name" separator use-h1>
         <x-slot:actions>
             <x-badge :value="$account->frozen ? 'Frozen' : 'Active'"
                      :class="$account->frozen ? 'badge-error' : 'badge-success'" />
             @can('manage-accounts')
                 <form method="POST"
                       action="{{ $account->frozen ? route('admin.accounts.unfreeze', $account) : route('admin.accounts.freeze', $account) }}"
-                      onsubmit="return confirm('Are you sure you want to {{ $account->frozen ? 'unfreeze' : 'freeze' }} this account?');">
+                      data-confirm="{{ $account->frozen ? 'Unfreeze' : 'Freeze' }} this account?"
+                      data-confirm-title="{{ $account->frozen ? 'Unfreeze' : 'Freeze' }} account?"
+                      data-confirm-label="{{ $account->frozen ? 'Unfreeze' : 'Freeze' }} account">
                     @csrf
                     <x-button :label="$account->frozen ? 'Unfreeze' : 'Freeze'"
                               :icon="$account->frozen ? 'o-lock-open' : 'o-lock-closed'"
@@ -23,7 +25,7 @@
     {{-- Balance --}}
     <x-card title="Balance" class="mb-4">
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         @foreach(PWHelperService::resources() as $resource)
@@ -66,7 +68,7 @@
             <x-input placeholder="Search..." x-model="search" icon="o-magnifying-glass" class="input-sm w-48" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra text-nowrap">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Date</th>
@@ -77,7 +79,7 @@
                         @foreach(PWHelperService::resources(false) as $resource)
                             <th class="text-right">{{ ucfirst($resource) }}</th>
                         @endforeach
-                        <th>Action</th>
+                        <th data-sortable="false">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,7 +136,10 @@
                                 @elseif($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
                                     <form method="POST"
                                           action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
-                                          onsubmit="return confirm('Are you sure you want to refund this transaction?');">
+                                          data-confirm="Refund this transaction? Confirm the current balance and transaction direction before continuing."
+                                          data-confirm-title="Refund transaction?"
+                                          data-confirm-label="Issue refund"
+                                          data-confirm-tone="error">
                                         @csrf
                                         <x-button label="Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-xs" />
                                     </form>
@@ -159,14 +164,14 @@
                 <x-badge  value="{{ $stuckTransactions->count() }} stuck" class="badge-warning" />
             </x-slot:menu>
             <div class="overflow-x-auto">
-                <table class="table table-sm table-zebra">
+                <table class="table table-sm table-zebra" data-sortable="false">
                     <thead>
                         <tr class="text-base-content/60">
                             <th>Date</th>
                             <th>Amount</th>
                             <th>Nation</th>
                             <th>Pending Reason</th>
-                            <th>Action</th>
+                            <th data-sortable="false">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -193,7 +198,10 @@
                                         @else
                                             <form method="POST"
                                                   action="{{ route('admin.accounts.transactions.unstuck_refund', $transaction) }}"
-                                                  onsubmit="return confirm('Unstick and refund this pending withdrawal?');">
+                                                  data-confirm="Unstick and refund this pending withdrawal? Confirm it was not completed externally before continuing."
+                                                  data-confirm-title="Release pending withdrawal?"
+                                                  data-confirm-label="Unstick and refund"
+                                                  data-confirm-tone="error">
                                                 @csrf
                                                 <x-button label="Unstick + Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-sm" />
                                             </form>
@@ -212,7 +220,7 @@
     <x-card class="mb-4">
         <x-slot:title>Last 500 Manual Adjustments</x-slot:title>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra text-nowrap">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Date</th>
@@ -266,7 +274,7 @@
             <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
         </x-slot:menu>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra text-nowrap">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Date</th>
@@ -330,7 +338,7 @@
             <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
         </x-slot:menu>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra text-nowrap">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Date</th>

@@ -3,8 +3,8 @@
 @section('content')
     <x-chart-js />
 
-    <div class="mx-auto space-y-8">
-        <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-md">
+    <div class="mx-auto w-full min-w-0 space-y-8">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Funding Desk</p>
@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        <x-utils.card title="Loans in 30 seconds" extraClasses="shadow-lg">
+        <x-utils.card title="Loans in 30 seconds" extraClasses="shadow-sm">
             <div class="grid gap-4 text-sm text-base-content/85 md:grid-cols-2">
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4">
                     <p class="font-semibold">What happens</p>
@@ -75,23 +75,23 @@
         @endif
 
         <div class="grid gap-6 lg:grid-cols-2">
-            <x-utils.card title="Apply for a loan" extraClasses="shadow-lg">
+            <x-utils.card title="Apply for a loan" extraClasses="shadow-sm">
                 @if ($loanApplicationsEnabled)
                     <form method="POST" action="{{ route('loans.apply') }}" class="space-y-4">
                         @csrf
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="amount">
-                                <span class="label-text font-semibold">Loan amount</span>
+                                <span class="font-semibold">Loan amount</span>
                             </label>
                             <input type="number" name="amount" id="amount" min="100000" step="0.01" required
-                                   class="input input-bordered w-full" placeholder="Enter amount">
+                                   class="input w-full" placeholder="Enter amount">
                         </div>
 
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="account_id">
-                                <span class="label-text font-semibold">Deposit account</span>
+                                <span class="font-semibold">Deposit account</span>
                             </label>
-                            <select name="account_id" id="account_id" class="select select-bordered w-full" required>
+                            <select name="account_id" id="account_id" class="select w-full" required>
                                 @foreach ($accounts as $account)
                                     <option value="{{ $account->id }}">
                                         {{ $account->name }} (Balance: ${{ number_format((float) $account->money, 2) }})
@@ -100,12 +100,12 @@
                             </select>
                         </div>
 
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="term_weeks">
-                                <span class="label-text font-semibold">Term (weeks)</span>
+                                <span class="font-semibold">Term (weeks)</span>
                             </label>
                             <input type="number" id="term_weeks" name="term_weeks" min="1" max="52" step="1" required
-                                   class="input input-bordered w-full" placeholder="1-52">
+                                   class="input w-full" placeholder="1-52">
                         </div>
 
                         <button type="submit" class="btn btn-primary w-full">Submit application</button>
@@ -115,28 +115,28 @@
                 @endif
             </x-utils.card>
 
-            <x-utils.card title="Make a payment" extraClasses="shadow-lg">
+            <x-utils.card title="Make a payment" extraClasses="shadow-sm">
                 @if ($activeLoans->isEmpty())
                     <p class="text-sm text-base-content/70">No active loans available for repayment.</p>
                 @else
                     <form method="POST" action="{{ route('loans.repay') }}" class="space-y-4" id="repayForm">
                         @csrf
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="repayment_loan_id">
-                                <span class="label-text font-semibold">Loan</span>
+                                <span class="font-semibold">Loan</span>
                             </label>
-                            <select name="loan_id" id="repayment_loan_id" class="select select-bordered w-full" required>
+                            <select name="loan_id" id="repayment_loan_id" class="select w-full" required>
                                 @foreach ($activeLoans as $loan)
                                     <option value="{{ $loan->id }}">Loan #{{ $loan->id }} ({{ strtoupper($loan->status) }})</option>
                                 @endforeach
                             </select>
                         </div>
 
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="repayment_account_id">
-                                <span class="label-text font-semibold">Payment account</span>
+                                <span class="font-semibold">Payment account</span>
                             </label>
-                            <select name="account_id" id="repayment_account_id" class="select select-bordered w-full" required>
+                            <select name="account_id" id="repayment_account_id" class="select w-full" required>
                                 @foreach ($accounts as $account)
                                     <option value="{{ $account->id }}">
                                         {{ $account->name }} (Balance: ${{ number_format((float) $account->money, 2) }})
@@ -145,12 +145,12 @@
                             </select>
                         </div>
 
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="repayment_amount">
-                                <span class="label-text font-semibold">Payment amount</span>
+                                <span class="font-semibold">Payment amount</span>
                             </label>
                             <input type="number" name="amount" id="repayment_amount" min="0.01" step="0.01" required
-                                   class="input input-bordered w-full" placeholder="Enter amount">
+                                   class="input w-full" placeholder="Enter amount">
                             <div class="mt-2 flex items-center justify-between gap-2">
                                 <button type="button" id="use_min_due" class="btn btn-outline btn-sm">
                                     Use minimum due
@@ -159,9 +159,9 @@
                             </div>
                         </div>
 
-                        <div class="form-control">
+                        <div class="grid gap-2">
                             <label class="label" for="repayment_slider">
-                                <span class="label-text font-semibold">What happens if I pay this amount?</span>
+                                <span class="font-semibold">What happens if I pay this amount?</span>
                             </label>
                             <input type="range" id="repayment_slider" min="0" max="100" value="0" class="range range-primary">
                             <div class="mt-1 flex justify-between text-xs text-base-content/60">
@@ -188,7 +188,7 @@
             </x-utils.card>
         </div>
 
-        <x-utils.card title="Loan formula and rules" extraClasses="shadow-lg">
+        <x-utils.card title="Loan formula and rules" extraClasses="shadow-sm">
             <div class="space-y-4 text-sm text-base-content/80">
                 <p>
                     The scheduled weekly payment uses standard amortization with a weekly rate:
@@ -208,7 +208,7 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="How loan payments work" extraClasses="shadow-lg">
+        <x-utils.card title="How loan payments work" extraClasses="shadow-sm">
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="rounded-xl border border-base-300 bg-base-200 p-4 text-sm">
                     <h3 class="text-base font-semibold">Payment cycle</h3>
@@ -249,7 +249,7 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="Glossary" extraClasses="shadow-lg">
+        <x-utils.card title="Glossary" extraClasses="shadow-sm">
             <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div class="rounded-lg border border-base-300 bg-base-200 p-3"><p class="font-semibold">Principal</p><p>The remaining borrowed amount.</p></div>
                 <div class="rounded-lg border border-base-300 bg-base-200 p-3"><p class="font-semibold">Interest</p><p>The borrowing cost based on weekly rate.</p></div>
@@ -264,7 +264,7 @@
         </x-utils.card>
 
         @if (! $activeLoans->isEmpty())
-            <x-utils.card title="Active Loans and Amortization" extraClasses="shadow-lg">
+            <x-utils.card title="Active Loans and Amortization" extraClasses="shadow-sm">
                 <div class="space-y-8">
                     @foreach ($activeLoans as $loan)
                         @php
@@ -401,7 +401,7 @@
                             @if (! empty($schedule))
                                 <div class="mt-6 space-y-4">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <h4 class="text-md font-semibold">Contract Amortization Schedule</h4>
+                                        <h4 class="text-base font-semibold">Contract Amortization Schedule</h4>
                                         <button class="btn btn-outline btn-sm" type="button"
                                                 onclick="downloadScheduleCsv('loan-schedule-{{ $loan->id }}', 'loan-{{ $loan->id }}-amortization.csv')">
                                             Download CSV
@@ -410,8 +410,8 @@
                                     <div class="h-96 rounded-lg border border-base-300 bg-base-100 p-3">
                                         <canvas id="amortization-chart-{{ $loan->id }}"></canvas>
                                     </div>
-                                    <div class="max-h-80 overflow-y-auto rounded-lg border border-base-300">
-                                        <table class="table table-sm table-zebra w-full" id="loan-schedule-{{ $loan->id }}">
+                                    <div class="max-h-80 overflow-x-auto overflow-y-auto rounded-lg border border-base-300">
+                                        <table class="table table-sm table-zebra w-full" id="loan-schedule-{{ $loan->id }}" data-sortable="false">
                                             <thead>
                                             <tr>
                                                 <th>Week</th>
@@ -447,6 +447,11 @@
                                             return;
                                         }
 
+                                        const palette = window.NexusCharts?.colors?.() ?? {
+                                            success: '#2f7d45',
+                                            warning: '#c28c24',
+                                        };
+
                                         new Chart(ctx, {
                                             type: 'bar',
                                             data: {
@@ -454,16 +459,18 @@
                                                 datasets: [
                                                     {
                                                         label: 'Interest',
+                                                        nexusColor: 'warning',
                                                         data: @json($chartInterest),
-                                                        backgroundColor: 'rgba(245, 158, 11, 0.65)',
-                                                        borderColor: 'rgba(245, 158, 11, 1)',
+                                                        backgroundColor: palette.warning,
+                                                        borderColor: palette.warning,
                                                         borderWidth: 1,
                                                     },
                                                     {
                                                         label: 'Principal',
+                                                        nexusColor: 'success',
                                                         data: @json($chartPrincipal),
-                                                        backgroundColor: 'rgba(16, 185, 129, 0.65)',
-                                                        borderColor: 'rgba(16, 185, 129, 1)',
+                                                        backgroundColor: palette.success,
+                                                        borderColor: palette.success,
                                                         borderWidth: 1,
                                                     }
                                                 ]
@@ -501,12 +508,12 @@
 
                             @if (! $loan->payments->isEmpty())
                                 <div class="mt-6">
-                                    <h4 class="text-md font-semibold">Payment History</h4>
-                                    <div class="max-h-72 overflow-y-auto rounded-lg border border-base-300">
-                                        <table class="table table-sm table-zebra w-full">
+                                    <h4 class="text-base font-semibold">Payment History</h4>
+                                    <div class="max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-base-300">
+                                        <table class="table table-sm table-zebra w-full" data-sortable="true">
                                             <thead>
                                             <tr>
-                                                <th>Date</th>
+                                                <th data-sortable="false">Date</th>
                                                 <th>Amount</th>
                                                 <th>Interest</th>
                                                 <th>Principal</th>
@@ -534,7 +541,7 @@
             </x-utils.card>
         @endif
 
-        <x-utils.card title="Loan FAQ" extraClasses="shadow-lg">
+        <x-utils.card title="Loan FAQ" extraClasses="shadow-sm">
             <div class="space-y-2">
                 @php
                     $faqs = [
@@ -571,19 +578,19 @@
             </div>
         </x-utils.card>
 
-        <x-utils.card title="Loan history" extraClasses="shadow-lg">
+        <x-utils.card title="Loan history" extraClasses="shadow-sm">
             @if ($loanHistory->isEmpty())
                 <p class="text-base-content/70">No previous loan applications found.</p>
             @else
                 <div class="overflow-x-auto rounded-xl border border-base-300">
-                    <table class="table table-zebra w-full">
+                    <table class="table table-zebra w-full" data-sortable="true">
                         <thead class="bg-base-200">
                         <tr>
                             <th>Amount</th>
                             <th>Term (Weeks)</th>
                             <th>Account</th>
                             <th>Status</th>
-                            <th>Requested At</th>
+                            <th data-sortable="false">Requested At</th>
                         </tr>
                         </thead>
                         <tbody>

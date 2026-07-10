@@ -2,24 +2,31 @@
 
 namespace App\Support;
 
+use App\Models\Account;
+use App\Models\Alliance;
+use App\Models\AllianceFinanceEntry;
+use App\Models\CityGrant;
+use App\Models\CityGrantRequest;
 use App\Models\DiscordAccount;
+use App\Models\GrantApplication;
+use App\Models\Grants;
+use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\Page;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 class BrowserTestBootstrap
 {
     /**
-     * Reset the lightweight browser-test schema and seed stable personas.
+     * Reset the isolated browser database and seed stable personas.
      *
-     * @return array{admin: User, member: User}
+     * @return array{admin: User, limited: User, member: User}
      */
     public function resetAndSeed(): array
     {
@@ -37,31 +44,41 @@ class BrowserTestBootstrap
         $this->recreateSchema();
 
         return DB::transaction(function (): array {
-            Setting::query()->create(['key' => 'require_discord_verification', 'value' => '1']);
-            Setting::query()->create(['key' => 'require_mfa_all_users', 'value' => '0']);
-            Setting::query()->create(['key' => 'require_mfa_admins', 'value' => '0']);
-
-            Page::query()->create([
-                'slug' => 'apply',
-                'status' => Page::STATUS_PUBLISHED,
-                'cached_html' => '<h1>'.e(config('app.name')).' Alliance Management System</h1>',
+            Setting::query()->insert([
+                ['key' => 'require_discord_verification', 'value' => '1'],
+                ['key' => 'require_mfa_all_users', 'value' => '0'],
+                ['key' => 'require_mfa_admins', 'value' => '0'],
+                ['key' => 'grant_approvals_enabled', 'value' => '1'],
+                ['key' => 'loan_applications_enabled', 'value' => '1'],
+                ['key' => 'loan_payments_enabled', 'value' => '1'],
             ]);
 
-            $memberNation = Nation::query()->create([
-                'id' => 200001,
-                'nation_name' => 'Browser Member Nation',
-                'leader_name' => 'Browser Member',
-                'discord' => 'browser-member',
-                'flag' => 'https://example.test/member-flag.png',
+            Alliance::query()->create([
+                'id' => 9001,
+                'name' => 'Browser Test Alliance',
+                'acronym' => 'BTA',
+                'score' => 42000,
+                'color' => 'green',
+                'average_score' => 2100,
+                'accept_members' => true,
+                'rank' => 42,
             ]);
 
-            $adminNation = Nation::query()->create([
-                'id' => 200002,
-                'nation_name' => 'Browser Admin Nation',
-                'leader_name' => 'Browser Admin',
-                'discord' => 'browser-admin',
-                'flag' => 'https://example.test/admin-flag.png',
-            ]);
+            $memberNation = $this->createNation(
+                id: 200001,
+                nationName: 'Browser Member Nation',
+                leaderName: 'Browser Member',
+            );
+            $adminNation = $this->createNation(
+                id: 200002,
+                nationName: 'Browser Admin Nation',
+                leaderName: 'Browser Admin',
+            );
+            $limitedNation = $this->createNation(
+                id: 200003,
+                nationName: 'Browser Limited Nation',
+                leaderName: 'Browser Limited',
+            );
 
             $member = User::factory()
                 ->verified()
@@ -82,32 +99,58 @@ class BrowserTestBootstrap
                     'last_active_at' => now(),
                 ]);
 
-            DiscordAccount::factory()->create([
-                'user_id' => $member->id,
-                'discord_id' => '111111111111111111',
-                'discord_username' => 'browser-member',
-            ]);
+            $limited = User::factory()
+                ->verified()
+                ->admin()
+                ->create([
+                    'name' => 'Browser Limited',
+                    'email' => 'browser.limited@example.test',
+                    'nation_id' => $limitedNation->id,
+                    'last_active_at' => now(),
+                ]);
 
-            DiscordAccount::factory()->create([
-                'user_id' => $admin->id,
-                'discord_id' => '222222222222222222',
-                'discord_username' => 'browser-admin',
+            $this->createDiscordAccount($member, '111111111111111111', 'browser-member');
+            $this->createDiscordAccount($admin, '222222222222222222', 'browser-admin');
+            $this->createDiscordAccount($limited, '333333333333333333', 'browser-limited');
+
+            $memberAccount = $this->createAccount($memberNation, 'Operations reserve', 1250000);
+            $this->createAccount($adminNation, 'Staff test account', 500000);
+
+            $this->createOperationalFixtures($memberNation, $memberAccount);
+
+            Page::query()->create([
+                'slug' => 'browser-operations-guide',
+                'status' => Page::STATUS_DRAFT,
+                'draft' => '<h2>Browser operations guide</h2><p>Stable content for editor lifecycle checks.</p>',
             ]);
 
             $adminRole = Role::query()->create([
-                'name' => 'Browser Admin Role',
+                'name' => 'Browser Full Admin',
                 'protected' => false,
             ]);
+            DB::table('role_permissions')->insert(
+                collect(config('permissions', []))
+                    ->map(fn (string $permission): array => [
+                        'role_id' => $adminRole->id,
+                        'permission' => $permission,
+                    ])
+                    ->all()
+            );
+            $admin->roles()->attach($adminRole);
 
+            $limitedRole = Role::query()->create([
+                'name' => 'Browser Limited Admin',
+                'protected' => false,
+            ]);
             DB::table('role_permissions')->insert([
-                'role_id' => $adminRole->id,
+                'role_id' => $limitedRole->id,
                 'permission' => 'view-users',
             ]);
-
-            $admin->roles()->attach($adminRole);
+            $limited->roles()->attach($limitedRole);
 
             return [
                 'admin' => $admin->fresh(),
+                'limited' => $limited->fresh(),
                 'member' => $member->fresh(),
             ];
         });
@@ -115,24 +158,23 @@ class BrowserTestBootstrap
 
     private function recreateSchema(): void
     {
-        Schema::disableForeignKeyConstraints();
+        $wipeStatus = Artisan::call('db:wipe', [
+            '--force' => true,
+            '--no-interaction' => true,
+        ]);
 
-        foreach ($this->tablesToDrop() as $table) {
-            Schema::dropIfExists($table);
+        if ($wipeStatus !== 0) {
+            throw new RuntimeException('Unable to wipe the browser test database: '.Artisan::output());
         }
 
-        Schema::enableForeignKeyConstraints();
+        $migrationStatus = Artisan::call('migrate', [
+            '--force' => true,
+            '--no-interaction' => true,
+        ]);
 
-        $this->createUsersTable();
-        $this->createNationsTable();
-        $this->createSettingsTable();
-        $this->createPagesTable();
-        $this->createDiscordAccountsTable();
-        $this->createTrustedDevicesTable();
-        $this->createPersonalAccessTokensTable();
-        $this->createRolesTables();
-        $this->createAuditLogsTable();
-        $this->createPendingWorkflowTables();
+        if ($migrationStatus !== 0) {
+            throw new RuntimeException('Unable to migrate the browser test database: '.Artisan::output());
+        }
     }
 
     private function guardAgainstNonTestDatabases(): void
@@ -159,257 +201,115 @@ class BrowserTestBootstrap
         }
     }
 
-    /**
-     * @return list<string>
-     */
-    private function tablesToDrop(): array
+    private function createNation(int $id, string $nationName, string $leaderName): Nation
     {
-        return [
-            'role_user',
-            'role_permissions',
-            'roles',
-            'audit_logs',
-            'personal_access_tokens',
-            'trusted_devices',
-            'discord_accounts',
-            'rebuilding_requests',
-            'war_aid_requests',
-            'loans',
-            'grant_applications',
-            'city_grant_requests',
-            'transactions',
-            'pages',
-            'settings',
-            'users',
-            'nations',
-        ];
+        return Nation::factory()->create([
+            'id' => $id,
+            'alliance_id' => 9001,
+            'nation_name' => $nationName,
+            'leader_name' => $leaderName,
+            'discord' => str($leaderName)->slug(),
+            'flag' => null,
+            'num_cities' => 12,
+            'score' => 2450.75,
+        ]);
     }
 
-    private function createUsersTable(): void
+    private function createDiscordAccount(User $user, string $discordId, string $username): void
     {
-        Schema::create('users', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->unsignedInteger('nation_id')->nullable();
-            $table->boolean('is_admin')->default(false);
-            $table->boolean('disabled')->default(false);
-            $table->timestamp('last_active_at')->nullable();
-            $table->string('verification_code')->nullable();
-            $table->timestamp('verified_at')->nullable();
-            $table->string('discord_verification_token')->nullable()->unique();
-            $table->text('two_factor_secret')->nullable();
-            $table->text('two_factor_recovery_codes')->nullable();
-            $table->timestamp('two_factor_confirmed_at')->nullable();
-            $table->timestamps();
-        });
+        DiscordAccount::factory()->create([
+            'user_id' => $user->id,
+            'discord_id' => $discordId,
+            'discord_username' => $username,
+        ]);
     }
 
-    private function createNationsTable(): void
+    private function createAccount(Nation $nation, string $name, float $money): Account
     {
-        Schema::create('nations', function (Blueprint $table): void {
-            $table->unsignedInteger('id')->primary();
-            $table->string('nation_name')->nullable();
-            $table->string('leader_name')->nullable();
-            $table->unsignedInteger('alliance_id')->nullable();
-            $table->string('discord')->nullable();
-            $table->string('flag')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
-        });
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = $name;
+        $account->money = $money;
+        $account->food = 250000;
+        $account->steel = 4200;
+        $account->aluminum = 3600;
+        $account->save();
+
+        return $account;
     }
 
-    private function createSettingsTable(): void
+    private function createOperationalFixtures(Nation $memberNation, Account $memberAccount): void
     {
-        Schema::create('settings', function (Blueprint $table): void {
-            $table->id();
-            $table->string('key')->unique();
-            $table->text('value')->nullable();
-            $table->timestamps();
-        });
-    }
+        $grant = new Grants;
+        $grant->name = 'Infrastructure reserve';
+        $grant->slug = 'infrastructure-reserve';
+        $grant->description = 'A stable browser fixture for reviewing an exact mixed-resource payout.';
+        $grant->money = 2500000;
+        $grant->steel = 1250;
+        $grant->aluminum = 900;
+        $grant->is_enabled = true;
+        $grant->is_one_time = false;
+        $grant->save();
 
-    private function createPagesTable(): void
-    {
-        Schema::create('pages', function (Blueprint $table): void {
-            $table->id();
-            $table->string('slug')->unique();
-            $table->string('status')->default('draft');
-            $table->json('draft')->nullable();
-            $table->json('published')->nullable();
-            $table->longText('cached_html')->nullable();
-            $table->timestamps();
-        });
-    }
+        GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+            'money' => $grant->money,
+            'steel' => $grant->steel,
+            'aluminum' => $grant->aluminum,
+        ]);
 
-    private function createDiscordAccountsTable(): void
-    {
-        Schema::create('discord_accounts', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('discord_id');
-            $table->string('discord_username');
-            $table->timestamp('linked_at');
-            $table->timestamp('unlinked_at')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
-        });
-    }
+        CityGrant::query()->create([
+            'description' => 'Baseline expansion support for browser review.',
+            'enabled' => true,
+            'grant_amount' => 4750000,
+            'city_number' => 13,
+            'requirements' => [],
+        ]);
 
-    private function createTrustedDevicesTable(): void
-    {
-        Schema::create('trusted_devices', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->string('token_hash');
-            $table->string('user_agent_hash');
-            $table->string('user_agent')->nullable();
-            $table->timestamp('expires_at');
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamps();
-        });
-    }
+        CityGrantRequest::query()->create([
+            'city_number' => 13,
+            'grant_amount' => 4750000,
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
 
-    private function createPersonalAccessTokensTable(): void
-    {
-        Schema::create('personal_access_tokens', function (Blueprint $table): void {
-            $table->id();
-            $table->morphs('tokenable');
-            $table->string('name');
-            $table->string('token', 64)->unique();
-            $table->text('abilities')->nullable();
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamps();
-        });
-    }
+        Loan::query()->create([
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'amount' => 7500000,
+            'remaining_balance' => 7500000,
+            'interest_rate' => 3.5,
+            'term_weeks' => 12,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
 
-    private function createRolesTables(): void
-    {
-        Schema::create('roles', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->unique();
-            $table->boolean('protected')->default(false);
-            $table->timestamps();
-        });
+        AllianceFinanceEntry::query()->create([
+            'date' => now()->toDateString(),
+            'direction' => AllianceFinanceEntry::DIRECTION_INCOME,
+            'category' => 'tax',
+            'description' => 'Member tax settlement',
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'money' => 2400000,
+            'food' => 12000,
+        ]);
 
-        Schema::create('role_user', function (Blueprint $table): void {
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('role_id');
-            $table->primary(['user_id', 'role_id']);
-        });
-
-        Schema::create('role_permissions', function (Blueprint $table): void {
-            $table->unsignedBigInteger('role_id');
-            $table->string('permission');
-            $table->primary(['role_id', 'permission']);
-        });
-    }
-
-    private function createAuditLogsTable(): void
-    {
-        Schema::create('audit_logs', function (Blueprint $table): void {
-            $table->id();
-            $table->timestamp('occurred_at')->index();
-            $table->uuid('request_id')->nullable()->index();
-            $table->string('ip', 45)->nullable()->index();
-            $table->string('user_agent', 512)->nullable();
-            $table->string('actor_type')->index();
-            $table->unsignedBigInteger('actor_id')->nullable();
-            $table->string('actor_name')->nullable();
-            $table->index(['actor_type', 'actor_id']);
-            $table->string('category')->index();
-            $table->string('action')->index();
-            $table->string('outcome')->index();
-            $table->string('severity')->index();
-            $table->string('message')->nullable();
-            $table->string('subject_type')->nullable();
-            $table->string('subject_id')->nullable();
-            $table->index(['subject_type', 'subject_id']);
-            $table->json('context')->nullable();
-        });
-    }
-
-    private function createPendingWorkflowTables(): void
-    {
-        Schema::create('transactions', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('from_account_id')->nullable();
-            $table->unsignedBigInteger('to_account_id')->nullable();
-            $table->unsignedInteger('nation_id')->nullable();
-            $table->string('transaction_type')->nullable();
-            $table->text('note')->nullable();
-            $table->boolean('is_pending')->default(false);
-            $table->boolean('requires_admin_approval')->default(false);
-            $table->string('pending_reason')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('city_grant_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedInteger('nation_id');
-            $table->string('status')->default('pending');
-            $table->unsignedTinyInteger('pending_key')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('grant_applications', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedInteger('nation_id');
-            $table->unsignedBigInteger('grant_id')->nullable();
-            $table->string('status')->default('pending');
-            $table->unsignedTinyInteger('pending_key')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
-        });
-
-        Schema::create('loans', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedInteger('nation_id');
-            $table->unsignedBigInteger('account_id')->nullable();
-            $table->decimal('amount', 15, 2)->default(0);
-            $table->unsignedInteger('term_weeks')->default(0);
-            $table->string('status')->default('pending');
-            $table->unsignedTinyInteger('pending_key')->nullable();
-            $table->decimal('remaining_balance', 15, 2)->default(0);
-            $table->decimal('weekly_interest_paid', 15, 2)->default(0);
-            $table->decimal('scheduled_weekly_payment', 15, 2)->default(0);
-            $table->decimal('past_due_amount', 15, 2)->default(0);
-            $table->decimal('accrued_interest_due', 15, 2)->default(0);
-            $table->timestamp('approved_at')->nullable();
-            $table->timestamp('next_due_date')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('war_aid_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedInteger('nation_id');
-            $table->unsignedBigInteger('account_id')->nullable();
-            $table->string('status')->default('pending');
-            $table->unsignedTinyInteger('pending_key')->nullable();
-            $table->timestamp('approved_at')->nullable();
-            $table->timestamp('denied_at')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('rebuilding_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedInteger('cycle_id')->default(1);
-            $table->unsignedInteger('nation_id');
-            $table->unsignedBigInteger('account_id')->nullable();
-            $table->unsignedBigInteger('tier_id')->nullable();
-            $table->unsignedInteger('city_count_snapshot')->default(0);
-            $table->decimal('target_infrastructure_snapshot', 10, 2)->default(0);
-            $table->decimal('estimated_amount', 15, 2)->default(0);
-            $table->string('status')->default('pending');
-            $table->unsignedTinyInteger('pending_key')->nullable();
-            $table->string('note')->nullable();
-            $table->timestamp('approved_at')->nullable();
-            $table->timestamp('denied_at')->nullable();
-            $table->timestamps();
-        });
+        AllianceFinanceEntry::query()->create([
+            'date' => now()->toDateString(),
+            'direction' => AllianceFinanceEntry::DIRECTION_EXPENSE,
+            'category' => 'grant',
+            'description' => 'Infrastructure grant reserve',
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'money' => 750000,
+            'steel' => 500,
+        ]);
     }
 }

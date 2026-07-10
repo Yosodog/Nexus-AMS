@@ -3,7 +3,7 @@
 @section('title', 'Audit Rules')
 
 @section('content')
-    <x-header title="Audit Rules" separator>
+    <x-header title="Audit Rules" separator use-h1>
         <x-slot:subtitle>Create, update, and retire NEL-powered checks.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex gap-2">
@@ -29,15 +29,15 @@
             </a>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th scope="col">Rule</th>
                     <th scope="col">Target</th>
-                    <th scope="col">Priority</th>
+                    <th scope="col" data-sortable="false">Priority</th>
                     <th scope="col">Enabled</th>
                     <th scope="col">Violations</th>
-                    <th scope="col" style="width: 180px;">Actions</th>
+                    <th scope="col" style="width: 180px;" data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -45,7 +45,7 @@
                     <tr>
                         <td>
                             <div class="font-semibold">{{ $rule->name }}</div>
-                            <div class="text-base-content/50 small">{{ $rule->description ?? 'No description' }}</div>
+                            <div class="text-sm text-base-content/50">{{ $rule->description ?? 'No description' }}</div>
                             <code class="mt-1 block text-wrap text-xs">{{ $rule->expression }}</code>
                         </td>
                         <td>
@@ -84,17 +84,17 @@
                         </td>
                         <td>
                             <div class="flex gap-2">
-                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline">
+                                <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-sm btn-outline" aria-label="View violations for {{ $rule->name }}">
                                     <x-icon name="o-bolt" class="size-4" />
                                 </a>
                                 @can('manage-audits')
-                                    <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary">
+                                    <a href="{{ route('admin.audits.rules.edit', $rule) }}" class="btn btn-sm btn-outline btn-primary" aria-label="Edit {{ $rule->name }}">
                                         <x-icon name="o-pencil" class="size-4" />
                                     </a>
-                                    <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" onsubmit="return confirm('Disable this rule and clear its violations?')">
+                                    <form action="{{ route('admin.audits.rules.destroy', $rule) }}" method="POST" data-confirm="Disable this rule and clear its violations?" data-confirm-title="Disable audit rule?" data-confirm-label="Disable rule" data-confirm-tone="error">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline btn-error">
+                                        <button type="submit" class="btn btn-sm btn-outline btn-error" aria-label="Disable {{ $rule->name }}">
                                             <x-icon name="o-no-symbol" class="size-4" />
                                         </button>
                                     </form>

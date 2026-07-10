@@ -10,19 +10,19 @@
                 <form method="GET" action="{{ route('admin.growth-circles.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                     <label class="block">
                         <span class="text-xs font-medium text-base-content/70">From</span>
-                        <input type="date" name="from" value="{{ request('from') }}" class="input input-bordered input-sm w-full">
+                        <input type="date" name="from" value="{{ request('from') }}" class="input input-sm w-full">
                     </label>
                     <label class="block">
                         <span class="text-xs font-medium text-base-content/70">To</span>
-                        <input type="date" name="to" value="{{ request('to') }}" class="input input-bordered input-sm w-full">
+                        <input type="date" name="to" value="{{ request('to') }}" class="input input-sm w-full">
                     </label>
                     <label class="block">
                         <span class="text-xs font-medium text-base-content/70">Nation ID</span>
-                        <input type="number" name="nation_id" value="{{ request('nation_id') }}" class="input input-bordered input-sm w-full">
+                        <input type="number" name="nation_id" value="{{ request('nation_id') }}" class="input input-sm w-full">
                     </label>
                     <label class="block">
                         <span class="text-xs font-medium text-base-content/70">Account ID</span>
-                        <input type="number" name="account_id" value="{{ request('account_id') }}" class="input input-bordered input-sm w-full">
+                        <input type="number" name="account_id" value="{{ request('account_id') }}" class="input input-sm w-full">
                     </label>
                     <div class="md:col-span-4 flex gap-2">
                         <x-button type="submit" label="Filter" class="btn-primary btn-sm" />
@@ -35,7 +35,7 @@
                     <p class="text-base-content/60 text-sm">No distributions match the current filter.</p>
                 @else
                     <div class="overflow-x-auto">
-                        <table class="table table-sm w-full">
+                        <table class="table table-sm w-full" data-sortable="false">
                             <thead>
                             <tr>
                                 <th>Cycle</th>

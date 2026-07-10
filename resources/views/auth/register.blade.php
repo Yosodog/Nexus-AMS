@@ -1,129 +1,171 @@
-@extends("layouts.main")
+@extends('layouts.public')
 
-@section("content")
-    <x-utils.card title="Create your account" extraClasses="mx-auto w-full max-w-2xl">
-        <p class="mb-4 text-sm text-base-content/70">Join {{ config('app.name') }} to manage your nation and alliance tools in one place. We will send a quick verification to confirm your nation.</p>
+@section('title', 'Create account · '.config('app.name'))
 
-        @if ($errors->any())
-            <div class="alert alert-error mb-4">
-                <div class="flex flex-col gap-1 text-sm">
-                    <span class="font-semibold">We need a bit more info.</span>
-                    <span class="text-base-content/80">Check the highlighted fields and try again.</span>
-                </div>
-            </div>
-        @endif
+@section('content')
+    <x-auth.shell
+        badge="Account setup · Step 1"
+        title="Create your member account"
+        description="Connect your sign-in credentials to the Politics & War nation you manage. We verify nation ownership before member tools become available."
+    >
+        <x-slot:context>
+            <h2 class="font-display text-2xl font-bold tracking-[-0.02em]">Your access path</h2>
+            <p class="mt-3 text-sm leading-6 text-neutral-content/70">
+                Setup begins here and continues in the services used by your alliance.
+            </p>
 
-        <form method="post" action="{{ route("register") }}" class="space-y-4">
-            @csrf
+            <ol class="mt-7 space-y-5">
+                <x-auth.journey-step
+                    number="1"
+                    state="current"
+                    title="Create your account"
+                    description="Choose credentials and identify the nation you manage."
+                />
+                <x-auth.journey-step
+                    number="2"
+                    title="Verify your nation"
+                    description="Open the message sent to your nation in Politics & War."
+                />
+                <x-auth.journey-step
+                    number="3"
+                    title="Complete access checks"
+                    description="Your alliance may also require Discord linking or multi-factor authentication."
+                />
+            </ol>
+        </x-slot:context>
 
-            <div class="grid gap-4 md:grid-cols-2">
-                <div class="form-control">
-                    <label class="label" for="name">
-                        <span class="label-text font-medium">Username</span>
-                        <span class="label-text-alt text-base-content/60">Displayed to other members</span>
-                    </label>
-                    <label class="input input-bordered flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                             class="w-4 h-4 opacity-70">
-                            <path fill-rule="evenodd"
-                                  d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z"
-                                  clip-rule="evenodd"/>
-                        </svg>
-                        <input type="text" class="grow" id="name" name="name" placeholder="Username"
-                               value="{{ old('name') }}" autocomplete="username" required/>
-                    </label>
-                    @error('name')
-                        <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                    @enderror
-                </div>
+        <div class="space-y-6">
+            <x-auth.error-summary title="Some account details need your attention." />
 
-                <div class="form-control">
-                    <label class="label" for="email">
-                        <span class="label-text font-medium">Email</span>
-                        <span class="label-text-alt text-base-content/60">For account alerts</span>
-                    </label>
-                    <label class="input input-bordered flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                             class="w-4 h-4 opacity-70">
-                            <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z"/>
-                            <path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z"/>
-                        </svg>
-                        <input type="email" class="grow" id="email" name="email" placeholder="Email"
-                               value="{{ old('email') }}" autocomplete="email" required/>
-                    </label>
-                    @error('email')
-                        <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
+            <form method="POST" action="{{ route('register') }}" class="space-y-7">
+                @csrf
 
-            <div class="grid gap-4 md:grid-cols-2">
-                <div class="form-control">
-                    <label class="label" for="nation_id">
-                        <span class="label-text font-medium">Nation ID</span>
-                        <span class="label-text-alt text-base-content/60">Used to verify alliance membership</span>
-                    </label>
-                    <label class="input input-bordered flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                             class="w-4 h-4 opacity-70">
-                            <path fill-rule="evenodd"
-                                  d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z"
-                                  clip-rule="evenodd"/>
-                        </svg>
-                        <input type="number" class="grow" id="nation_id" name="nation_id" placeholder="Nation ID"
-                               value="{{ old('nation_id') }}" min="1" inputmode="numeric" required/>
-                    </label>
-                    @error('nation_id')
-                        <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                    @enderror
-                </div>
+                <section aria-labelledby="identity-fields-title">
+                    <h2 id="identity-fields-title" class="font-display text-xl font-bold text-base-content">Account and nation</h2>
+                    <p class="mt-1 text-sm leading-6 text-base-content/70">
+                        All fields are required. Registration is limited to eligible alliance nations.
+                    </p>
 
-                <div class="space-y-4">
-                    <div class="form-control">
-                        <label class="label" for="password">
-                            <span class="label-text font-medium">Password</span>
-                            <span class="label-text-alt text-base-content/60">Make it strong and unique</span>
-                        </label>
-                        <label class="input input-bordered flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                                 class="w-4 h-4 opacity-70">
-                                <path fill-rule="evenodd"
-                                      d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
-                                      clip-rule="evenodd"/>
-                            </svg>
-                            <input type="password" class="grow" id="password" name="password" placeholder="Password"
-                                   autocomplete="new-password" required/>
-                        </label>
-                        @error('password')
-                            <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                        @enderror
+                    <div class="mt-5 grid gap-5 sm:grid-cols-2">
+                        <x-auth.field
+                            id="register-name"
+                            name="name"
+                            label="Username"
+                            hint="Your sign-in name. It may also be visible to other members."
+                        >
+                            <input
+                                type="text"
+                                id="register-name"
+                                name="name"
+                                value="{{ old('name') }}"
+                                @class(['input w-full', 'input-error' => $errors->has('name')])
+                                autocomplete="username"
+                                aria-describedby="register-name-help{{ $errors->has('name') ? ' register-name-error' : '' }}"
+                                @if($errors->has('name')) aria-invalid="true" @endif
+                                required
+                                autofocus
+                            >
+                        </x-auth.field>
+
+                        <x-auth.field
+                            id="register-email"
+                            name="email"
+                            label="Email address"
+                            hint="Keep this current for account notices."
+                        >
+                            <input
+                                type="email"
+                                id="register-email"
+                                name="email"
+                                value="{{ old('email') }}"
+                                @class(['input w-full', 'input-error' => $errors->has('email')])
+                                autocomplete="email"
+                                aria-describedby="register-email-help{{ $errors->has('email') ? ' register-email-error' : '' }}"
+                                @if($errors->has('email')) aria-invalid="true" @endif
+                                required
+                            >
+                        </x-auth.field>
+
+                        <x-auth.field
+                            id="register-nation-id"
+                            name="nation_id"
+                            label="Politics & War nation ID"
+                            hint="The numeric ID in your nation URL. We use it to verify the nation you manage."
+                        >
+                            <input
+                                type="number"
+                                id="register-nation-id"
+                                name="nation_id"
+                                value="{{ old('nation_id') }}"
+                                min="1"
+                                inputmode="numeric"
+                                @class(['input w-full', 'input-error' => $errors->has('nation_id')])
+                                aria-describedby="register-nation-id-help{{ $errors->has('nation_id') ? ' register-nation-id-error' : '' }}"
+                                @if($errors->has('nation_id')) aria-invalid="true" @endif
+                                required
+                            >
+                        </x-auth.field>
                     </div>
+                </section>
 
-                    <div class="form-control">
-                        <label class="label" for="password_confirmation">
-                            <span class="label-text font-medium">Confirm password</span>
-                        </label>
-                        <label class="input input-bordered flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                                 class="w-4 h-4 opacity-70">
-                                <path fill-rule="evenodd"
-                                      d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
-                                      clip-rule="evenodd"/>
-                            </svg>
-                            <input type="password" class="grow" id="password_confirmation" name="password_confirmation"
-                                   placeholder="Confirm password" autocomplete="new-password" required/>
-                        </label>
+                <section class="border-t border-base-300 pt-6" aria-labelledby="password-fields-title">
+                    <h2 id="password-fields-title" class="font-display text-xl font-bold text-base-content">Secure your account</h2>
+                    <p class="mt-1 text-sm leading-6 text-base-content/70">Use a long, unique password that you do not use elsewhere.</p>
+
+                    <div class="mt-5 grid gap-5 sm:grid-cols-2">
+                        <x-auth.field
+                            id="register-password"
+                            name="password"
+                            label="Password"
+                            hint="Your password must meet the current account security requirements."
+                        >
+                            <input
+                                type="password"
+                                id="register-password"
+                                name="password"
+                                @class(['input w-full', 'input-error' => $errors->has('password')])
+                                autocomplete="new-password"
+                                aria-describedby="register-password-help{{ $errors->has('password') ? ' register-password-error' : '' }}"
+                                @if($errors->has('password')) aria-invalid="true" @endif
+                                required
+                            >
+                        </x-auth.field>
+
+                        <x-auth.field
+                            id="register-password-confirmation"
+                            name="password_confirmation"
+                            label="Confirm password"
+                            hint="Enter the same password again."
+                        >
+                            <input
+                                type="password"
+                                id="register-password-confirmation"
+                                name="password_confirmation"
+                                @class(['input w-full', 'input-error' => $errors->has('password_confirmation')])
+                                autocomplete="new-password"
+                                aria-describedby="register-password-confirmation-help{{ $errors->has('password_confirmation') ? ' register-password-confirmation-error' : '' }}"
+                                @if($errors->has('password_confirmation')) aria-invalid="true" @endif
+                                required
+                            >
+                        </x-auth.field>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <div class="card-actions flex-col gap-2">
-                <input type="submit" class="btn btn-primary w-full" value="Register">
-                <p class="text-sm text-base-content/70 text-center">
-                    Already have an account?
-                    <a class="link link-primary" href="{{ route('login') }}">Log in</a>
-                </p>
-            </div>
-        </form>
-    </x-utils.card>
+                <div class="alert alert-info items-start" role="note">
+                    <x-icon name="o-information-circle" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                    <p class="text-sm leading-6">
+                        <span class="font-semibold">Next:</span>
+                        we will send an in-game verification message to the nation above. Open its link to continue setup.
+                    </p>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full">Create member account</button>
+            </form>
+        </div>
+
+        <x-slot:footer>
+            Already have an account?
+            <a class="link link-primary font-semibold" href="{{ route('login') }}">Sign in</a>
+        </x-slot:footer>
+    </x-auth.shell>
 @endsection

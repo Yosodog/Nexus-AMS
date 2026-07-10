@@ -3,7 +3,7 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <x-header title="Create Role" separator>
+    <x-header title="Create Role" separator use-h1>
         <x-slot:subtitle>Give the role a clear name and choose the permissions that match its purpose.</x-slot:subtitle>
         <x-slot:actions>
             <span class="badge badge-success badge-soft">

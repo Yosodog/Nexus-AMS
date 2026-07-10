@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="War Room Dashboard" separator>
+    <x-header title="War Room Dashboard" separator use-h1>
         <x-slot:subtitle>Track reactive counters alongside proactive war plans.</x-slot:subtitle>
         <x-slot:actions>
             <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('createWarPlanModal').showModal()">
@@ -20,13 +20,14 @@
 
                     <input
                         type="text"
-                        class="input input-bordered input-sm w-full sm:w-52"
+                        class="input input-sm w-full sm:w-52"
                         name="counter_active_search"
                         value="{{ $counterSearch }}"
                         placeholder="Search aggressor"
+                        aria-label="Search counters by aggressor"
                     >
 
-                    <select name="counter_status" class="select select-bordered select-sm w-full sm:w-40">
+                    <select name="counter_status" class="select select-sm w-full sm:w-40" aria-label="Filter counters by status">
                         <option value="all" @selected($counterStatus === 'all')>All statuses</option>
                         <option value="active" @selected($counterStatus === 'active')>Active</option>
                         <option value="draft" @selected($counterStatus === 'draft')>Draft</option>
@@ -39,7 +40,7 @@
             <div class="mb-4 text-sm text-base-content/60">Live and planning counters sharing assignment pools.</div>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra">
+                <table class="table table-zebra" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Aggressor</th>
@@ -48,7 +49,7 @@
                         <th>War Type</th>
                         <th>Team Size</th>
                         <th>Last Update</th>
-                        <th class="text-right">Action</th>
+                        <th class="text-right" data-sortable="false">Action</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -108,13 +109,14 @@
 
                     <input
                         type="text"
-                        class="input input-bordered input-sm w-full sm:w-52"
+                        class="input input-sm w-full sm:w-52"
                         name="plan_search"
                         value="{{ $planSearch }}"
                         placeholder="Search plan"
+                        aria-label="Search war plans"
                     >
 
-                    <select name="plan_status" class="select select-bordered select-sm w-full sm:w-40">
+                    <select name="plan_status" class="select select-sm w-full sm:w-40" aria-label="Filter war plans by status">
                         <option value="all" @selected($planStatus === 'all')>All statuses</option>
                         <option value="active" @selected($planStatus === 'active')>Active</option>
                         <option value="planning" @selected($planStatus === 'planning')>Planning</option>
@@ -127,7 +129,7 @@
             <div class="mb-4 text-sm text-base-content/60">Planning and active campaigns with assignment state.</div>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra">
+                <table class="table table-zebra" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Name</th>
@@ -136,7 +138,7 @@
                         <th>Targets</th>
                         <th>Assignments</th>
                         <th>Updated</th>
-                        <th class="text-right">Action</th>
+                        <th class="text-right" data-sortable="false">Action</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -190,7 +192,7 @@
                             type="text"
                             id="channel_id"
                             name="channel_id"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('channel_id', $discordWarChannelId) }}"
                         >
@@ -199,7 +201,7 @@
 
                     <label class="label cursor-pointer justify-start gap-3">
                         <input class="toggle toggle-primary" type="checkbox" id="enabled" name="enabled" value="1" {{ old('enabled', $discordWarAlertsEnabled) ? 'checked' : '' }}>
-                        <span class="label-text">Enable war alert dispatches</span>
+                        <span class="">Enable war alert dispatches</span>
                     </label>
 
                     <div>
@@ -218,7 +220,7 @@
                             type="text"
                             id="default_forum_channel_id"
                             name="default_forum_channel_id"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('default_forum_channel_id', $defaultWarRoomForumId) }}"
                         >
@@ -237,7 +239,7 @@
 
                     <label class="label cursor-pointer justify-start gap-3">
                         <input class="toggle toggle-primary" type="checkbox" id="war_room_creation_enabled" name="enabled" value="1" {{ old('enabled', $warCounterAutoCreationEnabled) ? 'checked' : '' }}>
-                        <span class="label-text">Enable automatic {{ config('app.name') }} counter room creation</span>
+                        <span class="">Enable automatic {{ config('app.name') }} counter room creation</span>
                     </label>
 
                     <div class="text-sm text-base-content/60">
@@ -260,7 +262,7 @@
                             type="text"
                             id="defense_role_id"
                             name="defense_role_id"
-                            class="input input-bordered w-full"
+                            class="input w-full"
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('defense_role_id', $warRoomDefenseRoleId) }}"
                         >
@@ -275,7 +277,7 @@
         </div>
     </div>
 
-    <dialog id="createWarPlanModal" class="modal">
+    <dialog id="createWarPlanModal" class="modal" aria-label="Create war plan">
         <div class="modal-box max-w-4xl">
             <form method="post" action="{{ route('admin.war-plans.store') }}" class="space-y-4">
                 @csrf
@@ -285,18 +287,18 @@
                         <h3 class="text-lg font-semibold">Create War Plan</h3>
                         <p class="text-sm text-base-content/60">Create a plan and tune the default targeting behavior.</p>
                     </div>
-                    <button type="button" class="btn btn-circle btn-ghost btn-sm" onclick="document.getElementById('createWarPlanModal').close()">✕</button>
+                    <button type="button" class="btn btn-circle btn-ghost btn-sm" onclick="document.getElementById('createWarPlanModal').close()" aria-label="Close war plan creation dialog">✕</button>
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <label class="block space-y-2 md:col-span-2">
                         <span class="text-sm font-medium">Plan Name</span>
-                        <input type="text" class="input input-bordered w-full" name="name" maxlength="120" value="{{ old('name') }}" required>
+                        <input type="text" class="input w-full" name="name" maxlength="120" value="{{ old('name') }}" required>
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Plan Type</span>
-                        <select class="select select-bordered w-full" name="plan_type">
+                        <select class="select w-full" name="plan_type">
                             @foreach (config('war.war_types') as $value => $label)
                                 <option value="{{ $value }}" @selected(old('plan_type', config('war.plan_defaults.plan_type', 'ordinary')) === $value)>{{ $label }}</option>
                             @endforeach
@@ -305,37 +307,37 @@
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Activity Window (hours)</span>
-                        <input type="number" class="input input-bordered w-full" name="activity_window_hours" min="12" max="240" value="{{ old('activity_window_hours', config('war.plan_defaults.activity_window_hours', 72)) }}">
+                        <input type="number" class="input w-full" name="activity_window_hours" min="12" max="240" value="{{ old('activity_window_hours', config('war.plan_defaults.activity_window_hours', 72)) }}">
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Preferred Targets per Nation</span>
-                        <input type="number" class="input input-bordered w-full" name="preferred_targets_per_nation" min="1" max="6" value="{{ old('preferred_targets_per_nation', config('war.plan_defaults.preferred_targets_per_nation', 2)) }}">
+                        <input type="number" class="input w-full" name="preferred_targets_per_nation" min="1" max="6" value="{{ old('preferred_targets_per_nation', config('war.plan_defaults.preferred_targets_per_nation', 2)) }}">
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Max Squad Size</span>
-                        <input type="number" class="input input-bordered w-full" name="max_squad_size" min="1" max="10" value="{{ old('max_squad_size', config('war.squads.max_size', 3)) }}">
+                        <input type="number" class="input w-full" name="max_squad_size" min="1" max="10" value="{{ old('max_squad_size', config('war.squads.max_size', 3)) }}">
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Squad Cohesion Tolerance (±)</span>
-                        <input type="number" class="input input-bordered w-full" name="squad_cohesion_tolerance" min="1" max="50" value="{{ old('squad_cohesion_tolerance', config('war.squads.cohesion_tolerance', 10)) }}">
+                        <input type="number" class="input w-full" name="squad_cohesion_tolerance" min="1" max="50" value="{{ old('squad_cohesion_tolerance', config('war.squads.cohesion_tolerance', 10)) }}">
                     </label>
 
                     <label class="label cursor-pointer justify-start gap-3 md:col-span-2">
                         <input class="toggle toggle-primary" type="checkbox" name="suppress_counters_when_active" value="1" {{ old('suppress_counters_when_active', config('war.plan_defaults.suppress_counters_when_active', true)) ? 'checked' : '' }}>
-                        <span class="label-text">Suppress counters while plan is active</span>
+                        <span class="">Suppress counters while plan is active</span>
                     </label>
 
                     <label class="block space-y-2 md:col-span-2">
                         <span class="text-sm font-medium">Friendly Alliance IDs (optional, comma separated)</span>
-                        <input type="text" class="input input-bordered w-full" name="friendly_alliances_raw" placeholder="e.g. 123,456" value="{{ old('friendly_alliances_raw') }}">
+                        <input type="text" class="input w-full" name="friendly_alliances_raw" placeholder="e.g. 123,456" value="{{ old('friendly_alliances_raw') }}">
                     </label>
 
                     <label class="block space-y-2 md:col-span-2">
                         <span class="text-sm font-medium">Enemy Alliance IDs (optional, comma separated)</span>
-                        <input type="text" class="input input-bordered w-full" name="enemy_alliances_raw" placeholder="e.g. 789,321" value="{{ old('enemy_alliances_raw') }}">
+                        <input type="text" class="input w-full" name="enemy_alliances_raw" placeholder="e.g. 789,321" value="{{ old('enemy_alliances_raw') }}">
                     </label>
                 </div>
 
