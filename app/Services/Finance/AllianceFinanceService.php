@@ -292,7 +292,8 @@ final class AllianceFinanceService
     private function rangeQuery(CarbonInterface $from, CarbonInterface $to, array $filters): Builder
     {
         $query = AllianceFinanceEntry::query()
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+            ->where('date', '>=', $from->toDateString())
+            ->where('date', '<', $to->copy()->addDay()->toDateString());
 
         return $this->applyFilters($query, $filters);
     }

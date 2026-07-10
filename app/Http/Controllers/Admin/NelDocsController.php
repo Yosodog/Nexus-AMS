@@ -10,6 +10,8 @@ class NelDocsController extends Controller
 {
     public function __invoke(): View
     {
+        $this->authorize('view-diagnostic-info');
+
         $projects = PWHelperService::PROJECTS;
 
         return view('admin.nel.docs', ['projects' => $projects]);

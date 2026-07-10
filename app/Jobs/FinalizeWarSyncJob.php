@@ -60,33 +60,49 @@ class FinalizeWarSyncJob implements ShouldQueue
             return;
         }
 
-        $keys = Cache::pull("sync_batch:{$this->batchId}:pages", []);
+        $expectedPages = Cache::get("sync_batch:{$this->batchId}:pages");
+        $expectedJobCount = (int) $batch->totalJobs;
+
+        if (
+            $expectedJobCount < 1
+            || ! is_array($expectedPages)
+            || $expectedPages !== range(1, $expectedJobCount)
+        ) {
+            Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} did not have a complete expected-page manifest.");
+            $this->flushBatchCache();
+            SettingService::setLastWarSyncBatchId($this->batchId);
+
+            return;
+        }
+
         $allWarIds = [];
 
-        foreach ($keys as $page) {
-            $ids = Cache::pull("sync_batch:{$this->batchId}:{$page}", []);
+        foreach ($expectedPages as $page) {
+            $ids = Cache::get("sync_batch:{$this->batchId}:{$page}");
+
+            if (! is_array($ids) || $ids === []) {
+                Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} was missing a completed result for page {$page}.");
+                $this->flushBatchCache();
+                SettingService::setLastWarSyncBatchId($this->batchId);
+
+                return;
+            }
+
+            foreach ($ids as $id) {
+                if (! is_int($id) || $id < 1) {
+                    Log::warning("FinalizeWarSyncJob skipped — batch {$this->batchId} had an invalid war ID for page {$page}.");
+                    $this->flushBatchCache();
+                    SettingService::setLastWarSyncBatchId($this->batchId);
+
+                    return;
+                }
+            }
+
             $allWarIds = array_merge($allWarIds, $ids);
         }
 
-        $allWarIds = array_unique($allWarIds);
-
-        $processedCount = Cache::pull("sync_batch:{$this->batchId}:wars_processed", 0);
-
-        if ($processedCount === 0) {
-            Log::warning("FinalizeWarSyncJob skipped — no wars were recorded as processed for batch {$this->batchId}.");
-            $this->flushBatchCache();
-            SettingService::setLastWarSyncBatchId($this->batchId);
-
-            return;
-        }
-
-        if (empty($allWarIds)) {
-            Log::warning("❌ FinalizeWarSyncJob aborted: no war IDs were collected for batch {$this->batchId}");
-            $this->flushBatchCache();
-            SettingService::setLastWarSyncBatchId($this->batchId);
-
-            return;
-        }
+        $processedCount = count($allWarIds);
+        $allWarIds = array_values(array_unique($allWarIds));
 
         $now = now();
         $cutoff = $now->copy()->subDays(5);

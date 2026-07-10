@@ -15,7 +15,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class LoansController
@@ -101,25 +100,23 @@ class LoansController
     /**
      * Approve a loan with modifications (amount, interest rate, term weeks).
      *
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function approve(Request $request, Loan $loan)
+    public function approve(Request $request, Loan $loan): RedirectResponse
     {
         $this->authorize('manage-loans');
 
-        $request->validate([
-            'amount' => 'required|numeric',
-            'interest_rate' => 'required|numeric|min:0|max:100',
-            'term_weeks' => 'required|integer|min:1|max:52',
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:'.$loan->amount],
+            'interest_rate' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
+            'term_weeks' => ['required', 'integer', 'between:1,52'],
         ]);
 
         $this->loanService->approveLoan(
             $loan,
-            $request->amount,
-            $request->interest_rate,
-            $request->term_weeks
+            (float) $validated['amount'],
+            (float) $validated['interest_rate'],
+            (int) $validated['term_weeks']
         );
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan approved successfully! ✅')->with(
@@ -264,92 +261,20 @@ class LoansController
     /**
      * Handle the loan update request.
      *
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      * @throws ValidationException
      */
-    public function update(Request $request, Loan $loan)
+    public function update(Request $request, Loan $loan): RedirectResponse
     {
         $this->authorize('manage-loans');
 
-        $changes = [];
-        $updatedLoan = null;
-
-        DB::transaction(function () use ($request, $loan, &$changes, &$updatedLoan) {
-            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-            $hasPayments = $lockedLoan->payments()->exists();
-            $before = $lockedLoan->only(['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance']);
-
-            $rules = [
-                'interest_rate' => 'required|numeric|min:0|max:100',
-                'term_weeks' => 'required|integer|min:1|max:52',
-                'next_due_date' => 'required|date|after:today',
-                'remaining_balance' => 'required|numeric|min:0|max:'.$lockedLoan->amount,
-            ];
-
-            if (! $hasPayments) {
-                $rules['amount'] = 'required|numeric|min:1';
-            }
-
-            $request->validate($rules);
-
-            if ($hasPayments) {
-                throw ValidationException::withMessages([
-                    'loan' => 'This loan has payment history and is now immutable. To change terms or balances, mark this loan paid and issue a replacement loan with corrected values.',
-                ]);
-            }
-
-            $updatedAmount = (float) ($request->amount ?? $lockedLoan->amount);
-            $updatedInterestRate = (float) $request->interest_rate;
-            $updatedTermWeeks = (int) $request->term_weeks;
-
-            $scheduledPaymentModel = new Loan([
-                'amount' => $updatedAmount,
-                'interest_rate' => $updatedInterestRate,
-                'term_weeks' => $updatedTermWeeks,
-            ]);
-
-            $lockedLoan->update([
-                'amount' => $updatedAmount,
-                'interest_rate' => $updatedInterestRate,
-                'term_weeks' => $updatedTermWeeks,
-                'next_due_date' => $request->next_due_date,
-                'remaining_balance' => $request->remaining_balance,
-                'scheduled_weekly_payment' => $this->loanService->calculateWeeklyPayment($scheduledPaymentModel),
-            ]);
-
-            $updatedLoan = $lockedLoan->fresh();
-
-            foreach (['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance'] as $field) {
-                $afterValue = $updatedLoan->{$field};
-                $beforeValue = $before[$field] ?? null;
-
-                if ((string) $beforeValue !== (string) $afterValue) {
-                    $changes[$field] = [
-                        'from' => $beforeValue,
-                        'to' => $afterValue,
-                    ];
-                }
-            }
-        });
-
-        if ($updatedLoan) {
-            $this->auditLogger->recordAfterCommit(
-                category: 'loans',
-                action: 'loan_updated',
-                outcome: 'success',
-                severity: 'warning',
-                subject: $updatedLoan,
-                context: [
-                    'related' => [
-                        ['type' => 'Account', 'id' => (string) $updatedLoan->account_id, 'role' => 'account'],
-                    ],
-                    'changes' => $changes,
-                ],
-                message: 'Loan updated.'
-            );
-        }
+        $this->loanService->updateLoan($loan, $request->only([
+            'amount',
+            'interest_rate',
+            'term_weeks',
+            'next_due_date',
+            'remaining_balance',
+        ]));
 
         return redirect()->route('admin.loans')->with('alert-message', 'Loan updated successfully! ✅')->with(
             'alert-type',
@@ -358,11 +283,9 @@ class LoansController
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function markAsPaid(Loan $loan)
+    public function markAsPaid(Loan $loan): RedirectResponse
     {
         $this->authorize('manage-loans');
 

@@ -21,12 +21,9 @@
             : 0;
     @endphp
 
-    <div class="mx-auto space-y-8 lg:space-y-10">
-        <section class="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-base-100 via-base-100 to-primary/10 p-6 shadow-lg lg:p-8">
-            <div class="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-2xl"></div>
-            <div class="pointer-events-none absolute -bottom-20 -left-12 h-52 w-52 rounded-full bg-info/10 blur-2xl"></div>
-
-            <div class="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div class="mx-auto w-full min-w-0 space-y-8 lg:space-y-10">
+        <section class="rounded-lg border border-base-300 border-l-4 border-l-primary bg-base-100 p-6 shadow-sm lg:p-8">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="space-y-3">
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary/70">Growth funding hub</p>
                     <h1 class="text-3xl font-extrabold text-base-content lg:text-4xl">City Grants</h1>
@@ -129,12 +126,12 @@
                             @csrf
                             <input type="hidden" name="city_number" value="{{ $nextCity }}">
 
-                            <div class="form-control sm:col-span-3">
-                                <label class="label">
-                                    <span class="label-text text-base-content">Bank account</span>
-                                    <span class="label-text-alt text-base-content/60">Funds are deposited here</span>
+                            <div class="grid gap-2 sm:col-span-3">
+                                <label class="label" for="city-grant-account">
+                                    <span class="text-base-content">Bank account</span>
+                                    <span class="text-base-content/60">Funds are deposited here</span>
                                 </label>
-                                <select name="account_id" class="select select-bordered w-full" required>
+                                <select id="city-grant-account" name="account_id" class="select w-full" required>
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
                                             {{ $account->name }}
@@ -235,13 +232,13 @@
                     </div>
                 @else
                     <div class="overflow-x-auto">
-                        <table class="table table-zebra w-full text-sm">
+                        <table class="table table-zebra w-full text-sm" data-sortable="true">
                             <thead>
                                 <tr>
-                                    <th>City #</th>
+                                    <th data-sortable="false">City #</th>
                                     <th>Amount</th>
                                     <th>Status</th>
-                                    <th>Requested</th>
+                                    <th data-sortable="false">Requested</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -283,10 +280,10 @@
                     @endphp
 
                     <article @class([
-                        'rounded-3xl border bg-base-100/95 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
-                        'border-primary/30 bg-gradient-to-br from-primary/10 via-base-100 to-info/10 ring-1 ring-primary/20' => $isCurrent,
-                        'border-success/30 bg-gradient-to-br from-success/10 via-base-100 to-base-100' => $isPast,
-                        'border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-base-200/40' => ! $isCurrent && ! $isPast,
+                        'rounded-lg border bg-base-100/95 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                        'border-primary/40 bg-primary/10 ring-1 ring-primary/20' => $isCurrent,
+                        'border-success/30 bg-success/10' => $isPast,
+                        'border-base-300 bg-base-100' => ! $isCurrent && ! $isPast,
                     ])>
                         <div class="space-y-4">
                             <div class="flex items-start justify-between gap-3">

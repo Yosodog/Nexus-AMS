@@ -65,8 +65,8 @@
     $coverageProgressClass = $coveragePercent >= 100 ? 'progress-success' : 'progress-warning';
     $topAccountName = $topAccounts->isNotEmpty() ? $topAccounts->first()->name : 'No accounts yet';
     $topAccountBalance = $topAccounts->isNotEmpty() ? (float) $topAccounts->first()->money : 0;
-    $surfaceCardClass = 'overflow-hidden rounded-3xl border border-base-300/60 bg-base-100 shadow-md';
-    $statCardClass = 'rounded-2xl border border-base-300/60 bg-base-100 shadow-sm';
+    $surfaceCardClass = 'overflow-hidden rounded-lg border border-base-300/60 bg-base-100 shadow-md';
+    $statCardClass = 'rounded-lg border border-base-300/60 bg-base-100 shadow-sm';
 
     $kpiCards = [
         [
@@ -141,7 +141,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Account Management" separator>
+    <x-header title="Account Management" separator use-h1>
         <x-slot:subtitle>Monitor alliance bank performance, approve withdrawals, and review direct deposits at a glance.</x-slot:subtitle>
         <x-slot:actions>
             <a href="#direct-deposit">
@@ -152,7 +152,7 @@
     </x-header>
 
     <div class="mb-6 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
             <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
                 <span class="font-medium text-base-content">Alliance Liquidity</span>
                 <span class="hidden text-base-content/30 sm:inline">•</span>
@@ -170,7 +170,7 @@
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
-            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+            <div class="rounded-lg border border-base-300/60 bg-base-100 p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Member Accounts</p>
@@ -185,7 +185,7 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+            <div class="rounded-lg border border-base-300/60 bg-base-100 p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Alliance Holdings</p>
@@ -200,7 +200,7 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4 shadow-sm">
+            <div class="rounded-lg border border-base-300/60 bg-base-100 p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <div class="flex items-center gap-2">
@@ -270,20 +270,20 @@
                             <canvas id="accountsLiquidityChart" class="w-full" style="height: 320px"></canvas>
                         </div>
                         <div class="space-y-3">
-                            <div class="rounded-2xl border border-base-300/60 bg-base-200/30 p-4">
+                            <div class="rounded-lg border border-base-300/60 bg-base-200/30 p-4">
                                 <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Reserve mix</p>
                                 <p class="mt-1 text-sm text-base-content/60">Separate bank and offshore balances so funding risk is easier to see at a glance.</p>
                             </div>
                             <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
                                     <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Members</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($accountsCash, 2) }}</p>
                                 </div>
-                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
                                     <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Main bank</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($bankCash, 2) }}</p>
                                 </div>
-                                <div class="rounded-2xl border border-base-300/60 bg-base-100 p-4">
+                                <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
                                     <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Offshores</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($offshoreCash, 2) }}</p>
                                 </div>
@@ -298,7 +298,7 @@
                             <canvas id="topBalancesChart" class="w-full" style="height: 320px"></canvas>
                         </div>
                     @else
-                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/50">
                             No account balance data is available yet.
                         </div>
                     @endif
@@ -310,7 +310,7 @@
                             <canvas id="resourceCushionChart" class="w-full" style="height: 320px"></canvas>
                         </div>
                     @else
-                        <div class="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-base-300 text-sm text-base-content/50">
+                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/50">
                             No resource position data is available yet.
                         </div>
                     @endif
@@ -330,8 +330,8 @@
         <x-slot:menu>
             <span class="badge badge-ghost badge-sm">Bank {{ $mainBankCachedDisplay }} · Offshores {{ $offshoreCachedDisplay }}</span>
         </x-slot:menu>
-        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-            <table class="table table-sm table-zebra">
+        <div class="overflow-x-auto rounded-lg border border-base-300/60">
+            <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Resource</th>
@@ -374,8 +374,8 @@
             <x-badge value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost badge-sm" />
             <x-input placeholder="Search accounts..." x-model="search" icon="o-magnifying-glass" class="input-sm w-56" clearable />
         </x-slot:menu>
-        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-            <table class="table table-sm table-zebra">
+        <div class="overflow-x-auto rounded-lg border border-base-300/60">
+            <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Owner</th>
@@ -445,7 +445,7 @@
                                      value="{{ old('max_daily_withdrawals', $maxDailyWithdrawals) }}"
                                      hint="Set to 0 for unlimited." required />
 
-                            <div class="rounded-2xl border border-base-300/60 bg-base-200/40 p-4">
+                            <div class="rounded-lg border border-base-300/60 bg-base-200/40 p-4">
                                 <div class="text-xs uppercase text-base-content/50 mb-3">At-a-glance</div>
                                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                                     <dt class="text-base-content/60">Pending withdrawals</dt>
@@ -458,8 +458,8 @@
                             </div>
                         </div>
 
-                        <div class="overflow-x-auto rounded-2xl border border-base-300/60 mb-4">
-                            <table class="table table-sm">
+                        <div class="overflow-x-auto rounded-lg border border-base-300/60 mb-4">
+                            <table class="table table-sm" data-sortable="false">
                                 <thead>
                                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                                         <th>Resource</th>
@@ -541,14 +541,107 @@
 
     @can('manage-accounts')
         {{-- Withdrawal KPIs --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             <x-stat title="Pending Withdrawals" :value="number_format($pendingWithdrawals->count())" icon="o-clock"
                     color="text-warning" description="Awaiting manual review" :class="$statCardClass" />
+            <x-stat title="Reconciliation Required" :value="number_format($withdrawalReconciliations->count())" icon="o-exclamation-triangle"
+                    color="text-error" description="External outcome must be verified" :class="$statCardClass" />
             <x-stat title="Daily Auto Limit" :value="$maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited'"
                     icon="o-arrow-path" color="text-info" description="Automatic approvals in 24 hours" :class="$statCardClass" />
             <x-stat title="Resources With Limits" :value="number_format($resourcesWithLimitsCount)"
                     icon="o-shield-check" color="text-success" description="Have an approval ceiling" :class="$statCardClass" />
         </div>
+
+        @if($withdrawalReconciliations->isNotEmpty())
+            <x-card class="{{ $surfaceCardClass }} mb-6 border-error/50">
+                <x-slot:title>
+                    <div>
+                        Withdrawal Reconciliation Required
+                        <div class="text-sm font-normal text-base-content/60">
+                            These sends may have reached Politics & War. Match the correlation ID against alliance bank records before resolving them.
+                        </div>
+                    </div>
+                </x-slot:title>
+                <x-slot:menu>
+                    <x-badge value="{{ number_format($withdrawalReconciliations->count()) }} unresolved" class="badge-error badge-sm" />
+                </x-slot:menu>
+
+                <div class="alert alert-error mb-4">
+                    <x-icon name="o-shield-exclamation" class="w-5 h-5" />
+                    <span>Do not resend, deny, or refund these withdrawals until the external bank outcome has been verified.</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    @foreach($withdrawalReconciliations as $transaction)
+                        <section class="rounded-2xl border border-error/30 bg-error/5 p-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.3fr)] gap-5">
+                                <div class="space-y-3">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <x-badge value="Transaction #{{ $transaction->id }}" class="badge-error badge-sm" />
+                                        <code class="rounded bg-base-300 px-2 py-1 text-xs font-semibold">{{ $transaction->bank_correlation_id }}</code>
+                                    </div>
+                                    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                                        <dt class="text-base-content/60">Attempted</dt>
+                                        <dd>{{ $transaction->bank_attempted_at?->format('M d, Y H:i:s') ?? 'Unknown' }}</dd>
+                                        <dt class="text-base-content/60">Member</dt>
+                                        <dd>{{ $transaction->fromAccount?->user?->name ?? 'Unknown user' }}</dd>
+                                        <dt class="text-base-content/60">Nation</dt>
+                                        <dd>
+                                            @if($transaction->nation)
+                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="link link-primary">
+                                                    {{ $transaction->nation->nation_name ?? ('Nation #'.$transaction->nation_id) }}
+                                                </a>
+                                            @else
+                                                Nation #{{ $transaction->nation_id }}
+                                            @endif
+                                        </dd>
+                                        <dt class="text-base-content/60">Attempts</dt>
+                                        <dd>{{ number_format($transaction->bank_attempt_count) }}</dd>
+                                    </dl>
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach(PWHelperService::resources() as $resource)
+                                            @if((float) $transaction->{$resource} > 0)
+                                                <x-badge value="{{ ucfirst($resource) }}: {{ $resource === 'money' ? '$' : '' }}{{ number_format((float) $transaction->{$resource}, 2) }}" class="badge-ghost badge-sm" />
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                @can('view-diagnostic-info')
+                                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-success/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_sent">
+                                            <div class="font-semibold text-sm">Confirmed sent</div>
+                                            <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
+                                            <x-input label="Bank record ID" name="bank_record_id" type="number" min="1" required />
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Record as Sent" icon="o-check-circle" type="submit" class="btn-success btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the external bank record proves this withdrawal was sent?');" />
+                                        </form>
+
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-warning/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_not_sent">
+                                            <div class="font-semibold text-sm">Confirmed not sent</div>
+                                            <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Refund After Verification" icon="o-arrow-uturn-left" type="submit" class="btn-warning btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the evidence proves no external transfer occurred and the local funds should be refunded?');" />
+                                        </form>
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        <x-icon name="o-lock-closed" class="w-5 h-5" />
+                                        <span>Diagnostic recovery access is required to resolve this withdrawal.</span>
+                                    </div>
+                                @endcan
+                            </div>
+                        </section>
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
 
         @if($pendingWithdrawals->isNotEmpty())
             <x-card class="{{ $surfaceCardClass }} mb-6">
@@ -561,8 +654,8 @@
                 <x-slot:menu>
                     <x-badge value="{{ number_format($pendingWithdrawals->count()) }} pending" class="badge-warning badge-sm" />
                 </x-slot:menu>
-                <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-                    <table class="table table-sm table-zebra">
+                <div class="overflow-x-auto rounded-lg border border-base-300/60">
+                    <table class="table table-sm table-zebra" data-sortable="false">
                         <thead>
                             <tr class="text-xs uppercase tracking-wider text-base-content/45">
                                 <th>Requested</th>
@@ -571,7 +664,7 @@
                                 <th>Nation</th>
                                 <th>Resources</th>
                                 <th>Reason</th>
-                                <th class="text-right">Actions</th>
+                                <th class="text-right" data-sortable="false">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -604,14 +697,14 @@
                                     <td>{{ $transaction->pending_reason ?? 'Manual approval required' }}</td>
                                     <td class="text-right">
                                         <div class="flex flex-col items-end gap-2">
-                                            <form action="{{ route('admin.withdrawals.approve', $transaction) }}" method="POST">
+                                            <form action="{{ route('admin.withdrawals.approve', $transaction) }}" method="POST" data-confirm="Approve withdrawal #{{ $transaction->id }} and send the displayed resources? An external transfer may begin immediately." data-confirm-title="Approve withdrawal?" data-confirm-label="Approve and send">
                                                 @csrf
                                                 <x-button label="Approve" icon="o-check-circle" type="submit" class="btn-success btn-sm" />
                                             </form>
                                             <div x-data="{ open: false }">
                                                 <x-button label="Deny" icon="o-x-circle" @click="open = !open" class="btn-error btn-outline btn-sm" />
                                                 <div x-show="open" x-cloak class="mt-2 p-3 bg-base-200 rounded-box w-64">
-                                                    <form action="{{ route('admin.withdrawals.deny', $transaction) }}" method="POST">
+                                                    <form action="{{ route('admin.withdrawals.deny', $transaction) }}" method="POST" data-confirm="Deny withdrawal #{{ $transaction->id }} and return it to a terminal state?" data-confirm-title="Deny withdrawal?" data-confirm-label="Deny withdrawal" data-confirm-tone="error">
                                                         @csrf
                                                         <x-textarea label="Reason" name="reason" rows="2" maxlength="500" required class="mb-2" />
                                                         <x-button label="Confirm Denial" type="submit" icon="o-x-circle" class="btn-error btn-sm w-full" />
@@ -646,8 +739,8 @@
         <x-slot:menu>
             <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
         </x-slot:menu>
-        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-            <table class="table table-sm table-zebra text-nowrap">
+        <div class="overflow-x-auto rounded-lg border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
@@ -724,8 +817,8 @@
         <x-slot:menu>
             <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
         </x-slot:menu>
-        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-            <table class="table table-sm table-zebra text-nowrap">
+        <div class="overflow-x-auto rounded-lg border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
@@ -805,8 +898,8 @@
             Recent Transactions
             <div class="text-sm font-normal text-base-content/50">Paginated, newest-first view of alliance banking activity.</div>
         </x-slot:title>
-        <div class="overflow-x-auto rounded-2xl border border-base-300/60">
-            <table class="table table-sm table-zebra text-nowrap">
+        <div class="overflow-x-auto rounded-lg border border-base-300/60">
+            <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
                     <tr class="text-xs uppercase tracking-wider text-base-content/45">
                         <th>Date</th>
@@ -817,7 +910,7 @@
                         @foreach(PWHelperService::resources(false) as $resource)
                             <th class="text-right">{{ ucfirst($resource) }}</th>
                         @endforeach
-                        <th class="text-right">Action</th>
+                        <th class="text-right" data-sortable="false">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -856,10 +949,15 @@
                                 <td class="text-right">{{ number_format($transaction->$resource, 2) }}</td>
                             @endforeach
                             <td class="text-right">
-                                @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
+                                @if($transaction->requiresBankReconciliation())
+                                    <x-badge value="Needs reconciliation" class="badge-error badge-sm" />
+                                @elseif($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
                                     <form method="POST"
                                           action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
-                                          onsubmit="return confirm('Are you sure you want to refund this transaction?');">
+                                          data-confirm="Refund this transaction? Confirm the current account balance before continuing."
+                                          data-confirm-title="Refund transaction?"
+                                          data-confirm-label="Issue refund"
+                                          data-confirm-tone="error">
                                         @csrf
                                         <x-button label="Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-xs" />
                                     </form>
@@ -895,36 +993,11 @@
                 return;
             }
 
-            const rgba = (hex, alpha) => {
-                const normalized = hex.replace('#', '');
-                const value = normalized.length === 3
-                    ? normalized.split('').map((char) => char + char).join('')
-                    : normalized;
-                const int = Number.parseInt(value, 16);
-                const r = (int >> 16) & 255;
-                const g = (int >> 8) & 255;
-                const b = int & 255;
-
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            };
-
-            const chartColors = {
-                primary: '#2563eb',
-                success: '#16a34a',
-                info: '#0891b2',
-                warning: '#d97706',
-                danger: '#dc2626',
-                neutral: '#64748b',
-                text: '#475569',
-                grid: 'rgba(148, 163, 184, 0.16)',
-                tooltipBackground: 'rgba(15, 23, 42, 0.92)',
-                tooltipBorder: 'rgba(148, 163, 184, 0.22)',
-            };
-
-            const tickColor = chartColors.text;
+            const chartColors = window.NexusCharts.colors();
+            const tickColor = chartColors.muted;
             const gridColor = chartColors.grid;
-            const tooltipBackground = chartColors.tooltipBackground;
-            const tooltipBorder = chartColors.tooltipBorder;
+            const tooltipBackground = chartColors.text;
+            const tooltipBorder = chartColors.grid;
             const legendColor = chartColors.text;
 
             const moneyFormat = (value) => '$' + new Intl.NumberFormat('en-US', {
@@ -932,7 +1005,7 @@
             }).format(value ?? 0);
 
             const baseFont = {
-                family: "'Inter', 'system-ui', sans-serif",
+                family: getComputedStyle(document.body).fontFamily,
                 size: 11,
                 weight: 500,
             };
@@ -951,8 +1024,8 @@
                     },
                     tooltip: {
                         backgroundColor: tooltipBackground,
-                        titleColor: '#f8fafc',
-                        bodyColor: '#e2e8f0',
+                        titleColor: chartColors.surface,
+                        bodyColor: chartColors.surface,
                         borderColor: tooltipBorder,
                         borderWidth: 1,
                         padding: 10,
@@ -980,12 +1053,14 @@
                         labels: @json($cashMixChart['labels']),
                         datasets: [{
                             data: @json($cashMixChart['data']),
+                            nexusPalette: true,
+                            nexusBorderColor: 'surface',
                             backgroundColor: [
-                                rgba(chartColors.primary, 0.88),
-                                rgba(chartColors.success, 0.88),
-                                rgba(chartColors.info, 0.88),
+                                chartColors.primary,
+                                chartColors.success,
+                                chartColors.info,
                             ],
-                            borderColor: '#ffffff',
+                            borderColor: chartColors.surface,
                             borderWidth: 3,
                             hoverOffset: 10,
                         }],
@@ -1017,9 +1092,10 @@
                         labels: @json($topBalanceChart['labels']),
                         datasets: [{
                             label: 'Balance',
+                            nexusColor: 'primary',
                             data: @json($topBalanceChart['data']),
-                            backgroundColor: rgba(chartColors.primary, 0.72),
-                            hoverBackgroundColor: rgba(chartColors.primary, 0.9),
+                            backgroundColor: chartColors.primary,
+                            hoverBackgroundColor: chartColors.primary,
                             borderRadius: 10,
                             borderSkipped: false,
                         }],
@@ -1065,16 +1141,17 @@
                         labels: @json($resourceCushionChart['labels']),
                         datasets: [{
                             label: 'Net position',
+                            nexusValueColors: { positive: 'success', negative: 'warning' },
                             data: @json($resourceCushionChart['data']),
                             backgroundColor(context) {
                                 return context.raw >= 0
-                                    ? rgba(chartColors.success, 0.76)
-                                    : rgba(chartColors.warning, 0.82);
+                                    ? chartColors.success
+                                    : chartColors.warning;
                             },
                             hoverBackgroundColor(context) {
                                 return context.raw >= 0
-                                    ? rgba(chartColors.success, 0.92)
-                                    : rgba(chartColors.warning, 0.95);
+                                    ? chartColors.success
+                                    : chartColors.warning;
                             },
                             borderRadius: 10,
                             borderSkipped: false,

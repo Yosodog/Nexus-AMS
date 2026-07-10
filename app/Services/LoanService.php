@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class LoanService
@@ -114,13 +115,13 @@ class LoanService
 
     public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks): Loan
     {
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $loan->nation_id,
-            context: 'approve your own loan request'
-        );
-
         $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedLoan->nation_id,
+                context: 'approve your own loan request'
+            );
 
             if ($lockedLoan->status !== 'pending') {
                 throw ValidationException::withMessages([
@@ -128,13 +129,32 @@ class LoanService
                 ]);
             }
 
-            $scheduledPayment = $this->calculateWeeklyPaymentFromInputs($amount, $interestRate, $termWeeks);
+            $validated = Validator::make([
+                'amount' => $amount,
+                'interest_rate' => $interestRate,
+                'term_weeks' => $termWeeks,
+                'requested_amount' => (float) $lockedLoan->amount,
+            ], [
+                'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'lte:requested_amount'],
+                'interest_rate' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
+                'term_weeks' => ['required', 'integer', 'between:1,52'],
+                'requested_amount' => ['required', 'numeric'],
+            ])->validate();
+
+            $approvedAmount = (float) $validated['amount'];
+            $approvedInterestRate = (float) $validated['interest_rate'];
+            $approvedTermWeeks = (int) $validated['term_weeks'];
+            $scheduledPayment = $this->calculateWeeklyPaymentFromInputs(
+                $approvedAmount,
+                $approvedInterestRate,
+                $approvedTermWeeks
+            );
 
             $lockedLoan->update([
-                'interest_rate' => $interestRate,
-                'amount' => $amount,
-                'remaining_balance' => $amount,
-                'term_weeks' => $termWeeks,
+                'interest_rate' => $approvedInterestRate,
+                'amount' => $approvedAmount,
+                'remaining_balance' => $approvedAmount,
+                'term_weeks' => $approvedTermWeeks,
                 'status' => 'approved',
                 'pending_key' => null,
                 'approved_at' => now(),
@@ -150,8 +170,8 @@ class LoanService
             $ipAddress = Request::ip();
 
             AccountService::adjustAccountBalance($account, [
-                'money' => $amount,
-                'note' => "Loan Approved: \${$amount} deposited (Term: {$termWeeks} weeks, Weekly Interest: {$interestRate}%)",
+                'money' => $approvedAmount,
+                'note' => "Loan Approved: \${$approvedAmount} deposited (Term: {$approvedTermWeeks} weeks, Weekly Interest: {$approvedInterestRate}%)",
             ], $adminId, $ipAddress);
 
             $borrower = $lockedLoan->nation()->firstOrFail();
@@ -188,13 +208,13 @@ class LoanService
 
     public function denyLoan(Loan $loan): void
     {
-        app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $loan->nation_id,
-            context: 'deny your own loan request'
-        );
-
         $updatedLoan = DB::transaction(function () use ($loan) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedLoan->nation_id,
+                context: 'deny your own loan request'
+            );
 
             if ($lockedLoan->status !== 'pending') {
                 throw ValidationException::withMessages([
@@ -493,10 +513,110 @@ class LoanService
         ];
     }
 
+    /**
+     * @param  array{amount: mixed, interest_rate: mixed, term_weeks: mixed, next_due_date: mixed, remaining_balance: mixed}  $attributes
+     */
+    public function updateLoan(Loan $loan, array $attributes): Loan
+    {
+        $changes = [];
+
+        $updatedLoan = DB::transaction(function () use ($loan, $attributes, &$changes) {
+            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedLoan->nation_id,
+                context: 'update your own loan'
+            );
+
+            if ($lockedLoan->payments()->exists()) {
+                throw ValidationException::withMessages([
+                    'loan' => 'This loan has payment history and is now immutable. To change terms or balances, mark this loan paid and issue a replacement loan with corrected values.',
+                ]);
+            }
+
+            $validated = Validator::make($attributes, [
+                'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
+                'interest_rate' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
+                'term_weeks' => ['required', 'integer', 'between:1,52'],
+                'next_due_date' => ['required', 'date', 'after:today'],
+                'remaining_balance' => ['required', 'numeric', 'min:0', 'decimal:0,2', 'lte:amount'],
+            ])->validate();
+
+            $before = $lockedLoan->only([
+                'amount',
+                'interest_rate',
+                'term_weeks',
+                'next_due_date',
+                'remaining_balance',
+            ]);
+            $updatedAmount = (float) $validated['amount'];
+            $updatedInterestRate = (float) $validated['interest_rate'];
+            $updatedTermWeeks = (int) $validated['term_weeks'];
+
+            $lockedLoan->update([
+                'amount' => $updatedAmount,
+                'interest_rate' => $updatedInterestRate,
+                'term_weeks' => $updatedTermWeeks,
+                'next_due_date' => $validated['next_due_date'],
+                'remaining_balance' => (float) $validated['remaining_balance'],
+                'scheduled_weekly_payment' => $this->calculateWeeklyPaymentFromInputs(
+                    $updatedAmount,
+                    $updatedInterestRate,
+                    $updatedTermWeeks
+                ),
+            ]);
+
+            $updatedLoan = $lockedLoan->fresh();
+
+            foreach (['amount', 'interest_rate', 'term_weeks', 'next_due_date', 'remaining_balance'] as $field) {
+                $afterValue = $updatedLoan->{$field};
+                $beforeValue = $before[$field] ?? null;
+
+                if ((string) $beforeValue !== (string) $afterValue) {
+                    $changes[$field] = [
+                        'from' => $beforeValue,
+                        'to' => $afterValue,
+                    ];
+                }
+            }
+
+            return $updatedLoan;
+        });
+
+        app(AuditLogger::class)->recordAfterCommit(
+            category: 'loans',
+            action: 'loan_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $updatedLoan,
+            context: [
+                'related' => [
+                    ['type' => 'Account', 'id' => (string) $updatedLoan->account_id, 'role' => 'account'],
+                ],
+                'changes' => $changes,
+            ],
+            message: 'Loan updated.'
+        );
+
+        return $updatedLoan;
+    }
+
     public function markLoanAsPaid(Loan $loan): void
     {
-        DB::transaction(function () use ($loan) {
+        $updatedLoan = DB::transaction(function () use ($loan) {
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedLoan->nation_id,
+                context: 'mark your own loan as paid'
+            );
+
+            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+                throw ValidationException::withMessages([
+                    'loan' => 'Only active loans can be marked as paid.',
+                ]);
+            }
+
             $lockedLoan->update([
                 'status' => 'paid',
                 'remaining_balance' => 0,
@@ -505,21 +625,23 @@ class LoanService
                 'weekly_interest_paid' => 0,
             ]);
 
-            $lockedLoan->nation->notify(new LoanNotification($lockedLoan->nation_id, $lockedLoan->fresh(), 'paid'));
+            return $lockedLoan->fresh();
         });
+
+        $updatedLoan->nation->notify(new LoanNotification($updatedLoan->nation_id, $updatedLoan, 'paid'));
 
         app(AuditLogger::class)->recordAfterCommit(
             category: 'loans',
             action: 'loan_marked_paid',
             outcome: 'success',
             severity: 'info',
-            subject: $loan,
+            subject: $updatedLoan,
             context: [
                 'related' => [
-                    ['type' => 'Account', 'id' => (string) $loan->account_id, 'role' => 'account'],
+                    ['type' => 'Account', 'id' => (string) $updatedLoan->account_id, 'role' => 'account'],
                 ],
                 'data' => [
-                    'nation_id' => $loan->nation_id,
+                    'nation_id' => $updatedLoan->nation_id,
                 ],
             ],
             message: 'Loan marked as paid.'

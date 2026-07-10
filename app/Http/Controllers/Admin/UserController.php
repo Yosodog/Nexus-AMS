@@ -11,11 +11,13 @@ use App\Rules\UniqueCanonicalUsername;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\DiscordAccountService;
+use App\Services\RoleDelegationService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -24,7 +26,10 @@ class UserController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly RoleDelegationService $roleDelegationService,
+    ) {}
 
     /**
      * @throws AuthorizationException
@@ -117,11 +122,18 @@ class UserController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function edit(User $user): View
+    public function edit(Request $request, User $user): View
     {
         $this->authorize('edit-users');
 
-        $allRoles = Role::orderBy('name')->get();
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->roleDelegationService->ensureCanManageUser($actor, $user);
+
+        $canManageRoles = $actor->can('edit-roles');
+        $allRoles = $canManageRoles
+            ? $this->roleDelegationService->grantableRoles($actor)
+            : collect();
 
         $user->load([
             'nation.alliance',
@@ -165,18 +177,21 @@ class UserController extends Controller
             'allRoles',
             'accounts',
             'recentTransactions',
-            'latestSignIn'
+            'latestSignIn',
+            'canManageRoles'
         ));
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $user): RedirectResponse
     {
         $this->authorize('edit-users');
+
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->roleDelegationService->ensureCanManageUser($actor, $user);
 
         $validated = $request->validate([
             'name' => ['required', 'string', new UniqueCanonicalUsername($user->id)],
@@ -190,32 +205,59 @@ class UserController extends Controller
             'roles.*' => ['exists:roles,id'],
         ]);
 
-        $before = $user->only(['name', 'email', 'is_admin', 'disabled', 'nation_id', 'verified_at']);
-        $beforeRoles = $user->roles()->pluck('roles.id')->sort()->values()->all();
+        [$user, $before, $beforeRoles] = DB::transaction(function () use ($actor, $user, $validated): array {
+            $user = User::query()->lockForUpdate()->findOrFail($user->id);
+            $this->roleDelegationService->ensureCanManageUser($actor, $user);
 
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->is_admin = (bool) $validated['is_admin'];
-        $user->disabled = filter_var($validated['disabled'], FILTER_VALIDATE_BOOLEAN);
-        $user->nation_id = $validated['nation_id'] ?? null;
+            $before = $user->only(['name', 'email', 'is_admin', 'disabled', 'nation_id', 'verified_at']);
+            $beforeRoles = $user->roles()->pluck('roles.id')->sort()->values()->all();
 
-        if (array_key_exists('verified_at', $validated)) {
-            $user->verified_at = filled($validated['verified_at']) ? now() : null;
-        }
+            $user->name = $validated['name'];
+            $user->email = $validated['email'];
+            $user->is_admin = (bool) $validated['is_admin'];
+            $user->disabled = filter_var($validated['disabled'], FILTER_VALIDATE_BOOLEAN);
+            $user->nation_id = $validated['nation_id'] ?? null;
 
-        if (! empty($validated['password'])) {
-            $user->password = Hash::make($validated['password']);
-            TrustedDevice::query()->where('user_id', $user->id)->delete();
-        }
+            if (array_key_exists('verified_at', $validated)) {
+                $user->verified_at = filled($validated['verified_at']) ? now() : null;
+            }
 
-        $user->save();
+            if (! empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+                TrustedDevice::query()->where('user_id', $user->id)->delete();
+            }
 
-        // Sync only non-protected roles
-        if (isset($validated['roles'])) {
-            $allowedRoles = Role::whereIn('id', $validated['roles'])->pluck('id');
+            if (array_key_exists('roles', $validated)) {
+                $this->authorize('edit-roles');
 
-            $user->roles()->sync($allowedRoles);
-        }
+                $requestedRoleIds = collect($validated['roles'] ?? [])
+                    ->map(fn ($roleId): int => (int) $roleId)
+                    ->unique()
+                    ->values();
+                $requestedRoles = Role::query()
+                    ->with('permissions')
+                    ->whereIn('id', $requestedRoleIds)
+                    ->get();
+
+                $this->roleDelegationService->ensureCanAssignRoles($actor, $requestedRoles);
+
+                $protectedRoleIds = $user->roles()
+                    ->where('protected', true)
+                    ->pluck('roles.id');
+
+                $user->roles()->sync(
+                    $protectedRoleIds
+                        ->concat($requestedRoles->pluck('id'))
+                        ->unique()
+                        ->values()
+                        ->all()
+                );
+            }
+
+            $user->save();
+
+            return [$user, $before, $beforeRoles];
+        });
 
         $after = $user->fresh()->only(['name', 'email', 'is_admin', 'disabled', 'nation_id', 'verified_at']);
         $afterRoles = $user->roles()->pluck('roles.id')->sort()->values()->all();
@@ -260,9 +302,13 @@ class UserController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function unlinkDiscord(User $user): RedirectResponse
+    public function unlinkDiscord(Request $request, User $user): RedirectResponse
     {
         $this->authorize('edit-users');
+
+        /** @var User $actor */
+        $actor = $request->user();
+        $this->roleDelegationService->ensureCanManageUser($actor, $user);
 
         $discordAccount = DiscordAccountService::unlinkUser($user);
 
@@ -296,6 +342,7 @@ class UserController extends Controller
     public function updateMfaRequirements(Request $request): RedirectResponse
     {
         $this->authorize('edit-users');
+        $this->authorize('bypass-self-restrictions');
 
         $validated = $request->validate([
             'require_mfa_all_users' => ['nullable', 'boolean'],

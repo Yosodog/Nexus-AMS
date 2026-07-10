@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Services\AuditLogger;
+use App\Services\RoleDelegationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -16,12 +17,15 @@ class RoleController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly RoleDelegationService $roleDelegationService,
+    ) {}
 
     /**
      * @throws AuthorizationException
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('view-roles');
 
@@ -39,17 +43,26 @@ class RoleController extends Controller
             'unique_permissions' => $roles->flatMap(fn ($role) => $role->permissions->pluck('permission'))->unique()->count(),
         ];
 
-        return view('admin.roles.index', compact('roles', 'stats'));
+        $manageableRoleIds = $request->user()->can('edit-roles')
+            ? $roles
+                ->filter(fn (Role $role): bool => $this->roleDelegationService->canManageRole($request->user(), $role))
+                ->pluck('id')
+            : collect();
+
+        return view('admin.roles.index', compact('roles', 'stats', 'manageableRoleIds'));
     }
 
     /**
      * @throws AuthorizationException
      */
-    public function edit(Role $role): View
+    public function edit(Request $request, Role $role): View
     {
         $this->authorize('edit-roles');
+        $this->roleDelegationService->ensureCanManageRole($request->user(), $role);
 
-        $permissions = config('permissions');
+        $permissions = $this->roleDelegationService
+            ->grantablePermissions($request->user())
+            ->all();
         $role->load([
             'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.email', 'users.nation_id')->orderBy('name'),
             'users.nation:id,nation_name,flag',
@@ -72,28 +85,39 @@ class RoleController extends Controller
             ]);
         }
 
+        $this->roleDelegationService->ensureCanManageRole($request->user(), $role);
+
         $validated = $request->validate([
             'name' => ['required', 'string'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'in:'.implode(',', config('permissions'))],
         ]);
 
+        $permissions = collect($validated['permissions'] ?? [])->unique()->values();
+        $this->roleDelegationService->ensureCanDelegatePermissions($request->user(), $permissions);
+
         $role->loadMissing('permissions');
         $beforePermissions = $role->permissions->pluck('permission')->sort()->values()->all();
         $beforeName = $role->name;
 
-        $role->update(['name' => $validated['name']]);
+        DB::transaction(function () use ($role, $validated, $permissions): void {
+            $role->update(['name' => $validated['name']]);
 
-        DB::table('role_permissions')->where('role_id', $role->id)->delete();
+            DB::table('role_permissions')->where('role_id', $role->id)->delete();
 
-        foreach ($validated['permissions'] ?? [] as $permission) {
-            DB::table('role_permissions')->insert([
-                'role_id' => $role->id,
-                'permission' => $permission,
-            ]);
-        }
+            if ($permissions->isNotEmpty()) {
+                DB::table('role_permissions')->insert(
+                    $permissions
+                        ->map(fn (string $permission): array => [
+                            'role_id' => $role->id,
+                            'permission' => $permission,
+                        ])
+                        ->all()
+                );
+            }
+        });
 
-        $afterPermissions = collect($validated['permissions'] ?? [])->sort()->values()->all();
+        $afterPermissions = $permissions->sort()->values()->all();
         $changes = [];
 
         if ($beforeName !== $role->name) {
@@ -141,17 +165,28 @@ class RoleController extends Controller
             'permissions.*' => ['string', 'in:'.implode(',', config('permissions'))],
         ]);
 
-        $role = Role::create([
-            'name' => $validated['name'],
-            'protected' => false,
-        ]);
+        $permissions = collect($validated['permissions'] ?? [])->unique()->values();
+        $this->roleDelegationService->ensureCanDelegatePermissions($request->user(), $permissions);
 
-        foreach ($validated['permissions'] ?? [] as $permission) {
-            DB::table('role_permissions')->insert([
-                'role_id' => $role->id,
-                'permission' => $permission,
+        $role = DB::transaction(function () use ($validated, $permissions): Role {
+            $role = Role::create([
+                'name' => $validated['name'],
+                'protected' => false,
             ]);
-        }
+
+            if ($permissions->isNotEmpty()) {
+                DB::table('role_permissions')->insert(
+                    $permissions
+                        ->map(fn (string $permission): array => [
+                            'role_id' => $role->id,
+                            'permission' => $permission,
+                        ])
+                        ->all()
+                );
+            }
+
+            return $role;
+        });
 
         $this->auditLogger->success(
             category: 'admin',
@@ -160,7 +195,7 @@ class RoleController extends Controller
             context: [
                 'data' => [
                     'name' => $role->name,
-                    'permissions' => $validated['permissions'] ?? [],
+                    'permissions' => $permissions->all(),
                 ],
             ],
             message: 'Role created.'
@@ -175,11 +210,13 @@ class RoleController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->authorize('edit-roles');
 
-        $permissions = config('permissions');
+        $permissions = $this->roleDelegationService
+            ->grantablePermissions($request->user())
+            ->all();
 
         return view('admin.roles.create', compact('permissions'));
     }
@@ -187,7 +224,7 @@ class RoleController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(Request $request, Role $role): RedirectResponse
     {
         $this->authorize('edit-roles');
 
@@ -198,12 +235,16 @@ class RoleController extends Controller
             ]);
         }
 
+        $this->roleDelegationService->ensureCanManageRole($request->user(), $role);
+
         $role->loadMissing('permissions');
         $permissions = $role->permissions->pluck('permission')->sort()->values()->all();
 
-        DB::table('role_permissions')->where('role_id', $role->id)->delete();
-        $role->users()->detach();
-        $role->delete();
+        DB::transaction(function () use ($role): void {
+            DB::table('role_permissions')->where('role_id', $role->id)->delete();
+            $role->users()->detach();
+            $role->delete();
+        });
 
         $this->auditLogger->recordAfterCommit(
             category: 'admin',

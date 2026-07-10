@@ -18,7 +18,7 @@
                 <span class="badge badge-outline">City {{ $bracket->city_number }}</span>
             </div>
             <div class="overflow-x-auto">
-                <table class="table table-sm w-full">
+                <table class="table table-sm w-full" data-sortable="false">
                     <thead>
                     <tr>
                         @foreach($resources as $r)
@@ -37,7 +37,7 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('dd.disenroll') }}">
+        <form method="POST" action="{{ route('dd.disenroll') }}" data-confirm="Disenroll from Direct Deposit? Automated deposits and the current tax-bracket assignment will stop." data-confirm-title="Leave Direct Deposit?" data-confirm-label="Disenroll" data-confirm-tone="error">
             @csrf
             <button class="btn btn-error w-full" type="submit">Disenroll from Direct Deposit</button>
         </form>
@@ -59,9 +59,9 @@
         <form method="POST" action="{{ route('dd.enroll') }}" class="space-y-3">
             @csrf
             <label class="label" for="account_id">
-                <span class="label-text">Choose an account for deposits:</span>
+                <span class="">Choose an account for deposits:</span>
             </label>
-            <select name="account_id" id="account_id" class="select select-bordered w-full mb-4" required>
+            <select name="account_id" id="account_id" class="select w-full mb-4" required>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
                 @endforeach

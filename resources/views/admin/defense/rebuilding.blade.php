@@ -11,7 +11,7 @@
         ];
     @endphp
 
-    <x-header title="Rebuilding Management" separator>
+    <x-header title="Rebuilding Management" separator use-h1>
         <x-slot:subtitle>Track estimates, payout throughput, and member eligibility through the current rebuilding cycle.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex flex-wrap justify-end gap-2">
@@ -21,7 +21,7 @@
                         {{ $enabled ? 'Close Rebuilding' : 'Open Rebuilding' }}
                     </button>
                 </form>
-                <form method="POST" action="{{ route('admin.rebuilding.reset') }}" onsubmit="return confirm('Reset rebuilding for a new cycle?');">
+                <form method="POST" action="{{ route('admin.rebuilding.reset') }}" data-confirm="Reset rebuilding for a new cycle? Confirm the current cycle is complete before continuing." data-confirm-title="Reset rebuilding cycle?" data-confirm-label="Reset cycle" data-confirm-tone="error">
                     @csrf
                     <button class="btn btn-error btn-outline btn-sm" type="submit">Reset Cycle</button>
                 </form>
@@ -77,7 +77,7 @@
             @csrf
             <label class="block space-y-2">
                 <span class="text-sm font-medium">Cycle Override (optional)</span>
-                <input type="number" class="input input-bordered" name="cycle_id" min="1" value="{{ $cycleId }}">
+                <input type="number" class="input" name="cycle_id" min="1" value="{{ $cycleId }}">
             </label>
             <button class="btn btn-primary" type="submit">Refresh Now</button>
         </form>
@@ -85,7 +85,7 @@
 
     <x-card title="All Nations Rebuilding Overview" class="mb-6">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Leader</th>
@@ -149,24 +149,24 @@
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Name</span>
-                    <input class="input input-bordered w-full" name="name" placeholder="Optional">
+                    <input class="input w-full" name="name" placeholder="Optional">
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Min Cities</span>
-                    <input type="number" class="input input-bordered w-full" name="min_city_count" min="1" required>
+                    <input type="number" class="input w-full" name="min_city_count" min="1" required>
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Max Cities</span>
-                    <input type="number" class="input input-bordered w-full" name="max_city_count" min="1" placeholder="No max">
+                    <input type="number" class="input w-full" name="max_city_count" min="1" placeholder="No max">
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Target Infrastructure</span>
-                    <input type="number" step="0.01" class="input input-bordered w-full" name="target_infrastructure" min="0" required>
+                    <input type="number" step="0.01" class="input w-full" name="target_infrastructure" min="0" required>
                 </label>
                 <label class="label cursor-pointer justify-start gap-3 pt-7">
                     <input type="hidden" name="is_active" value="0">
                     <input type="checkbox" class="toggle toggle-primary" name="is_active" value="1" checked>
-                    <span class="label-text">Active</span>
+                    <span class="">Active</span>
                 </label>
             </div>
 
@@ -188,7 +188,7 @@
         </form>
 
         <div class="mt-6 overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Name</th>
@@ -196,14 +196,14 @@
                     <th>Target Infra</th>
                     <th>Calc Assumptions</th>
                     <th>Active</th>
-                    <th>Actions</th>
+                    <th data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach($tiers as $tier)
                     <tr>
                         <td>{{ $tier->name ?: '-' }}</td>
-                        <td>{{ $tier->min_city_count }} - {{ $tier->max_city_count ?? '∞' }}</td>
+                        <td data-order="{{ $tier->min_city_count }}">{{ $tier->min_city_count }} - {{ $tier->max_city_count ?? '∞' }}</td>
                         <td>{{ number_format((float) $tier->target_infrastructure, 2) }}</td>
                         <td>
                             <div class="flex flex-wrap gap-2">
@@ -221,14 +221,14 @@
                                     @csrf
                                     @method('PUT')
                                     <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-                                        <input class="input input-bordered input-sm w-full" name="name" value="{{ $tier->name }}" placeholder="Name">
-                                        <input type="number" class="input input-bordered input-sm w-full" name="min_city_count" min="1" value="{{ $tier->min_city_count }}" required>
-                                        <input type="number" class="input input-bordered input-sm w-full" name="max_city_count" min="1" value="{{ $tier->max_city_count }}" placeholder="Max">
-                                        <input type="number" step="0.01" class="input input-bordered input-sm w-full" name="target_infrastructure" min="0" value="{{ $tier->target_infrastructure }}" required>
+                                        <input class="input input-sm w-full" name="name" value="{{ $tier->name }}" placeholder="Name">
+                                        <input type="number" class="input input-sm w-full" name="min_city_count" min="1" value="{{ $tier->min_city_count }}" required>
+                                        <input type="number" class="input input-sm w-full" name="max_city_count" min="1" value="{{ $tier->max_city_count }}" placeholder="Max">
+                                        <input type="number" step="0.01" class="input input-sm w-full" name="target_infrastructure" min="0" value="{{ $tier->target_infrastructure }}" required>
                                         <label class="label cursor-pointer justify-start gap-3">
                                             <input type="hidden" name="is_active" value="0">
                                             <input type="checkbox" class="toggle toggle-primary toggle-sm" name="is_active" value="1" @checked($tier->is_active)>
-                                            <span class="label-text">Active</span>
+                                            <span class="">Active</span>
                                         </label>
                                     </div>
                                     <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -241,7 +241,7 @@
                                     </div>
                                     <button class="btn btn-primary btn-sm" type="submit">Save</button>
                                 </form>
-                                <form method="POST" action="{{ route('admin.rebuilding.tiers.destroy', $tier) }}" onsubmit="return confirm('Delete this tier?');">
+                                <form method="POST" action="{{ route('admin.rebuilding.tiers.destroy', $tier) }}" data-confirm="Delete this rebuilding tier?" data-confirm-title="Delete tier?" data-confirm-label="Delete tier" data-confirm-tone="error">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-error btn-outline btn-sm" type="submit">Delete</button>
@@ -260,11 +260,11 @@
             @csrf
             <label class="block space-y-2">
                 <span class="text-sm font-medium">Nation ID</span>
-                <input type="number" class="input input-bordered w-full" name="nation_id" min="1" required>
+                <input type="number" class="input w-full" name="nation_id" min="1" required>
             </label>
             <label class="block space-y-2">
                 <span class="text-sm font-medium">Reason (optional)</span>
-                <input type="text" class="input input-bordered w-full" name="reason" maxlength="255">
+                <input type="text" class="input w-full" name="reason" maxlength="255">
             </label>
             <div class="flex items-end">
                 <button class="btn btn-warning w-full md:w-auto" type="submit">Mark Ineligible</button>
@@ -272,12 +272,12 @@
         </form>
 
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Nation</th>
                     <th>Reason</th>
-                    <th>Action</th>
+                    <th data-sortable="false">Action</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -295,7 +295,7 @@
                         </td>
                         <td>{{ $entry->reason ?: '-' }}</td>
                         <td>
-                            <form method="POST" action="{{ route('admin.rebuilding.ineligible.destroy', $entry->id) }}">
+                            <form method="POST" action="{{ route('admin.rebuilding.ineligible.destroy', $entry->id) }}" data-confirm="Remove this nation from the current rebuilding ineligibility list?" data-confirm-title="Restore eligibility?" data-confirm-label="Remove restriction">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-error btn-outline btn-sm" type="submit">Remove</button>
@@ -336,28 +336,28 @@
                         </div>
 
                         <div class="grid gap-4 lg:grid-cols-2">
-                            <form method="POST" action="{{ route('admin.rebuilding.approve', $req) }}" class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                            <form method="POST" action="{{ route('admin.rebuilding.approve', $req) }}" class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" data-confirm="Approve this rebuilding request and deposit the entered amount into the selected account?" data-confirm-title="Approve rebuilding payout?" data-confirm-label="Approve and deposit">
                                 @csrf
                                 @method('PATCH')
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Approved Amount</span>
-                                    <input type="number" min="0" step="1" name="approved_amount" class="input input-bordered w-full" value="{{ (int) round($req->estimated_amount) }}">
+                                    <input type="number" min="0" step="1" name="approved_amount" class="input w-full" value="{{ (int) round($req->estimated_amount) }}">
                                 </label>
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Review Note</span>
-                                    <input type="text" name="review_note" class="input input-bordered w-full" maxlength="255" placeholder="Optional">
+                                    <input type="text" name="review_note" class="input w-full" maxlength="255" placeholder="Optional">
                                 </label>
                                 <div class="flex items-end">
                                     <button class="btn btn-success w-full sm:w-auto" type="submit">Approve</button>
                                 </div>
                             </form>
 
-                            <form method="POST" action="{{ route('admin.rebuilding.deny', $req) }}" class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <form method="POST" action="{{ route('admin.rebuilding.deny', $req) }}" class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" data-confirm="Deny this rebuilding request? No funds will be deposited." data-confirm-title="Deny rebuilding request?" data-confirm-label="Deny request" data-confirm-tone="error">
                                 @csrf
                                 @method('PATCH')
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Review Note</span>
-                                    <input type="text" name="review_note" class="input input-bordered w-full" maxlength="255" placeholder="Optional">
+                                    <input type="text" name="review_note" class="input w-full" maxlength="255" placeholder="Optional">
                                 </label>
                                 <div class="flex items-end">
                                     <button class="btn btn-error w-full sm:w-auto" type="submit">Deny</button>
@@ -372,7 +372,7 @@
 
     <x-card title="Cycle History">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm">
+            <table class="table table-zebra table-sm" data-sortable="false">
                 <thead>
                 <tr>
                     <th>Nation</th>

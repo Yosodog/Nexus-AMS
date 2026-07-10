@@ -68,7 +68,7 @@
                         @endforeach
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('member-transfers.cancel', $transfer) }}">
+                        <form method="POST" action="{{ route('member-transfers.cancel', $transfer) }}" data-confirm="Cancel this pending member transfer and return its held resources to the source account?" data-confirm-title="Cancel transfer?" data-confirm-label="Cancel and refund">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-outline">Cancel</button>
                         </form>

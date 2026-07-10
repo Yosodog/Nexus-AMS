@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header :title="'Round ' . $round->round_number . ' — ' . \Illuminate\Support\Str::headline(strtolower($round->op_type?->name ?? ''))" separator>
+    <x-header :title="'Round ' . $round->round_number . ' — ' . \Illuminate\Support\Str::headline(strtolower($round->op_type?->name ?? ''))" separator use-h1>
         <x-slot:subtitle>Campaign: {{ $campaign->name }}</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex items-center gap-2">
@@ -22,7 +22,7 @@
 
     <x-card title="Assignments" subtitle="Safety levels 1/2/3 map to Quick, Normal, and Covert.">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="false">
                 <thead>
                 <tr>
                     <th>Attacker</th>

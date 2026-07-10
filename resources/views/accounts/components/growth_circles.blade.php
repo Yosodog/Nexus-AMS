@@ -31,7 +31,7 @@
             <details class="rounded-lg border border-base-300 p-3">
                 <summary class="cursor-pointer text-sm font-medium">Recent distributions (last 7 cycles)</summary>
                 <div class="mt-2 overflow-x-auto">
-                    <table class="table table-xs w-full">
+                    <table class="table table-xs w-full" data-sortable="false">
                         <thead>
                         <tr>
                             <th>Cycle</th>
@@ -82,7 +82,7 @@
             <details class="rounded-lg border border-base-300 p-3">
                 <summary class="cursor-pointer text-sm font-medium">Recent distributions (last 7 cycles)</summary>
                 <div class="mt-2 overflow-x-auto">
-                    <table class="table table-xs w-full">
+                    <table class="table table-xs w-full" data-sortable="false">
                         <thead>
                         <tr>
                             <th>Cycle</th>
@@ -128,9 +128,9 @@
               @if (! $isEligible) onsubmit="return false;" @endif>
             @csrf
             <label class="label" for="gc_account_id">
-                <span class="label-text">Choose an account for distributions:</span>
+                <span class="">Choose an account for distributions:</span>
             </label>
-            <select name="account_id" id="gc_account_id" class="select select-bordered w-full" required
+            <select name="account_id" id="gc_account_id" class="select w-full" required
                     @if (! $isEligible) disabled @endif>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
@@ -143,7 +143,9 @@
                 </p>
                 <button class="btn btn-primary w-full" type="submit"
                         @if (! $isEligible) disabled @endif
-                        onclick="return confirm('This will disenroll you from Direct Deposit and enroll you in Growth Circles. Your tax bracket will change to the 100% Growth Circles bracket. Continue?');">
+                        data-confirm="This will disenroll you from Direct Deposit and enroll you in Growth Circles. Your tax bracket will change to the 100% Growth Circles bracket."
+                        data-confirm-title="Change enrollment?"
+                        data-confirm-label="Join Growth Circles">
                     Switch from Direct Deposit
                 </button>
             @else

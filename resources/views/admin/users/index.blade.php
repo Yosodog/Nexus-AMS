@@ -16,7 +16,7 @@
         $membershipService = app(\App\Services\AllianceMembershipService::class);
     @endphp
 
-    <x-header title="Manage Users" separator>
+    <x-header title="Manage Users" separator use-h1>
         <x-slot:subtitle>Filter accounts, review access posture, and jump directly into member management.</x-slot:subtitle>
         <x-slot:actions>
             <a href="{{ route('admin.roles.index') }}" class="btn btn-outline btn-primary btn-sm">Manage Roles</a>
@@ -42,8 +42,8 @@
                 <x-input label="Search" name="search" :value="$filters['search']" placeholder="Name, email, Discord, or nation ID" class="xl:col-span-2" />
 
                 <div>
-                    <label for="filter-status" class="form-label">Account Status</label>
-                    <select id="filter-status" name="status" class="select select-bordered w-full">
+                    <label for="filter-status" class="mb-1 block text-sm font-medium">Account Status</label>
+                    <select id="filter-status" name="status" class="select w-full">
                         <option value="enabled" @selected($filters['status'] === 'enabled')>Enabled</option>
                         <option value="disabled" @selected($filters['status'] === 'disabled')>Disabled</option>
                         <option value="all" @selected($filters['status'] === 'all')>All accounts</option>
@@ -51,8 +51,8 @@
                 </div>
 
                 <div>
-                    <label for="filter-verification" class="form-label">Verification</label>
-                    <select id="filter-verification" name="verification" class="select select-bordered w-full">
+                    <label for="filter-verification" class="mb-1 block text-sm font-medium">Verification</label>
+                    <select id="filter-verification" name="verification" class="select w-full">
                         <option value="any" @selected($filters['verification'] === 'any')>Any</option>
                         <option value="verified" @selected($filters['verification'] === 'verified')>Verified</option>
                         <option value="unverified" @selected($filters['verification'] === 'unverified')>Unverified</option>
@@ -61,12 +61,12 @@
 
                 <label class="label cursor-pointer justify-start gap-3 rounded-box border border-base-300 px-4 py-3">
                     <input class="checkbox checkbox-primary" type="checkbox" name="is_admin" value="1" @checked($filters['is_admin'])>
-                    <span class="label-text font-medium">Admins only</span>
+                    <span class="font-medium">Admins only</span>
                 </label>
 
                 <label class="label cursor-pointer justify-start gap-3 rounded-box border border-base-300 px-4 py-3">
                     <input class="checkbox checkbox-primary" type="checkbox" name="alliance_member" value="1" @checked($filters['alliance_member'])>
-                    <span class="label-text font-medium">Alliance members</span>
+                    <span class="font-medium">Alliance members</span>
                 </label>
 
                 <div class="flex items-end gap-2 xl:col-span-6 xl:justify-end">
@@ -76,7 +76,7 @@
             </form>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra">
+                <table class="table table-zebra" data-sortable="false">
                     <thead>
                         <tr>
                             <th>User</th>
@@ -158,39 +158,41 @@
         </x-card>
     </div>
 
-    <x-card>
-        <x-slot:title>
-            <div>
-                MFA Requirements
-                <div class="text-sm font-normal text-base-content/60">Control Fortify enrollment requirements without leaving this screen.</div>
-            </div>
-        </x-slot:title>
-
-        <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="grid gap-4 lg:grid-cols-3">
-            @csrf
-
-            <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
-                <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-all-users" name="require_mfa_all_users" value="1" @checked($mfaRequirements['all_users'])>
-                <span>
-                    <span class="block font-semibold text-base-content">Require MFA for all users</span>
-                    <span class="mt-1 block text-sm text-base-content/60">Force every authenticated user to enroll before using the app.</span>
-                </span>
-            </label>
-
-            <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
-                <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-admins" name="require_mfa_admins" value="1" @checked($mfaRequirements['admins'])>
-                <span>
-                    <span class="block font-semibold text-base-content">Require MFA for admins</span>
-                    <span class="mt-1 block text-sm text-base-content/60">Protect privileged accounts even when the global requirement stays off.</span>
-                </span>
-            </label>
-
-            <div class="flex h-full flex-col justify-between rounded-box bg-base-200/70 px-4 py-4">
-                <div class="text-sm text-base-content/70">
-                    Administrators should enable MFA first before turning on the all-user requirement.
+    @can('bypass-self-restrictions')
+        <x-card>
+            <x-slot:title>
+                <div>
+                    MFA Requirements
+                    <div class="text-sm font-normal text-base-content/60">Control Fortify enrollment requirements without leaving this screen.</div>
                 </div>
-                <button type="submit" class="btn btn-primary mt-4 w-full">Save MFA Policy</button>
-            </div>
-        </form>
-    </x-card>
+            </x-slot:title>
+
+            <form method="POST" action="{{ route('admin.users.mfa-requirements') }}" class="grid gap-4 lg:grid-cols-3">
+                @csrf
+
+                <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
+                    <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-all-users" name="require_mfa_all_users" value="1" @checked($mfaRequirements['all_users'])>
+                    <span>
+                        <span class="block font-semibold text-base-content">Require MFA for all users</span>
+                        <span class="mt-1 block text-sm text-base-content/60">Force every authenticated user to enroll before using the app.</span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-3 rounded-box border border-base-300 px-4 py-4">
+                    <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-admins" name="require_mfa_admins" value="1" @checked($mfaRequirements['admins'])>
+                    <span>
+                        <span class="block font-semibold text-base-content">Require MFA for admins</span>
+                        <span class="mt-1 block text-sm text-base-content/60">Protect privileged accounts even when the global requirement stays off.</span>
+                    </span>
+                </label>
+
+                <div class="flex h-full flex-col justify-between rounded-box bg-base-200/70 px-4 py-4">
+                    <div class="text-sm text-base-content/70">
+                        Administrators should enable MFA first before turning on the all-user requirement.
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-4 w-full">Save MFA Policy</button>
+                </div>
+            </form>
+        </x-card>
+    @endcan
 @endsection

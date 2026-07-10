@@ -3,11 +3,11 @@
 @php use Illuminate\Support\Str; @endphp
 
 @section('content')
-    <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow mb-6">
+    <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow mb-6">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
                 <p class="text-xs uppercase tracking-wide text-base-content/60">Grant program</p>
-                <h1 class="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
+                <h1 class="inline-flex items-center gap-2 text-3xl font-bold text-primary sm:text-4xl">
                     {{ ucwords($grant->name) }}
                 </h1>
                 <p class="text-sm text-base-content/70">Review the payout, eligibility requirements, and apply with your preferred account.</p>
@@ -24,7 +24,7 @@
     </div>
 
     <div class="space-y-6">
-        <x-utils.card title="Grant details" extraClasses="shadow-xl border border-base-300">
+        <x-utils.card title="Grant details" extraClasses="shadow-sm border border-base-300">
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 @if ($grant->money > 0)
                     <div class="rounded-xl bg-base-200 p-4">
@@ -51,7 +51,7 @@
         </x-utils.card>
 
         <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
-            <x-utils.card title="Eligibility" extraClasses="shadow-xl border border-base-300">
+            <x-utils.card title="Eligibility" extraClasses="shadow-sm border border-base-300">
                 @if (! empty($eligibilityReport['summary']))
                     <div class="space-y-3">
                         @foreach ($eligibilityReport['summary'] as $summary)
@@ -87,17 +87,17 @@
 
             <div class="space-y-6 lg:self-start">
                 @if ($alreadyApplied)
-                    <div class="alert alert-info shadow-lg">
+                    <div class="alert alert-info shadow-sm">
                     <span class="text-lg">You have already received this grant.</span>
                     </div>
                 @else
-                    <x-utils.card title="Apply for this grant" extraClasses="shadow-xl border border-base-300">
+                    <x-utils.card title="Apply for this grant" extraClasses="shadow-sm border border-base-300">
                         <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="apply-form" class="space-y-4">
                             @csrf
 
-                            <div class="form-control w-full">
+                            <div class="grid gap-2 w-full">
                                 <label class="label font-semibold text-base-content" for="account_id">Select bank account</label>
-                                <select name="account_id" id="account_id" class="select select-bordered w-full">
+                                <select name="account_id" id="account_id" class="select w-full">
                                     <option value="">-- Choose an account --</option>
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}">{{ $account->name }} (Balance: ${{ number_format($account->money) }})</option>

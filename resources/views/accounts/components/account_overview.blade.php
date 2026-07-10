@@ -9,7 +9,7 @@
         <span class="badge badge-outline">{{ $accounts->count() }} active</span>
     </div>
     <div class="overflow-x-auto rounded-xl border border-base-300">
-        <table class="table w-full table-zebra">
+        <table class="table w-full table-zebra" data-sortable="true">
             <thead class="bg-base-200 text-sm">
             <tr>
                 <th class="text-left">Account</th>
@@ -35,6 +35,7 @@
                             <button type="button"
                                     class="btn btn-square btn-ghost btn-xs deposit-request-btn"
                                     data-account-id="{{ $account->id }}"
+                                    aria-label="{{ $account->frozen ? 'Deposit code unavailable while '.$account->name.' is frozen' : 'Generate a deposit code for '.$account->name }}"
                                     @disabled($account->frozen)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>

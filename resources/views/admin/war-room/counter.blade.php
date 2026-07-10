@@ -15,7 +15,7 @@
         $canManageAccounts = $canManageAccounts ?? false;
         $activeReimbursementNationId = (int) old('nation_id', 0);
     @endphp
-    <x-header title="Counter" separator>
+    <x-header title="Counter" separator use-h1>
         <x-slot:subtitle>
             @if($counter->aggressor)
                 <a href="https://politicsandwar.com/nation/id={{ $counter->aggressor->id }}" target="_blank" rel="noopener noreferrer" class="link link-hover font-semibold">
@@ -85,7 +85,7 @@
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">War Type</span>
-                                    <select class="select select-bordered select-sm w-full" name="war_declaration_type">
+                                    <select class="select select-sm w-full" name="war_declaration_type">
                                         @foreach (config('war.war_types') as $value => $label)
                                             <option value="{{ $value }}" @selected(old('war_declaration_type', $counter->war_declaration_type) === $value)>{{ $label }}</option>
                                         @endforeach
@@ -94,14 +94,14 @@
 
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Team Size</span>
-                                    <input type="number" class="input input-bordered input-sm w-full" name="team_size" min="1" max="10" value="{{ old('team_size', $counter->team_size) }}">
+                                    <input type="number" class="input input-sm w-full" name="team_size" min="1" max="10" value="{{ old('team_size', $counter->team_size) }}">
                                 </label>
                             </div>
 
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Discord forum override</span>
                                 <input type="text"
-                                       class="input input-bordered input-sm w-full"
+                                       class="input input-sm w-full"
                                        name="discord_forum_channel_id"
                                        placeholder="Use default from War Room settings"
                                        value="{{ old('discord_forum_channel_id', $counter->discord_forum_channel_id) }}">
@@ -110,7 +110,7 @@
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">War Reason</span>
                                 <input type="text"
-                                       class="input input-bordered input-sm w-full"
+                                       class="input input-sm w-full"
                                        name="war_reason"
                                        maxlength="255"
                                        placeholder="e.g. Counter"
@@ -130,32 +130,32 @@
                             <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Manually Add Nation (ID)</span>
-                                    <input type="number" class="input input-bordered input-sm w-full" name="friendly_nation_id" placeholder="e.g. 12345" required>
+                                    <input type="number" class="input input-sm w-full" name="friendly_nation_id" placeholder="e.g. 12345" required>
                                 </label>
 
                                 <label class="block space-y-2">
                                     <span class="text-sm font-medium">Score</span>
-                                    <input type="number" class="input input-bordered input-sm w-full" name="match_score" min="0" max="100" step="0.1" placeholder="auto">
+                                    <input type="number" class="input input-sm w-full" name="match_score" min="0" max="100" step="0.1" placeholder="auto">
                                 </label>
                             </div>
 
                             <button class="btn btn-outline btn-success btn-sm w-full" type="submit">Assign & Lock Manually</button>
                         </form>
 
-                        <form method="post" action="{{ route('admin.war-counters.finalize', $counter) }}" class="space-y-3">
+                        <form method="post" action="{{ route('admin.war-counters.finalize', $counter) }}" class="space-y-3" data-confirm="Finalize this counter with the selected notification options? Assignments will move into their operational state." data-confirm-title="Finalize counter?" data-confirm-label="Finalize counter">
                             @csrf
                             <label class="label cursor-pointer justify-start gap-3">
                                 <input class="checkbox checkbox-sm" type="checkbox" name="notify_in_game" value="1" id="counterNotifyInGame">
-                                <span class="label-text">Send in-game mail</span>
+                                <span class="">Send in-game mail</span>
                             </label>
                             <label class="label cursor-pointer justify-start gap-3">
                                 <input class="checkbox checkbox-sm" type="checkbox" name="notify_discord_room" value="1" id="counterNotifyRoom">
-                                <span class="label-text">Create Discord War Room</span>
+                                <span class="">Create Discord War Room</span>
                             </label>
                             <button class="btn btn-primary btn-sm w-full" type="submit">Finalize Counter</button>
                         </form>
 
-                        <form method="post" action="{{ route('admin.war-counters.archive', $counter) }}">
+                        <form method="post" action="{{ route('admin.war-counters.archive', $counter) }}" data-confirm="Archive this counter? It will leave the active operations queue." data-confirm-title="Archive counter?" data-confirm-label="Archive counter" data-confirm-tone="error">
                             @csrf
                             <button class="btn btn-outline btn-error btn-sm w-full" type="submit">Archive Counter</button>
                         </form>
@@ -172,7 +172,7 @@
                     </x-slot:menu>
 
                     <div class="-mx-6 -mb-6 overflow-x-auto rounded-b-box border-t border-base-300">
-                        <table class="table table-zebra">
+                        <table class="table table-zebra" data-sortable="false">
                             <thead>
                             <tr>
                                 <th>Friendly Nation</th>
@@ -180,7 +180,7 @@
                                 <th>Wars</th>
                                 <th>Match Score</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th data-sortable="false">Actions</th>
                             </tr>
                             </thead>
                             @forelse($assignments as $assignment)
@@ -206,7 +206,12 @@
                                         <div class="text-sm text-base-content/60">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge badge-ghost" title="Offensive / defensive wars">
+                                        <span
+                                            class="badge badge-ghost tooltip tooltip-left cursor-help"
+                                            data-tip="Offensive / defensive wars"
+                                            tabindex="0"
+                                            aria-label="{{ $friendly->offensive_wars_count ?? 0 }} offensive wars, {{ $friendly->defensive_wars_count ?? 0 }} defensive wars"
+                                        >
                                             {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                         </span>
                                     </td>
@@ -223,13 +228,13 @@
                                                 @csrf
                                                 <button class="btn btn-outline btn-success btn-sm" type="submit">Mark Assigned</button>
                                             </form>
-                                            <form method="post" action="{{ route('admin.war-counters.assignments.destroy', [$counter, $assignment]) }}" class="inline-block" onsubmit="return confirm('Remove this proposed assignment?')">
+                                            <form method="post" action="{{ route('admin.war-counters.assignments.destroy', [$counter, $assignment]) }}" class="inline-block" data-confirm="Remove this proposed assignment?" data-confirm-title="Remove assignment?" data-confirm-label="Remove assignment" data-confirm-tone="error">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="btn btn-outline btn-error btn-sm" type="submit">Remove</button>
                                             </form>
                                         @elseif($assignment->status === 'assigned')
-                                            <form method="post" action="{{ route('admin.war-counters.assignments.unassign', [$counter, $assignment]) }}" class="inline-block" onsubmit="return confirm('Revert this assignment back to proposed?')">
+                                            <form method="post" action="{{ route('admin.war-counters.assignments.unassign', [$counter, $assignment]) }}" class="inline-block" data-confirm="Revert this assignment to proposed status?" data-confirm-title="Revert assignment?" data-confirm-label="Revert to proposed">
                                                 @csrf
                                                 <button class="btn btn-outline btn-warning btn-sm" type="submit">Unassign</button>
                                             </form>
@@ -265,23 +270,23 @@
                         <div class="grid gap-3 md:grid-cols-[minmax(0,2.2fr)_repeat(3,minmax(0,1fr))_minmax(0,7rem)]">
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Search</span>
-                                <input type="search" class="input input-bordered input-sm w-full" id="candidate-filter-search" placeholder="Leader or nation">
+                                <input type="search" class="input input-sm w-full" id="candidate-filter-search" placeholder="Leader or nation">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Min Cities</span>
-                                <input type="number" class="input input-bordered input-sm w-full" id="candidate-filter-min-cities" min="0" step="1" value="0">
+                                <input type="number" class="input input-sm w-full" id="candidate-filter-min-cities" min="0" step="1" value="0">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Max Cities</span>
-                                <input type="number" class="input input-bordered input-sm w-full" id="candidate-filter-max-cities" min="0" step="1" placeholder="Any">
+                                <input type="number" class="input input-sm w-full" id="candidate-filter-max-cities" min="0" step="1" placeholder="Any">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Min Match Score</span>
-                                <input type="number" class="input input-bordered input-sm w-full" id="candidate-filter-min-match-score" min="0" max="100" step="0.1" value="0">
+                                <input type="number" class="input input-sm w-full" id="candidate-filter-min-match-score" min="0" max="100" step="0.1" value="0">
                             </label>
                             <label class="block space-y-2">
                                 <span class="text-sm font-medium">Active in</span>
-                                <select class="select select-bordered select-sm w-full" id="candidate-filter-activity">
+                                <select class="select select-sm w-full" id="candidate-filter-activity">
                                     <option value="all">Any</option>
                                     <option value="24">24h</option>
                                     <option value="72">3d</option>
@@ -291,19 +296,19 @@
                         </div>
                         <label class="label mt-2 cursor-pointer justify-start gap-3">
                             <input class="checkbox checkbox-sm" type="checkbox" id="candidate-filter-recommended">
-                            <span class="label-text">Recommended only</span>
+                            <span class="">Recommended only</span>
                         </label>
                     </div>
 
                     <div class="-mx-6 -mb-6 overflow-x-auto rounded-b-box">
-                        <table class="table table-zebra">
+                        <table class="table table-zebra" data-sortable="false">
                             <thead>
                             <tr>
                                 <th>Friendly Nation</th>
                                 <th>Strength</th>
                                 <th>Wars</th>
                                 <th>Match Score</th>
-                                <th>Action</th>
+                                <th data-sortable="false">Action</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -334,7 +339,12 @@
                                                 <div class="text-sm text-base-content/60">Aircraft {{ number_format(optional($friendlyMilitary)->aircraft ?? 0) }} • Ships {{ number_format(optional($friendlyMilitary)->ships ?? 0) }}</div>
                                             </td>
                                             <td>
-                                                <span class="badge badge-ghost" title="Offensive / defensive wars">
+                                                <span
+                                                    class="badge badge-ghost tooltip tooltip-left cursor-help"
+                                                    data-tip="Offensive / defensive wars"
+                                                    tabindex="0"
+                                                    aria-label="{{ $friendly->offensive_wars_count ?? 0 }} offensive wars, {{ $friendly->defensive_wars_count ?? 0 }} defensive wars"
+                                                >
                                                     {{ $friendly->offensive_wars_count ?? 0 }} / {{ $friendly->defensive_wars_count ?? 0 }}
                                                 </span>
                                             </td>
@@ -375,7 +385,7 @@
                             <div class="px-6 pt-4 text-sm text-base-content/60">
                                 Most recent 50 attacks where this aggressor was either the attacker or defender.
                             </div>
-                            <table class="table table-zebra table-sm">
+                            <table class="table table-zebra table-sm" data-sortable="false">
                                 <thead>
                                     <tr>
                                         <th>Time</th>
@@ -432,7 +442,7 @@
 
                     <x-card title="Last 30d Wars vs Us">
                         <div class="-mx-6 -mt-2 -mb-6 overflow-x-auto rounded-b-box border-t border-base-300">
-                            <table class="table table-zebra table-sm">
+                            <table class="table table-zebra table-sm" data-sortable="false">
                                 <thead>
                                     <tr>
                                         <th>Start</th>
@@ -562,7 +572,7 @@
                         <div class="mt-6">
                             <h3 class="mb-2 text-base font-semibold">Wars vs Aggressor (Cost Per War)</h3>
                             <div class="overflow-x-auto rounded-box border border-base-300">
-                                <table class="table table-zebra table-sm">
+                                <table class="table table-zebra table-sm" data-sortable="false">
                                     <thead>
                                 <tr>
                                     <th>Started</th>
@@ -645,7 +655,7 @@
                             Includes members actively involved in this counter, including the original defender when detected in counter wars.
                             </div>
                             <div class="overflow-x-auto rounded-box border border-base-300">
-                                <table class="table table-zebra">
+                                <table class="table table-zebra" data-sortable="false">
                                     <thead>
                                 <tr>
                                     <th>Member</th>
@@ -653,7 +663,7 @@
                                     <th>Suggested Reimbursement</th>
                                     <th>Deposit Account</th>
                                     <th>Adjustable Reimbursement</th>
-                                    <th class="text-right">Action</th>
+                                    <th class="text-right" data-sortable="false">Action</th>
                                 </tr>
                                 </thead>
                                     <tbody>
@@ -722,7 +732,7 @@
                                             <div class="text-sm text-base-content/60">Defaults use remaining amount per category/resource.</div>
                                         </td>
                                         <td>
-                                                <select name="account_id" class="select select-bordered select-sm mb-2 w-full" form="{{ $reimbursementFormId }}" @disabled(! $rowCanSubmit)>
+                                                <select name="account_id" class="select select-sm mb-2 w-full" form="{{ $reimbursementFormId }}" @disabled(! $rowCanSubmit)>
                                                     @forelse($rowAccounts as $account)
                                                         <option value="{{ $account->id }}" @selected($rowSelectedAccountId === (int) $account->id)>
                                                             {{ $account->name }} @if($account->frozen) (Frozen) @endif
@@ -750,7 +760,7 @@
                                                            name="gasoline"
                                                            value="{{ number_format($rowGasoline, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full"
+                                                           class="input input-sm w-full"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2">
@@ -762,7 +772,7 @@
                                                            name="munitions"
                                                            value="{{ number_format($rowMunitions, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full"
+                                                           class="input input-sm w-full"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2">
@@ -774,7 +784,7 @@
                                                            name="steel"
                                                            value="{{ number_format($rowSteel, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full"
+                                                           class="input input-sm w-full"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2">
@@ -786,7 +796,7 @@
                                                            name="aluminum"
                                                            value="{{ number_format($rowAluminum, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full"
+                                                           class="input input-sm w-full"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2">
@@ -798,7 +808,7 @@
                                                            name="unit_loss_cost"
                                                            value="{{ number_format($rowUnits, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full counter-cost-input"
+                                                           class="input input-sm w-full counter-cost-input"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2">
@@ -810,7 +820,7 @@
                                                            name="infra_loss_cost"
                                                            value="{{ number_format($rowInfra, 2, '.', '') }}"
                                                            form="{{ $reimbursementFormId }}"
-                                                           class="input input-bordered input-sm w-full counter-cost-input"
+                                                           class="input input-sm w-full counter-cost-input"
                                                            @disabled(! $rowCanSubmit)>
                                                 </label>
                                                 <label class="block space-y-2 lg:col-span-2 2xl:col-span-4">
@@ -818,7 +828,7 @@
                                                     <input type="text"
                                                            name="note"
                                                            maxlength="255"
-                                                           class="input input-bordered input-sm w-full"
+                                                           class="input input-sm w-full"
                                                            value="{{ $isActiveRow ? old('note') : '' }}"
                                                            placeholder="Optional override reason"
                                                            form="{{ $reimbursementFormId }}"
@@ -860,7 +870,7 @@
                         <div class="mt-6">
                             <h3 class="mb-2 text-base font-semibold">Recent Reimbursements</h3>
                             <div class="overflow-x-auto rounded-box border border-base-300">
-                                <table class="table table-zebra table-sm">
+                                <table class="table table-zebra table-sm" data-sortable="false">
                                     <thead>
                                 <tr>
                                     <th>When</th>

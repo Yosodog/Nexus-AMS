@@ -16,6 +16,15 @@ class Nation extends Model
 {
     use HasFactory, Notifiable, SoftDeletes;
 
+    private const NULLABLE_API_ATTRIBUTES = [
+        'alliance_id',
+        'update_tz',
+        'flag',
+        'discord',
+        'discord_id',
+        'tax_id',
+    ];
+
     /**
      * Will be set to what projects this nation has. Must run getProjectsAttribute() first.
      */
@@ -70,7 +79,6 @@ class Nation extends Model
 
     public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
     {
-        // Extract only non-null values
         $nationPayload = collect((array) $graphQLNationModel)
             ->only([
                 'id',
@@ -114,8 +122,20 @@ class Nation extends Model
                 'total_infrastructure_destroyed',
                 'total_infrastructure_lost',
             ])
-            ->filter(fn ($value) => $value !== null)
+            ->filter(fn ($value, string $key): bool => $graphQLNationModel->hasSourceField($key) && (
+                $value !== null || in_array($key, self::NULLABLE_API_ATTRIBUTES, true)
+            ))
             ->toArray();
+
+        if (
+            $graphQLNationModel->hasSourceField('alliance_id')
+            && $graphQLNationModel->alliance_id === null
+        ) {
+            $nationPayload['alliance_position'] ??= 'NOALLIANCE';
+            $nationPayload['alliance_position_id'] ??= 0;
+            $nationPayload['alliance_seniority'] ??= 0;
+            $nationPayload['tax_id'] ??= null;
+        }
 
         $nationId = $nationPayload['id'] ?? $graphQLNationModel->id;
         unset($nationPayload['id']);
@@ -173,33 +193,29 @@ class Nation extends Model
             $nation = self::create(['id' => $nationId] + $nationPayload);
         }
 
-        // Conditional update for resources
-        if (! is_null($graphQLNationModel->money)) {
-            $resourcesData = collect((array) $graphQLNationModel)
-                ->only([
-                    'money',
-                    'coal',
-                    'oil',
-                    'uranium',
-                    'iron',
-                    'bauxite',
-                    'lead',
-                    'gasoline',
-                    'munitions',
-                    'steel',
-                    'aluminum',
-                    'food',
-                    'credits',
-                ])
-                ->filter(fn ($value) => $value !== null)
-                ->toArray();
+        $resourcesData = collect((array) $graphQLNationModel)
+            ->only([
+                'money',
+                'coal',
+                'oil',
+                'uranium',
+                'iron',
+                'bauxite',
+                'lead',
+                'gasoline',
+                'munitions',
+                'steel',
+                'aluminum',
+                'food',
+                'credits',
+            ])
+            ->filter(fn ($value, string $key): bool => $value !== null && $graphQLNationModel->hasSourceField($key))
+            ->toArray();
 
-            if (! empty($resourcesData)) {
-                $nation->resources()->updateOrCreate(['nation_id' => $nation->id], $resourcesData);
-            }
+        if (! empty($resourcesData)) {
+            $nation->resources()->updateOrCreate(['nation_id' => $nation->id], $resourcesData);
         }
 
-        // Conditional update for military
         $militaryData = collect((array) $graphQLNationModel)
             ->only([
                 'soldiers',
@@ -232,7 +248,7 @@ class Nation extends Model
                 'spy_kills',
                 'spy_attacks',
             ])
-            ->filter(fn ($value) => $value !== null)
+            ->filter(fn ($value, string $key): bool => $value !== null && $graphQLNationModel->hasSourceField($key))
             ->toArray();
 
         if (! empty($militaryData)) {

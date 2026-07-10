@@ -40,12 +40,18 @@ class SettingsController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('view-diagnostic-info');
+        $user = request()->user();
+        abort_unless(
+            $user?->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants']),
+            403,
+        );
 
-        $manualNationBatchId = SettingService::getLastManualNationSyncBatchId();
-        $rollingNationBatchId = SettingService::getLastRollingNationSyncBatchId();
-        $allianceBatchId = SettingService::getLastAllianceSyncBatchId();
-        $warBatchId = SettingService::getLastWarSyncBatchId();
+        $canViewDiagnostics = $user->can('view-diagnostic-info');
+
+        $manualNationBatchId = $canViewDiagnostics ? SettingService::getLastManualNationSyncBatchId() : null;
+        $rollingNationBatchId = $canViewDiagnostics ? SettingService::getLastRollingNationSyncBatchId() : null;
+        $allianceBatchId = $canViewDiagnostics ? SettingService::getLastAllianceSyncBatchId() : null;
+        $warBatchId = $canViewDiagnostics ? SettingService::getLastWarSyncBatchId() : null;
 
         $nationBatch = $manualNationBatchId ? Bus::findBatch($manualNationBatchId) : null;
         $rollingNationBatch = $rollingNationBatchId ? Bus::findBatch($rollingNationBatchId) : null;
@@ -76,6 +82,10 @@ class SettingsController extends Controller
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
+            'backupDisks' => config('backup.backup.destination.disks', []),
+            'backupVerificationEnabled' => (bool) config('backup.backup.verify_backup'),
+            'backupFailureAlertsEnabled' => (bool) config('backup.notifications.failure_alerts_enabled'),
+            'backupArchivePasswordConfigured' => filled(config('backup.backup.password')),
             'loanPaymentsEnabled' => SettingService::isLoanPaymentsEnabled(),
             'loanPaymentsPausedAt' => SettingService::getLoanPaymentsPausedAt(),
             'grantApprovalsEnabled' => SettingService::isGrantApprovalsEnabled(),
@@ -83,7 +93,7 @@ class SettingsController extends Controller
             'userInactivityAutoDisableEnabled' => SettingService::isUserInactivityAutoDisableEnabled(),
             'userInactivityAutoDisableDays' => SettingService::getUserInactivityAutoDisableDays(),
             'stalePendingDefaultHours' => self::DEFAULT_STALE_PENDING_HOURS,
-            'pendingRecoveryItems' => $this->buildPendingRecoveryItems(),
+            'pendingRecoveryItems' => $canViewDiagnostics ? $this->buildPendingRecoveryItems() : [],
         ]);
     }
 

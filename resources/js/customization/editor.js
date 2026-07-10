@@ -97,7 +97,7 @@ function updateAuditSection(container, timestamp, userName, fallbackMessage) {
 
     if (!timestamp) {
         const span = document.createElement('span');
-        span.className = 'text-muted';
+        span.className = 'text-base-content/60';
         span.textContent = fallbackMessage;
         container.appendChild(span);
 
@@ -108,7 +108,7 @@ function updateAuditSection(container, timestamp, userName, fallbackMessage) {
     timeLine.textContent = formatTimestamp(timestamp);
 
     const userLine = document.createElement('div');
-    userLine.className = 'text-muted';
+    userLine.className = 'text-base-content/60';
     userLine.textContent = `by ${userName ?? 'System'}`;
 
     container.appendChild(timeLine);
@@ -145,7 +145,7 @@ function renderActivity(listElement, logs) {
 
     if (!Array.isArray(logs) || logs.length === 0) {
         const empty = document.createElement('li');
-        empty.className = 'text-muted';
+        empty.className = 'text-base-content/60';
         empty.textContent = 'No activity has been recorded yet.';
         listElement.appendChild(empty);
 
@@ -157,7 +157,7 @@ function renderActivity(listElement, logs) {
         item.className = 'mb-3';
 
         const title = document.createElement('div');
-        title.className = 'fw-semibold text-uppercase small text-muted';
+        title.className = 'text-xs font-semibold uppercase text-base-content/60';
         title.textContent = headline(log?.action ?? '');
 
         const meta = document.createElement('div');
@@ -169,7 +169,7 @@ function renderActivity(listElement, logs) {
 
         if (log?.metadata && Object.keys(log.metadata).length > 0) {
             const metadataBlock = document.createElement('code');
-            metadataBlock.className = 'd-block mt-1';
+            metadataBlock.className = 'mt-1 block';
             metadataBlock.textContent = JSON.stringify(log.metadata);
             item.appendChild(metadataBlock);
         }
@@ -195,7 +195,7 @@ function renderVersionsTable(table, versions) {
         const emptyRow = document.createElement('tr');
         const cell = document.createElement('td');
         cell.colSpan = 5;
-        cell.className = 'text-center text-muted py-3';
+        cell.className = 'py-3 text-center text-base-content/60';
         cell.textContent = 'No versions recorded yet.';
         emptyRow.appendChild(cell);
         table.appendChild(emptyRow);
@@ -211,7 +211,7 @@ function renderVersionsTable(table, versions) {
 
         const statusCell = document.createElement('td');
         const badge = document.createElement('span');
-        badge.className = 'badge text-bg-light';
+        badge.className = 'badge badge-ghost';
         badge.textContent = headline(version.status ?? 'unknown');
         statusCell.appendChild(badge);
 
@@ -222,18 +222,18 @@ function renderVersionsTable(table, versions) {
         userCell.textContent = version?.user?.name ?? 'System';
 
         const actionsCell = document.createElement('td');
-        actionsCell.className = 'text-end';
+        actionsCell.className = 'whitespace-nowrap text-right';
 
         const restoreDraftBtn = document.createElement('button');
         restoreDraftBtn.type = 'button';
-        restoreDraftBtn.className = 'btn btn-outline-primary btn-sm me-2';
+        restoreDraftBtn.className = 'btn btn-outline btn-primary btn-sm mr-2';
         restoreDraftBtn.dataset.restoreVersion = version.id;
         restoreDraftBtn.dataset.publish = 'false';
         restoreDraftBtn.textContent = 'Restore Draft';
 
         const restorePublishBtn = document.createElement('button');
         restorePublishBtn.type = 'button';
-        restorePublishBtn.className = 'btn btn-outline-success btn-sm';
+        restorePublishBtn.className = 'btn btn-outline btn-success btn-sm';
         restorePublishBtn.dataset.restoreVersion = version.id;
         restorePublishBtn.dataset.publish = 'true';
         restorePublishBtn.textContent = 'Restore & Publish';
@@ -264,7 +264,14 @@ function showTransientAlert(anchor, message, type = 'success') {
     }
 
     const alert = document.createElement('div');
-    alert.className = `alert alert-${type} mt-3 text-sm transition-opacity duration-300`;
+    const alertClass = {
+        success: 'alert-success',
+        info: 'alert-info',
+        warning: 'alert-warning',
+        danger: 'alert-error',
+        error: 'alert-error',
+    }[type] ?? 'alert-info';
+    alert.className = `alert ${alertClass} mt-3 text-sm transition-opacity duration-300`;
     alert.textContent = message;
 
     anchor.parentElement?.insertBefore(alert, anchor);
@@ -601,7 +608,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ? 'Restore this version and publish it immediately?'
             : 'Restore this version as the active draft?';
 
-        if (!window.confirm(confirmationMessage)) {
+        const confirmed = typeof window.NexusConfirm === 'function'
+            ? await window.NexusConfirm(confirmationMessage, {
+                title: publish ? 'Restore and publish version?' : 'Restore draft version?',
+                label: publish ? 'Restore and publish' : 'Restore draft',
+                tone: publish ? 'error' : 'default',
+            })
+            : window.confirm(confirmationMessage);
+
+        if (!confirmed) {
             return;
         }
 

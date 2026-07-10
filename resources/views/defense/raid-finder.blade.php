@@ -1,8 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto space-y-6" x-data="raidFinder()" x-init="loadRaids()">
-        <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow">
+    <div class="mx-auto w-full min-w-0 space-y-6" x-data="raidFinder()" x-init="loadRaids()">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Offense prep</p>
@@ -10,7 +10,7 @@
                     <p class="text-sm text-base-content/70">Fetch fresh raid targets by nation ID and sort on the fly.</p>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full sm:w-auto">
-                    <input id="nationId" type="number" class="input input-bordered w-full sm:w-40" x-model="nationId" placeholder="Nation ID"/>
+                    <input id="nationId" type="number" class="input w-full sm:w-40" x-model="nationId" placeholder="Nation ID" aria-label="Nation ID for raid search"/>
                     <button class="btn btn-primary w-full sm:w-auto" @click="loadRaids()">Refresh</button>
                 </div>
             </div>
@@ -29,7 +29,7 @@
                     <span class="badge badge-outline" x-text="`${targets.length} results`"></span>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full text-sm">
+                    <table class="table table-zebra w-full text-sm" data-sortable="false">
                         <thead>
                         <tr>
                             <th>Leader</th>

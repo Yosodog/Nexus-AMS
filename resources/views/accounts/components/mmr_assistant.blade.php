@@ -3,7 +3,7 @@
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
     <div>
         <h1 class="text-2xl font-semibold mb-1 flex items-center gap-2">
-            <i class="o-banknotes text-primary text-lg"></i>
+            <x-icon name="o-banknotes" class="size-5 text-primary" aria-hidden="true" />
             MMR Assistant
             @if ($mmrConfig && $mmrConfig->enabled)
                 <span class="badge badge-outline badge-success">Enabled</span>
@@ -18,15 +18,16 @@
 
     @if ($mmrEnabled && $mmrConfig && $mmrConfig->enabled)
         {{-- Disable Assistant Form --}}
-        <form method="POST" action="{{ route('mmra.update') }}" onsubmit="return confirm('Disable MMR Assistant?')">
+        <form method="POST" action="{{ route('mmra.update') }}" data-confirm="Disable MMR Assistant? Existing settings remain available if you enable it again." data-confirm-title="Disable MMR Assistant?" data-confirm-label="Disable assistant">
             @csrf
             <input type="hidden" name="enabled" value="0">
             <input type="hidden" name="account_id" value="{{ $mmrConfig->account_id }}">
             @foreach($mmrResources as $resource)
                 <input type="hidden" name="{{ $resource }}_pct" value="{{ $mmrConfig["{$resource}_pct"] }}">
             @endforeach
-            <button type="submit" class="btn btn-sm btn-outline-error">
-                <i class="o-x-circle me-1"></i> Disable assistant
+            <button type="submit" class="btn btn-sm btn-outline btn-error">
+                <x-icon name="o-x-circle" class="size-4" aria-hidden="true" />
+                Disable assistant
             </button>
         </form>
     @endif
@@ -45,7 +46,7 @@
 
         <div>
             <label class="label font-semibold">Choose where purchased resources go</label>
-            <select name="account_id" class="select select-bordered w-full" required>
+            <select name="account_id" class="select w-full" required>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
                 @endforeach
@@ -55,7 +56,8 @@
         <input type="hidden" name="enabled" value="1" />
 
         <button type="submit" class="btn btn-primary">
-            <i class="o-bolt me-1"></i> Enable MMR assistant
+            <x-icon name="o-bolt" class="size-4" aria-hidden="true" />
+            Enable MMR assistant
         </button>
     </form>
 @else
@@ -64,7 +66,7 @@
 
         <div>
             <label class="label font-semibold">Deposit resources into</label>
-            <select name="account_id" class="select select-bordered w-full" required>
+            <select name="account_id" class="select w-full" required>
                 @foreach($accounts as $account)
                     <option value="{{ $account->id }}" @selected($account->id === $mmrConfig->account_id)>
                         {{ $account->name }}
@@ -74,7 +76,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="table table-sm w-full">
+            <table class="table table-sm w-full" data-sortable="false">
                 <thead class="bg-base-300 text-base-content text-sm uppercase">
                 <tr>
                     <th>Resource</th>
@@ -113,7 +115,7 @@
                                    step="0.01"
                                    min="0"
                                    max="100"
-                                   class="input input-sm input-bordered w-24 resource-input"
+                                   class="input input-sm w-24 resource-input"
                                    data-ppu="{{ $ppu }}"
                                    value="{{ $percent }}">
                         </td>
@@ -129,7 +131,7 @@
                 <tr>
                     <td colspan="4" class="text-right font-bold">Total</td>
                     <td colspan="2">
-                        <span id="totalPct" class="badge bg-neutral">0%</span>
+                        <span id="totalPct" class="badge badge-neutral">0%</span>
                     </td>
                 </tr>
                 </tfoot>
@@ -138,7 +140,8 @@
 
         <div class="flex justify-end">
             <button type="submit" class="btn btn-success">
-                <i class="o-check me-1"></i> Save preferences
+                <x-icon name="o-check" class="size-4" aria-hidden="true" />
+                Save preferences
             </button>
         </div>
     </form>
@@ -150,7 +153,7 @@
     @else
         <div class="overflow-hidden rounded-lg border border-base-300">
             <div class="overflow-x-auto">
-                <table class="table table-sm w-full">
+                <table class="table table-sm w-full" data-sortable="false">
                     <thead class="bg-base-300 text-base-content text-sm uppercase">
                     <tr>
                         <th class="w-40">Date</th>
@@ -262,8 +265,9 @@
             });
 
             badge.textContent = total.toFixed(2) + '%';
-            badge.classList.toggle('bg-error', total > 100 || total < 0);
-            badge.classList.toggle('bg-success', total >= 0 && total <= 100);
+            badge.classList.remove('badge-neutral');
+            badge.classList.toggle('badge-error', total > 100 || total < 0);
+            badge.classList.toggle('badge-success', total >= 0 && total <= 100);
             badge.classList.toggle('animate-pulse', total > 100);
         }
 

@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Exceptions\AmbiguousMutationOutcomeException;
+use App\Exceptions\DefiniteMutationFailureException;
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\BankRecord;
 use App\Jobs\SendBank;
 use App\Models\Transaction;
 use Illuminate\Http\Client\ConnectionException;
+use Throwable;
 
 class BankService
 {
@@ -57,6 +60,17 @@ class BankService
      */
     public function sendWithdraw(): BankRecord
     {
+        if (! isset($this->receiver) || $this->receiver <= 0) {
+            throw new DefiniteMutationFailureException('A valid withdrawal receiver is required.');
+        }
+
+        $hasResources = collect(PWHelperService::resources())
+            ->contains(fn (string $resource): bool => $this->{$resource} > 0);
+
+        if (! $hasResources) {
+            throw new DefiniteMutationFailureException('A bank withdrawal must include at least one resource.');
+        }
+
         $client = new QueryService;
 
         $builder = (new GraphQLQueryBuilder)
@@ -74,8 +88,31 @@ class BankService
 
         $response = $client->sendQuery($builder, headers: true);
 
-        $bankRec = new BankRecord;
-        $bankRec->buildWithJSON((object) $response);
+        try {
+            $bankRec = new BankRecord;
+            $bankRec->buildWithJSON((object) $response);
+        } catch (Throwable $exception) {
+            throw new AmbiguousMutationOutcomeException(
+                'The bank mutation returned an invalid record after it may have succeeded.',
+                previous: $exception,
+            );
+        }
+
+        if ($bankRec->id <= 0
+            || $bankRec->receiver_id !== $this->receiver
+            || $bankRec->receiver_type !== $this->receiver_type) {
+            throw new AmbiguousMutationOutcomeException(
+                'The bank mutation returned a record that could not be matched to the requested withdrawal.'
+            );
+        }
+
+        foreach (PWHelperService::resources() as $resource) {
+            if (abs($bankRec->{$resource} - $this->{$resource}) > 0.005) {
+                throw new AmbiguousMutationOutcomeException(
+                    'The bank mutation returned resource amounts that did not match the requested withdrawal.'
+                );
+            }
+        }
 
         return $bankRec;
     }

@@ -2,7 +2,10 @@
     <x-slot:menu>
         @if($batch && ! $batch->finished() && ! $batch->cancelled())
             <form method="POST" action="{{ route('admin.settings.sync.cancel') }}"
-                  onsubmit="return confirm('Cancel the active rolling nation sync?')">
+                  data-confirm="Cancel the active rolling nation sync?"
+                  data-confirm-title="Cancel rolling sync?"
+                  data-confirm-label="Cancel sync"
+                  data-confirm-tone="error">
                 @csrf
                 <input type="hidden" name="batch_id" value="{{ $batch->id }}">
                 <input type="hidden" name="type" value="rolling_nation">
@@ -31,7 +34,7 @@
             <x-stat title="Next Job" :value="$rollingSchedule['nextRunAt'] ? $rollingSchedule['nextRunAt']->format('M d, H:i') : ($batch->finished() ? 'Completed' : 'Pending')" icon="o-calendar-days" color="text-warning" :description="$rollingSchedule['nextRunAt'] ? $rollingSchedule['nextRunAt']->diffForHumans() : 'Waiting on scheduler state'" />
         </div>
 
-        <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+        <div class="rounded-lg border border-base-300 bg-base-200/60 p-4">
             <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <div class="font-semibold text-base-content">Progress</div>
@@ -56,7 +59,7 @@
             </dl>
         </div>
     @else
-        <div class="rounded-2xl border border-dashed border-base-300 px-4 py-6 text-sm text-base-content/60">
+        <div class="rounded-lg border border-dashed border-base-300 px-4 py-6 text-sm text-base-content/60">
             No rolling nation sync is currently active. The scheduler will queue the next run automatically.
         </div>
     @endif

@@ -33,7 +33,7 @@
     <form method="POST" action="{{ route('auto-withdraw.update') }}" class="mt-4 space-y-4">
         @csrf
         <div class="overflow-x-auto rounded-xl border border-base-300">
-            <table class="table w-full">
+            <table class="table w-full" data-sortable="false">
                 <thead class="bg-base-200 text-sm">
                 <tr>
                     <th>Resource</th>
@@ -58,6 +58,7 @@
                             <input type="hidden" name="settings[{{ $resource }}][enabled]" value="0">
                             <input type="checkbox"
                                    class="toggle toggle-primary"
+                                   aria-label="Enable {{ $resource }} auto withdraw"
                                    name="settings[{{ $resource }}][enabled]"
                                    value="1"
                                    @checked($enabled)
@@ -65,7 +66,8 @@
                         </td>
                         <td>
                             <select name="settings[{{ $resource }}][account_id]"
-                                    class="select select-bordered w-full max-w-xs"
+                                    class="select w-full max-w-xs"
+                                    aria-label="Source account for {{ $resource }} auto withdraw"
                                     @disabled($disabledByAdmin)>
                                 @foreach($accounts as $account)
                                     <option value="{{ $account->id }}" @selected((int) $accountId === $account->id)>
@@ -78,7 +80,8 @@
                             <input type="number"
                                    min="0"
                                    inputmode="numeric"
-                                   class="input input-bordered w-full max-w-xs"
+                                   aria-label="{{ ucfirst($resource) }} threshold"
+                                   class="input w-full max-w-xs"
                                    name="settings[{{ $resource }}][threshold]"
                                    value="{{ $threshold }}"
                                    @disabled($disabledByAdmin)>
@@ -87,7 +90,8 @@
                             <input type="number"
                                    min="0"
                                    inputmode="numeric"
-                                   class="input input-bordered w-full max-w-xs"
+                                   aria-label="{{ ucfirst($resource) }} withdrawal amount"
+                                   class="input w-full max-w-xs"
                                    name="settings[{{ $resource }}][withdraw_amount]"
                                    value="{{ $withdrawAmount }}"
                                    @disabled($disabledByAdmin)>

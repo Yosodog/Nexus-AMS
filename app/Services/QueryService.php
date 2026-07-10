@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\AmbiguousMutationOutcomeException;
+use App\Exceptions\DefiniteMutationFailureException;
 use App\Exceptions\PWQueryFailedException;
 use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -16,6 +18,8 @@ use Throwable;
 
 class QueryService
 {
+    private const MAX_DIAGNOSTIC_LENGTH = 1000;
+
     public int $initialDelay = 5;
 
     public int $maxRetries = 5;
@@ -195,7 +199,15 @@ class QueryService
             }
         }
 
-        throw new PWQueryFailedException('Initial query failed: '.json_encode($response));
+        $message = 'Initial query failed: '.$this->sanitizeDiagnosticText(json_encode($response));
+
+        if (! $allowTransientRetries) {
+            throw new AmbiguousMutationOutcomeException(
+                'GraphQL mutation returned an unusable response after the request was sent; the side effect may have succeeded: '.$message
+            );
+        }
+
+        throw new PWQueryFailedException($message);
     }
 
     /**
@@ -212,8 +224,21 @@ class QueryService
         array $headers = [],
         bool $allowTransientRetries = true
     ): PromiseInterface {
+        try {
+            $endpoint = $this->endpoint();
+        } catch (Throwable $exception) {
+            if (! $allowTransientRetries) {
+                throw new DefiniteMutationFailureException(
+                    'GraphQL mutation could not be prepared before dispatch.',
+                    previous: $exception,
+                );
+            }
+
+            throw $exception;
+        }
+
         return Http::async()->withHeaders($headers)->post(
-            $this->endpoint(),
+            $endpoint,
             ['query' => $query, 'variables' => $variables]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
@@ -267,9 +292,9 @@ class QueryService
 
                         $context = [
                             'status' => $response->status(),
-                            'reason' => $response->reason(),
-                            'headers' => $response->headers(),
-                            'body' => $response->body(),
+                            'reason' => $this->sanitizeDiagnosticText($response->reason()),
+                            'request_id' => $this->sanitizeDiagnosticText($response->header('X-Request-ID')),
+                            'response_detail' => $this->responseDetail($response),
                         ];
 
                         Log::error('Query failed.', $context);
@@ -277,14 +302,18 @@ class QueryService
                         $message = sprintf(
                             'Query failed: status=%d reason=%s body=%s',
                             $response->status(),
-                            $response->reason() ?: 'unknown',
-                            $response->body() !== '' ? $response->body() : '[empty]'
+                            $this->sanitizeDiagnosticText($response->reason() ?: 'unknown'),
+                            $this->responseDetail($response)
                         );
+
+                        if (! $allowTransientRetries) {
+                            throw new DefiniteMutationFailureException($message);
+                        }
 
                         throw new PWQueryFailedException($message);
                     }
-                } catch (ConnectionException $e) {
-                    Log::error('Connection exception: '.$e->getMessage());
+                } catch (ConnectionException) {
+                    Log::error('Connection exception while calling the Politics & War API.');
                     throw new ConnectionException('Failed to connect to the Politics & War API.');
                 }
             },
@@ -311,37 +340,41 @@ class QueryService
     }
 
     /**
-     * @throws PWQueryFailedException
+     * @throws AmbiguousMutationOutcomeException
      */
     protected function throwAmbiguousMutationResponse(Response $response): never
     {
         $message = sprintf(
             'GraphQL mutation failed with an ambiguous upstream response and was not retried: status=%d reason=%s body=%s',
             $response->status(),
-            $response->reason() ?: 'unknown',
-            $response->body() !== '' ? $response->body() : '[empty]'
+            $this->sanitizeDiagnosticText($response->reason() ?: 'unknown'),
+            $this->responseDetail($response)
         );
 
-        Log::error($message, [
+        Log::error('GraphQL mutation returned an ambiguous upstream response.', [
             'status' => $response->status(),
-            'headers' => $response->headers(),
+            'reason' => $this->sanitizeDiagnosticText($response->reason()),
+            'request_id' => $this->sanitizeDiagnosticText($response->header('X-Request-ID')),
+            'response_detail' => $this->responseDetail($response),
         ]);
 
-        throw new PWQueryFailedException($message);
+        throw new AmbiguousMutationOutcomeException($message);
     }
 
     /**
-     * @throws ConnectionException
+     * @throws AmbiguousMutationOutcomeException
      */
     protected function throwAmbiguousMutationRejection(mixed $reason): never
     {
-        $message = $reason instanceof Throwable ? $reason->getMessage() : (string) $reason;
+        $message = $this->rejectionDetail($reason);
 
         Log::error('GraphQL mutation request was rejected and was not retried.', [
             'reason' => $message,
         ]);
 
-        throw new ConnectionException("GraphQL mutation request failed without retry because the side effect may have succeeded: {$message}");
+        throw new AmbiguousMutationOutcomeException(
+            "GraphQL mutation request failed without retry because the side effect may have succeeded: {$message}"
+        );
     }
 
     protected function retryTransientResponse(
@@ -356,13 +389,16 @@ class QueryService
             $message = sprintf(
                 'Query failed after retries: status=%d reason=%s body=%s',
                 $response->status(),
-                $response->reason() ?: 'unknown',
-                $response->body() !== '' ? $response->body() : '[empty]'
+                $this->sanitizeDiagnosticText($response->reason() ?: 'unknown'),
+                $this->responseDetail($response)
             );
 
-            Log::error($message, [
+            Log::error('Query failed after retry limit.', [
                 'retryCount' => $retryCount,
-                'headers' => $response->headers(),
+                'status' => $response->status(),
+                'reason' => $this->sanitizeDiagnosticText($response->reason()),
+                'request_id' => $this->sanitizeDiagnosticText($response->header('X-Request-ID')),
+                'response_detail' => $this->responseDetail($response),
             ]);
 
             throw new PWQueryFailedException($message);
@@ -372,10 +408,11 @@ class QueryService
 
         Log::warning('Transient query failure, retrying request.', [
             'status' => $response->status(),
-            'reason' => $response->reason(),
+            'reason' => $this->sanitizeDiagnosticText($response->reason()),
             'retryCount' => $retryCount,
             'nextDelaySeconds' => $waitSeconds,
-            'body' => $response->body(),
+            'request_id' => $this->sanitizeDiagnosticText($response->header('X-Request-ID')),
+            'response_detail' => $this->responseDetail($response),
         ]);
 
         sleep($waitSeconds);
@@ -393,7 +430,7 @@ class QueryService
         int &$delay,
         array $headers = []
     ): PromiseInterface {
-        $message = $reason instanceof Throwable ? $reason->getMessage() : (string) $reason;
+        $message = $this->rejectionDetail($reason);
 
         if ($retryCount >= $this->maxRetries) {
             Log::error('Query request rejected after retries.', [
@@ -518,9 +555,10 @@ class QueryService
                     $lastPage = $data['paginatorInfo']['lastPage'];
                 }
             } elseif ($response['state'] === 'rejected') {
-                Log::error("Query failed: {$response['reason']}");
+                $reason = $this->rejectionDetail($response['reason']);
+                Log::error('Batch query failed.', ['reason' => $reason]);
                 throw new PWQueryFailedException(
-                    "Query failed: {$response['reason']}"
+                    "Query failed: {$reason}"
                 );
             }
         }
@@ -555,5 +593,57 @@ class QueryService
         $results = $results->merge($firstResponse['paginatorInfo']);
 
         return $results;
+    }
+
+    protected function responseDetail(Response $response): string
+    {
+        $errors = data_get($response->json(), 'errors', []);
+        $messages = collect(is_array($errors) ? $errors : [])
+            ->pluck('message')
+            ->filter(fn (mixed $message): bool => is_string($message) && $message !== '')
+            ->take(3)
+            ->implode('; ');
+
+        return $messages === ''
+            ? '[response body omitted]'
+            : $this->sanitizeDiagnosticText($messages);
+    }
+
+    protected function rejectionDetail(mixed $reason): string
+    {
+        $message = $reason instanceof Throwable ? $reason->getMessage() : (string) $reason;
+
+        return $this->sanitizeDiagnosticText($message);
+    }
+
+    protected function sanitizeDiagnosticText(string|false|null $value): string
+    {
+        $text = (string) $value;
+        $secrets = array_filter([
+            $this->apiKey,
+            $this->mutationKey,
+            config('services.pw.api_key'),
+            config('services.pw.mutation_key'),
+        ], fn (mixed $secret): bool => is_string($secret) && $secret !== '');
+
+        foreach ($secrets as $secret) {
+            $text = str_replace($secret, '[redacted]', $text);
+        }
+
+        $text = preg_replace(
+            [
+                '/([?&](?:api_?key|key|token)=)[^&\s]+/i',
+                '/(X-(?:Api|Bot)-Key\s*[:=]\s*)[^\s,}\]]+/i',
+                '/(Authorization\s*[:=]\s*Bearer\s+)[^\s,}\]]+/i',
+            ],
+            '$1[redacted]',
+            $text,
+        ) ?? '[unavailable]';
+
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text) ?? '[unavailable]';
+
+        return mb_strlen($text) > self::MAX_DIAGNOSTIC_LENGTH
+            ? mb_substr($text, 0, self::MAX_DIAGNOSTIC_LENGTH).'…'
+            : $text;
     }
 }

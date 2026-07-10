@@ -219,9 +219,9 @@ class SettingService
         $value = self::getValue('backups_enabled');
 
         if (is_null($value)) {
-            self::setBackupsEnabled(true);
+            self::setBackupsEnabled(false);
 
-            return true;
+            return false;
         }
 
         return (bool) $value;

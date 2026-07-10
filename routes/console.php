@@ -6,7 +6,11 @@ use App\Services\PWHealthService;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('pw:health-check')->everyMinute();
+Schedule::command('pw:health-check')
+    ->everyMinute()
+    ->runInBackground()
+    ->withoutOverlapping(2)
+    ->onOneServer();
 
 $whenPWUp = fn () => app(PWHealthService::class)->isUp();
 
@@ -42,7 +46,10 @@ Schedule::command(ProcessDeposits::class)
     ->when($whenPWUp);
 
 // Loan
-Schedule::command('loans:process-payments')->dailyAt('00:15');
+Schedule::command('loans:process-payments')
+    ->dailyAt('00:15')
+    ->withoutOverlapping(120)
+    ->onOneServer();
 
 // Payroll
 Schedule::command('payroll:run-daily')
@@ -67,10 +74,15 @@ Schedule::command('audit:prune')->dailyAt('01:15');
 Schedule::command('war-counters:archive-stale')->hourly()->withoutOverlapping(55);
 
 // Backups
-Schedule::command('backup:run --only-to-disk=s3')
+Schedule::command('backup:run')
     ->everySixHours()
     ->runInBackground()
     ->withoutOverlapping(360)
+    ->when(fn () => SettingService::isBackupsEnabled());
+Schedule::command('backup:monitor')
+    ->dailyAt('02:10')
+    ->runInBackground()
+    ->withoutOverlapping(60)
     ->when(fn () => SettingService::isBackupsEnabled());
 Schedule::command('backup:clean')
     ->dailyAt('02:20')

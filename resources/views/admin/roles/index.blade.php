@@ -3,13 +3,15 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <x-header title="Manage Roles" separator>
+    <x-header title="Manage Roles" separator use-h1>
         <x-slot:subtitle>Review permission coverage, clean up stale roles, and keep access assignments readable.</x-slot:subtitle>
         <x-slot:actions>
-            <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
-                <x-icon name="o-plus" class="size-4" />
-                New Role
-            </a>
+            @can('edit-roles')
+                <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
+                    <x-icon name="o-plus" class="size-4" />
+                    New Role
+                </a>
+            @endcan
         </x-slot:actions>
     </x-header>
 
@@ -28,7 +30,7 @@
         </x-slot:title>
 
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                     <tr>
                         <th>Role</th>
@@ -65,13 +67,13 @@
                                 @endif
                             </td>
                             <td class="text-right">
-                                @if(! $role->protected)
+                                @if($manageableRoleIds->contains($role->id))
                                     <div class="inline-flex flex-wrap justify-end gap-2">
                                         <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-outline btn-primary btn-sm">
                                             <x-icon name="o-pencil-square" class="size-4" />
                                             Edit
                                         </a>
-                                        <form method="POST" action="{{ route('admin.roles.destroy', $role) }}" onsubmit="return confirm('Are you sure you want to delete this role?')">
+                                        <form method="POST" action="{{ route('admin.roles.destroy', $role) }}" data-confirm="Delete this role? Users assigned to it may lose access immediately." data-confirm-title="Delete role?" data-confirm-label="Delete role" data-confirm-tone="error">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline btn-error btn-sm">

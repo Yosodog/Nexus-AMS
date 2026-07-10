@@ -1,6 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
+    <x-chart-js />
+
     @php
         $totalWars = $activeWars->count() + $pastWars->count();
         $completedWars = $wins + $losses + $draws;
@@ -9,7 +11,7 @@
         $avgDurationDays = $avgDurationHoursValue ? round($avgDurationHoursValue / 24, 1) : 0;
     @endphp
     <div class="space-y-6">
-        <div class="card bg-gradient-to-br from-primary via-primary/90 to-secondary text-primary-content shadow-xl">
+        <div class="card border-primary bg-primary text-primary-content shadow-sm">
             <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                 <div class="md:col-span-2 space-y-2">
                     <p class="text-xs uppercase tracking-[0.2em] text-primary-content/80">Defense • War Storyboard</p>
@@ -19,7 +21,7 @@
                     </p>
                 </div>
                 <div class="w-full">
-                    <div class="rounded-2xl bg-base-100/10 border border-primary-content/20 p-4 backdrop-blur">
+                    <div class="rounded-lg bg-base-100/10 border border-primary-content/20 p-4 backdrop-blur">
                         <div class="flex items-center justify-between text-xs uppercase text-primary-content/70">
                             <span>Totals tracked</span>
                             <span>{{ $offensiveCount }} off • {{ $defensiveCount }} def</span>
@@ -41,22 +43,22 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-2xl">
+            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-lg">
                 <div class="stat-title text-base-content/70">Active wars</div>
                 <div class="stat-value text-primary">{{ $activeWars->count() }}</div>
                 <div class="stat-desc text-base-content/70">Ongoing engagements right now</div>
             </div>
-            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-2xl">
+            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-lg">
                 <div class="stat-title text-base-content/70">Win rate</div>
                 <div class="stat-value text-success">{{ $winRate }}%</div>
                 <div class="stat-desc text-base-content/70">{{ $wins }}W • {{ $losses }}L • {{ $draws }} pending</div>
             </div>
-            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-2xl">
+            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-lg">
                 <div class="stat-title text-base-content/70">Avg war length</div>
                 <div class="stat-value text-secondary">{{ $avgDurationDays }}d</div>
                 <div class="stat-desc text-base-content/70">({{ number_format($avgDurationHoursValue, 1) }} hours)</div>
             </div>
-            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-2xl">
+            <div class="stat bg-base-100/70 border border-base-300 shadow-sm rounded-lg">
                 <div class="stat-title text-base-content/70">Loot hauled</div>
                 <div class="stat-value text-info">${{ number_format($lootTotal, 0) }}</div>
                 <div class="stat-desc text-base-content/70">Missiles: {{ $missilesUsed }} • Nukes: {{ $nukesUsed }}</div>
@@ -66,13 +68,13 @@
         <form class="card bg-base-100 border border-base-300 shadow-sm" method="GET" action="{{ route('defense.war-stats') }}">
             <div class="card-body grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                    <label class="label-text text-sm font-semibold">Nation ID</label>
+                    <label class="text-sm font-semibold">Nation ID</label>
                     <div class="join w-full">
                         <input
                             type="number"
                             name="nation_id"
                             value="{{ $filters['nation_id'] }}"
-                            class="input input-bordered join-item w-full"
+                            class="input join-item w-full"
                             placeholder="e.g. 123456"
                         />
                         <button class="btn btn-primary join-item" type="submit">Load</button>
@@ -82,12 +84,12 @@
                     @endif
                 </div>
                 <div>
-                    <label class="label-text text-sm font-semibold">From</label>
-                    <input type="date" name="from" class="input input-bordered w-full" value="{{ $filters['from'] }}">
+                    <label class="text-sm font-semibold">From</label>
+                    <input type="date" name="from" class="input w-full" value="{{ $filters['from'] }}">
                 </div>
                 <div>
-                    <label class="label-text text-sm font-semibold">To</label>
-                    <input type="date" name="to" class="input input-bordered w-full" value="{{ $filters['to'] }}">
+                    <label class="text-sm font-semibold">To</label>
+                    <input type="date" name="to" class="input w-full" value="{{ $filters['to'] }}">
                 </div>
                 <div class="flex items-end gap-3">
                     <button class="btn btn-outline w-full" type="button" onclick="window.location='{{ route('defense.war-stats') }}'">
@@ -302,7 +304,7 @@
                         </div>
                     </div>
                 @empty
-                    <div class="p-6 rounded-2xl bg-base-100 border border-dashed border-base-300 text-base-content/70">
+                    <div class="p-6 rounded-lg bg-base-100 border border-dashed border-base-300 text-base-content/70">
                         No active wars right now. Enjoy the peace, or queue up a raid.
                     </div>
                 @endforelse
@@ -391,11 +393,28 @@
     </div>
 
     @push('scripts')
+        <x-chart-js />
         <script>
             const impactData = @json($timeline);
             const unitScoreExchange = @json($unitScoreExchange);
             const resourceUsage = @json($resourceUsage);
             const warTypeBreakdown = @json($warTypeBreakdown);
+            const chartPalette = window.NexusCharts?.colors?.() ?? {
+                primary: '#475194',
+                secondary: '#a87621',
+                success: '#2f7d45',
+                warning: '#c28c24',
+                error: '#b53a35',
+                info: '#347ba6',
+            };
+            const categoricalColors = [
+                chartPalette.primary,
+                chartPalette.secondary,
+                chartPalette.success,
+                chartPalette.info,
+                chartPalette.warning,
+                chartPalette.error,
+            ];
 
             const impactCtx = document.getElementById('impactChart');
             if (impactCtx) {
@@ -406,20 +425,22 @@
                         datasets: [
                             {
                                 label: 'Inflicted ($ value)',
+                                nexusColor: 'success',
                                 data: impactData.inflicted,
-                                borderColor: '#22c55e',
-                                backgroundColor: 'rgba(34,197,94,0.15)',
+                                borderColor: chartPalette.success,
+                                backgroundColor: chartPalette.success,
                                 tension: 0.35,
-                                fill: true,
+                                fill: false,
                             },
                             {
                                 label: 'Taken ($ value)',
+                                nexusColor: 'error',
                                 data: impactData.taken,
-                                borderColor: '#ef4444',
-                                backgroundColor: 'rgba(239,68,68,0.1)',
+                                borderColor: chartPalette.error,
+                                backgroundColor: chartPalette.error,
                                 borderDash: [6, 4],
                                 tension: 0.35,
-                                fill: true,
+                                fill: false,
                             },
                         ],
                     },
@@ -430,7 +451,6 @@
                         scales: {
                             y: {
                                 ticks: { callback: value => `$${Number(value).toLocaleString()}` },
-                                grid: { color: 'rgba(0,0,0,0.05)' },
                             },
                         },
                     },
@@ -449,8 +469,9 @@
                         datasets: [
                             {
                                 label: 'Consumed',
+                                nexusPalette: true,
                                 data,
-                                backgroundColor: ['#fde68a', '#fca5a5', '#60a5fa', '#a78bfa'],
+                                backgroundColor: labels.map((_, index) => categoricalColors[index % categoricalColors.length]),
                                 borderRadius: 10,
                             },
                         ],
@@ -478,15 +499,19 @@
                         datasets: [
                             {
                                 label: 'Inflicted',
+                                nexusColor: 'success',
                                 data: inflicted,
-                                backgroundColor: 'rgba(34,197,94,0.2)',
-                                borderColor: '#22c55e',
+                                backgroundColor: chartPalette.success,
+                                borderColor: chartPalette.success,
+                                fill: false,
                             },
                             {
                                 label: 'Lost',
+                                nexusColor: 'error',
                                 data: lost,
-                                backgroundColor: 'rgba(239,68,68,0.15)',
-                                borderColor: '#ef4444',
+                                backgroundColor: chartPalette.error,
+                                borderColor: chartPalette.error,
+                                fill: false,
                             },
                         ],
                     },
@@ -494,7 +519,6 @@
                         scales: {
                             r: {
                                 ticks: { display: false },
-                                angleLines: { color: 'rgba(0,0,0,0.08)' },
                             },
                         },
                     },
@@ -512,7 +536,8 @@
                         datasets: [
                             {
                                 data,
-                                backgroundColor: ['#38bdf8', '#34d399', '#f472b6', '#fbbf24', '#a78bfa', '#f97316'],
+                                nexusPalette: true,
+                                backgroundColor: labels.map((_, index) => categoricalColors[index % categoricalColors.length]),
                             },
                         ],
                     },

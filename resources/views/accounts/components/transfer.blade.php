@@ -1,20 +1,20 @@
 @php use App\Services\PWHelperService; @endphp
 <x-utils.card title="" extraClasses="mb-2">
     <div x-data="memberTransferSearch()">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+    <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <h2 class="card-title">Transfer funds & resources</h2>
             <p class="text-sm text-base-content/70">Move balances between accounts, pay down loans, or send directly to your nation.</p>
         </div>
-        <div class="join w-full md:w-auto">
+        <div class="join w-full lg:w-auto">
             <button type="button"
-                    class="btn join-item flex-1 md:flex-none"
+                    class="btn join-item flex-1 lg:flex-none"
                     :class="destinationMode === 'standard' ? 'btn-primary' : 'btn-outline'"
                     @click="switchToStandard()">
                 Standard destinations
             </button>
             <button type="button"
-                    class="btn join-item flex-1 md:flex-none"
+                    class="btn join-item flex-1 lg:flex-none"
                     :class="destinationMode === 'alliance' ? 'btn-primary' : 'btn-outline'"
                     @click="switchToAlliance()">
                     Transfer to alliance member
@@ -26,12 +26,12 @@
 
         <!-- From/To Selection -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="form-control">
+            <div class="grid gap-2">
                 <label for="tran_from" class="label font-semibold">
-                    <span class="label-text">From</span>
-                    <span class="label-text-alt text-base-content/60" id="fromSummary">Available balance</span>
+                    <span class="">From</span>
+                    <span class="text-base-content/60" id="fromSummary">Available balance</span>
                 </label>
-                <select class="select select-bordered w-full" name="from" id="tran_from" required>
+                <select class="select w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}"
@@ -45,13 +45,13 @@
                 </select>
             </div>
 
-            <div class="form-control">
+            <div class="grid gap-2">
                 <label for="tran_to" class="label font-semibold">
-                    <span class="label-text">To</span>
-                    <span class="label-text-alt text-base-content/60">Select loan to pay only money</span>
+                    <span class="">To</span>
+                    <span class="text-base-content/60">Select loan to pay only money</span>
                 </label>
                 <div class="space-y-3">
-                    <select class="select select-bordered w-full h-12"
+                    <select class="select w-full h-12"
                             :class="destinationMode === 'alliance' ? 'hidden' : ''"
                             name="to"
                             required
@@ -80,13 +80,13 @@
                     <div class="rounded-xl border border-base-300 bg-base-200/60 p-3"
                          x-show="destinationMode === 'alliance'" x-cloak>
                         <label class="label font-semibold">
-                            <span class="label-text">Send to alliance member</span>
-                            <span class="label-text-alt text-base-content/60">Search by nation or leader</span>
+                            <span class="">Send to alliance member</span>
+                            <span class="text-base-content/60">Search by nation or leader</span>
                         </label>
                         <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
                             <input
                                 type="text"
-                                class="input input-bordered w-full h-12"
+                                class="input w-full h-12"
                                 placeholder="Start typing a nation or leader name"
                                 x-model="query"
                                 @input.debounce.350ms="search"
@@ -144,14 +144,14 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="resource-fields">
                 @foreach(PWHelperService::resources() as $resource)
-                    <div class="form-control">
+                    <div class="grid gap-2">
                         <label for="{{ $resource }}" class="label font-semibold">
                             {{ ucfirst($resource) }}
                             <span class="badge badge-ghost ml-2" id="{{ $resource }}Avail">0.00</span>
                         </label>
                         <input
                             type="number"
-                            class="input input-bordered"
+                            class="input"
                             name="{{ $resource }}"
                             id="{{ $resource }}"
                             value="0"

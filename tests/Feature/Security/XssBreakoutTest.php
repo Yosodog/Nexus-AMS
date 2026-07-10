@@ -106,7 +106,7 @@ class XssBreakoutTest extends FeatureTestCase
             ->assertDontSee('</textarea><script>alert("followup")</script>', false);
     }
 
-    public function test_offshore_confirmations_encode_names_for_javascript_context(): void
+    public function test_offshore_confirmations_encode_names_for_html_attributes(): void
     {
         $admin = User::factory()->admin()->create();
         Gate::define('view-offshores', fn (): bool => true);
@@ -139,9 +139,19 @@ class XssBreakoutTest extends FeatureTestCase
         ])
             ->render();
 
-        $this->assertStringNotContainsString("confirm('Sweep the entire main bank into Offshore');alert(1);//", $html);
-        $this->assertStringNotContainsString("confirm('Delete Offshore');alert(1);//", $html);
-        $this->assertStringContainsString('\u0027);alert(1);\/\/', $html);
+        $encodedName = e($offshore->name);
+
+        $this->assertStringContainsString(
+            'data-confirm="Sweep the entire main bank into '.$encodedName.'? This cannot be undone."',
+            $html
+        );
+        $this->assertStringContainsString(
+            'data-confirm="Delete '.$encodedName.'? This action cannot be undone."',
+            $html
+        );
+        $this->assertStringNotContainsString('onclick=', $html);
+        $this->assertStringNotContainsString('confirm(', $html);
+        $this->assertStringNotContainsString("Offshore');alert(1);//", $html);
     }
 
     public function test_homepage_omits_unsafe_alliance_links(): void

@@ -12,7 +12,7 @@
         };
     @endphp
 
-    <x-header :title="'Violations: ' . $rule->name" separator>
+    <x-header :title="'Violations: ' . $rule->name" separator use-h1>
         <x-slot:subtitle>Live offenders for this rule. Rows clear automatically when targets comply.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex flex-wrap gap-2">
@@ -41,12 +41,12 @@
         </x-slot:menu>
 
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th scope="col">Target</th>
-                    <th scope="col">First detected</th>
-                    <th scope="col">Last evaluated</th>
+                    <th scope="col" data-sortable="false">First detected</th>
+                    <th scope="col" data-sortable="false">Last evaluated</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -100,11 +100,11 @@
                                 </div>
                             @endif
                         </td>
-                        <td>
+                        <td data-order="{{ $violation->first_detected_at->timestamp }}">
                             <div class="font-semibold">{{ $violation->first_detected_at->diffForHumans() }}</div>
                             <div class="text-sm text-base-content/60">{{ $violation->first_detected_at->toDayDateTimeString() }}</div>
                         </td>
-                        <td>
+                        <td data-order="{{ $violation->last_evaluated_at->timestamp }}">
                             <div class="font-semibold">{{ $violation->last_evaluated_at->diffForHumans() }}</div>
                             <div class="text-sm text-base-content/60">{{ $violation->last_evaluated_at->toDayDateTimeString() }}</div>
                         </td>

@@ -7,7 +7,7 @@
         $resourceTotal = collect($resourceList)->sum(fn($res) => $account->$res);
     @endphp
 
-    <div class="mx-auto space-y-8">
+    <div class="mx-auto w-full min-w-0 space-y-8">
         @if($account->frozen)
             <div class="alert alert-error shadow-sm">
                 <div>
@@ -17,7 +17,7 @@
             </div>
         @endif
 
-        <div class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Account</p>
@@ -50,7 +50,7 @@
 
         <x-utils.card title="Balances" extraClasses="mb-2">
             <div class="overflow-x-auto rounded-xl border border-base-300">
-                <table class="table w-full table-zebra">
+                <table class="table w-full table-zebra" data-sortable="false">
                     <thead class="bg-base-200">
                     <tr>
                         @foreach(PWHelperService::resources() as $resource)
@@ -72,7 +72,7 @@
 
         <x-utils.card title="Transactions" extraClasses="mb-2">
             <div class="overflow-x-auto rounded-xl border border-base-300">
-                <table class="table w-full table-zebra">
+                <table class="table w-full table-zebra" data-sortable="false">
                     <thead class="bg-base-200">
                     <tr>
                         <th>Date</th>
@@ -162,7 +162,7 @@
         <x-utils.card title="Manual adjustments" extraClasses="mb-2">
             @if($manualTransactions->count())
                 <div class="overflow-x-auto rounded-xl border border-base-300">
-                    <table class="table w-full table-zebra">
+                    <table class="table w-full table-zebra" data-sortable="false">
                         <thead class="bg-base-200">
                         <tr>
                             <th>Date</th>
@@ -208,7 +208,7 @@
         @if($ddLogs->count())
             <x-utils.card title="Direct Deposit activity" extraClasses="mb-2">
                 <div class="overflow-x-auto rounded-xl border border-base-300">
-                    <table class="table w-full table-zebra">
+                    <table class="table w-full table-zebra" data-sortable="false">
                         <thead class="bg-base-200">
                         <tr>
                             <th>Date</th>

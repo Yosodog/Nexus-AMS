@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\GrantRequirementService;
 use App\Services\GrantService;
 use App\Services\PWHelperService;
+use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -61,6 +62,7 @@ class GrantController
         $totalDenied = GrantApplication::where('status', 'denied')->count();
         $pendingCount = $pendingRequests->count();
         $totalFundsDistributed = GrantApplication::where('status', 'approved')->sum('money');
+        $grantApprovalsEnabled = SettingService::isGrantApprovalsEnabled();
 
         return view(
             'admin.grants.grants',
@@ -70,7 +72,8 @@ class GrantController
                 'totalApproved',
                 'totalDenied',
                 'pendingCount',
-                'totalFundsDistributed'
+                'totalFundsDistributed',
+                'grantApprovalsEnabled'
             )
         )->with('grantRequirementBuilderConfig', $this->grantRequirementService->getBuilderConfig());
     }

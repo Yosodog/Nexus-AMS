@@ -3,7 +3,7 @@
 @section('title', 'Audits')
 
 @section('content')
-    <x-header title="Audit Overview" separator>
+    <x-header title="Audit Overview" separator use-h1>
         <x-slot:subtitle>Track active rules, triage live violations, and manage member notifications from one place.</x-slot:subtitle>
         @can('manage-audits')
             <x-slot:actions>
@@ -38,7 +38,7 @@
             icon="o-check-circle"
             color="text-primary"
             :description="number_format($summary['total_rules']) . ' total rules configured'"
-            class="admin-stat-card admin-stat-card-primary"
+            class="border-t-2 border-primary"
         />
         <x-stat
             title="Open Violations"
@@ -46,7 +46,7 @@
             icon="o-exclamation-triangle"
             color="text-error"
             description="Live rows currently requiring attention"
-            class="admin-stat-card admin-stat-card-error"
+            class="border-t-2 border-error"
         />
         <x-stat
             title="High Priority"
@@ -54,7 +54,7 @@
             icon="o-bolt"
             color="text-warning"
             :description="'Medium ' . number_format($summary['violations_by_priority']['medium'] ?? 0) . ' · Low ' . number_format($summary['violations_by_priority']['low'] ?? 0)"
-            class="admin-stat-card admin-stat-card-warning"
+            class="border-t-2 border-warning"
         />
         <x-stat
             title="Target Split"
@@ -62,7 +62,7 @@
             icon="o-users"
             color="text-info"
             :description="number_format($summary['violations_by_target']['city'] ?? 0) . ' city violations'"
-            class="admin-stat-card admin-stat-card-info"
+            class="border-t-2 border-info"
         />
     </div>
 
@@ -78,15 +78,15 @@
             </div>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th scope="col">Rule</th>
                     <th scope="col">Target</th>
-                    <th scope="col">Priority</th>
+                    <th scope="col" data-sortable="false">Priority</th>
                     <th scope="col">Status</th>
                     <th scope="col" class="text-center">Violations</th>
-                    <th scope="col" class="text-right">Actions</th>
+                    <th scope="col" class="text-right" data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -135,7 +135,7 @@
                             </span>
                         </td>
                         <td class="text-right">
-                            <div class="btn-group">
+                            <div class="inline-flex flex-wrap items-center gap-2">
                                 <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline btn-sm">
                                     <x-icon name="o-bolt" class="size-4" />
                                     Violations

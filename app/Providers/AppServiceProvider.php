@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
@@ -64,6 +65,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $applicationUrl = (string) config('app.url');
+        $applicationScheme = parse_url($applicationUrl, PHP_URL_SCHEME);
+
+        URL::useOrigin($applicationUrl);
+
+        if (is_string($applicationScheme) && in_array($applicationScheme, ['http', 'https'], true)) {
+            URL::forceScheme($applicationScheme);
+        }
+
         RateLimiter::for('account-transfers', function (Request $request) {
             $key = $request->user()?->nation_id ?? $request->ip();
 
@@ -129,7 +139,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('pendingRequests', $pendingRequests);
         });
 
-        View::composer(['layouts.main', 'layouts.admin', 'admin.settings'], function ($view) {
+        View::composer(['layouts.main', 'layouts.public', 'layouts.admin', 'admin.settings'], function ($view) {
             $faviconPath = SettingService::getFaviconPath();
             $faviconUrl = asset('favicon.ico');
 

@@ -23,7 +23,7 @@ class MembersController extends Controller
      */
     public function index(MemberStatsService $statsService): View
     {
-        $this->authorize('manage-accounts');
+        $this->authorize('view-members');
 
         return view('admin.members.index', $statsService->getOverviewData());
     }
@@ -33,7 +33,7 @@ class MembersController extends Controller
      */
     public function show(Nation $nation, MemberStatsService $service): View
     {
-        $this->authorize('manage-accounts');
+        $this->authorize('view-members');
 
         return view('admin.members.show', $service->getNationStats($nation));
     }
@@ -42,7 +42,7 @@ class MembersController extends Controller
         InactivitySettingsRequest $request,
         AuditLogger $auditLogger
     ): RedirectResponse {
-        $this->authorize('view-members');
+        $this->authorize('manage-accounts');
 
         $previous = [
             'enabled' => SettingService::isInactivityModeEnabled(),

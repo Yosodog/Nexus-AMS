@@ -19,7 +19,7 @@
     @endphp
 
     <div class="space-y-6">
-        <div class="rounded-2xl border border-base-300 bg-gradient-to-r from-primary/10 via-base-100 to-base-100 p-6 shadow">
+        <div class="rounded-lg border border-base-300 border-l-4 border-l-primary bg-base-100 p-6 shadow-sm">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Audit health</p>
@@ -40,7 +40,7 @@
             </div>
         </div>
 
-        <div class="rounded-2xl border border-base-300 bg-base-100 shadow-sm">
+        <div class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
             <div class="flex flex-col gap-4 border-b border-base-200 px-5 py-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Recommended build</p>
@@ -158,7 +158,7 @@
                                 </button>
                             </div>
                             <textarea
-                                class="textarea textarea-bordered mt-3 h-80 w-full font-mono text-xs"
+                                class="textarea mt-3 h-80 w-full font-mono text-xs"
                                 readonly
                             >{{ $buildRecommendationJson }}</textarea>
                         </div>
@@ -191,7 +191,7 @@
                 $color = $priorityColors[$priority->value] ?? 'neutral';
             @endphp
 
-            <div class="rounded-2xl border border-base-300 bg-base-100 shadow-sm">
+            <div class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
                 <div class="flex items-center justify-between border-b border-base-200 px-5 py-4">
                     <div class="flex items-center gap-3">
                         <span class="badge badge-{{ $color }} badge-lg">{{ ucfirst($priority->value) }}</span>

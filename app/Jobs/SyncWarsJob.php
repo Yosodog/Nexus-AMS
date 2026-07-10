@@ -13,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -166,12 +167,6 @@ class SyncWarsJob implements ShouldQueue
                 'alliance_id' => $membershipService->getPrimaryAllianceId(),
             ], $this->perPage, pagination: true, handlePagination: false);
 
-            if (empty($wars)) {
-                Log::warning("SyncWarsJob received no wars for page {$this->page}.");
-
-                return;
-            }
-
             $records = [];
             $ids = [];
 
@@ -180,6 +175,10 @@ class SyncWarsJob implements ShouldQueue
                 $record = $this->extractWarData($war);
                 $records[] = $record;
                 $ids[] = $record['id'];
+            }
+
+            if ($records === []) {
+                throw new RuntimeException("War sync page {$this->page} returned no records.");
             }
 
             if (! empty($records)) {
@@ -191,13 +190,16 @@ class SyncWarsJob implements ShouldQueue
             // Store the IDs processed on this page so the finalizer can detect gaps or missing rows.
             Cache::put("sync_batch:{$this->batchId}:{$this->page}", $ids, now()->addHours(1));
 
-            Cache::add("sync_batch:{$this->batchId}:wars_processed", 0, now()->addHours(6));
-            Cache::increment("sync_batch:{$this->batchId}:wars_processed", count($records));
-
             unset($wars, $records, $ids);
             gc_collect_cycles();
         } catch (Throwable $e) {
-            Log::error("Failed to sync wars: {$e->getMessage()}");
+            Log::error('Failed to sync a page of wars.', [
+                'batch_id' => $this->batchId ?? null,
+                'page' => $this->page,
+                'exception' => $e,
+            ]);
+
+            throw $e;
         }
     }
 

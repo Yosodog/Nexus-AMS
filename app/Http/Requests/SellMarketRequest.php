@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\MarketResource;
 use App\Services\PWHelperService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,13 @@ class SellMarketRequest extends FormRequest
         return [
             'account_id' => ['required', 'integer', $accountRule],
             'resource' => ['required', 'string', Rule::in(PWHelperService::resources(false))],
-            'amount' => ['required', 'numeric', 'min:1'],
+            'amount' => [
+                'required',
+                'numeric',
+                'decimal:0,2',
+                'min:1',
+                'max:'.MarketResource::MAX_BUY_CAP_REMAINING,
+            ],
         ];
     }
 }

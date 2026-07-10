@@ -245,6 +245,54 @@ class GrantWorkflowTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_admin_grant_queue_explains_when_approvals_are_disabled(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+        $admin = $this->grantPermissions($admin, ['view-grants']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.grants'))
+            ->assertOk()
+            ->assertSee('Grant approvals are paused')
+            ->assertSee('Approval paused')
+            ->assertSee('Manual disbursements are unavailable while grant approvals are paused.')
+            ->assertDontSee('>Approve and deposit<', false);
+    }
+
+    public function test_paused_manual_grant_attempt_does_not_leave_a_pending_request(): void
+    {
+        SettingService::setGrantApprovalsEnabled(false);
+
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createGrant();
+        $admin = $this->createAdminWithPermission('manage-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants'))
+            ->post(route('admin.manual-disbursements.grants'), [
+                'grant_id' => $grant->id,
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('admin.grants'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'Grant approvals are currently paused.');
+
+        $this->assertDatabaseCount('grant_applications', 0);
+        $this->assertSame(0.0, (float) $account->fresh()->money);
+    }
+
     public function test_admin_cannot_approve_their_own_grant_application(): void
     {
         [$admin, $nation, $account] = $this->createMemberWithAccount(999, admin: true);

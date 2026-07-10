@@ -1,8 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto max-w-6xl space-y-8">
-        <div class="rounded-3xl border border-base-200 bg-gradient-to-br from-primary/10 via-base-100 to-warning/10 p-6 shadow-sm">
+    <div class="mx-auto w-full min-w-0 max-w-6xl space-y-8">
+        <div class="rounded-lg border border-primary/30 bg-base-100 p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="space-y-3">
                     <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
@@ -68,7 +68,7 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="table table-zebra table-sm">
+                    <table class="table table-zebra table-sm" data-sortable="false">
                         <thead>
                             <tr>
                                 <th>Method</th>
