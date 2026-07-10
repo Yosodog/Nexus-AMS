@@ -6,7 +6,11 @@ use App\Services\PWHealthService;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('pw:health-check')->everyMinute();
+Schedule::command('pw:health-check')
+    ->everyMinute()
+    ->runInBackground()
+    ->withoutOverlapping(2)
+    ->onOneServer();
 
 $whenPWUp = fn () => app(PWHealthService::class)->isUp();
 
@@ -42,7 +46,10 @@ Schedule::command(ProcessDeposits::class)
     ->when($whenPWUp);
 
 // Loan
-Schedule::command('loans:process-payments')->dailyAt('00:15');
+Schedule::command('loans:process-payments')
+    ->dailyAt('00:15')
+    ->withoutOverlapping(120)
+    ->onOneServer();
 
 // Payroll
 Schedule::command('payroll:run-daily')
