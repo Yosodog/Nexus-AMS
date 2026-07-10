@@ -293,10 +293,7 @@ class AccountsController extends Controller
             ]);
     }
 
-    /**
-     * @return RedirectResponse
-     */
-    public function delete(Request $request)
+    public function delete(Request $request): RedirectResponse
     {
         $account = AccountService::getAccountById($request->account_id);
 
@@ -306,7 +303,7 @@ class AccountsController extends Controller
                 throw new UserErrorException("You don't own that account");
             }
 
-            AccountService::deleteAccount($account);
+            AccountService::deleteAccount($account, (int) Auth::user()->nation_id);
         } catch (UserErrorException $e) {
             return redirect()
                 ->back()

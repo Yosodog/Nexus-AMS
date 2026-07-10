@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\GrantApplication;
 use App\Models\ManualTransaction;
+use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\RebuildingRequest;
 use App\Models\Transaction;
@@ -101,51 +102,55 @@ class AccountService
     }
 
     /**
-     * @return Transaction
-     *
-     * @throws UserErrorException
-     */
-    /**
      * Deletes an account after performing necessary checks.
      *
-     *
-     * @return Transaction
-     *
      * @throws UserErrorException
      */
-    public static function deleteAccount(Account $account): void
+    public static function deleteAccount(Account $account, int $ownerNationId): void
     {
-        // Check if the account has pending city grants
+        DB::transaction(function () use ($account, $ownerNationId): void {
+            $lockedAccount = Account::query()
+                ->lockForUpdate()
+                ->find($account->getKey());
+
+            if (! $lockedAccount || (int) $lockedAccount->nation_id !== $ownerNationId) {
+                throw new UserErrorException("You don't own that account");
+            }
+
+            self::assertAccountCanBeDeleted($lockedAccount);
+            $lockedAccount->delete();
+        }, attempts: 3);
+    }
+
+    /**
+     * @throws UserErrorException
+     */
+    private static function assertAccountCanBeDeleted(Account $account): void
+    {
         if ($account->cityGrants()->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending city grants.');
         }
 
-        // Check if the account has pending or active loans
         if ($account->loans()->whereIn('status', ['pending', 'approved'])->exists()) {
             throw new UserErrorException('The account has pending or active loans.');
         }
 
-        // Check if the account has pending grant applications
         if (GrantApplication::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending grant applications.');
         }
 
-        // Check if the account has pending war aid requests
         if (WarAidRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending war aid requests.');
         }
 
-        // Check if the account has pending rebuilding requests
         if (RebuildingRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending rebuilding requests.');
         }
 
-        // Check if the account has pending deposit requests
         if (DepositRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending deposit requests.');
         }
 
-        // Check if the account has pending transactions (withdrawals or transfers)
         $hasPendingTransactions = Transaction::query()
             ->where('is_pending', true)
             ->where('from_account_id', $account->id)
@@ -159,13 +164,21 @@ class AccountService
             throw new UserErrorException('The account has pending transactions.');
         }
 
-        // Check to ensure the account is empty
+        $hasPendingMemberTransfers = MemberTransfer::query()
+            ->where('status', MemberTransfer::STATUS_PENDING)
+            ->where(function ($query) use ($account): void {
+                $query->where('from_account_id', $account->id)
+                    ->orWhere('to_account_id', $account->id);
+            })
+            ->exists();
+
+        if ($hasPendingMemberTransfers) {
+            throw new UserErrorException('The account has pending member transfers.');
+        }
+
         if (! $account->isEmpty()) {
             throw new UserErrorException('The account is not empty.');
         }
-
-        // Proceed with deletion
-        $account->delete();
     }
 
     /**
