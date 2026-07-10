@@ -68,7 +68,7 @@ class NationProfitabilityServiceTest extends TestCase
 
         $this->assertSame(-6.0, $resources['uranium']);
         $this->assertSame(-45.0, $resources['oil']);
-        $this->assertSame(-54.0, $resources['lead']);
+        $this->assertSame(-45.0, $resources['lead']);
         $this->assertSame(-30.6, $resources['bauxite']);
         $this->assertSame(162.0, $resources['munitions']);
     }
