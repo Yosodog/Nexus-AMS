@@ -12,6 +12,7 @@ use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
@@ -284,6 +285,7 @@ class GrantWorkflowTest extends TestCase
                 'grant_id' => $grant->id,
                 'nation_id' => $nation->id,
                 'account_id' => $account->id,
+                'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect(route('admin.grants'))
             ->assertSessionHas('alert-type', 'error')
