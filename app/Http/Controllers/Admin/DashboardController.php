@@ -11,6 +11,7 @@ use App\Models\NationMilitary;
 use App\Models\NationSignIn;
 use App\Models\Taxes;
 use App\Models\TradePrice;
+use App\Models\User;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\PWHelperService;
@@ -57,7 +58,10 @@ class DashboardController extends Controller
             ? Carbon::parse($payload['generated_at'])
             : Carbon::now();
 
-        $metrics = $this->normalizeMetricsForView($payload['metrics'] ?? $payload);
+        /** @var User $user */
+        $user = $request->user();
+        $metrics = $this->filterMetricsForView($payload['metrics'] ?? $payload, $user);
+        $metrics = $this->normalizeMetricsForView($metrics);
 
         return view('admin.dashboard', array_merge($metrics, [
             'lastRefreshedAt' => $generatedAt,
@@ -815,6 +819,125 @@ class DashboardController extends Controller
         );
 
         return $metrics;
+    }
+
+    /**
+     * Limit cached telemetry to the metric families the current staff member may view.
+     *
+     * @param  array<string, mixed>  $metrics
+     * @return array<string, mixed>
+     */
+    private function filterMetricsForView(array $metrics, User $user): array
+    {
+        $defaults = [
+            'totalMembers' => 0,
+            'totalCities' => 0,
+            'poweredCities' => 0,
+            'powerCoverage' => 0.0,
+            'totalInfrastructure' => 0.0,
+            'avgInfrastructure' => 0.0,
+            'cashTotal' => 0.0,
+            'cashPerMember' => 0.0,
+            'resourceTotals' => [],
+            'resourceTotalValue' => 0.0,
+            'resourceValueBreakdown' => [],
+            'latestTradePriceDate' => null,
+            'taxMoneyThisWeek' => 0.0,
+            'taxMoneyTrend' => null,
+            'militaryTotals' => [],
+            'militaryReadiness' => [],
+            'militaryCapacity' => [],
+            'mmrThreshold' => 85,
+            'mmrCompliantCount' => 0,
+            'mmrCoverage' => 0.0,
+            'warsThisWeek' => 0,
+            'warTrend' => null,
+            'activeWars' => 0,
+            'activeWarDetails' => [],
+            'memberNationIds' => [],
+            'loanStats' => [
+                'pending' => 0,
+                'active' => 0,
+                'paid' => 0,
+                'outstanding_balance' => 0.0,
+                'avg_interest' => null,
+                'avg_term' => null,
+            ],
+            'grantStats' => [
+                'pending' => 0,
+                'approved_this_week' => 0,
+                'approved_total' => 0,
+                'money_disbursed_30d' => 0.0,
+            ],
+        ];
+
+        $visibleKeys = [];
+
+        if ($user->can('view-members')) {
+            $visibleKeys = array_merge($visibleKeys, [
+                'totalMembers',
+                'totalCities',
+                'poweredCities',
+                'powerCoverage',
+                'totalInfrastructure',
+                'avgInfrastructure',
+            ]);
+        }
+
+        if ($user->can('view-accounts') || $user->can('view-financial-reports')) {
+            $visibleKeys = array_merge($visibleKeys, [
+                'cashTotal',
+                'cashPerMember',
+                'resourceTotals',
+                'resourceTotalValue',
+                'resourceValueBreakdown',
+                'latestTradePriceDate',
+            ]);
+        }
+
+        if ($user->can('view-financial-reports')) {
+            $visibleKeys = array_merge($visibleKeys, ['taxMoneyThisWeek', 'taxMoneyTrend']);
+        }
+
+        if ($user->can('view-loans')) {
+            $visibleKeys[] = 'loanStats';
+        }
+
+        if ($user->can('view-grants')) {
+            $visibleKeys[] = 'grantStats';
+        }
+
+        if ($user->can('view-mmr')) {
+            $visibleKeys = array_merge($visibleKeys, [
+                'totalMembers',
+                'mmrThreshold',
+                'mmrCompliantCount',
+                'mmrCoverage',
+            ]);
+        }
+
+        if ($user->can('view-mmr') || $user->can('view-wars')) {
+            $visibleKeys = array_merge($visibleKeys, [
+                'militaryTotals',
+                'militaryReadiness',
+                'militaryCapacity',
+            ]);
+        }
+
+        if ($user->can('view-wars')) {
+            $visibleKeys = array_merge($visibleKeys, [
+                'warsThisWeek',
+                'warTrend',
+                'activeWars',
+                'activeWarDetails',
+                'memberNationIds',
+            ]);
+        }
+
+        return array_replace(
+            $defaults,
+            collect($metrics)->only(array_unique($visibleKeys))->all(),
+        );
     }
 
     /**

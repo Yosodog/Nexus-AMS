@@ -3,7 +3,9 @@
 namespace Tests\Unit\Controllers\Admin;
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Models\User;
 use App\Services\AllianceMembershipService;
+use Mockery;
 use Tests\FeatureTestCase;
 
 class DashboardControllerTest extends FeatureTestCase
@@ -41,6 +43,35 @@ class DashboardControllerTest extends FeatureTestCase
         $this->assertIsObject($normalized['topInfrastructureCities'][0]);
         $this->assertSame('Cached City', $normalized['topInfrastructureCities'][0]->name);
         $this->assertSame('Cache Leader', $normalized['topInfrastructureCities'][0]->nation->leader_name);
+    }
+
+    public function test_dashboard_metrics_are_filtered_by_staff_permissions(): void
+    {
+        $controller = new DashboardController($this->createMock(AllianceMembershipService::class));
+        $user = Mockery::mock(User::class);
+        $user->shouldReceive('can')->andReturnUsing(
+            fn (string $permission): bool => $permission === 'view-loans',
+        );
+
+        $filtered = $this->invokePrivate($controller, 'filterMetricsForView', [[
+            'cashTotal' => 9_000_000,
+            'totalMembers' => 42,
+            'activeWars' => 7,
+            'loanStats' => [
+                'pending' => 3,
+                'active' => 5,
+                'paid' => 8,
+                'outstanding_balance' => 1_250_000,
+                'avg_interest' => 2.5,
+                'avg_term' => 8,
+            ],
+        ], $user]);
+
+        $this->assertSame(0.0, $filtered['cashTotal']);
+        $this->assertSame(0, $filtered['totalMembers']);
+        $this->assertSame(0, $filtered['activeWars']);
+        $this->assertSame(3, $filtered['loanStats']['pending']);
+        $this->assertSame(1_250_000, $filtered['loanStats']['outstanding_balance']);
     }
 
     /**
