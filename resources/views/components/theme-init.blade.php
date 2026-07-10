@@ -1,38 +1,78 @@
 <script>
     (() => {
-        const themeStorageKey = 'nexus-theme';
-        const defaultThemeMode = 'auto';
+        const storageKey = 'nexus-theme';
+        const defaultMode = 'auto';
+        const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-        const normalizeThemeMode = (mode) => {
+        const normalize = (mode) => {
             if (mode === 'light' || mode === 'night' || mode === 'auto') {
                 return mode;
             }
 
-            return defaultThemeMode;
+            return defaultMode;
         };
 
-        const resolveThemeMode = (mode) => {
+        const resolve = (mode) => {
             if (mode === 'light' || mode === 'night') {
                 return mode;
             }
 
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'light';
+            return systemDarkQuery.matches ? 'night' : 'light';
         };
 
-        const applyTheme = (mode) => {
-            const resolvedThemeMode = normalizeThemeMode(mode);
-            const theme = resolveThemeMode(resolvedThemeMode);
+        const apply = (mode, broadcast = false) => {
+            const normalizedMode = normalize(mode);
+            const theme = resolve(normalizedMode);
 
             document.documentElement.setAttribute('data-theme', theme);
             document.documentElement.dataset.theme = theme;
-            document.documentElement.dataset.themeMode = resolvedThemeMode;
+            document.documentElement.dataset.themeMode = normalizedMode;
             document.documentElement.style.colorScheme = theme === 'night' ? 'dark' : 'light';
+
+            if (broadcast) {
+                window.dispatchEvent(new CustomEvent('nexus:theme-changed', {
+                    detail: { mode: normalizedMode, theme },
+                }));
+            }
+
+            return theme;
         };
 
-        try {
-            applyTheme(window.localStorage.getItem(themeStorageKey) ?? defaultThemeMode);
-        } catch (error) {
-            applyTheme(defaultThemeMode);
-        }
+        const read = () => {
+            try {
+                return normalize(window.localStorage.getItem(storageKey) ?? defaultMode);
+            } catch (error) {
+                return defaultMode;
+            }
+        };
+
+        const set = (mode) => {
+            const normalizedMode = normalize(mode);
+
+            try {
+                if (normalizedMode === defaultMode) {
+                    window.localStorage.removeItem(storageKey);
+                } else {
+                    window.localStorage.setItem(storageKey, normalizedMode);
+                }
+            } catch (error) {
+                // The selected mode still applies for this page when storage is unavailable.
+            }
+
+            apply(normalizedMode, true);
+        };
+
+        window.NexusTheme = Object.freeze({
+            storageKey,
+            defaultMode,
+            systemDarkQuery,
+            normalize,
+            resolve,
+            apply,
+            read,
+            set,
+        });
+
+        apply(read());
     })();
 </script>

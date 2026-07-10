@@ -2,37 +2,9 @@ import './bootstrap';
 
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
-const THEME_STORAGE_KEY = 'nexus-theme';
-const DEFAULT_THEME_MODE = 'auto';
-const SYSTEM_DARK_QUERY = window.matchMedia('(prefers-color-scheme: dark)');
+const themeApi = window.NexusTheme;
 
 const normalizeValue = (value) => value.replace(/\s+/g, ' ').trim();
-
-const resolveThemeMode = (mode) => {
-    if (mode === 'light' || mode === 'night') {
-        return mode;
-    }
-
-    return SYSTEM_DARK_QUERY.matches ? 'night' : 'light';
-};
-
-const normalizeThemeMode = (mode) => {
-    if (mode === 'light' || mode === 'night' || mode === 'auto') {
-        return mode;
-    }
-
-    return DEFAULT_THEME_MODE;
-};
-
-const applyTheme = (mode) => {
-    const resolvedMode = normalizeThemeMode(mode || DEFAULT_THEME_MODE);
-    const theme = resolveThemeMode(resolvedMode);
-
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.themeMode = resolvedMode;
-    document.documentElement.style.colorScheme = theme === 'night' ? 'dark' : 'light';
-};
 
 const parseSortableValue = (value) => {
     const normalized = normalizeValue(String(value ?? ''));
@@ -69,36 +41,26 @@ const compareSortableValues = (left, right) => {
     });
 };
 
-const enableMobileTableScrolling = (root = document) => {
-    if (window.innerWidth >= 768) {
-        return;
-    }
-
-    root.querySelectorAll('main table').forEach((table) => {
-        if (table.closest('.overflow-x-auto')) {
-            return;
-        }
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'overflow-x-auto';
-        table.parentNode.insertBefore(wrapper, table);
-        wrapper.appendChild(table);
-    });
-};
-
 const updateSortIndicators = (table) => {
     const activeIndex = Number(table.dataset.sortColumn ?? -1);
     const direction = table.dataset.sortDirection ?? SORT_ASC;
 
-    table.querySelectorAll('[data-sort-indicator]').forEach((indicator, index) => {
+    table.querySelectorAll('thead th').forEach((header, index) => {
+        const indicator = header.querySelector('[data-sort-indicator]');
+        if (!indicator) {
+            return;
+        }
+
         if (index === activeIndex) {
             indicator.textContent = direction === SORT_ASC ? '↑' : '↓';
             indicator.classList.remove('opacity-30');
+            header.setAttribute('aria-sort', direction === SORT_ASC ? 'ascending' : 'descending');
             return;
         }
 
         indicator.textContent = '↕';
         indicator.classList.add('opacity-30');
+        header.removeAttribute('aria-sort');
     });
 };
 
@@ -132,8 +94,8 @@ const sortTable = (table, columnIndex, direction = SORT_ASC) => {
 };
 
 const enableSortableTables = (root = document) => {
-    root.querySelectorAll('table').forEach((table) => {
-        if (table.dataset.sortable === 'false' || table.dataset.sortableInit === 'true') {
+    root.querySelectorAll('table[data-sortable="true"]').forEach((table) => {
+        if (table.dataset.sortableInit === 'true') {
             return;
         }
 
@@ -151,8 +113,9 @@ const enableSortableTables = (root = document) => {
 
             const content = document.createElement('button');
             content.type = 'button';
-            content.className = 'inline-flex w-full items-center gap-1 text-left font-inherit';
-            content.innerHTML = `<span>${cell.innerHTML}</span><span data-sort-indicator class="text-xs opacity-30">↕</span>`;
+            content.className = 'inline-flex min-h-10 w-full items-center gap-1.5 text-left font-inherit';
+            content.setAttribute('aria-label', `Sort by ${label}`);
+            content.innerHTML = `<span>${cell.innerHTML}</span><span data-sort-indicator aria-hidden="true" class="text-xs opacity-30">↕</span>`;
             cell.innerHTML = '';
             cell.classList.add('cursor-pointer', 'select-none');
             cell.appendChild(content);
@@ -173,14 +136,11 @@ const enableSortableTables = (root = document) => {
 };
 
 const enableThemePicker = (root = document) => {
-    const activeThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || document.documentElement.dataset.themeMode || DEFAULT_THEME_MODE);
-    applyTheme(activeThemeMode);
+    const activeThemeMode = themeApi.read();
+    themeApi.apply(activeThemeMode);
 
     const updateThemeButtonState = (button, isActive) => {
-        button.classList.toggle('menu-active', isActive);
-        button.classList.toggle('border-primary', isActive);
-        button.classList.toggle('bg-primary/10', isActive);
-        button.classList.toggle('shadow-sm', isActive);
+        button.classList.toggle('is-active', isActive);
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     };
 
@@ -196,105 +156,12 @@ const enableThemePicker = (root = document) => {
         button.addEventListener('click', (event) => {
             event.preventDefault();
 
-            const themeMode = button.dataset.themeMode || DEFAULT_THEME_MODE;
-            if (themeMode === DEFAULT_THEME_MODE) {
-                localStorage.removeItem(THEME_STORAGE_KEY);
-            } else {
-                localStorage.setItem(THEME_STORAGE_KEY, themeMode);
-            }
-
-            applyTheme(themeMode);
+            const themeMode = button.dataset.themeMode || themeApi.defaultMode;
+            themeApi.set(themeMode);
 
             document.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((item) => {
                 updateThemeButtonState(item, item.dataset.themeMode === themeMode);
             });
-        });
-    });
-};
-
-const enableBootstrapCompat = (root = document) => {
-    const openModal = (modal) => {
-        if (!modal || modal.tagName === 'DIALOG') {
-            return;
-        }
-
-        modal.classList.add('show');
-        modal.setAttribute('aria-modal', 'true');
-        modal.removeAttribute('aria-hidden');
-        document.body.classList.add('modal-open');
-    };
-
-    const closeModal = (modal) => {
-        if (!modal || modal.tagName === 'DIALOG') {
-            return;
-        }
-
-        modal.classList.remove('show');
-        modal.setAttribute('aria-hidden', 'true');
-
-        if (!document.querySelector('.modal.show:not(dialog)')) {
-            document.body.classList.remove('modal-open');
-        }
-    };
-
-    root.querySelectorAll('[data-bs-toggle="modal"]').forEach((trigger) => {
-        if (trigger.dataset.bsCompatBound === 'true') {
-            return;
-        }
-
-        trigger.dataset.bsCompatBound = 'true';
-        trigger.addEventListener('click', (event) => {
-            event.preventDefault();
-
-            const targetSelector = trigger.getAttribute('data-bs-target');
-            const modal = targetSelector ? document.querySelector(targetSelector) : null;
-            openModal(modal);
-        });
-    });
-
-    root.querySelectorAll('[data-bs-dismiss="modal"]').forEach((button) => {
-        if (button.dataset.bsCompatBound === 'true') {
-            return;
-        }
-
-        button.dataset.bsCompatBound = 'true';
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            closeModal(button.closest('.modal'));
-        });
-    });
-
-    root.querySelectorAll('.modal:not(dialog)').forEach((modal) => {
-        if (modal.dataset.bsCompatBackdropBound === 'true') {
-            return;
-        }
-
-        modal.dataset.bsCompatBackdropBound = 'true';
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal(modal);
-            }
-        });
-    });
-
-    root.querySelectorAll('[data-bs-toggle="collapse"]').forEach((trigger) => {
-        if (trigger.dataset.bsCompatBound === 'true') {
-            return;
-        }
-
-        trigger.dataset.bsCompatBound = 'true';
-        trigger.addEventListener('click', (event) => {
-            event.preventDefault();
-
-            const targetSelector = trigger.getAttribute('data-bs-target');
-            const collapse = targetSelector ? document.querySelector(targetSelector) : null;
-            if (!collapse) {
-                return;
-            }
-
-            const isOpen = collapse.classList.contains('show');
-            collapse.classList.toggle('show', !isOpen);
-            trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         });
     });
 };
@@ -517,18 +384,16 @@ const signalPageReady = (source = 'app') => {
     }));
 };
 
-SYSTEM_DARK_QUERY.addEventListener('change', () => {
-    const savedThemeMode = normalizeThemeMode(localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_THEME_MODE);
-    if (savedThemeMode === DEFAULT_THEME_MODE) {
-        applyTheme(DEFAULT_THEME_MODE);
+themeApi.systemDarkQuery.addEventListener('change', () => {
+    const savedThemeMode = themeApi.read();
+    if (savedThemeMode === themeApi.defaultMode) {
+        themeApi.apply(themeApi.defaultMode, true);
     }
 });
 
 const initAppUi = (root = document) => {
-    enableMobileTableScrolling(root);
     enableSortableTables(root);
     enableThemePicker(root);
-    enableBootstrapCompat(root);
     enableDepositRequests();
 };
 

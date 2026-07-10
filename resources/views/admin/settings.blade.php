@@ -5,52 +5,54 @@
         <x-slot:subtitle>Control sync workflows, diagnostics, public-facing content, and operational toggles from one place.</x-slot:subtitle>
     </x-header>
 
-    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-            <h2 class="text-lg font-semibold">Data Synchronization</h2>
-            <p class="text-sm text-base-content/60">Review manual sync controls, rolling progress, and operational status before forcing jobs.</p>
-        </div>
-    </div>
-
-    <details class="collapse collapse-arrow mb-6 border border-base-300 bg-base-100">
-        <summary class="collapse-title text-sm font-semibold">How the sync system works</summary>
-        <div class="collapse-content">
-            <div class="alert alert-info">
-                <div class="space-y-3 text-sm leading-6">
-                    <p>{{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.</p>
-                    <p>Full sync jobs are automatically scheduled and run periodically, so manual execution is rarely needed. Manual sync should only be used to correct known discrepancies.</p>
-                    <p>The <strong>Manual Nation Sync</strong> runs immediately and cancels any in-progress rolling nation sync. The <strong>Rolling Nation Sync</strong> is queued by the scheduler and staggers the workload across roughly 23 hours.</p>
-                    <p>Each sync fetches and updates all data for the selected type. Depending on queue activity, this can take anywhere from a few minutes to nearly an hour.</p>
-                    <p><strong>Note:</strong> Running syncs consumes queue capacity and may delay other time-sensitive tasks like withdrawals, transfers, and in-game messaging.</p>
-                </div>
+    @can('view-diagnostic-info')
+        <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-semibold">Data Synchronization</h2>
+                <p class="text-sm text-base-content/60">Review manual sync controls, rolling progress, and operational status before forcing jobs.</p>
             </div>
         </div>
-    </details>
 
-    <div class="mb-6 grid gap-6 md:grid-cols-2">
-        @include('components.admin.sync-card', [
-            'title' => 'Nation Sync (Manual)',
-            'batch' => $nationBatch,
-            'route' => route('admin.settings.sync.run'),
-        ])
+        <details class="collapse collapse-arrow mb-6 border border-base-300 bg-base-100">
+            <summary class="collapse-title text-sm font-semibold">How the sync system works</summary>
+            <div class="collapse-content">
+                <div class="alert alert-info">
+                    <div class="space-y-3 text-sm leading-6">
+                        <p>{{ config('app.name') }} typically keeps nation, alliance, and war data updated in near real-time using live subscriptions to the Politics & War API.</p>
+                        <p>Full sync jobs are automatically scheduled and run periodically, so manual execution is rarely needed. Manual sync should only be used to correct known discrepancies.</p>
+                        <p>The <strong>Manual Nation Sync</strong> runs immediately and cancels any in-progress rolling nation sync. The <strong>Rolling Nation Sync</strong> is queued by the scheduler and staggers the workload across roughly 23 hours.</p>
+                        <p>Each sync fetches and updates all data for the selected type. Depending on queue activity, this can take anywhere from a few minutes to nearly an hour.</p>
+                        <p><strong>Note:</strong> Running syncs consumes queue capacity and may delay other time-sensitive tasks like withdrawals, transfers, and in-game messaging.</p>
+                    </div>
+                </div>
+            </div>
+        </details>
 
-        @include('components.admin.rolling-sync-card', [
-            'batch' => $rollingNationBatch,
-            'rollingSchedule' => $rollingSchedule,
-        ])
+        <div class="mb-6 grid gap-6 md:grid-cols-2">
+            @include('components.admin.sync-card', [
+                'title' => 'Nation Sync (Manual)',
+                'batch' => $nationBatch,
+                'route' => route('admin.settings.sync.run'),
+            ])
 
-        @include('components.admin.sync-card', [
-            'title' => 'Alliance Sync',
-            'batch' => $allianceBatch,
-            'route' => route('admin.settings.sync.alliances'),
-        ])
+            @include('components.admin.rolling-sync-card', [
+                'batch' => $rollingNationBatch,
+                'rollingSchedule' => $rollingSchedule,
+            ])
 
-        @include('components.admin.sync-card', [
-            'title' => 'War Sync',
-            'batch' => $warBatch,
-            'route' => route('admin.settings.sync.wars'),
-        ])
-    </div>
+            @include('components.admin.sync-card', [
+                'title' => 'Alliance Sync',
+                'batch' => $allianceBatch,
+                'route' => route('admin.settings.sync.alliances'),
+            ])
+
+            @include('components.admin.sync-card', [
+                'title' => 'War Sync',
+                'batch' => $warBatch,
+                'route' => route('admin.settings.sync.wars'),
+            ])
+        </div>
+    @endcan
 
     <div class="mb-4">
         <h2 class="text-lg font-semibold">Other Settings</h2>
@@ -58,7 +60,8 @@
     </div>
 
     <div class="grid gap-6 lg:grid-cols-2">
-        <x-card title="Pending Request Recovery" subtitle="Use this only when a workflow is genuinely stuck." class="lg:col-span-2 border border-warning/40">
+        @can('view-diagnostic-info')
+            <x-card title="Pending Request Recovery" subtitle="Use this only when a workflow is genuinely stuck." class="lg:col-span-2 border border-warning/40">
             <x-slot:menu>
                 <span class="badge badge-warning">Diagnostics</span>
             </x-slot:menu>
@@ -123,13 +126,13 @@
                     </table>
                 </div>
             </div>
-        </x-card>
+            </x-card>
 
-        @php
-            $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);
-            $highlightInputs = array_pad($highlightInputs, 3, '');
-        @endphp
-        <x-card title="Homepage Messaging" subtitle="Edit the public homepage copy for your alliance.">
+            @php
+                $highlightInputs = old('home_highlights', $homepageSettings['highlights'] ?? []);
+                $highlightInputs = array_pad($highlightInputs, 3, '');
+            @endphp
+            <x-card title="Homepage Messaging" subtitle="Edit the public homepage copy for your alliance.">
             <x-slot:menu>
                 <span class="badge badge-info">Public</span>
             </x-slot:menu>
@@ -186,12 +189,12 @@
                     <button class="btn btn-primary" type="submit">Save Homepage Content</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
 
-        @php
-            $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
-        @endphp
-        <x-card title="Favicon" subtitle="Upload a square icon to update the browser favicon across the site." class="{{ $canUploadFavicon ? '' : 'opacity-60' }}">
+            @php
+                $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
+            @endphp
+            <x-card title="Favicon" subtitle="Upload a square icon to update the browser favicon across the site." class="{{ $canUploadFavicon ? '' : 'opacity-60' }}">
             <x-slot:menu>
                 <span class="badge badge-ghost">Branding</span>
             </x-slot:menu>
@@ -229,9 +232,9 @@
                     @endif
                 </form>
             </div>
-        </x-card>
+            </x-card>
 
-        <x-card title="Discord Verification" subtitle="Redirect users without an active Discord link after in-game verification.">
+            <x-card title="Discord Verification" subtitle="Redirect users without an active Discord link after in-game verification.">
             <x-slot:menu>
                 <span class="badge {{ $discordVerificationRequired ? 'badge-success' : 'badge-ghost' }}">
                     {{ $discordVerificationRequired ? 'Required' : 'Optional' }}
@@ -249,9 +252,9 @@
                     <button class="btn btn-primary" type="submit">Save Discord Setting</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
 
-        <x-card title="Discord Alliance Departures" subtitle="Send a Discord alert when a non-applicant leaves any alliance in our membership group.">
+            <x-card title="Discord Alliance Departures" subtitle="Send a Discord alert when a non-applicant leaves any alliance in our membership group.">
             <x-slot:menu>
                 <span class="badge {{ $discordDepartureEnabled ? 'badge-success' : 'badge-ghost' }}">
                     {{ $discordDepartureEnabled ? 'Enabled' : 'Disabled' }}
@@ -274,9 +277,11 @@
                     <button class="btn btn-primary" type="submit">Save Discord Departure Settings</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Auto Withdraw" subtitle="Global toggle for the automatic withdrawal scheduler.">
+        @can('manage-accounts')
+            <x-card title="Auto Withdraw" subtitle="Global toggle for the automatic withdrawal scheduler.">
             <x-slot:menu>
                 <span class="badge {{ $autoWithdrawEnabled ? 'badge-success' : 'badge-ghost' }}">
                     {{ $autoWithdrawEnabled ? 'Enabled' : 'Disabled' }}
@@ -294,9 +299,11 @@
                     <button class="btn btn-primary" type="submit">Save Auto Withdraw Setting</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Backups" subtitle="Run application and database backups every 6 hours.">
+        @can('view-diagnostic-info')
+            <x-card title="Backups" subtitle="Run application and database backups every 6 hours.">
             <x-slot:menu>
                 <span class="badge {{ $backupsEnabled ? 'badge-success' : 'badge-ghost' }}">
                     {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
@@ -314,9 +321,11 @@
                     <button class="btn btn-primary" type="submit">Save Backup Setting</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Loan Payments" subtitle="Pause required loan payments during war or special events.">
+        @can('manage-loans')
+            <x-card title="Loan Payments" subtitle="Pause required loan payments during war or special events.">
             <x-slot:menu>
                 <span class="badge {{ $loanPaymentsEnabled ? 'badge-success' : 'badge-warning' }}">
                     {{ $loanPaymentsEnabled ? 'Enabled' : 'Paused' }}
@@ -342,9 +351,11 @@
                     </div>
                 </form>
             </div>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Account Inactivity Auto-Disable" subtitle="Disable user accounts after a configurable period without activity.">
+        @can('manage-accounts')
+            <x-card title="Account Inactivity Auto-Disable" subtitle="Disable user accounts after a configurable period without activity.">
             <x-slot:menu>
                 <span class="badge {{ $userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost' }}">
                     {{ $userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled' }}
@@ -383,9 +394,11 @@
                     <button class="btn btn-primary" type="submit">Save Inactivity Auto-Disable</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Grant Approvals" subtitle="Emergency kill switch for grant and city grant approvals.">
+        @can('manage-grants')
+            <x-card title="Grant Approvals" subtitle="Emergency kill switch for grant and city grant approvals.">
             <x-slot:menu>
                 <span class="badge {{ $grantApprovalsEnabled ? 'badge-success' : 'badge-warning' }}">
                     {{ $grantApprovalsEnabled ? 'Enabled' : 'Paused' }}
@@ -403,9 +416,11 @@
                     <button class="btn btn-primary" type="submit">Save Grant Approval Setting</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
 
-        <x-card title="Audit Log Retention" :subtitle="$auditRetentionDays . ' days'">
+        @can('view-diagnostic-info')
+            <x-card title="Audit Log Retention" :subtitle="$auditRetentionDays . ' days'">
             <form method="POST" action="{{ route('admin.settings.audit-retention') }}" class="space-y-4">
                 @csrf
                 <label class="block space-y-2">
@@ -426,6 +441,7 @@
                     <button class="btn btn-primary" type="submit">Save Audit Retention</button>
                 </div>
             </form>
-        </x-card>
+            </x-card>
+        @endcan
     </div>
 @endsection
