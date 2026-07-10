@@ -101,6 +101,7 @@ class DiscordApplicationApiTest extends TestCase
     {
         $service = $this->makeApplicationService();
         $this->app->instance(ApplicationService::class, $service);
+        $this->createModerator('staff-1');
 
         $application = Application::query()->create([
             'nation_id' => 877003,
@@ -133,6 +134,20 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('logged', true)
             ->assertJsonPath('message.discord_channel_id', 'channel-123');
 
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/messages', [
+                'discord_channel_id' => 'channel-123',
+                'discord_message_id' => 'message-1',
+                'discord_user_id' => 'staff-1',
+                'discord_username' => 'Changed name should not overwrite',
+                'content' => 'Duplicate gateway delivery',
+                'sent_at' => now()->timestamp,
+                'is_staff' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('logged', true)
+            ->assertJsonPath('message.content', 'Initial interview response');
+
         $this->assertDatabaseHas('applications', [
             'id' => $application->id,
             'discord_channel_id' => 'channel-123',
@@ -143,6 +158,79 @@ class DiscordApplicationApiTest extends TestCase
             'discord_channel_id' => 'channel-123',
             'content' => 'Initial interview response',
             'is_staff' => 1,
+        ]);
+        $this->assertDatabaseCount('application_messages', 1);
+    }
+
+    public function test_attach_channel_is_idempotent_but_never_overwrites_an_authoritative_channel(): void
+    {
+        $service = $this->makeApplicationService();
+        $this->app->instance(ApplicationService::class, $service);
+
+        $application = Application::query()->create([
+            'nation_id' => 877103,
+            'leader_name_snapshot' => 'Leader 877103',
+            'discord_user_id' => 'applicant-channel-conflict',
+            'discord_username' => 'channel-user',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $payload = [
+            'application_id' => $application->id,
+            'discord_channel_id' => 'channel-authoritative',
+        ];
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/attach-channel', $payload)
+            ->assertOk();
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/attach-channel', $payload)
+            ->assertOk()
+            ->assertJsonPath('application.discord_channel_id', 'channel-authoritative');
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/attach-channel', [
+                'application_id' => $application->id,
+                'discord_channel_id' => 'channel-wrong',
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error', 'discord_channel_conflict')
+            ->assertJsonPath('context.discord_channel_id', 'channel-authoritative');
+
+        $this->assertSame('channel-authoritative', $application->fresh()->discord_channel_id);
+    }
+
+    public function test_message_staff_flag_is_derived_from_nexus_instead_of_the_bot_payload(): void
+    {
+        $application = Application::query()->create([
+            'nation_id' => 877104,
+            'leader_name_snapshot' => 'Leader 877104',
+            'discord_user_id' => 'applicant-message-authority',
+            'discord_username' => 'message-user',
+            'discord_channel_id' => 'channel-message-authority',
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/messages', [
+                'discord_channel_id' => 'channel-message-authority',
+                'discord_message_id' => 'message-unlinked',
+                'discord_user_id' => 'unlinked-author',
+                'discord_username' => 'Unlinked Author',
+                'content' => 'I cannot assert that I am staff.',
+                'sent_at' => now()->timestamp,
+                'is_staff' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('message.is_staff', false);
+
+        $this->assertDatabaseHas('application_messages', [
+            'application_id' => $application->id,
+            'discord_message_id' => 'message-unlinked',
+            'is_staff' => 0,
         ]);
     }
 
@@ -224,6 +312,87 @@ class DiscordApplicationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'approved')
             ->assertJsonPath('application.id', $application->id);
+    }
+
+    public function test_approve_reconciles_same_state_with_a_new_request_id_without_rewriting_audit_fields(): void
+    {
+        $originalModerator = $this->createModerator('moderator-original-approval');
+        $retryModerator = $this->createModerator('moderator-retry-approval');
+        $application = Application::query()->create([
+            'nation_id' => 877114,
+            'leader_name_snapshot' => 'Leader 877114',
+            'discord_user_id' => 'applicant-approval-reconcile',
+            'discord_username' => 'reconcile-user',
+            'status' => ApplicationStatus::Approved->value,
+            'pending_key' => null,
+            'approved_at' => now()->subHour(),
+            'approved_by_discord_id' => $originalModerator->activeDiscordAccount()->discord_id,
+            'approval_request_id' => 'interaction-original-approval',
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-new-approval',
+            ])
+            ->assertOk()
+            ->assertJsonPath('application.id', $application->id);
+
+        $application->refresh();
+        $this->assertSame('moderator-original-approval', $application->approved_by_discord_id);
+        $this->assertSame('interaction-original-approval', $application->approval_request_id);
+    }
+
+    public function test_approve_returns_conflict_when_latest_application_is_denied(): void
+    {
+        $moderator = $this->createModerator('moderator-opposite-approval');
+        $application = Application::query()->create([
+            'nation_id' => 877115,
+            'leader_name_snapshot' => 'Leader 877115',
+            'discord_user_id' => 'applicant-opposite-approval',
+            'discord_username' => 'opposite-user',
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denied_at' => now(),
+            'denied_by_discord_id' => 'original-denier',
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-opposite-approval',
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error', 'application_already_denied')
+            ->assertJsonPath('context.application_id', $application->id);
+
+        $this->assertSame(ApplicationStatus::Denied, $application->fresh()->status);
+    }
+
+    public function test_cancelled_application_returns_neutral_not_pending_conflict(): void
+    {
+        $moderator = $this->createModerator('moderator-cancelled-application');
+        $application = Application::query()->create([
+            'nation_id' => 877116,
+            'leader_name_snapshot' => 'Leader 877116',
+            'discord_user_id' => 'applicant-cancelled-decision',
+            'discord_username' => 'cancelled-user',
+            'status' => ApplicationStatus::Cancelled->value,
+            'pending_key' => null,
+            'cancelled_at' => now(),
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/approve', [
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'approval_request_id' => 'interaction-cancelled-application',
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error', 'application_not_pending')
+            ->assertJsonPath('context.status', ApplicationStatus::Cancelled->value);
     }
 
     public function test_approve_endpoint_prefers_a_pending_application_over_recent_approval_without_request_id(): void
@@ -308,7 +477,8 @@ class DiscordApplicationApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('status', 'denied')
-            ->assertJsonPath('application.id', $application->id);
+            ->assertJsonPath('application.id', $application->id)
+            ->assertJsonPath('config.applicant_role_id', 'applicant-role');
 
         $application->refresh();
 
@@ -359,6 +529,62 @@ class DiscordApplicationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'denied')
             ->assertJsonPath('application.id', $application->id);
+    }
+
+    public function test_deny_reconciles_same_state_with_a_new_request_id_without_rewriting_audit_fields(): void
+    {
+        $originalModerator = $this->createModerator('moderator-original-denial');
+        $retryModerator = $this->createModerator('moderator-retry-denial');
+        $application = Application::query()->create([
+            'nation_id' => 877117,
+            'leader_name_snapshot' => 'Leader 877117',
+            'discord_user_id' => 'applicant-denial-reconcile',
+            'discord_username' => 'denial-reconcile-user',
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denied_at' => now()->subHour(),
+            'denied_by_discord_id' => $originalModerator->activeDiscordAccount()->discord_id,
+            'denial_request_id' => 'interaction-original-denial',
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/deny', [
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
+                'denial_request_id' => 'interaction-new-denial',
+            ])
+            ->assertOk()
+            ->assertJsonPath('application.id', $application->id)
+            ->assertJsonPath('config.applicant_role_id', 'applicant-role');
+
+        $application->refresh();
+        $this->assertSame('moderator-original-denial', $application->denied_by_discord_id);
+        $this->assertSame('interaction-original-denial', $application->denial_request_id);
+    }
+
+    public function test_deny_returns_conflict_when_latest_application_is_approved(): void
+    {
+        $moderator = $this->createModerator('moderator-opposite-denial');
+        $application = Application::query()->create([
+            'nation_id' => 877118,
+            'leader_name_snapshot' => 'Leader 877118',
+            'discord_user_id' => 'applicant-opposite-denial',
+            'discord_username' => 'opposite-denial-user',
+            'status' => ApplicationStatus::Approved->value,
+            'pending_key' => null,
+            'approved_at' => now(),
+            'approved_by_discord_id' => 'original-approver',
+        ]);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/applications/deny', [
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
+                'denial_request_id' => 'interaction-opposite-denial',
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error', 'application_already_approved')
+            ->assertJsonPath('context.application_id', $application->id);
     }
 
     public function test_deny_endpoint_prefers_a_pending_application_over_recent_denial_without_request_id(): void

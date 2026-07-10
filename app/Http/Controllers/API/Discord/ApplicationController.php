@@ -41,10 +41,14 @@ class ApplicationController extends Controller
     {
         $application = Application::query()->findOrFail($request->integer('application_id'));
 
-        $application = $this->applicationService->attachChannelToApplication(
-            $application,
-            $request->string('discord_channel_id')->toString()
-        );
+        try {
+            $application = $this->applicationService->attachChannelToApplication(
+                $application,
+                $request->string('discord_channel_id')->toString()
+            );
+        } catch (ApplicationException $exception) {
+            return $this->errorResponse($exception);
+        }
 
         return response()->json([
             'application' => $application->toArray(),
@@ -99,6 +103,7 @@ class ApplicationController extends Controller
         return response()->json([
             'status' => 'denied',
             'application' => $application->toArray(),
+            'config' => $this->applicationService->getDiscordConfig(),
         ]);
     }
 

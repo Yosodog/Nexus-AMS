@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Events\OffshoreCacheInvalidated;
 use App\Exceptions\OffshoreTransferException;
+use App\Exceptions\OffshoreTransferReconciliationException;
 use App\Exceptions\PWQueryFailedException;
 use App\Models\Offshore;
 use App\Models\OffshoreTransfer;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -39,11 +41,23 @@ class OffshoreTransferService
         ?Offshore $destination,
         array $payload,
         User $user,
-        ?string $note = null
+        ?string $note = null,
+        ?string $idempotencyKey = null,
     ): OffshoreTransfer {
         $this->mainAllianceId = $this->membershipService->getPrimaryAllianceId();
 
+        if ($idempotencyKey !== null) {
+            $existing = OffshoreTransfer::query()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existing) {
+                return $this->resolveExistingIdempotentTransfer($existing);
+            }
+        }
+
         $transfer = new OffshoreTransfer([
+            'idempotency_key' => $idempotencyKey,
             'user_id' => $user->id,
             'source_type' => $sourceType,
             'source_offshore_id' => $source?->id,
@@ -56,7 +70,19 @@ class OffshoreTransferService
             ]),
         ]);
 
-        $transfer->save();
+        try {
+            $transfer->save();
+        } catch (QueryException $exception) {
+            if ($idempotencyKey === null || ! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            $existing = OffshoreTransfer::query()
+                ->where('idempotency_key', $idempotencyKey)
+                ->firstOrFail();
+
+            return $this->resolveExistingIdempotentTransfer($existing);
+        }
 
         $noteText = $note ?? $this->buildNote($user, $sourceType, $destinationType, $source, $destination);
 
@@ -93,10 +119,15 @@ class OffshoreTransferService
                 throw new OffshoreTransferException('Unsupported transfer configuration.');
             }
         } catch (OffshoreTransferException $exception) {
-            $transfer->markFailed($exception->getMessage());
+            if ($this->requiresReconciliation($exception)) {
+                $transfer->markReconciliationRequired($exception->getMessage());
+            } else {
+                $transfer->markFailed($exception->getMessage());
+            }
+
             throw $exception;
         } catch (Throwable $exception) {
-            $transfer->markFailed($exception->getMessage());
+            $transfer->markReconciliationRequired($exception->getMessage());
 
             throw new OffshoreTransferException('Unexpected error: '.$exception->getMessage(), previous: $exception);
         }
@@ -104,6 +135,28 @@ class OffshoreTransferService
         $transfer->markCompleted('Transfer completed successfully.');
 
         return $transfer->refresh();
+    }
+
+    private function resolveExistingIdempotentTransfer(OffshoreTransfer $transfer): OffshoreTransfer
+    {
+        if ($transfer->status === OffshoreTransfer::STATUS_COMPLETED) {
+            return $transfer;
+        }
+
+        throw new OffshoreTransferReconciliationException($transfer);
+    }
+
+    private function requiresReconciliation(OffshoreTransferException $exception): bool
+    {
+        $previous = $exception->getPrevious();
+
+        return $previous instanceof ConnectionException
+            || ($previous !== null && ! $previous instanceof PWQueryFailedException);
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return (string) ($exception->errorInfo[0] ?? '') === '23000';
     }
 
     /**

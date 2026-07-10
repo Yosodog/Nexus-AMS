@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Discord;
 
 use App\Events\OffshoreCacheInvalidated;
 use App\Exceptions\OffshoreTransferException;
+use App\Exceptions\OffshoreTransferReconciliationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Discord\DiscordOffshoreSweepRequest;
 use App\Models\DiscordAccount;
@@ -75,6 +76,19 @@ class OffshoreController extends Controller
             ], 403);
         }
 
+        $requestId = $request->string('request_id')->toString();
+        $existingTransfer = OffshoreTransfer::query()
+            ->where('idempotency_key', $requestId)
+            ->first();
+
+        if ($existingTransfer) {
+            if ($existingTransfer->status === OffshoreTransfer::STATUS_COMPLETED) {
+                return $this->sweepResponse($existingTransfer, true);
+            }
+
+            return $this->reconciliationResponse($existingTransfer);
+        }
+
         $offshore = $this->offshoreService->primary();
 
         if (! $offshore) {
@@ -112,9 +126,20 @@ class OffshoreController extends Controller
                 $offshore,
                 $payload,
                 $moderator,
-                $request->string('note')->trim()->toString() ?: sprintf('Discord main bank sweep into %s', $offshore->name)
+                $request->string('note')->trim()->toString() ?: sprintf('Discord main bank sweep into %s', $offshore->name),
+                $requestId,
             );
+        } catch (OffshoreTransferReconciliationException $exception) {
+            return $this->reconciliationResponse($exception->transfer);
         } catch (OffshoreTransferException $exception) {
+            $transfer = OffshoreTransfer::query()
+                ->where('idempotency_key', $requestId)
+                ->first();
+
+            if ($transfer?->status === OffshoreTransfer::STATUS_RECONCILIATION_REQUIRED) {
+                return $this->reconciliationResponse($transfer);
+            }
+
             $this->auditLogger->failure(
                 category: 'offshore',
                 action: 'discord_main_bank_sweep',
@@ -166,13 +191,35 @@ class OffshoreController extends Controller
             ],
         );
 
+        return $this->sweepResponse($transfer, false);
+    }
+
+    private function reconciliationResponse(OffshoreTransfer $transfer): JsonResponse
+    {
+        return response()->json([
+            'error' => 'sweep_reconciliation_required',
+            'message' => 'This sweep has an existing non-terminal or ambiguous transfer and must be reconciled before retrying.',
+            'transfer' => [
+                'id' => $transfer->id,
+                'status' => $transfer->status,
+            ],
+        ], 409);
+    }
+
+    private function sweepResponse(OffshoreTransfer $transfer, bool $replayed): JsonResponse
+    {
+        $offshore = $transfer->destinationOffshore;
+
         return response()->json([
             'swept' => true,
-            'message' => sprintf('Main bank swept into %s.', $offshore->name),
+            'message' => $offshore
+                ? sprintf('Main bank swept into %s.', $offshore->name)
+                : 'Main bank sweep completed.',
+            'replayed' => $replayed,
             'offshore' => [
-                'id' => $offshore->id,
-                'name' => $offshore->name,
-                'alliance_id' => $offshore->alliance_id,
+                'id' => $offshore?->id,
+                'name' => $offshore?->name,
+                'alliance_id' => $offshore?->alliance_id,
             ],
             'transfer' => [
                 'id' => $transfer->id,

@@ -72,6 +72,10 @@ Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOv
 Schedule::command('users:disable-inactive')->dailyAt('01:05')->withoutOverlapping(120);
 Schedule::command('audit:prune')->dailyAt('01:15');
 Schedule::command('war-counters:archive-stale')->hourly()->withoutOverlapping(55);
+Schedule::command('discord-queue:reap-leases')
+    ->everyMinute()
+    ->withoutOverlapping(1)
+    ->onOneServer();
 
 // Backups
 Schedule::command('backup:run')

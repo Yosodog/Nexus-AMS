@@ -17,6 +17,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -107,10 +108,28 @@ class ApplicationService
      */
     public function attachChannelToApplication(Application $application, string $discordChannelId): Application
     {
-        $application->discord_channel_id = $discordChannelId;
-        $application->save();
+        return DB::transaction(function () use ($application, $discordChannelId): Application {
+            $locked = Application::query()->lockForUpdate()->findOrFail($application->id);
 
-        return $application;
+            if ($locked->discord_channel_id !== null && $locked->discord_channel_id !== $discordChannelId) {
+                throw new ApplicationException(
+                    'discord_channel_conflict',
+                    'This application is already attached to a different Discord channel.',
+                    409,
+                    [
+                        'application_id' => $locked->id,
+                        'discord_channel_id' => $locked->discord_channel_id,
+                    ],
+                );
+            }
+
+            if ($locked->discord_channel_id === null) {
+                $locked->discord_channel_id = $discordChannelId;
+                $locked->save();
+            }
+
+            return $locked->fresh();
+        }, attempts: 3);
     }
 
     /**
@@ -122,8 +141,7 @@ class ApplicationService
      *     discord_user_id: string,
      *     discord_username: string,
      *     content: string,
-     *     sent_at: string|int,
-     *     is_staff: bool
+     *     sent_at: string|int
      * }  $payload
      */
     public function logDiscordMessage(array $payload): ?ApplicationMessage
@@ -137,16 +155,29 @@ class ApplicationService
             return null;
         }
 
-        return ApplicationMessage::query()->create([
-            'application_id' => $application->id,
-            'discord_message_id' => $payload['discord_message_id'],
-            'discord_user_id' => $payload['discord_user_id'],
-            'discord_username' => $payload['discord_username'],
-            'discord_channel_id' => $payload['discord_channel_id'],
-            'content' => $payload['content'],
-            'is_staff' => $payload['is_staff'],
-            'sent_at' => $this->parseTimestamp($payload['sent_at']),
-        ]);
+        $author = DiscordAccount::query()
+            ->where('discord_id', $payload['discord_user_id'])
+            ->whereNull('unlinked_at')
+            ->latest('linked_at')
+            ->first()?->user;
+
+        $isStaff = $author !== null
+            && Gate::forUser($author)->allows('manage-applications');
+
+        return ApplicationMessage::query()->firstOrCreate(
+            [
+                'application_id' => $application->id,
+                'discord_message_id' => $payload['discord_message_id'],
+            ],
+            [
+                'discord_user_id' => $payload['discord_user_id'],
+                'discord_username' => $payload['discord_username'],
+                'discord_channel_id' => $payload['discord_channel_id'],
+                'content' => $payload['content'],
+                'is_staff' => $isStaff,
+                'sent_at' => $this->parseTimestamp($payload['sent_at']),
+            ],
+        );
     }
 
     /**
@@ -164,10 +195,9 @@ class ApplicationService
         try {
             return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
                 ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator): Application {
-                    $existingApplication = $this->findApprovedApplicationForRetry(
+                    $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
-                        $moderatorDiscordId,
-                        $approvalRequestId
+                        ApplicationStatus::Approved,
                     );
 
                     if ($existingApplication) {
@@ -259,10 +289,9 @@ class ApplicationService
         try {
             return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
                 ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator): Application {
-                    $existingApplication = $this->findDeniedApplicationForRetry(
+                    $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
-                        $moderatorDiscordId,
-                        $denialRequestId
+                        ApplicationStatus::Denied,
                     );
 
                     if ($existingApplication) {
@@ -658,58 +687,52 @@ class ApplicationService
         return $application;
     }
 
-    protected function findApprovedApplicationForRetry(
+    protected function findExistingDecision(
         string $applicantDiscordId,
-        string $moderatorDiscordId,
-        ?string $approvalRequestId
+        ApplicationStatus $requestedStatus,
     ): ?Application {
-        if ($approvalRequestId) {
-            return Application::query()
-                ->where('discord_user_id', $applicantDiscordId)
-                ->where('status', ApplicationStatus::Approved->value)
-                ->where('approval_request_id', $approvalRequestId)
-                ->latest('approved_at')
-                ->first();
-        }
-
         if ($this->hasPendingApplication($applicantDiscordId)) {
             return null;
         }
 
-        return Application::query()
+        $application = Application::query()
             ->where('discord_user_id', $applicantDiscordId)
-            ->where('status', ApplicationStatus::Approved->value)
-            ->where('approved_by_discord_id', $moderatorDiscordId)
-            ->where('approved_at', '>=', Carbon::now()->subMinutes(10))
-            ->latest('approved_at')
+            ->latest('created_at')
+            ->latest('id')
             ->first();
-    }
 
-    protected function findDeniedApplicationForRetry(
-        string $applicantDiscordId,
-        string $moderatorDiscordId,
-        ?string $denialRequestId
-    ): ?Application {
-        if ($denialRequestId) {
-            return Application::query()
-                ->where('discord_user_id', $applicantDiscordId)
-                ->where('status', ApplicationStatus::Denied->value)
-                ->where('denial_request_id', $denialRequestId)
-                ->latest('denied_at')
-                ->first();
-        }
-
-        if ($this->hasPendingApplication($applicantDiscordId)) {
+        if (! $application) {
             return null;
         }
 
-        return Application::query()
-            ->where('discord_user_id', $applicantDiscordId)
-            ->where('status', ApplicationStatus::Denied->value)
-            ->where('denied_by_discord_id', $moderatorDiscordId)
-            ->where('denied_at', '>=', Carbon::now()->subMinutes(10))
-            ->latest('denied_at')
-            ->first();
+        if ($application->status === $requestedStatus) {
+            return $application;
+        }
+
+        if ($application->status === ApplicationStatus::Denied && $requestedStatus === ApplicationStatus::Approved) {
+            throw new ApplicationException(
+                'application_already_denied',
+                'The latest application has already been denied.',
+                409,
+                ['application_id' => $application->id, 'status' => $application->status->value],
+            );
+        }
+
+        if ($application->status === ApplicationStatus::Approved && $requestedStatus === ApplicationStatus::Denied) {
+            throw new ApplicationException(
+                'application_already_approved',
+                'The latest application has already been approved.',
+                409,
+                ['application_id' => $application->id, 'status' => $application->status->value],
+            );
+        }
+
+        throw new ApplicationException(
+            'application_not_pending',
+            'The latest application is not pending and cannot be changed.',
+            409,
+            ['application_id' => $application->id, 'status' => $application->status->value],
+        );
     }
 
     protected function hasPendingApplication(string $applicantDiscordId): bool

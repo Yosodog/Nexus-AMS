@@ -19,6 +19,7 @@ class DiscordOffshoreSweepRequest extends FormRequest
     {
         return [
             'moderator_discord_id' => ['required', 'string', 'max:100'],
+            'request_id' => ['required', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:255'],
         ];
     }

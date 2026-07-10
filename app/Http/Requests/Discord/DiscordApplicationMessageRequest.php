@@ -29,7 +29,6 @@ class DiscordApplicationMessageRequest extends FormRequest
             'discord_username' => ['required', 'string', 'max:191'],
             'content' => ['required', 'string'],
             'sent_at' => ['required', 'integer'],
-            'is_staff' => ['required', 'boolean'],
         ];
     }
 }

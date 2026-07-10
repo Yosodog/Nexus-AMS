@@ -73,6 +73,9 @@ Route::prefix('v1/subs')->middleware(ValidateNexusAPI::class)->group(function ()
 Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(function () {
     Route::post('/verify', [DiscordVerificationController::class, 'verify']);
     Route::get('/queue', [DiscordQueueController::class, 'index']);
+    Route::post('/queue/claim', [DiscordQueueController::class, 'claim']);
+    Route::post('/queue/{command}/lease', [DiscordQueueController::class, 'lease']);
+    Route::patch('/queue/{command}/checkpoint', [DiscordQueueController::class, 'checkpoint']);
     Route::post('/queue/{command}/status', [DiscordQueueController::class, 'update']);
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
@@ -81,6 +84,7 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
     Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel']);
     Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive']);
+    Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
     Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary']);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
 });

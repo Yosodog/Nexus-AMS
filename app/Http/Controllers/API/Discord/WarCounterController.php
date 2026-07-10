@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Gate;
 
 class WarCounterController extends Controller
 {
+    public function show(WarCounter $counter): JsonResponse
+    {
+        return response()->json([
+            'counter' => $counter->toArray(),
+        ]);
+    }
+
     public function attachChannel(DiscordWarCounterAttachChannelRequest $request): JsonResponse
     {
         $counter = WarCounter::query()->findOrFail($request->integer('war_counter_id'));

@@ -14,11 +14,14 @@ class OffshoreTransfer extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_RECONCILIATION_REQUIRED = 'reconciliation_required';
+
     public const TYPE_MAIN = 'main';
 
     public const TYPE_OFFSHORE = 'offshore';
 
     protected $fillable = [
+        'idempotency_key',
         'user_id',
         'source_type',
         'source_offshore_id',
@@ -74,6 +77,15 @@ class OffshoreTransfer extends Model
     {
         $this->forceFill([
             'status' => self::STATUS_FAILED,
+            'message' => $message,
+            'completed_at' => null,
+        ])->save();
+    }
+
+    public function markReconciliationRequired(string $message): void
+    {
+        $this->forceFill([
+            'status' => self::STATUS_RECONCILIATION_REQUIRED,
             'message' => $message,
             'completed_at' => null,
         ])->save();
