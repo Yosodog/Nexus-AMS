@@ -15,6 +15,7 @@ use App\Services\SelfApprovalGuard;
 use App\Services\SettingService;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -300,6 +301,7 @@ class WithdrawalController extends Controller
     public function reconcile(ReconcileWithdrawalRequest $request, Transaction $transaction): RedirectResponse
     {
         Gate::authorize('manage-accounts');
+        Gate::authorize('view-diagnostic-info');
 
         if (! $transaction->isNationWithdrawal()) {
             abort(403, 'This transaction cannot be reconciled as a withdrawal.');
@@ -313,100 +315,112 @@ class WithdrawalController extends Controller
         $validated = $request->validated();
         $resolvedTransaction = null;
 
-        $result = DB::transaction(function () use ($request, $transaction, $validated, &$resolvedTransaction): string {
-            $lockedTransaction = Transaction::query()
-                ->lockForUpdate()
-                ->find($transaction->id);
+        try {
+            $result = DB::transaction(function () use ($request, $transaction, $validated, &$resolvedTransaction): string {
+                $lockedTransaction = Transaction::query()
+                    ->lockForUpdate()
+                    ->find($transaction->id);
 
-            if (! $lockedTransaction || ! $lockedTransaction->requiresBankReconciliation()) {
-                return 'not-pending';
-            }
-
-            if ($validated['resolution'] === 'confirmed_sent') {
-                $bankRecordId = (int) $validated['bank_record_id'];
-                $recordAlreadyAssigned = Transaction::query()
-                    ->where('bank_record_id', $bankRecordId)
-                    ->where('id', '!=', $lockedTransaction->id)
-                    ->exists();
-
-                if ($recordAlreadyAssigned) {
-                    return 'duplicate-bank-record';
+                if (! $lockedTransaction || ! $lockedTransaction->requiresBankReconciliation()) {
+                    return 'not-pending';
                 }
 
-                $lockedTransaction->is_pending = false;
-                $lockedTransaction->requires_admin_approval = false;
-                $lockedTransaction->bank_processing_at = null;
-                $lockedTransaction->sent_at = $lockedTransaction->bank_attempted_at ?? now();
-                $lockedTransaction->bank_record_id = $bankRecordId;
-                $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_SENT;
-            } else {
-                if (is_null($lockedTransaction->from_account_id)) {
-                    return 'account-missing';
+                if ($validated['resolution'] === 'confirmed_sent') {
+                    $bankRecordId = (int) $validated['bank_record_id'];
+                    $recordAlreadyAssigned = Transaction::query()
+                        ->where('bank_record_id', $bankRecordId)
+                        ->where('id', '!=', $lockedTransaction->id)
+                        ->exists();
+
+                    if ($recordAlreadyAssigned) {
+                        return 'duplicate-bank-record';
+                    }
+
+                    $lockedTransaction->is_pending = false;
+                    $lockedTransaction->requires_admin_approval = false;
+                    $lockedTransaction->bank_processing_at = null;
+                    $lockedTransaction->sent_at = $lockedTransaction->bank_attempted_at ?? now();
+                    $lockedTransaction->bank_record_id = $bankRecordId;
+                    $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_SENT;
+                } else {
+                    if (is_null($lockedTransaction->from_account_id)) {
+                        return 'account-missing';
+                    }
+
+                    $fromAccount = AccountService::getAccountById($lockedTransaction->from_account_id);
+                    $adjustment = collect(PWHelperService::resources())
+                        ->mapWithKeys(fn (string $resource): array => [$resource => $lockedTransaction->{$resource}])
+                        ->all();
+                    $adjustment['note'] = "Evidence-based reconciliation refund for Transaction #{$lockedTransaction->id}";
+
+                    AccountService::adjustAccountBalance(
+                        $fromAccount,
+                        $adjustment,
+                        auth()->id(),
+                        $request->ip(),
+                        [
+                            'correlation_id' => $lockedTransaction->bank_correlation_id,
+                            'withdrawal_transaction_id' => $lockedTransaction->id,
+                        ],
+                    );
+
+                    $lockedTransaction->is_pending = false;
+                    $lockedTransaction->requires_admin_approval = false;
+                    $lockedTransaction->bank_processing_at = null;
+                    $lockedTransaction->refunded_at = now();
+                    $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_REFUNDED;
                 }
 
-                $fromAccount = AccountService::getAccountById($lockedTransaction->from_account_id);
-                $adjustment = collect(PWHelperService::resources())
-                    ->mapWithKeys(fn (string $resource): array => [$resource => $lockedTransaction->{$resource}])
-                    ->all();
-                $adjustment['note'] = "Evidence-based reconciliation refund for Transaction #{$lockedTransaction->id}";
-
-                AccountService::adjustAccountBalance(
-                    $fromAccount,
-                    $adjustment,
-                    auth()->id(),
-                    $request->ip(),
+                $lockedTransaction->bank_reconciliation_details = array_merge(
+                    $lockedTransaction->bank_reconciliation_details ?? [],
                     [
-                        'correlation_id' => $lockedTransaction->bank_correlation_id,
-                        'withdrawal_transaction_id' => $lockedTransaction->id,
-                    ],
-                );
-
-                $lockedTransaction->is_pending = false;
-                $lockedTransaction->requires_admin_approval = false;
-                $lockedTransaction->bank_processing_at = null;
-                $lockedTransaction->refunded_at = now();
-                $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_REFUNDED;
-            }
-
-            $lockedTransaction->bank_reconciliation_details = array_merge(
-                $lockedTransaction->bank_reconciliation_details ?? [],
-                [
-                    'resolution' => $validated['resolution'],
-                    'evidence' => $validated['evidence'],
-                    'resolved_at' => now()->toISOString(),
-                    'resolved_by' => auth()->id(),
-                    'bank_record_id' => $validated['bank_record_id'] ?? null,
-                ]
-            );
-            $lockedTransaction->save();
-
-            $this->auditLogger->record(
-                category: 'finance',
-                action: $validated['resolution'] === 'confirmed_sent'
-                    ? 'withdrawal_reconciled_sent'
-                    : 'withdrawal_reconciled_refunded',
-                outcome: 'success',
-                severity: 'warning',
-                subject: $lockedTransaction,
-                context: [
-                    'related' => [
-                        ['type' => 'Account', 'id' => (string) $lockedTransaction->from_account_id, 'role' => 'from_account'],
-                    ],
-                    'data' => [
-                        'nation_id' => $lockedTransaction->nation_id,
-                        'correlation_id' => $lockedTransaction->bank_correlation_id,
                         'resolution' => $validated['resolution'],
                         'evidence' => $validated['evidence'],
+                        'resolved_at' => now()->toISOString(),
+                        'resolved_by' => auth()->id(),
                         'bank_record_id' => $validated['bank_record_id'] ?? null,
+                    ]
+                );
+                $lockedTransaction->save();
+
+                $this->auditLogger->record(
+                    category: 'finance',
+                    action: $validated['resolution'] === 'confirmed_sent'
+                        ? 'withdrawal_reconciled_sent'
+                        : 'withdrawal_reconciled_refunded',
+                    outcome: 'success',
+                    severity: 'warning',
+                    subject: $lockedTransaction,
+                    context: [
+                        'related' => [
+                            ['type' => 'Account', 'id' => (string) $lockedTransaction->from_account_id, 'role' => 'from_account'],
+                        ],
+                        'data' => [
+                            'nation_id' => $lockedTransaction->nation_id,
+                            'correlation_id' => $lockedTransaction->bank_correlation_id,
+                            'resolution' => $validated['resolution'],
+                            'evidence' => $validated['evidence'],
+                            'bank_record_id' => $validated['bank_record_id'] ?? null,
+                        ],
                     ],
-                ],
-                message: 'Ambiguous withdrawal resolved from documented external evidence.'
-            );
+                    message: 'Ambiguous withdrawal resolved from documented external evidence.'
+                );
 
-            $resolvedTransaction = $lockedTransaction;
+                $resolvedTransaction = $lockedTransaction;
 
-            return 'resolved';
-        });
+                return 'resolved';
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            $message = $exception->getMessage();
+
+            if ($validated['resolution'] !== 'confirmed_sent'
+                || (! str_contains($message, 'transactions.bank_record_id')
+                    && ! str_contains($message, 'transactions_bank_record_id_unique'))) {
+                throw $exception;
+            }
+
+            $result = 'duplicate-bank-record';
+        }
 
         if ($result === 'duplicate-bank-record') {
             return redirect()->route('admin.accounts.dashboard')->with([

@@ -15,6 +15,7 @@ use App\Services\OffshoreFulfillmentResult;
 use App\Services\OffshoreFulfillmentService;
 use App\Services\PWHelperService;
 use App\Services\TransactionService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
@@ -241,6 +242,99 @@ class WithdrawalReconciliationTest extends TestCase
         Queue::assertPushed(SendBank::class, fn (SendBank $job): bool => $job->uniqueId() === 'withdrawal-'.$transaction->id);
     }
 
+    public function test_fulfillment_exception_moves_withdrawal_to_reconciliation_instead_of_stranding_it(): void
+    {
+        [, , $transaction] = $this->createWithdrawalFixture();
+        $fulfillment = Mockery::mock(OffshoreFulfillmentService::class);
+        $fulfillment->shouldReceive('coverShortfall')
+            ->once()
+            ->andThrow(new \RuntimeException('Fulfillment worker failed.'));
+        $bank = Mockery::mock(BankService::class);
+        $bank->shouldNotReceive('sendWithdraw');
+
+        (new SendBank($bank, $transaction))->handle($fulfillment);
+
+        $transaction->refresh();
+
+        $this->assertTrue($transaction->requiresBankReconciliation());
+        $this->assertTrue($transaction->requires_admin_approval);
+        $this->assertNull($transaction->bank_processing_at);
+        $this->assertSame(0, $transaction->bank_attempt_count);
+    }
+
+    public function test_failed_hook_recovers_interrupted_bank_preparation(): void
+    {
+        [, , $transaction] = $this->createWithdrawalFixture();
+        $transaction->bank_processing_at = now();
+        $transaction->beginBankPreparation();
+        $bank = Mockery::mock(BankService::class);
+
+        (new SendBank($bank, $transaction))->failed(new \RuntimeException('Worker timed out.'));
+
+        $transaction->refresh();
+
+        $this->assertTrue($transaction->requiresBankReconciliation());
+        $this->assertNull($transaction->bank_processing_at);
+    }
+
+    public function test_second_job_detects_interrupted_preparation_without_sending_again(): void
+    {
+        [, , $transaction] = $this->createWithdrawalFixture();
+        $transaction->bank_processing_at = now();
+        $transaction->beginBankPreparation();
+        $fulfillment = Mockery::mock(OffshoreFulfillmentService::class);
+        $fulfillment->shouldNotReceive('coverShortfall');
+        $bank = Mockery::mock(BankService::class);
+        $bank->shouldNotReceive('sendWithdraw');
+
+        (new SendBank($bank, $transaction))->handle($fulfillment);
+
+        $transaction->refresh();
+
+        $this->assertTrue($transaction->requiresBankReconciliation());
+        $this->assertNull($transaction->bank_processing_at);
+    }
+
+    public function test_reconciliation_requires_diagnostic_recovery_access(): void
+    {
+        [, , $transaction] = $this->createWithdrawalFixture(manuallyApproved: true);
+        $this->makeAmbiguous($transaction);
+        $manageOnlyAdmin = $this->grantPermissions(
+            $this->createVerifiedAdmin(['nation_id' => $transaction->nation_id + 200000]),
+            ['manage-accounts']
+        );
+
+        $this->actingAs($manageOnlyAdmin)
+            ->post(route('admin.withdrawals.reconcile', $transaction), [
+                'resolution' => 'confirmed_not_sent',
+                'evidence' => 'The full bank history contains no matching transfer for this withdrawal.',
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue($transaction->fresh()->requiresBankReconciliation());
+    }
+
+    public function test_bank_record_id_is_unique_at_the_database_level(): void
+    {
+        [$admin, , $transaction] = $this->createWithdrawalFixture(manuallyApproved: true);
+        $this->makeAmbiguous($transaction);
+
+        $this->actingAs($admin)
+            ->post(route('admin.withdrawals.reconcile', $transaction), [
+                'resolution' => 'confirmed_sent',
+                'bank_record_id' => 876543,
+                'evidence' => 'Alliance bank record 876543 matches the correlation ID and every resource amount.',
+            ])
+            ->assertSessionHas('alert-type', 'success');
+
+        $duplicate = $transaction->fresh()->replicate();
+        $duplicate->bank_correlation_id = 'NXS-WD-DUPLICATE-'.$transaction->id;
+
+        $this->expectException(UniqueConstraintViolationException::class);
+
+        $duplicate->save();
+    }
+
     /**
      * @return array{0: User, 1: Account, 2: Transaction}
      */
@@ -249,7 +343,7 @@ class WithdrawalReconciliationTest extends TestCase
         $nation = Nation::factory()->create();
         $admin = $this->grantPermissions(
             $this->createVerifiedAdmin(['nation_id' => $nation->id + 100000]),
-            ['manage-accounts', 'view-accounts']
+            ['manage-accounts', 'view-accounts', 'view-diagnostic-info']
         );
         $account = new Account;
         $account->nation_id = $nation->id;

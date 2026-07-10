@@ -15,6 +15,8 @@ class Transaction extends Model
 
     public const BANK_ATTEMPT_SENDING = 'sending';
 
+    public const BANK_ATTEMPT_PREPARING = 'preparing';
+
     public const BANK_ATTEMPT_SUCCEEDED = 'succeeded';
 
     public const BANK_ATTEMPT_FAILED = 'failed';
@@ -166,6 +168,13 @@ class Transaction extends Model
         $this->bank_attempt_status = self::BANK_ATTEMPT_SENDING;
         $this->bank_attempt_count = (int) $this->bank_attempt_count + 1;
         $this->bank_attempted_at = now();
+        $this->save();
+    }
+
+    public function beginBankPreparation(): void
+    {
+        $this->ensureBankCorrelationId();
+        $this->bank_attempt_status = self::BANK_ATTEMPT_PREPARING;
         $this->save();
     }
 

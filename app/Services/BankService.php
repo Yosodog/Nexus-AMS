@@ -98,7 +98,9 @@ class BankService
             );
         }
 
-        if ($bankRec->id <= 0 || $bankRec->receiver_id !== $this->receiver) {
+        if ($bankRec->id <= 0
+            || $bankRec->receiver_id !== $this->receiver
+            || $bankRec->receiver_type !== $this->receiver_type) {
             throw new AmbiguousMutationOutcomeException(
                 'The bank mutation returned a record that could not be matched to the requested withdrawal.'
             );

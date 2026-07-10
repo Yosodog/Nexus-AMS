@@ -13,7 +13,8 @@ class ReconcileWithdrawalRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('manage-accounts') === true;
+        return $this->user()?->can('manage-accounts') === true
+            && $this->user()?->can('view-diagnostic-info') === true;
     }
 
     /**
@@ -34,6 +35,7 @@ class ReconcileWithdrawalRequest extends FormRequest
                 'nullable',
                 'integer',
                 'min:1',
+                Rule::unique('transactions', 'bank_record_id')->ignore($this->route('transaction')),
             ],
         ];
     }
@@ -47,6 +49,7 @@ class ReconcileWithdrawalRequest extends FormRequest
             'evidence.required' => 'Reconciliation evidence is required before this withdrawal can be resolved.',
             'evidence.min' => 'Describe the evidence used to verify the upstream bank outcome.',
             'bank_record_id.required' => 'The Politics & War bank record ID is required when confirming a sent withdrawal.',
+            'bank_record_id.unique' => 'That Politics & War bank record is already assigned to another transaction.',
         ];
     }
 }

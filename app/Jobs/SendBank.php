@@ -61,9 +61,12 @@ class SendBank implements ShouldBeUnique, ShouldQueue
                 return null;
             }
 
-            if ($transaction->bank_attempt_status === Transaction::BANK_ATTEMPT_SENDING) {
+            if (in_array($transaction->bank_attempt_status, [
+                Transaction::BANK_ATTEMPT_PREPARING,
+                Transaction::BANK_ATTEMPT_SENDING,
+            ], true)) {
                 $transaction->markBankNeedsReconciliation(
-                    'A previous bank send attempt did not finish with a definitive response. Verify the correlation ID against Politics & War bank records before resolving it.'
+                    'A previous withdrawal attempt did not finish with a definitive result. Verify the correlation ID against Politics & War bank records before resolving it.'
                 );
 
                 return $transaction;
@@ -82,8 +85,7 @@ class SendBank implements ShouldBeUnique, ShouldQueue
             }
 
             $transaction->bank_processing_at = now();
-            $transaction->ensureBankCorrelationId();
-            $transaction->save();
+            $transaction->beginBankPreparation();
 
             return $transaction;
         });
@@ -98,10 +100,16 @@ class SendBank implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Attempt to top up the main bank before issuing the withdrawal mutation.
-        $result = $fulfillmentService->coverShortfall($transaction);
+        try {
+            // Attempt to top up the main bank before issuing the withdrawal mutation.
+            $result = $fulfillmentService->coverShortfall($transaction);
+            $transaction->recordOffshoreFulfillment($result);
+        } catch (Throwable $exception) {
+            $this->markNeedsReconciliation($transaction, $exception);
+            report($exception);
 
-        $transaction->recordOffshoreFulfillment($result);
+            return;
+        }
 
         if ($result->shouldSendWithdrawal()) {
             $transaction = DB::transaction(function () use ($transaction) {
@@ -192,14 +200,17 @@ class SendBank implements ShouldBeUnique, ShouldQueue
         }
 
         // Something prevented us from fulfilling automatically. Escalate to admins.
-        $transaction->markPendingAdminReview('Offshore fulfillment failed: '.$result->message);
+        $transaction->markDefiniteBankFailure('Offshore fulfillment failed: '.$result->message);
     }
 
     public function failed(?Throwable $exception): void
     {
         $transaction = Transaction::query()->find($this->transaction->id);
 
-        if (! $transaction || $transaction->bank_attempt_status !== Transaction::BANK_ATTEMPT_SENDING) {
+        if (! $transaction || ! in_array($transaction->bank_attempt_status, [
+            Transaction::BANK_ATTEMPT_PREPARING,
+            Transaction::BANK_ATTEMPT_SENDING,
+        ], true)) {
             return;
         }
 

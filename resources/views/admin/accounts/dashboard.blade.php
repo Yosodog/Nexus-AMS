@@ -607,28 +607,35 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                                    <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-success/30 bg-base-100 p-3 space-y-3">
-                                        @csrf
-                                        <input type="hidden" name="resolution" value="confirmed_sent">
-                                        <div class="font-semibold text-sm">Confirmed sent</div>
-                                        <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
-                                        <x-input label="Bank record ID" name="bank_record_id" type="number" min="1" required />
-                                        <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
-                                        <x-button label="Record as Sent" icon="o-check-circle" type="submit" class="btn-success btn-sm w-full"
-                                                  onclick="return confirm('Confirm that the external bank record proves this withdrawal was sent?');" />
-                                    </form>
+                                @can('view-diagnostic-info')
+                                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-success/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_sent">
+                                            <div class="font-semibold text-sm">Confirmed sent</div>
+                                            <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
+                                            <x-input label="Bank record ID" name="bank_record_id" type="number" min="1" required />
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Record as Sent" icon="o-check-circle" type="submit" class="btn-success btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the external bank record proves this withdrawal was sent?');" />
+                                        </form>
 
-                                    <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-warning/30 bg-base-100 p-3 space-y-3">
-                                        @csrf
-                                        <input type="hidden" name="resolution" value="confirmed_not_sent">
-                                        <div class="font-semibold text-sm">Confirmed not sent</div>
-                                        <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
-                                        <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
-                                        <x-button label="Refund After Verification" icon="o-arrow-uturn-left" type="submit" class="btn-warning btn-sm w-full"
-                                                  onclick="return confirm('Confirm that the evidence proves no external transfer occurred and the local funds should be refunded?');" />
-                                    </form>
-                                </div>
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-warning/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_not_sent">
+                                            <div class="font-semibold text-sm">Confirmed not sent</div>
+                                            <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Refund After Verification" icon="o-arrow-uturn-left" type="submit" class="btn-warning btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the evidence proves no external transfer occurred and the local funds should be refunded?');" />
+                                        </form>
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        <x-icon name="o-lock-closed" class="w-5 h-5" />
+                                        <span>Diagnostic recovery access is required to resolve this withdrawal.</span>
+                                    </div>
+                                @endcan
                             </div>
                         </section>
                     @endforeach
