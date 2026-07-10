@@ -34,9 +34,12 @@ class AutoWithdrawService
      * @throws PWQueryFailedException
      * @throws PWRateLimitHitException
      */
-    public function evaluateAndExecute(Nation $nation): void
-    {
-        if (! SettingService::isAutoWithdrawEnabled()) {
+    public function evaluateAndExecute(
+        Nation $nation,
+        bool $featureStatusVerified = false,
+        bool $blockadeStatusVerified = false
+    ): void {
+        if (! $featureStatusVerified && ! SettingService::isAutoWithdrawEnabled()) {
             return;
         }
 
@@ -47,15 +50,17 @@ class AutoWithdrawService
         }
 
         try {
-            try {
-                AccountService::ensureNotBlockaded($nation->id);
-            } catch (UserErrorException $e) {
-                Log::info('Auto withdraw skipped because withdrawal eligibility could not be confirmed.', [
-                    'nation_id' => $nation->id,
-                    'message' => $e->getMessage(),
-                ]);
+            if (! $blockadeStatusVerified) {
+                try {
+                    AccountService::ensureNotBlockaded($nation->id);
+                } catch (UserErrorException $e) {
+                    Log::info('Auto withdraw skipped because withdrawal eligibility could not be confirmed.', [
+                        'nation_id' => $nation->id,
+                        'message' => $e->getMessage(),
+                    ]);
 
-                return;
+                    return;
+                }
             }
 
             $resources = $nation->resources;
@@ -79,11 +84,13 @@ class AutoWithdrawService
                 return;
             }
 
-            $settings = AutoWithdrawSetting::query()
-                ->where('nation_id', $nation->id)
-                ->where('enabled', true)
-                ->with('account')
-                ->get();
+            $settings = $nation->relationLoaded('autoWithdrawSettings')
+                ? $nation->autoWithdrawSettings->where('enabled', true)
+                : AutoWithdrawSetting::query()
+                    ->where('nation_id', $nation->id)
+                    ->where('enabled', true)
+                    ->with('account')
+                    ->get();
 
             if ($settings->isEmpty()) {
                 return;

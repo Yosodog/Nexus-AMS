@@ -67,15 +67,56 @@ class AccountService
      */
     public static function ensureNotBlockaded(int $nationId): void
     {
+        if (in_array($nationId, self::getBlockadedNationIds([$nationId]), true)) {
+            throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
+        }
+    }
+
+    /**
+     * @param  array<int, int>  $nationIds
+     * @return array<int, int>
+     *
+     * @throws UserErrorException
+     */
+    public static function getBlockadedNationIds(array $nationIds): array
+    {
+        $nationIds = collect($nationIds)
+            ->map(fn (mixed $nationId): int => (int) $nationId)
+            ->filter(fn (int $nationId): bool => $nationId > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($nationIds === []) {
+            return [];
+        }
+
+        $requestedNationIds = array_fill_keys($nationIds, true);
+        $blockadedNationIds = [];
+
         try {
-            $wars = WarQueryService::getMultipleWars([
-                'active' => true,
-                'or_id' => [$nationId],
-                'first' => 1000,
-            ]);
+            foreach (array_chunk($nationIds, 100) as $nationIdChunk) {
+                $wars = WarQueryService::getMultipleWars([
+                    'active' => true,
+                    'or_id' => $nationIdChunk,
+                    'first' => 1000,
+                ]);
+
+                foreach ($wars as $war) {
+                    $navalBlockade = (int) ($war->naval_blockade ?? 0);
+
+                    if ($navalBlockade === (int) $war->def_id && isset($requestedNationIds[(int) $war->att_id])) {
+                        $blockadedNationIds[(int) $war->att_id] = true;
+                    }
+
+                    if ($navalBlockade === (int) $war->att_id && isset($requestedNationIds[(int) $war->def_id])) {
+                        $blockadedNationIds[(int) $war->def_id] = true;
+                    }
+                }
+            }
         } catch (\Throwable $e) {
             Log::warning('Unable to validate blockade status via P&W API; blocking withdrawal.', [
-                'nation_id' => $nationId,
+                'nation_count' => count($nationIds),
                 'exception_class' => $e::class,
             ]);
 
@@ -84,23 +125,7 @@ class AccountService
             );
         }
 
-        foreach ($wars as $war) {
-            $navalBlockade = (int) ($war->naval_blockade ?? 0);
-            if ($navalBlockade <= 0) {
-                continue;
-            }
-
-            $isAttacker = (int) $war->att_id === $nationId;
-            $isDefender = (int) $war->def_id === $nationId;
-
-            if ($isAttacker && $navalBlockade === (int) $war->def_id) {
-                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
-            }
-
-            if ($isDefender && $navalBlockade === (int) $war->att_id) {
-                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
-            }
-        }
+        return array_map('intval', array_keys($blockadedNationIds));
     }
 
     /**
