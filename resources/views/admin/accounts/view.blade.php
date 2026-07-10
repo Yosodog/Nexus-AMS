@@ -129,7 +129,9 @@
                                 <td class="text-right">{{ number_format($transaction->$resource, 2) }}</td>
                             @endforeach
                             <td>
-                                @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
+                                @if($transaction->requiresBankReconciliation())
+                                    <x-badge value="Needs reconciliation" class="badge-error badge-sm" />
+                                @elseif($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
                                     <form method="POST"
                                           action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
                                           onsubmit="return confirm('Are you sure you want to refund this transaction?');">
@@ -186,12 +188,16 @@
                                 <td>{{ $transaction->pending_reason ?? 'Unspecified' }}</td>
                                 <td>
                                     @can('manage-accounts')
-                                        <form method="POST"
-                                              action="{{ route('admin.accounts.transactions.unstuck_refund', $transaction) }}"
-                                              onsubmit="return confirm('Unstick and refund this pending withdrawal?');">
-                                            @csrf
-                                            <x-button label="Unstick + Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-sm" />
-                                        </form>
+                                        @if($transaction->requiresBankReconciliation())
+                                            <x-badge value="Resolve on Accounts Dashboard" class="badge-error badge-sm" />
+                                        @else
+                                            <form method="POST"
+                                                  action="{{ route('admin.accounts.transactions.unstuck_refund', $transaction) }}"
+                                                  onsubmit="return confirm('Unstick and refund this pending withdrawal?');">
+                                                @csrf
+                                                <x-button label="Unstick + Refund" icon="o-arrow-uturn-left" type="submit" class="btn-error btn-outline btn-sm" />
+                                            </form>
+                                        @endif
                                     @endcan
                                 </td>
                             </tr>

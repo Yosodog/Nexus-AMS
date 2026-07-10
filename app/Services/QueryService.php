@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\AmbiguousMutationOutcomeException;
+use App\Exceptions\DefiniteMutationFailureException;
 use App\Exceptions\PWQueryFailedException;
 use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -195,7 +197,15 @@ class QueryService
             }
         }
 
-        throw new PWQueryFailedException('Initial query failed: '.json_encode($response));
+        $message = 'Initial query failed: '.json_encode($response);
+
+        if (! $allowTransientRetries) {
+            throw new AmbiguousMutationOutcomeException(
+                'GraphQL mutation returned an unusable response after the request was sent; the side effect may have succeeded: '.$message
+            );
+        }
+
+        throw new PWQueryFailedException($message);
     }
 
     /**
@@ -212,8 +222,21 @@ class QueryService
         array $headers = [],
         bool $allowTransientRetries = true
     ): PromiseInterface {
+        try {
+            $endpoint = $this->endpoint();
+        } catch (Throwable $exception) {
+            if (! $allowTransientRetries) {
+                throw new DefiniteMutationFailureException(
+                    'GraphQL mutation could not be prepared before dispatch.',
+                    previous: $exception,
+                );
+            }
+
+            throw $exception;
+        }
+
         return Http::async()->withHeaders($headers)->post(
-            $this->endpoint(),
+            $endpoint,
             ['query' => $query, 'variables' => $variables]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
@@ -281,6 +304,10 @@ class QueryService
                             $response->body() !== '' ? $response->body() : '[empty]'
                         );
 
+                        if (! $allowTransientRetries) {
+                            throw new DefiniteMutationFailureException($message);
+                        }
+
                         throw new PWQueryFailedException($message);
                     }
                 } catch (ConnectionException $e) {
@@ -311,7 +338,7 @@ class QueryService
     }
 
     /**
-     * @throws PWQueryFailedException
+     * @throws AmbiguousMutationOutcomeException
      */
     protected function throwAmbiguousMutationResponse(Response $response): never
     {
@@ -327,11 +354,11 @@ class QueryService
             'headers' => $response->headers(),
         ]);
 
-        throw new PWQueryFailedException($message);
+        throw new AmbiguousMutationOutcomeException($message);
     }
 
     /**
-     * @throws ConnectionException
+     * @throws AmbiguousMutationOutcomeException
      */
     protected function throwAmbiguousMutationRejection(mixed $reason): never
     {
@@ -341,7 +368,9 @@ class QueryService
             'reason' => $message,
         ]);
 
-        throw new ConnectionException("GraphQL mutation request failed without retry because the side effect may have succeeded: {$message}");
+        throw new AmbiguousMutationOutcomeException(
+            "GraphQL mutation request failed without retry because the side effect may have succeeded: {$message}"
+        );
     }
 
     protected function retryTransientResponse(

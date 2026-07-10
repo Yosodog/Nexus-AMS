@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Exceptions\AmbiguousMutationOutcomeException;
+use App\Exceptions\DefiniteMutationFailureException;
 use App\Exceptions\PWQueryFailedException;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
@@ -138,7 +140,7 @@ class QueryServiceTest extends FeatureTestCase
             ->setMutation()
             ->addFields(['id']);
 
-        $this->expectException(PWQueryFailedException::class);
+        $this->expectException(AmbiguousMutationOutcomeException::class);
         $this->expectExceptionMessage('GraphQL mutation failed with an ambiguous upstream response and was not retried');
 
         try {
@@ -168,7 +170,7 @@ class QueryServiceTest extends FeatureTestCase
             ->setMutation()
             ->addFields(['id']);
 
-        $this->expectException(PWQueryFailedException::class);
+        $this->expectException(AmbiguousMutationOutcomeException::class);
         $this->expectExceptionMessage('GraphQL mutation failed with an ambiguous upstream response and was not retried');
 
         try {
@@ -176,5 +178,45 @@ class QueryServiceTest extends FeatureTestCase
         } finally {
             Http::assertSentCount(1);
         }
+    }
+
+    public function test_send_query_classifies_client_rejection_as_definite_mutation_failure(): void
+    {
+        Http::fake([
+            '*' => Http::response(['errors' => [['message' => 'Invalid receiver']]], 422),
+        ]);
+
+        $service = new QueryService;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->setMutation()
+            ->addFields(['id']);
+
+        $this->expectException(DefiniteMutationFailureException::class);
+        $this->expectExceptionMessage('Query failed: status=422');
+
+        try {
+            $service->sendQuery($builder);
+        } finally {
+            Http::assertSentCount(1);
+        }
+    }
+
+    public function test_send_query_classifies_unusable_success_response_as_ambiguous_mutation_outcome(): void
+    {
+        Http::fake([
+            '*' => Http::response(['errors' => [['message' => 'Resolver failed after dispatch']]], 200),
+        ]);
+
+        $service = new QueryService;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->setMutation()
+            ->addFields(['id']);
+
+        $this->expectException(AmbiguousMutationOutcomeException::class);
+        $this->expectExceptionMessage('side effect may have succeeded');
+
+        $service->sendQuery($builder);
     }
 }
