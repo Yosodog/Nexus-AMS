@@ -263,9 +263,9 @@
                 @csrf
                 <input type="hidden" name="loan_id" id="loan_id">
                 <div class="space-y-3 mb-4">
-                    <x-input label="Loan Amount" type="number" step="0.01" name="amount" id="approve_amount" required />
+                    <x-input label="Loan Amount" type="number" step="0.01" min="0.01" name="amount" id="approve_amount" required />
                     <x-input label="Interest Rate (%)" type="number" step="0.01" min="0" max="100" name="interest_rate" id="approve_interest_rate" required />
-                    <x-input label="Term (Weeks)" type="number" min="0" max="52" name="term_weeks" id="approve_term_weeks" required />
+                    <x-input label="Term (Weeks)" type="number" min="1" max="52" name="term_weeks" id="approve_term_weeks" required />
                 </div>
                 <div class="modal-action">
                     <x-button label="Approve Loan" type="submit" icon="o-check-circle" class="btn-success" />
@@ -285,6 +285,7 @@
             document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
             document.getElementById('loan_id').value = loan.id;
             document.getElementById('approve_amount').value = loan.amount;
+            document.getElementById('approve_amount').max = loan.amount;
             const interestRate = loan.interest_rate ?? defaultLoanInterestRate;
             document.getElementById('approve_interest_rate').value = interestRate ?? '';
             document.getElementById('approve_term_weeks').value = loan.term_weeks;

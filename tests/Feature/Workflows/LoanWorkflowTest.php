@@ -13,8 +13,10 @@ use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
@@ -128,7 +130,7 @@ class LoanWorkflowTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.loans.approve', ['Loan' => $loan->id]), [
-                'amount' => 300000,
+                'amount' => 225000.50,
                 'interest_rate' => 6.5,
                 'term_weeks' => 16,
             ])
@@ -141,14 +143,14 @@ class LoanWorkflowTest extends TestCase
         $this->assertSame('approved', $loan->status);
         $this->assertNull($loan->pending_key);
         $this->assertNotNull($loan->approved_at);
-        $this->assertSame(300000.0, (float) $loan->amount);
-        $this->assertSame(300000.0, (float) $loan->remaining_balance);
-        $this->assertSame('300000.00', number_format((float) $account->money, 2, '.', ''));
+        $this->assertSame(225000.5, (float) $loan->amount);
+        $this->assertSame(225000.5, (float) $loan->remaining_balance);
+        $this->assertSame('225000.50', number_format((float) $account->money, 2, '.', ''));
 
         $this->assertDatabaseHas('manual_transactions', [
             'account_id' => $account->id,
             'admin_id' => $admin->id,
-            'money' => 300000,
+            'money' => 225000.5,
         ]);
 
         Notification::assertSentTo(
@@ -179,7 +181,7 @@ class LoanWorkflowTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.loans.approve', ['Loan' => $loan->id]), [
-                'amount' => 300000,
+                'amount' => 200000,
                 'interest_rate' => 6.5,
                 'term_weeks' => 16,
             ])
@@ -189,6 +191,51 @@ class LoanWorkflowTest extends TestCase
 
         $this->assertSame('pending', $loan->status);
         $this->assertSame(1, $loan->pending_key);
+    }
+
+    #[DataProvider('invalidApprovalAmountProvider')]
+    public function test_admin_cannot_approve_a_loan_with_an_invalid_amount(string $invalidAmount): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $loan = $this->createLoanFor($nation, $account, [
+            'status' => 'pending',
+            'pending_key' => 1,
+            'interest_rate' => null,
+            'approved_at' => null,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-loans');
+
+        $this->actingAs($admin)
+            ->post(route('admin.loans.approve', ['Loan' => $loan->id]), [
+                'amount' => $invalidAmount,
+                'interest_rate' => '6.5',
+                'term_weeks' => '16',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('amount');
+
+        $loan->refresh();
+        $account->refresh();
+
+        $this->assertSame('pending', $loan->status);
+        $this->assertSame(1, $loan->pending_key);
+        $this->assertSame(0.0, (float) $account->money);
+        $this->assertDatabaseMissing('manual_transactions', [
+            'account_id' => $account->id,
+        ]);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidApprovalAmountProvider(): array
+    {
+        return [
+            'zero' => ['0'],
+            'negative' => ['-0.01'],
+            'more than two decimal places' => ['1.001'],
+            'more than the requested amount' => ['250000.01'],
+        ];
     }
 
     public function test_admin_can_deny_a_pending_loan_application(): void
@@ -252,6 +299,132 @@ class LoanWorkflowTest extends TestCase
         $this->expectExceptionMessage('Only pending loans can be approved.');
 
         app(LoanService::class)->approveLoan($loan, 300000, 6.5, 16);
+    }
+
+    public function test_admin_can_update_another_members_loan_without_payment_history(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $loan = $this->createLoanFor($nation, $account);
+        $admin = $this->createAdminWithPermission('manage-loans');
+        $nextDueDate = now()->addDays(10)->toDateString();
+
+        $this->actingAs($admin)
+            ->post(route('admin.loans.update', ['Loan' => $loan->id]), [
+                'amount' => '200000.25',
+                'interest_rate' => '5.25',
+                'term_weeks' => '16',
+                'next_due_date' => $nextDueDate,
+                'remaining_balance' => '150000.10',
+            ])
+            ->assertRedirect(route('admin.loans'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $loan->refresh();
+
+        $this->assertSame(200000.25, (float) $loan->amount);
+        $this->assertSame(5.25, (float) $loan->interest_rate);
+        $this->assertSame(16, $loan->term_weeks);
+        $this->assertSame($nextDueDate, $loan->next_due_date->toDateString());
+        $this->assertSame(150000.1, (float) $loan->remaining_balance);
+        $this->assertGreaterThan(0, (float) $loan->scheduled_weekly_payment);
+    }
+
+    public function test_admin_cannot_update_their_own_loan(): void
+    {
+        [$admin, $nation, $account] = $this->createMemberWithAccount(777260, admin: true);
+        $admin = $this->attachAdminPermission($admin, 'manage-loans');
+        $loan = $this->createLoanFor($nation, $account);
+
+        $this->actingAs($admin)
+            ->post(route('admin.loans.update', ['Loan' => $loan->id]), [
+                'amount' => '1.00',
+                'interest_rate' => '0',
+                'term_weeks' => '52',
+                'next_due_date' => now()->addDays(10)->toDateString(),
+                'remaining_balance' => '0',
+            ])
+            ->assertForbidden();
+
+        $loan->refresh();
+
+        $this->assertSame(250000.0, (float) $loan->amount);
+        $this->assertSame(250000.0, (float) $loan->remaining_balance);
+        $this->assertSame(5.0, (float) $loan->interest_rate);
+        $this->assertSame('approved', $loan->status);
+    }
+
+    public function test_admin_can_mark_another_members_active_loan_as_paid(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $loan = $this->createLoanFor($nation, $account, [
+            'past_due_amount' => 100,
+            'accrued_interest_due' => 25,
+            'weekly_interest_paid' => 5,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-loans');
+
+        $this->allowExtendedLoanStatusesOnSqlite();
+
+        try {
+            $this->actingAs($admin)
+                ->post(route('admin.loans.markPaid', ['Loan' => $loan->id]))
+                ->assertRedirect(route('admin.loans'))
+                ->assertSessionHas('alert-type', 'success');
+        } finally {
+            $this->restoreLoanStatusChecksOnSqlite();
+        }
+
+        $loan->refresh();
+
+        $this->assertSame('paid', $loan->status);
+        $this->assertSame(0.0, (float) $loan->remaining_balance);
+        $this->assertSame(0.0, (float) $loan->past_due_amount);
+        $this->assertSame(0.0, (float) $loan->accrued_interest_due);
+        $this->assertSame(0.0, (float) $loan->weekly_interest_paid);
+        Notification::assertSentTo(
+            $nation,
+            LoanNotification::class,
+            fn (LoanNotification $notification): bool => $notification->status === 'paid'
+                && $notification->loan->is($loan)
+        );
+    }
+
+    public function test_admin_cannot_mark_their_own_loan_as_paid(): void
+    {
+        [$admin, $nation, $account] = $this->createMemberWithAccount(777261, admin: true);
+        $admin = $this->attachAdminPermission($admin, 'manage-loans');
+        $loan = $this->createLoanFor($nation, $account);
+
+        $this->actingAs($admin)
+            ->post(route('admin.loans.markPaid', ['Loan' => $loan->id]))
+            ->assertForbidden();
+
+        $loan->refresh();
+
+        $this->assertSame('approved', $loan->status);
+        $this->assertSame(250000.0, (float) $loan->remaining_balance);
+        Notification::assertNothingSent();
+    }
+
+    public function test_admin_cannot_mark_a_non_active_loan_as_paid(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        $loan = $this->createLoanFor($nation, $account, [
+            'status' => 'denied',
+            'approved_at' => null,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-loans');
+
+        $this->actingAs($admin)
+            ->post(route('admin.loans.markPaid', ['Loan' => $loan->id]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('loan');
+
+        $loan->refresh();
+
+        $this->assertSame('denied', $loan->status);
+        $this->assertSame(250000.0, (float) $loan->remaining_balance);
+        Notification::assertNothingSent();
     }
 
     public function test_repayment_allocates_interest_before_principal(): void
@@ -369,6 +542,44 @@ class LoanWorkflowTest extends TestCase
         [$admin] = $this->createMemberWithAccount(777299, admin: true);
 
         return $this->attachAdminPermission($admin, $permission);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createLoanFor(Nation $nation, Account $account, array $overrides = []): Loan
+    {
+        return Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 250000,
+            'term_weeks' => 12,
+            'status' => 'approved',
+            'pending_key' => null,
+            'remaining_balance' => 250000,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 22000,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
+            'interest_rate' => 5,
+            'approved_at' => now(),
+            'next_due_date' => now()->addWeek(),
+            ...$overrides,
+        ]);
+    }
+
+    private function allowExtendedLoanStatusesOnSqlite(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA ignore_check_constraints = ON');
+        }
+    }
+
+    private function restoreLoanStatusChecksOnSqlite(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA ignore_check_constraints = OFF');
+        }
     }
 
     private function attachAdminPermission(User $admin, string $permission): User

@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\FeatureTestCase;
 
 class LoanServiceTest extends FeatureTestCase
@@ -200,6 +201,55 @@ class LoanServiceTest extends FeatureTestCase
         $this->expectExceptionMessage('Only pending loans can be approved.');
 
         app(LoanService::class)->approveLoan($loan, 500, 10, 5);
+    }
+
+    #[DataProvider('invalidApprovalAmountProvider')]
+    public function test_approve_loan_rejects_invalid_amounts_inside_the_locked_service_path(float $invalidAmount): void
+    {
+        $nation = $this->createNationAndAccount();
+        $account = Account::query()->where('nation_id', $nation->id)->firstOrFail();
+        $loan = Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 500,
+            'remaining_balance' => 500,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 0,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
+            'interest_rate' => 10,
+            'term_weeks' => 5,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+
+        try {
+            app(LoanService::class)->approveLoan($loan, $invalidAmount, 10, 5);
+            $this->fail('Expected the approval amount to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount', $exception->errors());
+        }
+
+        $loan->refresh();
+        $account->refresh();
+
+        $this->assertSame('pending', $loan->status);
+        $this->assertSame(500.0, (float) $loan->amount);
+        $this->assertSame(500.0, (float) $loan->remaining_balance);
+        $this->assertSame(0.0, (float) $account->money);
+    }
+
+    /**
+     * @return array<string, array{float}>
+     */
+    public static function invalidApprovalAmountProvider(): array
+    {
+        return [
+            'zero' => [0.0],
+            'negative' => [-0.01],
+            'more than two decimal places' => [1.001],
+            'more than requested' => [500.01],
+        ];
     }
 
     public function test_deny_loan_rejects_non_pending_status_before_mutation(): void
