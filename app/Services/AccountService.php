@@ -74,12 +74,14 @@ class AccountService
                 'first' => 1000,
             ]);
         } catch (\Throwable $e) {
-            Log::warning('Unable to validate blockade status via P&W API; allowing withdrawal.', [
+            Log::warning('Unable to validate blockade status via P&W API; blocking withdrawal.', [
                 'nation_id' => $nationId,
-                'error' => $e->getMessage(),
+                'exception_class' => $e::class,
             ]);
 
-            return;
+            throw new UserErrorException(
+                'We could not verify your blockade status right now. No funds were moved; please try again shortly.'
+            );
         }
 
         foreach ($wars as $war) {

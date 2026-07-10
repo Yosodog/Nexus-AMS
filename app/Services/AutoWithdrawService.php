@@ -50,7 +50,7 @@ class AutoWithdrawService
             try {
                 AccountService::ensureNotBlockaded($nation->id);
             } catch (UserErrorException $e) {
-                Log::info('Auto withdraw skipped because nation is under blockade.', [
+                Log::info('Auto withdraw skipped because withdrawal eligibility could not be confirmed.', [
                     'nation_id' => $nation->id,
                     'message' => $e->getMessage(),
                 ]);
