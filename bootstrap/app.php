@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnforceTrustedHost;
 use App\Http\Middleware\PreventDisabledUsers;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UpdateLastActive;
@@ -19,6 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustHosts(
+            at: static function (): array {
+                $host = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+                return is_string($host) && $host !== ''
+                    ? ['^'.preg_quote($host).'$']
+                    : ['(?!)'];
+            },
+            subdomains: false,
+        );
+        $middleware->append(EnforceTrustedHost::class);
         $middleware->statefulApi();
         $middleware->prependToGroup('web', [
             AssignRequestId::class,
