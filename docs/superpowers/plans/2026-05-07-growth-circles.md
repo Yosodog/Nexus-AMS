@@ -6,12 +6,12 @@
 
 **Architecture:** Parallel service mirroring DirectDeposit's enroll/disenroll/audit shape, with a daily scheduled command that reads from `nation_profitability_snapshots` and credits resources to a member-selected internal `Account`. The two programs auto-switch on enrollment while preserving the original pre-program tax bracket.
 
-**Tech Stack:** Laravel 12, PHP 8.4, MySQL/MariaDB, Tailwind+DaisyUI (user side), Bootstrap+AdminLTE (admin side).
+**Tech Stack:** Laravel 13, PHP 8.5, MySQL/MariaDB, Tailwind CSS 4 + daisyUI 5 (user side), Bootstrap + AdminLTE (admin side).
 
 **Spec:** `docs/superpowers/specs/2026-05-07-growth-circles-design.md`
 
 **Project policy notes:**
-- **NO automated tests.** Per `CLAUDE.md`, this project does not use automated tests. Each task uses manual verification (artisan tinker, browser, log inspection) instead. Do not write or run PHPUnit/Pest tests.
+- **Automated tests are required.** Follow the current root `AGENTS.md`: use PHPUnit for supported behavior and keep browser coverage to a small Playwright smoke layer.
 - **Run Pint after every PHP change.** `./vendor/bin/pint` before committing.
 - **`config('key')` only.** Never use `env()` outside config files.
 - **Form Requests for validation.** Never inline.
@@ -2462,5 +2462,4 @@ After all chunks land:
 - [ ] Admin-side: settings save, enrollments table renders with live status, force-disenroll and reapply-bracket actions work.
 - [ ] No stray uncommitted changes; all PHP changes have been formatted with Pint.
 - [ ] Manual QA matches the verification list in spec §15.
-
 

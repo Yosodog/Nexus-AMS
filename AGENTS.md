@@ -4,7 +4,7 @@ This document applies to the entire repository. If you discover additional `AGEN
 subdirectories, follow the most specific guidance available.
 
 ## Project Overview
-- Nexus-AMS is a Laravel 12 / PHP 8.2 application. Backend domain logic lives in `app/`, database
+- Nexus-AMS is a Laravel 13 / PHP 8.5 application. Backend domain logic lives in `app/`, database
   migrations and seeders live in `database/`, and HTTP entry points are defined under `routes/`.
 - GraphQL data objects and resolvers live in `app/GraphQL`. They model the Politics & War API, so
   be mindful of the nullable typed properties and the `buildWithJSON` hydration helpers.
@@ -12,7 +12,8 @@ subdirectories, follow the most specific guidance available.
   JavaScript in `resources/js/app.js` and Tailwind + DaisyUI components in `resources/views`.
 - Environment configuration is managed through Laravel's config files in `config/`; never commit
   `.env` changes.
-- The frontend is separated with two sections: The user side, which is designed with Tailwind/DaisyUI 4, and the admin side, which is styled with Bootstrap and AdminLTE
+- The frontend is separated into two sections: the user side uses Tailwind CSS 4 and daisyUI 5,
+  while the admin side uses Bootstrap and AdminLTE.
 
 ## Workflow Expectations
 - Review the relevant files before editing and match the surrounding conventions (e.g. nullable
@@ -118,9 +119,9 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 ## Foundational Context
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.4.14
+- php - 8.5
 - laravel/fortify (FORTIFY) - v1
-- laravel/framework (LARAVEL) - v12
+- laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
 - laravel/pulse (PULSE) - v1
 - laravel/sanctum (SANCTUM) - v4
@@ -129,8 +130,8 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/mcp (MCP) - v0
 - laravel/pint (PINT) - v1
 - laravel/sail (SAIL) - v1
-- phpunit/phpunit (PHPUNIT) - v11
-- tailwindcss (TAILWINDCSS) - v3
+- phpunit/phpunit (PHPUNIT) - v12
+- tailwindcss (TAILWINDCSS) - v4
 
 
 ## Conventions
@@ -278,16 +279,16 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
 
 
-=== laravel/v12 rules ===
+=== laravel/v13 rules ===
 
-## Laravel 12
+## Laravel 13
 
 - Use the `search-docs` tool to get version specific documentation.
 - Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
 
-### Laravel 12 Structure
-- No middleware files in `app/Http/Middleware/`.
-- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
+### Laravel 13 Structure
+- Register middleware aliases, ordering, exceptions, and routing files in `bootstrap/app.php`.
+- Middleware classes may live in `app/Http/Middleware/` and must be registered through the application bootstrap when needed.
 - `bootstrap/providers.php` contains application specific service providers.
 - **No app\Console\Kernel.php** - use `bootstrap/app.php` or `routes/console.php` for console configuration.
 - **Commands auto-register** - files in `app/Console/Commands/` are automatically available and do not require manual registration.
@@ -434,9 +435,9 @@ document.addEventListener('livewire:init', function () {
 - If existing pages and components support dark mode, new pages and components must support dark mode in a similar way, typically using `dark:`.
 
 
-=== tailwindcss/v3 rules ===
+=== tailwindcss/v4 rules ===
 
-## Tailwind 3
+## Tailwind 4
 
-- Always use Tailwind CSS v3 - verify you're using only classes supported by this version.
+- Always use Tailwind CSS v4 and verify that utilities are supported by the installed version.
 </laravel-boost-guidelines>
