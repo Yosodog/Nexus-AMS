@@ -6,19 +6,18 @@ use App\Models\Grants;
 use App\Services\AllianceMembershipService;
 use App\Services\PendingRequestsService;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class AppHeader extends Component
 {
-    public function logout(): RedirectResponse
+    public function logout(): void
     {
         Auth::logout();
         session()->invalidate();
         session()->regenerateToken();
 
-        return redirect()->route('home');
+        $this->redirectRoute('home');
     }
 
     public function render(): View
