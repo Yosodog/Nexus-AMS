@@ -15,6 +15,14 @@ use Spatie\DbDumper\Compressors\GzipCompressor;
 $defaultBackupDisks = env('AWS_BUCKET') ? ['s3'] : ['local'];
 $configuredBackupDisks = array_values(array_filter(array_map('trim', explode(',', (string) env('BACKUP_DESTINATION_DISKS', implode(',', $defaultBackupDisks))))));
 $backupDisks = $configuredBackupDisks === [] ? $defaultBackupDisks : $configuredBackupDisks;
+$configuredNotificationEmail = trim((string) env('BACKUP_NOTIFICATION_EMAIL', ''));
+$notificationEmail = $configuredNotificationEmail !== ''
+    ? $configuredNotificationEmail
+    : (string) env('MAIL_FROM_ADDRESS', 'hello@example.com');
+$failureNotificationChannels = $configuredNotificationEmail === '' ? [] : ['mail'];
+$successNotificationChannels = $configuredNotificationEmail !== '' && filter_var(env('BACKUP_NOTIFY_ON_SUCCESS', false), FILTER_VALIDATE_BOOL)
+    ? ['mail']
+    : [];
 
 return [
     'backup' => [
@@ -45,20 +53,28 @@ return [
         'temporary_directory' => storage_path('app/backup-temp'),
         'password' => env('BACKUP_ARCHIVE_PASSWORD'),
         'encryption' => 'default',
-        'verify_backup' => false,
+        'verify_backup' => filter_var(env('BACKUP_VERIFY', true), FILTER_VALIDATE_BOOL),
         'tries' => 1,
         'retry_delay' => 0,
     ],
     'notifications' => [
         'notifications' => [
-            BackupHasFailedNotification::class => [],
-            UnhealthyBackupWasFoundNotification::class => [],
-            CleanupHasFailedNotification::class => [],
-            BackupWasSuccessfulNotification::class => [],
-            HealthyBackupWasFoundNotification::class => [],
-            CleanupWasSuccessfulNotification::class => [],
+            BackupHasFailedNotification::class => $failureNotificationChannels,
+            UnhealthyBackupWasFoundNotification::class => $failureNotificationChannels,
+            CleanupHasFailedNotification::class => $failureNotificationChannels,
+            BackupWasSuccessfulNotification::class => $successNotificationChannels,
+            HealthyBackupWasFoundNotification::class => $successNotificationChannels,
+            CleanupWasSuccessfulNotification::class => $successNotificationChannels,
         ],
         'notifiable' => Notifiable::class,
+        'failure_alerts_enabled' => $configuredNotificationEmail !== '',
+        'mail' => [
+            'to' => $notificationEmail,
+            'from' => [
+                'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Nexus AMS')),
+            ],
+        ],
     ],
     'monitor_backups' => [
         [
