@@ -8,19 +8,19 @@ test('home page renders', async ({ page }) => {
   await page.getByRole('link', { name: 'Apply' }).first().click();
 
   await expect(page).toHaveURL(/\/apply$/);
-  await expect(page.getByText('YosoNET Alliance Management System')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Your path into/i })).toBeVisible();
 });
 
 test('public login route and form actions are interactive', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Login' }).first().click();
+  await page.getByRole('link', { name: 'Sign in', exact: true }).first().click();
 
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Username').fill('nobody');
   await page.getByLabel('Password').fill('wrong-password');
-  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('button', { name: 'Sign in to member app' }).click();
 
-  await expect(page.getByText('We couldn’t sign you in.')).toBeVisible();
+  await expect(page.getByText(/We could not sign you in\./)).toBeVisible();
 });
 
 test('verified user can reach settings and api docs', async ({ page }) => {

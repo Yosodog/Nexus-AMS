@@ -24,10 +24,9 @@ Nexus AMS is built around day-to-day alliance operations rather than a single fe
 - PHP 8.5
 - Laravel 13
 - MySQL as the default and primary supported database path
-- Blade views for the UI
-- Tailwind CSS + DaisyUI 4 for the user-facing side
-- Bootstrap/AdminLTE for the admin side
-- Vite for frontend bundling
+- Blade and Livewire 3 for server-rendered UI and interaction
+- Tailwind CSS 4, DaisyUI 5, and MaryUI 2 across public, member, and admin surfaces
+- Vite 6 for frontend bundling
 - Sanctum, Fortify, Pulse, Telescope, and Laravel Boost
 - Optional companion services for Discord and GraphQL subscription ingestion
 
@@ -59,7 +58,7 @@ Minimum local requirements:
 
 - PHP 8.5+
 - Composer
-- Node.js 18+
+- Node.js 20+
 - MySQL 8+ or compatible MariaDB
 - Redis is optional locally, but recommended for production queue/cache/session workloads
 
@@ -129,18 +128,23 @@ This repo is not a generic CRUD Laravel app. The main conventions are:
 - [`app/Nel`](app/Nel): the NEL expression engine and related helpers
 - [`app/Console/Commands`](app/Console/Commands): scheduled and operational commands
 - [`resources/views`](resources/views): Blade views
-- [`resources/views/admin`](resources/views/admin): Bootstrap/AdminLTE admin UI
-- [`resources/views/user`](resources/views/user): user-facing UI
+- [`resources/views/layouts`](resources/views/layouts): unified public, member, staff, and error shells
+- [`resources/views/admin`](resources/views/admin): dense, permission-aware staff workspaces
+- [`resources/views/user`](resources/views/user): member overview, settings, and API reference
 - [`resources/js`](resources/js): Vite-compiled JavaScript entrypoints
+- [`resources/css/app.css`](resources/css/app.css): Tailwind 4 configuration, DaisyUI themes, and Nexus design primitives
 - [`routes/web.php`](routes/web.php): browser routes
 - [`routes/api.php`](routes/api.php): API routes, subs endpoints, and bot integrations
 - [`database/migrations`](database/migrations): schema changes
 - [`database/seeders`](database/seeders): baseline data
 
-Operationally, the app is split into two frontend surfaces:
+The frontend has three expressions of one design system:
 
-- User side: Tailwind + DaisyUI
-- Admin side: Bootstrap + AdminLTE
+- Public: editorial recruitment, application, and onboarding journeys
+- Member: approachable, task-focused alliance operations
+- Admin: denser, permission-scoped triage and decision workspaces
+
+All three use the same semantic light/dark themes, typography, control contracts, and accessibility foundation. The former Bootstrap/AdminLTE compatibility layer is not part of the active frontend architecture. See [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) before adding or changing UI.
 
 ## Important App Conventions
 
@@ -269,7 +273,7 @@ If you are using Codex, Claude, Cursor, or another coding agent on this repo, th
 6. Add or update automated tests when they protect intended, supported behavior. When a test fails, rule out fixture, fake, auth, and assertion issues before concluding the application behavior is wrong.
 7. Do not rely on a friendly `exists()` check alone for single-pending workflows. Preserve or add the `pending_key` database guard.
 8. Never commit secrets, `.env` edits, or generated frontend build output.
-9. When editing UI, preserve the repo split: Tailwind/DaisyUI for user views, Bootstrap/AdminLTE for admin views.
+9. When editing UI, follow the unified Tailwind 4/DaisyUI 5 system in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md); do not reintroduce Bootstrap/AdminLTE compatibility classes.
 10. When a change affects queues, cron, caches, or deployment behavior, document the operational impact.
 
 For humans working with AI agents, the highest-leverage pattern is:

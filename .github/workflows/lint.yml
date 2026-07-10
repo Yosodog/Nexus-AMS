@@ -92,8 +92,6 @@ jobs:
         run: composer test:integration
 
   browser-smoke:
-    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    continue-on-error: true
     runs-on: ubuntu-latest
     needs: phpunit-fast
     steps:
@@ -121,3 +119,5 @@ jobs:
 
       - name: Run browser smoke suite
         run: npm run test:browser
+        env:
+          PLAYWRIGHT_PHP_COMMAND: php

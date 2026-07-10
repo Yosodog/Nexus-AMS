@@ -76,7 +76,7 @@ Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 
 if (app()->environment('testing')) {
     Route::get('/_browser/login/{persona}', [BrowserTestController::class, 'login'])
-        ->whereIn('persona', ['admin', 'member'])
+        ->whereIn('persona', ['admin', 'limited', 'member'])
         ->name('browser.login');
 }
 

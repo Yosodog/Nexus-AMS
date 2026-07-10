@@ -34,6 +34,7 @@ class BrowserTestController extends Controller
 
         return match ($persona) {
             'admin' => '/admin/users',
+            'limited' => '/admin/users',
             default => '/user/settings',
         };
     }
