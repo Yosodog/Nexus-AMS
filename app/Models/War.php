@@ -7,6 +7,7 @@ use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use InvalidArgumentException;
 use stdClass;
 
 class War extends Model
@@ -21,15 +22,26 @@ class War extends Model
             $war = (array) $war;
         }
 
-        // Normalize if deprecated field is present
+        if (! array_key_exists('id', $war) || ! is_numeric($war['id']) || (int) $war['id'] < 1) {
+            throw new InvalidArgumentException('A positive war ID is required.');
+        }
+
+        $warId = (int) $war['id'];
+        unset($war['id']);
+
         if (isset($war['att_soldiers_killed'])) {
             $war = self::normalizeDeprecatedKilledFields($war);
         }
 
-        $war['date'] = self::normalizeApiTimestamp($war['date'] ?? null);
-        $war['end_date'] = self::normalizeApiTimestamp($war['end_date'] ?? null);
+        if (array_key_exists('date', $war)) {
+            $war['date'] = self::normalizeApiTimestamp($war['date']);
+        }
 
-        return self::updateOrCreate(['id' => $war['id']], $war);
+        if (array_key_exists('end_date', $war)) {
+            $war['end_date'] = self::normalizeApiTimestamp($war['end_date']);
+        }
+
+        return self::updateOrCreate(['id' => $warId], $war);
     }
 
     public static function normalizeApiTimestamp(?string $value): ?string
