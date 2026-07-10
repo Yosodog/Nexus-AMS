@@ -4,11 +4,13 @@ namespace App\Support;
 
 use App\Models\DiscordAccount;
 use App\Models\Nation;
+use App\Models\Page;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
@@ -23,12 +25,27 @@ class BrowserTestBootstrap
     {
         $this->guardAgainstNonTestDatabases();
 
+        $database = (string) config('database.connections.sqlite.database');
+        if (! File::exists($database)) {
+            File::ensureDirectoryExists(dirname($database));
+
+            if (File::put($database, '') === false) {
+                throw new RuntimeException("Browser test bootstrap could not create database [{$database}].");
+            }
+        }
+
         $this->recreateSchema();
 
         return DB::transaction(function (): array {
             Setting::query()->create(['key' => 'require_discord_verification', 'value' => '1']);
             Setting::query()->create(['key' => 'require_mfa_all_users', 'value' => '0']);
             Setting::query()->create(['key' => 'require_mfa_admins', 'value' => '0']);
+
+            Page::query()->create([
+                'slug' => 'apply',
+                'status' => Page::STATUS_PUBLISHED,
+                'cached_html' => '<h1>'.e(config('app.name')).' Alliance Management System</h1>',
+            ]);
 
             $memberNation = Nation::query()->create([
                 'id' => 200001,
@@ -109,6 +126,7 @@ class BrowserTestBootstrap
         $this->createUsersTable();
         $this->createNationsTable();
         $this->createSettingsTable();
+        $this->createPagesTable();
         $this->createDiscordAccountsTable();
         $this->createTrustedDevicesTable();
         $this->createPersonalAccessTokensTable();
@@ -160,6 +178,7 @@ class BrowserTestBootstrap
             'grant_applications',
             'city_grant_requests',
             'transactions',
+            'pages',
             'settings',
             'users',
             'nations',
@@ -209,6 +228,19 @@ class BrowserTestBootstrap
             $table->id();
             $table->string('key')->unique();
             $table->text('value')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function createPagesTable(): void
+    {
+        Schema::create('pages', function (Blueprint $table): void {
+            $table->id();
+            $table->string('slug')->unique();
+            $table->string('status')->default('draft');
+            $table->json('draft')->nullable();
+            $table->json('published')->nullable();
+            $table->longText('cached_html')->nullable();
             $table->timestamps();
         });
     }
