@@ -10,6 +10,7 @@ use App\Services\QueryService;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\FeatureTestCase;
 
 class QueryServiceTest extends FeatureTestCase
@@ -218,5 +219,46 @@ class QueryServiceTest extends FeatureTestCase
         $this->expectExceptionMessage('side effect may have succeeded');
 
         $service->sendQuery($builder);
+    }
+
+    public function test_error_diagnostics_redact_api_credentials(): void
+    {
+        $apiKey = 'pw-api-secret-value';
+        $mutationKey = 'pw-mutation-secret-value';
+        config()->set('services.pw.api_key', $apiKey);
+        config()->set('services.pw.mutation_key', $mutationKey);
+        Log::spy();
+        Http::fake([
+            '*' => Http::response(
+                ['errors' => [['message' => "Rejected api_key={$apiKey} token={$mutationKey}"]]],
+                422,
+                ['X-Request-ID' => 'request-'.$apiKey, 'X-Api-Key' => $apiKey],
+            ),
+        ]);
+
+        $service = new QueryService;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->setMutation()
+            ->addFields(['id']);
+
+        try {
+            $service->sendQuery($builder);
+            $this->fail('The rejected mutation should throw a definite failure.');
+        } catch (DefiniteMutationFailureException $exception) {
+            $this->assertStringNotContainsString($apiKey, $exception->getMessage());
+            $this->assertStringNotContainsString($mutationKey, $exception->getMessage());
+            $this->assertStringContainsString('[redacted]', $exception->getMessage());
+        }
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(function (string $message, array $context) use ($apiKey, $mutationKey): bool {
+                $diagnostic = $message.json_encode($context, JSON_THROW_ON_ERROR);
+
+                return ! str_contains($diagnostic, $apiKey)
+                    && ! str_contains($diagnostic, $mutationKey)
+                    && str_contains($diagnostic, '[redacted]');
+            });
     }
 }
