@@ -105,6 +105,7 @@
 
                 <form method="POST" action="{{ route('admin.manual-disbursements.war-aid') }}" class="space-y-4">
                     @csrf
+                    <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block space-y-2">

@@ -99,6 +99,7 @@
             <x-slot:subtitle>Sends a grant directly to a nation and bypasses one-time or pending application checks.</x-slot:subtitle>
             <form method="POST" action="{{ route('admin.manual-disbursements.grants') }}">
                 @csrf
+                <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <label class="label font-semibold text-sm">Grant</label>

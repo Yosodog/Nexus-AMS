@@ -203,6 +203,7 @@
             <x-slot:subtitle>Creates and approves a loan immediately, bypassing borrower eligibility and duplicate checks.</x-slot:subtitle>
             <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}">
                 @csrf
+                <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                     <x-input label="Nation ID" type="number" name="nation_id" required min="1" :value="old('nation_id')" />
                     <x-input label="Account ID" type="number" name="account_id" required min="1" :value="old('account_id')" hint="Must belong to the nation above." />
