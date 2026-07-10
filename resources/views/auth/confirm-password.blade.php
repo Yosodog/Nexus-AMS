@@ -37,7 +37,7 @@
                         type="password"
                         id="confirm-current-password"
                         name="password"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('password')])
+                        @class(['input w-full', 'input-error' => $errors->has('password')])
                         autocomplete="current-password"
                         aria-describedby="confirm-current-password-help{{ $errors->has('password') ? ' confirm-current-password-error' : '' }}"
                         @if($errors->has('password')) aria-invalid="true" @endif

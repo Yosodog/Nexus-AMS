@@ -49,7 +49,7 @@
                             id="two-factor-code"
                             name="code"
                             value="{{ old('code') }}"
-                            @class(['input input-bordered w-full font-mono tracking-[0.2em]', 'input-error' => $errors->has('code')])
+                            @class(['input w-full font-mono tracking-[0.2em]', 'input-error' => $errors->has('code')])
                             inputmode="numeric"
                             autocomplete="one-time-code"
                             aria-describedby="two-factor-code-help{{ $errors->has('code') ? ' two-factor-code-error' : '' }}"
@@ -76,7 +76,7 @@
                             id="two-factor-recovery-code"
                             name="recovery_code"
                             value="{{ old('recovery_code') }}"
-                            @class(['input input-bordered w-full font-mono', 'input-error' => $errors->has('recovery_code')])
+                            @class(['input w-full font-mono', 'input-error' => $errors->has('recovery_code')])
                             autocomplete="one-time-code"
                             autocapitalize="off"
                             spellcheck="false"

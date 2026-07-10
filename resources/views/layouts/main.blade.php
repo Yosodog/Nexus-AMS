@@ -37,6 +37,8 @@
 
     <x-footer />
 
+    <x-confirmation-dialog />
+
     @livewireScripts
     @stack('scripts')
 

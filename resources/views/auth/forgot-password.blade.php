@@ -60,7 +60,7 @@
                         value="{{ old('nation_id') }}"
                         min="1"
                         inputmode="numeric"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('nation_id')])
+                        @class(['input w-full', 'input-error' => $errors->has('nation_id')])
                         aria-describedby="recovery-nation-id-help{{ $errors->has('nation_id') ? ' recovery-nation-id-error' : '' }}"
                         @if($errors->has('nation_id')) aria-invalid="true" @endif
                         required

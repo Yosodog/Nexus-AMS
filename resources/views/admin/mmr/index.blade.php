@@ -9,7 +9,7 @@
         $weightTotal = array_sum($weights ?? []);
     @endphp
 
-    <x-header title="Minimum Military Requirements" separator>
+    <x-header title="Minimum Military Requirements" separator use-h1>
         <x-slot:subtitle>Manage tier definitions, weighting, assistant settings, and member readiness in one place.</x-slot:subtitle>
     </x-header>
 
@@ -30,7 +30,7 @@
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">City count</span>
-                        <input type="number" id="city_count" name="city_count" class="input input-bordered w-full" placeholder="e.g. 15" min="1" required>
+                        <input type="number" id="city_count" name="city_count" class="input w-full" placeholder="e.g. 15" min="1" required>
                     </label>
 
                     <div class="flex flex-wrap gap-2">
@@ -50,13 +50,13 @@
             <x-card title="Tier Housekeeping">
                 <p class="mb-4 text-sm text-base-content/60">Remove tiers you no longer use. Tier 0 is protected.</p>
 
-                <form method="POST" action="{{ route('admin.mmr.destroy') }}" class="space-y-4" onsubmit="return confirm('Are you sure you want to delete this tier?')">
+                <form method="POST" action="{{ route('admin.mmr.destroy') }}" class="space-y-4" data-confirm="Delete this MMR tier? This cannot be undone." data-confirm-title="Delete MMR tier?" data-confirm-label="Delete tier" data-confirm-tone="error">
                     @csrf
                     @method('DELETE')
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Select tier to delete</span>
-                        <select name="tier_id" id="tier_id" class="select select-bordered w-full" required>
+                        <select name="tier_id" id="tier_id" class="select w-full" required>
                             <option disabled selected value="">Choose a city count</option>
                             @foreach($tiers as $tier)
                                 @if($tier->city_count !== 0)
@@ -118,12 +118,12 @@
                                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                         @foreach($resourceFields as $field)
                                             <label class="block space-y-2">
-                                                <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                                <span class="text-sm font-medium capitalize">{{ $field }}</span>
                                                 <input
                                                     type="number"
                                                     name="tiers[{{ $tier->id }}][{{ $field }}]"
                                                     value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                    class="input input-bordered w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
+                                                    class="input w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
                                                     min="0"
                                                     inputmode="numeric"
                                                     placeholder="{{ ucfirst($field) }}"
@@ -144,12 +144,12 @@
                                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                         @foreach($readinessFields as $field)
                                             <label class="block space-y-2">
-                                                <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
+                                                <span class="text-sm font-medium capitalize">{{ $field }}</span>
                                                 <input
                                                     type="number"
                                                     name="tiers[{{ $tier->id }}][{{ $field }}]"
                                                     value="{{ old("tiers.{$tier->id}.{$field}", $tier->$field) }}"
-                                                    class="input input-bordered w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
+                                                    class="input w-full @error("tiers.{$tier->id}.{$field}") input-error @enderror"
                                                     min="0"
                                                     inputmode="numeric"
                                                     placeholder="{{ ucfirst($field) }}"
@@ -222,8 +222,8 @@
                             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                 @foreach($resourceFields as $field)
                                     <label class="block space-y-2">
-                                        <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
-                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input input-bordered w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
+                                        <span class="text-sm font-medium capitalize">{{ $field }}</span>
+                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
                                         @error("resources.{$field}")
                                             <span class="text-xs text-error">{{ $message }}</span>
                                         @enderror
@@ -240,8 +240,8 @@
                             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                 @foreach($readinessFields as $field)
                                     <label class="block space-y-2">
-                                        <span class="text-sm font-medium text-capitalize">{{ $field }}</span>
-                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input input-bordered w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
+                                        <span class="text-sm font-medium capitalize">{{ $field }}</span>
+                                        <input type="number" name="resources[{{ $field }}]" value="{{ old("resources.{$field}") }}" class="input w-full @error("resources.{$field}") input-error @enderror" min="0" inputmode="numeric" placeholder="Leave blank">
                                         @error("resources.{$field}")
                                             <span class="text-xs text-error">{{ $message }}</span>
                                         @enderror
@@ -281,7 +281,7 @@
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     @foreach($resourceFields as $resource)
                         <label class="block space-y-2">
-                            <span class="flex justify-between text-sm font-medium text-capitalize">
+                            <span class="flex justify-between text-sm font-medium capitalize">
                                 <span>{{ $resource }}</span>
                                 <span class="text-base-content/60">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
                             </span>
@@ -289,7 +289,7 @@
                                 <input
                                     type="number"
                                     name="weights[{{ $resource }}]"
-                                    class="input input-bordered join-item w-full @error("weights.{$resource}") input-error @enderror mmr-weight-input"
+                                    class="input join-item w-full @error("weights.{$resource}") input-error @enderror mmr-weight-input"
                                     step="0.01"
                                     min="0"
                                     value="{{ old("weights.{$resource}", $weights[$resource] ?? 0) }}"
@@ -326,7 +326,7 @@
 
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="mmrEnabledToggle" name="enabled" value="1" @checked(\App\Services\SettingService::getMMRAssistantEnabled())>
-                    <span class="label-text">
+                    <span class="">
                         Enable MMR Assistant Globally
                         <span class="badge ml-2 {{ \App\Services\SettingService::getMMRAssistantEnabled() ? 'badge-success' : 'badge-ghost' }}">
                             {{ \App\Services\SettingService::getMMRAssistantEnabled() ? 'Enabled' : 'Disabled' }}
@@ -335,7 +335,7 @@
                 </label>
 
                 <div class="overflow-x-auto rounded-box border border-base-300">
-                    <table class="table table-zebra">
+                    <table class="table table-zebra" data-sortable="false">
                         <thead>
                         <tr>
                             <th>Resource</th>
@@ -346,12 +346,12 @@
                         <tbody>
                         @foreach(\App\Models\MMRSetting::orderBy('resource')->get() as $setting)
                             <tr>
-                                <td class="text-capitalize">{{ $setting->resource }}</td>
+                                <td class="capitalize">{{ $setting->resource }}</td>
                                 <td>
                                     <input type="checkbox" class="checkbox checkbox-sm" name="resources[{{ $setting->resource }}][enabled]" value="1" @checked($setting->enabled)>
                                 </td>
                                 <td>
-                                    <input type="number" name="resources[{{ $setting->resource }}][surcharge_pct]" class="input input-bordered input-sm w-full max-w-32" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}" value="{{ $setting->surcharge_pct }}">
+                                    <input type="number" name="resources[{{ $setting->resource }}][surcharge_pct]" class="input input-sm w-full max-w-32" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}" value="{{ $setting->surcharge_pct }}">
                                 </td>
                             </tr>
                         @endforeach
@@ -366,8 +366,8 @@
                     </button>
 
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-sm text-base-content/60">Set all surcharges to</span>
-                        <input type="number" id="setAllSurcharge" class="input input-bordered input-sm w-28" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}">
+                        <label class="text-sm text-base-content/60" for="setAllSurcharge">Set all surcharges to</label>
+                        <input type="number" id="setAllSurcharge" class="input input-sm w-28" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}">
                         <button type="button" class="btn btn-outline btn-sm" id="applySurchargeToAll">Apply</button>
                     </div>
                 </div>
@@ -389,7 +389,7 @@
 
         <x-card>
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra mmr-table" id="mmrResourceTable">
+                <table class="table table-zebra mmr-table" id="mmrResourceTable" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Leader</th>
@@ -459,7 +459,7 @@
 
         <x-card>
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra mmr-table" id="mmrMilitaryTable">
+                <table class="table table-zebra mmr-table" id="mmrMilitaryTable" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Leader</th>

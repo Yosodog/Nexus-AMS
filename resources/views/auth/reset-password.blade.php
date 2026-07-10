@@ -54,7 +54,7 @@
                         type="password"
                         id="reset-password"
                         name="password"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('password')])
+                        @class(['input w-full', 'input-error' => $errors->has('password')])
                         autocomplete="new-password"
                         aria-describedby="reset-password-help{{ $errors->has('password') ? ' reset-password-error' : '' }}"
                         @if($errors->has('password')) aria-invalid="true" @endif
@@ -73,7 +73,7 @@
                         type="password"
                         id="reset-password-confirmation"
                         name="password_confirmation"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('password_confirmation')])
+                        @class(['input w-full', 'input-error' => $errors->has('password_confirmation')])
                         autocomplete="new-password"
                         aria-describedby="reset-password-confirmation-help{{ $errors->has('password_confirmation') ? ' reset-password-confirmation-error' : '' }}"
                         @if($errors->has('password_confirmation')) aria-invalid="true" @endif

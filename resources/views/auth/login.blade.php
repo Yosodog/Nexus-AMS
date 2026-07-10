@@ -58,7 +58,7 @@
                         id="login-name"
                         name="name"
                         value="{{ old('name') }}"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('name')])
+                        @class(['input w-full', 'input-error' => $errors->has('name')])
                         autocomplete="username"
                         aria-describedby="login-name-help{{ $errors->has('name') ? ' login-name-error' : '' }}"
                         @if($errors->has('name')) aria-invalid="true" @endif
@@ -77,7 +77,7 @@
                         type="password"
                         id="login-password"
                         name="password"
-                        @class(['input input-bordered w-full', 'input-error' => $errors->has('password')])
+                        @class(['input w-full', 'input-error' => $errors->has('password')])
                         autocomplete="current-password"
                         aria-describedby="login-password-help{{ $errors->has('password') ? ' login-password-error' : '' }}"
                         @if($errors->has('password')) aria-invalid="true" @endif

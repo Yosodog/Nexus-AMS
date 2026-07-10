@@ -3,7 +3,7 @@
 @section('title', 'Recruitment Messaging')
 
 @section('content')
-    <x-header title="Recruitment Messaging" separator>
+    <x-header title="Recruitment Messaging" separator use-h1>
         <x-slot:subtitle>Manage the primary and follow-up messages sent to eligible recruits.</x-slot:subtitle>
     </x-header>
 
@@ -114,7 +114,7 @@
 
             <x-card title="Latest Recruited Nations">
                 <div class="overflow-x-auto rounded-box border border-base-300">
-                    <table class="table table-zebra">
+                    <table class="table table-zebra" data-sortable="false">
                         <thead>
                         <tr>
                             <th>Leader</th>

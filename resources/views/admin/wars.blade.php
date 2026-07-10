@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section("content")
-    <x-header title="Ongoing Wars" separator>
+    <x-header title="Ongoing Wars" separator use-h1>
         <x-slot:subtitle>Track active conflicts, recent launch tempo, and damage patterns across the alliance battlefield.</x-slot:subtitle>
     </x-header>
 
@@ -55,7 +55,7 @@
     <x-card class="mt-4">
         <x-slot:title>Active Wars</x-slot:title>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-striped">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th>ID</th>

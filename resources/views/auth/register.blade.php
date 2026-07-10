@@ -58,7 +58,7 @@
                                 id="register-name"
                                 name="name"
                                 value="{{ old('name') }}"
-                                @class(['input input-bordered w-full', 'input-error' => $errors->has('name')])
+                                @class(['input w-full', 'input-error' => $errors->has('name')])
                                 autocomplete="username"
                                 aria-describedby="register-name-help{{ $errors->has('name') ? ' register-name-error' : '' }}"
                                 @if($errors->has('name')) aria-invalid="true" @endif
@@ -78,7 +78,7 @@
                                 id="register-email"
                                 name="email"
                                 value="{{ old('email') }}"
-                                @class(['input input-bordered w-full', 'input-error' => $errors->has('email')])
+                                @class(['input w-full', 'input-error' => $errors->has('email')])
                                 autocomplete="email"
                                 aria-describedby="register-email-help{{ $errors->has('email') ? ' register-email-error' : '' }}"
                                 @if($errors->has('email')) aria-invalid="true" @endif
@@ -99,7 +99,7 @@
                                 value="{{ old('nation_id') }}"
                                 min="1"
                                 inputmode="numeric"
-                                @class(['input input-bordered w-full', 'input-error' => $errors->has('nation_id')])
+                                @class(['input w-full', 'input-error' => $errors->has('nation_id')])
                                 aria-describedby="register-nation-id-help{{ $errors->has('nation_id') ? ' register-nation-id-error' : '' }}"
                                 @if($errors->has('nation_id')) aria-invalid="true" @endif
                                 required
@@ -123,7 +123,7 @@
                                 type="password"
                                 id="register-password"
                                 name="password"
-                                @class(['input input-bordered w-full', 'input-error' => $errors->has('password')])
+                                @class(['input w-full', 'input-error' => $errors->has('password')])
                                 autocomplete="new-password"
                                 aria-describedby="register-password-help{{ $errors->has('password') ? ' register-password-error' : '' }}"
                                 @if($errors->has('password')) aria-invalid="true" @endif
@@ -141,7 +141,7 @@
                                 type="password"
                                 id="register-password-confirmation"
                                 name="password_confirmation"
-                                @class(['input input-bordered w-full', 'input-error' => $errors->has('password_confirmation')])
+                                @class(['input w-full', 'input-error' => $errors->has('password_confirmation')])
                                 autocomplete="new-password"
                                 aria-describedby="register-password-confirmation-help{{ $errors->has('password_confirmation') ? ' register-password-confirmation-error' : '' }}"
                                 @if($errors->has('password_confirmation')) aria-invalid="true" @endif

@@ -6,7 +6,7 @@
         $activeMembers = $members->where('is_active', true);
     @endphp
 
-    <x-header title="Payroll" separator>
+    <x-header title="Payroll" separator use-h1>
         <x-slot:subtitle>Manage weekly payroll grades and member payouts.</x-slot:subtitle>
         @can('edit_payroll')
             <x-slot:actions>
@@ -51,7 +51,7 @@
     <div class="grid gap-6">
         <x-card title="Payroll Grades" :subtitle="$grades->count() . ' grades'">
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra table-sm">
+                <table class="table table-zebra table-sm" data-sortable="true">
                     <thead>
                     <tr>
                         <th>Name</th>
@@ -59,7 +59,7 @@
                         <th>Daily</th>
                         <th>Status</th>
                         <th>Members</th>
-                        <th class="text-right">Actions</th>
+                        <th class="text-right" data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -87,7 +87,10 @@
                                         <form
                                             method="POST"
                                             action="{{ route('admin.payroll.grades.destroy', $grade) }}"
-                                            onsubmit="return confirm('Remove this payroll grade?');"
+                                            data-confirm="Remove this payroll grade?"
+                                            data-confirm-title="Remove payroll grade?"
+                                            data-confirm-label="Remove grade"
+                                            data-confirm-tone="error"
                                         >
                                             @csrf
                                             @method('DELETE')
@@ -109,7 +112,7 @@
 
         <x-card title="Payroll Members" :subtitle="$members->count() . ' records'">
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra table-sm">
+                <table class="table table-zebra table-sm" data-sortable="true">
                     <thead>
                     <tr>
                         <th>Nation</th>
@@ -118,7 +121,7 @@
                         <th>Weekly</th>
                         <th>Daily</th>
                         <th>Status</th>
-                        <th class="text-right">Actions</th>
+                        <th class="text-right" data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -156,7 +159,10 @@
                                         <form
                                             method="POST"
                                             action="{{ route('admin.payroll.members.destroy', $member) }}"
-                                            onsubmit="return confirm('Remove this member from payroll?');"
+                                            data-confirm="Remove this member from payroll?"
+                                            data-confirm-title="Remove payroll member?"
+                                            data-confirm-label="Remove member"
+                                            data-confirm-tone="error"
                                         >
                                             @csrf
                                             @method('DELETE')
@@ -178,7 +184,7 @@
     </div>
 
     @can('edit_payroll')
-        <dialog id="createGradeModal" class="modal">
+        <dialog id="createGradeModal" class="modal" aria-label="Create payroll grade">
             <div class="modal-box max-w-2xl">
                 <form method="POST" action="{{ route('admin.payroll.grades.store') }}" class="space-y-4">
                     @csrf
@@ -189,22 +195,22 @@
                             <h3 class="text-lg font-semibold">Add Payroll Grade</h3>
                             <p class="text-sm text-base-content/60">Create a reusable weekly amount for payroll members.</p>
                         </div>
-                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createGradeModal').close()">✕</button>
+                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createGradeModal').close()" aria-label="Close grade creation dialog">✕</button>
                     </div>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Name</span>
-                        <input type="text" class="input input-bordered" id="grade_name" name="name" value="{{ old('name') }}" required>
+                        <input type="text" class="input" id="grade_name" name="name" value="{{ old('name') }}" required>
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Weekly Amount</span>
-                        <input type="number" class="input input-bordered" id="grade_weekly" name="weekly_amount" min="0" step="0.01" value="{{ old('weekly_amount') }}" required>
+                        <input type="number" class="input" id="grade_weekly" name="weekly_amount" min="0" step="0.01" value="{{ old('weekly_amount') }}" required>
                     </label>
 
                     <label class="label cursor-pointer justify-start gap-3">
                         <input class="toggle toggle-primary" type="checkbox" id="grade_enabled" name="is_enabled" value="1" @checked(old('is_enabled', true))>
-                        <span class="label-text">Enabled</span>
+                        <span class="">Enabled</span>
                     </label>
 
                     <div class="flex justify-end gap-2">
@@ -216,7 +222,7 @@
             <form method="dialog" class="modal-backdrop"><button>close</button></form>
         </dialog>
 
-        <dialog id="createMemberModal" class="modal">
+        <dialog id="createMemberModal" class="modal" aria-label="Add payroll member">
             <div class="modal-box max-w-2xl">
                 <form method="POST" action="{{ route('admin.payroll.members.store') }}" class="space-y-4">
                     @csrf
@@ -227,17 +233,17 @@
                             <h3 class="text-lg font-semibold">Add Payroll Member</h3>
                             <p class="text-sm text-base-content/60">Attach a nation to one of the configured payroll grades.</p>
                         </div>
-                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createMemberModal').close()">✕</button>
+                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createMemberModal').close()" aria-label="Close payroll member dialog">✕</button>
                     </div>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Nation ID</span>
-                        <input type="number" class="input input-bordered" id="member_nation" name="nation_id" min="1" value="{{ old('nation_id') }}" required>
+                        <input type="number" class="input" id="member_nation" name="nation_id" min="1" value="{{ old('nation_id') }}" required>
                     </label>
 
                     <label class="block space-y-2">
                         <span class="text-sm font-medium">Payroll Grade</span>
-                        <select class="select select-bordered" id="member_grade" name="payroll_grade_id" required>
+                        <select class="select" id="member_grade" name="payroll_grade_id" required>
                             <option value="">Select a grade</option>
                             @foreach ($grades as $grade)
                                 <option value="{{ $grade->id }}" @selected((int) old('payroll_grade_id') === $grade->id)>
@@ -262,7 +268,7 @@
                     ? (bool) old('is_enabled', $grade->is_enabled)
                     : $grade->is_enabled;
             @endphp
-            <dialog id="editGradeModal-{{ $grade->id }}" class="modal">
+            <dialog id="editGradeModal-{{ $grade->id }}" class="modal" aria-label="Edit payroll grade {{ $grade->name }}">
                 <div class="modal-box max-w-2xl">
                     <form method="POST" action="{{ route('admin.payroll.grades.update', $grade) }}" class="space-y-4">
                         @csrf
@@ -274,14 +280,14 @@
                                 <h3 class="text-lg font-semibold">Edit {{ $grade->name }}</h3>
                                 <p class="text-sm text-base-content/60">Update the weekly amount or disable this grade.</p>
                             </div>
-                            <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editGradeModal-{{ $grade->id }}').close()">✕</button>
+                            <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editGradeModal-{{ $grade->id }}').close()" aria-label="Close grade editing dialog">✕</button>
                         </div>
 
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Name</span>
                             <input
                                 type="text"
-                                class="input input-bordered"
+                                class="input"
                                 id="grade_name_{{ $grade->id }}"
                                 name="name"
                                 value="{{ $modalContext === 'editGradeModal-' . $grade->id ? old('name') : $grade->name }}"
@@ -293,7 +299,7 @@
                             <span class="text-sm font-medium">Weekly Amount</span>
                             <input
                                 type="number"
-                                class="input input-bordered"
+                                class="input"
                                 id="grade_weekly_{{ $grade->id }}"
                                 name="weekly_amount"
                                 min="0"
@@ -305,7 +311,7 @@
 
                         <label class="label cursor-pointer justify-start gap-3">
                             <input class="toggle toggle-primary" type="checkbox" id="grade_enabled_{{ $grade->id }}" name="is_enabled" value="1" @checked($editEnabled)>
-                            <span class="label-text">Enabled</span>
+                            <span class="">Enabled</span>
                         </label>
 
                         <div class="flex justify-end gap-2">
@@ -327,7 +333,7 @@
                     ? (bool) old('is_active', $member->is_active)
                     : $member->is_active;
             @endphp
-            <dialog id="editMemberModal-{{ $member->id }}" class="modal">
+            <dialog id="editMemberModal-{{ $member->id }}" class="modal" aria-label="Edit payroll member {{ $member->nation_id }}">
                 <div class="modal-box max-w-2xl">
                     <form method="POST" action="{{ route('admin.payroll.members.update', $member) }}" class="space-y-4">
                         @csrf
@@ -339,12 +345,12 @@
                                 <h3 class="text-lg font-semibold">Edit Nation #{{ $member->nation_id }}</h3>
                                 <p class="text-sm text-base-content/60">Change the assigned grade or disable this payroll member.</p>
                             </div>
-                            <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editMemberModal-{{ $member->id }}').close()">✕</button>
+                            <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editMemberModal-{{ $member->id }}').close()" aria-label="Close payroll member editing dialog">✕</button>
                         </div>
 
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Payroll Grade</span>
-                            <select class="select select-bordered" id="member_grade_{{ $member->id }}" name="payroll_grade_id" required>
+                            <select class="select" id="member_grade_{{ $member->id }}" name="payroll_grade_id" required>
                                 @foreach ($grades as $grade)
                                     <option value="{{ $grade->id }}" @selected($selectedGrade === $grade->id)>
                                         {{ $grade->name }} — ${{ number_format((float) $grade->weekly_amount, 2) }} / week
@@ -356,7 +362,7 @@
                         <input type="hidden" name="is_active" value="0">
                         <label class="label cursor-pointer justify-start gap-3">
                             <input class="toggle toggle-primary" type="checkbox" id="member_active_{{ $member->id }}" name="is_active" value="1" @checked($memberActive)>
-                            <span class="label-text">Active</span>
+                            <span class="">Active</span>
                         </label>
 
                         <div class="flex justify-end gap-2">

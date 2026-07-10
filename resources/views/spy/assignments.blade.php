@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto max-w-6xl space-y-4">
+    <div class="mx-auto w-full min-w-0 max-w-6xl space-y-4">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h1 class="text-2xl font-bold text-primary sm:text-3xl">Spy assignments</h1>

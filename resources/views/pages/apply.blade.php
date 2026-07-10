@@ -6,7 +6,7 @@
     <section class="border-b border-base-300 bg-base-200/55">
         <div class="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-8">
             <div class="max-w-3xl">
-                <p class="nexus-eyebrow">Membership application</p>
+                <p class="nexus-kicker">Membership application</p>
                 <h1 class="mt-3 font-display text-4xl font-bold leading-none text-base-content sm:text-5xl">
                     Your path into {{ config('app.name') }}
                 </h1>
@@ -33,7 +33,7 @@
     <section class="apply-page-shell" aria-labelledby="application-briefing-heading">
         <article class="apply-page-content">
             <header class="mb-8 border-b border-base-300 pb-5">
-                <p class="nexus-eyebrow">Official briefing</p>
+                <p class="nexus-kicker">Official briefing</p>
                 <h2 id="application-briefing-heading" class="mt-2 font-display text-3xl font-bold text-base-content">Requirements and process</h2>
             </header>
 

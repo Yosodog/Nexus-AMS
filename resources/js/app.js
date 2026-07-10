@@ -162,6 +162,8 @@ const enableThemePicker = (root = document) => {
             document.querySelectorAll('a[data-theme-mode], button[data-theme-mode], [role="button"][data-theme-mode]').forEach((item) => {
                 updateThemeButtonState(item, item.dataset.themeMode === themeMode);
             });
+
+            button.closest('details')?.removeAttribute('open');
         });
     });
 };
@@ -374,6 +376,126 @@ const enableDepositRequests = () => {
     document.addEventListener('click', handleDepositRequestClick);
 };
 
+const enableConfirmations = () => {
+    if (document.documentElement.dataset.confirmationsBound === 'true') {
+        return;
+    }
+
+    const dialog = document.getElementById('nexus-confirmation-dialog');
+    const title = dialog?.querySelector('#nexus-confirmation-title');
+    const message = dialog?.querySelector('#nexus-confirmation-message');
+    const continueButton = dialog?.querySelector('[data-confirm-continue]');
+    const cancelButton = dialog?.querySelector('[data-confirm-cancel]');
+    let pendingAction = null;
+    let pendingCancel = null;
+
+    const requestConfirmation = (trigger, action, cancel = null) => {
+        const confirmationMessage = trigger.dataset.confirm;
+
+        if (!confirmationMessage) {
+            action();
+            return;
+        }
+
+        if (!dialog || !title || !message || !continueButton || typeof dialog.showModal !== 'function') {
+            if (window.confirm(confirmationMessage)) {
+                action();
+            } else {
+                cancel?.();
+            }
+
+            return;
+        }
+
+        title.textContent = trigger.dataset.confirmTitle || 'Confirm action';
+        message.textContent = confirmationMessage;
+        continueButton.textContent = trigger.dataset.confirmLabel || 'Continue';
+        continueButton.classList.toggle('btn-error', trigger.dataset.confirmTone === 'error');
+        continueButton.classList.toggle('btn-primary', trigger.dataset.confirmTone !== 'error');
+        pendingAction = action;
+        pendingCancel = cancel;
+        dialog.showModal();
+        cancelButton?.focus();
+    };
+
+    document.documentElement.dataset.confirmationsBound = 'true';
+    window.NexusConfirm = (confirmationMessage, options = {}) => new Promise((resolve) => {
+        const trigger = document.createElement('button');
+        trigger.dataset.confirm = confirmationMessage;
+        trigger.dataset.confirmTitle = options.title || 'Confirm action';
+        trigger.dataset.confirmLabel = options.label || 'Continue';
+        trigger.dataset.confirmTone = options.tone || 'default';
+        requestConfirmation(trigger, () => resolve(true), () => resolve(false));
+    });
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement) || !form.dataset.confirm) {
+            return;
+        }
+
+        if (form.dataset.confirmBypass === 'true') {
+            delete form.dataset.confirmBypass;
+            return;
+        }
+
+        event.preventDefault();
+        const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+
+        requestConfirmation(form, () => {
+            form.dataset.confirmBypass = 'true';
+            form.requestSubmit(submitter);
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!(event.target instanceof Element)) {
+            return;
+        }
+
+        const trigger = event.target.closest('[data-confirm]');
+
+        if (!(trigger instanceof HTMLElement) || trigger instanceof HTMLFormElement) {
+            return;
+        }
+
+        if (trigger.dataset.confirmBypass === 'true') {
+            delete trigger.dataset.confirmBypass;
+            return;
+        }
+
+        event.preventDefault();
+        requestConfirmation(trigger, () => {
+            trigger.dataset.confirmBypass = 'true';
+            trigger.click();
+        });
+    });
+
+    continueButton?.addEventListener('click', () => {
+        const action = pendingAction;
+        pendingAction = null;
+        pendingCancel = null;
+        dialog.close();
+        action?.();
+    });
+
+    cancelButton?.addEventListener('click', () => {
+        const cancel = pendingCancel;
+        pendingAction = null;
+        pendingCancel = null;
+        dialog.close();
+        cancel?.();
+    });
+
+    dialog?.addEventListener('close', () => {
+        const cancel = pendingCancel;
+        pendingAction = null;
+        pendingCancel = null;
+        cancel?.();
+    });
+};
+
 const signalPageReady = (source = 'app') => {
     document.dispatchEvent(new CustomEvent('codex:page-ready', {
         detail: { source },
@@ -395,6 +517,7 @@ const initAppUi = (root = document) => {
     enableSortableTables(root);
     enableThemePicker(root);
     enableDepositRequests();
+    enableConfirmations();
 };
 
 if (document.readyState === 'loading') {

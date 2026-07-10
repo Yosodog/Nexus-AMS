@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto">
+    <div class="mx-auto w-full min-w-0">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
                 <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
@@ -36,52 +36,52 @@
                         @csrf
 
                         <div class="grid gap-4 md:grid-cols-2">
-                            <div class="form-control">
+                            <div class="grid gap-2">
                                 <label class="label" for="name">
-                                    <span class="label-text font-medium">Name</span>
-                                    <span class="label-text-alt text-base-content/60">Visible to your team</span>
+                                    <span class="font-medium">Name</span>
+                                    <span class="text-base-content/60">Visible to your team</span>
                                 </label>
                                 <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}"
-                                       class="input input-bordered w-full" required>
+                                       class="input w-full" required>
                                 @error('name') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="form-control">
+                            <div class="grid gap-2">
                                 <label class="label" for="email">
-                                    <span class="label-text font-medium">Email</span>
-                                    <span class="label-text-alt text-base-content/60">Used for alerts</span>
+                                    <span class="font-medium">Email</span>
+                                    <span class="text-base-content/60">Used for alerts</span>
                                 </label>
                                 <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}"
-                                       class="input input-bordered w-full" required>
+                                       class="input w-full" required>
                                 @error('email') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
 
                         <div class="grid gap-4 md:grid-cols-2">
-                            <div class="form-control">
+                            <div class="grid gap-2">
                                 <label class="label" for="current_password">
-                                    <span class="label-text font-medium">Current password</span>
-                                    <span class="label-text-alt text-base-content/60">Required to change password</span>
+                                    <span class="font-medium">Current password</span>
+                                    <span class="text-base-content/60">Required to change password</span>
                                 </label>
-                                <input type="password" id="current_password" name="current_password" class="input input-bordered w-full">
+                                <input type="password" id="current_password" name="current_password" class="input w-full">
                                 @error('current_password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="form-control">
+                            <div class="grid gap-2">
                                 <label class="label" for="password">
-                                    <span class="label-text font-medium">New password</span>
-                                    <span class="label-text-alt text-base-content/60">Leave blank to keep current</span>
+                                    <span class="font-medium">New password</span>
+                                    <span class="text-base-content/60">Leave blank to keep current</span>
                                 </label>
-                                <input type="password" id="password" name="password" class="input input-bordered w-full">
+                                <input type="password" id="password" name="password" class="input w-full">
                                 @error('password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="form-control">
+                            <div class="grid gap-2">
                                 <label class="label" for="password_confirmation">
-                                    <span class="label-text font-medium">Confirm new password</span>
+                                    <span class="font-medium">Confirm new password</span>
                                 </label>
                                 <input type="password" id="password_confirmation" name="password_confirmation"
-                                       class="input input-bordered w-full">
+                                       class="input w-full">
                             </div>
                         </div>
 
@@ -144,32 +144,32 @@
                         <form method="POST" action="{{ route('user.settings.api-tokens.store') }}" class="space-y-4">
                             @csrf
                             <div class="grid gap-4 md:grid-cols-2">
-                                <div class="form-control">
+                                <div class="grid gap-2">
                                     <label class="label" for="token_name">
-                                        <span class="label-text font-medium">Token name</span>
+                                        <span class="font-medium">Token name</span>
                                     </label>
                                     <input type="text" id="token_name" name="name" value="{{ old('name') }}"
-                                           class="input input-bordered w-full" required>
+                                           class="input w-full" required>
                                     @error('name') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                                 </div>
 
-                                <div class="form-control">
+                                <div class="grid gap-2">
                                     <label class="label" for="token_expires_at">
-                                        <span class="label-text font-medium">Expires on</span>
-                                        <span class="label-text-alt text-base-content/60">Optional</span>
+                                        <span class="font-medium">Expires on</span>
+                                        <span class="text-base-content/60">Optional</span>
                                     </label>
                                     <input type="date" id="token_expires_at" name="expires_at"
-                                           value="{{ old('expires_at') }}" class="input input-bordered w-full">
+                                           value="{{ old('expires_at') }}" class="input w-full">
                                     @error('expires_at') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                                 </div>
 
-                                <div class="form-control">
+                                <div class="grid gap-2">
                                     <label class="label" for="token_current_password">
-                                        <span class="label-text font-medium">Current password</span>
-                                        <span class="label-text-alt text-base-content/60">Required</span>
+                                        <span class="font-medium">Current password</span>
+                                        <span class="text-base-content/60">Required</span>
                                     </label>
                                     <input type="password" id="token_current_password" name="current_password"
-                                           class="input input-bordered w-full" required>
+                                           class="input w-full" required>
                                     @error('current_password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
                                 </div>
                             </div>
@@ -185,14 +185,14 @@
                             <p class="text-sm text-base-content/70">No API tokens created yet.</p>
                         @else
                             <div class="overflow-x-auto">
-                                <table class="table table-sm">
+                                <table class="table table-sm" data-sortable="true">
                                     <thead>
                                         <tr>
                                             <th>Name</th>
-                                            <th>Created</th>
-                                            <th>Last used</th>
-                                            <th>Expires</th>
-                                            <th></th>
+                                            <th data-sortable="false">Created</th>
+                                            <th data-sortable="false">Last used</th>
+                                            <th data-sortable="false">Expires</th>
+                                            <th data-sortable="false"><span class="sr-only">Actions</span></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -204,19 +204,21 @@
                                                 <td class="text-xs">{{ $token->expires_at?->format('Y-m-d') ?? 'never' }}</td>
                                                 <td>
                                                     <div class="flex flex-wrap gap-2">
-                                                        <form method="POST" action="{{ route('user.settings.api-tokens.regenerate', $token->id) }}">
+                                                        <form method="POST" action="{{ route('user.settings.api-tokens.regenerate', $token->id) }}" data-confirm="Regenerate this API token? The current token will stop working immediately." data-confirm-title="Regenerate API token?" data-confirm-label="Regenerate token">
                                                             @csrf
                                                             <input type="hidden" name="name" value="{{ $token->name }}">
                                                             <input type="hidden" name="expires_at" value="{{ $token->expires_at?->toDateString() }}">
                                                             <input type="password" name="current_password"
-                                                                   class="input input-xs input-bordered mb-1 w-36"
+                                                                   class="input input-xs mb-1 w-36"
+                                                                   aria-label="Current password to regenerate API token"
                                                                    placeholder="Current password" required>
                                                             <button class="btn btn-xs btn-outline">Regenerate</button>
                                                         </form>
-                                                        <form method="POST" action="{{ route('user.settings.api-tokens.revoke', $token->id) }}">
+                                                        <form method="POST" action="{{ route('user.settings.api-tokens.revoke', $token->id) }}" data-confirm="Revoke this API token? Any integration using it will lose access immediately." data-confirm-title="Revoke API token?" data-confirm-label="Revoke token" data-confirm-tone="error">
                                                             @csrf
                                                             <input type="password" name="current_password"
-                                                                   class="input input-xs input-bordered mb-1 w-36"
+                                                                   class="input input-xs mb-1 w-36"
+                                                                   aria-label="Current password to revoke API token"
                                                                    placeholder="Current password" required>
                                                             <button class="btn btn-xs btn-outline btn-error">Revoke</button>
                                                         </form>
@@ -320,15 +322,15 @@
                         @if($user->two_factor_secret && ! $user->two_factor_confirmed_at)
                             <form method="POST" action="{{ url('/user/confirmed-two-factor-authentication') }}" class="space-y-3">
                                 @csrf
-                                <div class="form-control max-w-sm">
+                                <div class="grid gap-2 max-w-sm">
                                     <label class="label" for="two_factor_code">
-                                        <span class="label-text font-medium">Authenticator code</span>
+                                        <span class="font-medium">Authenticator code</span>
                                     </label>
                                     <input
                                         type="text"
                                         id="two_factor_code"
                                         name="code"
-                                        class="input input-bordered"
+                                        class="input"
                                         inputmode="numeric"
                                         autocomplete="one-time-code"
                                         placeholder="123456"
@@ -372,7 +374,7 @@
                                         <p class="text-xs text-base-content/70">Trusted devices can skip MFA for 14 days.</p>
                                     </div>
                                     @if($trustedDevices->isNotEmpty())
-                                        <form method="POST" action="{{ route('user.settings.trusted-devices.revoke-all') }}">
+                                        <form method="POST" action="{{ route('user.settings.trusted-devices.revoke-all') }}" data-confirm="Revoke every trusted device? All browsers will need MFA again." data-confirm-title="Revoke all trusted devices?" data-confirm-label="Revoke all" data-confirm-tone="error">
                                             @csrf
                                             <button type="submit" class="btn btn-outline btn-error btn-sm">Revoke all</button>
                                         </form>
@@ -399,7 +401,7 @@
                                                         @endif
                                                     </div>
 
-                                                    <form method="POST" action="{{ route('user.settings.trusted-devices.revoke', $trustedDevice) }}">
+                                                    <form method="POST" action="{{ route('user.settings.trusted-devices.revoke', $trustedDevice) }}" data-confirm="Revoke trust for this device? It will need MFA on its next protected sign-in." data-confirm-title="Revoke trusted device?" data-confirm-label="Revoke device" data-confirm-tone="error">
                                                         @csrf
                                                         <button type="submit" class="btn btn-outline btn-error btn-xs">Revoke</button>
                                                     </form>
@@ -410,7 +412,7 @@
                                 @endif
                             </div>
 
-                            <form method="POST" action="{{ url('/user/two-factor-authentication') }}">
+                            <form method="POST" action="{{ url('/user/two-factor-authentication') }}" data-confirm="Disable multi-factor authentication? This reduces sign-in protection and removes the current recovery setup." data-confirm-title="Disable MFA?" data-confirm-label="Disable MFA" data-confirm-tone="error">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-outline btn-error btn-sm">Disable MFA</button>

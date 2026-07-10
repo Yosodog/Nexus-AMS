@@ -4,9 +4,9 @@
 @inject('settings', 'App\Services\SettingService')
 
 @section('content')
-    <div class="mx-auto space-y-6">
+    <div class="mx-auto w-full min-w-0 space-y-6">
 
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
@@ -36,10 +36,10 @@
             </div>
 
             @if($wars->isEmpty())
-                <p class="text-gray-500">You have no active wars.</p>
+                <p class="text-base-content/55">You have no active wars.</p>
             @else
                 <div class="overflow-x-auto">
-                    <table class="table w-full">
+                    <table class="table w-full" data-sortable="true">
                         <thead>
                         <tr>
                             <th>Attacker</th>
@@ -64,7 +64,7 @@
 
             <h2 class="text-xl font-bold mt-8 mb-2">Previous war aid requests</h2>
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table w-full" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Requested At</th>
@@ -95,7 +95,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-gray-500">No previous requests.</td>
+                            <td colspan="5" class="text-center text-base-content/55">No previous requests.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -106,31 +106,31 @@
 
     @if ($settings::isWarAidEnabled())
         {{-- Modal --}}
-        <dialog id="aid-request-modal" class="modal">
+        <dialog id="aid-request-modal" class="modal" aria-label="Request war aid">
             <div class="modal-box w-11/12 max-w-5xl max-h-[calc(100dvh-3rem)] overflow-y-auto">
                 <form method="POST" action="{{ route('defense.war-aid.store') }}">
                     @csrf
                     <h3 class="font-bold text-lg">Request war aid</h3>
 
-                    <div class="form-control mt-4">
+                    <div class="grid gap-2 mt-4">
                         <label class="label">Account</label>
-                        <select class="select select-bordered" name="account_id" required>
+                        <select class="select" name="account_id" required>
                             @foreach($nation->accounts as $account)
                                 <option value="{{ $account->id }}">{{ $account->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="form-control mt-4">
+                    <div class="grid gap-2 mt-4">
                         <label class="label">Note</label>
-                        <textarea class="textarea textarea-bordered" name="note" required></textarea>
+                        <textarea class="textarea" name="note" required></textarea>
                     </div>
 
                     <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         @foreach(PWHelperService::resources() as $resource)
                             <div>
                                 <label class="label">{{ ucfirst($resource) }}</label>
-                                <input type="number" name="{{ $resource }}" class="input input-bordered w-full" min="0"
+                                <input type="number" name="{{ $resource }}" class="input w-full" min="0"
                                        value="0">
                             </div>
                         @endforeach

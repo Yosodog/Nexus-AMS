@@ -72,6 +72,8 @@
 
     <x-footer />
 
+    <x-confirmation-dialog />
+
     <div id="toast-container" class="toast toast-end toast-bottom hidden" aria-live="polite" aria-atomic="true"></div>
 
     @livewireScripts

@@ -68,7 +68,7 @@
         <div class="mb-2 flex items-center justify-between gap-3">
             <span class="fieldset-legend m-0">NEL Expression</span>
             <a href="{{ route('admin.nel.docs') }}" target="_blank" class="text-sm text-primary no-underline">
-                <i class="o-document-text-text me-1"></i>Syntax help
+                <x-icon name="o-document-text" class="mr-1 inline size-4" aria-hidden="true" />Syntax help
             </a>
         </div>
         <x-textarea

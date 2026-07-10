@@ -10,7 +10,7 @@
         $successCount = $pageLogs->where('outcome', 'success')->count();
     @endphp
 
-    <x-header title="Audit Logs" separator>
+    <x-header title="Audit Logs" separator use-h1>
         <x-slot:subtitle>Filter security and workflow events, then inspect request context without leaving the table.</x-slot:subtitle>
         <x-slot:actions>
             <a href="{{ route('admin.audit-logs.index') }}" class="btn btn-ghost btn-sm">Reset Filters</a>
@@ -34,8 +34,8 @@
 
         <form method="GET" action="{{ route('admin.audit-logs.index') }}" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div>
-                <label class="form-label" for="categoryFilter">Category</label>
-                <select class="select select-bordered w-full" id="categoryFilter" name="category">
+                <label class="mb-1 block text-sm font-medium" for="categoryFilter">Category</label>
+                <select class="select w-full" id="categoryFilter" name="category">
                     <option value="">All</option>
                     @foreach($categories as $category)
                         <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ $category }}</option>
@@ -44,8 +44,8 @@
             </div>
 
             <div>
-                <label class="form-label" for="outcomeFilter">Outcome</label>
-                <select class="select select-bordered w-full" id="outcomeFilter" name="outcome">
+                <label class="mb-1 block text-sm font-medium" for="outcomeFilter">Outcome</label>
+                <select class="select w-full" id="outcomeFilter" name="outcome">
                     <option value="">All</option>
                     @foreach($outcomes as $outcome)
                         <option value="{{ $outcome }}" @selected($filters['outcome'] === $outcome)>{{ $outcome }}</option>
@@ -54,8 +54,8 @@
             </div>
 
             <div>
-                <label class="form-label" for="severityFilter">Severity</label>
-                <select class="select select-bordered w-full" id="severityFilter" name="severity">
+                <label class="mb-1 block text-sm font-medium" for="severityFilter">Severity</label>
+                <select class="select w-full" id="severityFilter" name="severity">
                     <option value="">All</option>
                     @foreach($severities as $severity)
                         <option value="{{ $severity }}" @selected($filters['severity'] === $severity)>{{ $severity }}</option>
@@ -64,8 +64,8 @@
             </div>
 
             <div>
-                <label class="form-label" for="actorTypeFilter">Actor Type</label>
-                <select class="select select-bordered w-full" id="actorTypeFilter" name="actor_type">
+                <label class="mb-1 block text-sm font-medium" for="actorTypeFilter">Actor Type</label>
+                <select class="select w-full" id="actorTypeFilter" name="actor_type">
                     <option value="">All</option>
                     @foreach($actorTypes as $actorType)
                         <option value="{{ $actorType }}" @selected($filters['actor_type'] === $actorType)>{{ $actorType }}</option>
@@ -81,8 +81,8 @@
             <x-input label="IP Address" id="ipFilter" name="ip" :value="$filters['ip']" placeholder="IPv4 or IPv6" />
 
             <div class="xl:col-span-2">
-                <label class="form-label" for="searchFilter">Search</label>
-                <input class="input input-bordered w-full" id="searchFilter" type="text" name="q" value="{{ $filters['q'] }}" placeholder="Message, actor name, request id, or action">
+                <label class="mb-1 block text-sm font-medium" for="searchFilter">Search</label>
+                <input class="input w-full" id="searchFilter" type="text" name="q" value="{{ $filters['q'] }}" placeholder="Message, actor name, request id, or action">
             </div>
 
             <div class="flex items-end gap-2 xl:col-span-4 xl:justify-end">
@@ -104,12 +104,12 @@
         </x-slot:menu>
 
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra table-sm align-middle">
+            <table class="table table-zebra table-sm align-middle" data-sortable="false">
                 <thead>
                     <tr>
                         <th>Occurred</th>
                         <th>Category</th>
-                        <th>Action</th>
+                        <th data-sortable="false">Action</th>
                         <th>Outcome</th>
                         <th>Severity</th>
                         <th>Actor</th>

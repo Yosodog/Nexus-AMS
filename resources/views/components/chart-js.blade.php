@@ -29,6 +29,8 @@
             info: cssColor('--color-info', '#347ba6'),
         });
 
+        const semanticSeries = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
+
         const applyTheme = (chart) => {
             const palette = colors();
             const options = chart.options ?? {};
@@ -72,6 +74,46 @@
             if (plugins.title) {
                 plugins.title.color = palette.text;
             }
+
+            if (plugins.tooltip !== false) {
+                const tooltip = plugins.tooltip ??= {};
+                tooltip.backgroundColor = palette.text;
+                tooltip.titleColor = palette.surface;
+                tooltip.bodyColor = palette.surface;
+                tooltip.borderColor = palette.grid;
+            }
+
+            (chart.data?.datasets ?? []).forEach((dataset) => {
+                if (dataset.nexusColor && palette[dataset.nexusColor]) {
+                    dataset.borderColor = palette[dataset.nexusColor];
+                    dataset.backgroundColor = palette[dataset.nexusColor];
+                }
+
+                if (dataset.nexusBorderColor && palette[dataset.nexusBorderColor]) {
+                    dataset.borderColor = palette[dataset.nexusBorderColor];
+                }
+
+                if (dataset.nexusValueColors) {
+                    const positive = palette[dataset.nexusValueColors.positive] ?? palette.success;
+                    const negative = palette[dataset.nexusValueColors.negative] ?? palette.warning;
+                    dataset.backgroundColor = (context) => Number(context.raw) >= 0 ? positive : negative;
+                    dataset.hoverBackgroundColor = dataset.backgroundColor;
+                }
+
+                if (dataset.nexusPalette) {
+                    const itemCount = Array.isArray(dataset.data) ? dataset.data.length : 0;
+                    const themedColors = Array.from(
+                        { length: itemCount },
+                        (_, index) => palette[semanticSeries[index % semanticSeries.length]],
+                    );
+
+                    dataset.backgroundColor = themedColors;
+
+                    if (Array.isArray(dataset.borderColor)) {
+                        dataset.borderColor = themedColors;
+                    }
+                }
+            });
         };
 
         Chart.defaults.color = colors().text;

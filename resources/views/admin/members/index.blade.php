@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Alliance Members" separator>
+    <x-header title="Alliance Members" separator use-h1>
         <x-slot:actions>
             <x-stat title="Members" :value="number_format($totalMembers)" icon="o-users" color="text-primary" class="border border-base-300 rounded-box px-4 py-2" />
             <x-stat title="Cities" :value="number_format($totalCities)" icon="o-building-office-2" color="text-success" class="border border-base-300 rounded-box px-4 py-2" />
@@ -33,7 +33,7 @@
             <x-input placeholder="Search members..." x-model="search" icon="o-magnifying-glass" class="input-sm w-64" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Leader</th>
@@ -48,9 +48,9 @@
                         <th>Munitions</th>
                         <th>Uranium</th>
                         <th>Food</th>
-                        <th>Military %</th>
+                        <th data-sortable="false">Military %</th>
                         <th>Timezone</th>
-                        <th>Actions</th>
+                        <th data-sortable="false">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,7 +93,7 @@
                                 </span>
                             </td>
 
-                            <td>UTC {{ $nation['timezone'] }}</td>
+                            <td data-order="{{ $nation['timezone'] }}">UTC {{ $nation['timezone'] }}</td>
                             <td>
                                 <a href="{{ route('admin.members.show', $nation['id']) }}">
                                     <x-button label="View" icon="o-eye" class="btn-xs btn-ghost" />
@@ -118,7 +118,7 @@
             <span class="text-sm text-base-content/50">Radiation snapshot: {{ $profitabilityRadiationSnapshotAt }}</span>
         </x-slot:menu>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Rank</th>
@@ -240,7 +240,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Leader</th>

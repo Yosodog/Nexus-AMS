@@ -10,7 +10,7 @@
                         type="number"
                         name="direct_deposit_tax_id"
                         value="{{ old('direct_deposit_tax_id', $ddTaxId) }}"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         @cannot('manage-dd') disabled @endcannot
                         required
                     >
@@ -25,7 +25,7 @@
                         type="number"
                         name="direct_deposit_fallback_tax_id"
                         value="{{ old('direct_deposit_fallback_tax_id', $fallbackTaxId) }}"
-                        class="input input-bordered w-full"
+                        class="input w-full"
                         @cannot('manage-dd') disabled @endcannot
                         required
                     >
@@ -72,13 +72,16 @@
                     <div class="flex gap-2 mb-4">
                         <x-button label="Apply to Selected" type="submit" formaction="{{ route('admin.dd.brackets.update') }}" class="btn-primary btn-sm" />
                         <x-button label="Delete Selected" type="submit" formaction="{{ route('admin.dd.brackets.delete') }}"
-                                  onclick="return confirm('Are you sure you want to delete the selected brackets?');"
+                                  data-confirm="Delete the selected direct-deposit brackets?"
+                                  data-confirm-title="Delete selected brackets?"
+                                  data-confirm-label="Delete brackets"
+                                  data-confirm-tone="error"
                                   class="btn-error btn-sm" />
                     </div>
             @endcan
 
             <div class="overflow-x-auto">
-                <table class="table table-sm table-zebra">
+                <table class="table table-sm table-zebra" data-sortable="false">
                     <thead>
                         <tr class="text-base-content/60">
                             @can('manage-dd')
@@ -128,13 +131,13 @@
     {{-- Current Enrollments --}}
     <x-card title="Current Enrollments">
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Nation ID</th>
                         <th>Account</th>
                         <th>User</th>
-                        <th>Enrolled At</th>
+                        <th data-sortable="false">Enrolled At</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -147,7 +150,7 @@
                             </td>
                             <td>{{ $enrollment->account->name }}</td>
                             <td>{{ optional($enrollment->account->user)->name ?? 'Deleted' }}</td>
-                            <td>{{ $enrollment->enrolled_at->format('M d, Y H:i') }}</td>
+                            <td data-order="{{ $enrollment->enrolled_at->timestamp }}">{{ $enrollment->enrolled_at->format('M d, Y H:i') }}</td>
                         </tr>
                     @endforeach
                 </tbody>

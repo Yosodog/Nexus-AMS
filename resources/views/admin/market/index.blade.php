@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Alliance Market" separator>
+    <x-header title="Alliance Market" separator use-h1>
         <x-slot:subtitle>Manage buyable resources, caps, and pricing adjustments.</x-slot:subtitle>
     </x-header>
 
@@ -46,22 +46,22 @@
             <span class="text-sm text-base-content/60">Base prices from 24h averages.</span>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-zebra" id="marketResourcesTable">
+                <table class="table table-zebra" id="marketResourcesTable" data-sortable="true">
                     <thead>
                     <tr>
                         <th>Resource</th>
-                        <th>Status</th>
-                        <th>Adjustment %</th>
-                        <th>Buy Cap Remaining</th>
+                        <th data-sortable="false">Status</th>
+                        <th data-sortable="false">Adjustment %</th>
+                        <th data-sortable="false">Buy Cap Remaining</th>
                         <th>Base Price</th>
                         <th>Final Price</th>
-                        <th>Actions</th>
+                        <th data-sortable="false">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     @foreach ($marketResources as $resource)
                         <tr data-market-resource>
-                            <td class="text-capitalize">{{ str_replace('_', ' ', $resource['resource']) }}</td>
+                            <td class="capitalize">{{ str_replace('_', ' ', $resource['resource']) }}</td>
                             <td>
                                 <form method="POST" action="{{ route('admin.market.resource.toggle', $resource['id']) }}">
                                     @csrf
@@ -71,7 +71,7 @@
                                 </form>
                             </td>
                             <td>
-                                <input type="number" step="0.01" min="{{ $marketLimits['min_adjustment_percent'] }}" max="{{ $marketLimits['max_adjustment_percent'] }}" name="adjustment_percent" class="input input-bordered input-sm w-full min-w-28"
+                                <input type="number" step="0.01" min="{{ $marketLimits['min_adjustment_percent'] }}" max="{{ $marketLimits['max_adjustment_percent'] }}" name="adjustment_percent" class="input input-sm w-full min-w-28"
                                        value="{{ number_format($resource['adjustment_percent'], 2, '.', '') }}"
                                        data-adjustment-input
                                        data-base-price="{{ $resource['base_price'] }}"
@@ -79,7 +79,7 @@
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
                             <td>
-                                <input type="number" step="0.01" min="0" max="{{ $marketLimits['max_buy_cap_remaining'] }}" name="buy_cap_remaining" class="input input-bordered input-sm w-full min-w-32"
+                                <input type="number" step="0.01" min="0" max="{{ $marketLimits['max_buy_cap_remaining'] }}" name="buy_cap_remaining" class="input input-sm w-full min-w-32"
                                        value="{{ number_format($resource['buy_cap_remaining'], 2, '.', '') }}"
                                        form="update-market-{{ $resource['id'] }}">
                             </td>
@@ -100,7 +100,7 @@
 
     <x-card title="Latest Transactions (Last 50)">
         <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-sm" id="marketTransactionsTable">
+                <table class="table table-sm" id="marketTransactionsTable" data-sortable="false">
                     <thead>
                     <tr>
                         <th>Date</th>
@@ -120,7 +120,7 @@
                             <td>{{ $transaction->user?->name ?? 'Unknown' }}</td>
                             <td>{{ $transaction->nation?->leader_name ?? 'Unknown' }}</td>
                             <td>{{ $transaction->account?->name ?? 'Unknown' }}</td>
-                            <td class="text-capitalize">{{ str_replace('_', ' ', $transaction->resource) }}</td>
+                            <td class="capitalize">{{ str_replace('_', ' ', $transaction->resource) }}</td>
                             <td class="text-right">{{ number_format($transaction->amount, 2) }}</td>
                             <td class="text-right">${{ number_format($transaction->final_price, 4) }}</td>
                             <td class="text-right">${{ number_format($transaction->money_paid, 2) }}</td>

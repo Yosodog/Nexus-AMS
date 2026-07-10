@@ -3,7 +3,7 @@
 @section('title', 'Create Audit Rule')
 
 @section('content')
-    <x-header title="New Audit Rule" separator>
+    <x-header title="New Audit Rule" separator use-h1>
         <x-slot:subtitle>Define a NEL expression against nations or cities.</x-slot:subtitle>
     </x-header>
 

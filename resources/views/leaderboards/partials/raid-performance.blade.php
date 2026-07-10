@@ -33,46 +33,46 @@
 @endphp
 
 <div class="space-y-8">
-    <section class="overflow-hidden rounded-[2rem] border border-amber-200/80 bg-[linear-gradient(140deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(254,242,242,0.94))] shadow-xl shadow-amber-100/70">
+    <section class="overflow-hidden rounded-lg border border-base-300 bg-base-100">
         <div class="grid gap-6 p-6 lg:grid-cols-[1.2fr,0.95fr] lg:p-8">
             <div class="space-y-5">
                 <div class="space-y-3">
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-amber-700">
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
                         <span>{{ $activeBoard['eyebrow'] }}</span>
-                        <span class="h-1 w-1 rounded-full bg-amber-500"></span>
+                        <span class="size-1 rounded-full bg-secondary"></span>
                         <span>Live window</span>
                     </div>
                     <div class="space-y-2">
-                        <h2 class="max-w-4xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ $activeBoard['title'] }}</h2>
-                        <p class="max-w-3xl text-sm leading-6 text-slate-700 sm:text-base">
+                        <h2 class="max-w-4xl font-display text-3xl font-bold tracking-tight text-base-content sm:text-4xl">{{ $activeBoard['title'] }}</h2>
+                        <p class="max-w-3xl text-sm leading-6 text-base-content/70 sm:text-base">
                             Compare loot, infra pressure, finishing power, and raid tempo across the alliance in one place.
                         </p>
                     </div>
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-3">
-                    <div class="rounded-[1.4rem] border border-white/80 bg-white/90 p-4 shadow-sm">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Loot Value</p>
-                        <p class="mt-2 text-2xl font-black text-slate-950">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
+                    <div class="rounded-md border border-base-300 bg-base-100 p-4">
+                        <p class="nexus-stat-label">Loot value</p>
+                        <p class="mt-2 font-display text-2xl font-bold tabular-nums text-base-content">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
                     </div>
-                    <div class="rounded-[1.4rem] border border-amber-200 bg-amber-50/80 p-4 shadow-sm">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">Victories</p>
-                        <p class="mt-2 text-2xl font-black text-amber-900">{{ number_format((int) ($totals['victories'] ?? 0)) }}</p>
+                    <div class="rounded-md border border-warning/30 bg-warning/10 p-4">
+                        <p class="nexus-stat-label">Victories</p>
+                        <p class="mt-2 font-display text-2xl font-bold tabular-nums text-warning">{{ number_format((int) ($totals['victories'] ?? 0)) }}</p>
                     </div>
-                    <div class="rounded-[1.4rem] border border-rose-200 bg-rose-50/75 p-4 shadow-sm">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-700">Attack Tempo</p>
-                        <p class="mt-2 text-2xl font-black text-rose-900">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
+                    <div class="rounded-md border border-info/30 bg-info/10 p-4">
+                        <p class="nexus-stat-label">Attack tempo</p>
+                        <p class="mt-2 font-display text-2xl font-bold tabular-nums text-info">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
                     </div>
                 </div>
 
-                <form class="grid gap-3 rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-sm sm:grid-cols-[1fr,1fr,auto,auto]" method="GET" action="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">
+                <form class="grid gap-3 rounded-md border border-base-300 bg-base-200/45 p-4 sm:grid-cols-[1fr,1fr,auto,auto]" method="GET" action="{{ route('leaderboards.index', ['board' => 'raid-performance']) }}">
                     <div>
-                        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">From</label>
-                        <input type="date" name="from" class="input input-bordered w-full" value="{{ $filters['from'] }}">
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-base-content/60">From</label>
+                        <input type="date" name="from" class="input w-full" value="{{ $filters['from'] }}">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">To</label>
-                        <input type="date" name="to" class="input input-bordered w-full" value="{{ $filters['to'] }}">
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-base-content/60">To</label>
+                        <input type="date" name="to" class="input w-full" value="{{ $filters['to'] }}">
                     </div>
                     <div class="flex items-end">
                         <button class="btn btn-primary w-full sm:w-auto" type="submit">Update</button>
@@ -84,50 +84,50 @@
             </div>
 
             <div class="space-y-4">
-                <div class="rounded-[1.5rem] border border-slate-950 bg-slate-950 p-5 text-white shadow-xl">
-                    <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
+                <div class="rounded-md border border-neutral bg-neutral p-5 text-neutral-content">
+                    <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
                         <span>Alliance Totals</span>
                         <span>{{ $fromLabel }} - {{ $toLabel }}</span>
                     </div>
-                    <p class="mt-4 text-4xl font-black">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
-                    <p class="mt-2 text-sm text-slate-300">Money and resources looted at 24h average pricing.</p>
+                    <p class="mt-4 text-4xl font-bold">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
+                    <p class="mt-2 text-sm text-neutral-content/70">Money and resources looted at 24h average pricing.</p>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p class="text-xs uppercase text-slate-300">Infra Burned</p>
+                        <div class="rounded-md border border-neutral-content/15 bg-neutral-content/5 p-4">
+                            <p class="text-xs uppercase text-neutral-content/65">Infra burned</p>
                             <p class="mt-2 text-2xl font-bold">${{ number_format((float) ($totals['infra_destroyed_value'] ?? 0), 0) }}</p>
                         </div>
-                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p class="text-xs uppercase text-slate-300">Loot / Victory</p>
+                        <div class="rounded-md border border-neutral-content/15 bg-neutral-content/5 p-4">
+                            <p class="text-xs uppercase text-neutral-content/65">Loot / victory</p>
                             <p class="mt-2 text-2xl font-bold">${{ number_format((float) ($totals['avg_loot_per_victory'] ?? 0), 0) }}</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <article class="rounded-[1.5rem] border border-base-300 bg-white/90 p-5 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Top Looter</p>
+                    <article class="rounded-md border border-base-300 bg-base-100 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Top Looter</p>
                         @if ($topLooter)
-                            <a href="https://politicsandwar.com/nation/id={{ $topLooter['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-black text-base-content transition hover:text-primary">
+                            <a href="https://politicsandwar.com/nation/id={{ $topLooter['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-bold text-base-content transition hover:text-primary">
                                 <span>{{ $topLooter['nation_name'] }}</span>
                                 <span class="text-sm opacity-50">-&gt;</span>
                             </a>
                             <p class="mt-1 text-sm text-base-content/60">{{ $topLooter['leader_name'] }}</p>
-                            <p class="mt-4 text-3xl font-black text-secondary">${{ number_format((float) ($topLooter['loot_value'] ?? 0), 0) }}</p>
+                            <p class="mt-4 text-3xl font-bold text-secondary">${{ number_format((float) ($topLooter['loot_value'] ?? 0), 0) }}</p>
                             <p class="mt-2 text-xs text-base-content/55">{{ number_format((int) ($topLooter['victories'] ?? 0)) }} victories • {{ number_format((int) ($topLooter['attacks'] ?? 0)) }} attacks</p>
                         @else
                             <p class="mt-4 text-sm text-base-content/60">No raid data yet.</p>
                         @endif
                     </article>
 
-                    <article class="rounded-[1.5rem] border border-base-300 bg-white/90 p-5 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Most Victories</p>
+                    <article class="rounded-md border border-base-300 bg-base-100 p-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Most Victories</p>
                         @if ($topCloser)
-                            <a href="https://politicsandwar.com/nation/id={{ $topCloser['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-black text-base-content transition hover:text-primary">
+                            <a href="https://politicsandwar.com/nation/id={{ $topCloser['id'] }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 text-xl font-bold text-base-content transition hover:text-primary">
                                 <span>{{ $topCloser['nation_name'] }}</span>
                                 <span class="text-sm opacity-50">-&gt;</span>
                             </a>
                             <p class="mt-1 text-sm text-base-content/60">{{ $topCloser['leader_name'] }}</p>
-                            <p class="mt-4 text-3xl font-black text-primary">{{ number_format((int) ($topCloser['victories'] ?? 0)) }}</p>
+                            <p class="mt-4 text-3xl font-bold text-primary">{{ number_format((int) ($topCloser['victories'] ?? 0)) }}</p>
                             <p class="mt-2 text-xs text-base-content/55">${{ number_format((float) ($topCloser['loot_value'] ?? 0), 0) }} loot value</p>
                         @else
                             <p class="mt-4 text-sm text-base-content/60">No victory data yet.</p>
@@ -139,55 +139,55 @@
     </section>
 
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Total loot value</p>
-            <p class="mt-3 text-3xl font-black text-secondary">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
+        <div class="rounded-md border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Total loot value</p>
+            <p class="mt-3 text-3xl font-bold text-secondary">${{ number_format((float) ($totals['loot_value'] ?? 0), 0) }}</p>
             <p class="mt-2 text-xs text-base-content/60">Money + resources at 24h average prices.</p>
         </div>
-        <div class="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Loot per day</p>
-            <p class="mt-3 text-3xl font-black text-primary">${{ number_format((float) ($totals['loot_value_per_day'] ?? 0), 0) }}</p>
+        <div class="rounded-md border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Loot per day</p>
+            <p class="mt-3 text-3xl font-bold text-primary">${{ number_format((float) ($totals['loot_value_per_day'] ?? 0), 0) }}</p>
             <p class="mt-2 text-xs text-base-content/60">Average daily haul across the selected window.</p>
         </div>
-        <div class="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Loot per victory</p>
-            <p class="mt-3 text-3xl font-black text-accent">${{ number_format((float) ($totals['avg_loot_per_victory'] ?? 0), 0) }}</p>
+        <div class="rounded-md border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Loot per victory</p>
+            <p class="mt-3 text-3xl font-bold text-accent">${{ number_format((float) ($totals['avg_loot_per_victory'] ?? 0), 0) }}</p>
             <p class="mt-2 text-xs text-base-content/60">Finisher reward for confirmed victory hits.</p>
         </div>
-        <div class="rounded-[1.5rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Kill score total</p>
-            <p class="mt-3 text-3xl font-black text-info">{{ number_format((float) ($totals['kills_score'] ?? 0), 2) }}</p>
+        <div class="rounded-md border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Kill score total</p>
+            <p class="mt-3 text-3xl font-bold text-info">{{ number_format((float) ($totals['kills_score'] ?? 0), 2) }}</p>
             <p class="mt-2 text-xs text-base-content/60">Weighted military damage across all raid attacks.</p>
         </div>
     </section>
 
     <section class="grid gap-4 md:grid-cols-3">
-        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Raid Tempo</p>
-            <p class="mt-3 text-3xl font-black text-accent">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
+        <article class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Raid Tempo</p>
+            <p class="mt-3 text-3xl font-bold text-accent">{{ number_format((int) ($totals['attacks'] ?? 0)) }}</p>
             <p class="mt-2 text-sm text-base-content/65">Total raid attacks recorded in this window.</p>
             <p class="mt-4 text-xl font-bold text-base-content">${{ number_format((float) ($totals['avg_loot_per_attack'] ?? 0), 0) }}</p>
             <p class="text-xs text-base-content/55">Average loot value per attack.</p>
         </article>
 
-        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Pressure</p>
-            <p class="mt-3 text-3xl font-black text-primary">${{ number_format((float) ($totals['avg_infra_per_attack'] ?? 0), 0) }}</p>
+        <article class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Pressure</p>
+            <p class="mt-3 text-3xl font-bold text-primary">${{ number_format((float) ($totals['avg_infra_per_attack'] ?? 0), 0) }}</p>
             <p class="mt-2 text-sm text-base-content/65">Average infra value destroyed per raid attack.</p>
             <p class="mt-4 text-xl font-bold text-base-content">{{ number_format((float) ($totals['kills_score'] ?? 0), 2) }}</p>
             <p class="text-xs text-base-content/55">Total weighted kill score in the window.</p>
         </article>
 
-        <article class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55">Split</p>
+        <article class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Split</p>
             <div class="mt-3 grid gap-3">
-                <div class="rounded-2xl border border-secondary/25 bg-secondary/10 p-4">
+                <div class="rounded-md border border-secondary/25 bg-secondary/10 p-4">
                     <p class="text-xs uppercase text-base-content/70">Resource share</p>
-                    <p class="mt-2 text-2xl font-black text-secondary">{{ number_format((float) ($totals['resource_share_pct'] ?? 0), 2) }}%</p>
+                    <p class="mt-2 text-2xl font-bold text-secondary">{{ number_format((float) ($totals['resource_share_pct'] ?? 0), 2) }}%</p>
                 </div>
-                <div class="rounded-2xl border border-primary/25 bg-primary/10 p-4">
+                <div class="rounded-md border border-primary/25 bg-primary/10 p-4">
                     <p class="text-xs uppercase text-base-content/70">Money share</p>
-                    <p class="mt-2 text-2xl font-black text-primary">{{ number_format((float) ($totals['money_share_pct'] ?? 0), 2) }}%</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ number_format((float) ($totals['money_share_pct'] ?? 0), 2) }}%</p>
                 </div>
             </div>
         </article>
@@ -202,30 +202,30 @@
             $killRateRank = $selfStats['ranks']['kill_score_per_attack'] ?? null;
             $lootPercentile = $lootRank && $memberCount > 0 ? round(((($memberCount - $lootRank) / $memberCount) * 100), 1) : 0;
         @endphp
-        <section class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <section class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="grid gap-6 xl:grid-cols-3">
                 <div class="space-y-3 xl:col-span-2">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Your raid performance</p>
-                        <h3 class="mt-1 text-2xl font-black text-base-content">Your raid stats</h3>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Your raid performance</p>
+                        <h3 class="mt-1 text-2xl font-bold text-base-content">Your raid stats</h3>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
-                        <div class="rounded-2xl border border-secondary/30 bg-secondary/10 p-4">
+                        <div class="rounded-md border border-secondary/30 bg-secondary/10 p-4">
                             <p class="text-xs uppercase text-base-content/70">Loot value</p>
                             <p class="mt-2 text-2xl font-bold text-secondary">${{ number_format((float) ($selfStats['stats']['loot_value'] ?? 0), 0) }}</p>
                             <p class="text-xs text-base-content/60">Rank #{{ $lootRank ?? '-' }} of {{ $memberCount }} • Top {{ $lootPercentile }}%</p>
                         </div>
-                        <div class="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                        <div class="rounded-md border border-primary/30 bg-primary/10 p-4">
                             <p class="text-xs uppercase text-base-content/70">Victories</p>
                             <p class="mt-2 text-2xl font-bold text-primary">{{ number_format((int) ($selfStats['stats']['victories'] ?? 0)) }}</p>
                             <p class="text-xs text-base-content/60">Rank #{{ $victoryRank ?? '-' }} • {{ number_format((int) ($selfStats['stats']['attacks'] ?? 0)) }} attacks</p>
                         </div>
-                        <div class="rounded-2xl border border-accent/30 bg-accent/10 p-4">
+                        <div class="rounded-md border border-accent/30 bg-accent/10 p-4">
                             <p class="text-xs uppercase text-base-content/70">Loot per attack</p>
                             <p class="mt-2 text-2xl font-bold text-accent">${{ number_format((float) ($selfStats['stats']['loot_per_attack'] ?? 0), 0) }}</p>
                             <p class="text-xs text-base-content/60">Rank #{{ $lootRateRank ?? '-' }}</p>
                         </div>
-                        <div class="rounded-2xl border border-info/30 bg-info/10 p-4">
+                        <div class="rounded-md border border-info/30 bg-info/10 p-4">
                             <p class="text-xs uppercase text-base-content/70">Kill score per attack</p>
                             <p class="mt-2 text-2xl font-bold text-info">{{ number_format((float) ($selfStats['stats']['kill_score_per_attack'] ?? 0), 2) }}</p>
                             <p class="text-xs text-base-content/60">Rank #{{ $killRateRank ?? '-' }}</p>
@@ -233,17 +233,17 @@
                     </div>
                 </div>
                 <div class="space-y-3">
-                    <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                    <div class="rounded-md border border-base-300 bg-base-200/60 p-4">
                         <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Your share of loot</p>
                         <p class="mt-2 text-3xl font-bold text-secondary">{{ number_format((float) ($selfStats['loot_share'] ?? 0), 2) }}%</p>
                         <p class="text-xs text-base-content/60">Of alliance loot value.</p>
                     </div>
-                    <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                    <div class="rounded-md border border-base-300 bg-base-200/60 p-4">
                         <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Infra damage</p>
                         <p class="mt-2 text-2xl font-bold text-primary">${{ number_format((float) ($selfStats['stats']['infra_destroyed_value'] ?? 0), 0) }}</p>
                         <p class="text-xs text-base-content/60">{{ number_format((float) ($selfStats['stats']['infra_destroyed'] ?? 0), 2) }} infra destroyed</p>
                     </div>
-                    <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                    <div class="rounded-md border border-base-300 bg-base-200/60 p-4">
                         <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Unit score</p>
                         <p class="mt-2 text-2xl font-bold text-accent">{{ number_format((float) ($selfStats['stats']['unit_score'] ?? 0), 2) }}</p>
                         <p class="text-xs text-base-content/60">Weighted kills total.</p>
@@ -254,21 +254,21 @@
     @endif
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Loot velocity</p>
-                    <h3 class="text-xl font-black text-base-content">Daily loot value</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Loot velocity</p>
+                    <h3 class="text-xl font-bold text-base-content">Daily loot value</h3>
                 </div>
                 <span class="badge badge-outline">24h avg pricing</span>
             </div>
             <canvas id="lootTimelineChart" class="mt-4"></canvas>
         </div>
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">City damage</p>
-                    <h3 class="text-xl font-black text-base-content">Infra destroyed value</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">City damage</p>
+                    <h3 class="text-xl font-bold text-base-content">Infra destroyed value</h3>
                 </div>
                 <span class="badge badge-outline">Daily totals</span>
             </div>
@@ -277,11 +277,11 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Tempo</p>
-                    <h3 class="text-xl font-black text-base-content">Daily attacks</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Tempo</p>
+                    <h3 class="text-xl font-bold text-base-content">Daily attacks</h3>
                 </div>
                 <span class="badge badge-outline">All members</span>
             </div>
@@ -289,16 +289,16 @@
                 <canvas id="attackTimelineChart" class="h-full"></canvas>
             </div>
         </div>
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Raid momentum</p>
-                    <h3 class="text-xl font-black text-base-content">Peak performance</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Raid momentum</p>
+                    <h3 class="text-xl font-bold text-base-content">Peak performance</h3>
                 </div>
                 <span class="badge badge-outline">Highlights</span>
             </div>
             <div class="mt-4 grid gap-3">
-                <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                <div class="rounded-md border border-base-300 bg-base-200/60 p-4">
                     <p class="text-xs uppercase text-base-content/60">Best loot day</p>
                     <p class="mt-2 text-2xl font-bold text-secondary">
                         @if ($totals['best_loot_day'] ?? null)
@@ -309,17 +309,17 @@
                     </p>
                     <p class="text-xs text-base-content/60">{{ $totals['best_loot_day']['label'] ?? 'No data yet' }}</p>
                 </div>
-                <div class="rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                <div class="rounded-md border border-base-300 bg-base-200/60 p-4">
                     <p class="text-xs uppercase text-base-content/60">Best attack day</p>
                     <p class="mt-2 text-2xl font-bold text-primary">{{ number_format((int) ($totals['best_attack_day']['value'] ?? 0)) }} hits</p>
                     <p class="text-xs text-base-content/60">{{ $totals['best_attack_day']['label'] ?? 'No data yet' }}</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl border border-secondary/30 bg-secondary/10 p-4">
+                    <div class="rounded-md border border-secondary/30 bg-secondary/10 p-4">
                         <p class="text-xs uppercase text-base-content/70">Resource share</p>
                         <p class="mt-2 text-xl font-bold text-secondary">{{ number_format((float) ($totals['resource_share_pct'] ?? 0), 2) }}%</p>
                     </div>
-                    <div class="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                    <div class="rounded-md border border-primary/30 bg-primary/10 p-4">
                         <p class="text-xs uppercase text-base-content/70">Money share</p>
                         <p class="mt-2 text-xl font-bold text-primary">{{ number_format((float) ($totals['money_share_pct'] ?? 0), 2) }}%</p>
                     </div>
@@ -329,17 +329,17 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Loot leaderboard</p>
-                    <h3 class="text-xl font-black text-base-content">Top Looters</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Loot leaderboard</p>
+                    <h3 class="text-xl font-bold text-base-content">Top Looters</h3>
                 </div>
                 <span class="badge badge-outline">Value</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($lootLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-secondary/15 font-bold text-secondary">{{ $row['rank'] }}</span>
                             <div>
@@ -358,17 +358,17 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Infra leaderboard</p>
-                    <h3 class="text-xl font-black text-base-content">City Wreckers</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Infra leaderboard</p>
+                    <h3 class="text-xl font-bold text-base-content">City Wreckers</h3>
                 </div>
                 <span class="badge badge-outline">Value</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($infraLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 font-bold text-primary">{{ $row['rank'] }}</span>
                             <div>
@@ -389,17 +389,17 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Kill leaderboard</p>
-                    <h3 class="text-xl font-black text-base-content">Unit Takers</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Kill leaderboard</p>
+                    <h3 class="text-xl font-bold text-base-content">Unit Takers</h3>
                 </div>
                 <span class="badge badge-outline">Score</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($killLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 font-bold text-accent">{{ $row['rank'] }}</span>
                             <div>
@@ -418,17 +418,17 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Victory leaderboard</p>
-                    <h3 class="text-xl font-black text-base-content">Closers</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Victory leaderboard</p>
+                    <h3 class="text-xl font-bold text-base-content">Closers</h3>
                 </div>
                 <span class="badge badge-outline">Victories</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($victoryLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-info/15 font-bold text-info">{{ $row['rank'] }}</span>
                             <div>
@@ -449,17 +449,17 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-3">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Efficiency</p>
-                    <h3 class="text-xl font-black text-base-content">Loot per Attack</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Efficiency</p>
+                    <h3 class="text-xl font-bold text-base-content">Loot per Attack</h3>
                 </div>
                 <span class="badge badge-outline">Value</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($lootRateLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-secondary/15 font-bold text-secondary">{{ $row['rank'] }}</span>
                             <div>
@@ -478,17 +478,17 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Closers</p>
-                    <h3 class="text-xl font-black text-base-content">Loot per Victory</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Closers</p>
+                    <h3 class="text-xl font-bold text-base-content">Loot per Victory</h3>
                 </div>
                 <span class="badge badge-outline">Value</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($lootCloserLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 font-bold text-accent">{{ $row['rank'] }}</span>
                             <div>
@@ -507,17 +507,17 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Hitters</p>
-                    <h3 class="text-xl font-black text-base-content">Most Attacks</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Hitters</p>
+                    <h3 class="text-xl font-bold text-base-content">Most Attacks</h3>
                 </div>
                 <span class="badge badge-outline">Volume</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($attackLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-info/15 font-bold text-info">{{ $row['rank'] }}</span>
                             <div>
@@ -538,17 +538,17 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Pressure</p>
-                    <h3 class="text-xl font-black text-base-content">Infra per Attack</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Pressure</p>
+                    <h3 class="text-xl font-bold text-base-content">Infra per Attack</h3>
                 </div>
                 <span class="badge badge-outline">Value</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($infraRateLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 font-bold text-primary">{{ $row['rank'] }}</span>
                             <div>
@@ -567,17 +567,17 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Kill rate</p>
-                    <h3 class="text-xl font-black text-base-content">Kill Score per Attack</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Kill rate</p>
+                    <h3 class="text-xl font-bold text-base-content">Kill Score per Attack</h3>
                 </div>
                 <span class="badge badge-outline">Score</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($killRateLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 font-bold text-accent">{{ $row['rank'] }}</span>
                             <div>
@@ -598,17 +598,17 @@
     </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Money bags</p>
-                    <h3 class="text-xl font-black text-base-content">Cash Looted</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Money bags</p>
+                    <h3 class="text-xl font-bold text-base-content">Cash Looted</h3>
                 </div>
                 <span class="badge badge-outline">Money</span>
             </div>
             <div class="mt-5 space-y-2">
                 @forelse ($moneyLeaders as $row)
-                    <div class="flex items-center justify-between rounded-2xl border border-base-300 bg-base-200/40 px-4 py-3">
+                    <div class="flex items-center justify-between rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-warning/15 font-bold text-warning">{{ $row['rank'] }}</span>
                             <div>
@@ -627,11 +627,11 @@
             </div>
         </div>
 
-        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+        <div class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Top charts</p>
-                    <h3 class="text-xl font-black text-base-content">Leaderboard Spotlights</h3>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Top charts</p>
+                    <h3 class="text-xl font-bold text-base-content">Leaderboard Spotlights</h3>
                 </div>
                 <span class="badge badge-outline">Top 6</span>
             </div>
@@ -652,11 +652,11 @@
         </div>
     </section>
 
-    <section class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-md">
+    <section class="rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
         <div class="flex items-center justify-between gap-3">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-base-content/55">Loot breakdown</p>
-                <h3 class="text-xl font-black text-base-content">Resources hauled</h3>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Loot breakdown</p>
+                <h3 class="text-xl font-bold text-base-content">Resources hauled</h3>
             </div>
             <span class="badge badge-ghost">{{ $fromLabel }} - {{ $toLabel }}</span>
         </div>
@@ -691,6 +691,7 @@
 </div>
 
 @push('scripts')
+    <x-chart-js />
     <script>
         const lootTimeline = @json($lootTimeline);
         const infraTimeline = @json($infraTimeline);
@@ -699,6 +700,22 @@
         const topLoot = @json($topLoot);
         const topInfra = @json($topInfra);
         const topEfficiency = @json($topEfficiency);
+        const chartPalette = window.NexusCharts?.colors?.() ?? {
+            primary: '#28755f',
+            secondary: '#a87621',
+            success: '#2f7d45',
+            warning: '#c28c24',
+            error: '#b53a35',
+            info: '#347ba6',
+        };
+        const categoricalColors = [
+            chartPalette.primary,
+            chartPalette.secondary,
+            chartPalette.success,
+            chartPalette.info,
+            chartPalette.warning,
+            chartPalette.error,
+        ];
 
         const lootCtx = document.getElementById('lootTimelineChart');
         if (lootCtx) {
@@ -708,10 +725,11 @@
                     labels: lootTimeline.labels,
                     datasets: [{
                         label: 'Loot value',
+                        nexusColor: 'secondary',
                         data: lootTimeline.values,
-                        borderColor: '#facc15',
-                        backgroundColor: 'rgba(250, 204, 21, 0.15)',
-                        fill: true,
+                        borderColor: chartPalette.secondary,
+                        backgroundColor: chartPalette.secondary,
+                        fill: false,
                         tension: 0.35,
                     }],
                 },
@@ -720,7 +738,6 @@
                     scales: {
                         y: {
                             ticks: { callback: value => `$${Number(value).toLocaleString()}` },
-                            grid: { color: 'rgba(0,0,0,0.05)' },
                         },
                     },
                 },
@@ -735,8 +752,9 @@
                     labels: infraTimeline.labels,
                     datasets: [{
                         label: 'Infra value',
+                        nexusColor: 'info',
                         data: infraTimeline.values,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        backgroundColor: chartPalette.info,
                         borderRadius: 8,
                     }],
                 },
@@ -759,10 +777,11 @@
                     labels: attackTimeline.labels,
                     datasets: [{
                         label: 'Attacks',
+                        nexusColor: 'primary',
                         data: attackTimeline.values,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.15)',
-                        fill: true,
+                        borderColor: chartPalette.primary,
+                        backgroundColor: chartPalette.primary,
+                        fill: false,
                         tension: 0.35,
                     }],
                 },
@@ -785,7 +804,8 @@
                     labels: resourceMix.labels,
                     datasets: [{
                         data: resourceMix.values,
-                        backgroundColor: ['#38bdf8', '#fbbf24', '#34d399', '#f472b6', '#a78bfa', '#fb7185', '#f97316', '#22d3ee', '#4ade80', '#60a5fa', '#facc15'],
+                        nexusPalette: true,
+                        backgroundColor: resourceMix.labels.map((_, index) => categoricalColors[index % categoricalColors.length]),
                     }],
                 },
                 options: {
@@ -803,7 +823,8 @@
                     labels: topLoot.labels,
                     datasets: [{
                         data: topLoot.values,
-                        backgroundColor: 'rgba(250, 204, 21, 0.7)',
+                        nexusColor: 'secondary',
+                        backgroundColor: chartPalette.secondary,
                         borderRadius: 6,
                     }],
                 },
@@ -827,7 +848,8 @@
                     labels: topInfra.labels,
                     datasets: [{
                         data: topInfra.values,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        nexusColor: 'info',
+                        backgroundColor: chartPalette.info,
                         borderRadius: 6,
                     }],
                 },
@@ -851,7 +873,8 @@
                     labels: topEfficiency.labels,
                     datasets: [{
                         data: topEfficiency.values,
-                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                        nexusColor: 'success',
+                        backgroundColor: chartPalette.success,
                         borderRadius: 6,
                     }],
                 },

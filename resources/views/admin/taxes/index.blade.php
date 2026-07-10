@@ -2,7 +2,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Taxes" separator />
+    <x-header title="Taxes" separator use-h1 />
 
     {{-- Stats --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -32,7 +32,7 @@
         @foreach ($totals as $resource => $daily)
             <x-card :title="ucfirst($resource) . ' – Daily Totals'">
                 <div class="overflow-x-auto max-h-64 overflow-y-auto">
-                    <table class="table table-sm table-zebra">
+                    <table class="table table-sm table-zebra" data-sortable="false">
                         <thead>
                             <tr class="text-base-content/60">
                                 <th>Date</th>

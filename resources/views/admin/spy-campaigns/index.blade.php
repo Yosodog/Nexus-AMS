@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Spy Campaigns" separator>
+    <x-header title="Spy Campaigns" separator use-h1>
         <x-slot:subtitle>Plan espionage rounds, monitor odds, and dispatch assignments.</x-slot:subtitle>
         <x-slot:actions>
             <div class="tooltip tooltip-left" data-tip="Coordinate espionage rounds, auto-build matchups, then message aggressors with one click.">
@@ -22,7 +22,7 @@
 
     <x-card title="Campaign list" :subtitle="$campaigns->count() . ' campaigns tracked'">
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table class="table table-zebra">
+            <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
                     <th>Name</th>
@@ -32,7 +32,7 @@
                     <th>Assignments</th>
                     <th>Avg Odds</th>
                     <th>High Impact</th>
-                    <th class="text-right">Actions</th>
+                    <th class="text-right" data-sortable="false">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -75,7 +75,7 @@
         </div>
     </x-card>
 
-    <dialog id="createSpyCampaignModal" class="modal">
+    <dialog id="createSpyCampaignModal" class="modal" aria-label="Create spy campaign">
         <div class="modal-box max-w-2xl">
             <form method="post" action="{{ route('admin.spy-campaigns.store') }}" class="space-y-4">
                 @csrf
@@ -85,17 +85,17 @@
                         <h3 class="text-lg font-semibold">New Spy Campaign</h3>
                         <p class="text-sm text-base-content/60">Create the campaign shell before adding allied and enemy alliances.</p>
                     </div>
-                    <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createSpyCampaignModal').close()">✕</button>
+                    <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createSpyCampaignModal').close()" aria-label="Close campaign creation dialog">✕</button>
                 </div>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Name</span>
-                    <input type="text" name="name" class="input input-bordered w-full" required>
+                    <input type="text" name="name" class="input w-full" required>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Description</span>
-                    <textarea name="description" class="textarea textarea-bordered min-h-28 w-full" placeholder="What is the goal of this spy campaign?"></textarea>
+                    <textarea name="description" class="textarea min-h-28 w-full" placeholder="What is the goal of this spy campaign?"></textarea>
                 </label>
 
                 <label class="block space-y-2">
@@ -105,7 +105,7 @@
                             <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
                         </span>
                     </span>
-                    <input type="number" name="settings[min_success_chance]" class="input input-bordered w-full" min="0" max="100" step="1" value="65" placeholder="e.g. 65">
+                    <input type="number" name="settings[min_success_chance]" class="input w-full" min="0" max="100" step="1" value="65" placeholder="e.g. 65">
                 </label>
 
                 <div class="flex justify-end gap-2">

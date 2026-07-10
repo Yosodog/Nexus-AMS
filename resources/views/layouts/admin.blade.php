@@ -37,6 +37,8 @@
         </x-slot:content>
     </x-main>
 
+    <x-confirmation-dialog />
+
     @livewireScripts
     @stack('modals')
     @stack('scripts')

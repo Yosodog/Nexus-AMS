@@ -3,7 +3,7 @@
 @section('title', 'NEL Documentation')
 
 @section('content')
-    <x-header :title="config('app.name') . ' Expression Language (NEL)'" separator>
+    <x-header :title="config('app.name') . ' Expression Language (NEL)'" separator use-h1>
         <x-slot:subtitle>
             Define safe, predictable expressions for audits, grants, and MMR checks using dot-notation like
             <code>nation.score</code> or <code>nation.military.soldiers</code>.
@@ -45,7 +45,7 @@
 
         <x-card title="Operator Precedence">
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-sm">
+                <table class="table table-sm" data-sortable="false">
                     <thead>
                     <tr>
                         <th class="text-xs uppercase tracking-wide text-base-content/60">Level</th>
@@ -183,7 +183,7 @@ nation.last_active &lt; 1700000000</code></pre>
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <div class="overflow-x-auto rounded-box border border-base-300">
-                <table class="table table-sm">
+                <table class="table table-sm" data-sortable="false">
                     <thead>
                     <tr>
                         <th class="text-xs uppercase tracking-wide text-base-content/60">Project</th>
@@ -211,15 +211,15 @@ nation.last_active &lt; 1700000000</code></pre>
             <div class="space-y-4">
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Bit Integer</span>
-                    <input type="text" class="input input-bordered w-full" :value="bitsString" readonly>
+                    <input type="text" class="input w-full" :value="bitsString" readonly>
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Binary</span>
-                    <input type="text" class="input input-bordered w-full font-mono" :value="binaryString" readonly>
+                    <input type="text" class="input w-full font-mono" :value="binaryString" readonly>
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Selected</span>
-                    <input type="text" class="input input-bordered w-full" :value="selected.length ? selected.join(', ') : 'None'" readonly>
+                    <input type="text" class="input w-full" :value="selected.length ? selected.join(', ') : 'None'" readonly>
                 </label>
 
                 <div class="rounded-box border border-base-300 bg-base-200/60 p-4">

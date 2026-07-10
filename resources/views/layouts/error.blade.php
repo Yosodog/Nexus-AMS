@@ -33,7 +33,7 @@
             </div>
 
             <section aria-labelledby="error-title" class="border-t-2 border-primary pt-6">
-                <p class="nexus-eyebrow">System response · @yield('code')</p>
+                <p class="nexus-kicker">System response · @yield('code')</p>
                 <h1 id="error-title" class="mt-3 font-display text-4xl font-bold leading-none text-base-content sm:text-5xl">@yield('heading')</h1>
                 <p class="mt-5 max-w-2xl text-base leading-7 text-base-content/75">@yield('message')</p>
 

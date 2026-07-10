@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header :title="'Nation Overview: ' . $nation->leader_name" separator>
+    <x-header :title="'Nation Overview: ' . $nation->leader_name" separator use-h1>
         <x-slot:subtitle>
             <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" class="link link-primary">
                 Nation #{{ $nation->id }}
@@ -60,7 +60,7 @@
     {{-- Account Overview --}}
     <x-card title="Account Overview" class="mb-6">
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
                     <tr class="text-base-content/60">
                         <th>Account</th>
@@ -88,7 +88,7 @@
                             @foreach(\App\Services\PWHelperService::resources(false) as $resource)
                                 <td>{{ number_format((float) $account['resources'][$resource], 2) }}</td>
                             @endforeach
-                            <td>{{ $account['updated_at']?->format('Y-m-d H:i') ?? 'N/A' }}</td>
+                            <td data-order="{{ $account['updated_at']?->timestamp ?? 0 }}">{{ $account['updated_at']?->format('Y-m-d H:i') ?? 'N/A' }}</td>
                         </tr>
                     @empty
                         <tr>

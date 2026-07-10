@@ -1,20 +1,20 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto max-w-7xl space-y-6 px-0 py-2 sm:py-4 xl:max-w-6xl 2xl:max-w-[1400px]">
+    <div class="mx-auto w-full min-w-0 max-w-7xl space-y-6 px-0 py-2 sm:py-4 xl:max-w-6xl 2xl:max-w-[1400px]">
 
         {{-- Target Nation Input --}}
-        <div class="flex flex-col gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
+        <div class="flex flex-col gap-3 rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
             <div class="w-full flex-1 min-w-0 sm:min-w-[220px]">
                 <label class="label">
-                    <span class="label-text font-semibold">Target nation ID</span>
+                    <span class="font-semibold">Target nation ID</span>
                 </label>
                 <div class="join w-full">
                     <input
                             type="number"
                             id="nationIdInput"
                             placeholder="e.g. 123456"
-                            class="input input-bordered join-item w-full"
+                            class="input join-item w-full"
                     />
                     <button
                             class="btn btn-primary join-item"
@@ -119,7 +119,7 @@
         {{-- Nation Table --}}
         <x-utils.card :title="$target ? 'Matching nation' : 'All alliance nations'">
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table w-full" data-sortable="{{ $target ? 'false' : 'true' }}">
                     <thead>
                     <tr>
                         <th>Leader</th>
@@ -162,7 +162,7 @@
                                             <span class="text-sm font-semibold">{{ $nation->match_score }}</span>
                                         </div>
                                     @else
-                                        <span class="text-sm italic text-gray-500">Out of range</span>
+                                        <span class="text-sm italic text-base-content/55">Out of range</span>
                                     @endif
                                 </td>
                             @endif

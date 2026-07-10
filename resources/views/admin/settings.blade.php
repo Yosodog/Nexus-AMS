@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-    <x-header title="Admin Settings" separator>
+    <x-header title="Admin Settings" separator use-h1>
         <x-slot:subtitle>Control sync workflows, diagnostics, public-facing content, and operational toggles from one place.</x-slot:subtitle>
     </x-header>
 
@@ -72,7 +72,7 @@
                 </div>
 
                 <div class="overflow-x-auto rounded-box border border-base-300">
-                    <table class="table table-zebra">
+                    <table class="table table-zebra" data-sortable="false">
                         <thead>
                         <tr>
                             <th scope="col">Workflow</th>
@@ -108,7 +108,7 @@
                                             <span class="text-xs font-medium">Older than (hours)</span>
                                             <input
                                                 type="number"
-                                                class="input input-bordered input-sm w-28"
+                                                class="input input-sm w-28"
                                                 id="olderThanHours-{{ $item['type'] }}"
                                                 name="older_than_hours"
                                                 min="1"
@@ -141,46 +141,46 @@
                 @csrf
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Headline</span>
-                    <input type="text" class="input input-bordered" id="homeHeadline" name="home_headline" value="{{ old('home_headline', $homepageSettings['headline'] ?? '') }}" maxlength="160" required>
+                    <input type="text" class="input" id="homeHeadline" name="home_headline" value="{{ old('home_headline', $homepageSettings['headline'] ?? '') }}" maxlength="160" required>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Tagline</span>
-                    <input type="text" class="input input-bordered" id="homeTagline" name="home_tagline" value="{{ old('home_tagline', $homepageSettings['tagline'] ?? '') }}" maxlength="240" required>
+                    <input type="text" class="input" id="homeTagline" name="home_tagline" value="{{ old('home_tagline', $homepageSettings['tagline'] ?? '') }}" maxlength="240" required>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">About blurb</span>
-                    <textarea class="textarea textarea-bordered min-h-28" id="homeAbout" name="home_about" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
+                    <textarea class="textarea min-h-28" id="homeAbout" name="home_about" maxlength="800" placeholder="Short paragraph for guests">{{ old('home_about', $homepageSettings['about'] ?? '') }}</textarea>
                     <span class="text-xs text-base-content/60">A short paragraph near the top of the page.</span>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Stats intro</span>
-                    <input type="text" class="input input-bordered" id="homeStatsIntro" name="home_stats_intro" value="{{ old('home_stats_intro', $homepageSettings['stats_intro'] ?? '') }}" maxlength="240" placeholder="A quick look at the alliance as it stands today.">
+                    <input type="text" class="input" id="homeStatsIntro" name="home_stats_intro" value="{{ old('home_stats_intro', $homepageSettings['stats_intro'] ?? '') }}" maxlength="240" placeholder="A quick look at the alliance as it stands today.">
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Closing line</span>
-                    <input type="text" class="input input-bordered" id="homeClosingText" name="home_closing_text" value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300" placeholder="If this feels like the right fit, send in your application and come meet the team.">
+                    <input type="text" class="input" id="homeClosingText" name="home_closing_text" value="{{ old('home_closing_text', $homepageSettings['closing_text'] ?? '') }}" maxlength="300" placeholder="If this feels like the right fit, send in your application and come meet the team.">
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Hero badge</span>
-                    <input type="text" class="input input-bordered" id="homeHeroBadge" name="home_hero_badge" value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60" placeholder="Recruiting now">
+                    <input type="text" class="input" id="homeHeroBadge" name="home_hero_badge" value="{{ old('home_hero_badge', $homepageSettings['hero_badge'] ?? '') }}" maxlength="60" placeholder="Recruiting now">
                     <span class="block text-xs text-base-content/60">Short status label shown in the hero section.</span>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">CTA button label</span>
-                    <input type="text" class="input input-bordered" id="homeCtaLabel" name="home_cta_label" value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60" placeholder="Start your application">
+                    <input type="text" class="input" id="homeCtaLabel" name="home_cta_label" value="{{ old('home_cta_label', $homepageSettings['cta_label'] ?? '') }}" maxlength="60" placeholder="Start your application">
                     <span class="block text-xs text-base-content/60">Text on the main call-to-action button.</span>
                 </label>
 
                 <div class="space-y-2">
                     <div class="text-sm font-medium">Highlights (optional)</div>
-                    @foreach($highlightInputs as $highlight)
-                        <input type="text" class="input input-bordered w-full" name="home_highlights[]" value="{{ $highlight }}" maxlength="140" placeholder="e.g. Clear onboarding and quick responses">
+                    @foreach($highlightInputs as $index => $highlight)
+                        <input type="text" class="input w-full" name="home_highlights[]" value="{{ $highlight }}" maxlength="140" placeholder="e.g. Clear onboarding and quick responses" aria-label="Homepage highlight {{ $index + 1 }}">
                     @endforeach
                     <div class="text-xs text-base-content/60">Short points that tell recruits what they can expect.</div>
                 </div>
@@ -201,7 +201,7 @@
 
             <div class="space-y-4">
                 <div class="flex items-center gap-4">
-                    <div class="flex h-14 w-14 items-center justify-center rounded-box border border-base-300 bg-white">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-box border border-base-300 bg-base-100">
                         <img src="{{ $faviconUrl }}" alt="Current favicon" class="max-h-8 max-w-8">
                     </div>
                     <div class="text-sm text-base-content/60">Current favicon preview</div>
@@ -213,7 +213,7 @@
                         <span class="text-sm font-medium">Favicon file</span>
                         <input
                             type="file"
-                            class="file-input file-input-bordered"
+                            class="file-input"
                             id="faviconUpload"
                             name="favicon"
                             accept=".png,.ico,.jpg,.jpeg"
@@ -246,7 +246,7 @@
                 <input type="hidden" name="require_discord_verification" value="0">
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="requireDiscordVerification" name="require_discord_verification" value="1" @checked($discordVerificationRequired)>
-                    <span class="label-text">Require Discord Verification</span>
+                    <span class="">Require Discord Verification</span>
                 </label>
                 <div class="pt-2">
                     <button class="btn btn-primary" type="submit">Save Discord Setting</button>
@@ -265,13 +265,13 @@
                 @csrf
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Channel ID</span>
-                    <input type="text" class="input input-bordered" id="discordAllianceDepartureChannelId" name="discord_alliance_departure_channel_id" value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}" placeholder="e.g. 123456789012345678">
+                    <input type="text" class="input" id="discordAllianceDepartureChannelId" name="discord_alliance_departure_channel_id" value="{{ old('discord_alliance_departure_channel_id', $discordDepartureChannelId) }}" placeholder="e.g. 123456789012345678">
                     <span class="text-xs text-base-content/60">Leave blank to reuse the war alert channel.</span>
                 </label>
                 <input type="hidden" name="discord_alliance_departure_enabled" value="0">
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="discordAllianceDepartureEnabled" name="discord_alliance_departure_enabled" value="1" @checked($discordDepartureEnabled)>
-                    <span class="label-text">Enable departure alerts</span>
+                    <span class="">Enable departure alerts</span>
                 </label>
                 <div class="pt-2">
                     <button class="btn btn-primary" type="submit">Save Discord Departure Settings</button>
@@ -293,7 +293,7 @@
                 <input type="hidden" name="auto_withdraw_enabled" value="0">
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="autoWithdrawEnabled" name="auto_withdraw_enabled" value="1" @checked($autoWithdrawEnabled)>
-                    <span class="label-text">Enable Auto Withdraw</span>
+                    <span class="">Enable Auto Withdraw</span>
                 </label>
                 <div class="pt-2">
                     <button class="btn btn-primary" type="submit">Save Auto Withdraw Setting</button>
@@ -315,7 +315,7 @@
                 <input type="hidden" name="backups_enabled" value="0">
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="backupsEnabled" name="backups_enabled" value="1" @checked($backupsEnabled)>
-                    <span class="label-text">Enable Backups</span>
+                    <span class="">Enable Backups</span>
                 </label>
                 <div class="pt-2">
                     <button class="btn btn-primary" type="submit">Save Backup Setting</button>
@@ -344,7 +344,7 @@
                     <input type="hidden" name="loan_payments_enabled" value="0">
                     <label class="label cursor-pointer justify-start gap-3">
                         <input class="toggle toggle-primary" type="checkbox" id="loanPaymentsEnabled" name="loan_payments_enabled" value="1" @checked($loanPaymentsEnabled)>
-                        <span class="label-text">Enable Loan Payments</span>
+                        <span class="">Enable Loan Payments</span>
                     </label>
                     <div class="pt-2">
                         <button class="btn btn-primary" type="submit">Save Loan Payment Setting</button>
@@ -374,13 +374,13 @@
                         value="1"
                         @checked(old('user_inactivity_auto_disable_enabled', $userInactivityAutoDisableEnabled))
                     >
-                    <span class="label-text">Enable automatic account disabling</span>
+                    <span class="">Enable automatic account disabling</span>
                 </label>
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Inactivity threshold (days)</span>
                     <input
                         type="number"
-                        class="input input-bordered"
+                        class="input"
                         id="userInactivityAutoDisableDays"
                         name="user_inactivity_auto_disable_days"
                         min="1"
@@ -410,7 +410,7 @@
                 <input type="hidden" name="grant_approvals_enabled" value="0">
                 <label class="label cursor-pointer justify-start gap-3">
                     <input class="toggle toggle-primary" type="checkbox" id="grantApprovalsEnabled" name="grant_approvals_enabled" value="1" @checked($grantApprovalsEnabled)>
-                    <span class="label-text">Enable Grant Approvals</span>
+                    <span class="">Enable Grant Approvals</span>
                 </label>
                 <div class="pt-2">
                     <button class="btn btn-primary" type="submit">Save Grant Approval Setting</button>
@@ -427,7 +427,7 @@
                     <span class="text-sm font-medium">Retention (days)</span>
                     <input
                         type="number"
-                        class="input input-bordered"
+                        class="input"
                         id="auditRetentionDays"
                         name="audit_log_retention_days"
                         min="1"

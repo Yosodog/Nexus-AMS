@@ -3,7 +3,7 @@
 @section('content')
     @php use Illuminate\Support\Str; @endphp
 
-    <x-header :title="'Edit Role: ' . Str::headline($role->name)" separator>
+    <x-header :title="'Edit Role: ' . Str::headline($role->name)" separator use-h1>
         <x-slot:subtitle>Update the role name, review assigned members, and tune permissions without leaving the page.</x-slot:subtitle>
         <x-slot:actions>
             <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost btn-sm">Back to roles</a>
@@ -38,7 +38,7 @@
                              :readonly="$role->protected"
                              :disabled="$role->protected" />
 
-                    <div class="rounded-2xl bg-base-200/70 p-4 text-sm text-base-content/75">
+                    <div class="rounded-lg bg-base-200/70 p-4 text-sm text-base-content/75">
                         <div class="font-semibold text-base-content">Checklist</div>
                         <ul class="mt-2 space-y-2">
                             <li>Keep responsibilities narrow.</li>
@@ -73,7 +73,7 @@
                                         ->take(2)
                                         ->implode('');
                                 @endphp
-                                <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
+                                <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
                                     @if($flag)
                                         <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="h-10 w-10 rounded-full border border-base-300 object-cover">
                                     @else
@@ -85,7 +85,7 @@
                                     </div>
                                 </a>
                             @empty
-                                <div class="rounded-2xl border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
+                                <div class="rounded-lg border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
                                     No members have this role yet.
                                 </div>
                             @endforelse
@@ -125,7 +125,7 @@
                             $typeClass = $isView ? 'badge-info badge-outline' : 'badge-primary badge-outline';
                             $description = $isView ? 'Read-only access to ' . Str::headline($perm) : 'Full management access to ' . Str::headline($perm) . ' features.';
                         @endphp
-                        <label class="permission-item flex cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-4 transition hover:border-primary/30 hover:bg-primary/5 {{ $role->protected ? 'opacity-75' : '' }}"
+                        <label class="permission-item flex cursor-pointer items-start gap-3 rounded-lg border border-base-300 bg-base-100 px-4 py-4 transition hover:border-primary/30 hover:bg-primary/5 {{ $role->protected ? 'opacity-75' : '' }}"
                                data-permission-label="{{ Str::lower($perm) }}">
                             <input type="checkbox"
                                    name="permissions[]"

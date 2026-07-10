@@ -1,7 +1,8 @@
 @if ($requests->isEmpty())
     <p class="text-base-content/50 text-sm">No recent city grant requests.</p>
 @else
-    <table class="table table-sm table-zebra">
+    <div class="overflow-x-auto">
+    <table class="table table-sm table-zebra" data-sortable="false">
         <thead>
             <tr class="text-base-content/60">
                 <th>City #</th>
@@ -27,4 +28,5 @@
             @endforeach
         </tbody>
     </table>
+    </div>
 @endif

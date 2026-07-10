@@ -61,7 +61,7 @@
                 @endforeach
             </div>
             <div class="mt-3 hidden overflow-x-auto xl:block">
-                <table class="table table-zebra md:table-fixed">
+                <table class="table table-zebra md:table-fixed" data-sortable="false">
                     <thead>
                     <tr>
                         <th class="whitespace-nowrap">Resource</th>

@@ -162,6 +162,8 @@
 
         <aside
             id="member-navigation-drawer"
+            x-cloak
+            x-show="menuOpen"
             class="member-drawer"
             :class="menuOpen ? 'is-open' : ''"
             :aria-hidden="(! menuOpen).toString()"

@@ -332,7 +332,7 @@
                 </ul>
 
                 <div class="hidden overflow-x-auto sm:block">
-                    <table class="table">
+                    <table class="table" data-sortable="false">
                         <thead>
                             <tr>
                                 <th scope="col">Date</th>

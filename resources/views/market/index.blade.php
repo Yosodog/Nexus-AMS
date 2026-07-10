@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="space-y-6">
-        <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow-md">
+        <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow-md">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Alliance market</p>
@@ -21,7 +21,7 @@
                 @php
                     $isSoldOut = (float) $resource['buy_cap_remaining'] <= 0;
                 @endphp
-                <div class="rounded-2xl bg-base-100 border border-base-300 p-5 shadow-sm flex flex-col gap-4 {{ $isSoldOut ? 'opacity-60' : '' }}">
+                <div class="rounded-lg bg-base-100 border border-base-300 p-5 shadow-sm flex flex-col gap-4 {{ $isSoldOut ? 'opacity-60' : '' }}">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs uppercase text-base-content/60">{{ str_replace('_', ' ', $resource['resource']) }}</p>
@@ -50,14 +50,14 @@
                     </div>
                 </div>
             @empty
-                <div class="rounded-2xl bg-base-100 border border-base-300 p-6 text-center text-base-content/70">
+                <div class="rounded-lg bg-base-100 border border-base-300 p-6 text-center text-base-content/70">
                     No resources are currently buyable. Check back later.
                 </div>
             @endforelse
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
-            <div class="lg:col-span-2 rounded-2xl bg-base-100 border border-base-300 p-6 shadow-sm">
+            <div class="lg:col-span-2 rounded-lg bg-base-100 border border-base-300 p-6 shadow-sm">
                 <h2 class="text-lg font-semibold mb-4">Sell to the alliance</h2>
                 <form
                     method="POST"
@@ -75,11 +75,11 @@
                 >
                     @csrf
                     <div class="grid gap-4 md:grid-cols-2">
-                        <label class="form-control w-full">
+                        <label class="grid gap-2 w-full">
                             <div class="label">
-                                <span class="label-text">Account</span>
+                                <span class="">Account</span>
                             </div>
-                            <select name="account_id" class="select select-bordered w-full" x-model="accountId" required>
+                            <select name="account_id" class="select w-full" x-model="accountId" required>
                                 <option value="" disabled>Select an account</option>
                                 @foreach ($accounts as $account)
                                     <option value="{{ $account->id }}" @selected(old('account_id') == $account->id)>
@@ -92,11 +92,11 @@
                             @enderror
                         </label>
 
-                        <label class="form-control w-full">
+                        <label class="grid gap-2 w-full">
                             <div class="label">
-                                <span class="label-text">Resource</span>
+                                <span class="">Resource</span>
                             </div>
-                            <select name="resource" class="select select-bordered w-full" x-model="resource" required>
+                            <select name="resource" class="select w-full" x-model="resource" required>
                                 <option value="" disabled>Select a resource</option>
                                 @foreach ($marketResources as $resource)
                                     @php
@@ -116,22 +116,22 @@
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
-                        <label class="form-control w-full">
+                        <label class="grid gap-2 w-full">
                             <div class="label">
-                                <span class="label-text">Amount</span>
+                                <span class="">Amount</span>
                             </div>
                             <input
                                 type="number"
                                 name="amount"
                                 min="1"
                                 step="0.01"
-                                class="input input-bordered w-full"
+                                class="input w-full"
                                 placeholder="Enter amount"
                                 x-model="amount"
                                 required
                             />
                             <div class="label">
-                                <span class="label-text-alt text-base-content/60">Minimum sale: 1 unit</span>
+                                <span class="text-base-content/60">Minimum sale: 1 unit</span>
                             </div>
                             @error('amount')
                                 <p class="text-xs text-error mt-2">{{ $message }}</p>
@@ -170,7 +170,7 @@
                 </form>
             </div>
 
-            <div class="rounded-2xl bg-base-100 border border-base-300 p-6 shadow-sm">
+            <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow-sm">
                 <h3 class="text-lg font-semibold mb-3">Recent transactions</h3>
                 <div class="space-y-3">
                     @forelse ($recentTransactions as $transaction)

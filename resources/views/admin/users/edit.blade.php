@@ -14,7 +14,7 @@
         $allianceName = $nation?->alliance?->name;
     @endphp
 
-    <x-header :title="'Edit User: '.$user->name" separator>
+    <x-header :title="'Edit User: '.$user->name" separator use-h1>
         <x-slot:subtitle>Review access, linked nation data, Discord state, and recent financial activity for this member.</x-slot:subtitle>
         <x-slot:actions>
             <div class="flex flex-wrap items-center gap-2">
@@ -103,17 +103,17 @@
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="space-y-1">
                         <label for="user-name" class="text-sm font-semibold">Username</label>
-                        <input id="user-name" name="name" type="text" class="input input-bordered w-full" value="{{ old('name', $user->name) }}">
+                        <input id="user-name" name="name" type="text" class="input w-full" value="{{ old('name', $user->name) }}">
                     </div>
 
                     <div class="space-y-1">
                         <label for="user-email" class="text-sm font-semibold">Email</label>
-                        <input id="user-email" name="email" type="email" class="input input-bordered w-full" value="{{ old('email', $user->email) }}">
+                        <input id="user-email" name="email" type="email" class="input w-full" value="{{ old('email', $user->email) }}">
                     </div>
 
                     <div class="space-y-1">
                         <label for="user-admin" class="text-sm font-semibold">Is Admin</label>
-                        <select id="user-admin" name="is_admin" class="select select-bordered w-full">
+                        <select id="user-admin" name="is_admin" class="select w-full">
                             <option value="0" @selected(! $user->is_admin)>No</option>
                             <option value="1" @selected($user->is_admin)>Yes</option>
                         </select>
@@ -121,7 +121,7 @@
 
                     <div class="space-y-1">
                         <label for="user-disabled" class="text-sm font-semibold">Account Status</label>
-                        <select id="user-disabled" name="disabled" class="select select-bordered w-full">
+                        <select id="user-disabled" name="disabled" class="select w-full">
                             <option value="0" @selected(! $user->disabled)>Enabled</option>
                             <option value="1" @selected($user->disabled)>Disabled</option>
                         </select>
@@ -130,12 +130,12 @@
                     @if($nation)
                         <div class="space-y-1">
                             <label for="user-nation-id" class="text-sm font-semibold">Nation ID</label>
-                            <input id="user-nation-id" name="nation_id" type="number" class="input input-bordered w-full" value="{{ old('nation_id', $user->nation_id) }}">
+                            <input id="user-nation-id" name="nation_id" type="number" class="input w-full" value="{{ old('nation_id', $user->nation_id) }}">
                         </div>
 
                         <div class="space-y-1">
                             <label for="user-verified" class="text-sm font-semibold">Verification</label>
-                            <select id="user-verified" name="verified_at" class="select select-bordered w-full">
+                            <select id="user-verified" name="verified_at" class="select w-full">
                                 <option value="" @selected(! $user->verified_at)>Not Verified</option>
                                 <option value="1" @selected($user->verified_at)>Verified</option>
                             </select>
@@ -144,7 +144,7 @@
 
                     <div class="space-y-1 md:col-span-2">
                         <label for="roles" class="text-sm font-semibold">Roles</label>
-                        <select name="roles[]" id="roles" class="select select-bordered min-h-48 w-full" multiple size="{{ max(6, min(10, $allRoles->count())) }}">
+                        <select name="roles[]" id="roles" class="select min-h-48 w-full" multiple size="{{ max(6, min(10, $allRoles->count())) }}">
                             @foreach($allRoles as $role)
                                 <option value="{{ $role->id }}" @selected(in_array($role->id, $selectedRoleIds, true))>
                                     {{ ucfirst($role->name) }}{{ $role->protected ? ' (System)' : '' }}
@@ -160,12 +160,12 @@
                 <div class="space-y-4">
                     <div class="space-y-1">
                         <label for="user-password" class="text-sm font-semibold">New Password</label>
-                        <input id="user-password" name="password" type="password" class="input input-bordered w-full" placeholder="Leave blank to keep current">
+                        <input id="user-password" name="password" type="password" class="input w-full" placeholder="Leave blank to keep current">
                     </div>
 
                     <div class="space-y-1">
                         <label for="user-password-confirmation" class="text-sm font-semibold">Confirm Password</label>
-                        <input id="user-password-confirmation" name="password_confirmation" type="password" class="input input-bordered w-full">
+                        <input id="user-password-confirmation" name="password_confirmation" type="password" class="input w-full">
                     </div>
 
                     <div class="rounded-box bg-base-200/70 p-4 text-sm text-base-content/70">
@@ -216,7 +216,7 @@
                     </div>
                 @else
                     <div class="overflow-x-auto rounded-box border border-base-300">
-                        <table class="table table-zebra">
+                        <table class="table table-zebra" data-sortable="true">
                             <thead>
                                 <tr>
                                     <th>Account</th>
@@ -225,7 +225,7 @@
                                     <th class="text-right">Munitions</th>
                                     <th class="text-right">Food</th>
                                     <th>Status</th>
-                                    <th class="text-right">Updated</th>
+                                    <th class="text-right" data-sortable="false">Updated</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -246,7 +246,7 @@
                                                 {{ $account->frozen ? 'Frozen' : 'Active' }}
                                             </span>
                                         </td>
-                                        <td class="text-right text-sm text-base-content/60">{{ optional($account->updated_at)->diffForHumans() ?? '—' }}</td>
+                                        <td class="text-right text-sm text-base-content/60" data-order="{{ optional($account->updated_at)->timestamp ?? 0 }}">{{ optional($account->updated_at)->diffForHumans() ?? '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -263,7 +263,7 @@
                 </div>
             @else
                 <div class="overflow-x-auto rounded-box border border-base-300">
-                    <table class="table table-zebra">
+                    <table class="table table-zebra" data-sortable="false">
                         <thead>
                             <tr>
                                 <th>When</th>
