@@ -366,6 +366,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/withdrawals/limits', [WithdrawalController::class, 'updateLimits'])->name('admin.withdrawals.limits');
         Route::post('/withdrawals/{transaction}/approve', [WithdrawalController::class, 'approve'])->name('admin.withdrawals.approve');
         Route::post('/withdrawals/{transaction}/deny', [WithdrawalController::class, 'deny'])->name('admin.withdrawals.deny');
+        Route::post('/withdrawals/{transaction}/reconcile', [WithdrawalController::class, 'reconcile'])->name('admin.withdrawals.reconcile');
 
         // City Grants
         Route::get('/grants/city', [CityGrantController::class, 'cityGrants'])->name(

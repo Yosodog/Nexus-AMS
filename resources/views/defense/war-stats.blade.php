@@ -1,6 +1,8 @@
 @extends('layouts.main')
 
 @section('content')
+    <x-chart-js />
+
     @php
         $totalWars = $activeWars->count() + $pastWars->count();
         $completedWars = $wins + $losses + $draws;

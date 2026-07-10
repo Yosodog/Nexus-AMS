@@ -2,16 +2,27 @@ import { defineConfig } from '@playwright/test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const phpCommand = process.env.PLAYWRIGHT_PHP_COMMAND?.trim() || 'herd php';
+const shellEscape = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+const configuredPhpCommand = process.env.PLAYWRIGHT_PHP_COMMAND?.trim();
+const configuredPhpBinary = process.env.PLAYWRIGHT_PHP_BINARY?.trim();
+const phpCommand = configuredPhpCommand
+  || (configuredPhpBinary ? shellEscape(configuredPhpBinary) : 'herd php');
 const browserDatabase = process.env.PLAYWRIGHT_DB_DATABASE?.trim()
   || join(tmpdir(), `nexus-ams-browser-${process.pid}.sqlite`);
 const browserEnvironment = [
   'APP_ENV=testing',
+  'APP_DEBUG=false',
   'APP_URL=http://127.0.0.1:8011',
   'DB_CONNECTION=sqlite',
-  `DB_DATABASE=${browserDatabase}`,
+  `DB_DATABASE=${shellEscape(browserDatabase)}`,
   'PW_ALLIANCE_ID=9001',
+  'PW_API_ENDPOINT=https://pw.test/graphql',
+  'PW_API_KEY=testing-pw-key',
+  'PW_API_MUTATION_KEY=testing-pw-mutation-key',
+  'NEXUS_API_TOKEN=testing-nexus-token',
+  'DISCORD_BOT_KEY=testing-discord-key',
   'CACHE_STORE=array',
+  'MAIL_MAILER=array',
   'QUEUE_CONNECTION=sync',
   'SESSION_DRIVER=file',
   'SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8011',

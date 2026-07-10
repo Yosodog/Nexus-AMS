@@ -7,6 +7,9 @@ use stdClass;
 
 class Nation
 {
+    /** @var array<string, true> */
+    private array $sourceFields = [];
+
     public ?int $id = null;
 
     public ?int $alliance_id = null;
@@ -266,11 +269,11 @@ class Nation
 
     /**
      * I hate the function. Look away now.
-     *
-     * @return void
      */
-    public function buildWithJSON(stdClass $json)
+    public function buildWithJSON(stdClass $json): void
     {
+        $this->sourceFields = array_fill_keys(array_keys(get_object_vars($json)), true);
+
         $this->id = isset($json->id) ? (int) $json->id : null;
         $this->alliance_id = isset($json->alliance_id) ? (int) $json->alliance_id : null;
         $this->alliance_position = isset($json->alliance_position) ? (string) $json->alliance_position : null;
@@ -442,6 +445,11 @@ class Nation
         if (isset($json->last_active)) {
             $this->last_active = ApiDateNormalizer::normalizeTimestamp($json->last_active);
         }
+    }
+
+    public function hasSourceField(string $field): bool
+    {
+        return isset($this->sourceFields[$field]);
     }
 
     public function isApplicant(): bool

@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\GrantApplication;
 use App\Models\ManualTransaction;
+use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\RebuildingRequest;
 use App\Models\Transaction;
@@ -66,86 +67,117 @@ class AccountService
      */
     public static function ensureNotBlockaded(int $nationId): void
     {
-        try {
-            $wars = WarQueryService::getMultipleWars([
-                'active' => true,
-                'or_id' => [$nationId],
-                'first' => 1000,
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Unable to validate blockade status via P&W API; allowing withdrawal.', [
-                'nation_id' => $nationId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return;
-        }
-
-        foreach ($wars as $war) {
-            $navalBlockade = (int) ($war->naval_blockade ?? 0);
-            if ($navalBlockade <= 0) {
-                continue;
-            }
-
-            $isAttacker = (int) $war->att_id === $nationId;
-            $isDefender = (int) $war->def_id === $nationId;
-
-            if ($isAttacker && $navalBlockade === (int) $war->def_id) {
-                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
-            }
-
-            if ($isDefender && $navalBlockade === (int) $war->att_id) {
-                throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
-            }
+        if (in_array($nationId, self::getBlockadedNationIds([$nationId]), true)) {
+            throw new UserErrorException('Withdrawals are disabled while your nation is under naval blockade.');
         }
     }
 
     /**
-     * @return Transaction
+     * @param  array<int, int>  $nationIds
+     * @return array<int, int>
      *
      * @throws UserErrorException
      */
+    public static function getBlockadedNationIds(array $nationIds): array
+    {
+        $nationIds = collect($nationIds)
+            ->map(fn (mixed $nationId): int => (int) $nationId)
+            ->filter(fn (int $nationId): bool => $nationId > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($nationIds === []) {
+            return [];
+        }
+
+        $requestedNationIds = array_fill_keys($nationIds, true);
+        $blockadedNationIds = [];
+
+        try {
+            foreach (array_chunk($nationIds, 100) as $nationIdChunk) {
+                $wars = WarQueryService::getMultipleWars([
+                    'active' => true,
+                    'or_id' => $nationIdChunk,
+                    'first' => 1000,
+                ]);
+
+                foreach ($wars as $war) {
+                    $navalBlockade = (int) ($war->naval_blockade ?? 0);
+
+                    if ($navalBlockade === (int) $war->def_id && isset($requestedNationIds[(int) $war->att_id])) {
+                        $blockadedNationIds[(int) $war->att_id] = true;
+                    }
+
+                    if ($navalBlockade === (int) $war->att_id && isset($requestedNationIds[(int) $war->def_id])) {
+                        $blockadedNationIds[(int) $war->def_id] = true;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Unable to validate blockade status via P&W API; blocking withdrawal.', [
+                'nation_count' => count($nationIds),
+                'exception_class' => $e::class,
+            ]);
+
+            throw new UserErrorException(
+                'We could not verify your blockade status right now. No funds were moved; please try again shortly.'
+            );
+        }
+
+        return array_map('intval', array_keys($blockadedNationIds));
+    }
+
     /**
      * Deletes an account after performing necessary checks.
      *
-     *
-     * @return Transaction
-     *
      * @throws UserErrorException
      */
-    public static function deleteAccount(Account $account): void
+    public static function deleteAccount(Account $account, int $ownerNationId): void
     {
-        // Check if the account has pending city grants
+        DB::transaction(function () use ($account, $ownerNationId): void {
+            $lockedAccount = Account::query()
+                ->lockForUpdate()
+                ->find($account->getKey());
+
+            if (! $lockedAccount || (int) $lockedAccount->nation_id !== $ownerNationId) {
+                throw new UserErrorException("You don't own that account");
+            }
+
+            self::assertAccountCanBeDeleted($lockedAccount);
+            $lockedAccount->delete();
+        }, attempts: 3);
+    }
+
+    /**
+     * @throws UserErrorException
+     */
+    private static function assertAccountCanBeDeleted(Account $account): void
+    {
         if ($account->cityGrants()->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending city grants.');
         }
 
-        // Check if the account has pending or active loans
         if ($account->loans()->whereIn('status', ['pending', 'approved'])->exists()) {
             throw new UserErrorException('The account has pending or active loans.');
         }
 
-        // Check if the account has pending grant applications
         if (GrantApplication::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending grant applications.');
         }
 
-        // Check if the account has pending war aid requests
         if (WarAidRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending war aid requests.');
         }
 
-        // Check if the account has pending rebuilding requests
         if (RebuildingRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending rebuilding requests.');
         }
 
-        // Check if the account has pending deposit requests
         if (DepositRequest::where('account_id', $account->id)->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending deposit requests.');
         }
 
-        // Check if the account has pending transactions (withdrawals or transfers)
         $hasPendingTransactions = Transaction::query()
             ->where('is_pending', true)
             ->where('from_account_id', $account->id)
@@ -159,13 +191,21 @@ class AccountService
             throw new UserErrorException('The account has pending transactions.');
         }
 
-        // Check to ensure the account is empty
+        $hasPendingMemberTransfers = MemberTransfer::query()
+            ->where('status', MemberTransfer::STATUS_PENDING)
+            ->where(function ($query) use ($account): void {
+                $query->where('from_account_id', $account->id)
+                    ->orWhere('to_account_id', $account->id);
+            })
+            ->exists();
+
+        if ($hasPendingMemberTransfers) {
+            throw new UserErrorException('The account has pending member transfers.');
+        }
+
         if (! $account->isEmpty()) {
             throw new UserErrorException('The account is not empty.');
         }
-
-        // Proceed with deletion
-        $account->delete();
     }
 
     /**

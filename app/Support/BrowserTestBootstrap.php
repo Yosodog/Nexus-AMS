@@ -18,6 +18,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 
 class BrowserTestBootstrap
@@ -30,6 +31,16 @@ class BrowserTestBootstrap
     public function resetAndSeed(): array
     {
         $this->guardAgainstNonTestDatabases();
+
+        $database = (string) config('database.connections.sqlite.database');
+        if (! File::exists($database)) {
+            File::ensureDirectoryExists(dirname($database));
+
+            if (File::put($database, '') === false) {
+                throw new RuntimeException("Browser test bootstrap could not create database [{$database}].");
+            }
+        }
+
         $this->recreateSchema();
 
         return DB::transaction(function (): array {

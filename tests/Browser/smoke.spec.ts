@@ -28,6 +28,7 @@ test('verified user can reach settings and api docs', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Your settings hub' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'View API documentation' })).toBeVisible();
+  await expect(page.locator('script[src*="chart.js"]')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'View API documentation' }).click();
 

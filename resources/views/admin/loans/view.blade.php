@@ -155,7 +155,7 @@
             <form method="POST" action="{{ route('admin.loans.update', $loan) }}" class="p-5">
                 @csrf
                 <div class="nexus-form-grid lg:grid-cols-3">
-                    <x-input label="Loan amount" type="number" name="amount" id="amount" min="1"
+                    <x-input label="Loan amount" type="number" name="amount" id="amount" min="0.01" step="0.01"
                              :value="old('amount', $loan->amount)" :disabled="$loanIsImmutable"
                              :hint="$loanIsImmutable ? 'Locked after first payment.' : null" />
                     <x-input label="Weekly interest rate (%)" type="number" name="interest_rate" id="interest_rate"

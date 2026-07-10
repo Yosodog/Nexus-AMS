@@ -286,6 +286,7 @@
             </summary>
             <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}" class="border-t border-base-300 p-5" data-confirm="Create and deposit this loan immediately? This bypasses borrower eligibility and duplicate checks." data-confirm-title="Create manual loan?" data-confirm-label="Create and deposit" data-confirm-tone="error">
                 @csrf
+                <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     <x-input label="Nation ID" type="number" name="nation_id" required min="1" :value="old('nation_id')" />
                     <x-input label="Account ID" type="number" name="account_id" required min="1" :value="old('account_id')" hint="Must belong to the nation above." />
@@ -359,7 +360,7 @@
                     @csrf
                     <input type="hidden" name="loan_id" id="loan_id">
                     <div class="space-y-4">
-                        <x-input label="Loan amount" type="number" step="0.01" min="1" name="amount" id="approve_amount" required />
+                        <x-input label="Loan amount" type="number" step="0.01" min="0.01" name="amount" id="approve_amount" required />
                         <x-input label="Weekly interest rate (%)" type="number" step="0.01" min="0" max="100" name="interest_rate" id="approve_interest_rate" required />
                         <x-input label="Term (weeks)" type="number" min="1" max="52" name="term_weeks" id="approve_term_weeks" required />
                     </div>
@@ -382,6 +383,7 @@
             document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
             document.getElementById('loan_id').value = loan.id;
             document.getElementById('approve_amount').value = loan.amount;
+            document.getElementById('approve_amount').max = loan.amount;
             const interestRate = loan.interest_rate ?? defaultLoanInterestRate;
             document.getElementById('approve_interest_rate').value = interestRate ?? '';
             document.getElementById('approve_term_weeks').value = loan.term_weeks;

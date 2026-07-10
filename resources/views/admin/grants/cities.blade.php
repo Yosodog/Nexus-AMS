@@ -155,6 +155,7 @@
             @if($grantApprovalsEnabled)
                 <form method="POST" action="{{ route('admin.manual-disbursements.city-grants') }}" class="space-y-4 border-t border-base-300 p-5" data-confirm="Send this city grant immediately? This bypasses pending and prior-award checks." data-confirm-title="Send manual city grant?" data-confirm-label="Send city grant" data-confirm-tone="error">
                     @csrf
+                    <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                     <div class="grid gap-4 md:grid-cols-3">
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">City Grant</span>

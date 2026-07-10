@@ -23,6 +23,9 @@ final class PWHealthService
      */
     public function checkAndCache(int $ttlSeconds = 600): bool
     {
+        $originalMaxRetries = $this->query->maxRetries;
+        $this->query->maxRetries = 0;
+
         try {
             $builder = (new GraphQLQueryBuilder)
                 ->setRootField('me')
@@ -54,6 +57,8 @@ final class PWHealthService
             Cache::put(self::CACHE_KEY_LAST_ERROR, $e->getMessage(), $ttlSeconds);
 
             return false;
+        } finally {
+            $this->query->maxRetries = $originalMaxRetries;
         }
     }
 

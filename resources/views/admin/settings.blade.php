@@ -303,12 +303,25 @@
         @endcan
 
         @can('view-diagnostic-info')
-            <x-card title="Backups" subtitle="Run application and database backups every 6 hours.">
+            <x-card title="Backups" subtitle="Run configured application and database backups every six hours and monitor their freshness.">
             <x-slot:menu>
                 <span class="badge {{ $backupsEnabled ? 'badge-success' : 'badge-ghost' }}">
                     {{ $backupsEnabled ? 'Enabled' : 'Disabled' }}
                 </span>
             </x-slot:menu>
+
+            <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div><span class="font-semibold">Destinations:</span> {{ implode(', ', $backupDisks) ?: 'None' }}</div>
+                <div><span class="font-semibold">Archive check:</span> {{ $backupVerificationEnabled ? 'Enabled' : 'Disabled' }}</div>
+                <div><span class="font-semibold">Failure alerts:</span> {{ $backupFailureAlertsEnabled ? 'Configured' : 'Not configured' }}</div>
+                <div><span class="font-semibold">Archive password:</span> {{ $backupArchivePasswordConfigured ? 'Configured' : 'Not configured' }}</div>
+            </div>
+
+            @if (! $backupFailureAlertsEnabled || ! $backupArchivePasswordConfigured)
+                <div class="alert alert-warning mt-4 text-sm">
+                    Configure a notification address and archive password before relying on these backups for production recovery.
+                </div>
+            @endif
 
             <form method="POST" action="{{ route('admin.settings.backups') }}" class="space-y-4">
                 @csrf

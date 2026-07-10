@@ -142,17 +142,19 @@
                         </div>
                     @endif
 
-                    <div class="space-y-1 md:col-span-2">
-                        <label for="roles" class="text-sm font-semibold">Roles</label>
-                        <select name="roles[]" id="roles" class="select min-h-48 w-full" multiple size="{{ max(6, min(10, $allRoles->count())) }}">
-                            @foreach($allRoles as $role)
-                                <option value="{{ $role->id }}" @selected(in_array($role->id, $selectedRoleIds, true))>
-                                    {{ ucfirst($role->name) }}{{ $role->protected ? ' (System)' : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="text-sm text-base-content/60">Hold Ctrl or Cmd to select multiple roles.</p>
-                    </div>
+                    @if($canManageRoles)
+                        <div class="space-y-1 md:col-span-2">
+                            <label for="roles" class="text-sm font-semibold">Roles</label>
+                            <select name="roles[]" id="roles" class="select min-h-48 w-full" multiple size="{{ max(6, min(10, $allRoles->count())) }}">
+                                @foreach($allRoles as $role)
+                                    <option value="{{ $role->id }}" @selected(in_array($role->id, $selectedRoleIds, true))>
+                                        {{ ucfirst($role->name) }}{{ $role->protected ? ' (System)' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-sm text-base-content/60">Hold Ctrl or Cmd to select multiple roles.</p>
+                        </div>
+                    @endif
                 </div>
             </x-card>
 

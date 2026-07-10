@@ -6,10 +6,12 @@
     <x-header title="Manage Roles" separator use-h1>
         <x-slot:subtitle>Review permission coverage, clean up stale roles, and keep access assignments readable.</x-slot:subtitle>
         <x-slot:actions>
-            <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
-                <x-icon name="o-plus" class="size-4" />
-                New Role
-            </a>
+            @can('edit-roles')
+                <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
+                    <x-icon name="o-plus" class="size-4" />
+                    New Role
+                </a>
+            @endcan
         </x-slot:actions>
     </x-header>
 
@@ -65,7 +67,7 @@
                                 @endif
                             </td>
                             <td class="text-right">
-                                @if(! $role->protected)
+                                @if($manageableRoleIds->contains($role->id))
                                     <div class="inline-flex flex-wrap justify-end gap-2">
                                         <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-outline btn-primary btn-sm">
                                             <x-icon name="o-pencil-square" class="size-4" />

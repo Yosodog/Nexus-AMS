@@ -541,14 +541,107 @@
 
     @can('manage-accounts')
         {{-- Withdrawal KPIs --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             <x-stat title="Pending Withdrawals" :value="number_format($pendingWithdrawals->count())" icon="o-clock"
                     color="text-warning" description="Awaiting manual review" :class="$statCardClass" />
+            <x-stat title="Reconciliation Required" :value="number_format($withdrawalReconciliations->count())" icon="o-exclamation-triangle"
+                    color="text-error" description="External outcome must be verified" :class="$statCardClass" />
             <x-stat title="Daily Auto Limit" :value="$maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited'"
                     icon="o-arrow-path" color="text-info" description="Automatic approvals in 24 hours" :class="$statCardClass" />
             <x-stat title="Resources With Limits" :value="number_format($resourcesWithLimitsCount)"
                     icon="o-shield-check" color="text-success" description="Have an approval ceiling" :class="$statCardClass" />
         </div>
+
+        @if($withdrawalReconciliations->isNotEmpty())
+            <x-card class="{{ $surfaceCardClass }} mb-6 border-error/50">
+                <x-slot:title>
+                    <div>
+                        Withdrawal Reconciliation Required
+                        <div class="text-sm font-normal text-base-content/60">
+                            These sends may have reached Politics & War. Match the correlation ID against alliance bank records before resolving them.
+                        </div>
+                    </div>
+                </x-slot:title>
+                <x-slot:menu>
+                    <x-badge value="{{ number_format($withdrawalReconciliations->count()) }} unresolved" class="badge-error badge-sm" />
+                </x-slot:menu>
+
+                <div class="alert alert-error mb-4">
+                    <x-icon name="o-shield-exclamation" class="w-5 h-5" />
+                    <span>Do not resend, deny, or refund these withdrawals until the external bank outcome has been verified.</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    @foreach($withdrawalReconciliations as $transaction)
+                        <section class="rounded-2xl border border-error/30 bg-error/5 p-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.3fr)] gap-5">
+                                <div class="space-y-3">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <x-badge value="Transaction #{{ $transaction->id }}" class="badge-error badge-sm" />
+                                        <code class="rounded bg-base-300 px-2 py-1 text-xs font-semibold">{{ $transaction->bank_correlation_id }}</code>
+                                    </div>
+                                    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                                        <dt class="text-base-content/60">Attempted</dt>
+                                        <dd>{{ $transaction->bank_attempted_at?->format('M d, Y H:i:s') ?? 'Unknown' }}</dd>
+                                        <dt class="text-base-content/60">Member</dt>
+                                        <dd>{{ $transaction->fromAccount?->user?->name ?? 'Unknown user' }}</dd>
+                                        <dt class="text-base-content/60">Nation</dt>
+                                        <dd>
+                                            @if($transaction->nation)
+                                                <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="link link-primary">
+                                                    {{ $transaction->nation->nation_name ?? ('Nation #'.$transaction->nation_id) }}
+                                                </a>
+                                            @else
+                                                Nation #{{ $transaction->nation_id }}
+                                            @endif
+                                        </dd>
+                                        <dt class="text-base-content/60">Attempts</dt>
+                                        <dd>{{ number_format($transaction->bank_attempt_count) }}</dd>
+                                    </dl>
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach(PWHelperService::resources() as $resource)
+                                            @if((float) $transaction->{$resource} > 0)
+                                                <x-badge value="{{ ucfirst($resource) }}: {{ $resource === 'money' ? '$' : '' }}{{ number_format((float) $transaction->{$resource}, 2) }}" class="badge-ghost badge-sm" />
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                @can('view-diagnostic-info')
+                                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-success/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_sent">
+                                            <div class="font-semibold text-sm">Confirmed sent</div>
+                                            <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
+                                            <x-input label="Bank record ID" name="bank_record_id" type="number" min="1" required />
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Record as Sent" icon="o-check-circle" type="submit" class="btn-success btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the external bank record proves this withdrawal was sent?');" />
+                                        </form>
+
+                                        <form action="{{ route('admin.withdrawals.reconcile', $transaction) }}" method="POST" class="rounded-xl border border-warning/30 bg-base-100 p-3 space-y-3">
+                                            @csrf
+                                            <input type="hidden" name="resolution" value="confirmed_not_sent">
+                                            <div class="font-semibold text-sm">Confirmed not sent</div>
+                                            <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
+                                            <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
+                                            <x-button label="Refund After Verification" icon="o-arrow-uturn-left" type="submit" class="btn-warning btn-sm w-full"
+                                                      onclick="return confirm('Confirm that the evidence proves no external transfer occurred and the local funds should be refunded?');" />
+                                        </form>
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        <x-icon name="o-lock-closed" class="w-5 h-5" />
+                                        <span>Diagnostic recovery access is required to resolve this withdrawal.</span>
+                                    </div>
+                                @endcan
+                            </div>
+                        </section>
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
 
         @if($pendingWithdrawals->isNotEmpty())
             <x-card class="{{ $surfaceCardClass }} mb-6">
@@ -856,7 +949,9 @@
                                 <td class="text-right">{{ number_format($transaction->$resource, 2) }}</td>
                             @endforeach
                             <td class="text-right">
-                                @if($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
+                                @if($transaction->requiresBankReconciliation())
+                                    <x-badge value="Needs reconciliation" class="badge-error badge-sm" />
+                                @elseif($transaction->isNationWithdrawal() && !$transaction->isRefunded() && Gate::allows('manage-accounts'))
                                     <form method="POST"
                                           action="{{ route('admin.accounts.transactions.refund', $transaction) }}"
                                           data-confirm="Refund this transaction? Confirm the current account balance before continuing."

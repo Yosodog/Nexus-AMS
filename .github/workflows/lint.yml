@@ -9,9 +9,17 @@ on:
   schedule:
     - cron: '0 7 * * *'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -20,13 +28,25 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          tools: pint
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Audit Composer dependencies
+        run: composer audit --locked
 
       - name: Run Pint
-        run: pint
+        run: ./vendor/bin/pint
+
+      - name: Verify Pint made no changes
+        run: git diff --exit-code
 
   phpunit-fast:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: lint
     steps:
       - name: Checkout code
@@ -47,9 +67,8 @@ jobs:
         run: composer test:fast
 
   phpunit-integration:
-    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    continue-on-error: true
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: phpunit-fast
     services:
       mysql:
@@ -93,6 +112,7 @@ jobs:
 
   browser-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: phpunit-fast
     steps:
       - name: Checkout code
@@ -107,12 +127,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
 
       - name: Install dependencies
         run: |
           composer install --no-interaction --prefer-dist
           npm ci
           npx playwright install --with-deps chromium
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
 
       - name: Prepare test environment
         run: cp .env.testing.example .env.testing

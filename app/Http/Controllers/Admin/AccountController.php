@@ -86,9 +86,19 @@ class AccountController extends Controller
             ->with(['fromAccount.nation', 'fromAccount.user', 'nation'])
             ->where('transaction_type', 'withdrawal')
             ->where('requires_admin_approval', true)
+            ->where(function ($query): void {
+                $query->whereNull('bank_attempt_status')
+                    ->orWhere('bank_attempt_status', '!=', Transaction::BANK_ATTEMPT_NEEDS_RECONCILIATION);
+            })
             ->whereNull('approved_at')
             ->whereNull('denied_at')
             ->orderBy('created_at')
+            ->get();
+        $withdrawalReconciliations = Transaction::query()
+            ->with(['fromAccount.nation', 'fromAccount.user', 'nation', 'approvedBy'])
+            ->where('transaction_type', 'withdrawal')
+            ->where('bank_attempt_status', Transaction::BANK_ATTEMPT_NEEDS_RECONCILIATION)
+            ->orderBy('bank_attempted_at')
             ->get();
         $withdrawalLimits = WithdrawalLimitService::limits();
         $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
@@ -111,6 +121,7 @@ class AccountController extends Controller
             'directDepositLogs' => $directDepositLogs,
             'mmrPurchases' => $mmrPurchases,
             'pendingWithdrawals' => $pendingWithdrawals,
+            'withdrawalReconciliations' => $withdrawalReconciliations,
             'withdrawalLimits' => $withdrawalLimits,
             'maxDailyWithdrawals' => $maxDailyWithdrawals,
             'mainBankSnapshot' => $mainBankSnapshot,
@@ -244,6 +255,13 @@ class AccountController extends Controller
             abort(403, 'Denied withdrawals cannot be refunded.');
         }
 
+        if ($transaction->requiresBankReconciliation()) {
+            return back()->with([
+                'alert-message' => 'This withdrawal may already have been sent. Resolve its reconciliation record before returning any funds.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         if ($transaction->sent_at || $transaction->bank_record_id || $transaction->bank_processing_at) {
             return back()->with([
                 'alert-message' => 'This withdrawal is already processing or sent and cannot be refunded automatically.',
@@ -276,6 +294,10 @@ class AccountController extends Controller
 
             if ($lockedTransaction->denied_at) {
                 return 'denied';
+            }
+
+            if ($lockedTransaction->requiresBankReconciliation()) {
+                return 'reconciliation';
             }
 
             if ($lockedTransaction->isRefunded()) {
@@ -327,6 +349,13 @@ class AccountController extends Controller
         if ($result === 'denied') {
             return back()->with([
                 'alert-message' => 'Denied withdrawals cannot be refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'reconciliation') {
+            return back()->with([
+                'alert-message' => 'This withdrawal may already have been sent. Resolve its reconciliation record before returning any funds.',
                 'alert-type' => 'error',
             ]);
         }
@@ -386,6 +415,13 @@ class AccountController extends Controller
             abort(403, 'A sent transaction cannot be unstuck/refunded.');
         }
 
+        if ($transaction->requiresBankReconciliation()) {
+            return back()->with([
+                'alert-message' => 'This withdrawal may already have been sent. It cannot be unstuck or refunded without reconciliation evidence.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         if ($transaction->bank_processing_at) {
             return back()->with([
                 'alert-message' => 'This withdrawal is currently processing and cannot be unstuck/refunded automatically.',
@@ -418,6 +454,10 @@ class AccountController extends Controller
 
             if ($lockedTransaction->denied_at) {
                 return 'denied';
+            }
+
+            if ($lockedTransaction->requiresBankReconciliation()) {
+                return 'reconciliation';
             }
 
             if ($lockedTransaction->isRefunded()) {
@@ -480,6 +520,13 @@ class AccountController extends Controller
         if ($result === 'sent') {
             return back()->with([
                 'alert-message' => 'Sent withdrawals cannot be unstuck/refunded.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        if ($result === 'reconciliation') {
+            return back()->with([
+                'alert-message' => 'This withdrawal may already have been sent. It cannot be unstuck or refunded without reconciliation evidence.',
                 'alert-type' => 'error',
             ]);
         }

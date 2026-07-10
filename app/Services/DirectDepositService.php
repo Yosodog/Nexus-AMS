@@ -17,6 +17,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 class DirectDepositService
@@ -85,7 +86,8 @@ class DirectDepositService
 
         // ---- MMR: compute plan from after-tax cash (money only)
         $afterTaxCash = (float) ($originalDeposit['money'] ?? 0.0);
-        $plan = app(MMRAssistantService::class)->plan($nation, $afterTaxCash);
+        $mmrAssistant = app(MMRAssistantService::class);
+        $plan = $mmrAssistant->plan($nation, $afterTaxCash);
 
         $mmrTotalSpend = (float) ($plan['total_spend'] ?? 0.0);
         $mmrAccount = $plan['account'];
@@ -98,11 +100,24 @@ class DirectDepositService
         $recordedAt = Carbon::parse($record->date, 'UTC')->utc();
 
         try {
-            DB::transaction(function () use ($nation, $record, $deposit, $originalDeposit, $mmrTotalSpend, $plan, $mmrAccount, $ddAccount, $recordedAt) {
-                $lockedAccount = Account::whereKey($ddAccount->id)->lockForUpdate()->first();
+            DB::transaction(function () use ($nation, $record, $deposit, $originalDeposit, $mmrTotalSpend, $plan, $mmrAccount, $mmrAssistant, $ddAccount, $recordedAt) {
+                $accountIds = [$ddAccount->id];
+                if ($mmrTotalSpend > 0.0 && $mmrAccount) {
+                    $accountIds[] = $mmrAccount->id;
+                }
+                $accountIds = array_values(array_unique($accountIds));
+                sort($accountIds);
 
-                if (! $lockedAccount) {
-                    throw new \RuntimeException("DD account {$ddAccount->id} not found for nation {$nation->id}");
+                $lockedAccounts = Account::query()
+                    ->whereKey($accountIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+                $lockedAccount = $lockedAccounts->get($ddAccount->id);
+
+                if (! $this->isUsableDepositAccount($lockedAccount, $nation)) {
+                    throw new RuntimeException("DD account {$ddAccount->id} not found for nation {$nation->id}");
                 }
 
                 foreach ($deposit as $resource => $amount) {
@@ -120,7 +135,16 @@ class DirectDepositService
                 $log->save();
 
                 if ($mmrTotalSpend > 0.0) {
-                    $this->dispatchMmrContributionEvent($nation, $mmrAccount, $mmrTotalSpend, $record, $log, $plan);
+                    $lockedMmrAccount = $mmrAccount
+                        ? $lockedAccounts->get($mmrAccount->id)
+                        : null;
+
+                    if (! $this->isUsableDepositAccount($lockedMmrAccount, $nation)) {
+                        throw new RuntimeException("MMR account not found for nation {$nation->id}");
+                    }
+
+                    $mmrAssistant->applyPlan($lockedMmrAccount, $plan);
+                    $this->dispatchMmrContributionEvent($nation, $lockedMmrAccount, $mmrTotalSpend, $record, $log, $plan);
                 }
             });
         } catch (UniqueConstraintViolationException $exception) {
@@ -141,17 +165,6 @@ class DirectDepositService
             ]);
 
             throw $exception;
-        }
-
-        // Apply MMR plan: credit resources on the configured MMR account
-        if ($mmrTotalSpend > 0.0 && $mmrAccount) {
-            try {
-                app(MMRAssistantService::class)->applyPlan($mmrAccount, $plan);
-            } catch (Throwable $e) {
-                Log::warning(
-                    "MMR Assistant apply failed for nation {$nation->id} on BankRecord {$record->id}: {$e->getMessage()}"
-                );
-            }
         }
 
         // IMPORTANT: Return the *retained* (tax) values for the tax record

@@ -189,6 +189,7 @@
             @if($grantApprovalsEnabled)
                 <form method="POST" action="{{ route('admin.manual-disbursements.grants') }}" class="border-t border-base-300 p-5" data-confirm="Send this grant immediately? This bypasses the normal application and one-time checks." data-confirm-title="Send manual grant?" data-confirm-label="Send grant" data-confirm-tone="error">
                     @csrf
+                    <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                     <div class="grid gap-4 md:grid-cols-3">
                         <label class="block">
                             <span class="label font-semibold text-sm">Grant</span>

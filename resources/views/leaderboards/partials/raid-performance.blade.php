@@ -1,3 +1,5 @@
+<x-chart-js />
+
 @php
     $filters = $activePayload['filters'] ?? ['from' => now()->subDays(30)->toDateString(), 'to' => now()->toDateString()];
     $totals = $activePayload['totals'] ?? [];
