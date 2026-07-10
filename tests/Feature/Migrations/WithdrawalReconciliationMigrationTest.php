@@ -39,6 +39,8 @@ class WithdrawalReconciliationMigrationTest extends TestCase
         $migration = require database_path('migrations/2026_07_10_012847_add_withdrawal_reconciliation_to_transactions_table.php');
         $migration->down();
         $migration->up();
+        $backfillMigration = require database_path('migrations/2026_07_10_042127_backfill_legacy_withdrawal_reconciliation_rows.php');
+        $backfillMigration->up();
 
         $transaction = Transaction::query()->findOrFail($transaction->id);
 
@@ -50,9 +52,18 @@ class WithdrawalReconciliationMigrationTest extends TestCase
         $this->assertTrue($transaction->bank_reconciliation_details['legacy_processing_row']);
         $this->assertFalse($transaction->bank_reconciliation_details['correlation_present_in_bank_note']);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Resolve all ambiguous withdrawals');
+        $uniqueMigration = require database_path('migrations/2026_07_10_041434_add_unique_bank_record_id_to_transactions_table.php');
 
-        $migration->down();
+        try {
+            $uniqueMigration->down();
+            $this->fail('The unique bank-record guard should not be removed while reconciliation is pending.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Resolve all ambiguous withdrawals', $exception->getMessage());
+        }
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Resolve all legacy ambiguous withdrawals');
+
+        $backfillMigration->down();
     }
 }

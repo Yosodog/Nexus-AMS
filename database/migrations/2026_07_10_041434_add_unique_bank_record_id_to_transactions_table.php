@@ -38,6 +38,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::table('transactions')->where('bank_attempt_status', 'needs_reconciliation')->exists()) {
+            throw new RuntimeException(
+                'Resolve all ambiguous withdrawals before removing the unique bank-record guard.'
+            );
+        }
+
         Schema::table('transactions', function (Blueprint $table) {
             $table->dropUnique('transactions_bank_record_id_unique');
         });

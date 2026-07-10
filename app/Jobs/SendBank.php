@@ -200,7 +200,10 @@ class SendBank implements ShouldBeUnique, ShouldQueue
         }
 
         // Something prevented us from fulfilling automatically. Escalate to admins.
-        $transaction->markDefiniteBankFailure('Offshore fulfillment failed: '.$result->message);
+        $this->markPreparationFailure(
+            $transaction,
+            'Offshore fulfillment failed: '.$result->message,
+        );
     }
 
     public function failed(?Throwable $exception): void
@@ -262,6 +265,26 @@ class SendBank implements ShouldBeUnique, ShouldQueue
             message: 'Withdrawal bank send failed before a confirmed upstream mutation.',
             actorOverride: ['type' => 'system'],
         );
+    }
+
+    private function markPreparationFailure(Transaction $transaction, string $reason): void
+    {
+        DB::transaction(function () use ($transaction, $reason): void {
+            $lockedTransaction = Transaction::query()
+                ->lockForUpdate()
+                ->find($transaction->id);
+
+            if (! $lockedTransaction
+                || $lockedTransaction->sent_at
+                || $lockedTransaction->bank_record_id
+                || $lockedTransaction->refunded_at
+                || $lockedTransaction->denied_at
+                || $lockedTransaction->requiresBankReconciliation()) {
+                return;
+            }
+
+            $lockedTransaction->markDefiniteBankFailure($reason);
+        });
     }
 
     private function markNeedsReconciliation(Transaction $transaction, Throwable $exception): void

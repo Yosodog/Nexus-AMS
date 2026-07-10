@@ -295,6 +295,32 @@ class WithdrawalReconciliationTest extends TestCase
         $this->assertNull($transaction->bank_processing_at);
     }
 
+    public function test_failed_fulfillment_cannot_overwrite_concurrent_reconciliation(): void
+    {
+        [, , $transaction] = $this->createWithdrawalFixture();
+        $fulfillment = Mockery::mock(OffshoreFulfillmentService::class);
+        $fulfillment->shouldReceive('coverShortfall')
+            ->once()
+            ->andReturnUsing(function () use ($transaction): OffshoreFulfillmentResult {
+                $concurrentTransaction = Transaction::query()->findOrFail($transaction->id);
+                $concurrentTransaction->markBankNeedsReconciliation('A concurrent worker detected an interrupted preparation.');
+
+                return new OffshoreFulfillmentResult(
+                    OffshoreFulfillmentResult::STATUS_FAILED,
+                    'Offshore fulfillment could not continue.',
+                );
+            });
+        $bank = Mockery::mock(BankService::class);
+        $bank->shouldNotReceive('sendWithdraw');
+
+        (new SendBank($bank, $transaction))->handle($fulfillment);
+
+        $transaction->refresh();
+
+        $this->assertTrue($transaction->requiresBankReconciliation());
+        $this->assertNull($transaction->bank_processing_at);
+    }
+
     public function test_reconciliation_requires_diagnostic_recovery_access(): void
     {
         [, , $transaction] = $this->createWithdrawalFixture(manuallyApproved: true);
