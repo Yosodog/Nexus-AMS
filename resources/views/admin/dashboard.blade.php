@@ -319,7 +319,7 @@
                             <span class="text-xs text-base-content/60">Latest nation sign-ins</span>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="nexus-table">
+                            <table class="nexus-table" data-sortable="false">
                                 <thead>
                                     <tr>
                                         <th scope="col">Resource</th>
@@ -417,7 +417,7 @@
                             </span>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="nexus-table">
+                            <table class="nexus-table" data-sortable="false">
                                 <thead>
                                     <tr>
                                         <th scope="col">Conflict</th>

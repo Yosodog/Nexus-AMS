@@ -15,34 +15,30 @@ class DashboardControllerTest extends FeatureTestCase
         $controller = new DashboardController($this->createMock(AllianceMembershipService::class));
 
         $metrics = [
-            'topInfrastructureCities' => $this->makeIncompleteCollectionPayload([
+            'activeWarDetails' => $this->makeIncompleteCollectionPayload([
                 [
-                    'id' => 1,
-                    'name' => 'Cached City',
-                    'infrastructure' => 1500,
-                    'land' => 250,
-                    'nation' => [
+                    'id' => 10,
+                    'att_id' => 5,
+                    'def_id' => 8,
+                    'war_type' => 'raid',
+                    'turns_left' => 42,
+                    'attacker' => [
                         'id' => 5,
-                        'leader_name' => 'Cache Leader',
-                        'nation_name' => 'Cache Nation',
+                        'leader_name' => 'Cached Attacker',
                     ],
                 ],
             ]),
-            'topCashHolders' => [],
-            'topScoringNations' => [],
-            'activeWarDetails' => [],
-            'recentWars' => [],
         ];
 
         $this->assertTrue($this->invokePrivate($controller, 'containsIncompleteObject', [$metrics]));
 
         $normalized = $this->invokePrivate($controller, 'normalizeMetricsForView', [$metrics]);
 
-        $this->assertIsArray($normalized['topInfrastructureCities']);
-        $this->assertCount(1, $normalized['topInfrastructureCities']);
-        $this->assertIsObject($normalized['topInfrastructureCities'][0]);
-        $this->assertSame('Cached City', $normalized['topInfrastructureCities'][0]->name);
-        $this->assertSame('Cache Leader', $normalized['topInfrastructureCities'][0]->nation->leader_name);
+        $this->assertIsArray($normalized['activeWarDetails']);
+        $this->assertCount(1, $normalized['activeWarDetails']);
+        $this->assertIsObject($normalized['activeWarDetails'][0]);
+        $this->assertSame('raid', $normalized['activeWarDetails'][0]->war_type);
+        $this->assertSame('Cached Attacker', $normalized['activeWarDetails'][0]->attacker->leader_name);
     }
 
     public function test_dashboard_metrics_are_filtered_by_staff_permissions(): void

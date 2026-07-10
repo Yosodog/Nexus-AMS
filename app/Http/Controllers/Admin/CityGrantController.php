@@ -12,6 +12,7 @@ use App\Services\AuditLogger;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\PWHelperService;
+use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -35,9 +36,9 @@ class CityGrantController
     {
         $this->authorize('view-city-grants');
 
-        $pendingRequests = CityGrantRequest::where('status', 'pending')->get();
-        $previousRequests = CityGrantRequest::whereIn('status', ['approved', 'denied'])
-            ->orderBy('updated_at', 'desc')
+        $pendingRequests = CityGrantRequest::query()
+            ->with('nation')
+            ->where('status', 'pending')
             ->get();
         $grants = CityGrant::orderBy('city_number')->get();
         $cityCostService = app(CityCostService::class);
@@ -50,18 +51,19 @@ class CityGrantController
         $totalDenied = CityGrantRequest::where('status', 'denied')->count();
         $pendingCount = $pendingRequests->count();
         $totalFundsDistributed = CityGrantRequest::where('status', 'approved')->sum('grant_amount');
+        $grantApprovalsEnabled = SettingService::isGrantApprovalsEnabled();
 
         return view(
             'admin.grants.cities',
             compact(
                 'pendingRequests',
-                'previousRequests',
                 'grants',
                 'grantAmounts',
                 'totalApproved',
                 'totalDenied',
                 'pendingCount',
-                'totalFundsDistributed'
+                'totalFundsDistributed',
+                'grantApprovalsEnabled'
             )
         );
     }

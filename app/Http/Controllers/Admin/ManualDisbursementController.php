@@ -19,9 +19,11 @@ use App\Services\LoanService;
 use App\Services\PWHelperService;
 use App\Services\SelfApprovalGuard;
 use App\Services\WarAidService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ManualDisbursementController extends Controller
@@ -54,16 +56,20 @@ class ManualDisbursementController extends Controller
         $nation = Nation::findOrFail($data['nation_id']);
         $account = $this->validateAccountForNation((int) $data['account_id'], $nation);
 
-        $application = GrantApplication::create([
-            'grant_id' => $grant->id,
-            'nation_id' => $nation->id,
-            'account_id' => $account->id,
-            'status' => 'pending',
-            'pending_key' => 1,
-        ]);
-
         try {
-            GrantService::approveGrant($application->fresh());
+            $application = DB::transaction(function () use ($grant, $nation, $account): GrantApplication {
+                $application = GrantApplication::create([
+                    'grant_id' => $grant->id,
+                    'nation_id' => $nation->id,
+                    'account_id' => $account->id,
+                    'status' => 'pending',
+                    'pending_key' => 1,
+                ]);
+
+                GrantService::approveGrant($application);
+
+                return $application->fresh();
+            }, attempts: 3);
         } catch (ValidationException $exception) {
             $details = collect($exception->errors())->flatten()->implode(' ');
 
@@ -71,6 +77,15 @@ class ManualDisbursementController extends Controller
                 'alert-message' => $details ?: 'Unable to send this grant manually.',
                 'alert-type' => 'error',
             ]);
+        } catch (QueryException $exception) {
+            if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
+                return back()->with([
+                    'alert-message' => 'This nation already has a pending application for that grant.',
+                    'alert-type' => 'error',
+                ]);
+            }
+
+            throw $exception;
         }
 
         $this->auditLogger->recordAfterCommit(
@@ -134,17 +149,21 @@ class ManualDisbursementController extends Controller
             ]);
         }
 
-        $grantRequest = CityGrantRequest::create([
-            'city_number' => $cityNumber,
-            'grant_amount' => (int) round($grantAmount),
-            'nation_id' => $nation->id,
-            'account_id' => $account->id,
-            'status' => 'pending',
-            'pending_key' => 1,
-        ]);
-
         try {
-            CityGrantService::approveGrant($grantRequest);
+            $grantRequest = DB::transaction(function () use ($cityNumber, $grantAmount, $nation, $account): CityGrantRequest {
+                $grantRequest = CityGrantRequest::create([
+                    'city_number' => $cityNumber,
+                    'grant_amount' => (int) round($grantAmount),
+                    'nation_id' => $nation->id,
+                    'account_id' => $account->id,
+                    'status' => 'pending',
+                    'pending_key' => 1,
+                ]);
+
+                CityGrantService::approveGrant($grantRequest);
+
+                return $grantRequest->fresh();
+            }, attempts: 3);
         } catch (ValidationException $exception) {
             $details = collect($exception->errors())->flatten()->implode(' ');
 
@@ -152,6 +171,15 @@ class ManualDisbursementController extends Controller
                 'alert-message' => $details ?: 'Unable to send this city grant manually.',
                 'alert-type' => 'error',
             ]);
+        } catch (QueryException $exception) {
+            if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
+                return back()->with([
+                    'alert-message' => 'This nation already has a pending city grant request.',
+                    'alert-type' => 'error',
+                ]);
+            }
+
+            throw $exception;
         }
 
         $this->auditLogger->recordAfterCommit(

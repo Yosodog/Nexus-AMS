@@ -128,7 +128,7 @@ class RebuildingWorkflowTest extends TestCase
         Notification::assertSentTo(
             $nation,
             RebuildingNotification::class,
-            fn (RebuildingNotification $notification): bool => $notification->toPNW($nation)['subject'] === 'Rebuilding Approved'
+            fn (RebuildingNotification $notification): bool => $notification->toPNW($nation)['subject'] === 'Rebuilding approved'
         );
     }
 
@@ -167,7 +167,7 @@ class RebuildingWorkflowTest extends TestCase
         Notification::assertSentTo(
             $nation,
             RebuildingNotification::class,
-            fn (RebuildingNotification $notification): bool => $notification->toPNW($nation)['subject'] === 'Rebuilding Denied'
+            fn (RebuildingNotification $notification): bool => $notification->toPNW($nation)['subject'] === 'Rebuilding denied'
         );
     }
 

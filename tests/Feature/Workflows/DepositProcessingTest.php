@@ -67,7 +67,7 @@ class DepositProcessingTest extends TestCase
 
                 return in_array('pnw', $channels, true)
                     && $payload['nation_id'] === 779001
-                    && $payload['subject'] === 'Deposit Confirmed'
+                    && $payload['subject'] === 'Deposit confirmed'
                     && str_contains($payload['message'], 'Money: $125,000.00')
                     && str_contains($payload['message'], 'Food: 450.00');
             }

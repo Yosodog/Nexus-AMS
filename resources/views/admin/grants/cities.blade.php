@@ -3,153 +3,228 @@
 
     $defaultReminderMessage = 'You are eligible for a city grant to help cover the cost of your next city. '
         .'If you are planning to expand soon, please submit an application so we can review it promptly.';
+    $canManageCityGrants = auth()->user()?->can('manage-city-grants') ?? false;
+    $canBypassSelfRestrictions = auth()->user()?->can('bypass-self-restrictions') ?? false;
 @endphp
 @extends('layouts.admin')
 
+@section('title', 'City Grants')
+
 @section('content')
-    <x-header title="City Grant Management" separator>
-        <x-slot:subtitle>Review pending requests, issue manual disbursements, and maintain grant thresholds from one place.</x-slot:subtitle>
-        <x-slot:actions>
+    <header class="nexus-page-header">
+        <div class="nexus-page-header__copy">
+            <h1 class="nexus-page-title">City grants</h1>
+            <p class="nexus-page-summary">Review exact city funding requests, maintain tier requirements, and use manual disbursement only for deliberate exceptions.</p>
+        </div>
+        <div class="nexus-page-header__actions">
+            <span class="nexus-status {{ $pendingCount > 0 ? 'nexus-status--warning' : 'nexus-status--success' }}">
+                {{ number_format($pendingCount) }} pending
+            </span>
             @can('manage-city-grants')
                 <button class="btn btn-primary btn-outline btn-sm" type="button" onclick="document.getElementById('grantReminderModal').showModal()">
-                    Send Reminders
+                    Send reminders
                 </button>
             @endcan
-        </x-slot:actions>
-    </x-header>
-
-    <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <x-stat title="Approved Grants" :value="number_format($totalApproved)" icon="o-check-circle" color="text-primary" description="Completed city grant payouts" />
-        <x-stat title="Denied Grants" :value="number_format($totalDenied)" icon="o-x-circle" color="text-error" description="Requests rejected by staff" />
-        <x-stat title="Pending Grants" :value="number_format($pendingCount)" icon="o-clock" color="text-warning" description="Waiting for review" />
-        <x-stat title="Funds Distributed" :value="'$' . number_format($totalFundsDistributed)" icon="o-banknotes" color="text-success" description="Total city grant outflow" />
-    </div>
-
-    <x-card title="Pending City Grants" class="mb-6">
-        <div class="overflow-x-auto">
-            @if($pendingRequests->isEmpty())
-                <p class="py-6 text-base-content/60">No pending grant requests.</p>
-            @else
-                <table class="table table-zebra">
-                    <thead>
-                    <tr>
-                        <th>City #</th>
-                        <th>Nation</th>
-                        <th>Amount</th>
-                        <th>Requested At</th>
-                        <th data-sortable="false">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach ($pendingRequests as $request)
-                        <tr>
-                            <td>{{ $request->city_number }}</td>
-                            <td>
-                                @if ($request->nation)
-                                    <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-primary">
-                                        {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
-                                    </a>
-                                    <div class="text-sm text-base-content/60">{{ $request->nation->nation_name ?? 'Unknown Nation' }}</div>
-                                @else
-                                    <span class="text-base-content/60">Unknown Nation</span>
-                                @endif
-                            </td>
-                            <td>${{ number_format($request->grant_amount) }}</td>
-                            <td data-order="{{ $request->created_at->timestamp }}">{{ $request->created_at->format('M d, Y') }}</td>
-                            <td>
-                                <div class="flex flex-wrap gap-2">
-                                    <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                                    </form>
-                                    <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="btn btn-error btn-outline btn-sm">Deny</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            @endif
         </div>
-    </x-card>
+    </header>
+
+    @unless($grantApprovalsEnabled)
+        <div class="alert alert-warning" role="status">
+            <x-icon name="o-pause-circle" class="size-5" aria-hidden="true" />
+            <div>
+                <p class="font-semibold">City grant approvals are paused</p>
+                <p class="text-sm">Pending requests remain in the queue. Staff can deny them, but approval deposits are disabled by the global control.</p>
+            </div>
+        </div>
+    @endunless
+
+    <section class="nexus-panel nexus-panel--raised" aria-labelledby="pending-city-grants-title">
+        <div class="nexus-panel__header">
+            <div>
+                <h2 id="pending-city-grants-title" class="nexus-section-title">Pending city grants</h2>
+                <p class="nexus-body-muted mt-1">Approval immediately credits the requested account with the displayed amount.</p>
+            </div>
+            @unless($canManageCityGrants)
+                <span class="nexus-status nexus-status--neutral">View only</span>
+            @endunless
+        </div>
+
+        @forelse($pendingRequests as $request)
+            @php
+                $isOwnRequest = ! $canBypassSelfRestrictions
+                    && auth()->user()?->nation_id !== null
+                    && (int) auth()->user()->nation_id === (int) $request->nation_id;
+            @endphp
+            <article class="grid gap-4 border-b border-base-300 px-5 py-4 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_minmax(13rem,0.62fr)_auto] lg:items-center">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-semibold">City #{{ $request->city_number }}</h3>
+                        <span class="nexus-status nexus-status--warning">Pending</span>
+                    </div>
+                    @if ($request->nation)
+                        <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener noreferrer" class="mt-1 block w-fit font-medium text-primary hover:underline">
+                            {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
+                        </a>
+                        <p class="text-sm text-base-content/60">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
+                    @else
+                        <p class="mt-1 text-sm text-base-content/60">Unknown nation · Nation #{{ $request->nation_id }}</p>
+                    @endif
+                    <p class="mt-1 text-xs text-base-content/55">
+                        Requested <time datetime="{{ $request->created_at->toIso8601String() }}" title="{{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
+                        · Account #{{ $request->account_id }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Deposit on approval</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums">${{ number_format($request->grant_amount) }}</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2 lg:justify-end">
+                    @if($canManageCityGrants && ! $isOwnRequest)
+                        @if($grantApprovalsEnabled)
+                            <form action="{{ route('admin.grants.city.approve', $request) }}" method="POST" data-confirm="Approve this city grant and deposit the displayed amount into account #{{ $request->account_id }}?" data-confirm-title="Approve city grant?" data-confirm-label="Approve and deposit">
+                                @csrf
+                                <button type="submit" class="btn btn-success btn-sm">Approve and deposit</button>
+                            </form>
+                        @else
+                            <span class="nexus-status nexus-status--warning">Approval paused</span>
+                        @endif
+                        <form action="{{ route('admin.grants.city.deny', $request) }}" method="POST" data-confirm="Deny this city grant request? The applicant will be notified and no funds will be deposited." data-confirm-title="Deny city grant request?" data-confirm-label="Deny request" data-confirm-tone="error">
+                            @csrf
+                            <button type="submit" class="btn btn-error btn-outline btn-sm">Deny request</button>
+                        </form>
+                    @elseif($isOwnRequest)
+                        <span class="text-sm">
+                            <span class="nexus-status nexus-status--error">Self-decision blocked</span>
+                            <span class="mt-1 block text-base-content/60">Another reviewer must decide.</span>
+                        </span>
+                    @else
+                        <span class="nexus-status nexus-status--neutral">Decision unavailable</span>
+                    @endif
+                </div>
+            </article>
+        @empty
+            <div class="nexus-empty-state">
+                <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
+                <div>
+                    <h3 class="font-semibold">City grant queue is clear</h3>
+                    <p class="mt-1 text-sm text-base-content/60">There are no pending city grant requests.</p>
+                </div>
+            </div>
+        @endforelse
+    </section>
+
+    <dl class="nexus-metrics">
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Pending</dt>
+            <dd class="nexus-stat-value">{{ number_format($pendingCount) }}</dd>
+            <p class="nexus-stat-helper">Awaiting a decision</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Approved</dt>
+            <dd class="nexus-stat-value">{{ number_format($totalApproved) }}</dd>
+            <p class="nexus-stat-helper">Completed payouts</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Denied</dt>
+            <dd class="nexus-stat-value">{{ number_format($totalDenied) }}</dd>
+            <p class="nexus-stat-helper">Rejected requests</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Funds distributed</dt>
+            <dd class="nexus-stat-value">${{ number_format($totalFundsDistributed) }}</dd>
+            <p class="nexus-stat-helper">Approved city funding</p>
+        </div>
+    </dl>
 
     @can('manage-city-grants')
-        <x-card title="Manual City Grant Disbursement" class="mb-6">
-            <p class="mb-4 text-sm text-base-content/60">
-                Approves and pays a city grant immediately, bypassing pending or prior award checks. Use when admins need to push funds without a request.
-            </p>
-            <form method="POST" action="{{ route('admin.manual-disbursements.city-grants') }}" class="space-y-4">
-                @csrf
-                <div class="grid gap-4 md:grid-cols-3">
-                    <label class="block space-y-2">
-                        <span class="text-sm font-medium">City Grant</span>
-                        <select name="city_grant_id" class="select select-bordered w-full" required>
-                            <option value="">Select a city grant</option>
-                            @foreach($grants as $grant)
-                                @php
-                                    $computedAmount = $grantAmounts[$grant->id] ?? null;
-                                @endphp
-                                <option value="{{ $grant->id }}" @selected(old('city_grant_id') == $grant->id)>
-                                    City #{{ $grant->city_number }} —
-                                    @if ($computedAmount !== null)
-                                        ${{ number_format($computedAmount) }}
-                                    @else
-                                        Unavailable
-                                    @endif
-                                    ({{ number_format($grant->grant_amount) }}%)
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+        <details id="manual-city-grant-disbursement" class="nexus-panel" @if(old('city_grant_id') || old('nation_id') || old('account_id')) open @endif>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
+                <span>
+                    <span class="block font-semibold">Manual city grant disbursement</span>
+                    <span class="mt-0.5 block text-sm text-base-content/60">Immediately pays a grant while bypassing pending and prior-award checks.</span>
+                </span>
+                <span class="flex items-center gap-2">
+                    <span class="nexus-status {{ $grantApprovalsEnabled ? 'nexus-status--warning' : 'nexus-status--neutral' }}">
+                        {{ $grantApprovalsEnabled ? 'Elevated action' : 'Paused' }}
+                    </span>
+                    <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                </span>
+            </summary>
+            @if($grantApprovalsEnabled)
+                <form method="POST" action="{{ route('admin.manual-disbursements.city-grants') }}" class="space-y-4 border-t border-base-300 p-5" data-confirm="Send this city grant immediately? This bypasses pending and prior-award checks." data-confirm-title="Send manual city grant?" data-confirm-label="Send city grant" data-confirm-tone="error">
+                    @csrf
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">City Grant</span>
+                            <select name="city_grant_id" class="select w-full" required>
+                                <option value="">Select a city grant</option>
+                                @foreach($grants as $grant)
+                                    @php
+                                        $computedAmount = $grantAmounts[$grant->id] ?? null;
+                                    @endphp
+                                    <option value="{{ $grant->id }}" @selected(old('city_grant_id') == $grant->id)>
+                                        City #{{ $grant->city_number }} —
+                                        @if ($computedAmount !== null)
+                                            ${{ number_format($computedAmount) }}
+                                        @else
+                                            Unavailable
+                                        @endif
+                                        ({{ number_format($grant->grant_amount) }}%)
+                                    </option>
+                                @endforeach
+                            </select>
+                        </label>
 
-                    <label class="block space-y-2">
-                        <span class="text-sm font-medium">Nation ID</span>
-                        <input type="number" name="nation_id" class="input input-bordered w-full" required min="1" value="{{ old('nation_id') }}">
-                    </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Nation ID</span>
+                            <input type="number" name="nation_id" class="input w-full" required min="1" value="{{ old('nation_id') }}">
+                        </label>
 
-                    <label class="block space-y-2">
-                        <span class="text-sm font-medium">Account ID</span>
-                        <input type="number" name="account_id" class="input input-bordered w-full" required min="1" value="{{ old('account_id') }}">
-                        <span class="text-xs text-base-content/60">Must belong to the nation above.</span>
-                    </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Account ID</span>
+                            <input type="number" name="account_id" class="input w-full" required min="1" value="{{ old('account_id') }}">
+                            <span class="text-xs text-base-content/60">Must belong to the nation above.</span>
+                        </label>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">City # Override (optional)</span>
+                            <input type="number" name="city_number" class="input w-full" min="1" value="{{ old('city_number') }}" placeholder="Defaults to selected grant's city #">
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Grant Amount Override (optional)</span>
+                            <input type="number" name="grant_amount" class="input w-full" min="1" value="{{ old('grant_amount') }}" placeholder="Defaults to the calculated grant amount">
+                        </label>
+                    </div>
+
+                    <div class="nexus-form-actions">
+                        <button class="btn btn-primary" type="submit">Send city grant immediately</button>
+                    </div>
+                </form>
+            @else
+                <div class="border-t border-base-300 p-5 text-sm text-base-content/65">
+                    Manual city grant disbursements are unavailable while grant approvals are paused.
                 </div>
-
-                <div class="grid gap-4 md:grid-cols-2">
-                    <label class="block space-y-2">
-                        <span class="text-sm font-medium">City # Override (optional)</span>
-                        <input type="number" name="city_number" class="input input-bordered w-full" min="1" value="{{ old('city_number') }}" placeholder="Defaults to selected grant's city #">
-                    </label>
-
-                    <label class="block space-y-2">
-                        <span class="text-sm font-medium">Grant Amount Override (optional)</span>
-                        <input type="number" name="grant_amount" class="input input-bordered w-full" min="1" value="{{ old('grant_amount') }}" placeholder="Defaults to the calculated grant amount">
-                    </label>
-                </div>
-
-                <div class="flex justify-end">
-                    <button class="btn btn-primary" type="submit">Send City Grant</button>
-                </div>
-            </form>
-        </x-card>
+            @endif
+        </details>
     @endcan
 
-    <x-card>
-        <x-slot:title>
+    <section class="nexus-panel" aria-labelledby="city-grant-tiers-title">
+        <div class="nexus-panel__header">
             <div>
-                City Grants
-                <div class="text-sm font-normal text-base-content/60">Sortable overview of every city grant tier and its project requirements.</div>
+                <h2 id="city-grant-tiers-title" class="nexus-section-title">City grant tiers</h2>
+                <p class="nexus-body-muted mt-1">Calculated funding, availability, and required projects for each city level.</p>
             </div>
-        </x-slot:title>
-        <x-slot:menu>
-            <button class="btn btn-primary btn-sm" type="button" data-city-grant-create>
-                Create New Grant
-            </button>
-        </x-slot:menu>
+            @can('manage-city-grants')
+                <button class="btn btn-primary btn-sm" type="button" data-city-grant-create>Create city grant</button>
+            @endcan
+        </div>
         <div class="overflow-x-auto">
-            <table class="table table-zebra">
+            <table class="nexus-table" data-sortable="true">
                 <thead>
                 <tr>
                     <th>City #</th>
@@ -161,7 +236,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach ($grants as $grant)
+                @forelse ($grants as $grant)
                     <tr>
                         <td data-order="{{ $grant->city_number }}">{{ $grant->city_number }}</td>
                         <td>
@@ -176,7 +251,9 @@
                             <span class="text-base-content/60">({{ number_format($grant->grant_amount) }}%)</span>
                         </td>
                         <td data-order="{{ $grant->enabled ? 1 : 0 }}">
-                            <x-badge value="{{ $grant->enabled ? 'Enabled' : 'Disabled' }}" class="{{ $grant->enabled ? 'badge-success badge-sm' : 'badge-ghost badge-sm' }}" />
+                            <span class="nexus-status {{ $grant->enabled ? 'nexus-status--success' : 'nexus-status--neutral' }}">
+                                {{ $grant->enabled ? 'Enabled' : 'Disabled' }}
+                            </span>
                         </td>
                         <td>{{ $grant->description }}</td>
                         <td>
@@ -191,18 +268,25 @@
                             @endif
                         </td>
                         <td>
-                            <button class="btn btn-primary btn-outline btn-sm" type="button" data-city-grant-edit='@json($grant)'>
-                                Edit
-                            </button>
+                            @can('manage-city-grants')
+                                <button class="btn btn-primary btn-outline btn-sm" type="button" data-city-grant-edit='@json($grant)'>Edit</button>
+                            @else
+                                <span class="text-base-content/50">—</span>
+                            @endcan
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-base-content/60">No city grant tiers have been configured.</td>
+                    </tr>
+                @endforelse
                 </tbody>
             </table>
         </div>
-    </x-card>
+    </section>
 
-    <dialog id="grantModal" class="modal">
+    @can('manage-city-grants')
+    <dialog id="grantModal" class="modal" aria-labelledby="grantModalLabel">
         <div class="modal-box max-w-3xl">
             <form id="grantForm" method="POST" class="space-y-4">
                 @csrf
@@ -213,22 +297,22 @@
                         <h3 class="text-lg font-semibold" id="grantModalLabel">Manage City Grant</h3>
                         <p class="text-sm text-base-content/60">Adjust thresholds, status, and project requirements.</p>
                     </div>
-                    <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('grantModal').close()">✕</button>
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('grantModal').close()">Close</button>
                 </div>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">City Number</span>
-                    <input type="number" class="input input-bordered w-full" name="city_number" id="city_number" required>
+                    <input type="number" class="input w-full" name="city_number" id="city_number" required>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Grant Percentage</span>
-                    <input type="number" class="input input-bordered w-full" name="grant_amount" id="grant_amount" min="1" step="1" required>
+                    <input type="number" class="input w-full" name="grant_amount" id="grant_amount" min="1" step="1" required>
                 </label>
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Status</span>
-                    <select class="select select-bordered w-full" name="enabled" id="enabled">
+                    <select class="select w-full" name="enabled" id="enabled">
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </select>
@@ -236,7 +320,7 @@
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Required Projects</span>
-                    <select class="select select-bordered min-h-40 w-full" name="projects[]" id="projects" multiple>
+                    <select class="select min-h-40 w-full" name="projects[]" id="projects" multiple>
                         @foreach (array_keys(PWHelperService::PROJECTS) as $project)
                             <option value="{{ $project }}">{{ $project }}</option>
                         @endforeach
@@ -245,7 +329,7 @@
 
                 <label class="block space-y-2">
                     <span class="text-sm font-medium">Description</span>
-                    <textarea class="textarea textarea-bordered min-h-28 w-full" name="description" id="description"></textarea>
+                    <textarea class="textarea min-h-28 w-full" name="description" id="description"></textarea>
                 </label>
 
                 <div class="flex justify-end gap-2">
@@ -256,6 +340,7 @@
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
+    @endcan
 
     @can('manage-city-grants')
         @php
@@ -263,7 +348,7 @@
                 ->map(fn ($id) => (int) $id)
                 ->all();
         @endphp
-        <dialog id="grantReminderModal" class="modal">
+        <dialog id="grantReminderModal" class="modal" aria-label="Send city grant reminders">
             <div class="modal-box max-w-4xl">
                 <form method="POST" action="{{ route('admin.grants.city.reminders') }}" id="grantReminderForm" class="space-y-4">
                     @csrf
@@ -273,7 +358,7 @@
                             <h3 class="text-lg font-semibold">Send City Grant Reminders</h3>
                             <p class="text-sm text-base-content/60">Select grant tiers and queue reminder mails for eligible applicants.</p>
                         </div>
-                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('grantReminderModal').close()">✕</button>
+                        <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('grantReminderModal').close()">Close</button>
                     </div>
 
                     @if ($errors->has('grant_ids') || $errors->has('message'))
@@ -314,7 +399,7 @@
                                 <div class="mt-2">[Your message below]</div>
                                 <div class="mt-2">Please click [link={link to apply for city grants}]here[/here] to apply for a city grant</div>
                             </div>
-                            <textarea class="textarea textarea-bordered min-h-40 w-full" rows="6" id="grantReminderMessage" name="message" required>{{ old('message', $defaultReminderMessage) }}</textarea>
+                            <textarea class="textarea min-h-40 w-full" rows="6" id="grantReminderMessage" name="message" required>{{ old('message', $defaultReminderMessage) }}</textarea>
                             <span class="text-xs text-base-content/60">We automatically add a greeting and the application link after this message.</span>
                         </label>
                     </div>

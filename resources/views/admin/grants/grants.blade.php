@@ -20,119 +20,220 @@
             $oldGrantPayload[$resource] = old($resource, 0);
         }
     }
+
+    $canManageGrants = auth()->user()?->can('manage-grants') ?? false;
+    $canBypassSelfRestrictions = auth()->user()?->can('bypass-self-restrictions') ?? false;
 @endphp
 @extends('layouts.admin')
 
+@section('title', 'Grant Programs')
+
 @section('content')
-    <x-header title="Grant Management" separator>
-        <x-slot:actions>
+    <header class="nexus-page-header">
+        <div class="nexus-page-header__copy">
+            <h1 class="nexus-page-title">Grant programs</h1>
+            <p class="nexus-page-summary">Review requests against their exact payout, then maintain reusable grant definitions and eligibility rules.</p>
+        </div>
+        <div class="nexus-page-header__actions">
+            <span class="nexus-status {{ $pendingCount > 0 ? 'nexus-status--warning' : 'nexus-status--success' }}">
+                {{ number_format($pendingCount) }} pending
+            </span>
             @can('manage-grants')
-                <x-button label="Create New Grant" icon="o-plus"
-                          onclick="clearGrantForm(); document.getElementById('grantModal').showModal()"
-                          class="btn-primary" />
+                <button
+                    type="button"
+                    onclick="clearGrantForm(); document.getElementById('grantModal').showModal()"
+                    class="btn btn-primary btn-sm"
+                >
+                    <x-icon name="o-plus" class="size-4" aria-hidden="true" />
+                    Create grant program
+                </button>
             @endcan
-        </x-slot:actions>
-    </x-header>
+        </div>
+    </header>
 
-    {{-- KPI Stats --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <x-stat title="Total Approved" :value="$totalApproved" icon="o-check-circle" color="text-primary" />
-        <x-stat title="Total Denied" :value="$totalDenied" icon="o-x-circle" color="text-error" />
-        <x-stat title="Pending" :value="$pendingCount" icon="o-clock" color="text-warning" />
-        <x-stat title="Funds Distributed" :value="'$' . number_format($totalFundsDistributed)" icon="o-banknotes" color="text-success" />
-    </div>
-
-    {{-- Pending Applications --}}
-    <x-card title="Pending Applications" class="mb-6">
-        @if($pendingRequests->isEmpty())
-            <p class="text-base-content/50">No pending applications.</p>
-        @else
-            <div class="overflow-x-auto">
-                <table class="table table-sm table-zebra">
-                    <thead>
-                        <tr class="text-base-content/60">
-                            <th>Grant</th>
-                            <th>Nation</th>
-                            <th>Account</th>
-                            <th>Requested At</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($pendingRequests as $request)
-                            <tr>
-                                <td>{{ $request->grant->name }}</td>
-                                <td>
-                                    @if ($request->nation)
-                                        <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}"
-                                           target="_blank" class="link link-primary font-medium">
-                                            {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
-                                        </a>
-                                        <div class="text-xs text-base-content/50">{{ $request->nation->nation_name ?? '' }}</div>
-                                    @else
-                                        <span class="text-base-content/50">Unknown Nation</span>
-                                    @endif
-                                </td>
-                                <td>{{ $request->account->name }}</td>
-                                <td>{{ $request->created_at->format('M d, Y') }}</td>
-                                <td class="text-right">
-                                    <form action="{{ route('admin.grants.approve', $request) }}" method="POST" class="inline">
-                                        @csrf
-                                        <x-button label="Approve" type="submit" icon="o-check" class="btn-success btn-sm" />
-                                    </form>
-                                    <form action="{{ route('admin.grants.deny', $request) }}" method="POST" class="inline">
-                                        @csrf
-                                        <x-button label="Deny" type="submit" icon="o-x-mark" class="btn-error btn-outline btn-sm" />
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+    @unless($grantApprovalsEnabled)
+        <div class="alert alert-warning" role="status">
+            <x-icon name="o-pause-circle" class="size-5" aria-hidden="true" />
+            <div>
+                <p class="font-semibold">Grant approvals are paused</p>
+                <p class="text-sm">Pending requests are preserved. Staff can still deny a request, but deposits cannot be approved until the global control is enabled.</p>
             </div>
-        @endif
-    </x-card>
+        </div>
+    @endunless
+
+    <section class="nexus-panel nexus-panel--raised" aria-labelledby="pending-grants-title">
+        <div class="nexus-panel__header">
+            <div>
+                <h2 id="pending-grants-title" class="nexus-section-title">Pending grant requests</h2>
+                <p class="nexus-body-muted mt-1">Approval deposits the displayed payout into the selected account immediately.</p>
+            </div>
+            @unless($canManageGrants)
+                <span class="nexus-status nexus-status--neutral">View only</span>
+            @endunless
+        </div>
+
+        @forelse ($pendingRequests as $request)
+            @php
+                $isOwnRequest = ! $canBypassSelfRestrictions
+                    && auth()->user()?->nation_id !== null
+                    && (int) auth()->user()->nation_id === (int) $request->nation_id;
+                $payoutResources = collect(PWHelperService::resources())
+                    ->mapWithKeys(fn ($resource) => [$resource => (float) ($request->grant?->$resource ?? 0)])
+                    ->filter(fn ($amount) => $amount > 0);
+            @endphp
+            <article class="grid gap-4 border-b border-base-300 px-5 py-4 last:border-b-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(16rem,0.95fr)_auto] xl:items-center">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-semibold">{{ $request->grant?->name ?? 'Unknown grant' }}</h3>
+                        <span class="nexus-status nexus-status--warning">Pending</span>
+                    </div>
+                    @if ($request->nation)
+                        <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener" class="mt-1 block w-fit font-medium text-primary hover:underline">
+                            {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
+                        </a>
+                        <p class="text-sm text-base-content/60">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
+                    @else
+                        <p class="mt-1 text-sm text-base-content/60">Unknown nation · Nation #{{ $request->nation_id }}</p>
+                    @endif
+                    <p class="mt-1 text-xs text-base-content/55">
+                        Requested <time datetime="{{ $request->created_at->toIso8601String() }}" title="{{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
+                        · Account {{ $request->account?->name ?? '#'.$request->account_id }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Payout on approval</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @forelse($payoutResources as $resource => $amount)
+                            <span class="nexus-status nexus-status--neutral">
+                                {{ Str::headline($resource) }} {{ $resource === 'money' ? '$'.number_format($amount, 0) : number_format($amount, 0) }}
+                            </span>
+                        @empty
+                            <span class="text-sm text-base-content/60">No payout configured</span>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 xl:justify-end">
+                    @if($canManageGrants && ! $isOwnRequest)
+                        @if($grantApprovalsEnabled)
+                            <form action="{{ route('admin.grants.approve', $request) }}" method="POST" data-confirm="Approve this request and deposit the displayed payout into the selected account?" data-confirm-title="Approve grant request?" data-confirm-label="Approve and deposit">
+                                @csrf
+                                <button type="submit" class="btn btn-success btn-sm">Approve and deposit</button>
+                            </form>
+                        @else
+                            <span class="nexus-status nexus-status--warning">Approval paused</span>
+                        @endif
+                        <form action="{{ route('admin.grants.deny', $request) }}" method="POST" data-confirm="Deny this grant request? The applicant will be notified and no funds will be deposited." data-confirm-title="Deny grant request?" data-confirm-label="Deny request" data-confirm-tone="error">
+                            @csrf
+                            <button type="submit" class="btn btn-error btn-outline btn-sm">Deny request</button>
+                        </form>
+                    @elseif($isOwnRequest)
+                        <span class="text-sm">
+                            <span class="nexus-status nexus-status--error">Self-decision blocked</span>
+                            <span class="mt-1 block text-base-content/60">Another reviewer must decide.</span>
+                        </span>
+                    @else
+                        <span class="nexus-status nexus-status--neutral">Decision unavailable</span>
+                    @endif
+                </div>
+            </article>
+        @empty
+            <div class="nexus-empty-state">
+                <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
+                <div>
+                    <h3 class="font-semibold">Grant queue is clear</h3>
+                    <p class="mt-1 text-sm text-base-content/60">There are no pending custom grant requests.</p>
+                </div>
+            </div>
+        @endforelse
+    </section>
+
+    <dl class="nexus-metrics">
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Pending</dt>
+            <dd class="nexus-stat-value">{{ number_format($pendingCount) }}</dd>
+            <p class="nexus-stat-helper">Awaiting a decision</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Approved</dt>
+            <dd class="nexus-stat-value">{{ number_format($totalApproved) }}</dd>
+            <p class="nexus-stat-helper">All-time decisions</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Denied</dt>
+            <dd class="nexus-stat-value">{{ number_format($totalDenied) }}</dd>
+            <p class="nexus-stat-helper">All-time decisions</p>
+        </div>
+        <div class="nexus-metric">
+            <dt class="nexus-stat-label">Funds distributed</dt>
+            <dd class="nexus-stat-value">${{ number_format($totalFundsDistributed) }}</dd>
+            <p class="nexus-stat-helper">Approved money payouts</p>
+        </div>
+    </dl>
 
     @can('manage-grants')
-        {{-- Manual Grant Disbursement --}}
-        <x-card title="Manual Grant Disbursement" class="mb-6">
-            <x-slot:subtitle>Sends a grant directly to a nation and bypasses one-time or pending application checks.</x-slot:subtitle>
-            <form method="POST" action="{{ route('admin.manual-disbursements.grants') }}">
-                @csrf
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="label font-semibold text-sm">Grant</label>
-                        <select name="grant_id" class="select select-bordered w-full" required>
-                            <option value="">Select a grant</option>
-                            @foreach($grants as $grant)
-                                <option value="{{ $grant->id }}" @selected(old('grant_id') == $grant->id)>
-                                    {{ $grant->name }} ({{ $grant->is_one_time ? 'one-time' : 'repeatable' }})
-                                </option>
-                            @endforeach
-                        </select>
+        <details id="manual-grant-disbursement" class="nexus-panel" @if(old('grant_id') || old('nation_id') || old('account_id')) open @endif>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
+                <span>
+                    <span class="block font-semibold">Manual grant disbursement</span>
+                    <span class="mt-0.5 block text-sm text-base-content/60">Immediately sends a grant and bypasses one-time and pending-request checks.</span>
+                </span>
+                <span class="flex items-center gap-2">
+                    <span class="nexus-status {{ $grantApprovalsEnabled ? 'nexus-status--warning' : 'nexus-status--neutral' }}">
+                        {{ $grantApprovalsEnabled ? 'Elevated action' : 'Paused' }}
+                    </span>
+                    <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                </span>
+            </summary>
+            @if($grantApprovalsEnabled)
+                <form method="POST" action="{{ route('admin.manual-disbursements.grants') }}" class="border-t border-base-300 p-5" data-confirm="Send this grant immediately? This bypasses the normal application and one-time checks." data-confirm-title="Send manual grant?" data-confirm-label="Send grant" data-confirm-tone="error">
+                    @csrf
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <label class="block">
+                            <span class="label font-semibold text-sm">Grant</span>
+                            <select name="grant_id" class="select w-full" required>
+                                <option value="">Select a grant</option>
+                                @foreach($grants as $grant)
+                                    <option value="{{ $grant->id }}" @selected(old('grant_id') == $grant->id)>
+                                        {{ $grant->name }} ({{ $grant->is_one_time ? 'one-time' : 'repeatable' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <x-input label="Nation ID" type="number" name="nation_id" required min="1" :value="old('nation_id')" />
+                        <x-input label="Account ID" type="number" name="account_id" required min="1" :value="old('account_id')" hint="Must belong to the nation above." />
                     </div>
-                    <x-input label="Nation ID" type="number" name="nation_id" required min="1" :value="old('nation_id')" />
-                    <x-input label="Account ID" type="number" name="account_id" required min="1" :value="old('account_id')" hint="Must belong to the nation above." />
+                    <div class="nexus-form-actions mt-5">
+                        <button type="submit" class="btn btn-primary">Send grant immediately</button>
+                    </div>
+                </form>
+            @else
+                <div class="border-t border-base-300 p-5 text-sm text-base-content/65">
+                    Manual disbursements are unavailable while grant approvals are paused.
                 </div>
-                <div class="flex justify-end">
-                    <x-button label="Send Grant" type="submit" icon="o-paper-airplane" class="btn-primary" />
-                </div>
-            </form>
-        </x-card>
+            @endif
+        </details>
     @endcan
 
-    {{-- Custom Grants List --}}
-    <x-card title="Custom Grants">
+    <section class="nexus-panel" aria-labelledby="grant-programs-title">
+        <div class="nexus-panel__header">
+            <div>
+                <h2 id="grant-programs-title" class="nexus-section-title">Grant definitions</h2>
+                <p class="nexus-body-muted mt-1">Payouts and eligibility rules used by member applications.</p>
+            </div>
+            <span class="text-sm tabular-nums text-base-content/60">{{ number_format($grants->count()) }} programs</span>
+        </div>
         <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra">
+            <table class="nexus-table" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr>
                         <th>Name</th>
                         <th>Status</th>
                         <th>One-Time</th>
                         <th>Requirements</th>
                         <th>Resources</th>
-                        <th class="text-right">Actions</th>
+                        <th class="text-right" data-sortable="false">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -143,8 +244,9 @@
                                 <div class="text-sm text-base-content/50">{{ Str::limit($grant->description, 72) }}</div>
                             </td>
                             <td>
-                                <x-badge :value="$grant->is_enabled ? 'Enabled' : 'Disabled'"
-                                         :class="$grant->is_enabled ? 'badge-success badge-sm' : 'badge-ghost badge-sm'" />
+                                <span class="nexus-status {{ $grant->is_enabled ? 'nexus-status--success' : 'nexus-status--neutral' }}">
+                                    {{ $grant->is_enabled ? 'Enabled' : 'Disabled' }}
+                                </span>
                             </td>
                             <td>{{ $grant->is_one_time ? 'Yes' : 'No' }}</td>
                             <td>
@@ -186,7 +288,7 @@
                                 @endcan
                             </td>
                         </tr>
-                        <tr id="grant-resources-{{ $grant->id }}" class="hidden">
+                        <tr id="grant-resources-{{ $grant->id }}" class="hidden bg-base-200/40">
                             <td colspan="6">
                                 <div class="flex flex-wrap gap-2 py-1">
                                     @foreach (PWHelperService::resources() as $resource)
@@ -201,23 +303,23 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-base-content/50 py-6">No grants have been created yet.</td>
+                            <td colspan="6" class="py-8 text-center text-base-content/60">No grant definitions have been created.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </x-card>
+    </section>
 
-    {{-- Grant Modal --}}
-    <dialog id="grantModal" class="modal modal-bottom sm:modal-middle">
+    @can('manage-grants')
+    <dialog id="grantModal" class="modal modal-bottom sm:modal-middle" aria-labelledby="grant-modal-title">
         <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] overflow-y-auto">
             <div class="flex items-start justify-between mb-4">
                 <div>
-                    <h3 class="font-bold text-lg">Manage Grant</h3>
+                    <h3 id="grant-modal-title" class="font-bold text-lg">Manage grant program</h3>
                     <p class="text-base-content/50 text-sm">Create flexible grant requirements with nested logic, live summaries, and safe server-side enforcement.</p>
                 </div>
-                <button type="button" onclick="document.getElementById('grantModal').close()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+                <button type="button" onclick="document.getElementById('grantModal').close()" class="btn btn-sm btn-ghost">Close</button>
             </div>
 
             <form id="grantForm" method="POST">
@@ -228,13 +330,13 @@
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
                     {{-- Left: Grant Basics --}}
                     <div class="lg:col-span-2 bg-base-200 rounded-box p-4 space-y-4">
-                        <div class="text-xs uppercase text-base-content/50 font-semibold">Grant Basics</div>
+                        <div class="font-semibold">Grant basics</div>
                         <x-input label="Grant Name" name="name" id="grant_name" required />
                         <x-textarea label="Description" name="description" id="grant_description" rows="3" />
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="label text-sm font-semibold">Status</label>
-                                <select class="select select-bordered w-full" name="is_enabled" id="is_enabled">
+                                <select class="select w-full" name="is_enabled" id="is_enabled">
                                     <option value="1">Enabled</option>
                                     <option value="0">Disabled</option>
                                 </select>
@@ -250,7 +352,7 @@
 
                         <div class="divider"></div>
 
-                        <div class="text-xs uppercase text-base-content/50 font-semibold">Disbursement</div>
+                        <div class="font-semibold">Disbursement</div>
                         <x-input label="Money" type="number" name="money" id="grant_money" value="0" min="0" />
                         <div class="grid grid-cols-2 gap-3">
                             @foreach (PWHelperService::resources(false) as $resource)
@@ -285,7 +387,7 @@
                         @endif
 
                         <div class="bg-base-200 border border-base-300 rounded-box p-3">
-                            <div class="text-xs uppercase text-base-content/50 mb-1">Live Summary</div>
+                            <div class="text-sm font-semibold text-base-content/70 mb-1">Live summary</div>
                             <div class="font-semibold" id="requirementRuleCount">No custom requirements configured</div>
                             <div class="text-sm text-base-content/50 mt-1" id="requirementSummaryHint">Applications will only enforce the standard alliance and pending checks until you add rules.</div>
                         </div>
@@ -295,13 +397,13 @@
                                 <label class="font-semibold text-sm">Top-level logic</label>
                                 <div id="rootRuleBadge" class="badge badge-neutral badge-sm">0 rules</div>
                             </div>
-                            <select class="select select-bordered select-sm w-full" id="root_group_mode"></select>
+                            <select class="select select-sm w-full" id="root_group_mode"></select>
                         </div>
 
                         <div id="grantRequirementBuilder" class="space-y-3"></div>
 
                         <div class="bg-base-200 rounded-box p-3">
-                            <div class="text-xs uppercase text-base-content/50 mb-2">Builder Tips</div>
+                            <div class="text-sm font-semibold text-base-content/70 mb-2">Builder tips</div>
                             <ul class="text-sm text-base-content/60 list-disc list-inside space-y-1">
                                 <li>Use <strong>Any condition may match</strong> when several different paths should qualify.</li>
                                 <li>Use nested groups to combine project checks with city, score, or MMR ranges.</li>
@@ -313,12 +415,13 @@
 
                 <div class="modal-action">
                     <x-button label="Save Grant" type="submit" icon="o-check" class="btn-primary" />
-                    <x-button label="Cancel" onclick="document.getElementById('grantModal').close()" class="btn-ghost" />
+                    <x-button label="Cancel" type="button" onclick="document.getElementById('grantModal').close()" class="btn-ghost" />
                 </div>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
+    @endcan
 @endsection
 
 @push('scripts')
@@ -424,11 +527,11 @@
             header.appendChild(actions);
             actions.appendChild(createButton('Condition', 'btn btn-outline btn-primary btn-xs', () => { node.rules.push(createEmptyCondition()); renderGrantRequirementBuilder(); }));
             actions.appendChild(createButton('Group', 'btn btn-outline btn-xs', () => { node.rules.push(createEmptyGroup('all')); renderGrantRequirementBuilder(); }));
-            actions.appendChild(createMoveButton('↑', path, -1));
-            actions.appendChild(createMoveButton('↓', path, 1));
+            actions.appendChild(createMoveButton('Move up', path, -1));
+            actions.appendChild(createMoveButton('Move down', path, 1));
             if (!isRootLevel) actions.appendChild(createButton('Remove', 'btn btn-error btn-outline btn-xs', () => { removeNodeAtPath(path); renderGrantRequirementBuilder(); }));
             const select = document.createElement('select');
-            select.className = 'select select-bordered select-sm w-full mb-3';
+            select.className = 'select select-sm w-full mb-3';
             grantRequirementBuilderConfig.groups.forEach(groupOption => {
                 const option = document.createElement('option');
                 option.value = groupOption.value;
@@ -481,7 +584,7 @@
             messageWrap.appendChild(messageLabel);
             const messageInput = document.createElement('input');
             messageInput.type = 'text';
-            messageInput.className = 'input input-bordered input-sm w-full';
+            messageInput.className = 'input input-sm w-full';
             messageInput.placeholder = 'Optional. Shown to the applicant if this condition fails.';
             messageInput.value = node.message || '';
             messageInput.addEventListener('input', event => { node.message = event.target.value; syncGrantRequirementHiddenInput(); });
@@ -489,8 +592,8 @@
             footer.appendChild(messageWrap);
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'flex gap-2 shrink-0';
-            actionsDiv.appendChild(createMoveButton('↑', path, -1));
-            actionsDiv.appendChild(createMoveButton('↓', path, 1));
+            actionsDiv.appendChild(createMoveButton('Move up', path, -1));
+            actionsDiv.appendChild(createMoveButton('Move down', path, 1));
             actionsDiv.appendChild(createButton('Remove', 'btn btn-error btn-outline btn-xs', () => { removeNodeAtPath(path); renderGrantRequirementBuilder(); }));
             footer.appendChild(actionsDiv);
             return card;
@@ -503,7 +606,7 @@
             label.textContent = 'Field';
             wrapper.appendChild(label);
             const select = document.createElement('select');
-            select.className = 'select select-bordered select-sm w-full';
+            select.className = 'select select-sm w-full';
             wrapper.appendChild(select);
             const grouped = {};
             grantRequirementBuilderConfig.fields.forEach(item => { grouped[item.category] = grouped[item.category] || []; grouped[item.category].push(item); });
@@ -524,7 +627,7 @@
             label.textContent = 'Operator';
             wrapper.appendChild(label);
             const select = document.createElement('select');
-            select.className = 'select select-bordered select-sm w-full';
+            select.className = 'select select-sm w-full';
             allowedOperators.forEach(operator => { const option = document.createElement('option'); option.value = operator.value; option.textContent = operator.label; option.selected = operator.value === node.operator; select.appendChild(option); });
             select.addEventListener('change', event => { const field = grantRequirementFields.get(node.field); node.operator = event.target.value; node.value = defaultValueFor(field, node.operator); renderGrantRequirementBuilder(); });
             wrapper.appendChild(select);
@@ -548,7 +651,7 @@
             if (field.type === 'number') {
                 const input = document.createElement('input');
                 input.type = 'number';
-                input.className = 'input input-bordered input-sm w-full';
+                input.className = 'input input-sm w-full';
                 input.step = 'any';
                 input.value = node.value ?? '';
                 input.addEventListener('input', event => { node.value = event.target.value; syncGrantRequirementHiddenInput(); updateGrantRequirementSummary(); });
@@ -557,14 +660,14 @@
             }
             if (field.type === 'enum' && ['eq', 'neq'].includes(node.operator)) {
                 const select = document.createElement('select');
-                select.className = 'select select-bordered select-sm w-full';
+                select.className = 'select select-sm w-full';
                 field.options.forEach(optionData => { const option = document.createElement('option'); option.value = optionData.value; option.textContent = optionData.label; option.selected = optionData.value === node.value; select.appendChild(option); });
                 select.addEventListener('change', event => { node.value = event.target.value; syncGrantRequirementHiddenInput(); updateGrantRequirementSummary(); });
                 wrapper.appendChild(select);
                 return wrapper;
             }
             const select = document.createElement('select');
-            select.className = 'select select-bordered select-sm w-full';
+            select.className = 'select select-sm w-full';
             select.multiple = true;
             select.size = Math.min(6, Math.max(4, field.options.length));
             const selectedValues = Array.isArray(node.value) ? node.value : [];
@@ -586,7 +689,7 @@
             col.appendChild(label);
             const input = document.createElement('input');
             input.type = 'number';
-            input.className = 'input input-bordered input-sm w-full';
+            input.className = 'input input-sm w-full';
             input.step = 'any';
             input.value = value;
             input.addEventListener('input', event => onInput(event.target.value));
