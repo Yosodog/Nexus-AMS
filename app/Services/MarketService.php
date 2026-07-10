@@ -101,17 +101,23 @@ class MarketService
             ]);
         }
 
-        if ($amount <= 0) {
-            throw ValidationException::withMessages([
-                'amount' => 'Amount must be greater than 0.',
-            ]);
-        }
+        $amount = $this->canonicalizeSaleAmount($amount);
 
         if ($account->nation_id !== $user->nation_id) {
             throw new UserErrorException('You do not own that account.');
         }
 
-        return DB::transaction(function () use ($user, $account, $resource, $amount): MarketTransaction {
+        $basePrice = Arr::get($this->getBasePrices(), $resource);
+
+        if (! is_numeric($basePrice) || ! is_finite((float) $basePrice) || (float) $basePrice <= 0) {
+            throw ValidationException::withMessages([
+                'resource' => 'No current market price is available for this resource.',
+            ]);
+        }
+
+        $basePrice = number_format((float) $basePrice, 4, '.', '');
+
+        return DB::transaction(function () use ($user, $account, $resource, $amount, $basePrice): MarketTransaction {
             $marketResource = MarketResource::query()
                 ->where('resource', $resource)
                 ->lockForUpdate()
@@ -123,13 +129,34 @@ class MarketService
                 ]);
             }
 
-            if ((float) $marketResource->buy_cap_remaining < $amount) {
+            $finalPriceValue = $this->computeFinalPrice(
+                $resource,
+                (float) $marketResource->adjustment_percent,
+                (float) $basePrice
+            );
+
+            if (! is_finite($finalPriceValue) || $finalPriceValue <= 0) {
+                throw ValidationException::withMessages([
+                    'resource' => 'No positive market price is available for this resource.',
+                ]);
+            }
+
+            $finalPrice = number_format($finalPriceValue, 4, '.', '');
+            $moneyPaid = $this->multiplyAndRoundToCents($amount, $finalPrice);
+
+            if (bccomp($moneyPaid, '0.00', 2) <= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => 'This sale is too small to produce a positive payout.',
+                ]);
+            }
+
+            if (bccomp((string) $marketResource->buy_cap_remaining, $amount, 2) < 0) {
                 throw ValidationException::withMessages([
                     'amount' => 'That sale exceeds the remaining buy cap for this resource.',
                 ]);
             }
 
-            $capBefore = (float) $marketResource->buy_cap_remaining;
+            $capBefore = (string) $marketResource->buy_cap_remaining;
 
             $lockedAccount = Account::query()
                 ->lockForUpdate()
@@ -141,19 +168,15 @@ class MarketService
                 ]);
             }
 
-            if ((float) $lockedAccount->{$resource} < $amount) {
+            if (bccomp((string) $lockedAccount->{$resource}, $amount, 2) < 0) {
                 throw ValidationException::withMessages([
                     'amount' => 'Your account does not have enough of this resource.',
                 ]);
             }
 
-            $basePrice = Arr::get($this->getBasePrices(), $resource, 0);
-            $finalPrice = $this->computeFinalPrice($resource, (float) $marketResource->adjustment_percent, $basePrice);
-            $moneyPaid = round($amount * $finalPrice, 2);
-
             AccountService::adjustAccountBalance($lockedAccount, [
                 'money' => $moneyPaid,
-                $resource => -1 * $amount,
+                $resource => bcsub('0.00', $amount, 2),
                 'note' => 'Alliance market sale',
             ], null, null, [
                 'market_resource_id' => $marketResource->id,
@@ -162,7 +185,7 @@ class MarketService
                 'final_price' => $finalPrice,
             ]);
 
-            $marketResource->buy_cap_remaining = (float) $marketResource->buy_cap_remaining - $amount;
+            $marketResource->buy_cap_remaining = bcsub($capBefore, $amount, 2);
             $marketResource->save();
 
             $marketTransaction = MarketTransaction::create([
@@ -194,7 +217,7 @@ class MarketService
                         'final_price' => $finalPrice,
                         'money_paid' => $moneyPaid,
                         'cap_before' => $capBefore,
-                        'cap_after' => (float) $marketResource->buy_cap_remaining,
+                        'cap_after' => (string) $marketResource->buy_cap_remaining,
                     ],
                 ],
                 message: 'Alliance market sale completed.'
@@ -202,6 +225,39 @@ class MarketService
 
             return $marketTransaction;
         });
+    }
+
+    private function canonicalizeSaleAmount(float $amount): string
+    {
+        if (! is_finite($amount) || $amount < 1) {
+            throw ValidationException::withMessages([
+                'amount' => 'Amount must be at least 1.',
+            ]);
+        }
+
+        $roundedAmount = round($amount, 2);
+
+        if ($amount !== $roundedAmount) {
+            throw ValidationException::withMessages([
+                'amount' => 'Amount may not contain more than 2 decimal places.',
+            ]);
+        }
+
+        if ($roundedAmount > MarketResource::MAX_BUY_CAP_REMAINING) {
+            throw ValidationException::withMessages([
+                'amount' => 'Amount exceeds the maximum supported market sale.',
+            ]);
+        }
+
+        return number_format($roundedAmount, 2, '.', '');
+    }
+
+    private function multiplyAndRoundToCents(string $amount, string $unitPrice): string
+    {
+        $product = bcmul($amount, $unitPrice, 6);
+        $roundedProduct = bcadd($product, '0.005', 6);
+
+        return bcdiv($roundedProduct, '1', 2);
     }
 
     /**
