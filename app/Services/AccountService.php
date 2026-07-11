@@ -7,6 +7,7 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
+use App\Models\DiscordActionIntent;
 use App\Models\GrantApplication;
 use App\Models\ManualTransaction;
 use App\Models\MemberTransfer;
@@ -325,20 +326,20 @@ class AccountService
         $thereIsSomething = false;
         foreach (PWHelperService::resources() as $res) {
             // Verify that the 'from' account has enough resources
-            if ($resources[$res] > $fromAccount->$res) {
+            if (bccomp((string) $resources[$res], (string) $fromAccount->$res, 2) > 0) {
                 throw new UserErrorException(
                     "Insufficient {$res} in the source account."
                 );
             }
 
             // Verify that nothing is a negative resource
-            if ($resources[$res] < 0) {
+            if (bccomp((string) $resources[$res], '0.00', 2) < 0) {
                 throw new UserErrorException(
                     "$res is set to a negative number"
                 );
             }
 
-            if ($resources[$res] > 0) {
+            if (bccomp((string) $resources[$res], '0.00', 2) > 0) {
                 $thereIsSomething =
                     true; // We don't want to do a transaction if there is nothing
             }
@@ -359,15 +360,55 @@ class AccountService
         int $nation_id,
         array $resources
     ): Transaction {
+        $actor = Auth::user();
+
+        if (! $actor instanceof User || (int) $actor->nation_id !== $nation_id) {
+            throw new UserErrorException('The authenticated actor does not own the destination nation.');
+        }
+
+        return self::transferToNationForActor($actor, $fromAccountId, $resources);
+    }
+
+    /**
+     * Execute a nation withdrawal for an explicitly supplied, trusted actor.
+     * Actor authority must be resolved by the calling authentication boundary.
+     */
+    public static function transferToNationForActor(
+        User $actor,
+        int $fromAccountId,
+        array $resources,
+        ?DiscordActionIntent $actionIntent = null,
+    ): Transaction {
         try {
-            $requestNationId = (int) Auth::user()->nation_id;
+            $requestNationId = (int) $actor->nation_id;
+
+            if ($requestNationId <= 0) {
+                throw new UserErrorException('The withdrawal actor does not have a nation.');
+            }
+
             self::ensureNotBlockaded($requestNationId);
 
             return Cache::lock("account-transfer:nation:{$requestNationId}", 15)
-                ->block(5, function () use ($fromAccountId, $nation_id, $resources, $requestNationId): Transaction {
+                ->block(5, function () use ($fromAccountId, $resources, $requestNationId, $actionIntent): Transaction {
                     DB::beginTransaction();
 
                     try {
+                        if ($actionIntent) {
+                            $actionIntent = DiscordActionIntent::query()
+                                ->lockForUpdate()
+                                ->findOrFail($actionIntent->id);
+
+                            $existing = Transaction::query()
+                                ->where('discord_action_intent_id', $actionIntent->id)
+                                ->first();
+
+                            if ($existing) {
+                                DB::commit();
+
+                                return $existing;
+                            }
+                        }
+
                         $fromAccount = self::getAccountById($fromAccountId);
 
                         // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
@@ -377,12 +418,16 @@ class AccountService
                             $fromAccount
                         );
 
-                        $evaluation = WithdrawalLimitService::evaluate($nation_id, $resources);
+                        $evaluation = WithdrawalLimitService::evaluate($requestNationId, $resources);
                         $note = 'Withdraw from '.$fromAccount->name;
 
                         // Perform the transfer
                         foreach (PWHelperService::resources() as $res) {
-                            $fromAccount->$res -= $resources[$res];
+                            $fromAccount->$res = bcsub(
+                                (string) $fromAccount->$res,
+                                (string) $resources[$res],
+                                2,
+                            );
                         }
 
                         // Save changes
@@ -400,11 +445,18 @@ class AccountService
                             $evaluation['pending_reason']
                         );
 
-                        DB::commit(); // Commit before spawning the job. I'd rather it fail.
+                        if ($actionIntent) {
+                            $transaction->discord_action_intent_id = $actionIntent->id;
+                            $transaction->save();
+                        }
 
                         if (! $evaluation['requires_approval']) {
-                            self::dispatchWithdrawal($transaction, $fromAccount);
+                            DB::afterCommit(
+                                fn () => self::dispatchWithdrawal($transaction, $fromAccount)
+                            );
                         }
+
+                        DB::commit();
 
                         app(AuditLogger::class)->recordAfterCommit(
                             category: 'finance',

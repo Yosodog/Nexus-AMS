@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\WarPlanController;
 use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
+use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
 use App\Http\Controllers\API\Discord\WarCounterController as DiscordWarCounterController;
 use App\Http\Controllers\API\DiscordQueueController;
@@ -16,8 +17,10 @@ use App\Http\Controllers\API\TradePriceController;
 use App\Http\Controllers\API\WarSimulatorController as ApiWarSimulatorController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
+use App\Http\Middleware\EnsureDiscordInteractionIdempotency;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
+use App\Http\Middleware\ResolveDiscordActor;
 use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
 use Illuminate\Http\Request;
@@ -87,6 +90,19 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
     Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary']);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
+
+    Route::prefix('me')->middleware(ResolveDiscordActor::class)->group(function () {
+        Route::get('/accounts', [DiscordFinanceController::class, 'accounts']);
+        Route::get('/accounts/{account}/transactions', [DiscordFinanceController::class, 'transactions']);
+        Route::get('/withdrawals/{intent}', [DiscordFinanceController::class, 'reviewWithdrawal']);
+
+        Route::middleware(EnsureDiscordInteractionIdempotency::class)->group(function () {
+            Route::post('/accounts/{account}/deposit-requests', [DiscordFinanceController::class, 'createDepositRequest']);
+            Route::post('/withdrawals/drafts', [DiscordFinanceController::class, 'createWithdrawalDraft']);
+            Route::post('/withdrawals/{intent}/confirm', [DiscordFinanceController::class, 'confirmWithdrawal']);
+            Route::post('/withdrawals/{intent}/cancel', [DiscordFinanceController::class, 'cancelWithdrawal']);
+        });
+    });
 });
 
 Route::middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class, AdminMiddleware::class])

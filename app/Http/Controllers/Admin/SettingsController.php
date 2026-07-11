@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
+use App\Http\Requests\Admin\UpdateDiscordCityTierSettingsRequest;
 use App\Models\Application;
+use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
 use App\Models\GrantApplication;
@@ -13,6 +15,7 @@ use App\Models\Loan;
 use App\Models\RebuildingRequest;
 use App\Models\WarAidRequest;
 use App\Services\AuditLogger;
+use App\Services\Discord\PrivateNotificationService;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -79,6 +82,8 @@ class SettingsController extends Controller
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
             'discordDepartureChannelId' => SettingService::getDiscordAllianceDepartureChannelId(),
             'discordDepartureEnabled' => SettingService::isDiscordAllianceDepartureEnabled(),
+            'discordPrivateNotificationsEnabled' => SettingService::areDiscordPrivateNotificationsEnabled(),
+            'discordCityTierBucketSize' => SettingService::getDiscordCityTierBucketSize(),
             'homepageSettings' => $homepageSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
@@ -231,6 +236,60 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => 'Discord alliance departure settings updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateDiscordPrivateNotifications(Request $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $validated = $request->validate([
+            'discord_private_notifications_enabled' => ['required', 'boolean'],
+        ]);
+        $previous = SettingService::areDiscordPrivateNotificationsEnabled();
+        $enabled = (bool) $validated['discord_private_notifications_enabled'];
+
+        SettingService::setDiscordPrivateNotificationsEnabled($enabled);
+        $suppressedCount = $enabled ? 0 : app(PrivateNotificationService::class)->suppressPending();
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'discord_private_notifications_updated',
+            context: [
+                'changes' => ['enabled' => ['from' => $previous, 'to' => $enabled]],
+                'data' => ['suppressed_pending_count' => $suppressedCount],
+            ],
+            message: 'Discord private notification setting updated.',
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Discord private notification setting updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateDiscordCityTiers(UpdateDiscordCityTierSettingsRequest $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $validated = $request->validated();
+        $previous = SettingService::getDiscordCityTierBucketSize();
+        $bucketSize = (int) $validated['discord_city_tier_bucket_size'];
+
+        SettingService::setDiscordCityTierBucketSize($bucketSize);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'discord_city_tier_settings_updated',
+            context: [
+                'changes' => ['bucket_size' => ['from' => $previous, 'to' => $bucketSize]],
+            ],
+            message: 'Discord city-tier settings updated.',
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Discord city-tier settings updated. The next hourly sync will apply the new buckets.',
             'alert-type' => 'success',
         ]);
     }
@@ -766,6 +825,30 @@ class SettingsController extends Controller
                     'status' => 'expired',
                     'pending_key' => null,
                     'expired_at' => $releasedAt,
+                ],
+            ],
+            'blockade_relief_pending' => [
+                'label' => 'pending blockade relief requests',
+                'table' => 'blockade_relief_requests',
+                'model' => BlockadeReliefRequest::class,
+                'pending_status' => 'pending',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'expired',
+                    'pending_key' => null,
+                    'expired_at' => $releasedAt,
+                    'resolution_reason' => 'admin_stale_release',
+                ],
+            ],
+            'blockade_relief_claimed' => [
+                'label' => 'claimed blockade relief requests',
+                'table' => 'blockade_relief_requests',
+                'model' => BlockadeReliefRequest::class,
+                'pending_status' => 'claimed',
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => 'expired',
+                    'pending_key' => null,
+                    'expired_at' => $releasedAt,
+                    'resolution_reason' => 'admin_stale_release',
                 ],
             ],
         ];

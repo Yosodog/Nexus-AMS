@@ -38,12 +38,15 @@ use App\Http\Controllers\Admin\WarCounterController as AdminWarCounterController
 use App\Http\Controllers\Admin\WarPlanController as AdminWarPlanController;
 use App\Http\Controllers\Admin\WarRoomController;
 use App\Http\Controllers\Admin\WithdrawalController;
+use App\Http\Controllers\AlertSubscriptionController;
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\BlockadeReliefController;
 use App\Http\Controllers\CityGrantController as UserCityGrantController;
 use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\DirectDepositController;
+use App\Http\Controllers\DiscordBotGuideController;
 use App\Http\Controllers\DiscordVerificationController;
 use App\Http\Controllers\GrantController as UserGrantController;
 use App\Http\Controllers\GrowthCirclesController;
@@ -103,6 +106,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/user/settings/update', [UserController::class, 'updateSettings'])->name(
         'user.settings.update'
     );
+    Route::post('/user/settings/discord-notifications', [UserController::class, 'updateDiscordNotificationPreferences'])
+        ->name('user.settings.discord-notifications');
     Route::get('/user/settings/mfa-secrets', [UserController::class, 'showMfaSecrets'])
         ->middleware('password.confirm')
         ->name('user.settings.mfa-secrets');
@@ -122,6 +127,17 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         'user.settings.api-tokens.revoke'
     );
     Route::get('/user/settings/api-docs', ApiDocsController::class)->name('user.settings.api-docs');
+    Route::get('/user/discord-bot-guide', DiscordBotGuideController::class)->name('user.discord-bot-guide');
+
+    // Custom alerts and watchlists
+    Route::get('/user/alerts', [AlertSubscriptionController::class, 'index'])->name('user.alerts.index');
+    Route::post('/user/alerts', [AlertSubscriptionController::class, 'store'])->name('user.alerts.store');
+    Route::patch('/user/alerts/{alertSubscription}/status', [AlertSubscriptionController::class, 'updateStatus'])
+        ->name('user.alerts.status');
+    Route::post('/user/alerts/{alertSubscription}/test', [AlertSubscriptionController::class, 'test'])
+        ->name('user.alerts.test');
+    Route::delete('/user/alerts/{alertSubscription}', [AlertSubscriptionController::class, 'destroy'])
+        ->name('user.alerts.destroy');
 
     // User dashboard
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
@@ -180,6 +196,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
     // Audits
     Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+    Route::post('/audit/results/{auditResult}/acknowledge', [AuditController::class, 'acknowledge'])
+        ->name('audit.results.acknowledge');
+    Route::post('/audit/results/{auditResult}/snooze', [AuditController::class, 'snooze'])
+        ->name('audit.results.snooze');
     Route::post('/audit/recommendation/regenerate', [AuditController::class, 'regenerate'])
         ->name('audit.recommendation.regenerate');
 
@@ -206,6 +226,12 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/raid-leaderboard', RaidingLeaderboardController::class)->name('defense.raid-leaderboard');
         Route::get('/intel', [IntelReportController::class, 'index'])->name('defense.intel');
         Route::post('/intel', [IntelReportController::class, 'store'])->name('defense.intel.store');
+        Route::get('/blockade-relief', [BlockadeReliefController::class, 'index'])->name('defense.blockade-relief');
+        Route::post('/blockade-relief', [BlockadeReliefController::class, 'store'])->name('defense.blockade-relief.store');
+        Route::post('/blockade-relief/{blockadeReliefRequest}/claim', [BlockadeReliefController::class, 'claim'])
+            ->name('defense.blockade-relief.claim');
+        Route::post('/blockade-relief/{blockadeReliefRequest}/cancel', [BlockadeReliefController::class, 'cancel'])
+            ->name('defense.blockade-relief.cancel');
     });
     // Counters
 
@@ -265,6 +291,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             Route::delete('/audits/rules/{auditRule}', [AuditRuleController::class, 'destroy'])->name('admin.audits.rules.destroy');
             Route::post('/audits/run', [AdminAuditController::class, 'run'])->name('admin.audits.run');
             Route::post('/audits/notify', [AdminAuditController::class, 'notify'])->name('admin.audits.notify');
+            Route::patch('/audits/results/{auditResult}/remediation', [AdminAuditController::class, 'updateRemediation'])
+                ->name('admin.audits.results.remediation');
         });
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
 
@@ -645,6 +673,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/settings/discord/departure', [SettingsController::class, 'updateDiscordDeparture'])->name(
             'admin.settings.discord.departure'
         );
+        Route::post('/settings/discord/private-notifications', [SettingsController::class, 'updateDiscordPrivateNotifications'])
+            ->name('admin.settings.discord.private-notifications');
+        Route::post('/settings/discord/city-tiers', [SettingsController::class, 'updateDiscordCityTiers'])
+            ->name('admin.settings.discord.city-tiers');
         Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
         );

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreApiTokenRequest;
 use App\Models\TrustedDevice;
 use App\Rules\UniqueCanonicalUsername;
 use App\Services\AuditLogger;
+use App\Services\Discord\PrivateNotificationService;
 use App\Services\DiscordAccountService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
@@ -53,6 +54,38 @@ class UserController extends Controller
             'mfaRequiredForAdmins' => SettingService::isMfaRequiredForAdmins(),
             'trustedDevices' => $trustedDevices,
             'currentTrustedTokenHash' => $currentTrustedTokenHash,
+            'discordPrivateNotificationsEnabled' => SettingService::areDiscordPrivateNotificationsEnabled(),
+            'discordNotificationCategories' => PrivateNotificationService::CATEGORIES,
+            'discordNotificationPreferences' => app(PrivateNotificationService::class)->preferencesFor($user),
+        ]);
+    }
+
+    public function updateDiscordNotificationPreferences(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $categories = array_keys(PrivateNotificationService::CATEGORIES);
+        $validated = $request->validate([
+            'categories' => ['nullable', 'array'],
+            'categories.*' => ['string', 'in:'.implode(',', $categories)],
+        ]);
+
+        $selected = array_fill_keys($validated['categories'] ?? [], true);
+        $notificationService = app(PrivateNotificationService::class);
+        $notificationService->updatePreferences($user, $selected);
+        $disabledCategories = array_values(array_diff($categories, array_keys($selected)));
+        $suppressedCount = $disabledCategories === [] ? 0 : $notificationService->suppressPending($user, $disabledCategories);
+
+        $this->auditLogger->success(
+            category: 'account',
+            action: 'discord_notification_preferences_updated',
+            subject: $user,
+            context: ['data' => ['enabled_categories' => array_keys($selected), 'suppressed_pending_count' => $suppressedCount]],
+            message: 'Discord notification preferences updated.',
+        );
+
+        return redirect()->route('user.settings')->with([
+            'alert-message' => 'Discord notification preferences updated.',
+            'alert-type' => 'success',
         ]);
     }
 

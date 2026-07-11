@@ -89,12 +89,13 @@ class AppHeader extends Component
             [
                 'label' => 'Assistance',
                 'icon' => 'o-lifebuoy',
-                'active' => request()->routeIs('grants.*', 'defense.war-aid*', 'defense.rebuilding*'),
+                'active' => request()->routeIs('grants.*', 'defense.war-aid*', 'defense.rebuilding*', 'defense.blockade-relief*'),
                 'items' => [
                     ['label' => 'City grants', 'route' => route('grants.city'), 'active' => request()->routeIs('grants.city*')],
                     ...$grantItems,
                     ['label' => 'War aid', 'route' => route('defense.war-aid'), 'active' => request()->routeIs('defense.war-aid*')],
                     ['label' => 'Rebuilding', 'route' => route('defense.rebuilding'), 'active' => request()->routeIs('defense.rebuilding*')],
+                    ['label' => 'Blockade relief', 'route' => route('defense.blockade-relief'), 'active' => request()->routeIs('defense.blockade-relief*')],
                 ],
             ],
             [
@@ -111,10 +112,11 @@ class AppHeader extends Component
             [
                 'label' => 'Intelligence',
                 'icon' => 'o-magnifying-glass',
-                'active' => request()->routeIs('defense.intel*', 'defense.raid-finder*'),
+                'active' => request()->routeIs('defense.intel*', 'defense.raid-finder*', 'user.alerts.*'),
                 'items' => [
                     ['label' => 'Intel library', 'route' => route('defense.intel'), 'active' => request()->routeIs('defense.intel*')],
                     ['label' => 'Raid finder', 'route' => route('defense.raid-finder'), 'active' => request()->routeIs('defense.raid-finder*')],
+                    ['label' => 'Alerts and watchlists', 'route' => route('user.alerts.index'), 'active' => request()->routeIs('user.alerts.*')],
                 ],
             ],
             [

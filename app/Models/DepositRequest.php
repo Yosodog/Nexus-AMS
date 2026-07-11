@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DepositRequest extends Model
 {
-    public $fillable = ['account_id', 'deposit_code', 'status', 'pending_key'];
+    public $fillable = ['account_id', 'deposit_code', 'status', 'pending_key', 'expires_at'];
+
+    protected function casts(): array
+    {
+        return [
+            'expires_at' => 'datetime',
+        ];
+    }
 
     /**
      * @return BelongsTo

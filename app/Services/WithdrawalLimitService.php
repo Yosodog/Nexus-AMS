@@ -33,13 +33,15 @@ class WithdrawalLimitService
         $exceededResources = [];
         foreach ($resources as $resource) {
             $limitValue = $limits[$resource]->daily_limit ?? null;
-            $requested = (float) ($requestedResources[$resource] ?? 0);
-            if (is_null($limitValue) || $limitValue <= 0 || $requested <= 0) {
+            $requested = (string) ($requestedResources[$resource] ?? '0.00');
+            if (is_null($limitValue)
+                || bccomp((string) $limitValue, '0.00', 2) <= 0
+                || bccomp($requested, '0.00', 2) <= 0) {
                 continue;
             }
 
-            $currentTotal = (float) ($totals?->{$resource} ?? 0);
-            if (($currentTotal + $requested) > $limitValue + 0.00001) {
+            $currentTotal = (string) ($totals?->{$resource} ?? '0.00');
+            if (bccomp(bcadd($currentTotal, $requested, 2), (string) $limitValue, 2) > 0) {
                 $exceededResources[] = $resource;
             }
         }
@@ -47,7 +49,6 @@ class WithdrawalLimitService
         $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
         $dailyCount = (int) ($totals?->daily_count ?? 0);
         $countLimitReached = $maxDailyWithdrawals > 0 && $dailyCount >= $maxDailyWithdrawals;
-
         $requiresApproval = $countLimitReached || ! empty($exceededResources);
 
         $pendingReason = null;

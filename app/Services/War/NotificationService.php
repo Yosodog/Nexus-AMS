@@ -13,6 +13,7 @@ use App\Models\WarPlan;
 use App\Models\WarPlanAssignment;
 use App\Services\AllianceMembershipService;
 use App\Services\Discord\DiscordQueueService;
+use App\Services\Discord\PrivateNotificationService;
 use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
@@ -35,7 +36,8 @@ class NotificationService
 
     public function __construct(
         private readonly DiscordQueueService $discordQueueService,
-        private readonly AllianceMembershipService $membershipService
+        private readonly AllianceMembershipService $membershipService,
+        private readonly PrivateNotificationService $privateNotifications,
     ) {}
 
     /**
@@ -60,10 +62,6 @@ class NotificationService
             $result['in_game_skipped'] = $assignments->count();
         }
 
-        if (! ($channels['create_room'] ?? false)) {
-            return $result;
-        }
-
         if ($assignments instanceof EloquentCollection) {
             $assignments->loadMissing([
                 'friendlyNation.alliance',
@@ -73,6 +71,27 @@ class NotificationService
                 'target.nation.alliance',
                 'target.nation.military',
             ]);
+        }
+
+        $assignments->each(function (WarPlanAssignment $assignment) use ($plan): void {
+            $nation = $assignment->friendlyNation;
+            if (! $nation) {
+                return;
+            }
+
+            $this->privateNotifications->enqueueForNation(
+                $nation,
+                'war_assignments',
+                'war_assignment_created',
+                'war-plan-assignment-'.$assignment->id.'-created',
+                ['type' => 'war_plan_assignment', 'id' => $assignment->id, 'label' => $plan->name],
+                '/defense/war-plans',
+                ['status' => 'assigned'],
+            );
+        });
+
+        if (! ($channels['create_room'] ?? false)) {
+            return $result;
         }
 
         $forumChannelId = $this->resolveForumChannelId($plan->discord_forum_channel_id);
@@ -145,10 +164,6 @@ class NotificationService
             $result['in_game_skipped'] = $assignments->count();
         }
 
-        if (! ($channels['create_room'] ?? false)) {
-            return $result;
-        }
-
         $counter->loadMissing([
             'aggressor.alliance',
             'aggressor.military',
@@ -161,6 +176,27 @@ class NotificationService
                 'friendlyNation.user.discordAccounts',
                 'friendlyNation.accountProfile',
             ]);
+        }
+
+        $assignments->each(function (WarCounterAssignment $assignment) use ($counter): void {
+            $nation = $assignment->friendlyNation;
+            if (! $nation) {
+                return;
+            }
+
+            $this->privateNotifications->enqueueForNation(
+                $nation,
+                'war_assignments',
+                'war_assignment_created',
+                'war-counter-assignment-'.$assignment->id.'-created',
+                ['type' => 'war_counter_assignment', 'id' => $assignment->id, 'label' => 'Counter #'.$counter->id],
+                '/defense/war-rooms',
+                ['status' => 'assigned'],
+            );
+        });
+
+        if (! ($channels['create_room'] ?? false)) {
+            return $result;
         }
 
         $forumChannelId = $this->resolveForumChannelId($counter->discord_forum_channel_id);

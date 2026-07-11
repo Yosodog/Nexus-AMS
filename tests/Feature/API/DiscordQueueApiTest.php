@@ -158,6 +158,28 @@ class DiscordQueueApiTest extends TestCase
         )->assertUnprocessable()->assertJsonPath('error', 'checkpoint_not_supported');
     }
 
+    public function test_city_tier_checkpoint_accepts_partial_created_role_map(): void
+    {
+        $this->createCommand('CITY_TIER_SYNC');
+        $claim = $this->claimOne();
+
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            '/api/v1/discord/queue/'.$claim->json('data.id').'/checkpoint',
+            [
+                'lease_token' => $claim->json('data.lease_token'),
+                'result' => [
+                    'roles' => [[
+                        'bucket_start' => 1,
+                        'bucket_end' => 10,
+                        'discord_role_id' => '123456789012345678',
+                    ]],
+                ],
+            ],
+        )->assertOk()
+            ->assertJsonPath('data.result.roles.0.bucket_start', 1)
+            ->assertJsonPath('data.result.roles.0.discord_role_id', '123456789012345678');
+    }
+
     public function test_failed_acknowledgements_back_off_without_double_counting_attempts_and_stop_at_three(): void
     {
         $command = $this->createCommand();

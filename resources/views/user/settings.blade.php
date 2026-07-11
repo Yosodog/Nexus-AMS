@@ -98,6 +98,39 @@
                 <x-utils.card>
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div>
+                            <h2 class="text-lg font-semibold">Discord notifications</h2>
+                            <p class="text-sm text-base-content/70">Notifications are off by default. Opt in to the workflow updates you want sent to your linked Discord account.</p>
+                        </div>
+                        <span class="badge {{ $discordPrivateNotificationsEnabled ? 'badge-success' : 'badge-ghost' }}">
+                            {{ $discordPrivateNotificationsEnabled ? 'Available' : 'Paused' }}
+                        </span>
+                    </div>
+
+                    @if (! $discordPrivateNotificationsEnabled)
+                        <div class="alert alert-info mb-4 text-sm">Private notifications are paused alliance-wide. Your choices will apply when they are enabled.</div>
+                    @endif
+
+                    <form method="POST" action="{{ route('user.settings.discord-notifications') }}" class="space-y-3">
+                        @csrf
+                        @foreach($discordNotificationCategories as $category => $label)
+                            <label class="label cursor-pointer justify-between gap-4 rounded-box border border-base-200 px-4 py-3">
+                                <span>{{ $label }}</span>
+                                <input
+                                    class="toggle toggle-primary"
+                                    type="checkbox"
+                                    name="categories[]"
+                                    value="{{ $category }}"
+                                    @checked($discordNotificationPreferences[$category] ?? false)
+                                >
+                            </label>
+                        @endforeach
+                        <button class="btn btn-primary btn-sm" type="submit">Save notification choices</button>
+                    </form>
+                </x-utils.card>
+
+                <x-utils.card>
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div>
                             <h2 class="text-lg font-semibold">API tokens</h2>
                             <p class="text-sm text-base-content/70">Manage personal access tokens for API requests.</p>
                         </div>

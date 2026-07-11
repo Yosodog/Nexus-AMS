@@ -21,6 +21,7 @@ class DiscordQueueLeaseService
      */
     private const CHECKPOINT_FIELDS = [
         'WAR_ROOM_CREATE' => ['discord_channel_id'],
+        'CITY_TIER_SYNC' => ['roles'],
     ];
 
     public function claim(string $workerId, string $requestId): ?DiscordQueue
@@ -131,8 +132,9 @@ class DiscordQueueLeaseService
         ?string $leaseToken,
         ?string $errorCode,
         ?string $errorMessage,
+        ?array $result = null,
     ): DiscordQueue {
-        return DB::transaction(function () use ($command, $status, $leaseToken, $errorCode, $errorMessage): DiscordQueue {
+        return DB::transaction(function () use ($command, $status, $leaseToken, $errorCode, $errorMessage, $result): DiscordQueue {
             $locked = $this->lockCommand($command);
 
             if ($this->isIdempotentAcknowledgement($locked, $status, $leaseToken)) {
@@ -147,6 +149,7 @@ class DiscordQueueLeaseService
                     'leased_until' => null,
                     'worker_id' => null,
                     'last_error' => null,
+                    'result' => $result === null ? $locked->result : array_replace($locked->result ?? [], $result),
                     'completed_at' => Carbon::now(),
                 ])->save();
 

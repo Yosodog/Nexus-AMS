@@ -6,6 +6,7 @@ use App\Enums\SpyAssignmentStatus;
 use App\Models\SpyAssignment;
 use App\Models\SpyAssignmentMessageLog;
 use App\Models\SpyRound;
+use App\Services\Discord\PrivateNotificationService;
 use App\Services\PWMessageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -33,13 +34,13 @@ class SendSpyAssignmentsNotificationJob implements ShouldQueue
         public readonly array $options = [],
     ) {}
 
-    public function handle(PWMessageService $messageService): void
+    public function handle(PWMessageService $messageService, PrivateNotificationService $privateNotifications): void
     {
         /** @var SpyRound|null $round */
         $round = SpyRound::query()
             ->with([
                 'campaign',
-                'assignments.attacker',
+                'assignments.attacker.user.discordAccounts',
                 'assignments.defender',
             ])
             ->find($this->spyRoundId);
@@ -81,6 +82,23 @@ class SendSpyAssignmentsNotificationJob implements ShouldQueue
                 'message_hash' => $hash,
                 'sent_at' => now(),
             ]);
+
+            $attacker = $assignments->first()?->attacker;
+            if ($attacker) {
+                $privateNotifications->enqueueForNation(
+                    $attacker,
+                    'spy_assignments',
+                    'spy_assignment_created',
+                    'spy-round-'.$round->id.'-nation-'.$attackerId,
+                    [
+                        'type' => 'spy_round',
+                        'id' => $round->id,
+                        'label' => $round->campaign?->name ?? 'Spy campaign',
+                    ],
+                    '/defense/spy-operations',
+                    ['status' => 'assigned'],
+                );
+            }
 
             if ($sent) {
                 SpyAssignment::query()

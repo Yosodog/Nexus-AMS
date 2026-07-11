@@ -52,6 +52,10 @@
                                 <x-icon name="o-squares-2x2" class="size-4" />
                                 Admin overview
                             </a>
+                            <a href="{{ route('user.discord-bot-guide') }}">
+                                <x-icon name="o-command-line" class="size-4" />
+                                Discord bot guide
+                            </a>
                             @can('view-members')
                                 @if($user->nation_id)
                                     <a href="{{ route('admin.members.show', $user->nation_id) }}">

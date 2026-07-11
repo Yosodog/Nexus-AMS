@@ -18,8 +18,13 @@ class ValidateDiscordBotAPI
         $botToken = config('services.discord_bot_key');
         $providedToken = trim((string) $request->header('Authorization', ''));
 
-        if (empty($botToken) || $providedToken !== "Bearer {$botToken}") {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        $expectedToken = 'Bearer '.(string) $botToken;
+
+        if (empty($botToken) || ! hash_equals($expectedToken, $providedToken)) {
+            return response()->json([
+                'error' => ['code' => 'unauthorized', 'message' => 'Discord bot authentication failed.'],
+                'meta' => ['contract_version' => 1],
+            ], 401);
         }
 
         return $next($request);

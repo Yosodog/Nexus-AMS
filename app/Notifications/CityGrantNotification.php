@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\CityGrantRequest;
+use App\Notifications\Concerns\SendsPrivateDiscordNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -10,6 +11,7 @@ use Illuminate\Notifications\Notification;
 class CityGrantNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use SendsPrivateDiscordNotification;
 
     public int $nation_id;
 
@@ -34,7 +36,18 @@ class CityGrantNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['pnw']; // Send to Politics & War in-game messages
+        return $this->pnwAndPrivateDiscordChannels($notifiable, 'grants');
+    }
+
+    public function toDiscordBot(object $notifiable): array
+    {
+        return $this->privateDiscordMessage(
+            $notifiable,
+            'city_grant_request_'.$this->status,
+            ['type' => 'city_grant_request', 'id' => $this->request->id, 'label' => 'City #'.$this->request->city_number],
+            '/grants/city',
+            ['status' => $this->status, 'city_number' => $this->request->city_number],
+        );
     }
 
     /**

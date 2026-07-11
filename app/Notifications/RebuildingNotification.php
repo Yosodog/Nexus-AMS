@@ -3,12 +3,14 @@
 namespace App\Notifications;
 
 use App\Models\RebuildingRequest;
+use App\Notifications\Concerns\SendsPrivateDiscordNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 class RebuildingNotification extends Notification
 {
     use Queueable;
+    use SendsPrivateDiscordNotification;
 
     public function __construct(
         private readonly int $nationId,
@@ -23,7 +25,18 @@ class RebuildingNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['pnw'];
+        return $this->pnwAndPrivateDiscordChannels($notifiable, 'rebuilding');
+    }
+
+    public function toDiscordBot(object $notifiable): array
+    {
+        return $this->privateDiscordMessage(
+            $notifiable,
+            'rebuilding_request_'.$this->status,
+            ['type' => 'rebuilding_request', 'id' => $this->request->id],
+            '/defense/rebuilding',
+            ['status' => $this->status, 'cycle_id' => $this->request->cycle_id],
+        );
     }
 
     /**

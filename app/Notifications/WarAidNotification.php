@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\WarAidRequest;
+use App\Notifications\Concerns\SendsPrivateDiscordNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -10,6 +11,7 @@ use Illuminate\Notifications\Notification;
 class WarAidNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use SendsPrivateDiscordNotification;
 
     public int $nation_id;
 
@@ -29,7 +31,18 @@ class WarAidNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['pnw'];
+        return $this->pnwAndPrivateDiscordChannels($notifiable, 'war_aid');
+    }
+
+    public function toDiscordBot(object $notifiable): array
+    {
+        return $this->privateDiscordMessage(
+            $notifiable,
+            'war_aid_request_'.$this->status,
+            ['type' => 'war_aid_request', 'id' => $this->request->id],
+            '/defense/war-aid',
+            ['status' => $this->status],
+        );
     }
 
     /**

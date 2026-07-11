@@ -13,6 +13,7 @@ use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
 use App\Models\Nation as NationRecord;
 use App\Models\User;
+use App\Services\Discord\PrivateNotificationService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -28,6 +29,103 @@ class ApplicationService
         private readonly AllianceMembershipService $membershipService,
         private readonly AlliancePositionService $alliancePositionService,
     ) {}
+
+    public function approveById(Application $application, User $moderator, string $moderatorDiscordId, ?string $requestId = null): Application
+    {
+        if (! Gate::forUser($moderator)->allows('manage-applications')) {
+            throw new ApplicationException('forbidden', 'You do not have permission to approve applications.', 403);
+        }
+
+        return Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $requestId): Application {
+            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $requestId): Application {
+                $application = Application::query()->lockForUpdate()->findOrFail($application->id);
+                if ($application->status === ApplicationStatus::Approved && $requestId !== null && $application->approval_request_id === $requestId) {
+                    return $application;
+                }
+                if ($application->status !== ApplicationStatus::Pending) {
+                    throw new ApplicationException('invalid_status', 'Only pending applications may be approved.', 409);
+                }
+
+                $this->assertNationInAlliance($this->fetchNationInAlliance($application->nation_id));
+                $application->forceFill([
+                    'status' => ApplicationStatus::Approved,
+                    'pending_key' => null,
+                    'approved_at' => now(),
+                    'approved_by_discord_id' => $moderatorDiscordId,
+                    'approval_request_id' => $requestId,
+                ])->save();
+                SyncApplicationAllianceState::dispatch($application->id, ApplicationStatus::Approved, $moderator->id, $moderator->name)->afterCommit();
+                app(AuditLogger::class)->recordAfterCommit(
+                    category: 'applications', action: 'application_approved', outcome: 'success', severity: 'info', subject: $application,
+                    context: ['data' => ['nation_id' => $application->nation_id, 'moderator_discord_id' => $moderatorDiscordId]],
+                    message: 'Application approved.', actorOverride: ['type' => 'user', 'id' => $moderator->id, 'name' => $moderator->name],
+                );
+                DB::afterCommit(fn () => $this->queueApplicationNotification($application, 'approved'));
+
+                return $application->fresh();
+            }, attempts: 3);
+        });
+    }
+
+    public function denyById(
+        Application $application,
+        User $moderator,
+        string $moderatorDiscordId,
+        string $reason,
+        ?string $requestId = null,
+    ): Application {
+        if (! Gate::forUser($moderator)->allows('manage-applications')) {
+            throw new ApplicationException('forbidden', 'You do not have permission to deny applications.', 403);
+        }
+
+        return Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId): Application {
+            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId): Application {
+                $application = Application::query()->lockForUpdate()->findOrFail($application->id);
+                if ($application->status === ApplicationStatus::Denied && $requestId !== null && $application->denial_request_id === $requestId) {
+                    return $application;
+                }
+                if ($application->status !== ApplicationStatus::Pending) {
+                    throw new ApplicationException('invalid_status', 'Only pending applications may be denied.', 409);
+                }
+
+                $application->forceFill([
+                    'status' => ApplicationStatus::Denied,
+                    'pending_key' => null,
+                    'denied_at' => now(),
+                    'denied_by_discord_id' => $moderatorDiscordId,
+                    'denial_request_id' => $requestId,
+                    'denial_reason' => $reason,
+                ])->save();
+                SyncApplicationAllianceState::dispatch($application->id, ApplicationStatus::Denied, $moderator->id, $moderator->name)->afterCommit();
+                app(AuditLogger::class)->recordAfterCommit(
+                    category: 'applications', action: 'application_denied', outcome: 'denied', severity: 'warning', subject: $application,
+                    context: ['data' => ['nation_id' => $application->nation_id, 'moderator_discord_id' => $moderatorDiscordId, 'reason' => $reason]],
+                    message: 'Application denied.', actorOverride: ['type' => 'user', 'id' => $moderator->id, 'name' => $moderator->name],
+                );
+                DB::afterCommit(fn () => $this->queueApplicationNotification($application, 'denied'));
+
+                return $application->fresh();
+            }, attempts: 3);
+        });
+    }
+
+    private function queueApplicationNotification(Application $application, string $status): void
+    {
+        $nation = NationRecord::query()->with('user.discordAccounts')->find($application->nation_id);
+        if (! $nation) {
+            return;
+        }
+
+        app(PrivateNotificationService::class)->enqueueForNation(
+            $nation,
+            'applications',
+            'application_'.$status,
+            'application-'.$application->id.'-'.$status,
+            ['type' => 'application', 'id' => $application->id],
+            '/apply',
+            ['status' => $status],
+        );
+    }
 
     /**
      * Start a recruitment application initiated from Discord.

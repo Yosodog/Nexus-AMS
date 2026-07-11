@@ -3,8 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AuditPriority;
+use App\Http\Requests\AuditAcknowledgeRequest;
+use App\Http\Requests\AuditSnoozeRequest;
 use App\Http\Requests\RegenerateNationBuildRecommendationRequest;
 use App\Jobs\RefreshNationBuildRecommendationJob;
+use App\Models\AuditResult;
+use App\Models\AuditResultEvent;
+use App\Services\AllianceMemberEligibilityService;
+use App\Services\Audit\AuditRemediationService;
 use App\Services\Audit\AuditService;
 use App\Services\NationBuildRecommendationService;
 use Illuminate\Http\RedirectResponse;
@@ -15,20 +21,22 @@ class AuditController extends Controller
 {
     public function __construct(
         private readonly AuditService $auditService,
-        private readonly NationBuildRecommendationService $recommendationService
+        private readonly NationBuildRecommendationService $recommendationService,
+        private readonly AllianceMemberEligibilityService $eligibilityService,
+        private readonly AuditRemediationService $remediationService,
     ) {}
 
     public function index(): View|RedirectResponse
     {
         $user = Auth::user();
-        $nation = $user?->nation;
-
-        if (! $nation) {
+        if (! $user) {
             return redirect()->route('user.dashboard')->with([
                 'alert-message' => 'Link a nation to view audit results.',
                 'alert-type' => 'error',
             ]);
         }
+
+        $nation = $this->eligibilityService->nationFor($user);
 
         $nation->load(['cities', 'buildRecommendation']);
 
@@ -59,19 +67,46 @@ class AuditController extends Controller
             'buildRecommendationGroups' => $recommendation
                 ? $this->recommendationService->buildDisplayGroups($recommendation->recommended_build_json ?? [])
                 : [],
+            'remediationHistory' => AuditResultEvent::query()
+                ->with(['rule:id,name', 'city:id,name'])
+                ->where('nation_id', $nation->id)
+                ->latest('occurred_at')
+                ->limit(25)
+                ->get(),
+        ]);
+    }
+
+    public function acknowledge(AuditAcknowledgeRequest $request, AuditResult $auditResult): RedirectResponse
+    {
+        $this->remediationService->acknowledge(
+            $request->user(),
+            $auditResult,
+            $request->validated('note'),
+        );
+
+        return redirect()->route('audit.index')->with([
+            'alert-message' => 'Audit finding acknowledged.',
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function snooze(AuditSnoozeRequest $request, AuditResult $auditResult): RedirectResponse
+    {
+        $this->remediationService->snooze(
+            $request->user(),
+            $auditResult,
+            (int) $request->validated('hours'),
+        );
+
+        return redirect()->route('audit.index')->with([
+            'alert-message' => 'Discord audit reminders snoozed.',
+            'alert-type' => 'success',
         ]);
     }
 
     public function regenerate(RegenerateNationBuildRecommendationRequest $request): RedirectResponse
     {
-        $nation = $request->user()->nation;
-
-        if (! $nation) {
-            return redirect()->route('user.dashboard')->with([
-                'alert-message' => 'Link a nation to regenerate a build recommendation.',
-                'alert-type' => 'error',
-            ]);
-        }
+        $nation = $this->eligibilityService->nationFor($request->user());
 
         RefreshNationBuildRecommendationJob::dispatch((int) $nation->id);
 

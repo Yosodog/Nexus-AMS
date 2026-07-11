@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
@@ -36,6 +37,7 @@ class AuditService
         private readonly NationNelHelper $nationNelHelper,
         private readonly CityNelHelper $cityNelHelper,
         private readonly MathNelHelper $mathNelHelper,
+        private readonly AuditRemediationService $remediationService,
     ) {}
 
     public function runAllEnabledRules(): bool
@@ -345,23 +347,56 @@ class AuditService
         array $resolvedTargetKeysByRule,
         AuditTargetType $targetType,
     ): void {
-        if ($violations !== []) {
-            AuditResult::query()->upsert(
-                $violations,
-                ['audit_rule_id', 'target_type', 'target_key'],
-                ['nation_id', 'city_id', 'last_evaluated_at', 'updated_at'],
-            );
-        }
+        DB::transaction(function () use ($violations, $resolvedTargetKeysByRule, $targetType): void {
+            $existingKeys = collect();
 
-        foreach ($resolvedTargetKeysByRule as $ruleId => $targetKeys) {
-            foreach (array_chunk(array_values(array_unique($targetKeys)), 1000) as $targetKeyChunk) {
-                AuditResult::query()
-                    ->where('audit_rule_id', $ruleId)
+            if ($violations !== []) {
+                $ruleIds = collect($violations)->pluck('audit_rule_id')->unique()->values()->all();
+                $targetKeys = collect($violations)->pluck('target_key')->unique()->values()->all();
+
+                $existingKeys = AuditResult::query()
                     ->where('target_type', $targetType->value)
-                    ->whereIn('target_key', $targetKeyChunk)
-                    ->delete();
+                    ->whereIn('audit_rule_id', $ruleIds)
+                    ->whereIn('target_key', $targetKeys)
+                    ->get(['id', 'audit_rule_id', 'target_key'])
+                    ->mapWithKeys(fn (AuditResult $result): array => [
+                        $result->audit_rule_id.'|'.$result->target_key => true,
+                    ]);
+
+                AuditResult::query()->upsert(
+                    $violations,
+                    ['audit_rule_id', 'target_type', 'target_key'],
+                    ['nation_id', 'city_id', 'last_evaluated_at', 'updated_at'],
+                );
+
+                AuditResult::query()
+                    ->where('target_type', $targetType->value)
+                    ->whereIn('audit_rule_id', $ruleIds)
+                    ->whereIn('target_key', $targetKeys)
+                    ->get()
+                    ->each(function (AuditResult $result) use ($existingKeys): void {
+                        if (! $existingKeys->has($result->audit_rule_id.'|'.$result->target_key)) {
+                            $this->remediationService->recordEvent($result, 'opened');
+                        }
+                    });
             }
-        }
+
+            foreach ($resolvedTargetKeysByRule as $ruleId => $targetKeys) {
+                foreach (array_chunk(array_values(array_unique($targetKeys)), 1000) as $targetKeyChunk) {
+                    $resolved = AuditResult::query()
+                        ->where('audit_rule_id', $ruleId)
+                        ->where('target_type', $targetType->value)
+                        ->whereIn('target_key', $targetKeyChunk)
+                        ->get();
+
+                    $resolved->each(fn (AuditResult $result) => $this->remediationService->recordEvent($result, 'resolved'));
+
+                    if ($resolved->isNotEmpty()) {
+                        AuditResult::query()->whereKey($resolved->modelKeys())->delete();
+                    }
+                }
+            }
+        });
     }
 
     private static function targetKeyFor(AuditTargetType $targetType, ?int $nationId, ?int $cityId): string
@@ -446,20 +481,23 @@ class AuditService
      */
     protected function clearIneligibleViolations(array $allianceIds): void
     {
-        if ($allianceIds === []) {
-            AuditResult::query()->delete();
+        $query = AuditResult::query();
 
-            return;
-        }
-
-        AuditResult::query()
-            ->where(function (Builder $query) use ($allianceIds): void {
+        if ($allianceIds !== []) {
+            $query->where(function (Builder $query) use ($allianceIds): void {
                 $query->whereDoesntHave('nation')
                     ->orWhereHas('nation', function (Builder $query) use ($allianceIds): void {
                         $this->applyIneligibleMemberConstraints($query, $allianceIds);
                     });
-            })
-            ->delete();
+            });
+        }
+
+        $query->chunkById(500, function (Collection $results): void {
+            DB::transaction(function () use ($results): void {
+                $results->each(fn (AuditResult $result) => $this->remediationService->recordEvent($result, 'removed_ineligible'));
+                AuditResult::query()->whereKey($results->modelKeys())->delete();
+            });
+        });
     }
 
     /**

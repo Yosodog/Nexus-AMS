@@ -10,6 +10,8 @@ class SettingService
 {
     private const RECRUITMENT_SUBJECT_MAX_LENGTH = 50;
 
+    public const DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE = 10;
+
     public static function getLastScannedBankRecordId(): int
     {
         $id = self::getValue('last_bank_record_id');
@@ -163,6 +165,16 @@ class SettingService
     public static function setDiscordVerificationRequired(bool $required): void
     {
         self::setValue('require_discord_verification', $required ? 1 : 0);
+    }
+
+    public static function areDiscordPrivateNotificationsEnabled(): bool
+    {
+        return (bool) (self::getValue('discord_private_notifications_enabled') ?? false);
+    }
+
+    public static function setDiscordPrivateNotificationsEnabled(bool $enabled): void
+    {
+        self::setValue('discord_private_notifications_enabled', $enabled ? 1 : 0);
     }
 
     public static function isMfaRequiredForAllUsers(): bool
@@ -623,6 +635,18 @@ class SettingService
     public static function setDiscordWarAlertChannelId(?string $channelId): void
     {
         self::setValue('discord_war_alert_channel_id', $channelId ?? '');
+    }
+
+    public static function getDiscordCityTierBucketSize(): int
+    {
+        $value = self::getValue('discord_city_tier_bucket_size');
+
+        return max(1, min(100, (int) ($value ?? self::DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE)));
+    }
+
+    public static function setDiscordCityTierBucketSize(int $bucketSize): void
+    {
+        self::setValue('discord_city_tier_bucket_size', max(1, min(100, $bucketSize)));
     }
 
     public static function getDiscordWarRoomForumId(): string

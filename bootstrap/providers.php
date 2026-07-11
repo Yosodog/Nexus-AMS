@@ -1,6 +1,7 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use App\Providers\DiscordWorkflowServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\FortifyServiceProvider;
 use App\Providers\TelescopeServiceProvider;
@@ -10,4 +11,5 @@ return [
     EventServiceProvider::class,
     FortifyServiceProvider::class,
     TelescopeServiceProvider::class,
+    DiscordWorkflowServiceProvider::class,
 ];

@@ -36,6 +36,19 @@ test('verified user can reach settings and api docs', async ({ page }) => {
   await expect(page.getByText('Authorization: Bearer <token>')).toBeVisible();
 });
 
+test('member can open the Discord bot guide from the account menu', async ({ page }) => {
+  await page.goto('/_browser/login/member?redirect=/user/dashboard');
+
+  await page.locator('summary[aria-label="Open account menu"]').click();
+  await page.getByRole('link', { name: 'Discord bot guide' }).click();
+
+  await expect(page).toHaveURL(/\/user\/discord-bot-guide$/);
+  await expect(page.getByRole('heading', { name: 'Discord bot guide' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Accounts and finance' })).toBeVisible();
+  await expect(page.getByText('/withdraw account:<account>', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Staff commands' })).toBeVisible();
+});
+
 test('admin can reach the users index', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/users');
 

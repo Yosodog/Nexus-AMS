@@ -2,6 +2,9 @@
 
 use App\Console\Commands\ProcessDeposits;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
+use App\Jobs\EvaluateAlertSubscriptionsJob;
+use App\Jobs\ReconcileBlockadeReliefRequests;
+use App\Jobs\SendAuditRemindersJob;
 use App\Services\PWHealthService;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Schedule;
@@ -72,9 +75,22 @@ Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOv
 Schedule::command('users:disable-inactive')->dailyAt('01:05')->withoutOverlapping(120);
 Schedule::command('audit:prune')->dailyAt('01:15');
 Schedule::command('war-counters:archive-stale')->hourly()->withoutOverlapping(55);
+Schedule::job(new EvaluateAlertSubscriptionsJob, 'sync')
+    ->hourlyAt(25)
+    ->withoutOverlapping(55)
+    ->onOneServer();
+Schedule::job(new ReconcileBlockadeReliefRequests, 'sync')
+    ->hourlyAt(35)
+    ->withoutOverlapping(55)
+    ->onOneServer();
 Schedule::command('discord-queue:reap-leases')
     ->everyMinute()
     ->withoutOverlapping(1)
+    ->onOneServer();
+Schedule::command('discord:sync-city-tiers')
+    ->hourlyAt(20)
+    ->runInBackground()
+    ->withoutOverlapping(55)
     ->onOneServer();
 
 // Backups
@@ -122,6 +138,10 @@ Schedule::command('audits:run')
     ->hourlyAt(30)
     ->runInBackground()
     ->withoutOverlapping(90)
+    ->onOneServer();
+Schedule::job(new SendAuditRemindersJob, 'sync')
+    ->dailyAt('18:00')
+    ->withoutOverlapping(60)
     ->onOneServer();
 
 // Recruitment

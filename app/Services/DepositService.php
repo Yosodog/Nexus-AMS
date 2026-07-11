@@ -66,6 +66,14 @@ class DepositService
                     return;
                 }
 
+                if ($depositRequest->expires_at?->isPast()) {
+                    $depositRequest->status = 'expired';
+                    $depositRequest->pending_key = null;
+                    $depositRequest->save();
+
+                    return;
+                }
+
                 $account = Account::whereKey($depositRequest->account_id)->lockForUpdate()->first();
                 if (! $account) {
                     self::setDepositCompleted($depositRequest);
@@ -117,7 +125,11 @@ class DepositService
      */
     public static function getPendingDeposits()
     {
-        return DepositRequest::where('status', 'pending')->get();
+        self::expirePendingRequests();
+
+        return DepositRequest::where('status', 'pending')
+            ->where('expires_at', '>', now())
+            ->get();
     }
 
     public static function setDepositCompleted(DepositRequest $request): void
@@ -136,9 +148,12 @@ class DepositService
             throw new UserErrorException('This account is frozen. Deposits are disabled.');
         }
 
-        // Reuse existing pending request so members see the original code
+        self::expirePendingRequests($account->id);
+
+        // Reuse an unexpired pending request so members see the original code.
         $existing = DepositRequest::where('account_id', $account->id)
             ->where('status', 'pending')
+            ->where('expires_at', '>', now())
             ->latest()
             ->first();
 
@@ -146,25 +161,38 @@ class DepositService
             return $existing;
         }
 
-        try {
-            $deposit = new DepositRequest;
-            $deposit->account_id = $account->id;
-            $deposit->deposit_code = self::generate_code();
-            $deposit->status = 'pending';
-            $deposit->pending_key = 1;
-            $deposit->save();
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            try {
+                $deposit = new DepositRequest;
+                $deposit->account_id = $account->id;
+                $deposit->deposit_code = self::generate_code();
+                $deposit->status = 'pending';
+                $deposit->pending_key = 1;
+                $deposit->expires_at = now()->addMinutes(60);
+                $deposit->save();
 
-            return $deposit;
-        } catch (QueryException $exception) {
-            if (! self::isUniqueConstraintViolation($exception)) {
-                throw $exception;
+                return $deposit;
+            } catch (QueryException $exception) {
+                if (! self::isUniqueConstraintViolation($exception)) {
+                    throw $exception;
+                }
+
+                // A concurrent request for the same account wins cleanly.
+                $existing = DepositRequest::where('account_id', $account->id)
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now())
+                    ->latest()
+                    ->first();
+
+                if ($existing) {
+                    return $existing;
+                }
+
+                // Otherwise the randomly generated code collided; generate another.
             }
-
-            return DepositRequest::where('account_id', $account->id)
-                ->where('status', 'pending')
-                ->latest()
-                ->firstOrFail();
         }
+
+        throw new UserErrorException('Unable to create a unique deposit code. Please try again.');
     }
 
     public static function generate_code(): string
@@ -174,6 +202,27 @@ class DepositService
 
     private static function isUniqueConstraintViolation(QueryException $exception): bool
     {
-        return (string) ($exception->errorInfo[0] ?? '') === '23000';
+        return in_array((string) ($exception->errorInfo[0] ?? ''), ['23000', '23505'], true);
+    }
+
+    private static function expirePendingRequests(?int $accountId = null): void
+    {
+        DepositRequest::query()
+            ->where('status', 'pending')
+            ->whereNull('expires_at')
+            ->when($accountId, fn ($query) => $query->where('account_id', $accountId))
+            ->eachById(function (DepositRequest $request): void {
+                $request->expires_at = $request->created_at->copy()->addMinutes(60);
+                $request->save();
+            });
+
+        DepositRequest::query()
+            ->where('status', 'pending')
+            ->where('expires_at', '<=', now())
+            ->when($accountId, fn ($query) => $query->where('account_id', $accountId))
+            ->update([
+                'status' => 'expired',
+                'pending_key' => null,
+            ]);
     }
 }

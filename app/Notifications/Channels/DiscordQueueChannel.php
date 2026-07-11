@@ -35,6 +35,7 @@ class DiscordQueueChannel
         $action = $message['action'] ?? null;
         $payload = $message['payload'] ?? null;
         $availableAt = $message['available_at'] ?? null;
+        $dedupeKey = $message['dedupe_key'] ?? null;
 
         if (! is_string($action) || $action === '' || ! is_array($payload)) {
             Log::warning('Discord bot payload missing action or payload', [
@@ -66,6 +67,11 @@ class DiscordQueueChannel
             }
         }
 
-        $this->queueService->enqueue($action, $payload, $availableTimestamp);
+        $this->queueService->enqueue(
+            $action,
+            $payload,
+            $availableTimestamp,
+            is_string($dedupeKey) && $dedupeKey !== '' ? $dedupeKey : null,
+        );
     }
 }

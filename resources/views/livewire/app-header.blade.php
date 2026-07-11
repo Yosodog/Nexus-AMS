@@ -93,6 +93,10 @@
                                             <x-icon name="o-code-bracket" class="size-4" />
                                             API documentation
                                         </a>
+                                        <a href="{{ route('user.discord-bot-guide') }}">
+                                            <x-icon name="o-command-line" class="size-4" />
+                                            Discord bot guide
+                                        </a>
                                     @endif
                                     @if($user->is_admin)
                                         <a href="{{ route('admin.dashboard') }}">

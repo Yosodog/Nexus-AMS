@@ -254,6 +254,47 @@
             </form>
             </x-card>
 
+            <x-card title="Private Discord Notifications" subtitle="Allow workflow updates to be sent as minimal direct messages. Users must opt in by category.">
+            <x-slot:menu>
+                <span class="badge {{ $discordPrivateNotificationsEnabled ? 'badge-success' : 'badge-ghost' }}">
+                    {{ $discordPrivateNotificationsEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </x-slot:menu>
+
+            <form method="POST" action="{{ route('admin.settings.discord.private-notifications') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="discord_private_notifications_enabled" value="0">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input class="toggle toggle-primary" type="checkbox" name="discord_private_notifications_enabled" value="1" @checked($discordPrivateNotificationsEnabled)>
+                    <span>Enable private workflow notifications</span>
+                </label>
+                <p class="text-xs text-base-content/60">Messages contain only a status summary and a link back to Nexus. Balances, resources, verification codes, notes, and denial reasons are never included.</p>
+                <div class="pt-2">
+                    <button class="btn btn-primary" type="submit">Save Private Notification Setting</button>
+                </div>
+            </form>
+            </x-card>
+
+            <x-card title="Discord City Tiers" subtitle="Assign one bot-managed Discord role from each member's current city count. Enabled offshores are included; applicants and outsiders are excluded.">
+            <form method="POST" action="{{ route('admin.settings.discord.city-tiers') }}" class="space-y-4">
+                @csrf
+                <label class="block space-y-2">
+                    <span class="text-sm font-medium">Cities per tier</span>
+                    <input
+                        class="input w-full max-w-xs"
+                        type="number"
+                        name="discord_city_tier_bucket_size"
+                        min="1"
+                        max="100"
+                        value="{{ old('discord_city_tier_bucket_size', $discordCityTierBucketSize) }}"
+                        required
+                    >
+                    <span class="block text-xs text-base-content/60">Default 10 creates Cities 1-10, Cities 11-20, and every tier through the highest occupied bucket. Empty managed roles are retained.</span>
+                </label>
+                <button class="btn btn-primary" type="submit">Save City Tier Setting</button>
+            </form>
+            </x-card>
+
             <x-card title="Discord Alliance Departures" subtitle="Send a Discord alert when a non-applicant leaves any alliance in our membership group.">
             <x-slot:menu>
                 <span class="badge {{ $discordDepartureEnabled ? 'badge-success' : 'badge-ghost' }}">

@@ -251,6 +251,37 @@
                                     <div class="flex flex-wrap gap-3 text-xs text-base-content/70">
                                         <span class="badge badge-ghost">Since {{ $violation->first_detected_at->diffForHumans() }}</span>
                                         <span class="badge badge-ghost">Checked {{ $violation->last_evaluated_at->diffForHumans() }}</span>
+                                        @if($violation->acknowledged_at)
+                                            <span class="badge badge-success">Acknowledged {{ $violation->acknowledged_at->diffForHumans() }}</span>
+                                        @endif
+                                        @if($violation->isSnoozed())
+                                            <span class="badge badge-info">Reminders snoozed until {{ $violation->snoozed_until->toDayDateTimeString() }}</span>
+                                        @endif
+                                        @if($violation->isWaived())
+                                            <span class="badge badge-warning">Waived until {{ $violation->waived_until->toFormattedDateString() }}</span>
+                                        @endif
+                                        @if($violation->due_at)
+                                            <span class="badge {{ $violation->due_at->isPast() ? 'badge-error' : 'badge-outline' }}">Due {{ $violation->due_at->toFormattedDateString() }}</span>
+                                        @endif
+                                    </div>
+                                    @if($violation->remediation_note)
+                                        <p class="rounded-lg bg-base-200 p-3 text-sm">{{ $violation->remediation_note }}</p>
+                                    @endif
+                                    <div class="flex flex-col gap-2 border-t border-base-200 pt-3 sm:flex-row">
+                                        <form method="POST" action="{{ route('audit.results.acknowledge', $violation) }}" class="flex flex-1 gap-2">
+                                            @csrf
+                                            <input class="input input-sm min-w-0 flex-1" name="note" maxlength="500" placeholder="Optional remediation note">
+                                            <button class="btn btn-primary btn-sm" type="submit">Acknowledge</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('audit.results.snooze', $violation) }}" class="flex gap-2">
+                                            @csrf
+                                            <select class="select select-sm" name="hours" aria-label="Snooze audit reminders">
+                                                <option value="24">1 day</option>
+                                                <option value="72">3 days</option>
+                                                <option value="168">7 days</option>
+                                            </select>
+                                            <button class="btn btn-outline btn-sm" type="submit">Snooze</button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -259,6 +290,31 @@
                 @endif
             </div>
         @endforeach
+
+        <div class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
+            <div class="border-b border-base-200 px-5 py-4">
+                <h2 class="text-xl font-bold">Remediation history</h2>
+                <p class="text-sm text-base-content/70">Recent openings, resolutions, acknowledgements, snoozes, and waivers.</p>
+            </div>
+            <div class="divide-y divide-base-200">
+                @forelse($remediationHistory as $event)
+                    <div class="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <span class="font-medium">{{ $event->rule?->name ?? 'Deleted audit rule' }}</span>
+                            @if($event->city)
+                                <span class="text-base-content/60">· {{ $event->city->name }}</span>
+                            @endif
+                            <span class="badge badge-ghost ml-2">{{ str_replace('_', ' ', $event->event_type) }}</span>
+                        </div>
+                        <time class="text-sm text-base-content/60" datetime="{{ $event->occurred_at->toIso8601String() }}">
+                            {{ $event->occurred_at->diffForHumans() }}
+                        </time>
+                    </div>
+                @empty
+                    <p class="px-5 py-6 text-sm text-base-content/60">No remediation history yet.</p>
+                @endforelse
+            </div>
+        </div>
     </div>
 
     <script>

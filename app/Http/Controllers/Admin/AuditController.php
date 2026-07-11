@@ -3,19 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateAuditRemediationRequest;
 use App\Jobs\RunAuditsJob;
 use App\Models\AuditResult;
 use App\Models\AuditRule;
 use App\Notifications\AuditViolationSummaryNotification;
+use App\Services\Audit\AuditRemediationService;
 use App\Services\Audit\AuditService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
 
 class AuditController extends Controller
 {
-    public function __construct(private readonly AuditService $auditService) {}
+    public function __construct(
+        private readonly AuditService $auditService,
+        private readonly AuditRemediationService $remediationService,
+    ) {}
 
     public function index(): View
     {
@@ -86,6 +91,25 @@ class AuditController extends Controller
         ]);
     }
 
+    public function updateRemediation(UpdateAuditRemediationRequest $request, AuditResult $auditResult): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $this->remediationService->updateByAdmin(
+            $request->user(),
+            $auditResult,
+            isset($validated['due_at']) ? Carbon::parse($validated['due_at']) : null,
+            isset($validated['waived_until']) ? Carbon::parse($validated['waived_until']) : null,
+            $validated['remediation_note'] ?? null,
+            (bool) ($validated['clear_waiver'] ?? false),
+        );
+
+        return back()->with([
+            'alert-message' => 'Audit remediation updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
     public function notify(): RedirectResponse
     {
         $this->authorize('manage-audits');
@@ -128,7 +152,13 @@ class AuditController extends Controller
                 continue;
             }
 
-            Notification::route('pnw', 'pnw')->notify(new AuditViolationSummaryNotification((int) $nationId, $lines));
+            $nation = $results->first()?->nation;
+
+            if (! $nation) {
+                continue;
+            }
+
+            $nation->notify(new AuditViolationSummaryNotification((int) $nationId, $lines));
             $sent++;
         }
 

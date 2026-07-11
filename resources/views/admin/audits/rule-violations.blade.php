@@ -47,6 +47,7 @@
                     <th scope="col">Target</th>
                     <th scope="col" data-sortable="false">First detected</th>
                     <th scope="col" data-sortable="false">Last evaluated</th>
+                    <th scope="col" data-sortable="false">Remediation</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -108,10 +109,34 @@
                             <div class="font-semibold">{{ $violation->last_evaluated_at->diffForHumans() }}</div>
                             <div class="text-sm text-base-content/60">{{ $violation->last_evaluated_at->toDayDateTimeString() }}</div>
                         </td>
+                        <td class="min-w-80">
+                            <form method="POST" action="{{ route('admin.audits.results.remediation', $violation) }}" class="grid gap-2">
+                                @csrf
+                                @method('PATCH')
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="form-control">
+                                        <span class="label-text text-xs">Due date</span>
+                                        <input class="input input-sm" type="datetime-local" name="due_at" value="{{ $violation->due_at?->format('Y-m-d\TH:i') }}">
+                                    </label>
+                                    <label class="form-control">
+                                        <span class="label-text text-xs">Waived until</span>
+                                        <input class="input input-sm" type="datetime-local" name="waived_until" value="{{ $violation->waived_until?->format('Y-m-d\TH:i') }}">
+                                    </label>
+                                </div>
+                                <input class="input input-sm" name="remediation_note" maxlength="500" value="{{ $violation->remediation_note }}" placeholder="Remediation note">
+                                <div class="flex items-center justify-between gap-2">
+                                    <label class="label cursor-pointer gap-2 py-0 text-xs">
+                                        <input class="checkbox checkbox-sm" type="checkbox" name="clear_waiver" value="1">
+                                        Clear waiver
+                                    </label>
+                                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                                </div>
+                            </form>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="py-6 text-center text-sm text-base-content/60">No current violations for this rule.</td>
+                        <td colspan="4" class="py-6 text-center text-sm text-base-content/60">No current violations for this rule.</td>
                     </tr>
                 @endforelse
                 </tbody>

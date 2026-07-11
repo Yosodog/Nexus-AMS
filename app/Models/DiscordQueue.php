@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  *
  * @property string $id
  * @property string $action
+ * @property string|null $dedupe_key
  * @property array $payload
  * @property DiscordQueueStatus $status
  * @property int $attempts

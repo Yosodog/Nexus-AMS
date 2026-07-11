@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Loan;
+use App\Notifications\Concerns\SendsPrivateDiscordNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -10,6 +11,7 @@ use Illuminate\Notifications\Notification;
 class LoanNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use SendsPrivateDiscordNotification;
 
     public int $nation_id;
 
@@ -37,7 +39,18 @@ class LoanNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['pnw']; // Sends notification to Politics & War in-game messages
+        return $this->pnwAndPrivateDiscordChannels($notifiable, 'loans');
+    }
+
+    public function toDiscordBot(object $notifiable): array
+    {
+        return $this->privateDiscordMessage(
+            $notifiable,
+            'loan_'.$this->status,
+            ['type' => 'loan', 'id' => $this->loan->id],
+            '/loans',
+            ['status' => $this->status],
+        );
     }
 
     /**

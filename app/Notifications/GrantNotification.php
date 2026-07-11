@@ -3,12 +3,14 @@
 namespace App\Notifications;
 
 use App\Models\GrantApplication;
+use App\Notifications\Concerns\SendsPrivateDiscordNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 class GrantNotification extends Notification
 {
     use Queueable;
+    use SendsPrivateDiscordNotification;
 
     public int $nation_id;
 
@@ -33,7 +35,18 @@ class GrantNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['pnw']; // Sends in-game messages via custom channel
+        return $this->pnwAndPrivateDiscordChannels($notifiable, 'grants');
+    }
+
+    public function toDiscordBot(object $notifiable): array
+    {
+        return $this->privateDiscordMessage(
+            $notifiable,
+            'grant_application_'.$this->status,
+            ['type' => 'grant_application', 'id' => $this->application->id, 'label' => $this->application->grant->name],
+            '/grants',
+            ['status' => $this->status],
+        );
     }
 
     /**

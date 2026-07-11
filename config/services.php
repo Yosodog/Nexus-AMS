@@ -36,6 +36,11 @@ return [
     ],
     'nexus_api_token' => env('NEXUS_API_TOKEN'),
     'discord_bot_key' => env('DISCORD_BOT_KEY'),
+    'discord' => [
+        'guild_id' => env('DISCORD_GUILD_ID'),
+        'finance_action_intent_ttl_seconds' => (int) env('DISCORD_FINANCE_ACTION_INTENT_TTL_SECONDS', 120),
+        'workflow_action_intent_ttl_seconds' => (int) env('DISCORD_WORKFLOW_ACTION_INTENT_TTL_SECONDS', 900),
+    ],
 
     'pw' => [
         'alliance_id' => env('PW_ALLIANCE_ID', 0),

@@ -86,6 +86,11 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function discordActionIntent(): BelongsTo
+    {
+        return $this->belongsTo(DiscordActionIntent::class);
+    }
+
     public function deniedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'denied_by');

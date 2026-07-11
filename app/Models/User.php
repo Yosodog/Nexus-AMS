@@ -111,6 +111,11 @@ class User extends Authenticatable
         return $this->hasMany(TrustedDevice::class);
     }
 
+    public function discordNotificationPreferences(): HasMany
+    {
+        return $this->hasMany(DiscordNotificationPreference::class);
+    }
+
     public function activeDiscordAccount(): ?DiscordAccount
     {
         return $this->discordAccounts()

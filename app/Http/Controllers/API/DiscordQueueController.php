@@ -95,11 +95,28 @@ class DiscordQueueController extends Controller
 
     public function checkpoint(Request $request, DiscordQueue $command): JsonResponse
     {
-        $data = $request->validate([
-            'lease_token' => ['required', 'uuid'],
-            'result' => ['required', 'array:discord_channel_id'],
-            'result.discord_channel_id' => ['required', 'string', 'regex:/^\d{17,20}$/'],
-        ]);
+        $rules = match ($command->action) {
+            'WAR_ROOM_CREATE' => [
+                'lease_token' => ['required', 'uuid'],
+                'result' => ['required', 'array:discord_channel_id'],
+                'result.discord_channel_id' => ['required', 'string', 'regex:/^\d{17,20}$/'],
+            ],
+            'CITY_TIER_SYNC' => [
+                'lease_token' => ['required', 'uuid'],
+                'result' => ['required', 'array:roles'],
+                'result.roles' => ['required', 'array', 'max:250'],
+                'result.roles.*' => ['required', 'array:bucket_start,bucket_end,discord_role_id'],
+                'result.roles.*.bucket_start' => ['required', 'integer', 'min:1'],
+                'result.roles.*.bucket_end' => ['required', 'integer', 'gte:result.roles.*.bucket_start'],
+                'result.roles.*.discord_role_id' => ['required', 'string', 'regex:/^\d{17,20}$/'],
+            ],
+            default => [
+                'lease_token' => ['required', 'uuid'],
+                'result' => ['required', 'array'],
+            ],
+        };
+
+        $data = $request->validate($rules);
 
         try {
             $command = $this->leaseService->checkpoint($command, $data['lease_token'], $data['result']);
@@ -122,6 +139,7 @@ class DiscordQueueController extends Controller
             ])],
             'error_code' => ['nullable', 'string', 'max:100'],
             'error_message' => ['nullable', 'string', 'max:2000'],
+            'result' => ['nullable', 'array', 'max:25'],
         ]);
 
         try {
@@ -131,6 +149,7 @@ class DiscordQueueController extends Controller
                 $data['lease_token'] ?? null,
                 $data['error_code'] ?? null,
                 $data['error_message'] ?? null,
+                $data['result'] ?? null,
             );
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
@@ -143,6 +162,7 @@ class DiscordQueueController extends Controller
                 'available_at' => optional($command->available_at)->toIso8601String(),
                 'attempts' => $command->attempts,
                 'completed_at' => optional($command->completed_at)->toIso8601String(),
+                'result' => $command->result ?? (object) [],
             ],
         ]);
     }
@@ -155,6 +175,7 @@ class DiscordQueueController extends Controller
         return [
             'id' => $command->id,
             'action' => $command->action,
+            'dedupe_key' => $command->dedupe_key,
             'payload' => $command->payload,
             'status' => $command->status,
             'attempts' => $command->attempts,

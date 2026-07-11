@@ -8,6 +8,8 @@ use App\Models\DepositRequest;
 use App\Models\Nation;
 use App\Services\DepositService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Tests\FeatureTestCase;
 
 class DepositServiceTest extends FeatureTestCase
@@ -74,6 +76,44 @@ class DepositServiceTest extends FeatureTestCase
 
         $this->assertSame('completed', $deposit->status);
         $this->assertNull($deposit->pending_key);
+    }
+
+    public function test_create_request_expires_codes_after_sixty_minutes(): void
+    {
+        Carbon::setTestNow('2026-07-10 12:00:00');
+        $account = $this->createAccount();
+        $first = DepositService::createRequest($account);
+
+        Carbon::setTestNow(now()->addMinutes(61));
+        $second = DepositService::createRequest($account);
+
+        $this->assertFalse($first->is($second));
+        $this->assertSame('expired', $first->fresh()->status);
+        $this->assertNull($first->fresh()->pending_key);
+        $this->assertSame('pending', $second->status);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_create_request_retries_random_code_collisions(): void
+    {
+        $account = $this->createAccount();
+        $otherAccount = $this->createAccount();
+        DepositRequest::query()->create([
+            'account_id' => $otherAccount->id,
+            'deposit_code' => 'COLLIDE1',
+            'status' => 'completed',
+        ]);
+        Str::createRandomStringsUsingSequence(['COLLIDE1', 'UNIQUE22']);
+
+        try {
+            $deposit = DepositService::createRequest($account);
+        } finally {
+            Str::createRandomStringsNormally();
+        }
+
+        $this->assertSame('UNIQUE22', $deposit->deposit_code);
+        $this->assertSame('pending', $deposit->status);
     }
 
     private function createAccount(bool $frozen = false): Account
