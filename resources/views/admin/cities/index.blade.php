@@ -21,7 +21,7 @@
         <x-slot:title>
             <div>
                 Alliance Cities
-                <div class="text-sm font-normal text-base-content/60">Sortable city roster with alignment and power flags.</div>
+                <div class="text-sm font-normal text-base-content/60">Sort the full roster by any column without loading every row at once.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
@@ -32,44 +32,44 @@
             </div>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
-            <table id="citiesTable" class="table table-zebra table-sm" style="width: 100%" data-sortable="true">
+            <table id="citiesTable" class="table table-zebra table-sm" style="width: 100%" data-sortable="false">
                 <thead>
                 <tr>
-                    <th>City</th>
-                    <th>Nation</th>
-                    <th>Alliance</th>
-                    <th data-sortable="false">Founded</th>
-                    <th>Infrastructure</th>
-                    <th>Land</th>
-                    <th>Power</th>
-                    <th>Oil</th>
-                    <th>Wind</th>
-                    <th>Coal</th>
-                    <th>Nuclear</th>
-                    <th>Coal Mine</th>
-                    <th>Oil Well</th>
-                    <th>Uranium Mine</th>
-                    <th>Lead Mine</th>
-                    <th>Iron Mine</th>
-                    <th>Bauxite Mine</th>
-                    <th>Barracks</th>
-                    <th>Farm</th>
-                    <th>Police</th>
-                    <th>Hospital</th>
-                    <th>Recycling</th>
-                    <th>Subway</th>
-                    <th>Supermarket</th>
-                    <th>Bank</th>
-                    <th>Mall</th>
-                    <th>Stadium</th>
-                    <th>Oil Refinery</th>
-                    <th>Aluminum</th>
-                    <th>Steel</th>
-                    <th>Munitions</th>
-                    <th>Factory</th>
-                    <th>Hangar</th>
-                    <th>Drydock</th>
-                    <th data-sortable="false">Last Updated</th>
+                    <x-admin.sortable-table-heading column="city" label="City" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="nation" label="Nation" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="alliance" label="Alliance" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="founded" label="Founded" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="infrastructure" label="Infrastructure" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="land" label="Land" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="power" label="Power" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="oil_power" label="Oil" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="wind_power" label="Wind" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="coal_power" label="Coal" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="nuclear_power" label="Nuclear" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="coal_mine" label="Coal Mine" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="oil_well" label="Oil Well" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="uranium_mine" label="Uranium Mine" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="lead_mine" label="Lead Mine" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="iron_mine" label="Iron Mine" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="bauxite_mine" label="Bauxite Mine" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="barracks" label="Barracks" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="farm" label="Farm" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="police_station" label="Police" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="hospital" label="Hospital" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="recycling_center" label="Recycling" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="subway" label="Subway" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="supermarket" label="Supermarket" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="bank" label="Bank" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="shopping_mall" label="Mall" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="stadium" label="Stadium" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="oil_refinery" label="Oil Refinery" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="aluminum_refinery" label="Aluminum" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="steel_mill" label="Steel" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="munitions_factory" label="Munitions" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="factory" label="Factory" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="hangar" label="Hangar" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="drydock" label="Drydock" :current-sort="$sort" :current-direction="$direction" />
+                    <x-admin.sortable-table-heading column="updated" label="Last Updated" :current-sort="$sort" :current-direction="$direction" />
                 </tr>
                 </thead>
                 <tbody>
@@ -161,6 +161,12 @@
                 @endforeach
                 </tbody>
             </table>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-base-content/60">
+                Showing {{ number_format($cities->firstItem() ?? 0) }}–{{ number_format($cities->lastItem() ?? 0) }} of {{ number_format($summary['total_cities']) }} cities.
+            </p>
+            {{ $cities->onEachSide(1)->links() }}
         </div>
     </x-card>
 @endsection
