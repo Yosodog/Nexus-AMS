@@ -77,6 +77,11 @@ class User extends Authenticatable
         return $this->hasMany(Account::class, 'nation_id', 'nation_id');
     }
 
+    public function lotteryTickets(): HasMany
+    {
+        return $this->hasMany(LotteryTicket::class);
+    }
+
     public function isVerified(): bool
     {
         return ! is_null($this->verified_at);

@@ -63,6 +63,11 @@ class Account extends Model
         return $this->hasMany(MMRAssistantPurchase::class);
     }
 
+    public function lotteryTickets(): HasMany
+    {
+        return $this->hasMany(LotteryTicket::class);
+    }
+
     /**
      * Checks if the account is completely empty.
      */

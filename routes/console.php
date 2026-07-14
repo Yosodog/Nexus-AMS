@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\DrawWeeklyLottery;
 use App\Console\Commands\ProcessDeposits;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
@@ -58,6 +59,13 @@ Schedule::command('loans:process-payments')
 Schedule::command('payroll:run-daily')
     ->dailyAt('00:30')
     ->timezone('America/Chicago')
+    ->withoutOverlapping(120)
+    ->onOneServer();
+
+// Weekly lottery
+Schedule::command(DrawWeeklyLottery::class)
+    ->weeklyOn(0, '00:00')
+    ->timezone('UTC')
     ->withoutOverlapping(120)
     ->onOneServer();
 

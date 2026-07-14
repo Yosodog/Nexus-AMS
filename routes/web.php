@@ -54,6 +54,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\LeaderboardsController;
 use App\Http\Controllers\LoansController as UserLoansController;
+use App\Http\Controllers\LotteryController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\RaidFinderController;
@@ -171,6 +172,10 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     // Alliance Market
     Route::get('/market', [MarketController::class, 'index'])->name('market.index');
     Route::post('/market/sell', [MarketController::class, 'sell'])->name('market.sell');
+
+    // Weekly Lottery
+    Route::get('/lottery', [LotteryController::class, 'index'])->name('lottery.index');
+    Route::post('/lottery/tickets', [LotteryController::class, 'store'])->name('lottery.tickets.store');
 
     // Direct Deposit
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')

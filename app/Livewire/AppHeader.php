@@ -79,10 +79,11 @@ class AppHeader extends Component
             [
                 'label' => 'Finance',
                 'icon' => 'o-banknotes',
-                'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'loans.*'),
+                'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'lottery.*', 'loans.*'),
                 'items' => [
                     ['label' => 'Accounts', 'route' => route('accounts'), 'active' => request()->routeIs('accounts*', 'member-transfers.*')],
                     ['label' => 'Alliance market', 'route' => route('market.index'), 'active' => request()->routeIs('market.*')],
+                    ['label' => 'Weekly lottery', 'route' => route('lottery.index'), 'active' => request()->routeIs('lottery.*')],
                     ['label' => 'Loans', 'route' => route('loans.index'), 'active' => request()->routeIs('loans.*')],
                 ],
             ],

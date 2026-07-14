@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\DiscordActionIntent;
 use App\Models\GrantApplication;
+use App\Models\LotteryDrawing;
 use App\Models\ManualTransaction;
 use App\Models\MemberTransfer;
 use App\Models\Nation;
@@ -202,6 +203,12 @@ class AccountService
 
         if ($hasPendingMemberTransfers) {
             throw new UserErrorException('The account has pending member transfers.');
+        }
+
+        if ($account->lotteryTickets()->whereHas('drawing', function ($query): void {
+            $query->where('status', LotteryDrawing::STATUS_OPEN);
+        })->exists()) {
+            throw new UserErrorException('The account has tickets in an open lottery drawing.');
         }
 
         if (! $account->isEmpty()) {
