@@ -68,7 +68,7 @@
             "@php artisan test --testsuite=Fast"
         ],
         "test:integration": [
-            "@php artisan test --testsuite=Integration"
+            "@php artisan test --testsuite=Integration --fail-on-skipped"
         ],
         "test:browser": [
             "npm run test:browser"

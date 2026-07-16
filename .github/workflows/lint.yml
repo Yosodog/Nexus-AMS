@@ -70,6 +70,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: phpunit-fast
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: nexus_testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
     services:
       mysql:
         image: mysql:8.0
@@ -96,16 +103,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Prepare integration environment
-        run: |
-          cp .env.testing.example .env.testing
-          {
-            echo "DB_CONNECTION=mysql"
-            echo "DB_HOST=127.0.0.1"
-            echo "DB_PORT=3306"
-            echo "DB_DATABASE=nexus_testing"
-            echo "DB_USERNAME=root"
-            echo "DB_PASSWORD=root"
-          } >> .env.testing
+        run: cp .env.testing.example .env.testing
 
       - name: Run integration suite
         run: composer test:integration
