@@ -404,6 +404,43 @@ class LotteryWorkflowTest extends TestCase
         $this->assertDatabaseCount('manual_transactions', 1);
     }
 
+    public function test_unexpected_purchase_failure_preserves_the_request_without_claiming_no_money_moved(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+        $drawing = app(LotteryService::class)->currentDrawing();
+        $idempotencyKey = (string) Str::uuid();
+        $lotteryService = Mockery::mock(LotteryService::class);
+        $lotteryService->shouldReceive('purchaseTickets')
+            ->once()
+            ->andThrow(new RuntimeException('Unexpected response failure.'));
+        $this->app->instance(LotteryService::class, $lotteryService);
+
+        $response = $this->actingAs($user)
+            ->withoutMiddleware([
+                EnsureUserIsVerified::class,
+                DiscordVerifiedMiddleware::class,
+                EnsureMfaConfigured::class,
+            ])
+            ->post(route('lottery.tickets.store'), [
+                'idempotency_key' => $idempotencyKey,
+                'drawing_id' => $drawing->id,
+                'account_id' => $account->id,
+                'quantity' => 1,
+            ]);
+
+        $response->assertRedirect()
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHasInput('idempotency_key', $idempotencyKey)
+            ->assertSessionHasErrors();
+        $this->assertStringNotContainsString(
+            'No money was moved',
+            session('errors')->first(),
+        );
+    }
+
     public function test_purchase_rolls_back_when_the_audit_write_fails(): void
     {
         CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');

@@ -105,7 +105,10 @@ class LotteryController extends Controller
                 'quantity' => $request->input('quantity'),
             ]);
 
-            return redirect()->back()->withErrors('There was an error purchasing tickets. No money was moved.');
+            return redirect()->back()
+                ->withErrors('We could not confirm this purchase. Refresh your ticket list before retrying; this request is protected against duplicate charges.')
+                ->withInput()
+                ->with('alert-type', 'error');
         }
     }
 }
