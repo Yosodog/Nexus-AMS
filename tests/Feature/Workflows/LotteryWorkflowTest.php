@@ -11,6 +11,7 @@ use App\Models\Account;
 use App\Models\LotteryDrawing;
 use App\Models\LotteryPurchase;
 use App\Models\LotteryTicket;
+use App\Models\ManualTransaction;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\AccountService;
@@ -69,10 +70,13 @@ class LotteryWorkflowTest extends TestCase
         $this->assertSame('50000.00', $drawing->ticket_price);
         $this->assertDatabaseHas('manual_transactions', [
             'account_id' => $account->id,
-            'admin_id' => $user->id,
+            'admin_id' => null,
             'money' => -100000,
             'note' => 'Weekly lottery ticket purchase',
         ]);
+        $transaction = ManualTransaction::query()->sole();
+        $this->assertSame('member', $transaction->meta['initiated_by_type']);
+        $this->assertSame($user->id, $transaction->meta['initiated_by_user_id']);
         $this->assertDatabaseCount('lottery_tickets', 2);
     }
 

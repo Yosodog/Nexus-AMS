@@ -224,9 +224,11 @@ class LotteryService
                         'money' => -$totalCost,
                         'note' => 'Weekly lottery ticket purchase',
                     ],
-                    $user->id,
+                    null,
                     $ipAddress,
                     [
+                        'initiated_by_type' => 'member',
+                        'initiated_by_user_id' => $user->id,
                         'lottery_purchase_id' => $purchase->id,
                         'lottery_purchase_key' => $idempotencyKey,
                         'lottery_drawing_id' => $lockedDrawing->id,
