@@ -81,9 +81,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('lottery-purchases', function (Request $request) {
-            $key = $request->user()?->nation_id ?? $request->user()?->id ?? $request->ip();
+            if ($request->user()?->nation_id !== null) {
+                return Limit::perMinute(10)->by('nation:'.$request->user()->nation_id);
+            }
 
-            return Limit::perMinute(10)->by('nation:'.$key);
+            if ($request->user()?->id !== null) {
+                return Limit::perMinute(10)->by('user:'.$request->user()->id);
+            }
+
+            return Limit::perMinute(10)->by('ip:'.$request->ip());
         });
 
         RateLimiter::for('grant-requests', function (Request $request) {

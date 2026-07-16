@@ -25,7 +25,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -301,6 +303,27 @@ class LotteryWorkflowTest extends TestCase
 
         $this->assertDatabaseCount('lottery_tickets', 10);
         $this->assertAccountMoney($account, 500000);
+    }
+
+    public function test_purchase_rate_limit_fallbacks_cannot_collide_with_nation_keys(): void
+    {
+        $limiter = RateLimiter::limiter('lottery-purchases');
+        $nationUser = new User;
+        $nationUser->id = 456;
+        $nationUser->nation_id = 123;
+        $userWithoutNation = new User;
+        $userWithoutNation->id = 123;
+        $userWithoutNation->nation_id = null;
+
+        $nationRequest = Request::create('/lottery/tickets', 'POST');
+        $nationRequest->setUserResolver(fn (): User => $nationUser);
+        $userRequest = Request::create('/lottery/tickets', 'POST');
+        $userRequest->setUserResolver(fn (): User => $userWithoutNation);
+        $guestRequest = Request::create('/lottery/tickets', 'POST', server: ['REMOTE_ADDR' => '192.0.2.10']);
+
+        $this->assertSame('nation:123', $limiter($nationRequest)->key);
+        $this->assertSame('user:123', $limiter($userRequest)->key);
+        $this->assertSame('ip:192.0.2.10', $limiter($guestRequest)->key);
     }
 
     public function test_stale_form_cannot_purchase_from_a_new_drawing(): void
