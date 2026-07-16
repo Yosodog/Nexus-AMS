@@ -6,19 +6,23 @@ use App\Exceptions\UserErrorException;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
+use App\Livewire\AppHeader;
 use App\Models\Account;
 use App\Models\LotteryDrawing;
 use App\Models\LotteryTicket;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\AccountService;
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\LotteryRandomizer;
 use App\Services\LotteryService;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Tests\TestCase;
@@ -128,6 +132,8 @@ class LotteryWorkflowTest extends TestCase
     {
         [$user] = $this->createParticipant(500000);
         [, $otherAccount] = $this->createParticipant(500000);
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
 
         $response = $this->actingAs($user)
             ->withoutMiddleware([
@@ -142,6 +148,65 @@ class LotteryWorkflowTest extends TestCase
 
         $response->assertSessionHasErrors('account_id');
         $this->assertDatabaseCount('lottery_tickets', 0);
+    }
+
+    public function test_applicant_cannot_view_or_purchase_lottery_tickets(): void
+    {
+        [$applicant, $account] = $this->createParticipant(500000, alliancePosition: 'APPLICANT');
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+
+        $this->actingAs($applicant)
+            ->withoutMiddleware([
+                EnsureUserIsVerified::class,
+                DiscordVerifiedMiddleware::class,
+                EnsureMfaConfigured::class,
+            ])
+            ->get(route('lottery.index'))
+            ->assertForbidden();
+
+        $this->actingAs($applicant)
+            ->withoutMiddleware([
+                EnsureUserIsVerified::class,
+                DiscordVerifiedMiddleware::class,
+                EnsureMfaConfigured::class,
+            ])
+            ->post(route('lottery.tickets.store'), [
+                'account_id' => $account->id,
+                'quantity' => 1,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('lottery_tickets', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
+    public function test_service_rejects_a_user_when_member_eligibility_fails(): void
+    {
+        [$user, $account] = $this->createParticipant(500000);
+        $eligibilityService = Mockery::mock(AllianceMemberEligibilityService::class);
+        $eligibilityService->shouldReceive('nationFor')
+            ->once()
+            ->with($user)
+            ->andThrow(new AuthorizationException('Members only.'));
+        $auditLogger = Mockery::mock(AuditLogger::class);
+        $auditLogger->shouldNotReceive('recordAfterCommit');
+        $service = new LotteryService($eligibilityService, $auditLogger, new LotteryRandomizer);
+
+        $this->expectException(AuthorizationException::class);
+
+        $service->purchaseTickets($user, $account, 1);
+    }
+
+    public function test_applicant_navigation_does_not_show_the_lottery_link(): void
+    {
+        [$applicant] = $this->createParticipant(500000, alliancePosition: 'APPLICANT');
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+
+        Livewire::actingAs($applicant)
+            ->test(AppHeader::class)
+            ->assertDontSee('Weekly lottery');
     }
 
     public function test_expired_drawing_pays_the_matching_ticket_and_is_idempotent(): void
@@ -289,11 +354,14 @@ class LotteryWorkflowTest extends TestCase
     /**
      * @return array{0: User, 1: Account}
      */
-    private function createParticipant(float $money, bool $frozen = false): array
-    {
+    private function createParticipant(
+        float $money,
+        bool $frozen = false,
+        string $alliancePosition = 'MEMBER',
+    ): array {
         $nation = Nation::factory()->create([
             'alliance_id' => 777,
-            'alliance_position' => 'MEMBER',
+            'alliance_position' => $alliancePosition,
             'alliance_position_id' => 2,
             'vacation_mode_turns' => 0,
         ]);
@@ -313,13 +381,16 @@ class LotteryWorkflowTest extends TestCase
         int $membershipChecks,
         int $auditEvents,
     ): LotteryService {
-        $membershipService = Mockery::mock(AllianceMembershipService::class);
-        $membershipExpectation = $membershipService->shouldReceive('contains');
+        $eligibilityService = Mockery::mock(AllianceMemberEligibilityService::class);
+        $eligibilityExpectation = $eligibilityService->shouldReceive('nationFor');
 
         if ($membershipChecks > 0) {
-            $membershipExpectation->times($membershipChecks)->with(777)->andReturnTrue();
+            $eligibilityExpectation
+                ->times($membershipChecks)
+                ->with(Mockery::type(User::class))
+                ->andReturnUsing(fn (User $user): Nation => $user->nation);
         } else {
-            $membershipExpectation->never();
+            $eligibilityExpectation->never();
         }
 
         $auditLogger = Mockery::mock(AuditLogger::class);
@@ -331,7 +402,7 @@ class LotteryWorkflowTest extends TestCase
             $auditExpectation->never();
         }
 
-        return new LotteryService($membershipService, $auditLogger, $randomizer);
+        return new LotteryService($eligibilityService, $auditLogger, $randomizer);
     }
 
     private function assertAccountMoney(Account $account, float $expected): void

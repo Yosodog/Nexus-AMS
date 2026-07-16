@@ -18,7 +18,7 @@ class LotteryService
     public const MAX_TICKETS_PER_PURCHASE = 100;
 
     public function __construct(
-        private readonly AllianceMembershipService $membershipService,
+        private readonly AllianceMemberEligibilityService $eligibilityService,
         private readonly AuditLogger $auditLogger,
         private readonly LotteryRandomizer $randomizer,
     ) {}
@@ -66,11 +66,7 @@ class LotteryService
             ]);
         }
 
-        $user->loadMissing('nation');
-
-        if (! $this->membershipService->contains($user->nation?->alliance_id)) {
-            throw new UserErrorException('Only current alliance members may buy lottery tickets.');
-        }
+        $this->eligibilityService->nationFor($user);
 
         if ((int) $account->nation_id !== (int) $user->nation_id) {
             throw ValidationException::withMessages([

@@ -8,7 +8,7 @@ use App\Models\Account;
 use App\Models\LotteryDrawing;
 use App\Models\LotteryTicket;
 use App\Services\AccountService;
-use App\Services\AllianceMembershipService;
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\LotteryRandomizer;
 use App\Services\LotteryService;
 use Exception;
@@ -21,13 +21,15 @@ class LotteryController extends Controller
 {
     public function index(
         LotteryService $lotteryService,
-        AllianceMembershipService $membershipService,
+        AllianceMemberEligibilityService $eligibilityService,
     ): View {
         $user = request()->user();
 
-        if (! $user || ! $membershipService->contains($user->nation?->alliance_id)) {
+        if (! $user) {
             abort(403);
         }
+
+        $eligibilityService->nationFor($user);
 
         $drawing = $lotteryService->currentDrawing();
         $accounts = AccountService::getAccountsByUser($user);

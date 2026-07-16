@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\LotteryService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,7 +15,11 @@ class PurchaseLotteryTicketsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+
+        return $user !== null
+            && $user->nation !== null
+            && app(AllianceMemberEligibilityService::class)->isEligibleNation($user->nation);
     }
 
     /**
