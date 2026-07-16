@@ -15,10 +15,6 @@ use Illuminate\Validation\ValidationException;
 
 class LotteryService
 {
-    public const MAX_TICKETS_PER_PURCHASE = 100;
-
-    public const MAX_TICKETS_PER_NATION = 10000;
-
     public function __construct(
         private readonly AllianceMemberEligibilityService $eligibilityService,
         private readonly AuditLogger $auditLogger,
@@ -35,12 +31,23 @@ class LotteryService
 
     private function drawingStartingAt(CarbonImmutable $startsAt): LotteryDrawing
     {
+        $settings = SettingService::getLotterySettings();
+        $jackpotContributionCents = self::jackpotContributionCents(
+            $settings['ticket_price_cents'],
+            $settings['jackpot_basis_points'],
+        );
+
         return LotteryDrawing::query()->firstOrCreate(
             ['starts_at' => $startsAt],
             [
                 'ends_at' => $startsAt->addWeek(),
                 'status' => LotteryDrawing::STATUS_OPEN,
-                'ticket_price' => LotteryTicket::PRICE,
+                'sales_enabled' => $settings['sales_enabled'],
+                'ticket_price' => self::centsToDecimal($settings['ticket_price_cents']),
+                'jackpot_basis_points' => $settings['jackpot_basis_points'],
+                'jackpot_contribution_per_ticket' => self::centsToDecimal($jackpotContributionCents),
+                'max_tickets_per_purchase' => $settings['max_tickets_per_purchase'],
+                'max_tickets_per_nation' => $settings['max_tickets_per_nation'],
                 'ticket_count' => 0,
                 'allocation_seed' => $this->randomizer->permutationSeed(),
                 'next_ticket_sequence' => 0,
@@ -62,9 +69,9 @@ class LotteryService
         int $quantity,
         ?string $ipAddress = null,
     ): EloquentCollection {
-        if ($quantity < 1 || $quantity > self::MAX_TICKETS_PER_PURCHASE) {
+        if ($quantity < 1 || $quantity > SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE) {
             throw ValidationException::withMessages([
-                'quantity' => 'You may purchase between 1 and '.self::MAX_TICKETS_PER_PURCHASE.' tickets at a time.',
+                'quantity' => 'You may purchase between 1 and '.SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE.' tickets at a time.',
             ]);
         }
 
@@ -77,21 +84,29 @@ class LotteryService
         }
 
         $drawing = $this->currentDrawing();
-        $totalCost = LotteryTicket::PRICE * $quantity;
-        $jackpotContribution = LotteryTicket::JACKPOT_CONTRIBUTION * $quantity;
 
-        return DB::transaction(function () use ($user, $account, $quantity, $ipAddress, $drawing, $totalCost, $jackpotContribution): EloquentCollection {
+        return DB::transaction(function () use ($user, $account, $quantity, $ipAddress, $drawing): EloquentCollection {
             $lockedDrawing = LotteryDrawing::query()->lockForUpdate()->findOrFail($drawing->id);
 
             if ($lockedDrawing->status !== LotteryDrawing::STATUS_OPEN || $lockedDrawing->ends_at->isPast()) {
                 throw new UserErrorException('This lottery drawing is closed. Please refresh for the new drawing.');
             }
 
+            if (! $lockedDrawing->sales_enabled) {
+                throw new UserErrorException('Lottery ticket sales are currently paused.');
+            }
+
+            if ($quantity > $lockedDrawing->max_tickets_per_purchase) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'You may purchase at most '.number_format($lockedDrawing->max_tickets_per_purchase).' tickets at a time.',
+                ]);
+            }
+
             $nationTicketCount = LotteryTicket::query()
                 ->where('lottery_drawing_id', $lockedDrawing->id)
                 ->where('nation_id', $user->nation_id)
                 ->count();
-            $remainingNationTickets = max(0, self::MAX_TICKETS_PER_NATION - $nationTicketCount);
+            $remainingNationTickets = max(0, $lockedDrawing->max_tickets_per_nation - $nationTicketCount);
 
             if ($quantity > $remainingNationTickets) {
                 throw ValidationException::withMessages([
@@ -112,6 +127,11 @@ class LotteryService
             }
 
             $lockedAccount = Account::query()->lockForUpdate()->findOrFail($account->id);
+
+            $ticketPriceCents = self::decimalToCents($lockedDrawing->ticket_price);
+            $jackpotContributionPerTicketCents = self::decimalToCents($lockedDrawing->jackpot_contribution_per_ticket);
+            $totalCost = self::centsToDecimal($ticketPriceCents * $quantity);
+            $jackpotContribution = self::centsToDecimal($jackpotContributionPerTicketCents * $quantity);
 
             if ((int) $lockedAccount->nation_id !== (int) $user->nation_id) {
                 throw ValidationException::withMessages([
@@ -142,8 +162,8 @@ class LotteryService
                     'nation_id' => $user->nation_id,
                     'account_id' => $lockedAccount->id,
                     'code' => $code,
-                    'price_paid' => LotteryTicket::PRICE,
-                    'jackpot_contribution' => LotteryTicket::JACKPOT_CONTRIBUTION,
+                    'price_paid' => $lockedDrawing->ticket_price,
+                    'jackpot_contribution' => $lockedDrawing->jackpot_contribution_per_ticket,
                     'created_at' => $timestamp,
                     'updated_at' => $timestamp,
                 ])
@@ -200,6 +220,21 @@ class LotteryService
 
             return $tickets;
         }, attempts: 3);
+    }
+
+    public static function jackpotContributionCents(int $ticketPriceCents, int $jackpotBasisPoints): int
+    {
+        return intdiv(($ticketPriceCents * $jackpotBasisPoints) + 5000, 10000);
+    }
+
+    private static function decimalToCents(string|int|float $amount): int
+    {
+        return (int) round((float) $amount * 100);
+    }
+
+    private static function centsToDecimal(int $amount): string
+    {
+        return number_format($amount / 100, 2, '.', '');
     }
 
     /**

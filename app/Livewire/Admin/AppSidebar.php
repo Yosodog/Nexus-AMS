@@ -60,6 +60,7 @@ class AppSidebar extends Component
                 $this->item('Finance ledger', 'o-book-open', route('admin.finance.index'), request()->routeIs('admin.finance.*'), null, $user->can('view-financial-reports')),
                 $this->item('Payroll', 'o-currency-dollar', route('admin.payroll.index'), request()->routeIs('admin.payroll.*'), null, $user->can('view_payroll')),
                 $this->item('Alliance market', 'o-shopping-bag', route('admin.market.index'), request()->routeIs('admin.market.*'), null, $user->can('view-market')),
+                $this->item('Weekly lottery', 'o-ticket', route('admin.lottery.index'), request()->routeIs('admin.lottery.*'), null, $user->canAny(['view-lottery', 'manage-lottery'])),
             ]),
             $this->group('Defense', [
                 $this->item('War room', 'o-command-line', route('admin.war-room'), request()->routeIs('admin.war-room', 'admin.war-plans.*', 'admin.war-counters.*'), null, $user->can('view-wars')),

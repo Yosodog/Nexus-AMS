@@ -7,6 +7,7 @@ use App\Models\LotteryDrawing;
 use App\Models\LotteryTicket;
 use App\Models\Nation;
 use App\Models\User;
+use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -42,8 +43,8 @@ class LotteryTicketFactory extends Factory
                 ])->id;
             },
             'code' => fn (): string => Str::upper(Str::random(3)),
-            'price_paid' => LotteryTicket::PRICE,
-            'jackpot_contribution' => LotteryTicket::JACKPOT_CONTRIBUTION,
+            'price_paid' => SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS / 100,
+            'jackpot_contribution' => 45000,
         ];
     }
 }

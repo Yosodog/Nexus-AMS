@@ -61,7 +61,7 @@ class LotteryController extends Controller
             ),
             'remainingNationTicketCount' => max(
                 0,
-                LotteryService::MAX_TICKETS_PER_NATION - $nationTicketCount,
+                $drawing->max_tickets_per_nation - $nationTicketCount,
             ),
         ]);
     }

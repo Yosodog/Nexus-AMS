@@ -9,8 +9,8 @@
                     <h1 class="text-3xl font-bold text-base-content">Three characters. One weekly draw.</h1>
                     <p class="max-w-2xl text-sm text-base-content/70">
                         Every ticket costs ${{ number_format($drawing->ticket_price, 0) }} and receives a random three-character
-                        uppercase alphanumeric code. {{ \App\Models\LotteryTicket::JACKPOT_PERCENTAGE }}%
-                        (${{ number_format(\App\Models\LotteryTicket::JACKPOT_CONTRIBUTION, 0) }}) from each ticket joins the jackpot.
+                        uppercase alphanumeric code. {{ number_format($drawing->jackpot_basis_points / 100, 2) }}%
+                        (${{ number_format($drawing->jackpot_contribution_per_ticket, 2) }}) from each ticket joins the jackpot.
                     </p>
                     <p class="max-w-2xl text-sm text-base-content/70">
                         One code is drawn from {{ number_format(\App\Services\LotteryRandomizer::CODE_SPACE_SIZE) }} possibilities.
@@ -24,6 +24,9 @@
                         @endif
                         @if ($remainingNationTicketCount === 0)
                             <span class="badge badge-warning badge-outline">Nation limit reached</span>
+                        @endif
+                        @if (! $drawing->sales_enabled)
+                            <span class="badge badge-warning">Sales paused</span>
                         @endif
                     </div>
                 </div>
@@ -65,7 +68,12 @@
                     <h2 class="text-xl font-bold">Buy tickets</h2>
                 </div>
 
-                @if ($remainingTicketCount > 0 && $remainingNationTicketCount > 0)
+                @if (! $drawing->sales_enabled)
+                    <div class="rounded-xl border border-warning/30 bg-warning/10 p-5 text-sm text-base-content/80">
+                        <p class="font-semibold text-warning">Ticket sales are paused.</p>
+                        <p class="mt-1">Existing tickets remain eligible and the drawing will still complete on schedule.</p>
+                    </div>
+                @elseif ($remainingTicketCount > 0 && $remainingNationTicketCount > 0)
                     <form method="POST" action="{{ route('lottery.tickets.store') }}" class="space-y-5">
                         @csrf
 
@@ -95,14 +103,14 @@
                                 name="quantity"
                                 class="input w-full"
                                 min="1"
-                                max="{{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount, $remainingNationTicketCount) }}"
+                                max="{{ min($drawing->max_tickets_per_purchase, $remainingTicketCount, $remainingNationTicketCount) }}"
                                 step="1"
                                 value="{{ old('quantity', 1) }}"
                                 required
                             >
                             <span class="text-xs text-base-content/60">
                                 ${{ number_format($drawing->ticket_price, 0) }} each · up to
-                                {{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount, $remainingNationTicketCount) }} per purchase ·
+                                {{ min($drawing->max_tickets_per_purchase, $remainingTicketCount, $remainingNationTicketCount) }} per purchase ·
                                 {{ number_format($remainingNationTicketCount) }} remaining for your nation
                             </span>
                             @error('quantity')

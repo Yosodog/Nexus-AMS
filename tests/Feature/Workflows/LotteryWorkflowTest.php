@@ -18,6 +18,7 @@ use App\Services\AllianceMembershipService;
 use App\Services\AuditLogger;
 use App\Services\LotteryRandomizer;
 use App\Services\LotteryService;
+use App\Services\SettingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,7 +50,7 @@ class LotteryWorkflowTest extends TestCase
         $tickets = $service->purchaseTickets($user, $account, 2, '127.0.0.1');
 
         $drawing = LotteryDrawing::query()->sole();
-        $this->assertSame(90, LotteryTicket::JACKPOT_PERCENTAGE);
+        $this->assertSame(SettingService::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS, $drawing->jackpot_basis_points);
         $this->assertSame('2026-07-05 00:00:00', $drawing->starts_at->format('Y-m-d H:i:s'));
         $this->assertSame('2026-07-12 00:00:00', $drawing->ends_at->format('Y-m-d H:i:s'));
         $this->assertCount(2, $tickets->pluck('code')->unique());
@@ -227,7 +228,7 @@ class LotteryWorkflowTest extends TestCase
             $drawing,
             $firstUser,
             $firstAccount,
-            LotteryService::MAX_TICKETS_PER_NATION - 1,
+            SettingService::MAX_LOTTERY_TICKETS_PER_NATION - 1,
             $randomizer,
         );
 
@@ -244,7 +245,7 @@ class LotteryWorkflowTest extends TestCase
         }
 
         $this->assertSame(
-            LotteryService::MAX_TICKETS_PER_NATION,
+            SettingService::MAX_LOTTERY_TICKETS_PER_NATION,
             LotteryTicket::query()
                 ->where('lottery_drawing_id', $drawing->id)
                 ->where('nation_id', $firstUser->nation_id)
@@ -500,8 +501,11 @@ class LotteryWorkflowTest extends TestCase
                     'nation_id' => $user->nation_id,
                     'account_id' => $account->id,
                     'code' => $code,
-                    'price_paid' => LotteryTicket::PRICE,
-                    'jackpot_contribution' => LotteryTicket::JACKPOT_CONTRIBUTION,
+                    'price_paid' => SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS / 100,
+                    'jackpot_contribution' => LotteryService::jackpotContributionCents(
+                        SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS,
+                        SettingService::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS,
+                    ) / 100,
                     'created_at' => $timestamp,
                     'updated_at' => $timestamp,
                 ])->all());
@@ -510,7 +514,10 @@ class LotteryWorkflowTest extends TestCase
         $drawing->update([
             'ticket_count' => $quantity,
             'next_ticket_sequence' => $quantity,
-            'jackpot_amount' => LotteryTicket::JACKPOT_CONTRIBUTION * $quantity,
+            'jackpot_amount' => (LotteryService::jackpotContributionCents(
+                SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS,
+                SettingService::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS,
+            ) / 100) * $quantity,
         ]);
     }
 

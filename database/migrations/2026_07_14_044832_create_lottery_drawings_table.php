@@ -16,7 +16,12 @@ return new class extends Migration
             $table->dateTime('starts_at')->unique();
             $table->dateTime('ends_at')->index();
             $table->string('status', 20)->default('open')->index();
+            $table->boolean('sales_enabled')->default(true);
             $table->decimal('ticket_price', 15, 2);
+            $table->unsignedSmallInteger('jackpot_basis_points')->default(9000);
+            $table->decimal('jackpot_contribution_per_ticket', 15, 2)->default(45000);
+            $table->unsignedSmallInteger('max_tickets_per_purchase')->default(100);
+            $table->unsignedInteger('max_tickets_per_nation')->default(10000);
             $table->unsignedInteger('ticket_count')->default(0);
             $table->char('allocation_seed', 64);
             $table->unsignedInteger('next_ticket_sequence')->default(0);

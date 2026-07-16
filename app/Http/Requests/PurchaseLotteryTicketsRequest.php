@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Services\AllianceMemberEligibilityService;
-use App\Services\LotteryService;
+use App\Services\SettingService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,7 +37,7 @@ class PurchaseLotteryTicketsRequest extends FormRequest
 
         return [
             'account_id' => ['required', 'integer', $accountRule],
-            'quantity' => ['required', 'integer', 'min:1', 'max:'.LotteryService::MAX_TICKETS_PER_PURCHASE],
+            'quantity' => ['required', 'integer', 'min:1', 'max:'.SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE],
         ];
     }
 
@@ -49,7 +49,7 @@ class PurchaseLotteryTicketsRequest extends FormRequest
         return [
             'account_id.exists' => 'Select one of your active accounts.',
             'quantity.min' => 'Purchase at least one ticket.',
-            'quantity.max' => 'You may purchase at most '.LotteryService::MAX_TICKETS_PER_PURCHASE.' tickets at a time.',
+            'quantity.max' => 'You may purchase at most '.SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE.' tickets at a time.',
         ];
     }
 }

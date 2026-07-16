@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\GrowthCirclesController as AdminGrowthCirclesController;
 use App\Http\Controllers\Admin\LoansController;
+use App\Http\Controllers\Admin\LotteryController as AdminLotteryController;
 use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
@@ -321,6 +322,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/market/resource/{marketResource}/update', [AdminMarketController::class, 'update'])->name(
             'admin.market.resource.update'
         );
+        Route::get('/lottery', [AdminLotteryController::class, 'index'])->name('admin.lottery.index');
+        Route::post('/lottery/settings', [AdminLotteryController::class, 'update'])->name('admin.lottery.settings.update');
         Route::post('/accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name(
             'admin.accounts.unfreeze'
         );

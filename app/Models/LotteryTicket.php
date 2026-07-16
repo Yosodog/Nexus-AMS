@@ -9,12 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LotteryTicket extends Model
 {
-    public const PRICE = 50000;
-
-    public const JACKPOT_PERCENTAGE = 90;
-
-    public const JACKPOT_CONTRIBUTION = 45000;
-
     /** @use HasFactory<LotteryTicketFactory> */
     use HasFactory;
 
