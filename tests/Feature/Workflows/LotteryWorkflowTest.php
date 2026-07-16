@@ -196,6 +196,22 @@ class LotteryWorkflowTest extends TestCase
         $this->assertDatabaseCount('manual_transactions', 0);
     }
 
+    public function test_no_alliance_position_is_not_treated_as_an_eligible_member(): void
+    {
+        [$user] = $this->createParticipant(500000, alliancePosition: 'NOALLIANCE');
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+
+        $this->actingAs($user)
+            ->withoutMiddleware([
+                EnsureUserIsVerified::class,
+                DiscordVerifiedMiddleware::class,
+                EnsureMfaConfigured::class,
+            ])
+            ->get(route('lottery.index'))
+            ->assertForbidden();
+    }
+
     public function test_service_rejects_a_user_when_member_eligibility_fails(): void
     {
         [$user, $account] = $this->createParticipant(500000);
