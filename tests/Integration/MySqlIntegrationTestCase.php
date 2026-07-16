@@ -2,6 +2,7 @@
 
 namespace Tests\Integration;
 
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 abstract class MySqlIntegrationTestCase extends TestCase
@@ -15,6 +16,13 @@ abstract class MySqlIntegrationTestCase extends TestCase
         }
 
         $this->ensureIsolatedTestDatabase('mysql');
+        Http::fake([
+            '*' => Http::response([
+                'data' => [
+                    'game_info' => ['city_average' => 20.0],
+                ],
+            ]),
+        ]);
         $this->artisan('migrate:fresh', ['--force' => true]);
     }
 }
