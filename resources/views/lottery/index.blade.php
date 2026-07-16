@@ -50,7 +50,7 @@
                         </div>
                         <div class="rounded-xl bg-base-100/80 p-3">
                             <p class="text-xs text-base-content/60">Your tickets</p>
-                            <p class="text-xl font-bold">{{ number_format($myTickets->count()) }}</p>
+                            <p class="text-xl font-bold">{{ number_format($myTickets->total()) }}</p>
                         </div>
                     </div>
                     <p class="mt-3 text-xs text-base-content/60">
@@ -149,14 +149,14 @@
                         <p class="text-xs uppercase tracking-wide text-base-content/60">Current drawing</p>
                         <h2 class="text-xl font-bold">Your ticket codes</h2>
                     </div>
-                    @if ($myTickets->isNotEmpty())
+                    @if ($myTickets->total() > 0)
                         <span class="badge badge-primary badge-outline">
-                            {{ number_format(($myTickets->count() / \App\Services\LotteryRandomizer::CODE_SPACE_SIZE) * 100, 5) }}% chance
+                            {{ number_format(($myTickets->total() / \App\Services\LotteryRandomizer::CODE_SPACE_SIZE) * 100, 5) }}% chance
                         </span>
                     @endif
                 </div>
 
-                @if ($myTickets->isNotEmpty())
+                @if ($myTickets->total() > 0)
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
                         @foreach ($myTickets as $ticket)
                             <div class="rounded-xl border border-base-300 bg-base-200/50 p-4 text-center">
@@ -165,6 +165,11 @@
                             </div>
                         @endforeach
                     </div>
+                    @if ($myTickets->hasPages())
+                        <div class="mt-5 border-t border-base-300 pt-4">
+                            {{ $myTickets->links() }}
+                        </div>
+                    @endif
                 @else
                     <div class="rounded-xl border border-dashed border-base-300 px-6 py-12 text-center">
                         <p class="font-semibold">You do not have a ticket in this drawing yet.</p>

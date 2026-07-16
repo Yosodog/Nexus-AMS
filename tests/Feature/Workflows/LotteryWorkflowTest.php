@@ -25,6 +25,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -443,6 +444,35 @@ class LotteryWorkflowTest extends TestCase
             'No money was moved',
             session('errors')->first(),
         );
+    }
+
+    public function test_member_ticket_codes_are_paginated_without_losing_the_total(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+        $randomizer = new LotteryRandomizer;
+        $drawing = app(LotteryService::class)->currentDrawing();
+        $this->seedLotteryTickets($drawing, $user, $account, 60, $randomizer);
+
+        $client = $this->actingAs($user)->withoutMiddleware([
+            EnsureUserIsVerified::class,
+            DiscordVerifiedMiddleware::class,
+            EnsureMfaConfigured::class,
+        ]);
+
+        $client->get(route('lottery.index'))
+            ->assertOk()
+            ->assertViewHas('myTickets', fn (LengthAwarePaginator $tickets): bool => $tickets->count() === 48
+                && $tickets->total() === 60
+                && $tickets->currentPage() === 1);
+
+        $client->get(route('lottery.index', ['page' => 2]))
+            ->assertOk()
+            ->assertViewHas('myTickets', fn (LengthAwarePaginator $tickets): bool => $tickets->count() === 12
+                && $tickets->total() === 60
+                && $tickets->currentPage() === 2);
     }
 
     public function test_purchase_rolls_back_when_the_audit_write_fails(): void

@@ -39,7 +39,8 @@ class LotteryController extends Controller
             ->where('user_id', $user->id)
             ->with('account')
             ->latest()
-            ->get();
+            ->paginate(48)
+            ->withQueryString();
         $nationTicketCount = LotteryTicket::query()
             ->where('lottery_drawing_id', $drawing->id)
             ->where('nation_id', $user->nation_id)
