@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\LotteryDrawing;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\LotteryRandomizer;
 use App\Services\LotteryService;
 use App\Services\SettingService;
 use Carbon\CarbonImmutable;
@@ -110,7 +111,7 @@ class AdminLotterySettingsTest extends TestCase
 
         $this->actingAs($manager)
             ->post(route('admin.lottery.settings.update'), $this->validPayload([
-                'ticket_price' => '1000000001',
+                'ticket_price' => (string) ((SettingService::MAX_LOTTERY_TICKET_PRICE_CENTS / 100) + 1),
                 'jackpot_percentage' => '100.001',
                 'max_tickets_per_purchase' => '500',
                 'max_tickets_per_nation' => '499',
@@ -122,6 +123,15 @@ class AdminLotterySettingsTest extends TestCase
             ]);
 
         $this->assertDatabaseMissing('settings', ['key' => 'lottery_configuration']);
+    }
+
+    public function test_ticket_price_ceiling_fits_a_full_drawing_plus_one_rollover_in_the_payout_ledger(): void
+    {
+        $maximumTwoDrawingPoolCents = SettingService::MAX_LOTTERY_TICKET_PRICE_CENTS
+            * LotteryRandomizer::CODE_SPACE_SIZE
+            * 2;
+
+        $this->assertLessThanOrEqual(99_999_999_999_999, $maximumTwoDrawingPoolCents);
     }
 
     public function test_malformed_stored_lottery_configuration_falls_back_to_safe_bounds(): void

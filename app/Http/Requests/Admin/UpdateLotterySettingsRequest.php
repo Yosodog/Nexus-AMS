@@ -64,7 +64,9 @@ class UpdateLotterySettingsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'ticket_price.max' => 'A lottery ticket may cost at most $1 billion.',
+            'ticket_price.max' => 'A lottery ticket may cost at most $'.number_format(
+                SettingService::MAX_LOTTERY_TICKET_PRICE_CENTS / 100,
+            ).'.',
             'jackpot_percentage.decimal' => 'The jackpot share may use at most two decimal places.',
             'max_tickets_per_purchase.max' => 'A single purchase may contain at most 500 tickets.',
             'max_tickets_per_nation.max' => 'A nation may hold at most 10,000 tickets in a drawing.',
