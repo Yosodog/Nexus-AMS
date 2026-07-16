@@ -16,7 +16,9 @@ use App\Services\LotteryRandomizer;
 use App\Services\LotteryService;
 use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Http\Client\StrayRequestException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mockery;
@@ -41,6 +43,13 @@ class LotteryConcurrencyTest extends MySqlIntegrationTestCase
         CarbonImmutable::setTestNow();
 
         parent::tearDown();
+    }
+
+    public function test_mysql_harness_rejects_unexpected_outbound_http_requests(): void
+    {
+        $this->expectException(StrayRequestException::class);
+
+        Http::get('https://unexpected.example');
     }
 
     public function test_concurrent_purchases_cannot_exceed_the_nation_limit(): void

@@ -16,8 +16,9 @@ abstract class MySqlIntegrationTestCase extends TestCase
         }
 
         $this->ensureIsolatedTestDatabase('mysql');
+        $politicsAndWarEndpoint = rtrim((string) config('services.pw.endpoint'), '?');
         Http::fake([
-            '*' => Http::response([
+            $politicsAndWarEndpoint.'*' => Http::response([
                 'data' => [
                     'game_info' => ['city_average' => 20.0],
                 ],
