@@ -80,6 +80,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(2)->by($key);
         });
 
+        RateLimiter::for('lottery-purchases', function (Request $request) {
+            $key = $request->user()?->nation_id ?? $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute(10)->by('nation:'.$key);
+        });
+
         RateLimiter::for('grant-requests', function (Request $request) {
             $nationId = $request->user()?->nation_id;
             $nationLimit = (int) config('grants.rate_limits.nation_per_minute', 3);

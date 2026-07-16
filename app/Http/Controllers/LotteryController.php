@@ -39,6 +39,10 @@ class LotteryController extends Controller
             ->with('account')
             ->latest()
             ->get();
+        $nationTicketCount = LotteryTicket::query()
+            ->where('lottery_drawing_id', $drawing->id)
+            ->where('nation_id', $user->nation_id)
+            ->count();
         $recentDrawings = LotteryDrawing::query()
             ->where('status', LotteryDrawing::STATUS_DRAWN)
             ->with(['winningTicket.user.nation', 'winningTicket.account'])
@@ -54,6 +58,10 @@ class LotteryController extends Controller
             'remainingTicketCount' => max(
                 0,
                 LotteryRandomizer::CODE_SPACE_SIZE - $drawing->next_ticket_sequence,
+            ),
+            'remainingNationTicketCount' => max(
+                0,
+                LotteryService::MAX_TICKETS_PER_NATION - $nationTicketCount,
             ),
         ]);
     }

@@ -21,6 +21,7 @@ class LotteryTicket extends Model
     protected $fillable = [
         'lottery_drawing_id',
         'user_id',
+        'nation_id',
         'account_id',
         'code',
         'price_paid',
@@ -46,6 +47,11 @@ class LotteryTicket extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function nation(): BelongsTo
+    {
+        return $this->belongsTo(Nation::class);
     }
 
     public function account(): BelongsTo

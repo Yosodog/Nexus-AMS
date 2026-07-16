@@ -209,6 +209,83 @@ class LotteryWorkflowTest extends TestCase
             ->assertDontSee('Weekly lottery');
     }
 
+    public function test_ticket_limit_is_shared_by_every_user_and_account_for_a_nation(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$firstUser, $firstAccount] = $this->createParticipant(500000);
+        $secondUser = User::factory()->create(['nation_id' => $firstUser->nation_id]);
+        $secondAccount = new Account;
+        $secondAccount->nation_id = $firstUser->nation_id;
+        $secondAccount->name = 'Second Lottery Account';
+        $secondAccount->money = 500000;
+        $secondAccount->save();
+
+        $randomizer = new LotteryRandomizer;
+        $service = $this->lotteryService($randomizer, membershipChecks: 2, auditEvents: 1);
+        $drawing = $service->currentDrawing();
+        $this->seedLotteryTickets(
+            $drawing,
+            $firstUser,
+            $firstAccount,
+            LotteryService::MAX_TICKETS_PER_NATION - 1,
+            $randomizer,
+        );
+
+        $service->purchaseTickets($secondUser, $secondAccount, 1);
+
+        try {
+            $service->purchaseTickets($firstUser, $firstAccount, 1);
+            $this->fail('The lottery allowed a nation to exceed its drawing limit.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                ['Your nation has reached the ticket limit for this drawing.'],
+                $exception->errors()['quantity'],
+            );
+        }
+
+        $this->assertSame(
+            LotteryService::MAX_TICKETS_PER_NATION,
+            LotteryTicket::query()
+                ->where('lottery_drawing_id', $drawing->id)
+                ->where('nation_id', $firstUser->nation_id)
+                ->count(),
+        );
+        $this->assertDatabaseHas('lottery_tickets', [
+            'user_id' => $secondUser->id,
+            'nation_id' => $firstUser->nation_id,
+            'account_id' => $secondAccount->id,
+        ]);
+    }
+
+    public function test_purchase_route_is_throttled_per_nation(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(1000000);
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+
+        $client = $this->actingAs($user)->withoutMiddleware([
+            EnsureUserIsVerified::class,
+            DiscordVerifiedMiddleware::class,
+            EnsureMfaConfigured::class,
+        ]);
+
+        for ($attempt = 1; $attempt <= 10; $attempt++) {
+            $client->post(route('lottery.tickets.store'), [
+                'account_id' => $account->id,
+                'quantity' => 1,
+            ])->assertRedirect();
+        }
+
+        $client->post(route('lottery.tickets.store'), [
+            'account_id' => $account->id,
+            'quantity' => 1,
+        ])->assertTooManyRequests();
+
+        $this->assertDatabaseCount('lottery_tickets', 10);
+        $this->assertAccountMoney($account, 500000);
+    }
+
     public function test_expired_drawing_pays_the_matching_ticket_and_is_idempotent(): void
     {
         CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
@@ -403,6 +480,38 @@ class LotteryWorkflowTest extends TestCase
         }
 
         return new LotteryService($eligibilityService, $auditLogger, $randomizer);
+    }
+
+    private function seedLotteryTickets(
+        LotteryDrawing $drawing,
+        User $user,
+        Account $account,
+        int $quantity,
+        LotteryRandomizer $randomizer,
+    ): void {
+        $timestamp = now();
+
+        collect($randomizer->ticketCodesForRange($drawing->allocation_seed, 0, $quantity))
+            ->chunk(500)
+            ->each(function ($codes) use ($account, $drawing, $timestamp, $user): void {
+                LotteryTicket::query()->insert($codes->map(fn (string $code): array => [
+                    'lottery_drawing_id' => $drawing->id,
+                    'user_id' => $user->id,
+                    'nation_id' => $user->nation_id,
+                    'account_id' => $account->id,
+                    'code' => $code,
+                    'price_paid' => LotteryTicket::PRICE,
+                    'jackpot_contribution' => LotteryTicket::JACKPOT_CONTRIBUTION,
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ])->all());
+            });
+
+        $drawing->update([
+            'ticket_count' => $quantity,
+            'next_ticket_sequence' => $quantity,
+            'jackpot_amount' => LotteryTicket::JACKPOT_CONTRIBUTION * $quantity,
+        ]);
     }
 
     private function assertAccountMoney(Account $account, float $expected): void

@@ -29,6 +29,9 @@ class LotteryTicketFactory extends Factory
 
                 return User::factory()->create(['nation_id' => $nation->id])->id;
             },
+            'nation_id' => fn (array $attributes): int => User::query()
+                ->findOrFail($attributes['user_id'])
+                ->nation_id,
             'account_id' => function (array $attributes): int {
                 $user = User::query()->findOrFail($attributes['user_id']);
 

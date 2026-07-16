@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('lottery_drawing_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('nation_id')->constrained()->restrictOnDelete();
             $table->foreignId('account_id')->constrained()->restrictOnDelete();
             $table->char('code', 3);
             $table->decimal('price_paid', 15, 2);
@@ -22,6 +23,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['lottery_drawing_id', 'code']);
+            $table->index(['lottery_drawing_id', 'nation_id']);
             $table->index(['user_id', 'lottery_drawing_id']);
             $table->index(['account_id', 'lottery_drawing_id']);
         });

@@ -175,7 +175,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
     // Weekly Lottery
     Route::get('/lottery', [LotteryController::class, 'index'])->name('lottery.index');
-    Route::post('/lottery/tickets', [LotteryController::class, 'store'])->name('lottery.tickets.store');
+    Route::post('/lottery/tickets', [LotteryController::class, 'store'])
+        ->name('lottery.tickets.store')
+        ->middleware('throttle:lottery-purchases');
 
     // Direct Deposit
     Route::post('/direct-deposit/enroll', [DirectDepositController::class, 'enroll'])->name('dd.enroll')

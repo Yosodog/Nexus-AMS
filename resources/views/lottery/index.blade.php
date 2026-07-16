@@ -22,6 +22,9 @@
                         @if ($remainingTicketCount === 0)
                             <span class="badge badge-error badge-outline">Sold out</span>
                         @endif
+                        @if ($remainingNationTicketCount === 0)
+                            <span class="badge badge-warning badge-outline">Nation limit reached</span>
+                        @endif
                     </div>
                 </div>
 
@@ -62,7 +65,7 @@
                     <h2 class="text-xl font-bold">Buy tickets</h2>
                 </div>
 
-                @if ($remainingTicketCount > 0)
+                @if ($remainingTicketCount > 0 && $remainingNationTicketCount > 0)
                     <form method="POST" action="{{ route('lottery.tickets.store') }}" class="space-y-5">
                         @csrf
 
@@ -92,14 +95,15 @@
                                 name="quantity"
                                 class="input w-full"
                                 min="1"
-                                max="{{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount) }}"
+                                max="{{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount, $remainingNationTicketCount) }}"
                                 step="1"
                                 value="{{ old('quantity', 1) }}"
                                 required
                             >
                             <span class="text-xs text-base-content/60">
                                 ${{ number_format($drawing->ticket_price, 0) }} each · up to
-                                {{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount) }} per purchase
+                                {{ min(\App\Services\LotteryService::MAX_TICKETS_PER_PURCHASE, $remainingTicketCount, $remainingNationTicketCount) }} per purchase ·
+                                {{ number_format($remainingNationTicketCount) }} remaining for your nation
                             </span>
                             @error('quantity')
                                 <p class="text-xs text-error">{{ $message }}</p>
@@ -116,10 +120,15 @@
                             </p>
                         @endif
                     </form>
-                @else
+                @elseif ($remainingTicketCount === 0)
                     <div class="rounded-xl border border-error/30 bg-error/10 p-5 text-sm text-base-content/80">
                         <p class="font-semibold text-error">This week's drawing is sold out.</p>
                         <p class="mt-1">All {{ number_format(\App\Services\LotteryRandomizer::CODE_SPACE_SIZE) }} unique codes have been assigned.</p>
+                    </div>
+                @else
+                    <div class="rounded-xl border border-warning/30 bg-warning/10 p-5 text-sm text-base-content/80">
+                        <p class="font-semibold text-warning">Your nation has reached this drawing's ticket limit.</p>
+                        <p class="mt-1">Your existing tickets remain eligible for the draw.</p>
                     </div>
                 @endif
             </section>

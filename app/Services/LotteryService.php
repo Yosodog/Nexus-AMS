@@ -17,6 +17,8 @@ class LotteryService
 {
     public const MAX_TICKETS_PER_PURCHASE = 100;
 
+    public const MAX_TICKETS_PER_NATION = 10000;
+
     public function __construct(
         private readonly AllianceMemberEligibilityService $eligibilityService,
         private readonly AuditLogger $auditLogger,
@@ -85,6 +87,20 @@ class LotteryService
                 throw new UserErrorException('This lottery drawing is closed. Please refresh for the new drawing.');
             }
 
+            $nationTicketCount = LotteryTicket::query()
+                ->where('lottery_drawing_id', $lockedDrawing->id)
+                ->where('nation_id', $user->nation_id)
+                ->count();
+            $remainingNationTickets = max(0, self::MAX_TICKETS_PER_NATION - $nationTicketCount);
+
+            if ($quantity > $remainingNationTickets) {
+                throw ValidationException::withMessages([
+                    'quantity' => $remainingNationTickets === 0
+                        ? 'Your nation has reached the ticket limit for this drawing.'
+                        : 'Your nation may purchase only '.number_format($remainingNationTickets).' more tickets in this drawing.',
+                ]);
+            }
+
             $remainingTickets = LotteryRandomizer::CODE_SPACE_SIZE - $lockedDrawing->next_ticket_sequence;
 
             if ($quantity > $remainingTickets) {
@@ -123,6 +139,7 @@ class LotteryService
                 ->map(fn (string $code): array => [
                     'lottery_drawing_id' => $lockedDrawing->id,
                     'user_id' => $user->id,
+                    'nation_id' => $user->nation_id,
                     'account_id' => $lockedAccount->id,
                     'code' => $code,
                     'price_paid' => LotteryTicket::PRICE,
@@ -153,6 +170,7 @@ class LotteryService
                 $ipAddress,
                 [
                     'lottery_drawing_id' => $lockedDrawing->id,
+                    'nation_id' => $user->nation_id,
                     'lottery_ticket_ids' => $tickets->modelKeys(),
                     'ticket_quantity' => $quantity,
                     'jackpot_contribution' => $jackpotContribution,
@@ -171,6 +189,7 @@ class LotteryService
                 subject: $lockedDrawing,
                 context: [
                     'account_id' => $lockedAccount->id,
+                    'nation_id' => $user->nation_id,
                     'ticket_ids' => $tickets->modelKeys(),
                     'quantity' => $quantity,
                     'total_cost' => $totalCost,
