@@ -64,9 +64,9 @@ Schedule::command('payroll:run-daily')
 
 // Weekly lottery
 Schedule::command(DrawWeeklyLottery::class)
-    ->weeklyOn(0, '00:00')
+    ->everyFiveMinutes()
     ->timezone('UTC')
-    ->withoutOverlapping(120)
+    ->withoutOverlapping(10)
     ->onOneServer();
 
 // Growth Circles
