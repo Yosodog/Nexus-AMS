@@ -284,19 +284,21 @@ class LotteryService
                 throw new UserErrorException('This lottery drawing has not closed yet.');
             }
 
-            $tickets = LotteryTicket::query()
+            $ticketAggregate = LotteryTicket::query()
                 ->where('lottery_drawing_id', $lockedDrawing->id)
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
+                ->selectRaw('COUNT(*) as ticket_count, COALESCE(SUM(jackpot_contribution), 0) as jackpot_contribution')
+                ->firstOrFail();
 
-            $lockedDrawing->ticket_count = $tickets->count();
+            $lockedDrawing->ticket_count = (int) $ticketAggregate->ticket_count;
             $lockedDrawing->jackpot_amount = (float) $lockedDrawing->rollover_amount
-                + (float) $tickets->sum('jackpot_contribution');
+                + (float) $ticketAggregate->jackpot_contribution;
             $lockedDrawing->status = LotteryDrawing::STATUS_DRAWN;
             $lockedDrawing->drawn_at = $drawnAt;
             $lockedDrawing->winning_code = $this->randomizer->ticketCode();
-            $winner = $tickets->firstWhere('code', $lockedDrawing->winning_code);
+            $winner = LotteryTicket::query()
+                ->where('lottery_drawing_id', $lockedDrawing->id)
+                ->where('code', $lockedDrawing->winning_code)
+                ->first();
             $rolloverDrawingId = null;
 
             if ($winner) {
