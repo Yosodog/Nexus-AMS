@@ -8,6 +8,7 @@ use App\Models\LotteryTicket;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\LotteryRandomizer;
+use App\Services\LotteryService;
 use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -35,12 +36,13 @@ class LotteryTicketFactory extends Factory
                 ->nation_id,
             'account_id' => function (array $attributes): int {
                 $user = User::query()->findOrFail($attributes['user_id']);
+                $account = new Account;
+                $account->nation_id = $user->nation_id;
+                $account->name = 'Lottery Account';
+                $account->money = 100000;
+                $account->save();
 
-                return Account::query()->create([
-                    'nation_id' => $user->nation_id,
-                    'name' => 'Lottery Account',
-                    'money' => 100000,
-                ])->id;
+                return $account->id;
             },
             'code' => function (): string {
                 $value = fake()->unique()->numberBetween(0, LotteryRandomizer::CODE_SPACE_SIZE - 1);
@@ -53,7 +55,10 @@ class LotteryTicketFactory extends Factory
                 ));
             },
             'price_paid' => SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS / 100,
-            'jackpot_contribution' => 45000,
+            'jackpot_contribution' => LotteryService::jackpotContributionCents(
+                SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS,
+                SettingService::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS,
+            ) / 100,
         ];
     }
 }
