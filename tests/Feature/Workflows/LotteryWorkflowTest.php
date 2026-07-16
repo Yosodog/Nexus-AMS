@@ -21,6 +21,7 @@ use App\Services\LotteryService;
 use App\Services\SettingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -48,7 +49,7 @@ class LotteryWorkflowTest extends TestCase
         $randomizer = new LotteryRandomizer;
         $service = $this->lotteryService($randomizer, membershipChecks: 1, auditEvents: 1);
 
-        $tickets = $service->purchaseTickets($user, $account, 2, '127.0.0.1');
+        $tickets = $this->purchaseTickets($service, $user, $account, 2, '127.0.0.1');
 
         $drawing = LotteryDrawing::query()->sole();
         $this->assertSame(SettingService::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS, $drawing->jackpot_basis_points);
@@ -80,8 +81,8 @@ class LotteryWorkflowTest extends TestCase
         $randomizer = new LotteryRandomizer;
         $service = $this->lotteryService($randomizer, membershipChecks: 2, auditEvents: 2);
 
-        $firstTickets = $service->purchaseTickets($user, $account, 2);
-        $secondTickets = $service->purchaseTickets($user, $account, 2);
+        $firstTickets = $this->purchaseTickets($service, $user, $account, 2);
+        $secondTickets = $this->purchaseTickets($service, $user, $account, 2);
         $drawing = LotteryDrawing::query()->sole();
         $expectedCodes = $randomizer->ticketCodesForRange($drawing->allocation_seed, 0, 4);
 
@@ -99,7 +100,7 @@ class LotteryWorkflowTest extends TestCase
         $service = $this->lotteryService(new LotteryRandomizer, membershipChecks: 1, auditEvents: 0);
 
         try {
-            $service->purchaseTickets($user, $account, 1);
+            $this->purchaseTickets($service, $user, $account, 1);
             $this->fail('The lottery accepted a purchase without sufficient funds.');
         } catch (ValidationException $exception) {
             $this->assertSame(
@@ -120,7 +121,7 @@ class LotteryWorkflowTest extends TestCase
         $service = $this->lotteryService(new LotteryRandomizer, membershipChecks: 1, auditEvents: 0);
 
         try {
-            $service->purchaseTickets($user, $account, 1);
+            $this->purchaseTickets($service, $user, $account, 1);
             $this->fail('The lottery accepted a purchase from a frozen account.');
         } catch (UserErrorException $exception) {
             $this->assertSame('Frozen accounts cannot be used to buy lottery tickets.', $exception->getMessage());
@@ -136,6 +137,7 @@ class LotteryWorkflowTest extends TestCase
         [, $otherAccount] = $this->createParticipant(500000);
         config()->set('services.pw.alliance_id', 777);
         app(AllianceMembershipService::class)->clear();
+        $drawing = app(LotteryService::class)->currentDrawing();
 
         $response = $this->actingAs($user)
             ->withoutMiddleware([
@@ -144,6 +146,7 @@ class LotteryWorkflowTest extends TestCase
                 EnsureMfaConfigured::class,
             ])
             ->post(route('lottery.tickets.store'), [
+                'drawing_id' => $drawing->id,
                 'account_id' => $otherAccount->id,
                 'quantity' => 1,
             ]);
@@ -192,12 +195,12 @@ class LotteryWorkflowTest extends TestCase
             ->with($user)
             ->andThrow(new AuthorizationException('Members only.'));
         $auditLogger = Mockery::mock(AuditLogger::class);
-        $auditLogger->shouldNotReceive('recordAfterCommit');
+        $auditLogger->shouldNotReceive('record');
         $service = new LotteryService($eligibilityService, $auditLogger, new LotteryRandomizer);
 
         $this->expectException(AuthorizationException::class);
 
-        $service->purchaseTickets($user, $account, 1);
+        $this->purchaseTickets($service, $user, $account, 1);
     }
 
     public function test_applicant_navigation_does_not_show_the_lottery_link(): void
@@ -233,10 +236,10 @@ class LotteryWorkflowTest extends TestCase
             $randomizer,
         );
 
-        $service->purchaseTickets($secondUser, $secondAccount, 1);
+        $this->purchaseTickets($service, $secondUser, $secondAccount, 1);
 
         try {
-            $service->purchaseTickets($firstUser, $firstAccount, 1);
+            $this->purchaseTickets($service, $firstUser, $firstAccount, 1);
             $this->fail('The lottery allowed a nation to exceed its drawing limit.');
         } catch (ValidationException $exception) {
             $this->assertSame(
@@ -275,16 +278,47 @@ class LotteryWorkflowTest extends TestCase
         for ($attempt = 1; $attempt <= 10; $attempt++) {
             $client->post(route('lottery.tickets.store'), [
                 'account_id' => $account->id,
+                'drawing_id' => app(LotteryService::class)->currentDrawing()->id,
                 'quantity' => 1,
             ])->assertRedirect();
         }
 
         $client->post(route('lottery.tickets.store'), [
             'account_id' => $account->id,
+            'drawing_id' => app(LotteryService::class)->currentDrawing()->id,
             'quantity' => 1,
         ])->assertTooManyRequests();
 
         $this->assertDatabaseCount('lottery_tickets', 10);
+        $this->assertAccountMoney($account, 500000);
+    }
+
+    public function test_stale_form_cannot_purchase_from_a_new_drawing(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-11 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        config()->set('services.pw.alliance_id', 777);
+        app(AllianceMembershipService::class)->clear();
+        $displayedDrawing = app(LotteryService::class)->currentDrawing();
+
+        CarbonImmutable::setTestNow('2026-07-12 00:01:00 UTC');
+
+        $this->actingAs($user)
+            ->withoutMiddleware([
+                EnsureUserIsVerified::class,
+                DiscordVerifiedMiddleware::class,
+                EnsureMfaConfigured::class,
+            ])
+            ->post(route('lottery.tickets.store'), [
+                'drawing_id' => $displayedDrawing->id,
+                'account_id' => $account->id,
+                'quantity' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors();
+
+        $this->assertDatabaseCount('lottery_drawings', 1);
+        $this->assertDatabaseCount('lottery_tickets', 0);
         $this->assertAccountMoney($account, 500000);
     }
 
@@ -299,7 +333,7 @@ class LotteryWorkflowTest extends TestCase
         $service = new LotteryService($eligibilityService, $auditLogger, new LotteryRandomizer);
 
         try {
-            $service->purchaseTickets($user, $account, 1);
+            $this->purchaseTickets($service, $user, $account, 1);
             $this->fail('The purchase completed without its audit record.');
         } catch (RuntimeException $exception) {
             $this->assertSame('Audit unavailable.', $exception->getMessage());
@@ -361,8 +395,8 @@ class LotteryWorkflowTest extends TestCase
         $randomizer = Mockery::mock(LotteryRandomizer::class)->makePartial();
         $service = $this->lotteryService($randomizer, membershipChecks: 2, auditEvents: 3);
 
-        $service->purchaseTickets($firstUser, $firstAccount, 1);
-        $winningTicket = $service->purchaseTickets($secondUser, $secondAccount, 2)->last();
+        $this->purchaseTickets($service, $firstUser, $firstAccount, 1);
+        $winningTicket = $this->purchaseTickets($service, $secondUser, $secondAccount, 2)->last();
         $randomizer->shouldReceive('ticketCode')->once()->andReturn($winningTicket->code);
 
         CarbonImmutable::setTestNow('2026-07-12 00:00:00 UTC');
@@ -388,7 +422,7 @@ class LotteryWorkflowTest extends TestCase
         [$user, $account] = $this->createParticipant(500000);
         $randomizer = Mockery::mock(LotteryRandomizer::class)->makePartial();
         $service = $this->lotteryService($randomizer, membershipChecks: 2, auditEvents: 3);
-        $purchasedTickets = $service->purchaseTickets($user, $account, 2);
+        $purchasedTickets = $this->purchaseTickets($service, $user, $account, 2);
         $unmatchedCode = collect(['000', '001', '002'])
             ->first(fn (string $code): bool => ! $purchasedTickets->contains('code', $code));
         $randomizer->shouldReceive('ticketCode')->once()->andReturn($unmatchedCode);
@@ -408,7 +442,7 @@ class LotteryWorkflowTest extends TestCase
         $this->assertAccountMoney($account, 400000);
         $this->assertDatabaseCount('manual_transactions', 1);
 
-        $nextTicket = $service->purchaseTickets($user, $account, 1)->sole();
+        $nextTicket = $this->purchaseTickets($service, $user, $account, 1)->sole();
 
         $this->assertSame(
             $randomizer->ticketCodeForSequence($nextDrawing->allocation_seed, 0),
@@ -459,7 +493,7 @@ class LotteryWorkflowTest extends TestCase
         );
         $service = $this->lotteryService($randomizer, membershipChecks: 2, auditEvents: 1);
 
-        $ticket = $service->purchaseTickets($user, $account, 1)->sole();
+        $ticket = $this->purchaseTickets($service, $user, $account, 1)->sole();
 
         $this->assertSame($expectedFinalCode, $ticket->code);
         $this->assertSame(LotteryRandomizer::CODE_SPACE_SIZE, $drawing->refresh()->ticket_count);
@@ -467,7 +501,7 @@ class LotteryWorkflowTest extends TestCase
         $this->assertAccountMoney($account, 50000);
 
         try {
-            $service->purchaseTickets($user, $account, 1);
+            $this->purchaseTickets($service, $user, $account, 1);
             $this->fail('The lottery sold a ticket after exhausting the code space.');
         } catch (ValidationException $exception) {
             $this->assertSame(['This lottery drawing is sold out.'], $exception->errors()['quantity']);
@@ -483,7 +517,7 @@ class LotteryWorkflowTest extends TestCase
         CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
         [$user, $account] = $this->createParticipant(50000);
         $service = $this->lotteryService(new LotteryRandomizer, membershipChecks: 1, auditEvents: 1);
-        $service->purchaseTickets($user, $account, 1);
+        $this->purchaseTickets($service, $user, $account, 1);
 
         try {
             AccountService::deleteAccount($account, $user->nation_id);
@@ -547,6 +581,24 @@ class LotteryWorkflowTest extends TestCase
         }
 
         return new LotteryService($eligibilityService, $auditLogger, $randomizer);
+    }
+
+    /** @return EloquentCollection<int, LotteryTicket> */
+    private function purchaseTickets(
+        LotteryService $service,
+        User $user,
+        Account $account,
+        int $quantity,
+        ?string $ipAddress = null,
+        ?LotteryDrawing $drawing = null,
+    ): EloquentCollection {
+        return $service->purchaseTickets(
+            $user,
+            $account,
+            $drawing ?? $service->currentDrawing(),
+            $quantity,
+            $ipAddress,
+        );
     }
 
     private function seedLotteryTickets(

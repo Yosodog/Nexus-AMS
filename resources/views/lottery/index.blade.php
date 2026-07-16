@@ -76,6 +76,7 @@
                 @elseif ($remainingTicketCount > 0 && $remainingNationTicketCount > 0)
                     <form method="POST" action="{{ route('lottery.tickets.store') }}" class="space-y-5">
                         @csrf
+                        <input type="hidden" name="drawing_id" value="{{ $drawing->id }}">
 
                         <label class="grid gap-2">
                             <span class="text-sm font-medium">Pay from account</span>

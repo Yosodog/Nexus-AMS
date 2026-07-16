@@ -66,6 +66,7 @@ class LotteryService
     public function purchaseTickets(
         User $user,
         Account $account,
+        LotteryDrawing $drawing,
         int $quantity,
         ?string $ipAddress = null,
     ): EloquentCollection {
@@ -82,8 +83,6 @@ class LotteryService
                 'account_id' => 'You do not own this account.',
             ]);
         }
-
-        $drawing = $this->currentDrawing();
 
         return DB::transaction(function () use ($user, $account, $quantity, $ipAddress, $drawing): EloquentCollection {
             $lockedDrawing = LotteryDrawing::query()->lockForUpdate()->findOrFail($drawing->id);

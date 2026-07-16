@@ -72,9 +72,11 @@ class LotteryController extends Controller
     ): RedirectResponse {
         try {
             $account = Account::query()->findOrFail($request->integer('account_id'));
+            $drawing = LotteryDrawing::query()->findOrFail($request->integer('drawing_id'));
             $tickets = $lotteryService->purchaseTickets(
                 $request->user(),
                 $account,
+                $drawing,
                 $request->integer('quantity'),
                 $request->ip(),
             );
