@@ -68,6 +68,11 @@ class LotteryDrawing extends Model
         return $this->hasMany(LotteryTicket::class);
     }
 
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(LotteryPurchase::class);
+    }
+
     public function winningTicket(): BelongsTo
     {
         return $this->belongsTo(LotteryTicket::class, 'winning_ticket_id');

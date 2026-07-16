@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureUserIsVerified;
 use App\Livewire\AppHeader;
 use App\Models\Account;
 use App\Models\LotteryDrawing;
+use App\Models\LotteryPurchase;
 use App\Models\LotteryTicket;
 use App\Models\Nation;
 use App\Models\User;
@@ -23,6 +24,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Mockery;
@@ -146,6 +148,7 @@ class LotteryWorkflowTest extends TestCase
                 EnsureMfaConfigured::class,
             ])
             ->post(route('lottery.tickets.store'), [
+                'idempotency_key' => (string) Str::uuid(),
                 'drawing_id' => $drawing->id,
                 'account_id' => $otherAccount->id,
                 'quantity' => 1,
@@ -277,6 +280,7 @@ class LotteryWorkflowTest extends TestCase
 
         for ($attempt = 1; $attempt <= 10; $attempt++) {
             $client->post(route('lottery.tickets.store'), [
+                'idempotency_key' => (string) Str::uuid(),
                 'account_id' => $account->id,
                 'drawing_id' => app(LotteryService::class)->currentDrawing()->id,
                 'quantity' => 1,
@@ -284,6 +288,7 @@ class LotteryWorkflowTest extends TestCase
         }
 
         $client->post(route('lottery.tickets.store'), [
+            'idempotency_key' => (string) Str::uuid(),
             'account_id' => $account->id,
             'drawing_id' => app(LotteryService::class)->currentDrawing()->id,
             'quantity' => 1,
@@ -310,6 +315,7 @@ class LotteryWorkflowTest extends TestCase
                 EnsureMfaConfigured::class,
             ])
             ->post(route('lottery.tickets.store'), [
+                'idempotency_key' => (string) Str::uuid(),
                 'drawing_id' => $displayedDrawing->id,
                 'account_id' => $account->id,
                 'quantity' => 1,
@@ -320,6 +326,82 @@ class LotteryWorkflowTest extends TestCase
         $this->assertDatabaseCount('lottery_drawings', 1);
         $this->assertDatabaseCount('lottery_tickets', 0);
         $this->assertAccountMoney($account, 500000);
+    }
+
+    public function test_identical_purchase_retry_returns_original_tickets_without_a_second_charge(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        $service = $this->lotteryService(new LotteryRandomizer, membershipChecks: 2, auditEvents: 1);
+        $drawing = $service->currentDrawing();
+        $idempotencyKey = (string) Str::uuid();
+
+        $first = $this->purchaseTickets(
+            $service,
+            $user,
+            $account,
+            2,
+            drawing: $drawing,
+            idempotencyKey: $idempotencyKey,
+        );
+        $retry = $this->purchaseTickets(
+            $service,
+            $user,
+            $account,
+            2,
+            drawing: $drawing,
+            idempotencyKey: $idempotencyKey,
+        );
+
+        $this->assertSame($first->modelKeys(), $retry->modelKeys());
+        $this->assertSame($first->pluck('code')->all(), $retry->pluck('code')->all());
+        $this->assertSame($idempotencyKey, LotteryPurchase::query()->sole()->idempotency_key);
+        $this->assertNotNull(LotteryPurchase::query()->sole()->manual_transaction_id);
+        $this->assertAccountMoney($account, 400000);
+        $this->assertDatabaseCount('lottery_purchases', 1);
+        $this->assertDatabaseCount('lottery_tickets', 2);
+        $this->assertDatabaseCount('manual_transactions', 1);
+        $this->assertSame(2, $drawing->refresh()->ticket_count);
+    }
+
+    public function test_idempotency_key_cannot_be_reused_for_different_purchase_details(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        $service = $this->lotteryService(new LotteryRandomizer, membershipChecks: 2, auditEvents: 1);
+        $drawing = $service->currentDrawing();
+        $idempotencyKey = (string) Str::uuid();
+
+        $this->purchaseTickets(
+            $service,
+            $user,
+            $account,
+            1,
+            drawing: $drawing,
+            idempotencyKey: $idempotencyKey,
+        );
+
+        try {
+            $this->purchaseTickets(
+                $service,
+                $user,
+                $account,
+                2,
+                drawing: $drawing,
+                idempotencyKey: $idempotencyKey,
+            );
+            $this->fail('The lottery reused an idempotency key with different details.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                ['This purchase request identifier was already used for different lottery details.'],
+                $exception->errors()['idempotency_key'],
+            );
+        }
+
+        $this->assertAccountMoney($account, 450000);
+        $this->assertDatabaseCount('lottery_purchases', 1);
+        $this->assertDatabaseCount('lottery_tickets', 1);
+        $this->assertDatabaseCount('manual_transactions', 1);
     }
 
     public function test_purchase_rolls_back_when_the_audit_write_fails(): void
@@ -340,6 +422,7 @@ class LotteryWorkflowTest extends TestCase
         }
 
         $this->assertAccountMoney($account, 500000);
+        $this->assertDatabaseCount('lottery_purchases', 0);
         $this->assertDatabaseCount('lottery_tickets', 0);
         $this->assertDatabaseCount('manual_transactions', 0);
         $this->assertSame(0, LotteryDrawing::query()->sole()->ticket_count);
@@ -591,12 +674,14 @@ class LotteryWorkflowTest extends TestCase
         int $quantity,
         ?string $ipAddress = null,
         ?LotteryDrawing $drawing = null,
+        ?string $idempotencyKey = null,
     ): EloquentCollection {
         return $service->purchaseTickets(
             $user,
             $account,
             $drawing ?? $service->currentDrawing(),
             $quantity,
+            $idempotencyKey ?? (string) Str::uuid(),
             $ipAddress,
         );
     }

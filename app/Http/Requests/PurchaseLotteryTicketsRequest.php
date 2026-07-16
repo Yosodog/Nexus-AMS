@@ -36,6 +36,7 @@ class PurchaseLotteryTicketsRequest extends FormRequest
         }
 
         return [
+            'idempotency_key' => ['required', 'uuid'],
             'drawing_id' => ['required', 'integer', Rule::exists('lottery_drawings', 'id')],
             'account_id' => ['required', 'integer', $accountRule],
             'quantity' => ['required', 'integer', 'min:1', 'max:'.SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE],
@@ -48,6 +49,7 @@ class PurchaseLotteryTicketsRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'idempotency_key.uuid' => 'The purchase request expired. Refresh the page and try again.',
             'drawing_id.exists' => 'This lottery drawing is no longer available. Refresh the page and try again.',
             'account_id.exists' => 'Select one of your active accounts.',
             'quantity.min' => 'Purchase at least one ticket.',
