@@ -26,6 +26,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
+use RuntimeException;
 use Tests\TestCase;
 
 class LotteryWorkflowTest extends TestCase
@@ -287,6 +288,71 @@ class LotteryWorkflowTest extends TestCase
         $this->assertAccountMoney($account, 500000);
     }
 
+    public function test_purchase_rolls_back_when_the_audit_write_fails(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
+        [$user, $account] = $this->createParticipant(500000);
+        $eligibilityService = Mockery::mock(AllianceMemberEligibilityService::class);
+        $eligibilityService->shouldReceive('nationFor')->once()->with($user)->andReturn($user->nation);
+        $auditLogger = Mockery::mock(AuditLogger::class);
+        $auditLogger->shouldReceive('record')->once()->andThrow(new RuntimeException('Audit unavailable.'));
+        $service = new LotteryService($eligibilityService, $auditLogger, new LotteryRandomizer);
+
+        try {
+            $service->purchaseTickets($user, $account, 1);
+            $this->fail('The purchase completed without its audit record.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Audit unavailable.', $exception->getMessage());
+        }
+
+        $this->assertAccountMoney($account, 500000);
+        $this->assertDatabaseCount('lottery_tickets', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+        $this->assertSame(0, LotteryDrawing::query()->sole()->ticket_count);
+    }
+
+    public function test_draw_rolls_back_when_the_audit_write_fails(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-12 00:00:00 UTC');
+        [$user, $account] = $this->createParticipant(0);
+        $drawing = LotteryDrawing::factory()->create([
+            'starts_at' => CarbonImmutable::parse('2026-07-05 00:00:00 UTC'),
+            'ends_at' => CarbonImmutable::now(),
+            'ticket_count' => 1,
+            'next_ticket_sequence' => 1,
+            'jackpot_amount' => 45000,
+        ]);
+        $winningCode = (new LotteryRandomizer)->ticketCodeForSequence($drawing->allocation_seed, 0);
+        LotteryTicket::factory()->create([
+            'lottery_drawing_id' => $drawing->id,
+            'user_id' => $user->id,
+            'nation_id' => $user->nation_id,
+            'account_id' => $account->id,
+            'code' => $winningCode,
+        ]);
+        $randomizer = Mockery::mock(LotteryRandomizer::class)->makePartial();
+        $randomizer->shouldReceive('ticketCode')->once()->andReturn($winningCode);
+        $eligibilityService = Mockery::mock(AllianceMemberEligibilityService::class);
+        $eligibilityService->shouldNotReceive('nationFor');
+        $auditLogger = Mockery::mock(AuditLogger::class);
+        $auditLogger->shouldReceive('record')->once()->andThrow(new RuntimeException('Audit unavailable.'));
+        $service = new LotteryService($eligibilityService, $auditLogger, $randomizer);
+
+        try {
+            $service->draw($drawing, CarbonImmutable::now());
+            $this->fail('The drawing completed without its audit record.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Audit unavailable.', $exception->getMessage());
+        }
+
+        $drawing->refresh();
+        $this->assertSame(LotteryDrawing::STATUS_OPEN, $drawing->status);
+        $this->assertNull($drawing->winning_code);
+        $this->assertNull($drawing->winning_ticket_id);
+        $this->assertAccountMoney($account, 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
     public function test_expired_drawing_pays_the_matching_ticket_and_is_idempotent(): void
     {
         CarbonImmutable::setTestNow('2026-07-06 12:00:00 UTC');
@@ -472,7 +538,7 @@ class LotteryWorkflowTest extends TestCase
         }
 
         $auditLogger = Mockery::mock(AuditLogger::class);
-        $auditExpectation = $auditLogger->shouldReceive('recordAfterCommit');
+        $auditExpectation = $auditLogger->shouldReceive('record');
 
         if ($auditEvents > 0) {
             $auditExpectation->times($auditEvents);

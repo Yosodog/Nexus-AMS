@@ -78,7 +78,7 @@ class LotteryDrawingCapacityTest extends TestCase
         $eligibilityService = Mockery::mock(AllianceMemberEligibilityService::class);
         $eligibilityService->shouldNotReceive('nationFor');
         $auditLogger = Mockery::mock(AuditLogger::class);
-        $auditLogger->shouldReceive('recordAfterCommit')->once();
+        $auditLogger->shouldReceive('record')->once();
         $service = new LotteryService($eligibilityService, $auditLogger, $randomizer);
 
         $completed = $service->draw($drawing, CarbonImmutable::now());

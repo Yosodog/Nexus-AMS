@@ -203,7 +203,7 @@ class LotteryService
             $lockedDrawing->jackpot_amount = (float) $lockedDrawing->jackpot_amount + $jackpotContribution;
             $lockedDrawing->save();
 
-            $this->auditLogger->recordAfterCommit(
+            $this->auditLogger->record(
                 category: 'lottery',
                 action: 'tickets_purchased',
                 subject: $lockedDrawing,
@@ -338,7 +338,7 @@ class LotteryService
 
             $lockedDrawing->save();
 
-            $this->auditLogger->recordAfterCommit(
+            $this->auditLogger->record(
                 category: 'lottery',
                 action: 'drawing_completed',
                 subject: $lockedDrawing,
