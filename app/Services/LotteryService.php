@@ -114,7 +114,7 @@ class LotteryService
                     return $this->resolveExistingPurchase($existingPurchase, $user, $account, $lockedDrawing, $quantity);
                 }
 
-                if ($lockedDrawing->status !== LotteryDrawing::STATUS_OPEN || $lockedDrawing->ends_at->isPast()) {
+                if ($lockedDrawing->status !== LotteryDrawing::STATUS_OPEN || ! $lockedDrawing->ends_at->isFuture()) {
                     throw new UserErrorException('This lottery drawing is closed. Please refresh for the new drawing.');
                 }
 
