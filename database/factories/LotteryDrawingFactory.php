@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\LotteryDrawing;
+use App\Services\LotteryRandomizer;
 use App\Services\SettingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -45,6 +46,7 @@ class LotteryDrawingFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => LotteryDrawing::STATUS_DRAWN,
+            'winning_code' => app(LotteryRandomizer::class)->ticketCode(),
             'drawn_at' => $attributes['ends_at'],
         ]);
     }

@@ -7,9 +7,9 @@ use App\Models\LotteryDrawing;
 use App\Models\LotteryTicket;
 use App\Models\Nation;
 use App\Models\User;
+use App\Services\LotteryRandomizer;
 use App\Services\SettingService;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<LotteryTicket>
@@ -42,7 +42,16 @@ class LotteryTicketFactory extends Factory
                     'money' => 100000,
                 ])->id;
             },
-            'code' => fn (): string => Str::upper(Str::random(3)),
+            'code' => function (): string {
+                $value = fake()->unique()->numberBetween(0, LotteryRandomizer::CODE_SPACE_SIZE - 1);
+
+                return strtoupper(str_pad(
+                    base_convert((string) $value, 10, 36),
+                    LotteryRandomizer::CODE_LENGTH,
+                    '0',
+                    STR_PAD_LEFT,
+                ));
+            },
             'price_paid' => SettingService::DEFAULT_LOTTERY_TICKET_PRICE_CENTS / 100,
             'jackpot_contribution' => 45000,
         ];
