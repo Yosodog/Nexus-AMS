@@ -135,6 +135,7 @@ class RaidFinderService
             ->addNestedField('data', function (GraphQLQueryBuilder $b) {
                 $b->addFields([
                     'id',
+                    'nation_name',
                     'leader_name',
                     'alliance_id',
                     'alliance_position',
@@ -143,6 +144,13 @@ class RaidFinderService
                     'score',
                     'num_cities',
                     'war_policy',
+                    'soldiers',
+                    'tanks',
+                    'aircraft',
+                    'ships',
+                    'spies',
+                    'missiles',
+                    'nukes',
                 ])
                     ->addNestedField('alliance', fn ($b) => $b->addFields(SelectionSetHelper::allianceSet())
                     )

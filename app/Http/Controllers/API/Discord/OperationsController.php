@@ -48,13 +48,27 @@ class OperationsController extends Controller
             'nation_id' => (int) data_get($target, 'nation.id'),
             'nation_name' => (string) data_get($target, 'nation.nation_name', ''),
             'leader_name' => (string) data_get($target, 'nation.leader_name', ''),
+            'alliance_id' => data_get($target, 'nation.alliance_id'),
             'alliance_name' => data_get($target, 'nation.alliance.name'),
             'cities' => (int) data_get($target, 'nation.num_cities', 0),
             'score' => (float) data_get($target, 'nation.score', 0),
             'last_active' => data_get($target, 'nation.last_active'),
             'estimated_value' => (int) data_get($target, 'value', 0),
+            'last_beige_value' => (int) data_get($target, 'last_beige', 0),
             'defensive_wars' => (int) data_get($target, 'defensive_wars', 0),
+            'military' => [
+                'soldiers' => (int) data_get($target, 'nation.soldiers', 0),
+                'tanks' => (int) data_get($target, 'nation.tanks', 0),
+                'aircraft' => (int) data_get($target, 'nation.aircraft', 0),
+                'ships' => (int) data_get($target, 'nation.ships', 0),
+                'spies' => (int) data_get($target, 'nation.spies', 0),
+                'missiles' => (int) data_get($target, 'nation.missiles', 0),
+                'nukes' => (int) data_get($target, 'nation.nukes', 0),
+            ],
             'nation_url' => 'https://politicsandwar.com/nation/id='.data_get($target, 'nation.id'),
+            'alliance_url' => data_get($target, 'nation.alliance_id')
+                ? 'https://politicsandwar.com/alliance/id='.data_get($target, 'nation.alliance_id')
+                : null,
         ])->values()->all());
     }
 
