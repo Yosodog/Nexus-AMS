@@ -103,7 +103,8 @@ Schedule::command('discord:sync-city-tiers')
 
 // Backups
 Schedule::command('backup:run')
-    ->everySixHours()
+    ->cron('30 1,7,13,19 * * *')
+    ->timezone('UTC')
     ->runInBackground()
     ->withoutOverlapping(360)
     ->when(fn () => SettingService::isBackupsEnabled());

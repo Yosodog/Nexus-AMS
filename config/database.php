@@ -63,6 +63,10 @@ return [
             'strict' => true,
             'timezone' => env('DB_TIMEZONE', '+00:00'),
             'engine' => null,
+            'dump' => [
+                'useSingleTransaction' => true,
+                'skipLockTables' => true,
+            ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 $mysqlSslCaOption => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
