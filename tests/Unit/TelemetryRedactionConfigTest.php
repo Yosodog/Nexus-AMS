@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Laravel\Pulse\Recorders\SlowOutgoingRequests;
 use Tests\TestCase;
 
@@ -34,5 +36,23 @@ class TelemetryRedactionConfigTest extends TestCase
         $this->assertSame('2', $pulseDatabase);
         $this->assertNotSame((string) config('database.redis.default.database'), $pulseDatabase);
         $this->assertNotSame((string) config('database.redis.cache.database'), $pulseDatabase);
+    }
+
+    public function test_cache_allows_only_classes_required_by_the_pulse_dashboard(): void
+    {
+        $allowedClasses = config('cache.serializable_classes');
+
+        $this->assertSame([
+            CarbonImmutable::class,
+            Collection::class,
+            \stdClass::class,
+        ], $allowedClasses);
+
+        $payload = collect([(object) ['latest' => CarbonImmutable::now()]]);
+        $restored = unserialize(serialize($payload), ['allowed_classes' => $allowedClasses]);
+
+        $this->assertInstanceOf(Collection::class, $restored);
+        $this->assertInstanceOf(\stdClass::class, $restored->first());
+        $this->assertInstanceOf(CarbonImmutable::class, $restored->first()->latest);
     }
 }
