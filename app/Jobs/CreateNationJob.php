@@ -5,12 +5,12 @@ namespace App\Jobs;
 use App\Models\Nation;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
-use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CreateNationJob implements ShouldQueue
 {
@@ -57,8 +57,14 @@ class CreateNationJob implements ShouldQueue
                 $this->release(10);
 
                 return;
-            } catch (Exception $e) {
-                Log::error('Failed to create nations', ['error' => $e->getMessage()]);
+            } catch (Throwable $e) {
+                Log::error('Failed to create nation from subscription.', [
+                    'nation_id' => (int) $nationId,
+                    'exception_class' => $e::class,
+                    'error' => $e->getMessage(),
+                ]);
+
+                throw $e;
             }
         }
     }

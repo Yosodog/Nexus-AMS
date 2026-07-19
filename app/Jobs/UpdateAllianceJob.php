@@ -4,11 +4,11 @@ namespace App\Jobs;
 
 use App\Models\Alliance;
 use App\Services\AllianceQueryService;
-use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class UpdateAllianceJob implements ShouldQueue
 {
@@ -50,27 +50,32 @@ class UpdateAllianceJob implements ShouldQueue
     {
         try {
             foreach ($this->alliancesData as $allianceData) {
-                // Get the model from the DB
-                $allianceModel = Alliance::getById($allianceData['id']);
+                try {
+                    $allianceModel = Alliance::getById($allianceData['id']);
+                } catch (ModelNotFoundException) {
+                    $alliance = AllianceQueryService::getAllianceById($allianceData['id']);
+                    Alliance::updateFromAPI($alliance);
+
+                    continue;
+                }
 
                 foreach ($allianceData as $key => $data) {
-                    if (in_array($key, $this->skips)) { // Skip stuff that we don't store
-                        continue;
+                    if (! in_array($key, $this->skips)) {
+                        $allianceModel->$key = $data ?? '';
                     }
-
-                    $allianceModel->$key = $data ?? '';
                 }
 
                 $allianceModel->save();
             }
-        } catch (ModelNotFoundException $e) {
-            // Model is not in the DB for some reason, so let's just create it
-            // Now, we have the data for the model... but sometimes that data is not consistent with what we have in the DB
-            // So we'll just query and add it as usual lol
-            $alliance = AllianceQueryService::getAllianceById($allianceModel->id);
-            Alliance::updateFromAPI($alliance);
-        } catch (Exception $e) {
-            Log::error('Failed to update alliances', ['error' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            Log::error('Failed to update alliances from subscription.', [
+                'alliance_ids' => collect($this->alliancesData)->pluck('id')->filter()->take(10)->values()->all(),
+                'record_count' => count($this->alliancesData),
+                'exception_class' => $e::class,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         }
     }
 }

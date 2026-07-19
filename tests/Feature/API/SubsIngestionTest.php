@@ -136,6 +136,7 @@ class SubsIngestionTest extends FeatureTestCase
         $this->postSubsJson('/api/v1/subs/alliance/delete', ['id' => 77])
             ->assertOk()
             ->assertJson(['message' => 'Alliance deleted successfully']);
+        $this->postSubsJson('/api/v1/subs/alliance/delete', ['id' => 77])->assertOk();
 
         $this->assertDatabaseMissing('alliances', ['id' => 77]);
     }
@@ -205,9 +206,10 @@ class SubsIngestionTest extends FeatureTestCase
         $this->postSubsJson('/api/v1/subs/city/delete', ['id' => 501])
             ->assertOk()
             ->assertJson(['message' => 'Alliance deleted successfully']);
+        $this->postSubsJson('/api/v1/subs/city/delete', ['id' => 501])->assertOk();
 
         $this->assertSoftDeleted('cities', ['id' => 501]);
-        Queue::assertPushed(RefreshNationProfitabilitySnapshotJob::class);
+        Queue::assertPushed(RefreshNationProfitabilitySnapshotJob::class, 1);
     }
 
     public function test_war_create_persists_alliance_wars_and_dispatches_the_event_only_once(): void
@@ -313,6 +315,7 @@ class SubsIngestionTest extends FeatureTestCase
         $this->postSubsJson('/api/v1/subs/nation/delete', ['id' => 2026])
             ->assertOk()
             ->assertJson(['message' => 'Nation deleted successfully']);
+        $this->postSubsJson('/api/v1/subs/nation/delete', ['id' => 2026])->assertOk();
 
         $this->assertSoftDeleted('nations', ['id' => 2026]);
     }

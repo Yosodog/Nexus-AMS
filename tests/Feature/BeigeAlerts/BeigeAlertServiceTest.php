@@ -59,7 +59,16 @@ class BeigeAlertServiceTest extends TestCase
             'spies' => 55,
         ]);
 
-        app(BeigeAlertService::class)->maybeDispatchEarlyExitAlert(
+        $service = app(BeigeAlertService::class);
+
+        $service->maybeDispatchEarlyExitAlert(
+            nationId: 2026,
+            allianceId: 9988,
+            previousBeigeTurns: 3,
+            currentBeigeTurns: 0,
+            detectedAt: CarbonImmutable::parse('2026-02-17 03:23:00')
+        );
+        $service->maybeDispatchEarlyExitAlert(
             nationId: 2026,
             allianceId: 9988,
             previousBeigeTurns: 3,
@@ -75,6 +84,7 @@ class BeigeAlertServiceTest extends TestCase
         $this->assertSame(2026, $queued->payload['nation']['id']);
         $this->assertSame('Tester', $queued->payload['nation']['leader_name']);
         $this->assertSame('123456789', $queued->payload['channel_id']);
+        $this->assertDatabaseCount('discord_queue', 1);
     }
 
     private function createTables(): void

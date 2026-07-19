@@ -5,13 +5,13 @@ namespace App\Jobs;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
-use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CreateWarAttackJob implements ShouldQueue
 {
@@ -55,11 +55,16 @@ class CreateWarAttackJob implements ShouldQueue
             }
 
             WarAttack::pruneOlderThanDays(30);
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             Log::error('Failed to create war attacks', [
+                'war_attack_ids' => collect($this->warAttacks)->pluck('id')->filter()->take(10)->values()->all(),
+                'record_count' => count($this->warAttacks),
+                'exception_class' => $exception::class,
                 'error' => $exception->getMessage(),
                 'trace_id' => Str::uuid()->toString(),
             ]);
+
+            throw $exception;
         }
     }
 }

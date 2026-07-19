@@ -8,7 +8,6 @@ use App\Models\Nation;
 use App\Services\CityQueryService;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
-use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -16,6 +15,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class UpdateCityJob implements ShouldQueue
 {
@@ -39,15 +39,15 @@ class UpdateCityJob implements ShouldQueue
     public function handle(NationProfitabilityService $profitabilityService): void
     {
         foreach ($this->citiesData as $cityData) {
-            $cityFromApi = null;
-            $nationId = $cityData['nation_id'] ?? null;
-
-            if (! $nationId) {
-                $cityFromApi = CityQueryService::getCityById($cityData['id']);
-                $nationId = $cityFromApi->nation_id ?? null;
-            }
-
             try {
+                $cityFromApi = null;
+                $nationId = $cityData['nation_id'] ?? null;
+
+                if (! $nationId) {
+                    $cityFromApi = CityQueryService::getCityById($cityData['id']);
+                    $nationId = $cityFromApi->nation_id ?? null;
+                }
+
                 Cache::lock($this->lockKey($nationId ?? $cityData['id']), 30)->block(5, function () use (
                     $cityData,
                     $nationId,
@@ -65,8 +65,15 @@ class UpdateCityJob implements ShouldQueue
                 $this->release(10);
 
                 return;
-            } catch (Exception $e) {
-                Log::error('Failed to update cities', ['error' => $e->getMessage()]);
+            } catch (Throwable $e) {
+                Log::error('Failed to update city from subscription.', [
+                    'city_id' => isset($cityData['id']) ? (int) $cityData['id'] : null,
+                    'nation_id' => isset($nationId) ? (int) $nationId : null,
+                    'exception_class' => $e::class,
+                    'error' => $e->getMessage(),
+                ]);
+
+                throw $e;
             }
         }
     }

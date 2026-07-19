@@ -7,7 +7,6 @@ use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
-use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -15,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class UpdateNationJob implements ShouldQueue
 {
@@ -97,8 +97,15 @@ class UpdateNationJob implements ShouldQueue
                     }
                 }
             }
-        } catch (Exception $e) {
-            Log::error('Failed to update nations', ['error' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            Log::error('Failed to update nations from subscription.', [
+                'nation_ids' => collect($this->nationsData)->pluck('id')->filter()->take(10)->values()->all(),
+                'record_count' => count($this->nationsData),
+                'exception_class' => $e::class,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         }
     }
 }

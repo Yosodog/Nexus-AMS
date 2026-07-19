@@ -188,6 +188,16 @@ return [
             'database' => env('REDIS_PULSE_DB', '2'),
         ],
 
+        'subscriptions' => [
+            'url' => env('SUBS_REDIS_URL', 'redis://127.0.0.1:6379/3'),
+            'prefix' => '',
+            'host' => env('SUBS_REDIS_HOST', '127.0.0.1'),
+            'username' => env('SUBS_REDIS_USERNAME'),
+            'password' => env('SUBS_REDIS_PASSWORD'),
+            'port' => env('SUBS_REDIS_PORT', '6379'),
+            'database' => env('SUBS_REDIS_DB', '3'),
+        ],
+
     ],
 
 ];

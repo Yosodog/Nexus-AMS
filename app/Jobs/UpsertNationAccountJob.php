@@ -3,12 +3,12 @@
 namespace App\Jobs;
 
 use App\Models\NationAccount;
-use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class UpsertNationAccountJob implements ShouldQueue
 {
@@ -32,11 +32,16 @@ class UpsertNationAccountJob implements ShouldQueue
 
                 NationAccount::upsertFromEvent($account);
             }
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             Log::error('Failed to upsert nation accounts', [
+                'nation_ids' => collect($this->accounts)->pluck('id')->filter()->take(10)->values()->all(),
+                'record_count' => count($this->accounts),
+                'exception_class' => $exception::class,
                 'error' => $exception->getMessage(),
                 'trace_id' => Str::uuid()->toString(),
             ]);
+
+            throw $exception;
         }
     }
 }
