@@ -215,7 +215,7 @@
                 <x-icon name="o-squares-2x2" class="size-5" />
                 <span>Overview</span>
             </a>
-            <a href="{{ route('accounts') }}" @if(request()->routeIs('accounts*', 'member-transfers.*')) aria-current="page" @endif>
+            <a href="{{ route('accounts') }}" @if(request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'lottery.*', 'loans.*')) aria-current="page" @endif>
                 <x-icon name="o-banknotes" class="size-5" />
                 <span>Finance</span>
             </a>

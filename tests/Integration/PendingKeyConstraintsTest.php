@@ -16,11 +16,26 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
     private function createNationWithAccount(int $nationId, int $accountId): void
     {
         Nation::factory()->create(['id' => $nationId, 'alliance_id' => null]);
-        Account::query()->create([
-            'id' => $accountId,
-            'nation_id' => $nationId,
-            'name' => 'Main',
-        ]);
+        $account = new Account;
+        $account->id = $accountId;
+        $account->nation_id = $nationId;
+        $account->name = 'Main';
+        $account->save();
+    }
+
+    private function createGrant(int $grantId): Grants
+    {
+        $grant = new Grants;
+        $grant->id = $grantId;
+        $grant->name = "Integration Grant {$grantId}";
+        $grant->slug = "integration-grant-{$grantId}";
+        $grant->description = 'Grant';
+        $grant->money = 1000;
+        $grant->is_enabled = true;
+        $grant->is_one_time = false;
+        $grant->save();
+
+        return $grant;
     }
 
     public function test_loans_allow_only_one_pending_request_per_nation(): void
@@ -31,6 +46,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'nation_id' => 2026,
             'account_id' => 88,
             'amount' => 100000,
+            'remaining_balance' => 100000,
             'interest_rate' => 5,
             'term_weeks' => 4,
             'status' => 'pending',
@@ -45,6 +61,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'nation_id' => 2026,
             'account_id' => 88,
             'amount' => 250000,
+            'remaining_balance' => 250000,
             'interest_rate' => 5,
             'term_weeks' => 4,
             'status' => 'pending',
@@ -62,6 +79,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'nation_id' => 2026,
             'account_id' => 88,
             'amount' => 100000,
+            'remaining_balance' => 100000,
             'interest_rate' => 5,
             'term_weeks' => 4,
             'status' => 'pending',
@@ -82,6 +100,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'nation_id' => 2026,
             'account_id' => 88,
             'amount' => 250000,
+            'remaining_balance' => 250000,
             'interest_rate' => 5,
             'term_weeks' => 4,
             'status' => 'pending',
@@ -96,6 +115,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
     public function test_grant_applications_allow_only_one_pending_request_per_grant_and_nation(): void
     {
         $this->createNationWithAccount(2030, 90);
+        $this->createGrant(44);
 
         DB::table('grant_applications')->insert([
             'grant_id' => 44,
@@ -186,6 +206,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'cycle_id' => 7,
             'nation_id' => 2033,
             'account_id' => 93,
+            'tier_id' => 1,
             'city_count_snapshot' => 12,
             'target_infrastructure_snapshot' => 1700,
             'estimated_amount' => 4500000,
@@ -201,6 +222,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
             'cycle_id' => 7,
             'nation_id' => 2033,
             'account_id' => 93,
+            'tier_id' => 1,
             'city_count_snapshot' => 12,
             'target_infrastructure_snapshot' => 1700,
             'estimated_amount' => 4500000,
@@ -294,26 +316,7 @@ class PendingKeyConstraintsTest extends MySqlIntegrationTestCase
     {
         $this->createNationWithAccount(2040, 95);
 
-        $grant = Grants::query()->create([
-            'name' => 'Integration Grant',
-            'slug' => 'integration-grant',
-            'description' => 'Grant',
-            'money' => 1000,
-            'coal' => 0,
-            'oil' => 0,
-            'uranium' => 0,
-            'iron' => 0,
-            'bauxite' => 0,
-            'lead' => 0,
-            'gasoline' => 0,
-            'munitions' => 0,
-            'steel' => 0,
-            'aluminum' => 0,
-            'food' => 0,
-            'validation_rules' => [],
-            'is_enabled' => true,
-            'is_one_time' => false,
-        ]);
+        $grant = $this->createGrant(44);
 
         DB::table('grant_applications')->insert([
             'grant_id' => $grant->id,

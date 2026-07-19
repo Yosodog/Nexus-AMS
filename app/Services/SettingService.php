@@ -10,7 +10,23 @@ class SettingService
 {
     private const RECRUITMENT_SUBJECT_MAX_LENGTH = 50;
 
+    private const LOTTERY_SETTINGS_KEY = 'lottery_configuration';
+
     public const DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE = 10;
+
+    public const DEFAULT_LOTTERY_TICKET_PRICE_CENTS = 5000000;
+
+    public const DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS = 9000;
+
+    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE = 100;
+
+    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION = 10000;
+
+    public const MAX_LOTTERY_TICKET_PRICE_CENTS = 1000000000;
+
+    public const MAX_LOTTERY_TICKETS_PER_PURCHASE = 500;
+
+    public const MAX_LOTTERY_TICKETS_PER_NATION = 10000;
 
     public static function getLastScannedBankRecordId(): int
     {
@@ -40,6 +56,82 @@ class SettingService
             ['key' => $key],
             ['value' => $value]
         );
+    }
+
+    /**
+     * @return array{
+     *     sales_enabled: bool,
+     *     ticket_price_cents: int,
+     *     jackpot_basis_points: int,
+     *     max_tickets_per_purchase: int,
+     *     max_tickets_per_nation: int
+     * }
+     */
+    public static function getLotterySettings(): array
+    {
+        $stored = self::getValue(self::LOTTERY_SETTINGS_KEY);
+        $decoded = is_string($stored) ? json_decode($stored, true) : null;
+
+        return self::normalizeLotterySettings(is_array($decoded) ? $decoded : []);
+    }
+
+    /**
+     * @param  array{
+     *     sales_enabled: bool,
+     *     ticket_price_cents: int,
+     *     jackpot_basis_points: int,
+     *     max_tickets_per_purchase: int,
+     *     max_tickets_per_nation: int
+     * }  $settings
+     */
+    public static function setLotterySettings(array $settings): void
+    {
+        self::setValue(
+            self::LOTTERY_SETTINGS_KEY,
+            json_encode(self::normalizeLotterySettings($settings), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array{
+     *     sales_enabled: bool,
+     *     ticket_price_cents: int,
+     *     jackpot_basis_points: int,
+     *     max_tickets_per_purchase: int,
+     *     max_tickets_per_nation: int
+     * }
+     */
+    private static function normalizeLotterySettings(array $settings): array
+    {
+        $maxTicketsPerNation = min(
+            self::MAX_LOTTERY_TICKETS_PER_NATION,
+            max(1, (int) ($settings['max_tickets_per_nation'] ?? self::DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION)),
+        );
+        $maxTicketsPerPurchase = min(
+            self::MAX_LOTTERY_TICKETS_PER_PURCHASE,
+            $maxTicketsPerNation,
+            max(1, (int) ($settings['max_tickets_per_purchase'] ?? self::DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE)),
+        );
+        $salesEnabled = filter_var(
+            $settings['sales_enabled'] ?? true,
+            FILTER_VALIDATE_BOOL,
+            FILTER_NULL_ON_FAILURE,
+        );
+
+        return [
+            'sales_enabled' => $salesEnabled ?? true,
+            'ticket_price_cents' => min(
+                self::MAX_LOTTERY_TICKET_PRICE_CENTS,
+                max(100, (int) ($settings['ticket_price_cents'] ?? self::DEFAULT_LOTTERY_TICKET_PRICE_CENTS)),
+            ),
+            'jackpot_basis_points' => min(
+                10000,
+                max(0, (int) ($settings['jackpot_basis_points'] ?? self::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS)),
+            ),
+            'max_tickets_per_purchase' => $maxTicketsPerPurchase,
+            'max_tickets_per_nation' => $maxTicketsPerNation,
+        ];
     }
 
     public static function setLastScannedBankRecordId(int $id): void

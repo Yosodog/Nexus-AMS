@@ -29,6 +29,12 @@ test('member can move from overview into finance and defense workflows', async (
   await expect(page.getByRole('link', { name: 'Operations reserve', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: '$1,250,000.00', exact: true })).toBeVisible();
 
+  await page.goto('/lottery');
+  await expectApplicationShell(page);
+  await expect(page.getByRole('heading', { name: 'Three characters. One weekly draw.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Buy tickets' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buy lottery tickets' })).toBeVisible();
+
   await page.goto('/loans');
   await expectApplicationShell(page);
   await expect(page.getByRole('heading', { name: 'Loans' })).toBeVisible();
@@ -60,6 +66,12 @@ test('full admin can reach core operations and inspect ledger activity', async (
   await page.goto('/admin/accounts');
   await expectApplicationShell(page);
   await expect(page.getByRole('heading', { name: 'Account Management' })).toBeVisible();
+
+  await page.goto('/admin/lottery');
+  await expectApplicationShell(page);
+  await expect(page.getByRole('heading', { name: 'Weekly Lottery' })).toBeVisible();
+  await expect(page.getByText('Lottery configuration', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save lottery configuration' })).toBeVisible();
 
   await page.goto('/admin/finance');
   await expectApplicationShell(page);

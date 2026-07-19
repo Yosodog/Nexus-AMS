@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Grants;
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\AllianceMembershipService;
 use App\Services\PendingRequestsService;
 use Illuminate\Contracts\View\View;
@@ -31,6 +32,8 @@ class AppHeader extends Component
         $membershipService = app(AllianceMembershipService::class);
         $allianceId = data_get($user, 'nation.alliance_id');
         $showMemberNavigation = $user !== null && $membershipService->contains($allianceId);
+        $canUseLottery = $user?->nation !== null
+            && app(AllianceMemberEligibilityService::class)->isEligibleNation($user->nation);
 
         $enabledGrants = $showMemberNavigation
             ? Grants::query()->where('is_enabled', true)->orderBy('name')->get()
@@ -42,7 +45,7 @@ class AppHeader extends Component
             'user' => $user,
             'showMemberNavigation' => $showMemberNavigation,
             'enabledGrants' => $enabledGrants,
-            'navigation' => $this->navigation($enabledGrants->all()),
+            'navigation' => $this->navigation($enabledGrants->all(), $canUseLottery),
             'pendingTotal' => $pendingTotal,
             'showPendingIndicator' => $showPendingIndicator,
         ]);
@@ -58,7 +61,7 @@ class AppHeader extends Component
      *     items?: array<int, array{label: string, route: string, active: bool}>
      * }>
      */
-    private function navigation(array $enabledGrants): array
+    private function navigation(array $enabledGrants, bool $canUseLottery): array
     {
         $grantItems = array_map(
             fn (Grants $grant): array => [
@@ -79,12 +82,15 @@ class AppHeader extends Component
             [
                 'label' => 'Finance',
                 'icon' => 'o-banknotes',
-                'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'loans.*'),
-                'items' => [
+                'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'lottery.*', 'loans.*'),
+                'items' => array_values(array_filter([
                     ['label' => 'Accounts', 'route' => route('accounts'), 'active' => request()->routeIs('accounts*', 'member-transfers.*')],
                     ['label' => 'Alliance market', 'route' => route('market.index'), 'active' => request()->routeIs('market.*')],
+                    $canUseLottery
+                        ? ['label' => 'Weekly lottery', 'route' => route('lottery.index'), 'active' => request()->routeIs('lottery.*')]
+                        : null,
                     ['label' => 'Loans', 'route' => route('loans.index'), 'active' => request()->routeIs('loans.*')],
-                ],
+                ])),
             ],
             [
                 'label' => 'Assistance',

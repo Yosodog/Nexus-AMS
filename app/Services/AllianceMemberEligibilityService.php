@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AlliancePositionEnum;
 use App\Models\Nation;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -31,7 +32,14 @@ class AllianceMemberEligibilityService
 
     public function isEligibleNation(Nation $nation): bool
     {
+        $alliancePosition = strtoupper(trim((string) $nation->alliance_position));
+
         return $this->membershipService->contains($nation->alliance_id)
-            && strtoupper((string) $nation->alliance_position) !== 'APPLICANT';
+            && in_array($alliancePosition, [
+                AlliancePositionEnum::MEMBER->value,
+                AlliancePositionEnum::OFFICER->value,
+                AlliancePositionEnum::HEIR->value,
+                AlliancePositionEnum::LEADER->value,
+            ], true);
     }
 }
