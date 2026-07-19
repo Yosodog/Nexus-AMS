@@ -24,4 +24,15 @@ class TelemetryRedactionConfigTest extends TestCase
         $this->assertSame('https://api.politicsandwar.com/graphql?[redacted]', $grouped);
         $this->assertStringNotContainsString('super-secret', $grouped);
     }
+
+    public function test_pulse_uses_a_dedicated_redis_database(): void
+    {
+        $queueConnection = (string) config('queue.connections.redis.connection');
+        $pulseDatabase = (string) config('database.redis.pulse.database');
+
+        $this->assertSame('default', $queueConnection);
+        $this->assertSame('2', $pulseDatabase);
+        $this->assertNotSame((string) config('database.redis.default.database'), $pulseDatabase);
+        $this->assertNotSame((string) config('database.redis.cache.database'), $pulseDatabase);
+    }
 }
