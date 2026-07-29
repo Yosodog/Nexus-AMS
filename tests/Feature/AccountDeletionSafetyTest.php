@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
+use App\Models\DirectDepositEnrollment;
 use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\AccountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class AccountDeletionSafetyTest extends TestCase
@@ -71,6 +73,86 @@ class AccountDeletionSafetyTest extends TestCase
         AccountService::deleteAccount($account, $nation->id);
 
         $this->assertSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    public function test_direct_deposit_account_cannot_be_deleted(): void
+    {
+        [$nation, $account] = $this->createNationAndAccount(810009);
+
+        DirectDepositEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => 123,
+            'enrolled_at' => now(),
+        ]);
+
+        try {
+            AccountService::deleteAccount($account, $nation->id);
+            $this->fail('An account selected for Direct Deposit was deleted.');
+        } catch (UserErrorException $exception) {
+            $this->assertSame(
+                'Disenroll from Direct Deposit before deleting this account.',
+                $exception->getMessage(),
+            );
+        }
+
+        $this->assertNotSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    public function test_direct_deposit_component_handles_an_enrollment_with_a_deleted_account(): void
+    {
+        [$nation, $deletedAccount] = $this->createNationAndAccount(810010);
+        $activeAccount = new Account;
+        $activeAccount->nation_id = $nation->id;
+        $activeAccount->name = 'Secondary';
+        $activeAccount->save();
+
+        $enrollment = DirectDepositEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $deletedAccount->id,
+            'previous_tax_id' => 123,
+            'enrolled_at' => now(),
+        ]);
+
+        $deletedAccount->delete();
+        $enrollment->load('account');
+
+        $html = view('accounts.components.direct_deposit', [
+            'enrollment' => $enrollment,
+            'accounts' => collect([$activeAccount]),
+            'bracket' => null,
+            'gcEnrollment' => null,
+        ])->render();
+
+        $this->assertStringContainsString('Not enrolled', $html);
+        $this->assertStringNotContainsString('deposits are heading to', $html);
+    }
+
+    public function test_admin_direct_deposit_component_handles_an_enrollment_with_a_deleted_account(): void
+    {
+        [$nation, $account, $user] = $this->createNationAndAccount(810011, createUser: true);
+
+        $enrollment = DirectDepositEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => 123,
+            'enrolled_at' => now(),
+        ]);
+
+        $account->delete();
+        $enrollment->load('account');
+
+        Gate::define('view-dd', fn (): bool => true);
+        Gate::define('manage-dd', fn (): bool => false);
+
+        $this->actingAs($user)
+            ->view('admin.accounts.direct_deposit', [
+                'ddTaxId' => 456,
+                'fallbackTaxId' => 789,
+                'brackets' => collect(),
+                'enrollments' => collect([$enrollment]),
+            ])
+            ->assertSee('Deleted account');
     }
 
     /**

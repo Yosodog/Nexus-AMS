@@ -7,6 +7,7 @@ use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
 use App\Models\DepositRequest;
+use App\Models\DirectDepositEnrollment;
 use App\Models\DiscordActionIntent;
 use App\Models\GrantApplication;
 use App\Models\LotteryDrawing;
@@ -156,6 +157,10 @@ class AccountService
      */
     private static function assertAccountCanBeDeleted(Account $account): void
     {
+        if (DirectDepositEnrollment::query()->where('account_id', $account->id)->exists()) {
+            throw new UserErrorException('Disenroll from Direct Deposit before deleting this account.');
+        }
+
         if ($account->cityGrants()->where('status', 'pending')->exists()) {
             throw new UserErrorException('The account has pending city grants.');
         }

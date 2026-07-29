@@ -148,8 +148,8 @@
                                     {{ $enrollment->nation_id }}
                                 </a>
                             </td>
-                            <td>{{ $enrollment->account->name }}</td>
-                            <td>{{ optional($enrollment->account->user)->name ?? 'Deleted' }}</td>
+                            <td>{{ $enrollment->account?->name ?? 'Deleted account' }}</td>
+                            <td>{{ $enrollment->account?->user?->name ?? 'Deleted' }}</td>
                             <td data-order="{{ $enrollment->enrolled_at->timestamp }}">{{ $enrollment->enrolled_at->format('M d, Y H:i') }}</td>
                         </tr>
                     @endforeach

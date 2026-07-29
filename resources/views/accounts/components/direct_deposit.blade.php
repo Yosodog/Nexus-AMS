@@ -1,7 +1,7 @@
 @php
     use App\Services\PWHelperService;
 
-    $isEnrolled = isset($enrollment);
+    $isEnrolled = isset($enrollment) && $enrollment->account !== null;
     $resources = PWHelperService::resources();
 @endphp
 
