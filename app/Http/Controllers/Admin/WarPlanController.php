@@ -45,7 +45,7 @@ class WarPlanController extends Controller
         LiveFeedQueryService $liveFeed,
         AllianceMembershipService $membershipService
     ): View {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $feedFilters = $request->only(['minutes', 'hours', 'attack_types', 'scope']);
 
@@ -268,7 +268,7 @@ class WarPlanController extends Controller
      */
     public function export(WarPlan $plan, Request $request): JsonResponse
     {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $includeAssignments = ! $request->boolean('options_only');
 
@@ -321,7 +321,7 @@ class WarPlanController extends Controller
 
     public function exportTargetsCsv(WarPlan $plan): StreamedResponse
     {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $filename = sprintf('war-plan-%d-targets-%s.csv', $plan->id, now()->format('Ymd-His'));
 
@@ -390,7 +390,7 @@ class WarPlanController extends Controller
 
     public function exportAssignmentsCsv(WarPlan $plan): StreamedResponse
     {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $filename = sprintf('war-plan-%d-assignments-%s.csv', $plan->id, now()->format('Ymd-His'));
 
@@ -816,7 +816,7 @@ class WarPlanController extends Controller
         WarPlan $plan,
         AllianceMembershipService $membershipService
     ): JsonResponse {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $friendliesQuery = $this->buildFriendliesQuery(
             $this->resolveFriendlyAllianceIds($plan, $membershipService)
@@ -860,7 +860,7 @@ class WarPlanController extends Controller
 
     public function assignmentsData(WarPlan $plan): JsonResponse
     {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $assignments = $plan->assignments()
             ->select([
@@ -914,7 +914,7 @@ class WarPlanController extends Controller
         WarPlanTarget $target,
         AllianceMembershipService $membershipService
     ): JsonResponse {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         if ($target->war_plan_id !== $plan->id) {
             abort(404);
@@ -940,7 +940,7 @@ class WarPlanController extends Controller
         WarPlan $plan,
         AllianceMembershipService $membershipService
     ): JsonResponse {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $friendliesQuery = $this->buildFriendliesQuery(
             $this->resolveFriendlyAllianceIds($plan, $membershipService)

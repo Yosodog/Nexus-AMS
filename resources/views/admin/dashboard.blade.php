@@ -15,6 +15,7 @@
         $canViewGrants = $can('view-grants');
         $canViewCityGrants = $can('view-city-grants');
         $canViewWars = $can('view-wars');
+        $canManageWarRoom = $can('manage-war-room');
         $canViewMmr = $can('view-mmr');
         $canViewWarAid = $can('view-war-aid');
         $canViewRebuilding = $can('view-rebuilding');
@@ -156,7 +157,7 @@
                 @endif
 
                 @if ($canViewWars)
-                    <a href="{{ route('admin.war-room') }}" class="group grid gap-3 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <a href="{{ route('admin.wars') }}" class="group grid gap-3 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                         <span class="flex min-w-0 items-start gap-3">
                             <span class="nexus-icon-box bg-error/10 text-error">
                                 <x-icon name="o-bolt" class="size-4" aria-hidden="true" />
@@ -402,6 +403,8 @@
                 <div class="flex flex-wrap gap-2">
                     @if ($canViewWars)
                         <a href="{{ route('admin.wars') }}" class="btn btn-ghost btn-sm">All wars</a>
+                    @endif
+                    @if ($canManageWarRoom)
                         <a href="{{ route('admin.war-room') }}" class="btn btn-primary btn-sm">War room</a>
                     @endif
                     @if ($canViewMmr)

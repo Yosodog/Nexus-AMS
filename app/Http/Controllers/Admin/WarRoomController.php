@@ -24,7 +24,7 @@ class WarRoomController extends Controller
      */
     public function index(Request $request): View
     {
-        $this->authorize('view-wars');
+        $this->authorize('manage-war-room');
 
         $activeCounterSearch = $this->nullIfEmpty($request->string('counter_active_search')->trim()->toString());
         $counterStatus = $request->query('counter_status', 'all');
