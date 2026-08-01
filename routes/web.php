@@ -91,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
         'not_verified'
     );
     Route::post('/resend-verification', [VerificationController::class, 'resendVerification'])
+        ->middleware('throttle:verification-resends')
         ->name('verification.resend');
 
     Route::get('/verify-discord', [DiscordVerificationController::class, 'show'])->name('discord.verify.show');

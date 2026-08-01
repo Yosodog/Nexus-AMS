@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Notifications\NationVerification;
 use Closure;
-use Exception;
 use Illuminate\Container\Container;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,24 +58,9 @@ class VerificationController extends Controller
 
     /**
      * @return mixed
-     *
-     * @throws Exception
      */
     public function resendVerification()
     {
-        if (session()->has('last_verification_attempt')) {
-            $secondsSinceLastAttempt = abs(
-                now()->diffInSeconds(session('last_verification_attempt'))
-            );
-
-            if ($secondsSinceLastAttempt < 60) { // Allow every 60 seconds
-                return redirect()->route('not_verified')->with([
-                    'alert-message' => 'Please wait before requesting another verification message.',
-                    'alert-type' => 'warning',
-                ]);
-            }
-        }
-
         $user = User::findOrFail(
             Auth::user()->id
         ); // I know this is weird but the notification needs the user model, not what Auth::user() returns.
@@ -91,17 +75,7 @@ class VerificationController extends Controller
                 ]);
         }
 
-        // Generate a new verification code
-        $verification_code = strtoupper(bin2hex(random_bytes(16)));
-
-        // Update user record
-        $user->update(['verification_code' => $verification_code]);
-
-        // Send the new verification message
         $user->notify(new NationVerification($user));
-
-        // Store the last attempt timestamp
-        session(['last_verification_attempt' => now()]);
 
         return redirect()
             ->route('not_verified')
