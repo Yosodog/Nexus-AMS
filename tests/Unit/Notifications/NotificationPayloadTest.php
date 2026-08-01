@@ -106,6 +106,22 @@ class NotificationPayloadTest extends FeatureTestCase
         $this->assertStringContainsString('Food: 50.00', $completedPayload['message']);
     }
 
+    public function test_deposit_completion_escapes_user_authored_account_names_in_bbcode(): void
+    {
+        $payload = (new DepositCompletedNotification(
+            1,
+            "Primary[/b]\n[i]spoofed[/i]",
+            ['money' => 1000],
+        ))->toPNW(new \stdClass);
+
+        $this->assertStringContainsString(
+            'Your deposit to [b]Primary［/b］ ［i］spoofed［/i］[/b] has been received and applied.',
+            $payload['message'],
+        );
+        $this->assertSame(2, substr_count($payload['message'], '[b]'));
+        $this->assertSame(2, substr_count($payload['message'], '[/b]'));
+    }
+
     public function test_password_reset_notification_includes_reset_link_and_notifiable_email(): void
     {
         $user = User::factory()->create([

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Services\PWHelperService;
+use App\Support\PWBBCode;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -30,7 +31,7 @@ class DepositCompletedNotification extends Notification implements ShouldQueue
      */
     public function toPNW(object $notifiable): array
     {
-        $accountLabel = $this->accountName ?? 'your account';
+        $accountLabel = PWBBCode::escapeText($this->accountName ?? 'your account');
 
         $resourceLines = collect(PWHelperService::resources())
             ->filter(function (string $resource): bool {
