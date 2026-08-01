@@ -706,7 +706,7 @@ class DiscordApplicationApiTest extends TestCase
                 parent::__construct($membershipService, $alliancePositionService);
             }
 
-            protected function fetchNation(int $nationId): GraphQlNation
+            protected function fetchLiveNation(int $nationId): GraphQlNation
             {
                 return $this->nations[$nationId];
             }

@@ -638,6 +638,14 @@ class ApplicationService
             return $this->mapLocalNationToGraphQl($localNation);
         }
 
+        return $this->fetchLiveNation($nationId);
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    protected function fetchLiveNation(int $nationId): Nation
+    {
         try {
             return $this->queryNationFromApi($nationId);
         } catch (PWEntityDoesNotExist $e) {
@@ -663,13 +671,7 @@ class ApplicationService
      */
     protected function fetchEligibleApplicantNation(int $nationId): Nation
     {
-        $localNation = $this->findLocalNationSnapshot($nationId);
-
-        if ($localNation && $this->isLocalNationEligibleApplicant($localNation)) {
-            return $this->mapLocalNationToGraphQl($localNation);
-        }
-
-        return $this->fetchNation($nationId);
+        return $this->fetchLiveNation($nationId);
     }
 
     /**
@@ -677,13 +679,7 @@ class ApplicationService
      */
     protected function fetchNationInAlliance(int $nationId): Nation
     {
-        $localNation = $this->findLocalNationSnapshot($nationId);
-
-        if ($localNation && $this->membershipService->contains((int) $localNation->alliance_id)) {
-            return $this->mapLocalNationToGraphQl($localNation);
-        }
-
-        return $this->fetchNation($nationId);
+        return $this->fetchLiveNation($nationId);
     }
 
     /**
@@ -790,12 +786,6 @@ class ApplicationService
         return NationRecord::query()
             ->select(['id', 'alliance_id', 'alliance_position', 'alliance_position_id', 'leader_name'])
             ->find($nationId);
-    }
-
-    protected function isLocalNationEligibleApplicant(NationRecord $nation): bool
-    {
-        return $this->membershipService->contains((int) $nation->alliance_id)
-            && $nation->alliance_position === AlliancePositionEnum::APPLICANT->value;
     }
 
     protected function mapLocalNationToGraphQl(NationRecord $nation): Nation

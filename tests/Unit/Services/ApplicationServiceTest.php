@@ -49,7 +49,7 @@ class ApplicationServiceTest extends FeatureTestCase
         $service->createApplicationFromDiscord(877100, 'discord-a', 'user-a');
     }
 
-    public function test_create_application_uses_local_nation_snapshot_when_it_already_shows_an_eligible_applicant(): void
+    public function test_create_application_rejects_a_stale_local_applicant_snapshot(): void
     {
         Nation::factory()->create([
             'id' => 877103,
@@ -59,12 +59,37 @@ class ApplicationServiceTest extends FeatureTestCase
             'alliance_position_id' => 1,
         ]);
 
+        $service = $this->makeService([
+            877103 => $this->makeNation(877103, 877, 'MEMBER'),
+        ]);
+
+        $this->expectException(ApplicationException::class);
+        $this->expectExceptionMessage('The nation must be marked as an applicant in the alliance.');
+
+        $service->createApplicationFromDiscord(877103, 'discord-local-applicant', 'local-user');
+    }
+
+    public function test_create_application_fails_closed_when_live_nation_lookup_fails(): void
+    {
+        Nation::factory()->create([
+            'id' => 877108,
+            'leader_name' => 'Stale Applicant',
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
+            'alliance_position' => 'APPLICANT',
+            'alliance_position_id' => 1,
+        ]);
+
         $service = $this->makeApiGuardedService();
 
-        $application = $service->createApplicationFromDiscord(877103, 'discord-local-applicant', 'local-user');
+        try {
+            $service->createApplicationFromDiscord(877108, 'discord-lookup-failure', 'local-user');
+            $this->fail('Expected the live nation lookup to fail closed.');
+        } catch (ApplicationException $exception) {
+            $this->assertSame('nation_lookup_failed', $exception->error);
+            $this->assertSame(503, $exception->status);
+        }
 
-        $this->assertSame(877103, $application->nation_id);
-        $this->assertSame('Local Leader', $application->leader_name_snapshot);
+        $this->assertDatabaseMissing('applications', ['nation_id' => 877108]);
     }
 
     public function test_get_nation_uses_local_nation_snapshot_without_hitting_the_api(): void
@@ -342,7 +367,7 @@ class ApplicationServiceTest extends FeatureTestCase
                 parent::__construct($membershipService, $alliancePositionService);
             }
 
-            protected function fetchNation(int $nationId): GraphQlNation
+            protected function fetchLiveNation(int $nationId): GraphQlNation
             {
                 return $this->nations[$nationId];
             }
