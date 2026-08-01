@@ -834,6 +834,7 @@ class WarPlanController extends Controller
                     'num_cities',
                     'color',
                     'vacation_mode_turns',
+                    'beige_turns',
                     'offensive_wars_count',
                     'defensive_wars_count',
                 ]),
@@ -846,7 +847,9 @@ class WarPlanController extends Controller
             ->get();
 
         return response()->json([
-            'targets' => $targets,
+            'targets' => $targets
+                ->map(fn (WarPlanTarget $target): array => $this->warPlanTargetPayload($target, true))
+                ->all(),
             'preferred_assignments_per_target' => $this->calculatePreferredAssignmentsPerTarget(
                 $targets->count(),
                 $friendlyCount,
@@ -883,14 +886,15 @@ class WarPlanController extends Controller
                     'score',
                     'num_cities',
                     'color',
+                    'vacation_mode_turns',
+                    'beige_turns',
                     'offensive_wars_count',
                     'defensive_wars_count',
                 ]),
                 'friendlyNation.alliance:id,name,acronym',
                 'friendlyNation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
-                'friendlyNation.accountProfile:nation_id,last_active',
                 'target:id,war_plan_id,nation_id,target_priority_score,preferred_war_type,meta,computed_at',
-                'target.nation:id,alliance_id,leader_name,nation_name,score,num_cities,color,vacation_mode_turns,offensive_wars_count,defensive_wars_count',
+                'target.nation:id,alliance_id,leader_name,nation_name,score,num_cities,color,vacation_mode_turns,beige_turns,offensive_wars_count,defensive_wars_count',
                 'target.nation.alliance:id,name,acronym',
                 'target.nation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
                 'squad:id,war_plan_id,label,round,cohesion_score,meta',
@@ -898,7 +902,11 @@ class WarPlanController extends Controller
             ->orderByDesc('match_score')
             ->get();
 
-        return response()->json(['assignments' => $assignments]);
+        return response()->json([
+            'assignments' => $assignments
+                ->map(fn (WarPlanAssignment $assignment): array => $this->warPlanAssignmentPayload($assignment))
+                ->all(),
+        ]);
     }
 
     public function targetCandidatesData(
@@ -919,7 +927,6 @@ class WarPlanController extends Controller
         $target->loadMissing([
             'nation:id,alliance_id,leader_name,nation_name,score,num_cities,color,vacation_mode_turns,offensive_wars_count,defensive_wars_count',
             'nation.military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
-            'nation.accountProfile:nation_id,last_active',
             'assignments:id,war_plan_id,war_plan_target_id,friendly_nation_id,war_plan_squad_id,match_score,status,is_overridden,is_locked,meta',
         ]);
 
@@ -940,7 +947,11 @@ class WarPlanController extends Controller
         );
 
         $friendlies = $friendliesQuery
-            ->with(['military', 'latestSignIn', 'alliance', 'accountProfile'])
+            ->with([
+                'military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+                'alliance:id,name,acronym',
+                'accountProfile:nation_id,last_active',
+            ])
             ->get();
 
         $assignments = $plan->assignments()->select(['id', 'friendly_nation_id'])->get();
@@ -948,9 +959,15 @@ class WarPlanController extends Controller
         $assignmentFriendlyIds = $assignments->pluck('friendly_nation_id')->filter()->unique();
 
         return response()->json([
-            'friendlies' => $friendlies,
+            'friendlies' => $friendlies
+                ->map(fn (Nation $friendly): array => $this->warPlanNationPayload($friendly, true))
+                ->all(),
             'friendly_stats' => $this->transformFriendlyStats($friendlyStats),
-            'unassigned' => $friendlies->whereNotIn('id', $assignmentFriendlyIds)->values(),
+            'unassigned' => $friendlies
+                ->whereNotIn('id', $assignmentFriendlyIds)
+                ->map(fn (Nation $friendly): array => $this->warPlanNationPayload($friendly, true))
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -958,14 +975,24 @@ class WarPlanController extends Controller
      * Generate recommended friendlies per target along with helper stats for the view.
      *
      * @return array{
-     *     0: array<int, array<int, array{friendly: Nation, score: float, recommended: bool, assignment_load: int, max_assignments: int, available_slots: int}>>,
-     *     1: Collection<int, Nation>,
+     *     0: array<int, array<int, array{friendly: array<string, mixed>, score: float, recommended: bool, assignment_load: int, max_assignments: int, available_slots: int}>>,
+     *     1: Collection<int, array<string, mixed>>,
      *     2: Collection<int, array{friendly: Nation, assignment_load: int, available_slots: int, remaining_slots: int, max_assignments: int, offensive_wars: int, defensive_wars: int, remaining_offensive_capacity: int}>
      * }
      */
     protected function recommendAssignments(WarPlan $plan, Builder $friendliesQuery): array
     {
-        $friendlies = $friendliesQuery->with(['military', 'latestSignIn', 'alliance'])->get();
+        $friendlies = $friendliesQuery->with([
+            'military:id,nation_id,soldiers,tanks,aircraft,ships,missiles,nukes',
+            'latestSignIn' => fn ($query) => $query->select(
+                'nation_sign_ins.id',
+                'nation_sign_ins.nation_id',
+                'nation_sign_ins.created_at',
+                'nation_sign_ins.mmr_score'
+            ),
+            'alliance:id,name,acronym',
+            'accountProfile:nation_id,last_active',
+        ])->get();
 
         if ($friendlies->isEmpty()) {
             return [[], collect(), collect()];
@@ -1040,7 +1067,7 @@ class WarPlanController extends Controller
                 ])
                 ->values()
                 ->map(fn (array $stat) => [
-                    'friendly' => $stat['friendly'],
+                    'friendly' => $this->warPlanNationPayload($stat['friendly']),
                     'score' => $stat['score'],
                     'recommended' => (bool) ($stat['recommended'] ?? false),
                     'assignment_load' => $stat['assignment_load'],
@@ -1053,7 +1080,7 @@ class WarPlanController extends Controller
         }
 
         $allFriendlies = $friendlyStats
-            ->map(fn (array $stat) => $stat['friendly'])
+            ->map(fn (array $stat): array => $this->warPlanNationPayload($stat['friendly']))
             ->sortBy('leader_name')
             ->values();
 
@@ -1064,7 +1091,7 @@ class WarPlanController extends Controller
      * Build recommendation rows for a single target to avoid generating an entire target x friendly matrix.
      *
      * @return array<int, array{
-     *     friendly: Nation,
+     *     friendly: array<string, mixed>,
      *     score: float,
      *     recommended: bool,
      *     assignment_load: int,
@@ -1084,6 +1111,7 @@ class WarPlanController extends Controller
                     'nation_sign_ins.mmr_score'
                 ),
                 'alliance:id,name,acronym',
+                'accountProfile:nation_id,last_active',
             ])
             ->get();
 
@@ -1152,7 +1180,7 @@ class WarPlanController extends Controller
             ])
             ->values()
             ->map(fn (array $stat) => [
-                'friendly' => $stat['friendly'],
+                'friendly' => $this->warPlanNationPayload($stat['friendly']),
                 'score' => $stat['score'],
                 'recommended' => (bool) ($stat['recommended'] ?? false),
                 'assignment_load' => $stat['assignment_load'],
@@ -1160,6 +1188,112 @@ class WarPlanController extends Controller
                 'available_slots' => $stat['remaining_slots'],
             ])
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function warPlanAssignmentPayload(WarPlanAssignment $assignment): array
+    {
+        $squad = $assignment->squad;
+
+        return [
+            'id' => $assignment->id,
+            'war_plan_id' => $assignment->war_plan_id,
+            'war_plan_target_id' => $assignment->war_plan_target_id,
+            'friendly_nation_id' => $assignment->friendly_nation_id,
+            'war_plan_squad_id' => $assignment->war_plan_squad_id,
+            'match_score' => (float) $assignment->match_score,
+            'status' => $assignment->status,
+            'is_overridden' => (bool) $assignment->is_overridden,
+            'is_locked' => (bool) $assignment->is_locked,
+            'meta' => $assignment->meta,
+            'created_at' => $assignment->created_at?->toIso8601String(),
+            'updated_at' => $assignment->updated_at?->toIso8601String(),
+            'friendly_nation' => $assignment->friendlyNation
+                ? $this->warPlanNationPayload($assignment->friendlyNation)
+                : null,
+            'target' => $assignment->target
+                ? $this->warPlanTargetPayload($assignment->target)
+                : null,
+            'squad' => $squad ? [
+                'id' => $squad->id,
+                'war_plan_id' => $squad->war_plan_id,
+                'label' => $squad->label,
+                'round' => (int) $squad->round,
+                'cohesion_score' => (float) $squad->cohesion_score,
+                'meta' => $squad->meta,
+            ] : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function warPlanTargetPayload(WarPlanTarget $target, bool $includeActivity = false): array
+    {
+        return [
+            'id' => $target->id,
+            'war_plan_id' => $target->war_plan_id,
+            'nation_id' => $target->nation_id,
+            'target_priority_score' => (float) $target->target_priority_score,
+            'preferred_war_type' => $target->preferred_war_type,
+            'meta' => $target->meta,
+            'computed_at' => $target->computed_at?->toIso8601String(),
+            'assignments_count' => isset($target->assignments_count)
+                ? (int) $target->assignments_count
+                : null,
+            'nation' => $target->nation
+                ? $this->warPlanNationPayload($target->nation, $includeActivity)
+                : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function warPlanNationPayload(Nation $nation, bool $includeActivity = false): array
+    {
+        $alliance = $nation->relationLoaded('alliance') ? $nation->alliance : null;
+        $military = $nation->relationLoaded('military') ? $nation->military : null;
+        $accountProfile = $includeActivity && $nation->relationLoaded('accountProfile')
+            ? $nation->accountProfile
+            : null;
+
+        $payload = [
+            'id' => $nation->id,
+            'alliance_id' => $nation->alliance_id,
+            'leader_name' => $nation->leader_name,
+            'nation_name' => $nation->nation_name,
+            'score' => (float) $nation->score,
+            'num_cities' => (int) $nation->num_cities,
+            'color' => $nation->color,
+            'vacation_mode_turns' => (int) $nation->vacation_mode_turns,
+            'beige_turns' => (int) $nation->beige_turns,
+            'offensive_wars_count' => (int) $nation->offensive_wars_count,
+            'defensive_wars_count' => (int) $nation->defensive_wars_count,
+            'alliance' => $alliance ? [
+                'id' => $alliance->id,
+                'name' => $alliance->name,
+                'acronym' => $alliance->acronym,
+            ] : null,
+            'military' => $military ? [
+                'soldiers' => (int) $military->soldiers,
+                'tanks' => (int) $military->tanks,
+                'aircraft' => (int) $military->aircraft,
+                'ships' => (int) $military->ships,
+                'missiles' => (int) $military->missiles,
+                'nukes' => (int) $military->nukes,
+            ] : null,
+        ];
+
+        if ($includeActivity) {
+            $payload['account_profile'] = [
+                'last_active' => $accountProfile?->last_active?->toIso8601String(),
+            ];
+        }
+
+        return $payload;
     }
 
     /**
