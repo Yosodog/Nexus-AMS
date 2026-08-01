@@ -734,7 +734,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->group(function () {
                 Route::get('/', [CustomizationController::class, 'index'])->name('admin.customization.index');
                 Route::get('/pages/{page}', [CustomizationController::class, 'edit'])->name('admin.customization.edit');
-                Route::post('/pages/{page}/preview', [CustomizationController::class, 'preview'])->name('admin.customization.preview');
+                Route::post('/pages/{page}/preview', [CustomizationController::class, 'preview'])
+                    ->middleware('throttle:custom-page-previews')
+                    ->name('admin.customization.preview');
                 Route::post('/pages/{page}/draft', [CustomizationController::class, 'saveDraft'])->name('admin.customization.draft');
                 Route::post('/pages/{page}/publish', [CustomizationController::class, 'publish'])->name('admin.customization.publish');
                 Route::get('/pages/{page}/versions', [CustomizationController::class, 'versions'])->name('admin.customization.versions');

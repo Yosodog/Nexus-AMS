@@ -14,7 +14,6 @@ use App\Services\PagePublisher;
 use App\Services\PageRenderer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Carbon;
 
 /**
  * Handle administrative customization workflows for CMS-driven pages.
@@ -75,30 +74,11 @@ class CustomizationController extends Controller
     {
         $this->authorize('manage-custom-pages');
 
-        $user = $request->user();
         $content = $this->publisher->normalizeContent($request->content());
         $html = $this->renderer->render($content);
 
-        $version = $page->versions()->create([
-            'editor_state' => $content,
-            'status' => PageVersion::STATUS_PREVIEW,
-            'user_id' => $user?->id,
-        ]);
-
-        $page->activityLogs()->create([
-            'action' => PageActivityLog::ACTION_PREVIEWED,
-            'user_id' => $user?->id,
-            'metadata' => array_merge($request->metadata(), [
-                'version_id' => $version->id,
-                'previewed_at' => Carbon::now()->toIso8601String(),
-            ]),
-        ]);
-
-        $page->forgetCachedHtml();
-
         return response()->json([
             'html' => $html,
-            'version' => $this->serializeVersion($version),
         ]);
     }
 

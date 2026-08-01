@@ -121,6 +121,13 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('custom-page-previews', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('user:'.($request->user()?->id ?? $request->ip())),
+                Limit::perMinute(30)->by('ip:'.$request->ip()),
+            ];
+        });
+
         RateLimiter::for('war-simulations', function (Request $request) {
             $key = $request->user()?->nation_id ?? $request->ip();
 
