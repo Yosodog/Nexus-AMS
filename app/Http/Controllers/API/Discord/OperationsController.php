@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\API\Discord;
 
+use App\Enums\SpyAssignmentStatus;
+use App\Enums\SpyCampaignStatus;
+use App\Enums\SpyRoundStatus;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
@@ -218,7 +221,11 @@ class OperationsController extends Controller
     {
         $assignments = SpyAssignment::query()
             ->where('attacker_nation_id', $this->actor($request)->nation_id)
-            ->whereHas('round.campaign', fn ($query) => $query->whereNotIn('status', ['completed', 'cancelled']))
+            ->where('status', SpyAssignmentStatus::SENT->value)
+            ->whereHas('round', fn ($query) => $query
+                ->where('status', SpyRoundStatus::ASSIGNED->value)
+                ->whereHas('campaign', fn ($campaignQuery) => $campaignQuery
+                    ->where('status', SpyCampaignStatus::ACTIVE->value)))
             ->with(['round.campaign:id,name,status', 'defender:id,nation_name,leader_name,alliance_id'])
             ->latest()
             ->limit(100)

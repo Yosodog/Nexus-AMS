@@ -2,8 +2,15 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\SpyAssignmentStatus;
+use App\Enums\SpyCampaignStatus;
+use App\Enums\SpyOperationType;
+use App\Enums\SpyRoundStatus;
 use App\Models\DiscordAccount;
 use App\Models\Nation;
+use App\Models\SpyAssignment;
+use App\Models\SpyCampaign;
+use App\Models\SpyRound;
 use App\Models\User;
 use App\Services\RaidFinderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -86,6 +93,73 @@ class DiscordOperationsApiTest extends TestCase
             ->assertJsonPath('data.0.military.aircraft', 2100)
             ->assertJsonPath('data.0.nation_url', 'https://politicsandwar.com/nation/id=9876')
             ->assertJsonPath('data.0.alliance_url', 'https://politicsandwar.com/alliance/id=456');
+    }
+
+    public function test_spy_assignments_only_include_sent_orders_from_active_assigned_rounds(): void
+    {
+        $activeCampaign = SpyCampaign::query()->create([
+            'name' => 'Published campaign',
+            'status' => SpyCampaignStatus::ACTIVE,
+        ]);
+        $assignedRound = SpyRound::query()->create([
+            'spy_campaign_id' => $activeCampaign->id,
+            'round_number' => 1,
+            'op_type' => SpyOperationType::GATHER_INTELLIGENCE,
+            'status' => SpyRoundStatus::ASSIGNED,
+        ]);
+
+        $visibleAssignment = $this->createSpyAssignment(
+            $assignedRound,
+            SpyAssignmentStatus::SENT,
+            Nation::factory()->create()
+        );
+        $this->createSpyAssignment(
+            $assignedRound,
+            SpyAssignmentStatus::PENDING,
+            Nation::factory()->create()
+        );
+
+        $draftRound = SpyRound::query()->create([
+            'spy_campaign_id' => $activeCampaign->id,
+            'round_number' => 2,
+            'op_type' => SpyOperationType::GATHER_INTELLIGENCE,
+            'status' => SpyRoundStatus::DRAFT,
+        ]);
+        $this->createSpyAssignment($draftRound, SpyAssignmentStatus::SENT, Nation::factory()->create());
+
+        $draftCampaign = SpyCampaign::query()->create([
+            'name' => 'Draft campaign',
+            'status' => SpyCampaignStatus::DRAFT,
+        ]);
+        $draftCampaignRound = SpyRound::query()->create([
+            'spy_campaign_id' => $draftCampaign->id,
+            'round_number' => 1,
+            'op_type' => SpyOperationType::GATHER_INTELLIGENCE,
+            'status' => SpyRoundStatus::ASSIGNED,
+        ]);
+        $this->createSpyAssignment($draftCampaignRound, SpyAssignmentStatus::SENT, Nation::factory()->create());
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/v1/discord/me/spy-assignments')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $visibleAssignment->id)
+            ->assertJsonPath('data.0.status', SpyAssignmentStatus::SENT->value)
+            ->assertJsonPath('data.0.campaign.name', 'Published campaign');
+    }
+
+    private function createSpyAssignment(
+        SpyRound $round,
+        SpyAssignmentStatus $status,
+        Nation $defender
+    ): SpyAssignment {
+        return SpyAssignment::query()->create([
+            'spy_round_id' => $round->id,
+            'attacker_nation_id' => $this->nation->id,
+            'defender_nation_id' => $defender->id,
+            'op_type' => SpyOperationType::GATHER_INTELLIGENCE,
+            'status' => $status,
+        ]);
     }
 
     /** @return array<string, string> */
