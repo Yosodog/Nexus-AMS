@@ -496,6 +496,10 @@ class GrantRequirementService
             return null;
         }
 
+        if ($depth > 1 && $node['rules'] === []) {
+            $errors[] = 'Nested grant requirement groups must contain at least one rule.';
+        }
+
         if (count($node['rules']) > self::MAX_GROUP_CHILDREN) {
             $errors[] = 'A grant requirement group contains too many child rules.';
         }

@@ -76,6 +76,36 @@ class GrantRequirementServiceTest extends FeatureTestCase
         $this->assertTrue($service->evaluate([], $nation)['passes']);
     }
 
+    public function test_empty_nested_groups_are_rejected_for_every_group_operator(): void
+    {
+        $service = app(GrantRequirementService::class);
+
+        foreach (['all', 'any', 'not'] as $group) {
+            $inspection = $service->inspect([
+                'group' => 'all',
+                'rules' => [
+                    ['group' => $group, 'rules' => []],
+                ],
+            ]);
+
+            $this->assertContains(
+                'Nested grant requirement groups must contain at least one rule.',
+                $inspection['errors'],
+                "The {$group} group should not be empty.",
+            );
+        }
+    }
+
+    public function test_empty_top_level_group_still_means_no_requirements(): void
+    {
+        $service = app(GrantRequirementService::class);
+
+        $inspection = $service->inspect(['group' => 'all', 'rules' => []]);
+
+        $this->assertSame([], $inspection['errors']);
+        $this->assertNull($inspection['normalized']);
+    }
+
     public function test_evaluate_supports_nested_any_and_not_groups(): void
     {
         $service = app(GrantRequirementService::class);
