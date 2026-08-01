@@ -73,6 +73,10 @@ class InactiveUserAutoDisableSecurityTest extends TestCase
             'protected' => true,
         ]);
         $protectedAdmin->roles()->attach($protectedRole);
+        $unprotectedAdmin = User::factory()->admin()->create([
+            'last_active_at' => $inactiveAt,
+            'created_at' => $inactiveAt,
+        ]);
 
         $inactiveUser = User::factory()->create([
             'last_active_at' => $inactiveAt,
@@ -85,6 +89,7 @@ class InactiveUserAutoDisableSecurityTest extends TestCase
         $this->artisan('users:disable-inactive')->assertSuccessful();
 
         $this->assertFalse($protectedAdmin->fresh()->disabled);
+        $this->assertFalse($unprotectedAdmin->fresh()->disabled);
         $this->assertTrue($inactiveUser->fresh()->disabled);
         $this->assertFalse($activeUser->fresh()->disabled);
     }
