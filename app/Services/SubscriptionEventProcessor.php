@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Events\WarDeclared;
-use App\Exceptions\PWQueryFailedException;
+use App\Jobs\CreateAllianceJob;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
 use App\Jobs\DeleteNationAccountJob;
@@ -17,7 +17,6 @@ use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
-use Illuminate\Http\Client\ConnectionException;
 use InvalidArgumentException;
 
 class SubscriptionEventProcessor
@@ -37,12 +36,7 @@ class SubscriptionEventProcessor
         private readonly NationProfitabilityService $nationProfitabilityService,
     ) {}
 
-    /**
-     * @param  array<int|string, mixed>  $payload
-     *
-     * @throws ConnectionException
-     * @throws PWQueryFailedException
-     */
+    /** @param  array<int|string, mixed>  $payload */
     public function process(string $model, string $event, array $payload): void
     {
         $model = strtolower(trim($model));
@@ -69,7 +63,7 @@ class SubscriptionEventProcessor
                 $this->deleteNations($records);
                 break;
             case 'alliance:create':
-                $this->createAlliances($records);
+                $this->queueAllianceCreation($records);
                 break;
             case 'alliance:update':
                 UpdateAllianceJob::dispatch($records);
@@ -143,17 +137,17 @@ class SubscriptionEventProcessor
         }
     }
 
-    /**
-     * @param  list<array<string, mixed>>  $records
-     *
-     * @throws ConnectionException
-     * @throws PWQueryFailedException
-     */
-    private function createAlliances(array $records): void
+    /** @param  list<array<string, mixed>>  $records */
+    private function queueAllianceCreation(array $records): void
     {
+        $maximum = max((int) config('subscriptions.ingestion.alliance_create_max_records'), 1);
+
+        if (count($records) > $maximum) {
+            throw new InvalidArgumentException("Alliance create batches may not exceed {$maximum} records.");
+        }
+
         foreach ($records as $record) {
-            $alliance = AllianceQueryService::getAllianceById($record['id']);
-            Alliance::updateFromAPI($alliance);
+            CreateAllianceJob::dispatch((int) $record['id']);
         }
     }
 

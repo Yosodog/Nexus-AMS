@@ -45,7 +45,7 @@ class SubController extends Controller
             return $error;
         }
 
-        return response()->json(['message' => 'Alliance created successfully']);
+        return response()->json(['message' => 'Alliance creation(s) queued for processing']);
     }
 
     public function updateAlliance(Request $request): JsonResponse

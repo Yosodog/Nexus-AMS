@@ -3,6 +3,7 @@
 namespace Tests\Feature\API;
 
 use App\Events\WarDeclared;
+use App\Jobs\CreateAllianceJob;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
 use App\Jobs\DeleteNationAccountJob;
@@ -64,7 +65,23 @@ class SubsIngestionTest extends FeatureTestCase
         Queue::assertPushed(UpdateNationJob::class, fn (UpdateNationJob $job) => $job->nationsData === $payload);
     }
 
-    public function test_alliance_create_uses_a_simulated_pw_response_and_persists_the_alliance(): void
+    public function test_alliance_create_queues_without_waiting_for_pw(): void
+    {
+        Queue::fake();
+        Http::fake();
+
+        $this->postSubsJson('/api/v1/subs/alliance/create', ['id' => 9988])
+            ->assertOk()
+            ->assertJson(['message' => 'Alliance creation(s) queued for processing']);
+
+        Queue::assertPushed(
+            CreateAllianceJob::class,
+            fn (CreateAllianceJob $job): bool => $job->allianceId === 9988
+        );
+        Http::assertNothingSent();
+    }
+
+    public function test_create_alliance_job_persists_a_simulated_pw_response(): void
     {
         Http::fake([
             'https://pw.test/graphql*' => Http::response([
@@ -101,15 +118,28 @@ class SubsIngestionTest extends FeatureTestCase
             ], 200),
         ]);
 
-        $this->postSubsJson('/api/v1/subs/alliance/create', ['id' => 9988])
-            ->assertOk()
-            ->assertJson(['message' => 'Alliance created successfully']);
+        (new CreateAllianceJob(9988))->handle();
 
         $this->assertDatabaseHas('alliances', [
             'id' => 9988,
             'name' => 'Enemy Coalition',
             'acronym' => 'EC',
         ]);
+    }
+
+    public function test_alliance_create_rejects_an_oversized_batch(): void
+    {
+        Queue::fake();
+        config()->set('subscriptions.ingestion.alliance_create_max_records', 2);
+
+        $this->postSubsJson('/api/v1/subs/alliance/create', [
+            ['id' => 1],
+            ['id' => 2],
+            ['id' => 3],
+        ])->assertBadRequest()
+            ->assertJson(['error' => 'Alliance create batches may not exceed 2 records.']);
+
+        Queue::assertNothingPushed();
     }
 
     public function test_alliance_update_queues_the_job(): void

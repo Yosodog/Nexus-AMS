@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'ingestion' => [
+        'alliance_create_max_records' => 25,
+    ],
+
     'redis' => [
         'connection' => env('SUBS_REDIS_CONNECTION', 'subscriptions'),
         'stream' => env('SUBS_REDIS_STREAM', 'nexus:subscriptions:v1'),
