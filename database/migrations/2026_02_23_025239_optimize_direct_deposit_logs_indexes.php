@@ -2,41 +2,46 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            return;
-        }
-
         if ($this->indexExists('direct_deposit_logs', 'ddl_nation_created_at_idx')) {
             Schema::table('direct_deposit_logs', function (Blueprint $table) {
                 $table->dropIndex('ddl_nation_created_at_idx');
             });
         }
 
-        Schema::table('direct_deposit_logs', function (Blueprint $table) {
-            $table->index(['nation_id', 'created_at', 'money'], 'ddl_nation_created_at_money_idx');
-            $table->index(['account_id', 'created_at'], 'ddl_account_created_at_idx');
-            $table->index('created_at', 'ddl_created_at_idx');
-        });
+        if (! $this->indexExists('direct_deposit_logs', 'ddl_nation_created_at_money_idx')) {
+            Schema::table('direct_deposit_logs', function (Blueprint $table) {
+                $table->index(['nation_id', 'created_at', 'money'], 'ddl_nation_created_at_money_idx');
+            });
+        }
+
+        if (! $this->indexExists('direct_deposit_logs', 'ddl_account_created_at_idx')) {
+            Schema::table('direct_deposit_logs', function (Blueprint $table) {
+                $table->index(['account_id', 'created_at'], 'ddl_account_created_at_idx');
+            });
+        }
+
+        if (! $this->indexExists('direct_deposit_logs', 'ddl_created_at_idx')) {
+            Schema::table('direct_deposit_logs', function (Blueprint $table) {
+                $table->index('created_at', 'ddl_created_at_idx');
+            });
+        }
     }
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            return;
+        foreach (['ddl_nation_created_at_money_idx', 'ddl_account_created_at_idx', 'ddl_created_at_idx'] as $index) {
+            if ($this->indexExists('direct_deposit_logs', $index)) {
+                Schema::table('direct_deposit_logs', function (Blueprint $table) use ($index) {
+                    $table->dropIndex($index);
+                });
+            }
         }
-
-        Schema::table('direct_deposit_logs', function (Blueprint $table) {
-            $table->dropIndex('ddl_nation_created_at_money_idx');
-            $table->dropIndex('ddl_account_created_at_idx');
-            $table->dropIndex('ddl_created_at_idx');
-        });
 
         if (! $this->indexExists('direct_deposit_logs', 'ddl_nation_created_at_idx')) {
             Schema::table('direct_deposit_logs', function (Blueprint $table) {
@@ -47,12 +52,7 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
-        $databaseName = DB::getDatabaseName();
-        $matches = DB::select(
-            'SELECT 1 FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ? LIMIT 1',
-            [$databaseName, $table, $indexName]
-        );
-
-        return $matches !== [];
+        return collect(Schema::getIndexes($table))
+            ->contains(fn (array $index): bool => ($index['name'] ?? null) === $indexName);
     }
 };
