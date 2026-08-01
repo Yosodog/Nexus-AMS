@@ -99,7 +99,10 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             EnsureDiscordInteractionCommand::class.':deny',
         ]);
     Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel'])
-        ->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':war-counters.attach-channel',
+        ]);
     Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive'])
         ->middleware([
             VerifyDiscordInteraction::class,

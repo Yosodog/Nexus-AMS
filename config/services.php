@@ -38,7 +38,7 @@ return [
     'discord_bot_key' => env('DISCORD_BOT_KEY'),
     'discord' => [
         'guild_id' => env('DISCORD_GUILD_ID'),
-        'application_public_key' => env('DISCORD_APPLICATION_PUBLIC_KEY'),
+        'relay_public_key' => env('DISCORD_RELAY_PUBLIC_KEY'),
         'interaction_max_age_seconds' => (int) env('DISCORD_INTERACTION_MAX_AGE_SECONDS', 300),
         'finance_action_intent_ttl_seconds' => (int) env('DISCORD_FINANCE_ACTION_INTENT_TTL_SECONDS', 120),
         'workflow_action_intent_ttl_seconds' => (int) env('DISCORD_WORKFLOW_ACTION_INTENT_TTL_SECONDS', 900),

@@ -32,7 +32,7 @@ class DiscordWarCounterAuthorizationTest extends TestCase
         ]);
     }
 
-    public function test_non_admin_cannot_mutate_counters_by_claiming_a_war_room_permission(): void
+    public function test_actor_interaction_cannot_impersonate_the_service_callback(): void
     {
         $counter = $this->counter();
         $this->linkActor(isAdmin: false);
@@ -43,17 +43,21 @@ class DiscordWarCounterAuthorizationTest extends TestCase
                 'discord_channel_id' => '456789012345678901',
             ])
             ->assertForbidden()
-            ->assertJsonPath('error.code', 'forbidden');
+            ->assertJsonPath('error.code', 'discord_interaction_action_mismatch');
 
         $this->assertNull($counter->fresh()->discord_channel_id);
     }
 
-    public function test_authenticated_war_room_admin_can_attach_and_archive_a_counter(): void
+    public function test_signed_service_can_attach_and_authenticated_admin_can_archive_a_counter(): void
     {
         $counter = $this->counter();
         $this->linkActor(isAdmin: true);
 
-        $this->withHeaders($this->headers('456789012345678901'))
+        $this->withHeaders($this->signedDiscordServiceHeaders(
+            'discord-war-counter-test-key',
+            self::GUILD_ID,
+            'war-counters.attach-channel',
+        ))
             ->postJson('/api/v1/discord/war-counters/attach-channel', [
                 'war_counter_id' => $counter->id,
                 'discord_channel_id' => '567890123456789012',

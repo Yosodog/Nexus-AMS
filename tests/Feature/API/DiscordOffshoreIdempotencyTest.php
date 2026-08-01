@@ -142,7 +142,7 @@ class DiscordOffshoreIdempotencyTest extends TestCase
         ])->postJson('/api/v1/discord/offshores/sweep-primary', [
             'request_id' => 'forged-actor-headers',
         ])->assertUnauthorized()
-            ->assertJsonPath('error.code', 'invalid_discord_interaction');
+            ->assertJsonPath('error.code', 'invalid_discord_relay_proof');
 
         $this->assertDatabaseMissing('offshore_transfers', [
             'idempotency_key' => 'forged-actor-headers',

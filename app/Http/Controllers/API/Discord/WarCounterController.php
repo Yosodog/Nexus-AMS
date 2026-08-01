@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Discord;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveDiscordActor;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Http\Requests\Discord\DiscordWarCounterArchiveRequest;
 use App\Http\Requests\Discord\DiscordWarCounterAttachChannelRequest;
 use App\Models\User;
@@ -25,7 +26,10 @@ class WarCounterController extends Controller
 
     public function attachChannel(DiscordWarCounterAttachChannelRequest $request): JsonResponse
     {
-        $this->authorizeModerator($request);
+        if ($request->attributes->get(VerifyDiscordInteraction::SERVICE_ATTRIBUTE) !== true) {
+            throw new AuthorizationException('A signed Discord service callback is required.');
+        }
+
         $counter = WarCounter::query()->findOrFail($request->integer('war_counter_id'));
 
         $counter->update([

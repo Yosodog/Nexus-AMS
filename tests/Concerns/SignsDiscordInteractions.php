@@ -13,7 +13,7 @@ trait SignsDiscordInteractions
         $this->discordInteractionSecretKey = sodium_crypto_sign_secretkey($keypair);
 
         config([
-            'services.discord.application_public_key' => bin2hex(sodium_crypto_sign_publickey($keypair)),
+            'services.discord.relay_public_key' => bin2hex(sodium_crypto_sign_publickey($keypair)),
             'services.discord.interaction_max_age_seconds' => 300,
         ]);
     }
@@ -43,6 +43,8 @@ trait SignsDiscordInteractions
         }
 
         $payload = json_encode([
+            'relay_version' => 1,
+            'proof_type' => 'interaction',
             'id' => $interactionId,
             'application_id' => '123456789012345679',
             'type' => 2,
@@ -64,9 +66,37 @@ trait SignsDiscordInteractions
             'X-Discord-Guild-ID' => $guildId,
             'X-Discord-User-ID' => $discordUserId,
             'X-Discord-Interaction-ID' => $interactionId,
-            'X-Signature-Ed25519' => bin2hex($signature),
-            'X-Signature-Timestamp' => (string) $timestamp,
-            'X-Discord-Interaction-Payload' => rtrim(strtr(base64_encode($payload), '+/', '-_'), '='),
+            'X-Nexus-Discord-Relay-Signature' => bin2hex($signature),
+            'X-Nexus-Discord-Relay-Timestamp' => (string) $timestamp,
+            'X-Nexus-Discord-Relay-Payload' => rtrim(strtr(base64_encode($payload), '+/', '-_'), '='),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function signedDiscordServiceHeaders(
+        string $botToken,
+        string $guildId,
+        string $action,
+        ?int $timestamp = null,
+    ): array {
+        $timestamp ??= now()->timestamp;
+        $payload = json_encode([
+            'relay_version' => 1,
+            'proof_type' => 'service',
+            'nonce' => '11111111-2222-4333-8444-555555555555',
+            'guild_id' => $guildId,
+            'action' => $action,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $signature = sodium_crypto_sign_detached((string) $timestamp.$payload, $this->discordInteractionSecretKey);
+
+        return [
+            'Authorization' => 'Bearer '.$botToken,
+            'Accept' => 'application/json',
+            'X-Nexus-Discord-Relay-Signature' => bin2hex($signature),
+            'X-Nexus-Discord-Relay-Timestamp' => (string) $timestamp,
+            'X-Nexus-Discord-Relay-Payload' => rtrim(strtr(base64_encode($payload), '+/', '-_'), '='),
         ];
     }
 }

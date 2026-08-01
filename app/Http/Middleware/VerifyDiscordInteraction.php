@@ -16,22 +16,24 @@ class VerifyDiscordInteraction
 
     public const INTERACTION_ATTRIBUTE = 'verified_discord_interaction_id';
 
-    public const PAYLOAD_HEADER = 'X-Discord-Interaction-Payload';
+    public const PAYLOAD_HEADER = 'X-Nexus-Discord-Relay-Payload';
 
-    public const SIGNATURE_HEADER = 'X-Signature-Ed25519';
+    public const SERVICE_ATTRIBUTE = 'verified_discord_service_proof';
 
-    public const TIMESTAMP_HEADER = 'X-Signature-Timestamp';
+    public const SIGNATURE_HEADER = 'X-Nexus-Discord-Relay-Signature';
+
+    public const TIMESTAMP_HEADER = 'X-Nexus-Discord-Relay-Timestamp';
 
     public const USER_ATTRIBUTE = 'verified_discord_user_id';
 
     public function handle(Request $request, Closure $next): Response
     {
-        $publicKeyHex = trim((string) config('services.discord.application_public_key'));
+        $publicKeyHex = trim((string) config('services.discord.relay_public_key'));
 
         if (! function_exists('sodium_crypto_sign_verify_detached') || ! $this->isHexKey($publicKeyHex)) {
             return $this->error(
-                'discord_interaction_verification_unavailable',
-                'Discord interaction verification is not configured.',
+                'discord_relay_verification_unavailable',
+                'Discord relay verification is not configured.',
                 503,
             );
         }
@@ -42,12 +44,12 @@ class VerifyDiscordInteraction
         $payload = $this->decodePayload($encodedPayload);
 
         if (! $this->isHexSignature($signatureHex) || ! ctype_digit($timestamp) || $payload === null) {
-            return $this->error('invalid_discord_interaction', 'Valid Discord interaction provenance is required.', 401);
+            return $this->error('invalid_discord_relay_proof', 'A valid Discord relay proof is required.', 401);
         }
 
         $maxAge = max(30, (int) config('services.discord.interaction_max_age_seconds', 300));
         if (abs(now()->timestamp - (int) $timestamp) > $maxAge) {
-            return $this->error('stale_discord_interaction', 'The Discord interaction has expired.', 401);
+            return $this->error('stale_discord_relay_proof', 'The Discord relay proof has expired.', 401);
         }
 
         $signature = hex2bin($signatureHex);
@@ -58,17 +60,29 @@ class VerifyDiscordInteraction
             $timestamp.$payload,
             $publicKey,
         )) {
-            return $this->error('invalid_discord_interaction', 'Discord interaction verification failed.', 401);
+            return $this->error('invalid_discord_relay_proof', 'Discord relay verification failed.', 401);
         }
 
         try {
             $interaction = json_decode($payload, true, 64, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return $this->error('invalid_discord_interaction', 'The Discord interaction payload is invalid.', 401);
+            return $this->error('invalid_discord_relay_proof', 'The Discord relay payload is invalid.', 401);
         }
 
         if (! is_array($interaction)) {
-            return $this->error('invalid_discord_interaction', 'The Discord interaction payload is invalid.', 401);
+            return $this->error('invalid_discord_relay_proof', 'The Discord relay payload is invalid.', 401);
+        }
+
+        if (($interaction['relay_version'] ?? null) !== 1) {
+            return $this->error('invalid_discord_relay_proof', 'The Discord relay proof version is unsupported.', 401);
+        }
+
+        if (($interaction['proof_type'] ?? null) === 'service') {
+            return $this->handleServiceProof($request, $next, $interaction);
+        }
+
+        if (($interaction['proof_type'] ?? null) !== 'interaction') {
+            return $this->error('invalid_discord_relay_proof', 'The Discord relay proof type is invalid.', 401);
         }
 
         $guildId = trim((string) ($interaction['guild_id'] ?? ''));
@@ -76,7 +90,7 @@ class VerifyDiscordInteraction
         $userId = trim((string) data_get($interaction, 'member.user.id', data_get($interaction, 'user.id', '')));
 
         if (! $this->isSnowflake($guildId) || ! $this->isSnowflake($interactionId) || ! $this->isSnowflake($userId)) {
-            return $this->error('invalid_discord_interaction', 'The Discord interaction identity is invalid.', 401);
+            return $this->error('invalid_discord_relay_proof', 'The Discord interaction identity is invalid.', 401);
         }
 
         $request->attributes->set(self::GUILD_ATTRIBUTE, $guildId);
@@ -87,6 +101,31 @@ class VerifyDiscordInteraction
         $request->headers->set(ResolveDiscordActor::GUILD_HEADER, $guildId);
         $request->headers->set(ResolveDiscordActor::USER_HEADER, $userId);
         $request->headers->set('X-Discord-Interaction-ID', $interactionId);
+
+        return $next($request);
+    }
+
+    /**
+     * @param  array<string, mixed>  $proof
+     */
+    private function handleServiceProof(Request $request, Closure $next, array $proof): Response
+    {
+        $guildId = trim((string) ($proof['guild_id'] ?? ''));
+        $configuredGuildId = trim((string) config('services.discord.guild_id'));
+        $nonce = trim((string) ($proof['nonce'] ?? ''));
+        $action = trim((string) ($proof['action'] ?? ''));
+
+        if (! $this->isSnowflake($guildId)
+            || $configuredGuildId === ''
+            || ! hash_equals($configuredGuildId, $guildId)
+            || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $nonce) !== 1
+            || preg_match('/^[a-z0-9][a-z0-9._-]{0,99}$/', $action) !== 1) {
+            return $this->error('invalid_discord_relay_proof', 'The Discord service relay proof is invalid.', 401);
+        }
+
+        $request->attributes->set(self::GUILD_ATTRIBUTE, $guildId);
+        $request->attributes->set(self::COMMAND_ATTRIBUTE, $action);
+        $request->attributes->set(self::SERVICE_ATTRIBUTE, true);
 
         return $next($request);
     }
