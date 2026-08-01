@@ -6,6 +6,7 @@ use App\Models\InactivityEvent;
 use App\Models\Nation;
 use App\Services\InactivityModeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class InactivityModeServiceTest extends TestCase
@@ -36,5 +37,28 @@ class InactivityModeServiceTest extends TestCase
 
         $this->assertSame($optedOutAt, $event->dd_opted_out_at->toISOString());
         $this->assertNull($event->episode_ended_at);
+    }
+
+    public function test_normalized_api_activity_timestamp_is_parsed_as_utc(): void
+    {
+        $previousTimezone = date_default_timezone_get();
+        $parsed = null;
+
+        try {
+            date_default_timezone_set('America/Chicago');
+            config(['app.timezone' => 'America/Chicago']);
+
+            $method = new ReflectionMethod(InactivityModeService::class, 'parseLastActive');
+            $parsed = $method->invoke(
+                app(InactivityModeService::class),
+                '2026-08-01 12:00:00',
+            );
+        } finally {
+            date_default_timezone_set($previousTimezone);
+        }
+
+        $this->assertNotNull($parsed);
+        $this->assertSame('UTC', $parsed->getTimezone()->getName());
+        $this->assertSame('2026-08-01T12:00:00+00:00', $parsed->toIso8601String());
     }
 }

@@ -360,7 +360,7 @@ class InactivityModeService
         }
 
         try {
-            return Carbon::parse($lastActive);
+            return Carbon::parse($lastActive, 'UTC');
         } catch (\Throwable) {
             return null;
         }
