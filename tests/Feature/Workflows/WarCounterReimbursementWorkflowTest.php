@@ -107,6 +107,29 @@ class WarCounterReimbursementWorkflowTest extends TestCase
         $this->assertSame('25.00', number_format((float) $account->fresh()->money, 2, '.', ''));
     }
 
+    public function test_unallied_nation_cannot_be_manually_assigned_to_counter(): void
+    {
+        [$admin, $counter] = $this->createCounterFixture();
+        $unalliedNation = Nation::factory()->create([
+            'alliance_id' => null,
+            'alliance_position' => 'NOALLIANCE',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.war-counters.assignments.manual', $counter), [
+                'friendly_nation_id' => $unalliedNation->id,
+                'match_score' => 75,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'warning')
+            ->assertSessionHas('alert-message', 'Nation is not within friendly alliances.');
+
+        $this->assertDatabaseMissing('war_counter_assignments', [
+            'war_counter_id' => $counter->id,
+            'friendly_nation_id' => $unalliedNation->id,
+        ]);
+    }
+
     /**
      * @return array{0: User, 1: WarCounter, 2: Nation, 3: Account}
      */

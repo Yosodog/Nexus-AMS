@@ -256,10 +256,9 @@ class WarCounterController extends Controller
             'match_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $allowedAlliances = $membershipService->getAllianceIds();
         $friendly = Nation::query()->findOrFail($data['friendly_nation_id']);
 
-        if ($friendly->alliance_id && ! in_array($friendly->alliance_id, $allowedAlliances->all(), true)) {
+        if (! $membershipService->contains($friendly->alliance_id)) {
             return Redirect::back()
                 ->with('alert-type', 'warning')
                 ->with('alert-message', 'Nation is not within friendly alliances.');
