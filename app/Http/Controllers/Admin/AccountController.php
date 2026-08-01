@@ -52,6 +52,8 @@ class AccountController extends Controller
 
         $canViewAllianceLiquidity = $request->user()->can('view-offshores')
             || $request->user()->can('view-financial-reports');
+        $canViewDirectDeposit = $request->user()->can('view-dd');
+        $canViewMmr = $request->user()->can('view-mmr');
 
         $membership = app(AllianceMembershipService::class);
         $allianceIds = $membership->getAllianceIds();
@@ -63,10 +65,18 @@ class AccountController extends Controller
             ->orderBy('nation_id')
             ->get();
 
-        $brackets = DirectDepositTaxBracket::orderBy('city_number')->get();
-        $enrollments = DirectDepositEnrollment::with('account.user')->get();
-        $ddTaxId = SettingService::getDirectDepositId();
-        $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+        $brackets = collect();
+        $enrollments = collect();
+        $ddTaxId = null;
+        $fallbackTaxId = null;
+
+        if ($canViewDirectDeposit) {
+            $brackets = DirectDepositTaxBracket::orderBy('city_number')->get();
+            $enrollments = DirectDepositEnrollment::with('account.user')->get();
+            $ddTaxId = SettingService::getDirectDepositId();
+            $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+        }
+
         $recentTransactionsSample = Transaction::latest('created_at')
             ->take(50)
             ->get();
@@ -75,16 +85,20 @@ class AccountController extends Controller
             ->paginate(15, ['*'], 'tx_page')
             ->withQueryString()
             ->fragment('recent-transactions');
-        $directDepositLogs = DirectDepositLog::with(['account.user'])
-            ->latest('created_at')
-            ->paginate(10, ['*'], 'dd_page')
-            ->withQueryString()
-            ->fragment('direct-deposit-logs');
-        $mmrPurchases = MMRAssistantPurchase::with('account.nation')
-            ->latest('created_at')
-            ->paginate(10, ['*'], 'mmr_page')
-            ->withQueryString()
-            ->fragment('mmr-assistant');
+        $directDepositLogs = $canViewDirectDeposit
+            ? DirectDepositLog::with(['account.user'])
+                ->latest('created_at')
+                ->paginate(10, ['*'], 'dd_page')
+                ->withQueryString()
+                ->fragment('direct-deposit-logs')
+            : null;
+        $mmrPurchases = $canViewMmr
+            ? MMRAssistantPurchase::with('account.nation')
+                ->latest('created_at')
+                ->paginate(10, ['*'], 'mmr_page')
+                ->withQueryString()
+                ->fragment('mmr-assistant')
+            : null;
         $pendingWithdrawals = Transaction::query()
             ->with(['fromAccount.nation', 'fromAccount.user', 'nation'])
             ->where('transaction_type', 'withdrawal')
@@ -133,6 +147,8 @@ class AccountController extends Controller
             'withdrawalLimits' => $withdrawalLimits,
             'maxDailyWithdrawals' => $maxDailyWithdrawals,
             'canViewAllianceLiquidity' => $canViewAllianceLiquidity,
+            'canViewDirectDeposit' => $canViewDirectDeposit,
+            'canViewMmr' => $canViewMmr,
             'mainBankSnapshot' => $mainBankSnapshot,
             'offshoreSnapshots' => $offshoreSnapshots,
         ]);

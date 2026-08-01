@@ -144,9 +144,11 @@
     <x-header title="Account Management" separator use-h1>
         <x-slot:subtitle>Monitor alliance bank performance, approve withdrawals, and review direct deposits at a glance.</x-slot:subtitle>
         <x-slot:actions>
-            <a href="#direct-deposit">
-                <x-button label="Direct Deposit Hub" icon="o-building-library" class="btn-outline btn-sm" />
-            </a>
+            @if($canViewDirectDeposit)
+                <a href="#direct-deposit">
+                    <x-button label="Direct Deposit Hub" icon="o-building-library" class="btn-outline btn-sm" />
+                </a>
+            @endif
             <x-button label="Refresh" icon="o-arrow-path" onclick="location.reload()" class="btn-ghost btn-sm" />
         </x-slot:actions>
     </x-header>
@@ -729,12 +731,15 @@
     @endcan
 
     {{-- Direct Deposit --}}
-    <div id="direct-deposit" class="mb-6">
-        @include('admin.accounts.direct_deposit')
-    </div>
+    @if($canViewDirectDeposit)
+        <div id="direct-deposit" class="mb-6">
+            @include('admin.accounts.direct_deposit')
+        </div>
+    @endif
 
     {{-- Direct Deposit Logs --}}
-    <x-card id="direct-deposit-logs" class="{{ $surfaceCardClass }} mb-6">
+    @if($canViewDirectDeposit)
+        <x-card id="direct-deposit-logs" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
                 <x-badge value="DD" class="badge-primary badge-sm" />
@@ -743,7 +748,9 @@
             <div class="text-sm font-normal text-base-content/50">After-tax payouts with quick links to nations and deposit accounts.</div>
         </x-slot:title>
         <x-slot:menu>
-            <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
+            @if($canViewMmr)
+                <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
+            @endif
         </x-slot:menu>
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
@@ -809,10 +816,12 @@
                 <div class="sm:ml-auto">{{ $directDepositLogs->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>
-    </x-card>
+        </x-card>
+    @endif
 
     {{-- MMR Assistant --}}
-    <x-card id="mmr-assistant" class="{{ $surfaceCardClass }} mb-6">
+    @if($canViewMmr)
+        <x-card id="mmr-assistant" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div class="flex items-center gap-2">
                 <x-badge value="MMR" class="badge-neutral badge-sm" />
@@ -821,7 +830,9 @@
             <div class="text-sm font-normal text-base-content/50">Withheld cash reinvested into resources based on player configs.</div>
         </x-slot:title>
         <x-slot:menu>
-            <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
+            @if($canViewDirectDeposit)
+                <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
+            @endif
         </x-slot:menu>
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
@@ -896,7 +907,8 @@
                 <div class="sm:ml-auto">{{ $mmrPurchases->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>
-    </x-card>
+        </x-card>
+    @endif
 
     {{-- Recent Transactions --}}
     <x-card id="recent-transactions" class="{{ $surfaceCardClass }} mb-6">
