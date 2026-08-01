@@ -272,7 +272,7 @@
                                     aria-expanded="false"
                                     onclick="toggleGrantResources({{ $grant->id }}, this)"
                                 >
-                                    <x-mary-icon name="o-eye" />
+                                    <x-icon name="o-eye" class="size-4" />
                                     <span>Resources</span>
                                 </button>
                             </td>
@@ -283,7 +283,7 @@
                                         class="btn btn-primary btn-sm"
                                         onclick="editGrant({{ Js::from($grant) }}); document.getElementById('grantModal').showModal()"
                                     >
-                                        <x-mary-icon name="o-pencil" />
+                                        <x-icon name="o-pencil" class="size-4" />
                                         <span>Edit</span>
                                     </button>
                                 @endcan
