@@ -61,9 +61,12 @@ class CityController extends Controller
     {
         $this->authorize('view-members');
 
-        $requestedSort = (string) $request->query('sort', 'power');
-        $sort = array_key_exists($requestedSort, self::SORT_COLUMNS) ? $requestedSort : 'power';
-        $requestedDirection = strtolower((string) $request->query('direction', $sort === 'power' ? 'desc' : 'asc'));
+        $requestedSort = $request->query('sort', 'power');
+        $sort = is_string($requestedSort) && array_key_exists($requestedSort, self::SORT_COLUMNS)
+            ? $requestedSort
+            : 'power';
+        $requestedDirection = $request->query('direction', $sort === 'power' ? 'desc' : 'asc');
+        $requestedDirection = is_string($requestedDirection) ? strtolower($requestedDirection) : 'desc';
         $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : 'asc';
 
         $cityQuery = $this->cityQuery($membershipService);

@@ -57,6 +57,25 @@ class CityIndexPerformanceTest extends TestCase
             ->assertOk();
     }
 
+    public function test_city_index_rejects_array_sort_parameters_without_crashing(): void
+    {
+        $alliance = Alliance::factory()->create();
+        config(['services.pw.alliance_id' => $alliance->id]);
+        app(AllianceMembershipService::class)->clear();
+
+        $nation = Nation::factory()->for($alliance)->create();
+        City::query()->create($this->cityAttributes($nation, 1));
+
+        $this->actingAs($this->createAdmin())
+            ->get(route('admin.cities.index', [
+                'sort' => ['infrastructure'],
+                'direction' => ['asc'],
+            ]))
+            ->assertOk()
+            ->assertViewHas('sort', 'power')
+            ->assertViewHas('direction', 'desc');
+    }
+
     private function createAdmin(): User
     {
         $admin = $this->createVerifiedAdmin(['nation_id' => 990001]);
