@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\InactivitySettingsRequest;
 use App\Models\Nation;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\MemberStatsService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\View\View;
 
@@ -21,21 +23,27 @@ class MembersController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function index(MemberStatsService $statsService): View
+    public function index(Request $request, MemberStatsService $statsService): View
     {
         $this->authorize('view-members');
 
-        return view('admin.members.index', $statsService->getOverviewData());
+        /** @var User $viewer */
+        $viewer = $request->user();
+
+        return view('admin.members.index', $statsService->getOverviewData($viewer));
     }
 
     /**
      * @throws AuthorizationException
      */
-    public function show(Nation $nation, MemberStatsService $service): View
+    public function show(Request $request, Nation $nation, MemberStatsService $service): View
     {
         $this->authorize('view-members');
 
-        return view('admin.members.show', $service->getNationStats($nation));
+        /** @var User $viewer */
+        $viewer = $request->user();
+
+        return view('admin.members.show', $service->getNationStats($nation, $viewer));
     }
 
     public function updateInactivitySettings(

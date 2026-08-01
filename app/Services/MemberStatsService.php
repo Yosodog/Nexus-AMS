@@ -11,6 +11,8 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Models\NationSignIn;
 use App\Models\Taxes;
+use App\Models\User;
+use Illuminate\Support\Collection;
 
 class MemberStatsService
 {
@@ -22,26 +24,40 @@ class MemberStatsService
     /**
      * @return array<int|string, mixed>
      */
-    public function getOverviewData(): array
+    public function getOverviewData(User $viewer): array
     {
+        $canViewAccounts = $viewer->can('view-accounts');
+        $canViewFinancialReports = $viewer->can('view-financial-reports');
+        $canViewMilitary = $viewer->can('view-mmr') || $viewer->can('view-wars');
+
+        $relationships = ['accountProfile:nation_id,last_active'];
+
+        if ($canViewAccounts) {
+            $relationships[] = 'resources:nation_id,money,steel,gasoline,aluminum,munitions,uranium,food';
+        }
+
+        if ($canViewMilitary) {
+            $relationships[] = 'military:nation_id,soldiers,tanks,aircraft,ships,spies';
+        }
+
         $nations = Nation::query()
             ->select(['id', 'leader_name', 'nation_name', 'score', 'num_cities', 'update_tz'])
-            ->with([
-                'resources:nation_id,money,steel,gasoline,aluminum,munitions,uranium,food',
-                'military:nation_id,soldiers,tanks,aircraft,ships,spies',
-                'accountProfile:nation_id,last_active',
-            ])
+            ->with($relationships)
             ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
             ->where('alliance_position', '!=', 'APPLICANT')
             ->where('vacation_mode_turns', '=', 0)
             ->get();
 
-        $accountTotals = Account::query()
-            ->selectRaw('nation_id, SUM(money) as money, SUM(steel) as steel, SUM(gasoline) as gasoline, SUM(aluminum) as aluminum, SUM(munitions) as munitions, SUM(uranium) as uranium, SUM(food) as food')
-            ->whereIn('nation_id', $nations->pluck('id'))
-            ->groupBy('nation_id')
-            ->get()
-            ->keyBy('nation_id');
+        $accountTotals = collect();
+
+        if ($canViewAccounts) {
+            $accountTotals = Account::query()
+                ->selectRaw('nation_id, SUM(money) as money, SUM(steel) as steel, SUM(gasoline) as gasoline, SUM(aluminum) as aluminum, SUM(munitions) as munitions, SUM(uranium) as uranium, SUM(food) as food')
+                ->whereIn('nation_id', $nations->pluck('id'))
+                ->groupBy('nation_id')
+                ->get()
+                ->keyBy('nation_id');
+        }
 
         $openEvents = InactivityEvent::query()
             ->select([
@@ -57,7 +73,9 @@ class MemberStatsService
 
         $maxTier = $nations->max('num_cities') ?? 0;
         $cityCountsByTier = $nations->countBy('num_cities');
-        $profitabilityLeaderboard = $this->nationProfitabilityService->getLeaderboard();
+        $profitabilityLeaderboard = $canViewFinancialReports
+            ? $this->nationProfitabilityService->getLeaderboard()
+            : ['rows' => [], 'radiation_snapshot_at' => null];
         $profitabilityByNation = collect($profitabilityLeaderboard['rows'] ?? [])->keyBy('nation_id');
 
         $cityTiers = collect(range(1, $maxTier))->mapWithKeys(fn ($tier) => [
@@ -77,6 +95,9 @@ class MemberStatsService
                 $profitabilityByNation->get($nation->id)
             )),
             'profitabilityLeaderboard' => $profitabilityLeaderboard,
+            'canViewAccounts' => $canViewAccounts,
+            'canViewFinancialReports' => $canViewFinancialReports,
+            'canViewMilitary' => $canViewMilitary,
             'inactivitySettings' => [
                 'enabled' => SettingService::isInactivityModeEnabled(),
                 'threshold_hours' => SettingService::getInactivityThresholdHours(),
@@ -117,6 +138,8 @@ class MemberStatsService
         ?array $profitability = null
     ): array {
         $cities = $nation->num_cities;
+        $military = $nation->relationLoaded('military') ? $nation->military : null;
+        $nationResources = $nation->relationLoaded('resources') ? $nation->resources : null;
         $max = [
             'soldiers' => $cities * 15000,
             'tanks' => $cities * 1250,
@@ -125,10 +148,10 @@ class MemberStatsService
         ];
 
         $current = [
-            'soldiers' => $nation->military?->soldiers ?? 0,
-            'tanks' => $nation->military?->tanks ?? 0,
-            'aircraft' => $nation->military?->aircraft ?? 0,
-            'ships' => $nation->military?->ships ?? 0,
+            'soldiers' => $military?->soldiers ?? 0,
+            'tanks' => $military?->tanks ?? 0,
+            'aircraft' => $military?->aircraft ?? 0,
+            'ships' => $military?->ships ?? 0,
         ];
 
         $militaryPercent = collect($max)->mapWithKeys(fn ($maxVal, $type) => [
@@ -145,9 +168,9 @@ class MemberStatsService
             'food',
         ];
 
-        $resourceValues = collect($resources)->mapWithKeys(function ($res) use ($nation, $accountTotals) {
+        $resourceValues = collect($resources)->mapWithKeys(function ($res) use ($nationResources, $accountTotals) {
             $accountTotal = (float) ($accountTotals?->{$res} ?? 0);
-            $inGame = optional($nation->resources)->$res ?? 0;
+            $inGame = $nationResources?->{$res} ?? 0;
 
             return [
                 $res => [
@@ -164,7 +187,7 @@ class MemberStatsService
             'score' => $nation->score,
             'cities' => $cities,
             'timezone' => $nation->update_tz,
-            'spies' => $nation->military?->spies ?? 0,
+            'spies' => $military?->spies ?? 0,
             'military_percent' => $militaryPercent,
             'military_current' => $current,
             'resources' => $resourceValues,
@@ -184,9 +207,15 @@ class MemberStatsService
     /**
      * Gets stats for the admin/members/{nations} page
      */
-    public function getNationStats(Nation $nation): array
+    public function getNationStats(Nation $nation, User $viewer): array
     {
         $nationId = $nation->id;
+        $canViewAccounts = $viewer->can('view-accounts');
+        $canViewCityGrants = $viewer->can('view-city-grants');
+        $canViewGrants = $viewer->can('view-grants');
+        $canViewLoans = $viewer->can('view-loans');
+        $canViewMmr = $viewer->can('view-mmr');
+        $canViewTaxes = $viewer->can('view-taxes');
 
         // 1. Info Boxes
         $lastSignIn = NationSignIn::query()
@@ -198,19 +227,23 @@ class MemberStatsService
         $lastCities = optional($lastSignIn)->num_cities ?? $nation->cities;
 
         // 2. Resource History (30 days)
-        $resourceHistory = NationSignIn::where('nation_id', $nationId)
-            ->where('created_at', '>=', now()->subDays(30))
-            ->orderBy('created_at')
-            ->get(['created_at', 'steel', 'aluminum', 'munitions', 'gasoline'])
-            ->map(function ($row) {
-                return [
-                    'date' => $row->created_at->format('Y-m-d'),
-                    'steel' => $row->steel,
-                    'aluminum' => $row->aluminum,
-                    'munitions' => $row->munitions,
-                    'gasoline' => $row->gasoline,
-                ];
-            });
+        $resourceHistory = collect();
+
+        if ($canViewMmr) {
+            $resourceHistory = NationSignIn::where('nation_id', $nationId)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->orderBy('created_at')
+                ->get(['created_at', 'steel', 'aluminum', 'munitions', 'gasoline'])
+                ->map(function ($row) {
+                    return [
+                        'date' => $row->created_at->format('Y-m-d'),
+                        'steel' => $row->steel,
+                        'aluminum' => $row->aluminum,
+                        'munitions' => $row->munitions,
+                        'gasoline' => $row->gasoline,
+                    ];
+                });
+        }
 
         // 3. Score History (365 days)
         $scoreHistory = NationSignIn::where('nation_id', $nationId)
@@ -218,77 +251,56 @@ class MemberStatsService
             ->orderBy('created_at')
             ->get(['created_at', 'score']);
 
-        $taxHistory = Taxes::query()
-            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(gasoline) AS gasoline, SUM(aluminum) AS aluminum, SUM(munitions) AS munitions, SUM(uranium) AS uranium, SUM(food) AS food')
-            ->where('sender_id', $nationId)
-            ->where('date', '>=', now()->subDays(365))
-            ->groupBy('day')
-            ->orderBy('day')
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'date' => (string) $row->date,
-                    'money' => (float) ($row->money ?? 0),
-                    'steel' => (float) ($row->steel ?? 0),
-                    'gasoline' => (float) ($row->gasoline ?? 0),
-                    'aluminum' => (float) ($row->aluminum ?? 0),
-                    'munitions' => (float) ($row->munitions ?? 0),
-                    'uranium' => (float) ($row->uranium ?? 0),
-                    'food' => (float) ($row->food ?? 0),
-                ];
-            })
-            ->values();
+        $taxHistory = $canViewTaxes ? $this->taxHistory($nationId) : collect();
 
         // 5. Recent Requests
-        $recentCityGrants = CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentCustomGrants = GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentLoans = Loan::where('nation_id', $nationId)->latest()->take(5)->get();
-        $recentTaxes = Taxes::query()
-            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(munitions) AS munitions, SUM(food) AS food')
-            ->where('sender_id', $nationId)
-            ->where('date', '>=', now()->subDays(7))
-            ->groupBy('day')
-            ->orderBy('day')
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'date' => (string) $row->date,
-                    'money' => (float) ($row->money ?? 0),
-                    'steel' => (float) ($row->steel ?? 0),
-                    'munitions' => (float) ($row->munitions ?? 0),
-                    'food' => (float) ($row->food ?? 0),
-                ];
-            })
-            ->values();
+        $recentCityGrants = $canViewCityGrants
+            ? CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get()
+            : collect();
+        $recentCustomGrants = $canViewGrants
+            ? GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get()
+            : collect();
+        $recentLoans = $canViewLoans
+            ? Loan::where('nation_id', $nationId)->latest()->take(5)->get()
+            : collect();
+        $recentTaxes = $canViewTaxes ? $this->recentTaxes($nationId) : collect();
 
-        $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
-            ->where('created_at', '>=', now()->subDays(30))
-            ->orderBy('created_at')
-            ->get(['created_at', 'money', 'steel', 'aluminum', 'gasoline', 'munitions'])
-            ->map(fn ($row) => [
-                'date' => $row->created_at->format('Y-m-d'),
-                'money' => $row->money,
-                'steel' => $row->steel,
-                'aluminum' => $row->aluminum,
-                'gasoline' => $row->gasoline,
-                'munitions' => $row->munitions,
-            ])
-            ->values();
+        $resourceSignInHistory = collect();
 
-        $memberAccounts = Account::query()
-            ->where('nation_id', $nationId)
-            ->orderBy('id')
-            ->get()
-            ->map(fn (Account $account) => [
-                'id' => $account->id,
-                'name' => $account->name,
-                'frozen' => (bool) $account->frozen,
-                'resources' => collect(PWHelperService::resources())
-                    ->mapWithKeys(fn (string $resource) => [$resource => (float) ($account->$resource ?? 0.0)])
-                    ->all(),
-                'updated_at' => $account->updated_at,
-            ])
-            ->values();
+        if ($canViewMmr) {
+            $resourceSignInHistory = NationSignIn::where('nation_id', $nation->id)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->orderBy('created_at')
+                ->get(['created_at', 'money', 'steel', 'aluminum', 'gasoline', 'munitions'])
+                ->map(fn ($row) => [
+                    'date' => $row->created_at->format('Y-m-d'),
+                    'money' => $row->money,
+                    'steel' => $row->steel,
+                    'aluminum' => $row->aluminum,
+                    'gasoline' => $row->gasoline,
+                    'munitions' => $row->munitions,
+                ])
+                ->values();
+        }
+
+        $memberAccounts = collect();
+
+        if ($canViewAccounts) {
+            $memberAccounts = Account::query()
+                ->where('nation_id', $nationId)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Account $account) => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                    'frozen' => (bool) $account->frozen,
+                    'resources' => collect(PWHelperService::resources())
+                        ->mapWithKeys(fn (string $resource) => [$resource => (float) ($account->$resource ?? 0.0)])
+                        ->all(),
+                    'updated_at' => $account->updated_at,
+                ])
+                ->values();
+        }
 
         return [
             'nation' => $nation,
@@ -307,6 +319,59 @@ class MemberStatsService
 
             'resourceSignInHistory' => $resourceSignInHistory,
             'memberAccounts' => $memberAccounts,
+            'canViewAccounts' => $canViewAccounts,
+            'canViewCityGrants' => $canViewCityGrants,
+            'canViewGrants' => $canViewGrants,
+            'canViewLoans' => $canViewLoans,
+            'canViewMmr' => $canViewMmr,
+            'canViewTaxes' => $canViewTaxes,
         ];
+    }
+
+    /**
+     * @return Collection<int, array<string, float|string>>
+     */
+    private function taxHistory(int $nationId): Collection
+    {
+        return Taxes::query()
+            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(gasoline) AS gasoline, SUM(aluminum) AS aluminum, SUM(munitions) AS munitions, SUM(uranium) AS uranium, SUM(food) AS food')
+            ->where('sender_id', $nationId)
+            ->where('date', '>=', now()->subDays(365))
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->map(fn ($row) => [
+                'date' => (string) $row->date,
+                'money' => (float) ($row->money ?? 0),
+                'steel' => (float) ($row->steel ?? 0),
+                'gasoline' => (float) ($row->gasoline ?? 0),
+                'aluminum' => (float) ($row->aluminum ?? 0),
+                'munitions' => (float) ($row->munitions ?? 0),
+                'uranium' => (float) ($row->uranium ?? 0),
+                'food' => (float) ($row->food ?? 0),
+            ])
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, array<string, float|string>>
+     */
+    private function recentTaxes(int $nationId): Collection
+    {
+        return Taxes::query()
+            ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(munitions) AS munitions, SUM(food) AS food')
+            ->where('sender_id', $nationId)
+            ->where('date', '>=', now()->subDays(7))
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->map(fn ($row) => [
+                'date' => (string) $row->date,
+                'money' => (float) ($row->money ?? 0),
+                'steel' => (float) ($row->steel ?? 0),
+                'munitions' => (float) ($row->munitions ?? 0),
+                'food' => (float) ($row->food ?? 0),
+            ])
+            ->values();
     }
 }

@@ -20,12 +20,14 @@
         </x-card>
     </div>
 
-    @php
-        $profitabilityRows = $profitabilityLeaderboard['rows'] ?? [];
-        $profitabilityRadiationSnapshotAt = filled($profitabilityLeaderboard['radiation_snapshot_at'] ?? null)
-            ? \Illuminate\Support\Carbon::parse($profitabilityLeaderboard['radiation_snapshot_at'])->toDateTimeString()
-            : 'Unavailable';
-    @endphp
+    @if($canViewFinancialReports)
+        @php
+            $profitabilityRows = $profitabilityLeaderboard['rows'] ?? [];
+            $profitabilityRadiationSnapshotAt = filled($profitabilityLeaderboard['radiation_snapshot_at'] ?? null)
+                ? \Illuminate\Support\Carbon::parse($profitabilityLeaderboard['radiation_snapshot_at'])->toDateTimeString()
+                : 'Unavailable';
+        @endphp
+    @endif
 
     {{-- Member Table --}}
     <x-card title="Alliance Members" class="mb-6" x-data="{ search: '' }">
@@ -40,15 +42,21 @@
                         <th>Status</th>
                         <th>Score</th>
                         <th>Cities</th>
-                        <th>Spies</th>
-                        <th>Money</th>
-                        <th>Steel</th>
-                        <th>Gasoline</th>
-                        <th>Aluminum</th>
-                        <th>Munitions</th>
-                        <th>Uranium</th>
-                        <th>Food</th>
-                        <th data-sortable="false">Military %</th>
+                        @if($canViewMilitary)
+                            <th>Spies</th>
+                        @endif
+                        @if($canViewAccounts)
+                            <th>Money</th>
+                            <th>Steel</th>
+                            <th>Gasoline</th>
+                            <th>Aluminum</th>
+                            <th>Munitions</th>
+                            <th>Uranium</th>
+                            <th>Food</th>
+                        @endif
+                        @if($canViewMilitary)
+                            <th data-sortable="false">Military %</th>
+                        @endif
                         <th>Timezone</th>
                         <th data-sortable="false">Actions</th>
                     </tr>
@@ -71,27 +79,33 @@
                             </td>
                             <td>{{ number_format($nation['score'], 2) }}</td>
                             <td>{{ $nation['cities'] }}</td>
-                            <td>{{ $nation['spies'] }}</td>
+                            @if($canViewMilitary)
+                                <td>{{ $nation['spies'] }}</td>
+                            @endif
 
-                            @foreach (['money', 'steel', 'gasoline', 'aluminum', 'munitions', 'uranium', 'food'] as $res)
+                            @if($canViewAccounts)
+                                @foreach (['money', 'steel', 'gasoline', 'aluminum', 'munitions', 'uranium', 'food'] as $res)
+                                    <td>
+                                        <span class="tooltip"
+                                              data-tip="In Nation: {{ number_format($nation['resources'][$res]['in_game']) }}">
+                                            {{ number_format($nation['resources'][$res]['total']) }}
+                                        </span>
+                                    </td>
+                                @endforeach
+                            @endif
+
+                            @if($canViewMilitary)
                                 <td>
-                                    <span class="tooltip"
-                                          data-tip="In Nation: {{ number_format($nation['resources'][$res]['in_game']) }}">
-                                        {{ number_format($nation['resources'][$res]['total']) }}
+                                    <span class="tooltip" data-tip="Soldiers: {{ number_format($nation['military_current']['soldiers']) }} | Tanks: {{ number_format($nation['military_current']['tanks']) }} | Aircraft: {{ number_format($nation['military_current']['aircraft']) }} | Ships: {{ number_format($nation['military_current']['ships']) }}">
+                                        {{ implode('/', [
+                                            $nation['military_percent']['soldiers'] . '%',
+                                            $nation['military_percent']['tanks'] . '%',
+                                            $nation['military_percent']['aircraft'] . '%',
+                                            $nation['military_percent']['ships'] . '%',
+                                        ]) }}
                                     </span>
                                 </td>
-                            @endforeach
-
-                            <td>
-                                <span class="tooltip" data-tip="Soldiers: {{ number_format($nation['military_current']['soldiers']) }} | Tanks: {{ number_format($nation['military_current']['tanks']) }} | Aircraft: {{ number_format($nation['military_current']['aircraft']) }} | Ships: {{ number_format($nation['military_current']['ships']) }}">
-                                    {{ implode('/', [
-                                        $nation['military_percent']['soldiers'] . '%',
-                                        $nation['military_percent']['tanks'] . '%',
-                                        $nation['military_percent']['aircraft'] . '%',
-                                        $nation['military_percent']['ships'] . '%',
-                                    ]) }}
-                                </span>
-                            </td>
+                            @endif
 
                             <td data-order="{{ $nation['timezone'] }}">UTC {{ $nation['timezone'] }}</td>
                             <td>
@@ -107,7 +121,8 @@
     </x-card>
 
     {{-- Build Profitability --}}
-    <x-card class="mb-6">
+    @if($canViewFinancialReports)
+        <x-card class="mb-6">
         <x-slot:title>
             <div>
                 Build Profitability
@@ -157,7 +172,8 @@
                 </tbody>
             </table>
         </div>
-    </x-card>
+        </x-card>
+    @endif
 
     {{-- Inactivity Settings --}}
     <x-card class="mb-6">

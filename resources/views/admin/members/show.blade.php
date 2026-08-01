@@ -15,50 +15,67 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <x-stat title="Score" :value="number_format($lastScore, 2)" icon="o-chart-bar" color="text-primary" />
         <x-stat title="Cities" :value="$lastCities" icon="o-building-office-2" color="text-success" />
-        <x-stat title="Total Taxes (30d)" :value="'$' . number_format($taxHistory->take(30)->sum('money'))" icon="o-banknotes" color="text-info" />
+        @if($canViewTaxes)
+            <x-stat title="Total Taxes (30d)" :value="'$' . number_format($taxHistory->take(30)->sum('money'))" icon="o-banknotes" color="text-info" />
+        @endif
         <x-stat title="Updates" :value="$scoreHistory->count() . ' records'" icon="o-clock" color="text-warning" />
     </div>
 
     {{-- Charts --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <x-card title="Money Tax History">
-            <canvas id="moneyTaxChart" class="max-h-56"></canvas>
-        </x-card>
-        <x-card title="Food Tax History">
-            <canvas id="foodTaxChart" class="max-h-56"></canvas>
-        </x-card>
-        <x-card title="Resource Tax History">
-            <canvas id="resourceTaxChart" class="max-h-56"></canvas>
-        </x-card>
+        @if($canViewTaxes)
+            <x-card title="Money Tax History">
+                <canvas id="moneyTaxChart" class="max-h-56"></canvas>
+            </x-card>
+            <x-card title="Food Tax History">
+                <canvas id="foodTaxChart" class="max-h-56"></canvas>
+            </x-card>
+            <x-card title="Resource Tax History">
+                <canvas id="resourceTaxChart" class="max-h-56"></canvas>
+            </x-card>
+        @endif
         <x-card title="Score History (1 Year)">
             <canvas id="scoreChart" class="max-h-56"></canvas>
         </x-card>
-        <x-card title="Money History (30 Days)">
-            <canvas id="moneySignInChart" class="max-h-56"></canvas>
-        </x-card>
-        <x-card title="Resource History (30 Days)">
-            <canvas id="resourceSignInChart" class="max-h-56"></canvas>
-        </x-card>
+        @if($canViewMmr)
+            <x-card title="Money History (30 Days)">
+                <canvas id="moneySignInChart" class="max-h-56"></canvas>
+            </x-card>
+            <x-card title="Resource History (30 Days)">
+                <canvas id="resourceSignInChart" class="max-h-56"></canvas>
+            </x-card>
+        @endif
     </div>
 
     {{-- Recent Tables --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <x-card title="Recent Loan Requests">
-            @include('admin.members.partials.loans', ['loans' => $recentLoans])
-        </x-card>
-        <x-card title="Recent Grant Requests">
-            @include('admin.members.partials.grants', ['requests' => $recentCustomGrants])
-        </x-card>
-        <x-card title="Recent City Grant Requests">
-            @include('admin.members.partials.city_grants', ['requests' => $recentCityGrants])
-        </x-card>
-        <x-card title="Recent Taxes Paid">
-            @include('admin.members.partials.taxes', ['taxes' => $recentTaxes])
-        </x-card>
-    </div>
+    @if($canViewLoans || $canViewGrants || $canViewCityGrants || $canViewTaxes)
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            @if($canViewLoans)
+                <x-card title="Recent Loan Requests">
+                    @include('admin.members.partials.loans', ['loans' => $recentLoans])
+                </x-card>
+            @endif
+            @if($canViewGrants)
+                <x-card title="Recent Grant Requests">
+                    @include('admin.members.partials.grants', ['requests' => $recentCustomGrants])
+                </x-card>
+            @endif
+            @if($canViewCityGrants)
+                <x-card title="Recent City Grant Requests">
+                    @include('admin.members.partials.city_grants', ['requests' => $recentCityGrants])
+                </x-card>
+            @endif
+            @if($canViewTaxes)
+                <x-card title="Recent Taxes Paid">
+                    @include('admin.members.partials.taxes', ['taxes' => $recentTaxes])
+                </x-card>
+            @endif
+        </div>
+    @endif
 
     {{-- Account Overview --}}
-    <x-card title="Account Overview" class="mb-6">
+    @if($canViewAccounts)
+        <x-card title="Account Overview" class="mb-6">
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
@@ -101,17 +118,23 @@
                 </tbody>
             </table>
         </div>
-    </x-card>
+        </x-card>
+    @endif
 @endsection
 
 @push('scripts')
     <x-chart-js />
     <script>
+        @if($canViewTaxes)
         const taxLabels = {!! json_encode($taxHistory->pluck('date')) !!};
+        @endif
+        @if($canViewMmr)
         const signInLabels = {!! json_encode($resourceSignInHistory->pluck('date')) !!};
+        @endif
         const seriesColors = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
         const chartDefaults = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } };
 
+        @if($canViewTaxes)
         new Chart(document.getElementById('moneyTaxChart'), {
             type: 'line',
             data: { labels: taxLabels, datasets: [{ label: 'Money', nexusColor: 'primary', data: {!! json_encode($taxHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
@@ -136,6 +159,7 @@
             },
             options: chartDefaults
         });
+        @endif
 
         new Chart(document.getElementById('scoreChart'), {
             type: 'line',
@@ -146,6 +170,7 @@
             options: { responsive: true }
         });
 
+        @if($canViewMmr)
         new Chart(document.getElementById('moneySignInChart'), {
             type: 'line',
             data: { labels: signInLabels, datasets: [{ label: 'Money', nexusColor: 'primary', data: {!! json_encode($resourceSignInHistory->map(fn($row) => $row['money'])) !!}, fill: false, tension: 0.3, borderWidth: 2 }] },
@@ -164,5 +189,6 @@
             },
             options: chartDefaults
         });
+        @endif
     </script>
 @endpush
