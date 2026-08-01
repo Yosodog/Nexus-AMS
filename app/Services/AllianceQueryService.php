@@ -25,10 +25,7 @@ class AllianceQueryService
 
         $response = $client->sendQuery($builder);
 
-        $alliance = new Alliance;
-        $alliance->buildWithJSON((object) $response->{0});
-
-        return $alliance;
+        return self::hydrateSingleAlliance($response, $aID);
     }
 
     /**
@@ -53,10 +50,7 @@ class AllianceQueryService
 
         $response = $client->sendQuery($builder);
 
-        $alliance = new Alliance;
-        $alliance->buildWithJSON((object) $response->{0});
-
-        return $alliance;
+        return self::hydrateSingleAlliance($response, $aID);
     }
 
     /**
@@ -115,8 +109,27 @@ class AllianceQueryService
 
         $response = $client->sendQuery($builder);
 
+        return self::hydrateSingleAlliance($response, $aID);
+    }
+
+    /** @throws PWQueryFailedException */
+    private static function hydrateSingleAlliance(mixed $response, int $allianceId): Alliance
+    {
+        $record = is_object($response)
+            ? ($response->{0} ?? null)
+            : (is_array($response) ? ($response[0] ?? null) : null);
+        $recordData = is_object($record) || is_array($record) ? (array) $record : [];
+
+        if (! isset($recordData['id'])
+            || ! is_numeric($recordData['id'])
+            || (int) $recordData['id'] !== $allianceId) {
+            throw new PWQueryFailedException(
+                "Politics & War returned no usable data for alliance [{$allianceId}]."
+            );
+        }
+
         $alliance = new Alliance;
-        $alliance->buildWithJSON((object) $response->{0});
+        $alliance->buildWithJSON((object) $recordData);
 
         return $alliance;
     }

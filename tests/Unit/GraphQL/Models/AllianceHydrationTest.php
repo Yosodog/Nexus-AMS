@@ -9,6 +9,35 @@ use Tests\UnitTestCase;
 
 class AllianceHydrationTest extends UnitTestCase
 {
+    public function test_build_with_json_defaults_nullable_fields_and_collections(): void
+    {
+        $alliance = new Alliance;
+
+        $alliance->buildWithJSON((object) [
+            'id' => 777,
+            'name' => 'Test Alliance',
+            'acronym' => 'TA',
+            'score' => 12345.67,
+            'color' => 'blue',
+            'average_score' => null,
+            'accept_members' => true,
+            'flag' => null,
+            'forum_link' => null,
+            'discord_link' => null,
+            'rank' => 1,
+        ]);
+
+        $this->assertSame('777', $alliance->id);
+        $this->assertNull($alliance->flag);
+        $this->assertNull($alliance->forum_link);
+        $this->assertNull($alliance->discord_link);
+        $this->assertNull($alliance->wiki_link);
+        $this->assertNull($alliance->money);
+        $this->assertNull($alliance->food);
+        $this->assertCount(0, $alliance->nations);
+        $this->assertCount(0, $alliance->taxrecs);
+    }
+
     public function test_build_with_json_hydrates_nested_nations_and_tax_records(): void
     {
         $alliance = new Alliance;
