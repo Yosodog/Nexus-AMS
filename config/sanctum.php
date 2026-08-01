@@ -5,8 +5,6 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
-$appUrlHost = parse_url((string) env('APP_URL', ''), PHP_URL_HOST);
-
 $defaultStatefulDomains = [
     'localhost',
     'localhost:3000',
@@ -17,14 +15,6 @@ $defaultStatefulDomains = [
     Sanctum::currentRequestHost(),
 ];
 
-if (is_string($appUrlHost) && $appUrlHost !== '') {
-    $defaultStatefulDomains[] = $appUrlHost;
-
-    if (! str_starts_with($appUrlHost, 'www.')) {
-        $defaultStatefulDomains[] = "www.{$appUrlHost}";
-    }
-}
-
 $configuredStatefulDomains = array_values(array_filter(array_map(
     static fn (string $domain): string => trim($domain),
     explode(',', (string) env('SANCTUM_STATEFUL_DOMAINS', ''))
@@ -32,7 +22,7 @@ $configuredStatefulDomains = array_values(array_filter(array_map(
 
 $statefulDomains = $configuredStatefulDomains === []
     ? $defaultStatefulDomains
-    : array_merge($configuredStatefulDomains, $defaultStatefulDomains);
+    : $configuredStatefulDomains;
 
 $statefulDomains = array_values(array_unique(array_filter($statefulDomains)));
 
