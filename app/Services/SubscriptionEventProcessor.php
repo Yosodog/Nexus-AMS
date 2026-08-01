@@ -17,6 +17,7 @@ use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
+use App\Models\WarDeclarationReceipt;
 use InvalidArgumentException;
 
 class SubscriptionEventProcessor
@@ -195,19 +196,25 @@ class SubscriptionEventProcessor
 
             $war = War::updateFromAPI((object) $record);
 
-            if (! $war->wasRecentlyCreated) {
-                continue;
-            }
+            $war->getConnection()->transaction(function () use ($record): void {
+                $receipt = WarDeclarationReceipt::query()->firstOrCreate([
+                    'war_id' => (int) $record['id'],
+                ]);
 
-            event(new WarDeclared(
-                warId: $record['id'],
-                attackerNationId: $record['att_id'],
-                attackerAllianceId: $record['att_alliance_id'] ?? null,
-                attackerAlliancePosition: $record['att_alliance_position'] ?? null,
-                defenderNationId: $record['def_id'],
-                defenderAllianceId: $record['def_alliance_id'] ?? null,
-                defenderAlliancePosition: $record['def_alliance_position'] ?? null,
-            ));
+                if (! $receipt->wasRecentlyCreated) {
+                    return;
+                }
+
+                event(new WarDeclared(
+                    warId: $record['id'],
+                    attackerNationId: $record['att_id'],
+                    attackerAllianceId: $record['att_alliance_id'] ?? null,
+                    attackerAlliancePosition: $record['att_alliance_position'] ?? null,
+                    defenderNationId: $record['def_id'],
+                    defenderAllianceId: $record['def_alliance_id'] ?? null,
+                    defenderAlliancePosition: $record['def_alliance_position'] ?? null,
+                ));
+            });
         }
     }
 

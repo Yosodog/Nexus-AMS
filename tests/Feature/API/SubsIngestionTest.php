@@ -242,7 +242,7 @@ class SubsIngestionTest extends FeatureTestCase
         Queue::assertPushed(RefreshNationProfitabilitySnapshotJob::class, 1);
     }
 
-    public function test_war_create_persists_alliance_wars_and_dispatches_the_event_only_once(): void
+    public function test_war_create_dispatches_the_event_once_when_sync_already_persisted_the_war(): void
     {
         Event::fake();
 
@@ -262,6 +262,8 @@ class SubsIngestionTest extends FeatureTestCase
             'def_alliance_position' => 'MEMBER',
         ];
 
+        War::updateFromAPI($payload);
+
         $this->postSubsJson('/api/v1/subs/war/create', $payload)
             ->assertOk()
             ->assertJson(['message' => 'War created successfully']);
@@ -269,7 +271,33 @@ class SubsIngestionTest extends FeatureTestCase
         $this->postSubsJson('/api/v1/subs/war/create', $payload)->assertOk();
 
         $this->assertDatabaseHas('wars', ['id' => 901, 'att_alliance_id' => 321]);
+        $this->assertDatabaseHas('war_declaration_receipts', ['war_id' => 901]);
         Event::assertDispatchedTimes(WarDeclared::class, 1);
+    }
+
+    public function test_war_declaration_receipt_migration_backfills_existing_wars(): void
+    {
+        War::query()->create([
+            'id' => 902,
+            'date' => now(),
+            'reason' => 'Historical',
+            'war_type' => 'ORDINARY',
+            'turns_left' => 0,
+            'att_id' => 1001,
+            'att_alliance_id' => 321,
+            'att_alliance_position' => 'MEMBER',
+            'def_id' => 2002,
+            'def_alliance_id' => 999,
+            'def_alliance_position' => 'MEMBER',
+        ]);
+        Schema::drop('war_declaration_receipts');
+
+        $migration = require database_path(
+            'migrations/2026_08_01_201608_create_war_declaration_receipts_table.php'
+        );
+        $migration->up();
+
+        $this->assertDatabaseHas('war_declaration_receipts', ['war_id' => 902]);
     }
 
     public function test_war_update_and_attack_endpoints_queue_jobs(): void
@@ -526,6 +554,11 @@ class SubsIngestionTest extends FeatureTestCase
             $table->unsignedInteger('def_nukes_used')->default(0);
             $table->float('att_infra_destroyed_value')->default(0);
             $table->float('def_infra_destroyed_value')->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('war_declaration_receipts', function ($table): void {
+            $table->unsignedBigInteger('war_id')->primary();
             $table->timestamps();
         });
 
