@@ -210,6 +210,42 @@ class QueryServiceTest extends FeatureTestCase
         $this->assertSame(30, $service->rateLimitResetAfter(Http::get('https://example.test/future-reset')));
     }
 
+    public function test_paginated_queries_fetch_every_page_across_batches(): void
+    {
+        $requestedPages = [];
+
+        Http::fake(function ($request) use (&$requestedPages) {
+            $query = (string) $request->data()['query'];
+            preg_match('/page: (\d+)/', $query, $matches);
+            $page = isset($matches[1]) ? (int) $matches[1] : 1;
+            $requestedPages[] = $page;
+
+            return Http::response([
+                'data' => [
+                    'wars' => [
+                        'data' => [['id' => $page]],
+                        'paginatorInfo' => [
+                            'perPage' => 1,
+                            'count' => 8,
+                            'lastPage' => 8,
+                        ],
+                    ],
+                ],
+            ]);
+        });
+
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('wars')
+            ->addArgument('first', 1)
+            ->addNestedField('data', fn ($query) => $query->addFields(['id']))
+            ->withPaginationInfo();
+
+        $response = (array) (new QueryService)->sendQuery($builder);
+
+        $this->assertSame(range(1, 8), $requestedPages);
+        $this->assertSame(range(1, 8), array_column($response, 'id'));
+    }
+
     public function test_send_query_classifies_client_rejection_as_definite_mutation_failure(): void
     {
         Http::fake([

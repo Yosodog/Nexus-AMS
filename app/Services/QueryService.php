@@ -98,7 +98,7 @@ class QueryService
     ): stdClass {
         $maxConcurrency = $maxConcurrency ?? $this->maxConcurrency;
         $paginationEnabled = $builder->includePagination;
-        $page = 1;
+        $page = 2;
         $lastPage = 1;
         $allResults = collect();
         $rootField = $builder->getRootField();
@@ -519,8 +519,6 @@ class QueryService
         bool $allowTransientRetries = true
     ): array {
         $promises = [];
-        $page++; // Increment page because we can assume we are already on page 2 if we hit this function
-
         // Loop up to the max concurrency or remaining pages
         for ($i = 0; $i < $maxConcurrency && $page <= $lastPage; $i++) {
             // Clone the builder and add the current page argument
