@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ReconcileWithdrawalRequest;
+use App\Models\Account;
 use App\Models\Transaction;
 use App\Models\WithdrawLimit;
 use App\Notifications\WithdrawalDeniedNotification;
@@ -325,6 +326,10 @@ class WithdrawalController extends Controller
                     return 'not-pending';
                 }
 
+                $isLegacyPendingGuardAutoRefund = $lockedTransaction->hasLegacyPendingGuardAutoRefund();
+                $legacyCreditStatus = $validated['legacy_refund_credit_status'] ?? null;
+                $localBalanceAction = 'none';
+
                 if ($validated['resolution'] === 'confirmed_sent') {
                     $bankRecordId = (int) $validated['bank_record_id'];
                     $recordAlreadyAssigned = Transaction::query()
@@ -336,42 +341,90 @@ class WithdrawalController extends Controller
                         return 'duplicate-bank-record';
                     }
 
+                    if ($isLegacyPendingGuardAutoRefund && $legacyCreditStatus === 'confirmed_applied') {
+                        $fromAccount = Account::query()->find($lockedTransaction->from_account_id);
+
+                        if (! $fromAccount) {
+                            return 'account-missing';
+                        }
+
+                        $adjustment = collect(PWHelperService::resources())
+                            ->mapWithKeys(function (string $resource) use ($lockedTransaction): array {
+                                $recordedCredit = max(0, (float) $lockedTransaction->{$resource});
+
+                                return [$resource => -$recordedCredit];
+                            })
+                            ->all();
+                        $adjustment['note'] = "Reversal of legacy migration auto-refund for Transaction #{$lockedTransaction->id}";
+
+                        AccountService::adjustAccountBalance(
+                            $fromAccount,
+                            $adjustment,
+                            auth()->id(),
+                            $request->ip(),
+                            [
+                                'correlation_id' => $lockedTransaction->bank_correlation_id,
+                                'withdrawal_transaction_id' => $lockedTransaction->id,
+                                'legacy_pending_guard_refund_reversal' => true,
+                            ],
+                        );
+                        $localBalanceAction = 'legacy_credit_reversed';
+                    } elseif ($isLegacyPendingGuardAutoRefund) {
+                        $localBalanceAction = 'no_legacy_credit_to_reverse';
+                    }
+
                     $lockedTransaction->is_pending = false;
                     $lockedTransaction->requires_admin_approval = false;
                     $lockedTransaction->bank_processing_at = null;
-                    $lockedTransaction->sent_at = $lockedTransaction->bank_attempted_at ?? now();
+                    $lockedTransaction->sent_at = $isLegacyPendingGuardAutoRefund
+                        ? $lockedTransaction->bank_attempted_at
+                        : ($lockedTransaction->bank_attempted_at ?? now());
+                    $lockedTransaction->refunded_at = null;
                     $lockedTransaction->bank_record_id = $bankRecordId;
                     $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_SENT;
                 } else {
-                    if (is_null($lockedTransaction->from_account_id)) {
-                        return 'account-missing';
+                    $shouldApplyRefund = ! $isLegacyPendingGuardAutoRefund
+                        || $legacyCreditStatus === 'confirmed_not_applied';
+
+                    if ($shouldApplyRefund) {
+                        if (is_null($lockedTransaction->from_account_id)) {
+                            return 'account-missing';
+                        }
+
+                        $fromAccount = AccountService::getAccountById($lockedTransaction->from_account_id);
+                        $adjustment = collect(PWHelperService::resources())
+                            ->mapWithKeys(fn (string $resource): array => [$resource => $lockedTransaction->{$resource}])
+                            ->all();
+                        $adjustment['note'] = "Evidence-based reconciliation refund for Transaction #{$lockedTransaction->id}";
+
+                        AccountService::adjustAccountBalance(
+                            $fromAccount,
+                            $adjustment,
+                            auth()->id(),
+                            $request->ip(),
+                            [
+                                'correlation_id' => $lockedTransaction->bank_correlation_id,
+                                'withdrawal_transaction_id' => $lockedTransaction->id,
+                                'legacy_pending_guard_refund' => $isLegacyPendingGuardAutoRefund,
+                            ],
+                        );
+                        $localBalanceAction = $isLegacyPendingGuardAutoRefund
+                            ? 'missing_legacy_credit_applied'
+                            : 'refund_applied';
+                    } else {
+                        $localBalanceAction = 'existing_legacy_credit_preserved';
                     }
-
-                    $fromAccount = AccountService::getAccountById($lockedTransaction->from_account_id);
-                    $adjustment = collect(PWHelperService::resources())
-                        ->mapWithKeys(fn (string $resource): array => [$resource => $lockedTransaction->{$resource}])
-                        ->all();
-                    $adjustment['note'] = "Evidence-based reconciliation refund for Transaction #{$lockedTransaction->id}";
-
-                    AccountService::adjustAccountBalance(
-                        $fromAccount,
-                        $adjustment,
-                        auth()->id(),
-                        $request->ip(),
-                        [
-                            'correlation_id' => $lockedTransaction->bank_correlation_id,
-                            'withdrawal_transaction_id' => $lockedTransaction->id,
-                        ],
-                    );
 
                     $lockedTransaction->is_pending = false;
                     $lockedTransaction->requires_admin_approval = false;
                     $lockedTransaction->bank_processing_at = null;
-                    $lockedTransaction->refunded_at = now();
+                    $lockedTransaction->refunded_at = $shouldApplyRefund
+                        ? now()
+                        : $lockedTransaction->refunded_at;
                     $lockedTransaction->bank_attempt_status = Transaction::BANK_ATTEMPT_RECONCILED_REFUNDED;
                 }
 
-                $lockedTransaction->bank_reconciliation_details = array_merge(
+                $reconciliationDetails = array_merge(
                     $lockedTransaction->bank_reconciliation_details ?? [],
                     [
                         'resolution' => $validated['resolution'],
@@ -381,6 +434,13 @@ class WithdrawalController extends Controller
                         'bank_record_id' => $validated['bank_record_id'] ?? null,
                     ]
                 );
+
+                if ($isLegacyPendingGuardAutoRefund) {
+                    $reconciliationDetails['legacy_pending_guard_auto_refund']['local_credit_outcome'] = $legacyCreditStatus;
+                    $reconciliationDetails['legacy_pending_guard_auto_refund']['local_balance_action'] = $localBalanceAction;
+                }
+
+                $lockedTransaction->bank_reconciliation_details = $reconciliationDetails;
                 $lockedTransaction->save();
 
                 $this->auditLogger->record(
@@ -401,6 +461,9 @@ class WithdrawalController extends Controller
                             'resolution' => $validated['resolution'],
                             'evidence' => $validated['evidence'],
                             'bank_record_id' => $validated['bank_record_id'] ?? null,
+                            'legacy_pending_guard_auto_refund' => $isLegacyPendingGuardAutoRefund,
+                            'legacy_refund_credit_status' => $legacyCreditStatus,
+                            'local_balance_action' => $localBalanceAction,
                         ],
                     ],
                     message: 'Ambiguous withdrawal resolved from documented external evidence.'

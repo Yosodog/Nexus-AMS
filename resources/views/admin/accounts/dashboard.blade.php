@@ -581,6 +581,9 @@
 
                 <div class="grid grid-cols-1 gap-4">
                     @foreach($withdrawalReconciliations as $transaction)
+                        @php
+                            $isLegacyPendingGuardAutoRefund = $transaction->hasLegacyPendingGuardAutoRefund();
+                        @endphp
                         <section class="rounded-2xl border border-error/30 bg-error/5 p-4">
                             <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.3fr)] gap-5">
                                 <div class="space-y-3">
@@ -613,6 +616,12 @@
                                             @endif
                                         @endforeach
                                     </div>
+                                    @if($isLegacyPendingGuardAutoRefund)
+                                        <div class="alert alert-warning text-sm">
+                                            <x-icon name="o-exclamation-triangle" class="w-5 h-5" />
+                                            <span>This row was marked refunded by the legacy pending-withdrawal migration. Verify both the external bank outcome and whether its local account credit actually landed.</span>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 @can('view-diagnostic-info')
@@ -622,6 +631,13 @@
                                             <input type="hidden" name="resolution" value="confirmed_sent">
                                             <div class="font-semibold text-sm">Confirmed sent</div>
                                             <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
+                                            @if($isLegacyPendingGuardAutoRefund)
+                                                <x-select label="Legacy local credit" name="legacy_refund_credit_status" required
+                                                          :options="[
+                                                              ['id' => 'confirmed_applied', 'name' => 'Confirmed applied — reverse it'],
+                                                              ['id' => 'confirmed_not_applied', 'name' => 'Confirmed not applied — no reversal'],
+                                                          ]" />
+                                            @endif
                                             <x-input label="Bank record ID" name="bank_record_id" type="number" min="1" required />
                                             <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
                                             <x-button label="Record as Sent" icon="o-check-circle" type="submit" class="btn-success btn-sm w-full"
@@ -633,6 +649,13 @@
                                             <input type="hidden" name="resolution" value="confirmed_not_sent">
                                             <div class="font-semibold text-sm">Confirmed not sent</div>
                                             <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
+                                            @if($isLegacyPendingGuardAutoRefund)
+                                                <x-select label="Legacy local credit" name="legacy_refund_credit_status" required
+                                                          :options="[
+                                                              ['id' => 'confirmed_applied', 'name' => 'Confirmed applied — keep existing credit'],
+                                                              ['id' => 'confirmed_not_applied', 'name' => 'Confirmed not applied — refund once'],
+                                                          ]" />
+                                            @endif
                                             <x-textarea label="Evidence" name="evidence" rows="3" minlength="20" maxlength="2000" required />
                                             <x-button label="Refund After Verification" icon="o-arrow-uturn-left" type="submit" class="btn-warning btn-sm w-full"
                                                       onclick="return confirm('Confirm that the evidence proves no external transfer occurred and the local funds should be refunded?');" />

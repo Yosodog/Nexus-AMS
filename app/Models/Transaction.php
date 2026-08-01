@@ -209,6 +209,14 @@ class Transaction extends Model
         return $this->bank_attempt_status === self::BANK_ATTEMPT_NEEDS_RECONCILIATION;
     }
 
+    public function hasLegacyPendingGuardAutoRefund(): bool
+    {
+        return data_get(
+            $this->bank_reconciliation_details,
+            'legacy_pending_guard_auto_refund.identified'
+        ) === true;
+    }
+
     public function isNationWithdrawal(): bool
     {
         return $this->transaction_type === 'withdrawal' && is_null($this->to_account_id);

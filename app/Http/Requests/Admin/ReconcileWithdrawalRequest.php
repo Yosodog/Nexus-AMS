@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Transaction;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,6 +38,16 @@ class ReconcileWithdrawalRequest extends FormRequest
                 'min:1',
                 Rule::unique('transactions', 'bank_record_id')->ignore($this->route('transaction')),
             ],
+            'legacy_refund_credit_status' => [
+                Rule::requiredIf(function (): bool {
+                    $transaction = $this->route('transaction');
+
+                    return $transaction instanceof Transaction
+                        && $transaction->hasLegacyPendingGuardAutoRefund();
+                }),
+                'nullable',
+                Rule::in(['confirmed_applied', 'confirmed_not_applied']),
+            ],
         ];
     }
 
@@ -50,6 +61,8 @@ class ReconcileWithdrawalRequest extends FormRequest
             'evidence.min' => 'Describe the evidence used to verify the upstream bank outcome.',
             'bank_record_id.required' => 'The Politics & War bank record ID is required when confirming a sent withdrawal.',
             'bank_record_id.unique' => 'That Politics & War bank record is already assigned to another transaction.',
+            'legacy_refund_credit_status.required' => 'Confirm whether the legacy migration credit reached the source account.',
+            'legacy_refund_credit_status.in' => 'Select a supported legacy migration credit outcome.',
         ];
     }
 }
