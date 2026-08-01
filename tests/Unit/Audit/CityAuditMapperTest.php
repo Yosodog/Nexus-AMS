@@ -19,6 +19,7 @@ class CityAuditMapperTest extends TestCase
             'score' => 500,
             'num_cities' => 3,
             'color' => 'blue',
+            'project_bits' => '8192',
         ]);
 
         $city = new City([
@@ -68,5 +69,6 @@ class CityAuditMapperTest extends TestCase
         $this->assertTrue($variables['city']['powered']);
         $this->assertSame('Tester', $variables['nation']['leader_name']);
         $this->assertSame(3, $variables['nation']['num_cities']);
+        $this->assertSame('8192', $variables['nation']['project_bits']);
     }
 }

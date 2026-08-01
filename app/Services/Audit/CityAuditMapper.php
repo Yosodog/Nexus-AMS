@@ -23,6 +23,7 @@ class CityAuditMapper
                 'score' => $nation?->score,
                 'num_cities' => $nation?->num_cities,
                 'color' => $nation?->color,
+                'project_bits' => $nation?->project_bits,
             ],
             'city' => [
                 'id' => $city->id,

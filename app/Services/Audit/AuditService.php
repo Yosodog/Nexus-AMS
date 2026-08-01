@@ -148,7 +148,7 @@ class AuditService
                 ->whereHas('nation', function (Builder $query) use ($allianceIds): void {
                     $this->applyMemberConstraints($query, $allianceIds);
                 })
-                ->with(['nation:id,nation_name,leader_name,score,num_cities,color'])
+                ->with(['nation:id,nation_name,leader_name,score,num_cities,color,project_bits'])
                 ->chunkById(self::CHUNK_SIZE, function (Collection $cities) use ($cityRules, $cityHelpers, $evaluatedAt): void {
                     $this->runRulesForCityChunk($cities, $cityRules, $cityHelpers, $evaluatedAt);
                 });

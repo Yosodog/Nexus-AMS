@@ -9,6 +9,7 @@ use App\Models\City;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
 use App\Services\Audit\AuditService;
+use App\Services\PWHelperService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -75,6 +76,32 @@ class AuditServiceTest extends TestCase
         app(AuditService::class)->runAllEnabledRules();
 
         $this->assertDatabaseCount('audit_results', 0);
+    }
+
+    public function test_city_rules_can_use_nation_project_helpers(): void
+    {
+        $nation = $this->createNation(score: 900);
+        $nation->update([
+            'project_bits' => (string) PWHelperService::PROJECTS['Urban Planning'],
+        ]);
+        $city = $this->createCity($nation, infrastructure: 500);
+
+        $rule = AuditRule::query()->create([
+            'name' => 'Urban Planning owner',
+            'target_type' => AuditTargetType::City,
+            'priority' => AuditPriority::Medium,
+            'expression' => 'nation.has_project("Urban Planning")',
+            'enabled' => true,
+        ]);
+
+        app(AuditService::class)->runAllEnabledRules();
+
+        $this->assertDatabaseHas('audit_results', [
+            'audit_rule_id' => $rule->id,
+            'nation_id' => $nation->id,
+            'city_id' => $city->id,
+            'target_type' => 'city',
+        ]);
     }
 
     private function createNation(float $score): Nation
