@@ -12,24 +12,6 @@ return new class extends Migration
     private const KEY_VALUE = 1;
 
     /**
-     * @var array<int, string>
-     */
-    private const RESOURCES = [
-        'money',
-        'coal',
-        'oil',
-        'uranium',
-        'iron',
-        'bauxite',
-        'lead',
-        'gasoline',
-        'munitions',
-        'steel',
-        'aluminum',
-        'food',
-    ];
-
-    /**
      * Run the migrations.
      */
     public function up(): void
@@ -40,13 +22,17 @@ return new class extends Migration
             });
         }
 
-        $this->refundDuplicatePendingWithdrawals();
+        $this->quarantineDuplicatePendingWithdrawals();
 
         DB::table('transactions')
             ->where('is_pending', true)
             ->where('transaction_type', 'withdrawal')
             ->whereNull('to_account_id')
             ->whereNotNull('nation_id')
+            ->where(function ($query): void {
+                $query->whereNull('bank_attempt_status')
+                    ->orWhere('bank_attempt_status', '!=', 'needs_reconciliation');
+            })
             ->update(['pending_withdrawal_key' => self::KEY_VALUE]);
 
         Schema::table('transactions', function (Blueprint $table): void {
@@ -65,7 +51,7 @@ return new class extends Migration
         });
     }
 
-    private function refundDuplicatePendingWithdrawals(): void
+    private function quarantineDuplicatePendingWithdrawals(): void
     {
         $pendingWithdrawals = DB::table('transactions')
             ->where('is_pending', true)
@@ -78,45 +64,20 @@ return new class extends Migration
             ->get()
             ->groupBy('nation_id');
 
-        $now = now();
-
         foreach ($pendingWithdrawals as $withdrawals) {
             $duplicates = $withdrawals->slice(1);
 
             foreach ($duplicates as $duplicate) {
-                $this->refundDuplicateWithdrawal($duplicate, $now);
+                DB::table('transactions')
+                    ->where('id', $duplicate->id)
+                    ->update([
+                        'requires_admin_approval' => true,
+                        'bank_attempt_status' => 'needs_reconciliation',
+                        'pending_withdrawal_key' => null,
+                        'pending_reason' => 'Quarantined during pending withdrawal guard migration because another pending withdrawal already existed for this nation. Verify external bank state before refunding or completing it.',
+                        'updated_at' => now(),
+                    ]);
             }
         }
-    }
-
-    private function refundDuplicateWithdrawal(object $transaction, DateTimeInterface $refundedAt): void
-    {
-        if ($transaction->from_account_id) {
-            $accountUpdates = ['updated_at' => $refundedAt];
-
-            foreach (self::RESOURCES as $resource) {
-                $amount = (float) ($transaction->{$resource} ?? 0);
-
-                if ($amount > 0) {
-                    $accountUpdates[$resource] = DB::raw($resource.' + '.number_format($amount, 2, '.', ''));
-                }
-            }
-
-            DB::table('accounts')
-                ->where('id', $transaction->from_account_id)
-                ->update($accountUpdates);
-        }
-
-        DB::table('transactions')
-            ->where('id', $transaction->id)
-            ->update([
-                'is_pending' => false,
-                'requires_admin_approval' => false,
-                'refunded_at' => $refundedAt,
-                'bank_processing_at' => null,
-                'pending_withdrawal_key' => null,
-                'pending_reason' => 'Auto-refunded during pending withdrawal guard migration because another pending withdrawal already existed for this nation.',
-                'updated_at' => $refundedAt,
-            ]);
     }
 };
