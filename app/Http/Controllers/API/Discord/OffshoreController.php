@@ -6,9 +6,10 @@ use App\Events\OffshoreCacheInvalidated;
 use App\Exceptions\OffshoreTransferException;
 use App\Exceptions\OffshoreTransferReconciliationException;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolveDiscordActor;
 use App\Http\Requests\Discord\DiscordOffshoreSweepRequest;
-use App\Models\DiscordAccount;
 use App\Models\OffshoreTransfer;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\MainBankService;
 use App\Services\OffshoreService;
@@ -28,14 +29,10 @@ class OffshoreController extends Controller
 
     public function sweepPrimary(DiscordOffshoreSweepRequest $request): JsonResponse
     {
-        $moderatorDiscordId = $request->string('moderator_discord_id')->toString();
-        $moderator = DiscordAccount::query()
-            ->where('discord_id', $moderatorDiscordId)
-            ->whereNull('unlinked_at')
-            ->latest('linked_at')
-            ->first()?->user;
+        $moderatorDiscordId = (string) $request->header(ResolveDiscordActor::USER_HEADER);
+        $moderator = $request->attributes->get(ResolveDiscordActor::ACTOR_ATTRIBUTE);
 
-        if (! $moderator) {
+        if (! $moderator instanceof User) {
             $this->auditLogger->denied(
                 category: 'offshore',
                 action: 'discord_main_bank_sweep',
@@ -44,16 +41,16 @@ class OffshoreController extends Controller
                         'moderator_discord_id' => $moderatorDiscordId,
                     ],
                 ],
-                message: 'Discord offshore sweep denied because the moderator is not linked.'
+                message: 'Discord offshore sweep denied because the authenticated actor is missing.'
             );
 
             return response()->json([
                 'error' => 'moderator_not_found',
-                'message' => 'Moderator account is not linked to Nexus.',
+                'message' => 'Authenticated moderator context is missing.',
             ], 403);
         }
 
-        if (! Gate::forUser($moderator)->allows('manage-offshores')) {
+        if (! $moderator->is_admin || ! Gate::forUser($moderator)->allows('manage-offshores')) {
             $this->auditLogger->denied(
                 category: 'offshore',
                 action: 'discord_main_bank_sweep',
@@ -62,7 +59,7 @@ class OffshoreController extends Controller
                         'moderator_discord_id' => $moderatorDiscordId,
                     ],
                 ],
-                message: 'Discord offshore sweep denied because the moderator lacks permission.',
+                message: 'Discord offshore sweep denied because the moderator is not an authorized administrator.',
                 actorOverride: [
                     'type' => 'user',
                     'id' => $moderator->id,
@@ -82,6 +79,13 @@ class OffshoreController extends Controller
             ->first();
 
         if ($existingTransfer) {
+            if ((int) $existingTransfer->user_id !== (int) $moderator->id) {
+                return response()->json([
+                    'error' => 'request_id_conflict',
+                    'message' => 'This request ID belongs to a different moderator.',
+                ], 409);
+            }
+
             if ($existingTransfer->status === OffshoreTransfer::STATUS_COMPLETED) {
                 return $this->sweepResponse($existingTransfer, true);
             }

@@ -88,7 +88,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel']);
     Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive']);
     Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
-    Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary']);
+    Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary'])
+        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
 
     Route::prefix('me')->middleware(ResolveDiscordActor::class)->group(function () {

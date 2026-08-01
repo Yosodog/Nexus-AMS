@@ -24,12 +24,17 @@ class DiscordOffshoreIdempotencyTest extends TestCase
     use BuildsTestUsers;
     use RefreshDatabase;
 
+    private const DISCORD_ID = '234567890123456789';
+
+    private const GUILD_ID = '123456789012345678';
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('services.pw.alliance_id', 877);
         config()->set('services.discord_bot_key', 'discord-test-token');
+        config()->set('services.discord.guild_id', self::GUILD_ID);
         Event::fake();
     }
 
@@ -37,13 +42,13 @@ class DiscordOffshoreIdempotencyTest extends TestCase
     {
         [$offshore, $user] = $this->createTransferParties();
         $nation = Nation::factory()->create();
-        $user->forceFill(['nation_id' => $nation->id])->save();
+        $user->forceFill(['nation_id' => $nation->id, 'is_admin' => true])->save();
         $moderator = $this->grantPermissions($user->fresh(), [
             'manage-offshores',
         ]);
         DiscordAccount::factory()->create([
             'user_id' => $moderator->id,
-            'discord_id' => 'moderator-sweep-idempotency',
+            'discord_id' => self::DISCORD_ID,
         ]);
 
         $completed = OffshoreTransfer::query()->create([
@@ -58,9 +63,8 @@ class DiscordOffshoreIdempotencyTest extends TestCase
             'completed_at' => now(),
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('345678901234567890'))
             ->postJson('/api/v1/discord/offshores/sweep-primary', [
-                'moderator_discord_id' => 'moderator-sweep-idempotency',
                 'request_id' => 'interaction-api-completed',
             ])
             ->assertOk()
@@ -77,14 +81,43 @@ class DiscordOffshoreIdempotencyTest extends TestCase
             'status' => OffshoreTransfer::STATUS_PENDING,
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('456789012345678901'))
             ->postJson('/api/v1/discord/offshores/sweep-primary', [
-                'moderator_discord_id' => 'moderator-sweep-idempotency',
                 'request_id' => 'interaction-api-pending',
             ])
             ->assertConflict()
             ->assertJsonPath('error', 'sweep_reconciliation_required')
             ->assertJsonPath('transfer.id', $pending->id);
+    }
+
+    public function test_api_does_not_allow_a_non_admin_to_impersonate_an_admin_from_the_payload(): void
+    {
+        [, $user] = $this->createTransferParties();
+        $nation = Nation::factory()->create();
+        $user->forceFill(['nation_id' => $nation->id, 'is_admin' => false])->save();
+        $actor = $this->grantPermissions($user->fresh(), ['manage-offshores']);
+        DiscordAccount::factory()->create([
+            'user_id' => $actor->id,
+            'discord_id' => self::DISCORD_ID,
+        ]);
+
+        $admin = $this->grantPermissions(
+            User::factory()->admin()->verified()->create(),
+            ['manage-offshores'],
+        );
+        $adminDiscord = DiscordAccount::factory()->create(['user_id' => $admin->id]);
+
+        $this->withHeaders($this->discordHeaders('567890123456789012'))
+            ->postJson('/api/v1/discord/offshores/sweep-primary', [
+                'moderator_discord_id' => $adminDiscord->discord_id,
+                'request_id' => 'impersonation-attempt',
+            ])
+            ->assertForbidden()
+            ->assertJsonPath('error', 'forbidden');
+
+        $this->assertDatabaseMissing('offshore_transfers', [
+            'idempotency_key' => 'impersonation-attempt',
+        ]);
     }
 
     public function test_completed_transfer_is_replayed_without_dispatching_a_second_bank_mutation(): void
@@ -211,11 +244,14 @@ class DiscordOffshoreIdempotencyTest extends TestCase
     /**
      * @return array<string, string>
      */
-    private function discordHeaders(): array
+    private function discordHeaders(string $interactionId): array
     {
         return [
             'Authorization' => 'Bearer discord-test-token',
             'Accept' => 'application/json',
+            'X-Discord-Guild-ID' => self::GUILD_ID,
+            'X-Discord-User-ID' => self::DISCORD_ID,
+            'X-Discord-Interaction-ID' => $interactionId,
         ];
     }
 }
