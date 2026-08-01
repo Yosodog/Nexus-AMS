@@ -13,6 +13,7 @@ class BrowserTestController extends Controller
     public function login(Request $request, BrowserTestBootstrap $browserTestBootstrap, string $persona): RedirectResponse
     {
         abort_unless(app()->environment('testing'), 404);
+        abort_unless(in_array($request->ip(), ['127.0.0.1', '::1'], true), 404);
 
         $users = $browserTestBootstrap->resetAndSeed();
         abort_unless(array_key_exists($persona, $users), 404);
