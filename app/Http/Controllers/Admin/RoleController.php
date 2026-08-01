@@ -63,12 +63,19 @@ class RoleController extends Controller
         $permissions = $this->roleDelegationService
             ->grantablePermissions($request->user())
             ->all();
-        $role->load([
-            'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.email', 'users.nation_id')->orderBy('name'),
-            'users.nation:id,nation_name,flag',
-        ]);
+        $canViewAssignedUsers = $request->user()->can('view-users');
 
-        return view('admin.roles.edit', compact('role', 'permissions'));
+        if ($canViewAssignedUsers) {
+            $role->load([
+                'users' => fn ($query) => $query
+                    ->without('roles')
+                    ->select('users.id', 'users.name', 'users.nation_id')
+                    ->orderBy('name'),
+                'users.nation:id,nation_name,flag',
+            ]);
+        }
+
+        return view('admin.roles.edit', compact('role', 'permissions', 'canViewAssignedUsers'));
     }
 
     /**

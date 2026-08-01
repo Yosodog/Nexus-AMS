@@ -4,7 +4,11 @@
     @php use Illuminate\Support\Str; @endphp
 
     <x-header :title="'Edit Role: ' . Str::headline($role->name)" separator use-h1>
-        <x-slot:subtitle>Update the role name, review assigned members, and tune permissions without leaving the page.</x-slot:subtitle>
+        <x-slot:subtitle>
+            {{ $canViewAssignedUsers
+                ? 'Update the role name, review assigned members, and tune permissions without leaving the page.'
+                : 'Update the role name and tune its permissions.' }}
+        </x-slot:subtitle>
         <x-slot:actions>
             <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost btn-sm">Back to roles</a>
         </x-slot:actions>
@@ -47,54 +51,56 @@
                         </ul>
                     </div>
 
-                    @php
-                        $maxUsersToShow = 12;
-                        $totalUsers = $role->users->count();
-                        $visibleUsers = $role->users->take($maxUsersToShow);
-                    @endphp
+                    @if($canViewAssignedUsers)
+                        @php
+                            $maxUsersToShow = 12;
+                            $totalUsers = $role->users->count();
+                            $visibleUsers = $role->users->take($maxUsersToShow);
+                        @endphp
 
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <div class="font-semibold text-base-content">Assigned Members</div>
-                                <div class="text-sm text-base-content/60">{{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}</div>
-                            </div>
-                            <x-badge :value="(string) $totalUsers" class="badge-ghost badge-sm" />
-                        </div>
-
-                        <div class="grid gap-2">
-                            @forelse($visibleUsers as $user)
-                                @php
-                                    $flag = $user->nation?->flag;
-                                    $nationName = $user->nation?->nation_name;
-                                    $initials = collect(explode(' ', $user->name))
-                                        ->filter()
-                                        ->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))
-                                        ->take(2)
-                                        ->implode('');
-                                @endphp
-                                <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
-                                    @if($flag)
-                                        <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="h-10 w-10 rounded-full border border-base-300 object-cover">
-                                    @else
-                                        <div class="grid h-10 w-10 place-items-center rounded-full bg-primary/15 font-semibold text-primary">{{ $initials ?: '?' }}</div>
-                                    @endif
-                                    <div class="min-w-0">
-                                        <div class="truncate font-semibold text-base-content">{{ $user->name }}</div>
-                                        <div class="truncate text-sm text-base-content/60">{{ $nationName ?: 'No nation linked' }}</div>
-                                    </div>
-                                </a>
-                            @empty
-                                <div class="rounded-lg border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
-                                    No members have this role yet.
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="font-semibold text-base-content">Assigned Members</div>
+                                    <div class="text-sm text-base-content/60">{{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}</div>
                                 </div>
-                            @endforelse
-                        </div>
+                                <x-badge :value="(string) $totalUsers" class="badge-ghost badge-sm" />
+                            </div>
 
-                        @if($totalUsers > $maxUsersToShow)
-                            <x-badge :value="'+' . ($totalUsers - $maxUsersToShow) . ' more'" class="badge-ghost badge-sm" />
-                        @endif
-                    </div>
+                            <div class="grid gap-2">
+                                @forelse($visibleUsers as $user)
+                                    @php
+                                        $flag = $user->nation?->flag;
+                                        $nationName = $user->nation?->nation_name;
+                                        $initials = collect(explode(' ', $user->name))
+                                            ->filter()
+                                            ->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))
+                                            ->take(2)
+                                            ->implode('');
+                                    @endphp
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
+                                        @if($flag)
+                                            <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="h-10 w-10 rounded-full border border-base-300 object-cover">
+                                        @else
+                                            <div class="grid h-10 w-10 place-items-center rounded-full bg-primary/15 font-semibold text-primary">{{ $initials ?: '?' }}</div>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <div class="truncate font-semibold text-base-content">{{ $user->name }}</div>
+                                            <div class="truncate text-sm text-base-content/60">{{ $nationName ?: 'No nation linked' }}</div>
+                                        </div>
+                                    </a>
+                                @empty
+                                    <div class="rounded-lg border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
+                                        No members have this role yet.
+                                    </div>
+                                @endforelse
+                            </div>
+
+                            @if($totalUsers > $maxUsersToShow)
+                                <x-badge :value="'+' . ($totalUsers - $maxUsersToShow) . ' more'" class="badge-ghost badge-sm" />
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </x-card>
 
