@@ -286,29 +286,8 @@
                 input.disabled = true;
             });
             moneyInput.disabled = false;
-
-            // Get the selected loan's remaining balance
-            const selectedOption = toSelect.options[toSelect.selectedIndex];
-            const remainingBalance = parseFloat(selectedOption.dataset.remainingBalance);
-
-            // Set the max attribute and title for the money input
-            moneyInput.max = remainingBalance;
-            moneyInput.min = 0.01; // Ensure minimum payment is at least 0.01
-            moneyInput.step = 0.01; // Allow two decimal places
-            moneyInput.title = `Payment amount must be between $0.01 and $${remainingBalance.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            // Add event listener to enforce min/max values and prevent negative numbers
-            moneyInput.addEventListener('input', function () {
-                let value = parseFloat(this.value);
-                if (value < 0.01) {
-                    this.value = 0.01;
-                } else if (value > remainingBalance) {
-                    this.value = remainingBalance;
-                }
-            });
+            moneyInput.min = 0.01;
+            moneyInput.step = 0.01;
         } else {
             // Re-enable all resource inputs for non-loan transfers
             resourceInputs.forEach(input => {
@@ -316,13 +295,47 @@
             });
             moneyInput.disabled = false;
 
-            // Remove the loan-specific attributes
-            moneyInput.removeAttribute('min');
-            moneyInput.removeAttribute('step');
+            // Restore the standard transfer constraints
+            moneyInput.min = 0;
+            moneyInput.step = 'any';
         }
 
         // Reapply the from account validation after making changes
         handleFromSelectionChange();
+    }
+
+    function getSelectedLoanRemainingBalance() {
+        const toSelect = document.getElementById('tran_to');
+        if (!toSelect || !toSelect.value.startsWith('loan_') || toSelect.selectedIndex < 0) {
+            return null;
+        }
+
+        const remainingBalance = Number(toSelect.options[toSelect.selectedIndex]?.dataset.remainingBalance);
+
+        return Number.isFinite(remainingBalance) && remainingBalance >= 0 ? remainingBalance : null;
+    }
+
+    function bindTransferInputValidation(input) {
+        if (input.dataset.validationBound === 'true') {
+            return;
+        }
+
+        input.dataset.validationBound = 'true';
+        input.addEventListener('input', function () {
+            const value = Number(this.value);
+            const minimum = this.min === '' ? 0 : Number(this.min);
+            const maximum = this.max === '' ? Number.POSITIVE_INFINITY : Number(this.max);
+
+            if (!Number.isFinite(value)) {
+                return;
+            }
+
+            if (value < minimum) {
+                this.value = minimum;
+            } else if (value > maximum) {
+                this.value = maximum;
+            }
+        });
     }
 
     function handleFromSelectionChange() {
@@ -356,6 +369,7 @@
             aluminum: Number(selectedOption.dataset.aluminum),
             food: Number(selectedOption.dataset.food)
         };
+        const loanRemainingBalance = getSelectedLoanRemainingBalance();
 
         // Update all the available resource amounts and set max values
         Object.entries(resources).forEach(([resource, amount]) => {
@@ -371,25 +385,22 @@
             // Update the input max value and add validation
             const input = document.getElementById(resource);
             if (input && !input.disabled) { // Only update enabled inputs
-                input.max = amount;
-                input.title = `Maximum available: ${amount.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                })}`;
+                const maximum = resource === 'money' && loanRemainingBalance !== null
+                    ? Math.min(amount, loanRemainingBalance)
+                    : amount;
 
-                // Remove existing event listener by cloning and replacing
-                const newInput = input.cloneNode(true);
-                input.parentNode.replaceChild(newInput, input);
+                input.max = maximum;
+                input.title = loanRemainingBalance !== null && resource === 'money'
+                    ? `Payment amount must be between $0.01 and $${maximum.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}`
+                    : `Maximum available: ${maximum.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}`;
 
-                // Add new event listener for validation
-                newInput.addEventListener('input', function () {
-                    let value = Number(this.value);
-                    if (value < 0) {
-                        this.value = 0;
-                    } else if (value > amount) {
-                        this.value = amount;
-                    }
-                });
+                bindTransferInputValidation(input);
             }
         });
     }
