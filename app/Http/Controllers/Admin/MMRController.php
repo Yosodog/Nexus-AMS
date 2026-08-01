@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkEditMMRTiersRequest;
+use App\Http\Requests\Admin\UpdateAllMMRTiersRequest;
 use App\Http\Requests\Admin\UpdateMMRAssistantSettingsRequest;
 use App\Models\MMRSetting;
 use App\Models\MMRTier;
@@ -16,6 +17,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class MMRController extends Controller
@@ -132,51 +134,24 @@ class MMRController extends Controller
      * tier to update its fields. Each field is validated to ensure it meets
      * the required criteria before updating the tier.
      *
-     * @param  Request  $request  The incoming HTTP request containing the data to update.
      * @return RedirectResponse A redirect response indicating the result of the operation.
-     *
-     * @throws AuthorizationException If the user is not authorized to manage MMR.
      */
-    public function updateAll(Request $request): RedirectResponse
+    public function updateAll(UpdateAllMMRTiersRequest $request): RedirectResponse
     {
-        $this->authorize('manage-mmr');
-        $fields = [
-            'money',
-            'steel',
-            'aluminum',
-            'munitions',
-            'uranium',
-            'food',
-            'gasoline',
-            'barracks',
-            'factories',
-            'hangars',
-            'drydocks',
-            'missiles',
-            'nukes',
-            'spies',
-        ];
-        $tiers = $request->input('tiers', []);
-        $errors = [];
+        $validated = $request->validated();
 
-        foreach ($tiers as $id => $data) {
-            $tier = MMRTier::find($id);
+        DB::transaction(function () use ($validated): void {
+            foreach ($validated['tiers'] as $id => $data) {
+                $tier = MMRTier::query()->findOrFail((int) $id);
+                $update = [];
 
-            $update = [];
-
-            foreach ($fields as $field) {
-                $value = $data[$field] ?? 0;
-                if (! is_numeric($value) || $value < 0) {
-                    $errors["tiers.$id.$field"] = 'Must be a non-negative number.';
-                } else {
-                    $update[$field] = max(0, (int) $value);
+                foreach (UpdateAllMMRTiersRequest::FIELDS as $field) {
+                    $update[$field] = (int) ($data[$field] ?? 0);
                 }
-            }
 
-            if (empty($errors)) {
                 $tier->update($update);
             }
-        }
+        });
 
         return redirect()->route('admin.mmr.index')->with([
             'alert-message' => 'All tiers updated.',

@@ -721,7 +721,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             Route::get('/', [MMRController::class, 'index'])->name('admin.mmr.index');
             Route::post('/store', [MMRController::class, 'store'])->name('admin.mmr.store');
             Route::delete('/destroy', [MMRController::class, 'destroy'])->name('admin.mmr.destroy');
-            Route::post('/{tier}/update', [MMRController::class, 'update'])->name('admin.mmr.update');
             Route::post('/update-all', [MMRController::class, 'updateAll'])->name('admin.mmr.updateAll');
             Route::post('/bulk-edit-resources', [MMRController::class, 'bulkEditResources'])->name('admin.mmr.bulk-edit-resources');
             Route::post('/update-weights', [MMRController::class, 'updateWeights'])->name('admin.mmr.weights.update');
