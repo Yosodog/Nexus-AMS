@@ -132,12 +132,10 @@ class Page extends Model
 
         $this->draft = $normalized;
 
-        $shouldForgetCachedHtml = true;
-
         if (! $restoreAsDraft) {
             $this->published = $normalized;
             $this->status = self::STATUS_PUBLISHED;
-            $shouldForgetCachedHtml = false;
+            $this->cached_html = null;
         } else {
             $this->status = self::STATUS_DRAFT;
         }
@@ -149,9 +147,7 @@ class Page extends Model
             'restore_as_draft' => $restoreAsDraft,
         ]);
 
-        if ($shouldForgetCachedHtml) {
-            $this->forgetCachedHtml();
-        }
+        $this->forgetCachedHtml();
     }
 
     /**
