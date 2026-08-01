@@ -7,6 +7,8 @@ use Carbon\Carbon;
 
 class LeaderboardDirectoryService
 {
+    public const MAX_RAID_WINDOW_DAYS = 90;
+
     public function __construct(
         private readonly NationProfitabilityService $nationProfitabilityService,
         private readonly RaidLeaderboardService $raidLeaderboardService
@@ -24,11 +26,16 @@ class LeaderboardDirectoryService
         $boards = $this->boards();
         $defaultSlug = 'dashboard';
         $activeSlug = array_key_exists((string) $requestedBoard, $boards) ? (string) $requestedBoard : $defaultSlug;
-        [$fromDate, $toDate] = $this->resolveRaidDateRange($from, $to);
-        $payloads = [
-            'profitability' => $this->nationProfitabilityService->getLeaderboard(),
-            'raid-performance' => $this->raidLeaderboardService->buildLeaderboard($fromDate, $toDate, $viewerNationId),
-        ];
+        $payloads = [];
+
+        if (in_array($activeSlug, ['dashboard', 'profitability'], true)) {
+            $payloads['profitability'] = $this->nationProfitabilityService->getLeaderboard();
+        }
+
+        if (in_array($activeSlug, ['dashboard', 'raid-performance'], true)) {
+            [$fromDate, $toDate] = $this->resolveRaidDateRange($from, $to);
+            $payloads['raid-performance'] = $this->raidLeaderboardService->buildLeaderboard($fromDate, $toDate, $viewerNationId);
+        }
 
         $boards = collect($boards)->map(function (array $board) use ($payloads): array {
             if ($board['slug'] === 'profitability') {
@@ -223,6 +230,10 @@ class LeaderboardDirectoryService
 
         if ($fromDate->greaterThan($toDate)) {
             [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
+        }
+
+        if ($fromDate->diffInDays($toDate) > self::MAX_RAID_WINDOW_DAYS) {
+            $fromDate = $toDate->copy()->subDays(self::MAX_RAID_WINDOW_DAYS)->startOfDay();
         }
 
         return [$fromDate, $toDate];

@@ -134,6 +134,17 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('raid-leaderboards', function (Request $request) {
+            if ($request->route('board') === 'profitability') {
+                return Limit::none();
+            }
+
+            return [
+                Limit::perMinute(10)->by('raid-leaderboard:user:'.$request->user()->getAuthIdentifier()),
+                Limit::perMinute(30)->by('raid-leaderboard:ip:'.$request->ip()),
+            ];
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });

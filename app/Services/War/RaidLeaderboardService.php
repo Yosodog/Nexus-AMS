@@ -2,6 +2,7 @@
 
 namespace App\Services\War;
 
+use App\Enums\AlliancePositionEnum;
 use App\Enums\WarAttackTypeEnum;
 use App\Models\Nation;
 use App\Models\WarAttack;
@@ -104,7 +105,12 @@ class RaidLeaderboardService
         return Nation::query()
             ->select(['id', 'leader_name', 'nation_name'])
             ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
-            ->where('alliance_position', '!=', 'APPLICANT')
+            ->whereIn('alliance_position', [
+                AlliancePositionEnum::MEMBER->value,
+                AlliancePositionEnum::OFFICER->value,
+                AlliancePositionEnum::HEIR->value,
+                AlliancePositionEnum::LEADER->value,
+            ])
             ->where('vacation_mode_turns', '=', 0)
             ->get()
             ->keyBy('id');

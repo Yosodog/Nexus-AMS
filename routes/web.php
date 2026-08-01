@@ -144,7 +144,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
 
     // User dashboard
     Route::get('/user/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
-    Route::get('/leaderboards/{board?}', LeaderboardsController::class)->name('leaderboards.index');
+    Route::get('/leaderboards/{board?}', LeaderboardsController::class)
+        ->middleware('throttle:raid-leaderboards')
+        ->name('leaderboards.index');
 
     // Account Routes
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts');
