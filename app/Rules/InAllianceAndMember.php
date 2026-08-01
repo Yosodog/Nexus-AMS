@@ -3,13 +3,15 @@
 namespace App\Rules;
 
 use App\Exceptions\PWEntityDoesNotExist;
+use App\GraphQL\Models\Nation as GraphQLNation;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
 use App\Services\NationQueryService;
 use Closure;
-use Exception;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Translation\PotentiallyTranslatedString;
+use Throwable;
 
 class InAllianceAndMember implements ValidationRule
 {
@@ -32,37 +34,32 @@ class InAllianceAndMember implements ValidationRule
         $membershipService = $this->membershipService ?? app(AllianceMembershipService::class);
 
         try {
-            $nation = Nation::getNationById($nationId);
-
-            if ($membershipService->contains($nation->alliance_id)) {
-                if ($nation->alliance_position === 'APPLICANT') {
-                    $fail('You are either not in the alliance or you are still an applicant.');
-                }
-
-                return;
-            }
-        } catch (Exception $exception) {
-            // Ignore and fall back to the live API check below.
-        }
-
-        try {
-            $nation = NationQueryService::getNationById($nationId);
+            $nation = $this->fetchLiveNation($nationId);
+            Nation::updateFromAPI($nation);
         } catch (PWEntityDoesNotExist) {
             $fail('That nation does not exist');
 
             return;
-        }
-
-        Nation::updateFromAPI($nation);
-
-        if ($membershipService->contains($nation->alliance_id)) {
-            if ($nation->alliance_position === 'APPLICANT') {
-                $fail('You are either not in the alliance or you are still an applicant.');
-            }
+        } catch (Throwable $exception) {
+            Log::warning('Live nation membership validation failed during registration.', [
+                'nation_id' => $nationId,
+                'exception' => $exception::class,
+            ]);
+            $fail('Unable to verify nation membership right now. Please try again.');
 
             return;
         }
 
-        $fail('You are either not in the alliance or you are still an applicant.');
+        if (
+            ! $membershipService->contains($nation->alliance_id)
+            || strtoupper((string) $nation->alliance_position) === 'APPLICANT'
+        ) {
+            $fail('You are either not in the alliance or you are still an applicant.');
+        }
+    }
+
+    protected function fetchLiveNation(int $nationId): GraphQLNation
+    {
+        return NationQueryService::getNationById($nationId);
     }
 }
