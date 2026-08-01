@@ -163,9 +163,18 @@ class AppServiceProvider extends ServiceProvider
             $view->with('faviconPath', $faviconPath);
         });
 
-        LogViewer::auth(function ($request) {
-            return Gate::allows('view-diagnostic-info');
+        LogViewer::auth(function (Request $request): bool {
+            $user = $request->user();
+
+            return $user instanceof User
+                && $user->is_admin
+                && ! $user->disabled
+                && $user->isVerified()
+                && Gate::forUser($user)->allows('view-application-logs');
         });
+
+        Gate::define('deleteLogFile', fn (): bool => false);
+        Gate::define('deleteLogFolder', fn (): bool => false);
 
         LogViewer::extend('cron', CronLog::class);
         LogViewer::extend('sublog', SubLog::class);

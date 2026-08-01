@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\EnsureMfaConfigured;
+use App\Http\Middleware\EnsureUserIsVerified;
 use Opcodes\LogViewer\Enums\SortingMethod;
 use Opcodes\LogViewer\Enums\SortingOrder;
 use Opcodes\LogViewer\Enums\Theme;
@@ -16,7 +19,7 @@ return [
     |
     */
 
-    'enabled' => env('LOG_VIEWER_ENABLED', true),
+    'enabled' => env('LOG_VIEWER_ENABLED', in_array((string) env('APP_ENV', 'production'), ['local', 'testing'], true)),
 
     'api_only' => env('LOG_VIEWER_API_ONLY', false),
 
@@ -99,6 +102,10 @@ return [
 
     'middleware' => [
         'web',
+        'auth',
+        EnsureUserIsVerified::class,
+        EnsureMfaConfigured::class,
+        AdminMiddleware::class,
         AuthorizeLogViewer::class,
     ],
 
@@ -113,6 +120,9 @@ return [
 
     'api_middleware' => [
         EnsureFrontendRequestsAreStateful::class,
+        EnsureUserIsVerified::class,
+        EnsureMfaConfigured::class,
+        AdminMiddleware::class,
         AuthorizeLogViewer::class,
     ],
 

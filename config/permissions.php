@@ -26,6 +26,7 @@ return [
     'view-raids',
     'manage-raids',
     'view-diagnostic-info',
+    'view-application-logs',
     'view-applications',
     'manage-applications',
     'view-recruitment',
