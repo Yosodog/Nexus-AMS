@@ -4,7 +4,7 @@ This document applies to the entire repository. If you discover additional `AGEN
 subdirectories, follow the most specific guidance available.
 
 ## Project Overview
-- Nexus-AMS is a Laravel 13 / PHP 8.5 application. Backend domain logic lives in `app/`, database
+- Nexus-AMS is a Laravel 13 / PHP 8.3 application. Backend domain logic lives in `app/`, database
   migrations and seeders live in `database/`, and HTTP entry points are defined under `routes/`.
 - GraphQL data objects and resolvers live in `app/GraphQL`. They model the Politics & War API, so
   be mindful of the nullable typed properties and the `buildWithJSON` hydration helpers.
@@ -119,7 +119,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 ## Foundational Context
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.5
+- php - 8.3
 - laravel/fortify (FORTIFY) - v1
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
