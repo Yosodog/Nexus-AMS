@@ -29,7 +29,7 @@ class CityGrantService
     public static function createRequest(CityGrant $grant, Nation $nation, int $accountId): CityGrantRequest
     {
         return DB::transaction(function () use ($grant, $nation, $accountId) {
-            Nation::query()
+            $nation = Nation::query()
                 ->lockForUpdate()
                 ->findOrFail($nation->id);
 
@@ -111,11 +111,7 @@ class CityGrantService
         $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
 
         $validator->validateAllianceMembership();
-        // $validator->validateGovernmentType($requirements["government_type"]);
-        // $validator->validateColor($requirements["allowed_colors"]);
-        // $validator->validateRequiredProjects($requirements["projects"]);
-        // $validator->validateInfrastructure($requirements["inf_per_city"]);
-        // TODO implement these checks later
+        $validator->validateRequiredProjects($grant->requirements['required_projects'] ?? []);
     }
 
     /**
@@ -167,6 +163,14 @@ class CityGrantService
                     'This city grant is currently disabled.',
                 ]);
             }
+
+            $nation = Nation::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedRequest->nation_id);
+
+            $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
+            $validator->validateAllianceMembership();
+            $validator->validateRequiredProjects($grant->requirements['required_projects'] ?? []);
 
             // Fetch the recipient account
             $account = Account::findOrFail($lockedRequest->account_id);

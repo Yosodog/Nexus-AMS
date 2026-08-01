@@ -8,6 +8,7 @@ use App\Models\CityGrantRequest;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\CityGrantNotification;
+use App\Services\PWHelperService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -80,6 +81,29 @@ class CityGrantWorkflowTest extends TestCase
         $this->assertSame(1, CityGrantRequest::query()->count());
     }
 
+    public function test_member_cannot_request_a_city_grant_without_required_projects(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => ['required_projects' => ['Urban Planning']],
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('grants.city'))
+            ->post(route('grants.city.request'), [
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas(
+                'alert-message',
+                'You are not eligible for this grant. You must own the Urban Planning project to be eligible.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
     public function test_admin_can_approve_a_pending_city_grant_request(): void
     {
         [$user, $nation, $account] = $this->createMemberWithAccount();
@@ -114,6 +138,44 @@ class CityGrantWorkflowTest extends TestCase
             fn (CityGrantNotification $notification): bool => $notification->status === 'approved'
                 && $notification->request->is($request)
         );
+    }
+
+    public function test_admin_cannot_approve_after_required_project_eligibility_changes(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $nation->update([
+            'project_bits' => (string) PWHelperService::PROJECTS['Urban Planning'],
+        ]);
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => ['required_projects' => ['Urban Planning']],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $request = CityGrantRequest::query()->sole();
+        $nation->update(['project_bits' => '0']);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.grants.city.approve', ['CityGrantRequest' => $request->id]))
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas(
+                'alert-message',
+                'You must own the Urban Planning project to be eligible.',
+            );
+
+        $request->refresh();
+        $account->refresh();
+
+        $this->assertSame('pending', $request->status);
+        $this->assertSame(1, $request->pending_key);
+        $this->assertSame(0.0, (float) $account->money);
     }
 
     public function test_admin_can_deny_a_pending_city_grant_request(): void
