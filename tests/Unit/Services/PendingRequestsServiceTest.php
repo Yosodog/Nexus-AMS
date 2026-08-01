@@ -57,7 +57,7 @@ class PendingRequestsServiceTest extends FeatureTestCase
         $this->assertSame(3, $counts['total']);
     }
 
-    public function test_get_counts_for_admin_returns_all_counts(): void
+    public function test_admin_flag_does_not_bypass_pending_count_permissions(): void
     {
         $user = User::factory()->make(['is_admin' => true]);
         Gate::shouldReceive('forUser')->once()->andReturn(new class
@@ -81,8 +81,8 @@ class PendingRequestsServiceTest extends FeatureTestCase
 
         $counts = $service->getCountsForUser($user);
 
-        $this->assertSame(['grants' => 2, 'loans' => 3, 'war_aid' => 4], $counts['counts']);
-        $this->assertSame(9, $counts['total']);
+        $this->assertSame([], $counts['counts']);
+        $this->assertSame(0, $counts['total']);
     }
 
     public function test_get_raw_counts_uses_cache_key_and_flush_cache_clears_it(): void

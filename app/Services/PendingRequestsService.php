@@ -71,7 +71,6 @@ class PendingRequestsService
     {
         $permissions = $this->permissionsMap();
         $gate = Gate::forUser($user);
-        $canManageAll = (bool) ($user->is_admin ?? false);
 
         return collect($rawCounts)
             ->mapWithKeys(function ($count, $type) use ($permissions, $gate) {
@@ -83,9 +82,6 @@ class PendingRequestsService
 
                 return [];
             })
-            ->when($canManageAll, fn ($collection) => collect($rawCounts)->mapWithKeys(
-                fn ($count, $type) => [$type => (int) $count]
-            ))
             ->all();
     }
 
