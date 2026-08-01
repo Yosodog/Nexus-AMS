@@ -37,7 +37,6 @@ class AutoWithdrawService
     public function evaluateAndExecute(
         Nation $nation,
         bool $featureStatusVerified = false,
-        bool $blockadeStatusVerified = false
     ): void {
         if (! $featureStatusVerified && ! SettingService::isAutoWithdrawEnabled()) {
             return;
@@ -50,17 +49,15 @@ class AutoWithdrawService
         }
 
         try {
-            if (! $blockadeStatusVerified) {
-                try {
-                    AccountService::ensureNotBlockaded($nation->id);
-                } catch (UserErrorException $e) {
-                    Log::info('Auto withdraw skipped because withdrawal eligibility could not be confirmed.', [
-                        'nation_id' => $nation->id,
-                        'message' => $e->getMessage(),
-                    ]);
+            try {
+                AccountService::ensureNotBlockaded($nation->id);
+            } catch (UserErrorException $e) {
+                Log::info('Auto withdraw skipped because withdrawal eligibility could not be confirmed.', [
+                    'nation_id' => $nation->id,
+                    'message' => $e->getMessage(),
+                ]);
 
-                    return;
-                }
+                return;
             }
 
             $resources = $nation->resources;

@@ -57,7 +57,6 @@ class AutoWithdrawCommand extends Command
                 $this->autoWithdrawService->evaluateAndExecute(
                     $nation,
                     featureStatusVerified: true,
-                    blockadeStatusVerified: true
                 );
             } catch (\Throwable $exception) {
                 $this->warn("Skipping nation {$nation->id}: {$exception->getMessage()}");
