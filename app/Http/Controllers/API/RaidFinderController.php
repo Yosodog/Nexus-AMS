@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
+use App\Services\RaidFinderCache;
 use App\Services\RaidFinderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -13,7 +14,8 @@ class RaidFinderController extends Controller
 {
     public function __construct(
         protected RaidFinderService $raidFinderService,
-        protected AllianceMembershipService $membershipService
+        protected AllianceMembershipService $membershipService,
+        protected RaidFinderCache $raidFinderCache,
     ) {}
 
     public function show(?int $nation_id = null)
@@ -26,7 +28,7 @@ class RaidFinderController extends Controller
             abort(403, 'You can only run this for your alliance.');
         }
 
-        $cacheKey = "raid-finder:{$nationId}";
+        $cacheKey = $this->raidFinderCache->key($nationId);
 
         $targets = Cache::remember(
             $cacheKey,
