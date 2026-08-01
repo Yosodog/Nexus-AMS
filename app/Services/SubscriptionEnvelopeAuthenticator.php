@@ -27,7 +27,7 @@ class SubscriptionEnvelopeAuthenticator
     }
 
     /** @param  array<string, string>  $fields */
-    public function verify(array $fields): void
+    public function verify(array $fields, bool $enforceFreshness = true): void
     {
         if (! isset($fields['signature']) || trim($fields['signature']) === '') {
             throw new InvalidArgumentException('Subscription stream message is missing [signature].');
@@ -39,23 +39,33 @@ class SubscriptionEnvelopeAuthenticator
             throw new InvalidArgumentException('Subscription stream message signature is invalid.');
         }
 
-        $this->assertFresh($fields['received_at']);
+        if ($enforceFreshness) {
+            $this->assertFresh($fields['received_at']);
+        }
+    }
+
+    public function isMessageIdReservedForStream(string $messageId, string $streamId): bool
+    {
+        $reservedStreamId = Redis::connection((string) config('subscriptions.redis.connection'))
+            ->client()
+            ->rawCommand('GET', $this->reservationKey($messageId));
+
+        return is_string($reservedStreamId) && hash_equals($reservedStreamId, $streamId);
     }
 
     public function reserveMessageId(string $messageId, string $streamId): void
     {
-        $key = (string) config('subscriptions.redis.replay_prefix').hash('sha256', $messageId);
-        $ttl = max((int) config('subscriptions.redis.replay_ttl_seconds'), 1);
+        $key = $this->reservationKey($messageId);
         $script = <<<'LUA'
 local existing_stream_id = redis.call('GET', KEYS[1])
 
 if not existing_stream_id then
-    redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+    redis.call('SET', KEYS[1], ARGV[1])
     return 1
 end
 
 if existing_stream_id == ARGV[1] then
-    redis.call('EXPIRE', KEYS[1], ARGV[2])
+    redis.call('PERSIST', KEYS[1])
     return 1
 end
 
@@ -64,11 +74,35 @@ LUA;
 
         $reserved = Redis::connection((string) config('subscriptions.redis.connection'))
             ->client()
-            ->rawCommand('EVAL', $script, 1, $key, $streamId, (string) $ttl);
+            ->rawCommand('EVAL', $script, 1, $key, $streamId);
 
         if ((int) $reserved !== 1) {
             throw new InvalidArgumentException("Subscription message ID [{$messageId}] has already been processed.");
         }
+    }
+
+    public function expireMessageIdReservation(string $messageId, string $streamId): void
+    {
+        $script = <<<'LUA'
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+    return 0
+end
+
+redis.call('EXPIRE', KEYS[1], ARGV[2])
+
+return 1
+LUA;
+
+        Redis::connection((string) config('subscriptions.redis.connection'))
+            ->client()
+            ->rawCommand(
+                'EVAL',
+                $script,
+                1,
+                $this->reservationKey($messageId),
+                $streamId,
+                (string) max((int) config('subscriptions.redis.replay_ttl_seconds'), 1)
+            );
     }
 
     /** @param  array<string, string>  $fields */
@@ -118,5 +152,10 @@ LUA;
         }
 
         return $secret;
+    }
+
+    private function reservationKey(string $messageId): string
+    {
+        return (string) config('subscriptions.redis.replay_prefix').hash('sha256', $messageId);
     }
 }

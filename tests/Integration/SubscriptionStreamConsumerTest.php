@@ -106,6 +106,32 @@ class SubscriptionStreamConsumerTest extends TestCase
         $this->assertSame(0, (int) $this->raw('XLEN', $this->stream));
     }
 
+    public function test_it_retries_a_previously_admitted_message_after_its_envelope_age_expires(): void
+    {
+        config()->set('subscriptions.redis.max_deliveries', 3);
+        $processor = Mockery::mock(SubscriptionEventProcessor::class);
+        $processor->shouldReceive('process')
+            ->twice()
+            ->with('nation', 'update', ['id' => 4242])
+            ->andThrow(new RuntimeException('Temporary processor failure.'))
+            ->andReturnNull();
+
+        $consumer = new SubscriptionStreamConsumer($processor, app(SubscriptionEnvelopeAuthenticator::class));
+        $consumer->ensureConsumerGroup();
+        $this->publish(['id' => 4242]);
+
+        $this->assertSame(1, $consumer->consumeOnce());
+        $this->assertSame(1, (int) $this->raw('XPENDING', $this->stream, $this->group)[0]);
+
+        $this->travel(10)->minutes();
+        usleep(2000);
+
+        $this->assertSame(1, $consumer->consumeOnce());
+        $this->assertSame(0, (int) $this->raw('XPENDING', $this->stream, $this->group)[0]);
+        $this->assertSame(0, (int) $this->raw('XLEN', $this->stream));
+        $this->assertFileDoesNotExist($this->deadLetterFile);
+    }
+
     public function test_it_dead_letters_a_message_after_the_maximum_delivery_count(): void
     {
         config()->set('subscriptions.redis.max_deliveries', 5);

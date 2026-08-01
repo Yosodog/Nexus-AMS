@@ -38,13 +38,14 @@ class SubscriptionStreamConsumer
         $this->authenticator->assertConfigured();
 
         $messages = $this->claimStaleMessages();
+        $reclaimed = $messages !== [];
 
         if ($messages === []) {
             $messages = $this->readNewMessages();
         }
 
         foreach ($messages as $message) {
-            $this->processMessage($message['id'], $message['fields']);
+            $this->processMessage($message['id'], $message['fields'], $reclaimed);
         }
 
         return count($messages);
@@ -139,16 +140,22 @@ class SubscriptionStreamConsumer
     }
 
     /** @param  array<string, string>  $fields */
-    private function processMessage(string $streamId, array $fields): void
+    private function processMessage(string $streamId, array $fields, bool $reclaimed): void
     {
         $startedAt = microtime(true);
+        $messageId = null;
 
         try {
-            $message = $this->decodeMessage($fields);
+            $wasPreviouslyAdmitted = $reclaimed
+                && isset($fields['message_id'])
+                && $this->authenticator->isMessageIdReservedForStream($fields['message_id'], $streamId);
+            $message = $this->decodeMessage($fields, ! $wasPreviouslyAdmitted);
+            $messageId = $message['message_id'];
             $this->authenticator->reserveMessageId($message['message_id'], $streamId);
             $this->processor->process($message['model'], $message['event'], $message['payload']);
 
             $this->acknowledgeAndDelete($streamId);
+            $this->authenticator->expireMessageIdReservation($message['message_id'], $streamId);
 
             Log::info('Processed subscription stream message.', [
                 'stream_id' => $streamId,
@@ -164,6 +171,10 @@ class SubscriptionStreamConsumer
         } catch (InvalidArgumentException|JsonException|UnexpectedValueException $exception) {
             $this->deadLetter($streamId, $fields, $exception, $this->deliveryCount($streamId), 'invalid_message');
             $this->acknowledgeAndDelete($streamId);
+
+            if ($messageId !== null) {
+                $this->authenticator->expireMessageIdReservation($messageId, $streamId);
+            }
         } catch (Throwable $exception) {
             $deliveries = $this->deliveryCount($streamId);
 
@@ -180,6 +191,10 @@ class SubscriptionStreamConsumer
             if ($deliveries >= max((int) config('subscriptions.redis.max_deliveries'), 1)) {
                 $this->deadLetter($streamId, $fields, $exception, $deliveries, 'max_deliveries');
                 $this->acknowledgeAndDelete($streamId);
+
+                if ($messageId !== null) {
+                    $this->authenticator->expireMessageIdReservation($messageId, $streamId);
+                }
             }
         }
     }
@@ -190,7 +205,7 @@ class SubscriptionStreamConsumer
      *
      * @throws JsonException
      */
-    private function decodeMessage(array $fields): array
+    private function decodeMessage(array $fields, bool $enforceFreshness): array
     {
         foreach (['message_id', 'schema_version', 'model', 'event', 'source', 'received_at', 'payload'] as $required) {
             if (! isset($fields[$required]) || trim($fields[$required]) === '') {
@@ -206,7 +221,7 @@ class SubscriptionStreamConsumer
             throw new InvalidArgumentException("Unsupported subscription source [{$fields['source']}].");
         }
 
-        $this->authenticator->verify($fields);
+        $this->authenticator->verify($fields, $enforceFreshness);
 
         $payload = json_decode($fields['payload'], true, 512, JSON_THROW_ON_ERROR);
 

@@ -56,13 +56,13 @@ class SubscriptionEnvelopeAuthenticatorTest extends TestCase
         $client = Mockery::mock();
         $client->shouldReceive('rawCommand')
             ->once()
-            ->withArgs(function (string $command, string $script, int $keyCount, string $key, string $streamId, string $ttl): bool {
+            ->withArgs(function (string $command, string $script, int $keyCount, string $key, string $streamId): bool {
                 return $command === 'EVAL'
-                    && str_contains($script, "redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])")
+                    && str_contains($script, "redis.call('SET', KEYS[1], ARGV[1])")
+                    && str_contains($script, "redis.call('PERSIST', KEYS[1])")
                     && $keyCount === 1
                     && $key === 'test:replay:'.hash('sha256', 'message-4242')
-                    && $streamId === '1000-1'
-                    && $ttl === '600';
+                    && $streamId === '1000-1';
             })
             ->andReturn(1);
 
