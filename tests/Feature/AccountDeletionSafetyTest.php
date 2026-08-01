@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
+use App\Models\DiscordAccount;
 use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\User;
@@ -71,6 +72,56 @@ class AccountDeletionSafetyTest extends TestCase
         [$nation, $account] = $this->createNationAndAccount(810008);
 
         AccountService::deleteAccount($account, $nation->id);
+
+        $this->assertSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    public function test_account_delete_endpoint_rejects_missing_and_array_ids(): void
+    {
+        [, $account, $user] = $this->createNationAndAccount(810012, createUser: true);
+        $this->attachDiscordAccount($user);
+
+        $this->actingAs($user)
+            ->from(route('accounts'))
+            ->post(route('accounts.delete.post'))
+            ->assertRedirect(route('accounts'))
+            ->assertSessionHasErrors('account_id');
+
+        $this->post(route('accounts.delete.post'), [
+            'account_id' => [$account->id],
+        ])
+            ->assertRedirect(route('accounts'))
+            ->assertSessionHasErrors('account_id');
+
+        $this->assertNotSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    public function test_account_delete_endpoint_scopes_lookup_to_the_owner(): void
+    {
+        [, $ownedAccount, $user] = $this->createNationAndAccount(810013, createUser: true);
+        [, $foreignAccount] = $this->createNationAndAccount(810014);
+        $this->attachDiscordAccount($user);
+
+        $this->actingAs($user)
+            ->post(route('accounts.delete.post'), [
+                'account_id' => $foreignAccount->id,
+            ])
+            ->assertNotFound();
+
+        $this->assertNotSoftDeleted('accounts', ['id' => $ownedAccount->id]);
+        $this->assertNotSoftDeleted('accounts', ['id' => $foreignAccount->id]);
+    }
+
+    public function test_account_delete_endpoint_deletes_an_owned_empty_account(): void
+    {
+        [, $account, $user] = $this->createNationAndAccount(810015, createUser: true);
+        $this->attachDiscordAccount($user);
+
+        $this->actingAs($user)
+            ->post(route('accounts.delete.post'), [
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('accounts'));
 
         $this->assertSoftDeleted('accounts', ['id' => $account->id]);
     }
@@ -173,6 +224,11 @@ class AccountDeletionSafetyTest extends TestCase
         $user = User::factory()->verified()->create(['nation_id' => $nation->id]);
 
         return [$nation, $account, $user];
+    }
+
+    private function attachDiscordAccount(User $user): void
+    {
+        DiscordAccount::factory()->create(['user_id' => $user->id]);
     }
 
     private function createPendingMemberTransfer(Account $source, Account $destination, User $user): void

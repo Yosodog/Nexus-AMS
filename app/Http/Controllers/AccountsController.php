@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
+use App\Http\Requests\DeleteAccountRequest;
 use App\Http\Requests\TransferRequest;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
@@ -293,17 +294,15 @@ class AccountsController extends Controller
             ]);
     }
 
-    public function delete(Request $request): RedirectResponse
+    public function delete(DeleteAccountRequest $request): RedirectResponse
     {
-        $account = AccountService::getAccountById($request->account_id);
+        $ownerNationId = (int) $request->user()->nation_id;
+        $account = Account::query()
+            ->where('nation_id', $ownerNationId)
+            ->findOrFail($request->integer('account_id'));
 
         try {
-            // Ensure we own this account
-            if (Auth::user()->nation_id !== $account->nation_id) {
-                throw new UserErrorException("You don't own that account");
-            }
-
-            AccountService::deleteAccount($account, (int) Auth::user()->nation_id);
+            AccountService::deleteAccount($account, $ownerNationId);
         } catch (UserErrorException $e) {
             return redirect()
                 ->back()
