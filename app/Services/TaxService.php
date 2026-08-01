@@ -7,6 +7,7 @@ use App\Events\AllianceIncomeOccurred;
 use App\Exceptions\PWQueryFailedException;
 use App\Models\AllianceFinanceEntry;
 use App\Models\Taxes;
+use App\Models\TaxImportCheckpoint;
 use App\Models\TaxImportRejection;
 use Carbon\Exceptions\InvalidFormatException;
 use Exception;
@@ -32,15 +33,51 @@ class TaxService
         Cache::forget('tax_resource_chart_data');
         Cache::forget('tax_daily_totals');
 
-        $taxes = self::getAllianceTaxes($alliance_id, $client);
         $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
+        $bankRecords = self::getAllianceBankRecords($alliance_id, $lastTaxId + 1, $client);
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
         $updatedDates = [];
 
-        foreach ($taxes as $record) {
-            if ($record->id <= $lastTaxId) {
+        foreach ($bankRecords->sortBy(fn (object $record): int => $record->id)->values() as $record) {
+            if ($record->id <= $newLastId) {
+                continue;
+            }
+
+            if ($record->receiver_id !== $alliance_id || $record->receiver_type !== 2) {
+                Log::error('Tax import received a bank record outside the requested alliance.', [
+                    'alliance_id' => $alliance_id,
+                    'tax_id' => $record->id,
+                    'receiver_id' => $record->receiver_id,
+                    'receiver_type' => $record->receiver_type,
+                ]);
+
+                break;
+            }
+
+            if ($record->tax_id <= 0) {
+                self::advanceCheckpoint($alliance_id, $record->id);
+                $newLastId = $record->id;
+
+                continue;
+            }
+
+            $existingTax = Taxes::query()->find($record->id);
+            if ($existingTax) {
+                if ((int) $existingTax->receiver_id !== $alliance_id) {
+                    Log::error('Tax import record ID conflicts with another alliance.', [
+                        'alliance_id' => $alliance_id,
+                        'tax_id' => $record->id,
+                        'existing_receiver_id' => $existingTax->receiver_id,
+                    ]);
+
+                    break;
+                }
+
+                self::advanceCheckpoint($alliance_id, $record->id);
+                $newLastId = $record->id;
+
                 continue;
             }
 
@@ -55,7 +92,8 @@ class TaxService
                     'error' => $exception->getMessage(),
                 ]);
 
-                $newLastId = max($newLastId, $record->id);
+                self::advanceCheckpoint($alliance_id, $record->id);
+                $newLastId = $record->id;
 
                 continue;
             }
@@ -94,7 +132,8 @@ class TaxService
                     $updatedDates[$dateKey] = true;
                 }
 
-                $newLastId = max($newLastId, $record->id);
+                self::advanceCheckpoint($alliance_id, $record->id);
+                $newLastId = $record->id;
             } catch (Throwable $e) {
                 Log::error('Failed to process tax record', [
                     'tax_id' => $record->id,
@@ -123,18 +162,53 @@ class TaxService
      */
     public static function getAllianceTaxes(int $alliance_id, ?QueryService $client = null): Collection
     {
-        return collect(AllianceQueryService::getAllianceWithTaxes($alliance_id, $client)->taxrecs);
+        return self::getAllianceBankRecords($alliance_id, 1, $client)
+            ->filter(fn (object $record): bool => $record->tax_id > 0)
+            ->values();
+    }
+
+    /**
+     * @throws PWQueryFailedException
+     * @throws ConnectionException
+     */
+    protected static function getAllianceBankRecords(
+        int $allianceId,
+        int $minimumId,
+        ?QueryService $client = null
+    ): Collection {
+        return collect(BankRecordQueryService::getAllianceDeposits(
+            $allianceId,
+            options: [
+                'minId' => max(1, $minimumId),
+                'orderByColumn' => 'ID',
+                'orderByDirection' => 'ASC',
+            ],
+            client: $client,
+        ));
     }
 
     public static function getLastScannedTaxRecordId(?int $allianceId = null): int
     {
-        $query = Taxes::query();
-
-        if ($allianceId !== null) {
-            $query->where('receiver_id', $allianceId);
+        if ($allianceId === null) {
+            return (int) (Taxes::query()->max('id') ?? 0);
         }
 
-        return (int) ($query->max('id') ?? 0);
+        return (int) (TaxImportCheckpoint::query()
+            ->where('alliance_id', $allianceId)
+            ->value('last_scanned_id') ?? 0);
+    }
+
+    protected static function advanceCheckpoint(int $allianceId, int $recordId): void
+    {
+        TaxImportCheckpoint::query()->firstOrCreate(
+            ['alliance_id' => $allianceId],
+            ['last_scanned_id' => 0],
+        );
+
+        TaxImportCheckpoint::query()
+            ->where('alliance_id', $allianceId)
+            ->where('last_scanned_id', '<', $recordId)
+            ->update(['last_scanned_id' => $recordId]);
     }
 
     protected static function parseApiTimestamp(string $timestamp): Carbon

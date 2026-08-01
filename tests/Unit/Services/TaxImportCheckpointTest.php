@@ -3,6 +3,8 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Taxes;
+use App\Models\TaxImportCheckpoint;
+use App\Services\GraphQLQueryBuilder;
 use App\Services\PWHelperService;
 use App\Services\QueryService;
 use App\Services\TaxService;
@@ -27,10 +29,8 @@ class TaxImportCheckpointTest extends TestCase
         $client->shouldReceive('sendQuery')
             ->once()
             ->andReturn((object) [
-                (object) $this->alliancePayload([
-                    $this->bankRecordPayload(101, receiverId: 777),
-                    $this->bankRecordPayload(102, receiverId: 777),
-                ]),
+                $this->bankRecordPayload(101, receiverId: 777),
+                $this->bankRecordPayload(102, receiverId: 777),
             ]);
 
         $lastScanned = TaxService::updateAllianceTaxes(777, $client);
@@ -48,10 +48,8 @@ class TaxImportCheckpointTest extends TestCase
         $client->shouldReceive('sendQuery')
             ->once()
             ->andReturn((object) [
-                (object) $this->alliancePayload([
-                    $this->bankRecordPayload(101, receiverId: 777, date: 'not-a-timestamp'),
-                    $this->bankRecordPayload(102, receiverId: 777),
-                ]),
+                $this->bankRecordPayload(101, receiverId: 777, date: 'not-a-timestamp'),
+                $this->bankRecordPayload(102, receiverId: 777),
             ]);
 
         $lastScanned = TaxService::updateAllianceTaxes(777, $client);
@@ -68,6 +66,81 @@ class TaxImportCheckpointTest extends TestCase
             'id' => 102,
             'receiver_id' => 777,
         ]);
+        $this->assertDatabaseHas('tax_import_checkpoints', [
+            'alliance_id' => 777,
+            'last_scanned_id' => 102,
+        ]);
+    }
+
+    public function test_tax_import_orders_records_before_advancing_its_checkpoint(): void
+    {
+        Taxes::query()->create($this->taxRow([
+            'id' => 102,
+            'receiver_id' => 888,
+        ]));
+
+        $client = Mockery::mock(QueryService::class);
+        $client->shouldReceive('sendQuery')
+            ->once()
+            ->andReturn((object) [
+                $this->bankRecordPayload(103, receiverId: 777),
+                $this->bankRecordPayload(102, receiverId: 777),
+                $this->bankRecordPayload(101, receiverId: 777),
+            ]);
+
+        $lastScanned = TaxService::updateAllianceTaxes(777, $client);
+
+        $this->assertSame(101, $lastScanned);
+        $this->assertDatabaseHas('taxes', [
+            'id' => 101,
+            'receiver_id' => 777,
+        ]);
+        $this->assertDatabaseMissing('taxes', [
+            'id' => 103,
+            'receiver_id' => 777,
+        ]);
+        $this->assertDatabaseHas('tax_import_checkpoints', [
+            'alliance_id' => 777,
+            'last_scanned_id' => 101,
+        ]);
+    }
+
+    public function test_tax_import_uses_a_paginated_ordered_feed_and_resumes_after_non_tax_records(): void
+    {
+        $client = Mockery::mock(QueryService::class);
+        $client->shouldReceive('sendQuery')
+            ->once()
+            ->withArgs(function (GraphQLQueryBuilder $builder): bool {
+                $query = $builder->build();
+
+                return str_contains($query, 'bankrecs(')
+                    && str_contains($query, 'min_id: 1')
+                    && str_contains($query, 'column: ID')
+                    && str_contains($query, 'order: ASC')
+                    && str_contains($query, 'paginatorInfo');
+            })
+            ->andReturn((object) [
+                $this->bankRecordPayload(101, receiverId: 777, taxId: 0),
+                $this->bankRecordPayload(102, receiverId: 777),
+            ]);
+
+        $this->assertSame(102, TaxService::updateAllianceTaxes(777, $client));
+        $this->assertDatabaseMissing('taxes', ['id' => 101]);
+        $this->assertDatabaseHas('taxes', ['id' => 102]);
+
+        $resumeClient = Mockery::mock(QueryService::class);
+        $resumeClient->shouldReceive('sendQuery')
+            ->once()
+            ->withArgs(function (GraphQLQueryBuilder $builder): bool {
+                return str_contains($builder->build(), 'min_id: 103');
+            })
+            ->andReturn((object) []);
+
+        $this->assertSame(102, TaxService::updateAllianceTaxes(777, $resumeClient));
+        $this->assertSame(
+            102,
+            TaxImportCheckpoint::query()->where('alliance_id', 777)->value('last_scanned_id'),
+        );
     }
 
     /**
@@ -89,34 +162,14 @@ class TaxImportCheckpointTest extends TestCase
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $taxRecords
      * @return array<string, mixed>
      */
-    private function alliancePayload(array $taxRecords): array
-    {
-        return [
-            'id' => '777',
-            'name' => 'Test Alliance',
-            'acronym' => 'TA',
-            'score' => 1000.0,
-            'color' => 'blue',
-            'average_score' => 500.0,
-            'accept_members' => true,
-            'flag' => 'https://example.test/flag.png',
-            'forum_link' => 'https://example.test/forum',
-            'discord_link' => 'https://example.test/discord',
-            'wiki_link' => null,
-            'rank' => 1,
-            'taxrecs' => $taxRecords,
-            ...$this->resourcePayload(),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function bankRecordPayload(int $id, int $receiverId, ?string $date = null): array
-    {
+    private function bankRecordPayload(
+        int $id,
+        int $receiverId,
+        ?string $date = null,
+        int $taxId = 1
+    ): array {
         return [
             'id' => $id,
             'date' => $date ?? now()->toISOString(),
@@ -126,7 +179,7 @@ class TaxImportCheckpointTest extends TestCase
             'receiver_type' => 2,
             'banker_id' => 1,
             'note' => 'Tax import test',
-            'tax_id' => 1,
+            'tax_id' => $taxId,
             ...$this->resourcePayload(['money' => 10]),
         ];
     }

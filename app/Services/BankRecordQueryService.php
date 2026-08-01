@@ -17,9 +17,13 @@ class BankRecordQueryService
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function getAllianceDeposits(int $aID, int $perQuery = 500, array $options = []): BankRecords
-    {
-        $client = new QueryService;
+    public static function getAllianceDeposits(
+        int $aID,
+        int $perQuery = 500,
+        array $options = [],
+        ?QueryService $client = null
+    ): BankRecords {
+        $client ??= new QueryService;
 
         $builder = (new GraphQLQueryBuilder)
             ->setRootField('bankrecs')
@@ -43,9 +47,7 @@ class BankRecordQueryService
 
         $builder->addNestedField('data', function (GraphQLQueryBuilder $builder) {
             $builder->addFields(SelectionSetHelper::bankRecordSet());
-        });
-
-        // TODO the withdraw works but it errors out because of the response
+        })->withPaginationInfo();
 
         $response = $client->sendQuery($builder);
 
