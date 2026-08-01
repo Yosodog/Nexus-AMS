@@ -13,12 +13,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('recruitment_messages', function (Blueprint $table) {
-            $table->id();
-            $table->string('type')->unique();
-            $table->longText('message');
-            $table->timestamps();
-        });
+        if ($this->legacyMigrationRan() && Schema::hasTable('recruitment_messages')) {
+            return;
+        }
+
+        if (! Schema::hasTable('recruitment_messages')) {
+            Schema::create('recruitment_messages', function (Blueprint $table) {
+                $table->id();
+                $table->string('type')->unique();
+                $table->longText('message');
+                $table->timestamps();
+            });
+        }
 
         $appName = config('app.name');
 
@@ -45,14 +51,14 @@ return new class extends Migration
 
             $message = $existing[$key] ?? $default;
 
-            DB::table('recruitment_messages')->updateOrInsert(
-                ['type' => $type],
-                [
+            if (! DB::table('recruitment_messages')->where('type', $type)->exists()) {
+                DB::table('recruitment_messages')->insert([
+                    'type' => $type,
                     'message' => $message,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]
-            );
+                ]);
+            }
         }
 
         DB::table('settings')
@@ -67,6 +73,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if ($this->legacyMigrationRan()) {
+            return;
+        }
+
         $messages = DB::table('recruitment_messages')->get(['type', 'message']);
 
         foreach ($messages as $record) {
@@ -87,5 +97,13 @@ return new class extends Migration
         }
 
         Schema::dropIfExists('recruitment_messages');
+    }
+
+    private function legacyMigrationRan(): bool
+    {
+        return Schema::hasTable('migrations')
+            && DB::table('migrations')
+                ->where('migration', '2025_09_06_000030_create_recruitment_messages_table')
+                ->exists();
     }
 };
