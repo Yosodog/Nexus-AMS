@@ -65,9 +65,20 @@ class GrantRequirementService
      */
     public function inspect(mixed $definition): array
     {
+        if ($definition === null || $definition === '' || $definition === []) {
+            return ['normalized' => null, 'errors' => []];
+        }
+
+        if (! is_array($definition)) {
+            return [
+                'normalized' => null,
+                'errors' => ['Grant requirements must be an array of groups and conditions.'],
+            ];
+        }
+
         $definition = $this->coerceLegacyDefinition($definition);
 
-        if ($definition === null || $definition === '' || $definition === []) {
+        if ($definition === null) {
             return ['normalized' => null, 'errors' => []];
         }
 
@@ -90,7 +101,17 @@ class GrantRequirementService
      */
     public function evaluate(mixed $definition, Nation $nation): array
     {
-        $normalized = $this->normalize($definition);
+        $inspection = $this->inspect($definition);
+
+        if ($inspection['errors'] !== []) {
+            return [
+                'passes' => false,
+                'failures' => ['This grant has invalid eligibility requirements. Contact an administrator.'],
+                'summary' => [],
+            ];
+        }
+
+        $normalized = $inspection['normalized'];
 
         if ($normalized === null) {
             return [
@@ -979,12 +1000,8 @@ class GrantRequirementService
     /**
      * @return array<string, mixed>|array<int, mixed>|null
      */
-    private function coerceLegacyDefinition(mixed $definition): ?array
+    private function coerceLegacyDefinition(array $definition): ?array
     {
-        if (! is_array($definition)) {
-            return null;
-        }
-
         if ($definition === []) {
             return [];
         }

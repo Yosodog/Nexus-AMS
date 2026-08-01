@@ -48,6 +48,34 @@ class GrantRequirementServiceTest extends FeatureTestCase
         $this->assertContains('The City count field does not support that operator.', $inspection['errors']);
     }
 
+    public function test_malformed_non_empty_requirement_definitions_are_rejected(): void
+    {
+        $service = app(GrantRequirementService::class);
+
+        $inspection = $service->inspect('__invalid_json__');
+        $evaluation = $service->evaluate('__invalid_json__', $this->makeNation());
+
+        $this->assertSame(
+            ['Grant requirements must be an array of groups and conditions.'],
+            $inspection['errors'],
+        );
+        $this->assertFalse($evaluation['passes']);
+        $this->assertSame(
+            ['This grant has invalid eligibility requirements. Contact an administrator.'],
+            $evaluation['failures'],
+        );
+    }
+
+    public function test_absent_requirement_definitions_remain_unrestricted(): void
+    {
+        $service = app(GrantRequirementService::class);
+        $nation = $this->makeNation();
+
+        $this->assertTrue($service->evaluate(null, $nation)['passes']);
+        $this->assertTrue($service->evaluate('', $nation)['passes']);
+        $this->assertTrue($service->evaluate([], $nation)['passes']);
+    }
+
     public function test_evaluate_supports_nested_any_and_not_groups(): void
     {
         $service = app(GrantRequirementService::class);
