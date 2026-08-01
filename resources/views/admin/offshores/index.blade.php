@@ -485,7 +485,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold">Manual Offshore Transfer</h3>
-                            <p class="text-sm text-base-content/60">Move funds between the main bank and offshores.</p>
+                            <p class="text-sm text-base-content/60">Move funds between the main bank and one offshore. For offshore-to-offshore moves, complete and verify two separate transfers through the main bank.</p>
                         </div>
                         <button type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="manualTransferModal" aria-label="Close transfer dialog">✕</button>
                     </div>

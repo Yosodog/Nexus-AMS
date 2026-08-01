@@ -45,10 +45,13 @@ class ManualOffshoreTransferRequest extends FormRequest
             }
 
             if ($sourceType === $destinationType) {
-                if ($sourceType !== 'offshore') {
+                if ($sourceType === 'offshore') {
+                    $validator->errors()->add(
+                        'destination_type',
+                        'Direct offshore-to-offshore transfers are disabled because they cannot be completed atomically. Transfer to the main bank, verify completion, then start a separate transfer to the destination offshore.'
+                    );
+                } else {
                     $validator->errors()->add('destination_type', 'Source and destination must be different.');
-                } elseif ($this->input('source_offshore_id') === $this->input('destination_offshore_id')) {
-                    $validator->errors()->add('destination_offshore_id', 'Select a different offshore to deposit to.');
                 }
             }
 

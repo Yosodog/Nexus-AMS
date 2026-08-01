@@ -44,6 +44,13 @@ class OffshoreTransferService
         ?string $note = null,
         ?string $idempotencyKey = null,
     ): OffshoreTransfer {
+        if ($sourceType === OffshoreTransfer::TYPE_OFFSHORE
+            && $destinationType === OffshoreTransfer::TYPE_OFFSHORE) {
+            throw new OffshoreTransferException(
+                'Direct offshore-to-offshore transfers are disabled because they cannot be completed atomically. Transfer to the main bank, verify completion, then start a separate transfer to the destination offshore.'
+            );
+        }
+
         $this->mainAllianceId = $this->membershipService->getPrimaryAllianceId();
 
         if ($idempotencyKey !== null) {
@@ -87,8 +94,7 @@ class OffshoreTransferService
         $noteText = $note ?? $this->buildNote($user, $sourceType, $destinationType, $source, $destination);
 
         $requiresMainBank = $sourceType === OffshoreTransfer::TYPE_MAIN
-            || $destinationType === OffshoreTransfer::TYPE_MAIN
-            || ($sourceType === OffshoreTransfer::TYPE_OFFSHORE && $destinationType === OffshoreTransfer::TYPE_OFFSHORE);
+            || $destinationType === OffshoreTransfer::TYPE_MAIN;
 
         if ($this->mainAllianceId <= 0 && $requiresMainBank) {
             $message = 'Main alliance ID is not configured; cannot complete transfer.';
@@ -106,15 +112,6 @@ class OffshoreTransferService
                 $this->sendFromOffshoreToMain($source, $payload, $noteText);
                 $this->offshoreService->refreshBalances($source, true);
                 event(new OffshoreCacheInvalidated($source->id, 'manual-transfer'));
-            } elseif ($sourceType === OffshoreTransfer::TYPE_OFFSHORE && $destinationType === OffshoreTransfer::TYPE_OFFSHORE && $source && $destination) {
-                // Bridge the transfer through the main bank when moving between two offshores.
-                $this->sendFromOffshoreToMain($source, $payload, $noteText.' (Step 1/2)');
-                $this->offshoreService->refreshBalances($source, true);
-                event(new OffshoreCacheInvalidated($source->id, 'manual-transfer'));
-
-                $this->sendFromMainToOffshore($destination, $payload, $noteText.' (Step 2/2)');
-                $this->offshoreService->refreshBalances($destination, true);
-                event(new OffshoreCacheInvalidated($destination->id, 'manual-transfer'));
             } else {
                 throw new OffshoreTransferException('Unsupported transfer configuration.');
             }
