@@ -3,8 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\Transaction;
-use App\Models\User;
-use App\Services\AccountService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -22,7 +20,7 @@ class CheckRapidTransactions extends Command
      *
      * @var string
      */
-    protected $description = 'Scans recent transfers/withdrawals for multiple transactions in the same second.';
+    protected $description = 'Reports recent transfers/withdrawals that require rapid-transaction review.';
 
     protected int $scanWindowMinutes = 2;
 
@@ -57,39 +55,10 @@ class CheckRapidTransactions extends Command
         }
 
         foreach ($violations as $nationId => $groupedSeconds) {
-            $user = User::query()->where('nation_id', $nationId)->first();
-
-            if (! $user) {
-                Log::warning('Rapid transactions detected for missing user record.', [
-                    'nation_id' => $nationId,
-                    'detected_seconds' => $groupedSeconds->keys()->values()->all(),
-                    'cutoff' => $cutoff->toDateTimeString(),
-                ]);
-
-                continue;
-            }
-
-            $user->loadMissing('accounts');
-
-            $frozenCount = 0;
-            foreach ($user->accounts as $account) {
-                if (AccountService::setFrozen($account, true)) {
-                    $frozenCount++;
-                }
-            }
-
-            $wasDisabled = $user->disabled;
-            if (! $user->disabled) {
-                $user->disabled = true;
-                $user->save();
-            }
-
-            Log::warning('Rapid transactions detected; user disabled and accounts frozen.', [
-                'user_id' => $user->id,
+            Log::warning('Rapid transactions detected; manual review required.', [
                 'nation_id' => $nationId,
-                'disabled_previously' => $wasDisabled,
-                'frozen_accounts' => $frozenCount,
                 'detected_seconds' => $groupedSeconds->keys()->values()->all(),
+                'cutoff' => $cutoff->toDateTimeString(),
                 'transactions' => $groupedSeconds
                     ->flatten(1)
                     ->map(fn ($transaction) => [
