@@ -3,7 +3,7 @@
 @section('content')
     @php
         $nation = $user->nation;
-        $latestSignIn = $latestSignIn ?? optional($nation)->latestSignIn;
+        $latestSignIn ??= null;
         $accounts = $accounts ?? collect();
         $resourceKeys = ['money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'];
         $accountTotalMoney = $accounts->sum('money');
@@ -78,12 +78,14 @@
 
             <x-card>
                 <div class="space-y-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">Account Overview</p>
-                    <p class="text-2xl font-bold">{{ $accounts->count() }}</p>
-                    <div class="space-y-1 text-sm text-base-content/70">
-                        <p>Linked accounts</p>
-                        <p>Total balance: ${{ number_format($accountTotalMoney, 2) }}</p>
-                    </div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">{{ $canViewAccounts ? 'Account Overview' : 'Roles' }}</p>
+                    @if($canViewAccounts)
+                        <p class="text-2xl font-bold">{{ $accounts->count() }}</p>
+                        <div class="space-y-1 text-sm text-base-content/70">
+                            <p>Linked accounts</p>
+                            <p>Total balance: ${{ number_format($accountTotalMoney, 2) }}</p>
+                        </div>
+                    @endif
                     <div class="flex flex-wrap gap-2">
                         @forelse($roles as $role)
                             <x-badge :value="\Illuminate\Support\Str::title($role)" class="badge-primary badge-outline badge-sm max-w-full" />
@@ -211,7 +213,8 @@
                 </div>
             </x-card>
 
-            <x-card title="Associated Accounts" :subtitle="$accounts->count().' linked'">
+            @if($canViewAccounts)
+                <x-card title="Associated Accounts" :subtitle="$accounts->count().' linked'">
                 @if($accounts->isEmpty())
                     <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
                         No accounts are currently associated with this user.
@@ -255,10 +258,12 @@
                         </table>
                     </div>
                 @endif
-            </x-card>
+                </x-card>
+            @endif
         </div>
 
-        <x-card title="Recent Transactions" :subtitle="$recentTransactions->count().' records'">
+        @if($canViewAccounts)
+            <x-card title="Recent Transactions" :subtitle="$recentTransactions->count().' records'">
             @if($recentTransactions->isEmpty())
                 <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
                     No recent transactions were found for this user.
@@ -340,9 +345,11 @@
                     </table>
                 </div>
             @endif
-        </x-card>
+            </x-card>
+        @endif
 
-        <x-card title="Latest Nation Sign-In Snapshot" :subtitle="$latestSignIn ? ($latestSignIn->created_at?->diffForHumans() ?? 'Recorded recently') : 'No snapshot available'">
+        @if($canViewMmr)
+            <x-card title="Latest Nation Sign-In Snapshot" :subtitle="$latestSignIn ? ($latestSignIn->created_at?->diffForHumans() ?? 'Recorded recently') : 'No snapshot available'">
             @if(! $nation)
                 <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
                     This user is not linked to a nation, so no sign-in data is available.
@@ -418,6 +425,7 @@
                     </div>
                 </div>
             @endif
-        </x-card>
+            </x-card>
+        @endif
     </div>
 @endsection

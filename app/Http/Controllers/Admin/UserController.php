@@ -131,23 +131,30 @@ class UserController extends Controller
         $this->roleDelegationService->ensureCanManageUser($actor, $user);
 
         $canManageRoles = $actor->can('edit-roles');
+        $canViewAccounts = $actor->can('view-accounts');
+        $canViewMmr = $actor->can('view-mmr');
         $allRoles = $canManageRoles
             ? $this->roleDelegationService->grantableRoles($actor)
             : collect();
 
-        $user->load([
-            'nation.alliance',
-            'nation.resources',
-            'nation.latestSignIn',
-            'accounts' => fn ($query) => $query->orderBy('name'),
-        ]);
+        $relationships = ['nation.alliance'];
 
-        $accounts = $user->accounts;
+        if ($canViewAccounts) {
+            $relationships['accounts'] = fn ($query) => $query->orderBy('name');
+        }
+
+        if ($canViewMmr) {
+            $relationships[] = 'nation.latestSignIn';
+        }
+
+        $user->load($relationships);
+
+        $accounts = $canViewAccounts ? $user->accounts : collect();
         $accountIds = $accounts->pluck('id');
 
         $recentTransactions = collect();
 
-        if ($accountIds->isNotEmpty() || $user->nation_id) {
+        if ($canViewAccounts && ($accountIds->isNotEmpty() || $user->nation_id)) {
             $recentTransactionsQuery = Transaction::with(['fromAccount', 'toAccount', 'nation'])
                 ->latest('created_at')
                 ->limit(10);
@@ -168,7 +175,7 @@ class UserController extends Controller
             $recentTransactions = $recentTransactionsQuery->get();
         }
 
-        $latestSignIn = optional($user->nation)->latestSignIn;
+        $latestSignIn = $canViewMmr ? optional($user->nation)->latestSignIn : null;
         $discordAccount = DiscordAccountService::getActiveAccount($user);
 
         return view('admin.users.edit', compact(
@@ -178,7 +185,9 @@ class UserController extends Controller
             'accounts',
             'recentTransactions',
             'latestSignIn',
-            'canManageRoles'
+            'canManageRoles',
+            'canViewAccounts',
+            'canViewMmr'
         ));
     }
 
