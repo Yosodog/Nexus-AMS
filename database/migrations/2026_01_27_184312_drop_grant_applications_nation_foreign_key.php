@@ -31,21 +31,5 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        if (DB::getDriverName() === 'sqlite') {
-            return;
-        }
-
-        $constraint = DB::selectOne(
-            'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND CONSTRAINT_NAME = ?',
-            ['grant_applications', 'nation_id', 'grant_applications_nation_id_foreign']
-        );
-
-        if (! $constraint) {
-            Schema::table('grant_applications', function (Blueprint $table) {
-                $table->foreign('nation_id')->references('id')->on('nations')->noActionOnDelete();
-            });
-        }
-    }
+    public function down(): void {}
 };
