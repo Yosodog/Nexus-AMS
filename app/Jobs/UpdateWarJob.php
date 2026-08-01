@@ -4,12 +4,15 @@ namespace App\Jobs;
 
 use App\Models\War;
 use App\Services\AllianceMembershipService;
+use App\Services\SubscriptionRecordQuarantine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
+use TypeError;
+use ValueError;
 
 class UpdateWarJob implements ShouldQueue
 {
@@ -21,8 +24,10 @@ class UpdateWarJob implements ShouldQueue
 
     public function handle(): void
     {
-        try {
-            foreach ($this->warsData as $warData) {
+        $quarantine = app(SubscriptionRecordQuarantine::class);
+
+        foreach ($this->warsData as $warData) {
+            try {
                 if (! is_array($warData)) {
                     throw new InvalidArgumentException('Each war update must be an array.');
                 }
@@ -32,20 +37,22 @@ class UpdateWarJob implements ShouldQueue
                 }
 
                 War::updateFromAPI((object) $warData);
-            }
-        } catch (Throwable $e) {
-            Log::error('Failed to update subscription wars.', [
-                'war_ids' => array_values(array_filter(array_map(
-                    fn (mixed $warData): ?int => is_array($warData) && isset($warData['id'])
-                        ? (int) $warData['id']
-                        : null,
-                    $this->warsData
-                ))),
-                'exception_class' => $e::class,
-                'error' => $e->getMessage(),
-            ]);
+            } catch (InvalidArgumentException|TypeError|ValueError $exception) {
+                $quarantine->quarantine(
+                    'war',
+                    'update',
+                    $warData,
+                    'invalid_war_update: '.$exception->getMessage()
+                );
+            } catch (Throwable $exception) {
+                Log::error('Failed to update subscription war.', [
+                    'war_id' => is_array($warData) ? ($warData['id'] ?? null) : null,
+                    'exception_class' => $exception::class,
+                    'error' => $exception->getMessage(),
+                ]);
 
-            throw $e;
+                throw $exception;
+            }
         }
     }
 

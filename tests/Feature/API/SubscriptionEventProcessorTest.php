@@ -18,24 +18,49 @@ use Tests\TestCase;
 
 class SubscriptionEventProcessorTest extends TestCase
 {
+    private string $quarantineFile;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->quarantineFile = sys_get_temp_dir().'/nexus-subscription-records-'.bin2hex(random_bytes(6)).'.jsonl';
+        config()->set('subscriptions.ingestion.quarantine_file', $this->quarantineFile);
+    }
+
+    protected function tearDown(): void
+    {
+        if (is_file($this->quarantineFile)) {
+            unlink($this->quarantineFile);
+        }
+
+        parent::tearDown();
+    }
+
     #[DataProvider('queuedEventProvider')]
     public function test_it_routes_single_and_bulk_payloads_to_existing_jobs(
         string $model,
         string $event,
         string $jobClass,
-        string $payloadProperty
+        string $payloadProperty,
+        array $eventFields = [],
     ): void {
         Queue::fake();
 
         $processor = app(SubscriptionEventProcessor::class);
-        $processor->process($model, $event, ['id' => 101]);
-        $processor->process($model, $event, [['id' => 202], ['id' => 303]]);
+        $processor->process($model, $event, ['id' => 101, ...$eventFields]);
+        $processor->process($model, $event, [
+            ['id' => 202, ...$eventFields],
+            ['id' => 303, ...$eventFields],
+        ]);
 
         Queue::assertPushed($jobClass, 2);
-        Queue::assertPushed($jobClass, fn (object $job): bool => $job->{$payloadProperty} === [['id' => 101]]);
         Queue::assertPushed($jobClass, fn (object $job): bool => $job->{$payloadProperty} === [
-            ['id' => 202],
-            ['id' => 303],
+            ['id' => 101, ...$eventFields],
+        ]);
+        Queue::assertPushed($jobClass, fn (object $job): bool => $job->{$payloadProperty} === [
+            ['id' => 202, ...$eventFields],
+            ['id' => 303, ...$eventFields],
         ]);
     }
 
@@ -54,6 +79,35 @@ class SubscriptionEventProcessorTest extends TestCase
         $processor->process('nation', 'update', [['nation_name' => 'Missing ID']]);
     }
 
+    public function test_it_quarantines_invalid_records_and_dispatches_valid_siblings(): void
+    {
+        Queue::fake();
+
+        app(SubscriptionEventProcessor::class)->process('war', 'update', [
+            ['id' => ['poison'], 'turns_left' => 3],
+            ['id' => 201, 'att_points' => ['poison']],
+            ['id' => '202', 'turns_left' => '4'],
+        ]);
+
+        Queue::assertPushed(UpdateWarJob::class, fn (UpdateWarJob $job): bool => $job->warsData === [[
+            'id' => 202,
+            'turns_left' => 4,
+        ]]);
+        $this->assertFileExists($this->quarantineFile);
+        $this->assertStringContainsString('validation_failed', file_get_contents($this->quarantineFile));
+    }
+
+    public function test_war_create_requires_positive_attacker_and_defender_ids(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('contains no valid records');
+
+        app(SubscriptionEventProcessor::class)->process('war', 'create', [
+            'id' => 901,
+            'att_id' => 1001,
+        ]);
+    }
+
     public function test_it_accepts_an_empty_batch_without_dispatching_work(): void
     {
         Queue::fake();
@@ -64,7 +118,7 @@ class SubscriptionEventProcessorTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, string, class-string, string}>
+     * @return iterable<string, array{0: string, 1: string, 2: class-string, 3: string, 4?: array<string, mixed>}>
      */
     public static function queuedEventProvider(): iterable
     {
@@ -74,7 +128,13 @@ class SubscriptionEventProcessorTest extends TestCase
         yield 'city create' => ['city', 'create', UpdateCityJob::class, 'citiesData'];
         yield 'city update' => ['city', 'update', UpdateCityJob::class, 'citiesData'];
         yield 'war update' => ['war', 'update', UpdateWarJob::class, 'warsData'];
-        yield 'war attack create' => ['warattack', 'create', CreateWarAttackJob::class, 'warAttacks'];
+        yield 'war attack create' => [
+            'warattack',
+            'create',
+            CreateWarAttackJob::class,
+            'warAttacks',
+            ['att_id' => 1001, 'def_id' => 2002, 'war_id' => 901, 'type' => 'GROUND'],
+        ];
         yield 'account create' => ['account', 'create', UpsertNationAccountJob::class, 'accounts'];
         yield 'account update' => ['account', 'update', UpsertNationAccountJob::class, 'accounts'];
         yield 'account delete' => ['account', 'delete', DeleteNationAccountJob::class, 'accounts'];

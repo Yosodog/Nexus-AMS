@@ -155,6 +155,33 @@ class SubsIngestionTest extends FeatureTestCase
         Queue::assertPushed(UpdateAllianceJob::class, fn (UpdateAllianceJob $job) => $job->alliancesData === $payload);
     }
 
+    public function test_alliance_update_job_quarantines_a_bad_id_and_continues(): void
+    {
+        $quarantineFile = sys_get_temp_dir().'/nexus-alliance-update-quarantine-'.bin2hex(random_bytes(6)).'.jsonl';
+        config()->set('subscriptions.ingestion.quarantine_file', $quarantineFile);
+
+        Alliance::factory()->create([
+            'id' => 77,
+            'name' => 'Before',
+            'acronym' => 'BEF',
+        ]);
+
+        try {
+            (new UpdateAllianceJob([
+                ['id' => ['poison']],
+                ['id' => 77, 'name' => 'After', '__typename' => 'Alliance'],
+            ]))->handle();
+
+            $this->assertDatabaseHas('alliances', ['id' => 77, 'name' => 'After']);
+            $this->assertFileExists($quarantineFile);
+            $this->assertStringContainsString('invalid_alliance_update', file_get_contents($quarantineFile));
+        } finally {
+            if (is_file($quarantineFile)) {
+                unlink($quarantineFile);
+            }
+        }
+    }
+
     public function test_alliance_delete_removes_the_record(): void
     {
         Alliance::factory()->create([
