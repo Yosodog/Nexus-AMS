@@ -51,8 +51,8 @@
                         <tbody>
                         @foreach ($wars as $war)
                             <tr>
-                                <td class="link-primary"><a href="https://politicsandwar.com/nation/id={{ $war->attacker->id }}" target="_blank">{{ $war->attacker->leader_name }}</a></td>
-                                <td class="link-primary"><a href="https://politicsandwar.com/nation/id={{ $war->defender->id }}" target="_blank">{{ $war->defender->leader_name }}</a></td>
+                                <td class="link-primary"><a href="https://politicsandwar.com/nation/id={{ $war->att_id }}" target="_blank">{{ $war->attacker?->leader_name ?? "Nation #{$war->att_id}" }}</a></td>
+                                <td class="link-primary"><a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank">{{ $war->defender?->leader_name ?? "Nation #{$war->def_id}" }}</a></td>
                                 <td>{{ ucfirst($war->war_type) }}</td>
                                 <td>{{ \Carbon\Carbon::create($war->date)->toDateTimeString() }}</td>
                             </tr>

@@ -5,6 +5,7 @@ namespace Tests\Feature\Workflows;
 use App\Models\Account;
 use App\Models\Nation;
 use App\Models\User;
+use App\Models\War;
 use App\Models\WarAidRequest;
 use App\Notifications\WarAidNotification;
 use App\Services\SettingService;
@@ -248,6 +249,33 @@ class WarAidWorkflowTest extends TestCase
             ->assertSessionHasErrors([
                 'account_id' => 'You do not own the selected account.',
             ]);
+    }
+
+    public function test_war_aid_page_renders_when_an_active_war_nation_is_missing(): void
+    {
+        [$user, $nation] = $this->createMemberWithAccount();
+        $missingDefenderId = 999999;
+
+        War::query()->create([
+            'id' => 900001,
+            'date' => now(),
+            'reason' => 'Active war with a missing nation snapshot',
+            'war_type' => 'ORDINARY',
+            'turns_left' => 10,
+            'att_id' => $nation->id,
+            'att_alliance_id' => $nation->alliance_id,
+            'att_alliance_position' => 'MEMBER',
+            'def_id' => $missingDefenderId,
+            'def_alliance_id' => 999,
+            'def_alliance_position' => 'MEMBER',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('defense.war-aid'))
+            ->assertOk()
+            ->assertSee($nation->leader_name)
+            ->assertSee("Nation #{$missingDefenderId}")
+            ->assertSee("https://politicsandwar.com/nation/id={$missingDefenderId}", false);
     }
 
     public function test_resource_payload_persists_multiple_resource_types(): void
