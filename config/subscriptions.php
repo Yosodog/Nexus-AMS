@@ -3,6 +3,7 @@
 return [
     'ingestion' => [
         'alliance_create_max_records' => 25,
+        'quarantine_file' => storage_path('logs/subscription-record-quarantine.jsonl'),
     ],
 
     'redis' => [

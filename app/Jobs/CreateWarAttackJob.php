@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Enums\WarAttackTypeEnum;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
+use App\Services\SubscriptionRecordQuarantine;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -21,7 +23,7 @@ class CreateWarAttackJob implements ShouldQueue
 
     public function __construct(public array $warAttacks) {}
 
-    public function handle(): void
+    public function handle(SubscriptionRecordQuarantine $quarantine): void
     {
         if (empty($this->warAttacks)) {
             return;
@@ -29,8 +31,28 @@ class CreateWarAttackJob implements ShouldQueue
 
         try {
             $membershipService = app(AllianceMembershipService::class);
+            $supportedAttacks = [];
 
-            $nationIds = collect($this->warAttacks)
+            foreach ($this->warAttacks as $warAttack) {
+                $type = is_array($warAttack) && isset($warAttack['type']) && is_string($warAttack['type'])
+                    ? WarAttackTypeEnum::tryFrom($warAttack['type'])
+                    : null;
+
+                if ($type === null) {
+                    $quarantine->quarantine(
+                        'warattack',
+                        'create',
+                        $warAttack,
+                        'unknown_war_attack_type'
+                    );
+
+                    continue;
+                }
+
+                $supportedAttacks[] = $warAttack;
+            }
+
+            $nationIds = collect($supportedAttacks)
                 ->flatMap(fn (array $attack) => [
                     $attack['att_id'] ?? null,
                     $attack['def_id'] ?? null,
@@ -43,7 +65,7 @@ class CreateWarAttackJob implements ShouldQueue
                 ->whereIn('id', $nationIds)
                 ->pluck('alliance_id', 'id');
 
-            foreach ($this->warAttacks as $warAttack) {
+            foreach ($supportedAttacks as $warAttack) {
                 $attAlliance = $alliancesByNation[$warAttack['att_id']] ?? null;
                 $defAlliance = $alliancesByNation[$warAttack['def_id']] ?? null;
 
