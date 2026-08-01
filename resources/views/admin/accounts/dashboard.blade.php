@@ -151,7 +151,8 @@
         </x-slot:actions>
     </x-header>
 
-    <div class="mb-6 space-y-4">
+    @if($canViewAllianceLiquidity)
+        <div class="mb-6 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
             <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
                 <span class="font-medium text-base-content">Alliance Liquidity</span>
@@ -221,7 +222,8 @@
                 <x-progress :value="min(100, max(0, $coveragePercent))" class="mt-4 h-2 {{ $coverageProgressClass }}" />
             </div>
         </div>
-    </div>
+        </div>
+    @endif
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         @foreach($kpiCards as $card)
@@ -236,7 +238,8 @@
         @endforeach
     </div>
 
-    <div id="alliance-position" x-data="{ activeChart: 'liquidity' }" class="mb-6">
+    @if($canViewAllianceLiquidity)
+        <div id="alliance-position" x-data="{ activeChart: 'liquidity' }" class="mb-6">
         <div class="{{ $surfaceCardClass }}">
             <div class="border-b border-base-200 px-5 pt-5 sm:px-6 sm:pt-6">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -317,10 +320,12 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+    @endif
 
     {{-- Resource Ownership Table --}}
-    <x-card class="{{ $surfaceCardClass }} mb-6">
+    @if($canViewAllianceLiquidity)
+        <x-card class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             <div>
                 Resource Ownership
@@ -360,7 +365,8 @@
                 </tbody>
             </table>
         </div>
-    </x-card>
+        </x-card>
+    @endif
 
     {{-- All Accounts Table --}}
     <x-card class="{{ $surfaceCardClass }} mb-6" x-data="{ search: '' }">

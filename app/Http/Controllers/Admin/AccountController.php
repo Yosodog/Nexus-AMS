@@ -46,9 +46,12 @@ class AccountController extends Controller
      *
      * @throws AuthorizationException
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $this->authorize('view-accounts');
+
+        $canViewAllianceLiquidity = $request->user()->can('view-offshores')
+            || $request->user()->can('view-financial-reports');
 
         $membership = app(AllianceMembershipService::class);
         $allianceIds = $membership->getAllianceIds();
@@ -103,12 +106,17 @@ class AccountController extends Controller
         $withdrawalLimits = WithdrawalLimitService::limits();
         $maxDailyWithdrawals = SettingService::getWithdrawMaxDailyCount();
 
-        $mainBankSnapshot = app(MainBankService::class)->getCachedSnapshot();
-        $offshoreService = app(OffshoreService::class);
-        $offshoreSnapshots = $offshoreService->all()
-            ->mapWithKeys(fn ($offshore) => [
-                $offshore->id => $offshoreService->getCachedSnapshot($offshore),
-            ]);
+        $mainBankSnapshot = null;
+        $offshoreSnapshots = collect();
+
+        if ($canViewAllianceLiquidity) {
+            $mainBankSnapshot = app(MainBankService::class)->getCachedSnapshot();
+            $offshoreService = app(OffshoreService::class);
+            $offshoreSnapshots = $offshoreService->all()
+                ->mapWithKeys(fn ($offshore) => [
+                    $offshore->id => $offshoreService->getCachedSnapshot($offshore),
+                ]);
+        }
 
         return view('admin.accounts.dashboard', [
             'accounts' => $accounts,
@@ -124,6 +132,7 @@ class AccountController extends Controller
             'withdrawalReconciliations' => $withdrawalReconciliations,
             'withdrawalLimits' => $withdrawalLimits,
             'maxDailyWithdrawals' => $maxDailyWithdrawals,
+            'canViewAllianceLiquidity' => $canViewAllianceLiquidity,
             'mainBankSnapshot' => $mainBankSnapshot,
             'offshoreSnapshots' => $offshoreSnapshots,
         ]);
