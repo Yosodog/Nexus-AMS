@@ -8,6 +8,7 @@ use App\Models\Grants;
 use App\Models\Loan;
 use App\Models\ManualDisbursement;
 use App\Models\Nation;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\LoanService;
@@ -101,6 +102,98 @@ class ManualDisbursementWorkflowTest extends TestCase
             'idempotency_key' => $idempotencyKey,
             'type' => ManualDisbursement::TYPE_LOAN,
             'created_by' => $admin->id,
+        ]);
+    }
+
+    public function test_workflow_manager_without_manual_disbursement_permission_is_denied(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        [$admin] = $this->createMemberWithAccount(777598, admin: true);
+        $admin = $this->grantPermissions($admin, ['manage-loans']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.manual-disbursements.loans'), [
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+                'amount' => 100000,
+                'interest_rate' => 5,
+                'term_weeks' => 10,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('loans', 0);
+        $this->assertDatabaseCount('manual_disbursements', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
+    public function test_manual_disbursement_strictly_prohibits_self_disbursement(): void
+    {
+        [$admin, $nation, $account] = $this->createMemberWithAccount(777597, admin: true);
+        $admin = $this->grantPermissions($admin, [
+            'manage-loans',
+            'manage-manual-disbursements',
+            'bypass-self-restrictions',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.manual-disbursements.loans'), [
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+                'amount' => 100000,
+                'interest_rate' => 5,
+                'term_weeks' => 10,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('loans', 0);
+        $this->assertDatabaseCount('manual_disbursements', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
+    public function test_non_admin_with_both_permissions_cannot_disburse(): void
+    {
+        [$member] = $this->createMemberWithAccount(777596);
+        $this->attachDiscordAccount($member);
+        $member = $this->grantPermissions($member, [
+            'manage-loans',
+            'manage-manual-disbursements',
+        ]);
+        [, $nation, $account] = $this->createMemberWithAccount(777595);
+
+        $this->actingAs($member)
+            ->post(route('admin.manual-disbursements.loans'), [
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+                'amount' => 100000,
+                'interest_rate' => 5,
+                'term_weeks' => 10,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('loans', 0);
+        $this->assertDatabaseCount('manual_disbursements', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
+    public function test_upgrade_grants_manual_disbursement_permission_to_default_admin(): void
+    {
+        $defaultAdminRole = Role::query()->firstOrCreate(
+            ['name' => 'default admin'],
+            ['protected' => true],
+        );
+        $defaultAdminRole->permissions()
+            ->where('permission', 'manage-manual-disbursements')
+            ->delete();
+
+        $migration = require database_path('migrations/2026_08_01_205718_grant_manual_disbursement_permission_to_default_admin.php');
+        $migration->up();
+
+        $this->assertDatabaseHas('role_permissions', [
+            'role_id' => $defaultAdminRole->id,
+            'permission' => 'manage-manual-disbursements',
         ]);
     }
 
@@ -261,7 +354,7 @@ class ManualDisbursementWorkflowTest extends TestCase
     {
         [$admin] = $this->createMemberWithAccount(777599, admin: true);
 
-        return $this->grantPermissions($admin, [$permission]);
+        return $this->grantPermissions($admin, [$permission, 'manage-manual-disbursements']);
     }
 
     /**

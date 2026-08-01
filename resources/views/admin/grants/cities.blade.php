@@ -139,6 +139,7 @@
     </dl>
 
     @can('manage-city-grants')
+        @can('manage-manual-disbursements')
         <details id="manual-city-grant-disbursement" class="nexus-panel" @if(old('city_grant_id') || old('nation_id') || old('account_id')) open @endif>
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
@@ -212,6 +213,7 @@
                 </div>
             @endif
         </details>
+        @endcan
     @endcan
 
     <section class="nexus-panel" aria-labelledby="city-grant-tiers-title">

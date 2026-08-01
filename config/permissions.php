@@ -46,6 +46,7 @@ return [
     'manage-spies',
     'view-market',
     'manage-market',
+    'manage-manual-disbursements',
     'view-lottery',
     'manage-lottery',
     'view-audits',

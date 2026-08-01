@@ -173,6 +173,7 @@
     </dl>
 
     @can('manage-grants')
+        @can('manage-manual-disbursements')
         <details id="manual-grant-disbursement" class="nexus-panel" @if(old('grant_id') || old('nation_id') || old('account_id')) open @endif>
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
@@ -215,6 +216,7 @@
                 </div>
             @endif
         </details>
+        @endcan
     @endcan
 
     <section class="nexus-panel" aria-labelledby="grant-programs-title">

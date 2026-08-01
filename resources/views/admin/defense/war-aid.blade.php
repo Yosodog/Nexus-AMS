@@ -98,6 +98,7 @@
         @endif
 
         @can('manage-war-aid')
+            @can('manage-manual-disbursements')
             <x-card title="Manual War Aid Disbursement">
                 <p class="mb-4 text-sm text-base-content/60">
                     Issues war aid immediately and bypasses pending-request checks. Provide at least one resource amount.
@@ -145,6 +146,7 @@
                     </div>
                 </form>
             </x-card>
+            @endcan
         @endcan
 
         <x-card title="Past Requests">

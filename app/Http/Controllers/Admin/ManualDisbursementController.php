@@ -15,6 +15,7 @@ use App\Models\Grants;
 use App\Models\Loan;
 use App\Models\ManualDisbursement;
 use App\Models\Nation;
+use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\AuditLogger;
 use App\Services\CityCostService;
@@ -22,13 +23,14 @@ use App\Services\CityGrantService;
 use App\Services\GrantService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
-use App\Services\SelfApprovalGuard;
 use App\Services\WarAidService;
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,19 +44,19 @@ class ManualDisbursementController extends Controller
     public function __construct(
         protected LoanService $loanService,
         protected WarAidService $warAidService,
-        protected SelfApprovalGuard $selfApprovalGuard,
         private readonly AuditLogger $auditLogger,
     ) {}
 
     public function sendGrant(SendManualGrantRequest $request): RedirectResponse
     {
-        $this->authorize('manage-grants');
+        $actor = $this->authorizeManualDisbursement($request, 'manage-grants');
 
         $data = $request->validated();
 
-        $this->selfApprovalGuard->ensureNotSelf(
-            requestNationId: (int) $data['nation_id'],
-            context: 'send a grant to your own nation'
+        $this->ensureNotSelfDisbursement(
+            actor: $actor,
+            nationId: (int) $data['nation_id'],
+            context: 'send a grant to your own nation',
         );
 
         $grant = Grants::findOrFail($data['grant_id']);
@@ -125,13 +127,14 @@ class ManualDisbursementController extends Controller
 
     public function sendCityGrant(SendManualCityGrantRequest $request): RedirectResponse
     {
-        $this->authorize('manage-city-grants');
+        $actor = $this->authorizeManualDisbursement($request, 'manage-city-grants');
 
         $data = $request->validated();
 
-        $this->selfApprovalGuard->ensureNotSelf(
-            requestNationId: (int) $data['nation_id'],
-            context: 'send a city grant to your own nation'
+        $this->ensureNotSelfDisbursement(
+            actor: $actor,
+            nationId: (int) $data['nation_id'],
+            context: 'send a city grant to your own nation',
         );
 
         $cityGrant = CityGrant::findOrFail($data['city_grant_id']);
@@ -222,13 +225,14 @@ class ManualDisbursementController extends Controller
 
     public function sendLoan(SendManualLoanRequest $request): RedirectResponse
     {
-        $this->authorize('manage-loans');
+        $actor = $this->authorizeManualDisbursement($request, 'manage-loans');
 
         $data = $request->validated();
 
-        $this->selfApprovalGuard->ensureNotSelf(
-            requestNationId: (int) $data['nation_id'],
-            context: 'approve or send a loan to your own nation'
+        $this->ensureNotSelfDisbursement(
+            actor: $actor,
+            nationId: (int) $data['nation_id'],
+            context: 'approve or send a loan to your own nation',
         );
 
         $nation = Nation::findOrFail($data['nation_id']);
@@ -288,13 +292,14 @@ class ManualDisbursementController extends Controller
 
     public function sendWarAid(SendManualWarAidRequest $request): RedirectResponse
     {
-        $this->authorize('manage-war-aid');
+        $actor = $this->authorizeManualDisbursement($request, 'manage-war-aid');
 
         $data = $request->validated();
 
-        $this->selfApprovalGuard->ensureNotSelf(
-            requestNationId: (int) $data['nation_id'],
-            context: 'send war aid to your own nation'
+        $this->ensureNotSelfDisbursement(
+            actor: $actor,
+            nationId: (int) $data['nation_id'],
+            context: 'send war aid to your own nation',
         );
 
         $resources = collect(PWHelperService::resources())
@@ -358,6 +363,33 @@ class ManualDisbursementController extends Controller
         return back()
             ->with('alert-message', 'War aid dispatched manually — request queue bypassed.')
             ->with('alert-type', 'success');
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    private function authorizeManualDisbursement(FormRequest $request, string $workflowPermission): User
+    {
+        $actor = $request->user();
+
+        if (! $actor instanceof User || ! (bool) $actor->is_admin) {
+            throw new AuthorizationException('Manual disbursements require administrator access.');
+        }
+
+        $this->authorize('manage-manual-disbursements');
+        $this->authorize($workflowPermission);
+
+        return $actor;
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    private function ensureNotSelfDisbursement(User $actor, int $nationId, string $context): void
+    {
+        if ($actor->nation_id !== null && (int) $actor->nation_id === $nationId) {
+            throw new AuthorizationException('You cannot '.$context.'.');
+        }
     }
 
     /**

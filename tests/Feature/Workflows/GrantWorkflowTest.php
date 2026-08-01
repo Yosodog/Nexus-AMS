@@ -359,7 +359,7 @@ class GrantWorkflowTest extends TestCase
 
     private function attachAdminPermission(User $admin, string $permission): User
     {
-        return $this->grantPermissions($admin, [$permission]);
+        return $this->grantPermissions($admin, [$permission, 'manage-manual-disbursements']);
     }
 
     /**

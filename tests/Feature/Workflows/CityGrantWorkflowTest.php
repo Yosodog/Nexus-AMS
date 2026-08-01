@@ -440,6 +440,6 @@ class CityGrantWorkflowTest extends TestCase
     {
         [$admin] = $this->createMemberWithAccount(777699, admin: true);
 
-        return $this->grantPermissions($admin, [$permission]);
+        return $this->grantPermissions($admin, [$permission, 'manage-manual-disbursements']);
     }
 }

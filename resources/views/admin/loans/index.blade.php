@@ -273,6 +273,7 @@
     </details>
 
     @can('manage-loans')
+        @can('manage-manual-disbursements')
         <details id="manual-loan-disbursement" class="nexus-panel" @if(old('nation_id') || old('account_id')) open @endif>
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
@@ -299,6 +300,7 @@
                 </div>
             </form>
         </details>
+        @endcan
 
         <section class="nexus-panel" aria-labelledby="loan-settings-title">
             <div class="nexus-panel__header">
