@@ -7,11 +7,65 @@ use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use stdClass;
 
 class War extends Model
 {
+    /** @var list<string> */
+    private const PERSISTED_FIELDS = [
+        'date',
+        'end_date',
+        'reason',
+        'war_type',
+        'ground_control',
+        'air_superiority',
+        'naval_blockade',
+        'winner_id',
+        'turns_left',
+        'att_id',
+        'att_alliance_id',
+        'att_alliance_position',
+        'def_id',
+        'def_alliance_id',
+        'def_alliance_position',
+        'att_points',
+        'def_points',
+        'att_peace',
+        'def_peace',
+        'att_resistance',
+        'def_resistance',
+        'att_fortify',
+        'def_fortify',
+        'att_gas_used',
+        'def_gas_used',
+        'att_mun_used',
+        'def_mun_used',
+        'att_alum_used',
+        'def_alum_used',
+        'att_steel_used',
+        'def_steel_used',
+        'att_infra_destroyed',
+        'def_infra_destroyed',
+        'att_money_looted',
+        'def_money_looted',
+        'def_soldiers_lost',
+        'att_soldiers_lost',
+        'def_tanks_lost',
+        'att_tanks_lost',
+        'def_aircraft_lost',
+        'att_aircraft_lost',
+        'def_ships_lost',
+        'att_ships_lost',
+        'att_missiles_used',
+        'def_missiles_used',
+        'att_nukes_used',
+        'def_nukes_used',
+        'att_infra_destroyed_value',
+        'def_infra_destroyed_value',
+    ];
+
     protected $table = 'wars';
 
     protected $guarded = [];
@@ -41,7 +95,7 @@ class War extends Model
             $war['end_date'] = self::normalizeApiTimestamp($war['end_date']);
         }
 
-        return self::updateOrCreate(['id' => $warId], $war);
+        return self::updateOrCreate(['id' => $warId], Arr::only($war, self::PERSISTED_FIELDS));
     }
 
     public static function normalizeApiTimestamp(?string $value): ?string

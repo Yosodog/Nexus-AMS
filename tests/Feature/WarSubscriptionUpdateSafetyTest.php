@@ -65,6 +65,34 @@ class WarSubscriptionUpdateSafetyTest extends TestCase
         $this->assertNull($war->refresh()->end_date);
     }
 
+    public function test_model_filters_graphql_metadata_and_unknown_fields_on_create_and_update(): void
+    {
+        $war = War::updateFromAPI([
+            'id' => 910005,
+            'date' => '2026-06-01 12:00:00',
+            'reason' => 'Counter',
+            'war_type' => 'ORDINARY',
+            'turns_left' => 12,
+            'att_id' => 911005,
+            'att_alliance_id' => 321,
+            'att_alliance_position' => 'MEMBER',
+            'def_id' => 912005,
+            'def_alliance_id' => 999,
+            'def_alliance_position' => 'MEMBER',
+            '__typename' => 'War',
+            'future_upstream_field' => 'ignored',
+        ]);
+
+        War::updateFromAPI([
+            'id' => $war->id,
+            'turns_left' => 4,
+            '__typename' => 'War',
+            'another_unknown_field' => ['ignored'],
+        ]);
+
+        $this->assertSame(4, $war->refresh()->turns_left);
+    }
+
     public function test_job_uses_existing_alliance_ids_for_partial_updates(): void
     {
         $war = $this->createWar(910003);
