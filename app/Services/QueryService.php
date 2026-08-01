@@ -24,6 +24,8 @@ class QueryService
 
     public int $maxRetries = 5;
 
+    public int $maxRateLimitWaitSeconds = 60;
+
     protected ?string $apiKey = null;
 
     protected ?string $endpoint = null;
@@ -249,7 +251,8 @@ class QueryService
                                 $this->throwAmbiguousMutationResponse($response);
                             }
 
-                            $resetAfter = $this->getRateLimitResetAfter($response) ?? $delay;
+                            $resetAfter = $this->getRateLimitResetAfter($response)
+                                ?? $this->limitRateLimitWait($delay);
                             if ($retryCount >= $this->maxRetries) {
                                 Log::error('Rate limit retry limit reached.', [
                                     'retryCount' => $retryCount,
@@ -476,18 +479,29 @@ class QueryService
     {
         $resetAfter = $response->header('X-RateLimit-Reset-After');
         if (is_numeric($resetAfter)) {
-            return max(0, (int) ceil((float) $resetAfter));
+            return $this->limitRateLimitWait((float) $resetAfter);
         }
 
         $resetAt = $response->header('X-RateLimit-Reset');
         if (is_numeric($resetAt)) {
-            $seconds = (int) $resetAt - now()->timestamp;
+            $seconds = (float) $resetAt - now()->timestamp;
             if ($seconds > 0) {
-                return $seconds;
+                return $this->limitRateLimitWait($seconds);
             }
         }
 
         return null;
+    }
+
+    protected function limitRateLimitWait(int|float $seconds): int
+    {
+        $maximum = max(0, $this->maxRateLimitWaitSeconds);
+
+        if (! is_finite((float) $seconds)) {
+            return $maximum;
+        }
+
+        return min($maximum, max(0, (int) ceil($seconds)));
     }
 
     /**

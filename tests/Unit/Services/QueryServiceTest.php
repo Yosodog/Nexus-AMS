@@ -181,6 +181,35 @@ class QueryServiceTest extends FeatureTestCase
         }
     }
 
+    public function test_rate_limit_reset_headers_are_bounded_before_sleeping(): void
+    {
+        $service = new class extends QueryService
+        {
+            public int $maxRateLimitWaitSeconds = 30;
+
+            public function rateLimitResetAfter(Response $response): ?int
+            {
+                return $this->getRateLimitResetAfter($response);
+            }
+        };
+
+        Http::fake([
+            'https://example.test/large-delay' => Http::response('', 429, [
+                'X-RateLimit-Reset-After' => '999999',
+            ]),
+            'https://example.test/negative-delay' => Http::response('', 429, [
+                'X-RateLimit-Reset-After' => '-10',
+            ]),
+            'https://example.test/future-reset' => Http::response('', 429, [
+                'X-RateLimit-Reset' => (string) now()->addDay()->timestamp,
+            ]),
+        ]);
+
+        $this->assertSame(30, $service->rateLimitResetAfter(Http::get('https://example.test/large-delay')));
+        $this->assertSame(0, $service->rateLimitResetAfter(Http::get('https://example.test/negative-delay')));
+        $this->assertSame(30, $service->rateLimitResetAfter(Http::get('https://example.test/future-reset')));
+    }
+
     public function test_send_query_classifies_client_rejection_as_definite_mutation_failure(): void
     {
         Http::fake([
