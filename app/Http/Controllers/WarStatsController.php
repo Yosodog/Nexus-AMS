@@ -4,27 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Nation;
 use App\Models\War;
+use App\Services\AllianceMemberEligibilityService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class WarStatsController extends Controller
 {
-    public function __invoke(Request $request): View|RedirectResponse
-    {
-        $currentUserNation = Auth::user()?->nation;
-        $targetNationId = $request->integer('nation_id') ?: $currentUserNation?->id;
-
-        if (! $targetNationId) {
-            return redirect()->route('user.dashboard')->with([
-                'alert-message' => 'We could not load your nation profile to build war stats.',
-                'alert-type' => 'error',
-            ]);
-        }
+    public function __invoke(
+        Request $request,
+        AllianceMemberEligibilityService $memberEligibilityService
+    ): View|RedirectResponse {
+        $currentUserNation = $memberEligibilityService->nationFor($request->user());
+        $targetNationId = $request->integer('nation_id') ?: $currentUserNation->id;
 
         $targetNation = Nation::find($targetNationId);
 
