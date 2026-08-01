@@ -127,6 +127,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($key);
         });
 
+        RateLimiter::for('profitability-calculations', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('profitability:user:'.$request->user()->getAuthIdentifier()),
+                Limit::perMinute(30)->by('profitability:ip:'.$request->ip()),
+            ];
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });

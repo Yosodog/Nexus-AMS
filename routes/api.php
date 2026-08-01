@@ -27,7 +27,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', EnsureMfaConfigured::class])->prefix('v1')->group(function () {
-    Route::get('/nations/{nationId}/profitability', [NationProfitabilityController::class, 'show']);
+    Route::get('/nations/{nationId}/profitability', [NationProfitabilityController::class, 'show'])
+        ->middleware('throttle:profitability-calculations');
 });
 
 Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class])->group(function () {

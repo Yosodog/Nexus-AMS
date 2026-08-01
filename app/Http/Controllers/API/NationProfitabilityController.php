@@ -4,14 +4,22 @@ namespace App\Http\Controllers\API;
 
 use App\Exceptions\PWEntityDoesNotExist;
 use App\Http\Controllers\Controller;
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\NationProfitabilityService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Throwable;
 
 class NationProfitabilityController extends Controller
 {
-    public function show(int $nationId, NationProfitabilityService $profitabilityService): JsonResponse
-    {
+    public function show(
+        Request $request,
+        int $nationId,
+        AllianceMemberEligibilityService $memberEligibilityService,
+        NationProfitabilityService $profitabilityService
+    ): JsonResponse {
+        $memberEligibilityService->nationFor($request->user());
+
         try {
             return response()->json(
                 $profitabilityService->calculateLiveNationProfitabilityById($nationId)
