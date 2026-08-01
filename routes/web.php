@@ -209,6 +209,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/audit/results/{auditResult}/snooze', [AuditController::class, 'snooze'])
         ->name('audit.results.snooze');
     Route::post('/audit/recommendation/regenerate', [AuditController::class, 'regenerate'])
+        ->middleware('throttle:build-recommendation-regeneration')
         ->name('audit.recommendation.regenerate');
 
     /***** Defense Routes *****/
