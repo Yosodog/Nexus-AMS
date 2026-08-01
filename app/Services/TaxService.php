@@ -7,6 +7,8 @@ use App\Events\AllianceIncomeOccurred;
 use App\Exceptions\PWQueryFailedException;
 use App\Models\AllianceFinanceEntry;
 use App\Models\Taxes;
+use App\Models\TaxImportRejection;
+use Carbon\Exceptions\InvalidFormatException;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
@@ -43,9 +45,24 @@ class TaxService
             }
 
             try {
+                $recordedAt = self::parseApiTimestamp($record->date);
+            } catch (InvalidFormatException $exception) {
+                self::quarantineInvalidTimestamp($alliance_id, $record);
+
+                Log::warning('Quarantined tax record with an invalid timestamp.', [
+                    'alliance_id' => $alliance_id,
+                    'tax_id' => $record->id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                $newLastId = max($newLastId, $record->id);
+
+                continue;
+            }
+
+            try {
                 // Process DD. If the tax_id matches the DD tax ID, then it will process the DD and return what is left for taxes.
                 $record = $ddService->process($record);
-                $recordedAt = self::parseApiTimestamp($record->date);
 
                 $taxModel = DB::transaction(function () use ($record, $recordedAt) {
                     return Taxes::create([
@@ -123,6 +140,21 @@ class TaxService
     protected static function parseApiTimestamp(string $timestamp): Carbon
     {
         return Carbon::parse($timestamp, 'UTC')->utc();
+    }
+
+    protected static function quarantineInvalidTimestamp(int $allianceId, object $record): void
+    {
+        TaxImportRejection::query()->updateOrCreate(
+            [
+                'alliance_id' => $allianceId,
+                'tax_record_id' => $record->id,
+            ],
+            [
+                'reason' => 'invalid_timestamp',
+                'raw_timestamp' => $record->date,
+                'payload' => get_object_vars($record),
+            ],
+        );
     }
 
     protected static function recordDailyTaxIncome(string $date): void

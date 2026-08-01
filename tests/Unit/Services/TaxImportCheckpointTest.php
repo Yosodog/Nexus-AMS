@@ -42,6 +42,34 @@ class TaxImportCheckpointTest extends TestCase
         ]);
     }
 
+    public function test_tax_import_quarantines_invalid_timestamps_and_continues(): void
+    {
+        $client = Mockery::mock(QueryService::class);
+        $client->shouldReceive('sendQuery')
+            ->once()
+            ->andReturn((object) [
+                (object) $this->alliancePayload([
+                    $this->bankRecordPayload(101, receiverId: 777, date: 'not-a-timestamp'),
+                    $this->bankRecordPayload(102, receiverId: 777),
+                ]),
+            ]);
+
+        $lastScanned = TaxService::updateAllianceTaxes(777, $client);
+
+        $this->assertSame(102, $lastScanned);
+        $this->assertDatabaseHas('tax_import_rejections', [
+            'alliance_id' => 777,
+            'tax_record_id' => 101,
+            'reason' => 'invalid_timestamp',
+            'raw_timestamp' => 'not-a-timestamp',
+        ]);
+        $this->assertDatabaseMissing('taxes', ['id' => 101]);
+        $this->assertDatabaseHas('taxes', [
+            'id' => 102,
+            'receiver_id' => 777,
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
@@ -87,11 +115,11 @@ class TaxImportCheckpointTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function bankRecordPayload(int $id, int $receiverId): array
+    private function bankRecordPayload(int $id, int $receiverId, ?string $date = null): array
     {
         return [
             'id' => $id,
-            'date' => now()->toISOString(),
+            'date' => $date ?? now()->toISOString(),
             'sender_id' => 123,
             'sender_type' => 1,
             'receiver_id' => $receiverId,
