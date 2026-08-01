@@ -109,25 +109,51 @@ class UpdateApplication extends Command
         $this->runShellCommand("{$phpBinary} {$artisanBinary} {$arguments}", $description);
     }
 
-    /**
-     * This is assuming the app is running as www-user... we'll deal with this issue later if it becomes a problem
-     */
     private function fixPermissions(): void
     {
-        $user = 'www-data';
         $paths = ['storage', 'bootstrap/cache'];
 
         foreach ($paths as $path) {
             $fullPath = base_path($path);
-            $this->runShellCommand("chown -R {$user}:{$user} {$fullPath}", "Setting ownership for {$path}");
-            $this->runShellCommand(
-                "find {$fullPath} -type d -exec chmod 775 {} \\;",
-                "Setting directory permissions for {$path}"
-            );
-            $this->runShellCommand(
-                "find {$fullPath} -type f -exec chmod 664 {} \\;",
-                "Setting file permissions for {$path}"
-            );
+
+            foreach ($this->permissionCommands($fullPath, $path) as [$command, $description]) {
+                $this->runShellCommand($command, $description);
+            }
         }
+    }
+
+    /**
+     * @return array<int, array{0: string, 1: string}>
+     */
+    protected function permissionCommands(string $fullPath, string $pathLabel): array
+    {
+        $owner = trim((string) config('deployment.owner'));
+        $group = trim((string) config('deployment.group'));
+        $directoryMode = $this->normalizePermissionMode((string) config('deployment.directory_mode'), 'directory');
+        $fileMode = $this->normalizePermissionMode((string) config('deployment.file_mode'), 'file');
+
+        if ($owner === '' || $group === '') {
+            throw new RuntimeException('Deployment owner and group must be configured.');
+        }
+
+        $ownership = escapeshellarg("{$owner}:{$group}");
+        $escapedPath = escapeshellarg($fullPath);
+
+        return [
+            ["chown -R -- {$ownership} {$escapedPath}", "Setting ownership for {$pathLabel}"],
+            ["find {$escapedPath} -type d -exec chmod {$directoryMode} {} +", "Setting directory permissions for {$pathLabel}"],
+            ["find {$escapedPath} -type f -exec chmod {$fileMode} {} +", "Setting file permissions for {$pathLabel}"],
+        ];
+    }
+
+    private function normalizePermissionMode(string $mode, string $label): string
+    {
+        $mode = trim($mode);
+
+        if (! preg_match('/^0?[0-7]{3}$/', $mode)) {
+            throw new RuntimeException("Invalid {$label} permission mode [{$mode}].");
+        }
+
+        return str_pad(ltrim($mode, '0'), 4, '0', STR_PAD_LEFT);
     }
 }
