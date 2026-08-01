@@ -94,10 +94,18 @@ class AdminPresentationAuthorizationTest extends TestCase
             ->get(route('admin.settings'))
             ->assertOk()
             ->assertSee('Auto Withdraw')
-            ->assertSee('Account Inactivity Auto-Disable')
+            ->assertDontSee('Account Inactivity Auto-Disable')
             ->assertDontSee('Data Synchronization')
             ->assertDontSee('Loan Payments')
             ->assertDontSee('Grant Approvals');
+
+        $userManager = $this->createAdmin(['edit-users'], 930006);
+
+        $this->actingAs($userManager)
+            ->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Account Inactivity Auto-Disable')
+            ->assertDontSee('Auto Withdraw');
 
         $loanManager = $this->createAdmin(['manage-loans'], 930004);
 

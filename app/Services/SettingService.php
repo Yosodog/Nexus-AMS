@@ -440,9 +440,7 @@ class SettingService
         $value = self::getValue('user_inactivity_auto_disable_enabled');
 
         if (is_null($value)) {
-            self::setUserInactivityAutoDisableEnabled(true);
-
-            return true;
+            return false;
         }
 
         return (bool) $value;

@@ -79,7 +79,7 @@ class AppSidebar extends Component
                     route('admin.settings'),
                     request()->routeIs('admin.settings'),
                     null,
-                    $user->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants']),
+                    $user->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants', 'edit-users']),
                 ),
                 $this->item('Custom pages', 'o-paint-brush', route('admin.customization.index'), request()->routeIs('admin.customization.*'), null, $user->can('manage-custom-pages')),
                 $this->item('Audit logs', 'o-clipboard-document-list', route('admin.audit-logs.index'), request()->routeIs('admin.audit-logs.*'), null, $user->can('view-diagnostic-info')),

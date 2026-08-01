@@ -39,6 +39,9 @@ class DisableInactiveUsers extends Command
 
         $disabledCount = User::query()
             ->where('disabled', false)
+            ->whereDoesntHave('roles', function ($query): void {
+                $query->where('protected', true);
+            })
             ->where(function ($query) use ($cutoff): void {
                 $query->where('last_active_at', '<=', $cutoff)
                     ->orWhere(function ($innerQuery) use ($cutoff): void {

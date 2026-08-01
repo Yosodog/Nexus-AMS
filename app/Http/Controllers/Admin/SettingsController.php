@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
 use App\Http\Requests\Admin\UpdateDiscordCityTierSettingsRequest;
+use App\Http\Requests\Admin\UpdateUserInactivityAutoDisableRequest;
 use App\Models\Application;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
@@ -45,7 +46,7 @@ class SettingsController extends Controller
     {
         $user = request()->user();
         abort_unless(
-            $user?->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants']),
+            $user?->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants', 'edit-users']),
             403,
         );
 
@@ -565,17 +566,14 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function updateUserInactivityAutoDisable(Request $request): RedirectResponse
+    public function updateUserInactivityAutoDisable(UpdateUserInactivityAutoDisableRequest $request): RedirectResponse
     {
-        $this->authorize('manage-accounts');
+        $this->authorize('edit-users');
 
         $previousEnabled = SettingService::isUserInactivityAutoDisableEnabled();
         $previousDays = SettingService::getUserInactivityAutoDisableDays();
 
-        $validated = $request->validate([
-            'user_inactivity_auto_disable_enabled' => ['required', 'boolean'],
-            'user_inactivity_auto_disable_days' => ['required', 'integer', 'min:1', 'max:3650'],
-        ]);
+        $validated = $request->validated();
 
         $enabled = (bool) $validated['user_inactivity_auto_disable_enabled'];
         $days = (int) $validated['user_inactivity_auto_disable_days'];

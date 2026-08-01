@@ -408,7 +408,7 @@
             </x-card>
         @endcan
 
-        @can('manage-accounts')
+        @can('edit-users')
             <x-card title="Account Inactivity Auto-Disable" subtitle="Disable user accounts after a configurable period without activity.">
             <x-slot:menu>
                 <span class="badge {{ $userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost' }}">
