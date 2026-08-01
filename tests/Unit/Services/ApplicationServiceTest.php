@@ -131,7 +131,11 @@ class ApplicationServiceTest extends FeatureTestCase
             [877101 => $this->makeNation(877101, 877, 'APPLICANT')]
         );
 
-        $approvedApplication = $service->approveByDiscordUser('discord-applicant', $moderator->activeDiscordAccount()->discord_id);
+        $approvedApplication = $service->approveByDiscordUser(
+            'discord-applicant',
+            $moderator->activeDiscordAccount()->discord_id,
+            'unit-approval-request',
+        );
 
         $application->refresh();
 
@@ -166,7 +170,11 @@ class ApplicationServiceTest extends FeatureTestCase
             [877102 => $this->makeNation(877102, 877, 'APPLICANT')]
         );
 
-        $deniedApplication = $service->denyByDiscordUser('discord-deny', $moderator->activeDiscordAccount()->discord_id);
+        $deniedApplication = $service->denyByDiscordUser(
+            'discord-deny',
+            $moderator->activeDiscordAccount()->discord_id,
+            'unit-denial-request',
+        );
 
         $application->refresh();
 

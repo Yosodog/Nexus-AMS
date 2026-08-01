@@ -314,7 +314,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('application.id', $application->id);
     }
 
-    public function test_approve_reconciles_same_state_with_a_new_request_id_without_rewriting_audit_fields(): void
+    public function test_approve_rejects_a_new_request_id_for_an_already_approved_application(): void
     {
         $originalModerator = $this->createModerator('moderator-original-approval');
         $retryModerator = $this->createModerator('moderator-retry-approval');
@@ -336,8 +336,9 @@ class DiscordApplicationApiTest extends TestCase
                 'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
                 'approval_request_id' => 'interaction-new-approval',
             ])
-            ->assertOk()
-            ->assertJsonPath('application.id', $application->id);
+            ->assertConflict()
+            ->assertJsonPath('error', 'application_decision_request_mismatch')
+            ->assertJsonPath('context.application_id', $application->id);
 
         $application->refresh();
         $this->assertSame('moderator-original-approval', $application->approved_by_discord_id);
@@ -395,7 +396,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('context.status', ApplicationStatus::Cancelled->value);
     }
 
-    public function test_approve_endpoint_prefers_a_pending_application_over_recent_approval_without_request_id(): void
+    public function test_stale_approval_retry_does_not_approve_a_new_pending_application(): void
     {
         Queue::fake();
 
@@ -412,6 +413,7 @@ class DiscordApplicationApiTest extends TestCase
             'pending_key' => null,
             'approved_at' => now(),
             'approved_by_discord_id' => $moderatorDiscordId,
+            'approval_request_id' => 'interaction-stale-approval',
         ]);
 
         $pendingApplication = Application::query()->create([
@@ -432,22 +434,20 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => $applicantDiscordId,
                 'moderator_discord_id' => $moderatorDiscordId,
+                'approval_request_id' => 'interaction-stale-approval',
             ])
             ->assertOk()
             ->assertJsonPath('status', 'approved')
-            ->assertJsonPath('application.id', $pendingApplication->id);
+            ->assertJsonPath('application.id', $previousApplication->id);
 
         $previousApplication->refresh();
         $pendingApplication->refresh();
 
         $this->assertSame(ApplicationStatus::Approved, $previousApplication->status);
-        $this->assertSame(ApplicationStatus::Approved, $pendingApplication->status);
-        $this->assertNull($pendingApplication->pending_key);
+        $this->assertSame(ApplicationStatus::Pending, $pendingApplication->status);
+        $this->assertSame(1, $pendingApplication->pending_key);
 
-        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($pendingApplication): bool {
-            return $job->applicationId === $pendingApplication->id
-                && $job->targetStatus === ApplicationStatus::Approved;
-        });
+        Queue::assertNotPushed(SyncApplicationAllianceState::class);
     }
 
     public function test_deny_endpoint_updates_the_application_and_queues_the_alliance_sync_job(): void
@@ -531,7 +531,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('application.id', $application->id);
     }
 
-    public function test_deny_reconciles_same_state_with_a_new_request_id_without_rewriting_audit_fields(): void
+    public function test_deny_rejects_a_new_request_id_for_an_already_denied_application(): void
     {
         $originalModerator = $this->createModerator('moderator-original-denial');
         $retryModerator = $this->createModerator('moderator-retry-denial');
@@ -553,9 +553,9 @@ class DiscordApplicationApiTest extends TestCase
                 'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
                 'denial_request_id' => 'interaction-new-denial',
             ])
-            ->assertOk()
-            ->assertJsonPath('application.id', $application->id)
-            ->assertJsonPath('config.applicant_role_id', 'applicant-role');
+            ->assertConflict()
+            ->assertJsonPath('error', 'application_decision_request_mismatch')
+            ->assertJsonPath('context.application_id', $application->id);
 
         $application->refresh();
         $this->assertSame('moderator-original-denial', $application->denied_by_discord_id);
@@ -587,7 +587,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('context.application_id', $application->id);
     }
 
-    public function test_deny_endpoint_prefers_a_pending_application_over_recent_denial_without_request_id(): void
+    public function test_stale_denial_retry_does_not_deny_a_new_pending_application(): void
     {
         Queue::fake();
 
@@ -604,6 +604,7 @@ class DiscordApplicationApiTest extends TestCase
             'pending_key' => null,
             'denied_at' => now(),
             'denied_by_discord_id' => $moderatorDiscordId,
+            'denial_request_id' => 'interaction-stale-denial',
         ]);
 
         $pendingApplication = Application::query()->create([
@@ -624,22 +625,20 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => $applicantDiscordId,
                 'moderator_discord_id' => $moderatorDiscordId,
+                'denial_request_id' => 'interaction-stale-denial',
             ])
             ->assertOk()
             ->assertJsonPath('status', 'denied')
-            ->assertJsonPath('application.id', $pendingApplication->id);
+            ->assertJsonPath('application.id', $previousApplication->id);
 
         $previousApplication->refresh();
         $pendingApplication->refresh();
 
         $this->assertSame(ApplicationStatus::Denied, $previousApplication->status);
-        $this->assertSame(ApplicationStatus::Denied, $pendingApplication->status);
-        $this->assertNull($pendingApplication->pending_key);
+        $this->assertSame(ApplicationStatus::Pending, $pendingApplication->status);
+        $this->assertSame(1, $pendingApplication->pending_key);
 
-        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($pendingApplication): bool {
-            return $job->applicationId === $pendingApplication->id
-                && $job->targetStatus === ApplicationStatus::Denied;
-        });
+        Queue::assertNotPushed(SyncApplicationAllianceState::class);
     }
 
     /**

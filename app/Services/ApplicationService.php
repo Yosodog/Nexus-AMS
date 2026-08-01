@@ -286,7 +286,7 @@ class ApplicationService
     public function approveByDiscordUser(
         string $applicantDiscordId,
         string $moderatorDiscordId,
-        ?string $approvalRequestId = null
+        string $approvalRequestId,
     ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
@@ -296,6 +296,7 @@ class ApplicationService
                     $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
                         ApplicationStatus::Approved,
+                        $approvalRequestId,
                     );
 
                     if ($existingApplication) {
@@ -380,7 +381,7 @@ class ApplicationService
     public function denyByDiscordUser(
         string $applicantDiscordId,
         string $moderatorDiscordId,
-        ?string $denialRequestId = null
+        string $denialRequestId,
     ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
@@ -390,6 +391,7 @@ class ApplicationService
                     $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
                         ApplicationStatus::Denied,
+                        $denialRequestId,
                     );
 
                     if ($existingApplication) {
@@ -788,7 +790,36 @@ class ApplicationService
     protected function findExistingDecision(
         string $applicantDiscordId,
         ApplicationStatus $requestedStatus,
+        string $requestId,
     ): ?Application {
+        $requestIdColumn = $requestedStatus === ApplicationStatus::Approved
+            ? 'approval_request_id'
+            : 'denial_request_id';
+        $oppositeRequestIdColumn = $requestedStatus === ApplicationStatus::Approved
+            ? 'denial_request_id'
+            : 'approval_request_id';
+
+        $matchingDecision = Application::query()
+            ->where('discord_user_id', $applicantDiscordId)
+            ->where($requestIdColumn, $requestId)
+            ->latest('id')
+            ->first();
+
+        if ($matchingDecision) {
+            return $matchingDecision;
+        }
+
+        if (Application::query()
+            ->where('discord_user_id', $applicantDiscordId)
+            ->where($oppositeRequestIdColumn, $requestId)
+            ->exists()) {
+            throw new ApplicationException(
+                'application_decision_request_conflict',
+                'This Discord request ID was already used for a different application decision.',
+                409,
+            );
+        }
+
         if ($this->hasPendingApplication($applicantDiscordId)) {
             return null;
         }
@@ -804,7 +835,12 @@ class ApplicationService
         }
 
         if ($application->status === $requestedStatus) {
-            return $application;
+            throw new ApplicationException(
+                'application_decision_request_mismatch',
+                'The application was already decided by a different Discord request.',
+                409,
+                ['application_id' => $application->id, 'status' => $application->status->value],
+            );
         }
 
         if ($application->status === ApplicationStatus::Denied && $requestedStatus === ApplicationStatus::Approved) {

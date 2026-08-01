@@ -25,7 +25,7 @@ class DiscordApplicationApproveRequest extends FormRequest
         return [
             'applicant_discord_id' => ['required', 'string', 'max:100'],
             'moderator_discord_id' => ['required', 'string', 'max:100'],
-            'approval_request_id' => ['nullable', 'string', 'max:100'],
+            'approval_request_id' => ['required', 'string', 'max:100'],
         ];
     }
 }
