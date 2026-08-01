@@ -19,6 +19,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -101,6 +102,8 @@ class CreateCounterOnWarDeclared
                             'attacker_nation_id' => $event->attackerNationId,
                             'war_id' => $event->warId,
                         ]);
+
+                        throw new RuntimeException('War counter auto-creation did not resolve an open counter.');
                     } else {
                         $counter->update([
                             'last_war_declared_at' => now(),
@@ -117,6 +120,8 @@ class CreateCounterOnWarDeclared
                 'attacker_nation_id' => $event->attackerNationId,
                 'message' => $exception->getMessage(),
             ]);
+
+            throw $exception;
         } finally {
             try {
                 $lock->release();
@@ -161,7 +166,7 @@ class CreateCounterOnWarDeclared
                     'defender_nation_id' => $event->defenderNationId,
                 ]);
 
-                return true;
+                throw new RuntimeException('Discord war alert requires current attacker and defender nation data.');
             }
 
             try {
@@ -181,6 +186,8 @@ class CreateCounterOnWarDeclared
                     'defender_nation_id' => $event->defenderNationId,
                     'message' => $exception->getMessage(),
                 ]);
+
+                throw $exception;
             }
 
             return true;
@@ -190,6 +197,8 @@ class CreateCounterOnWarDeclared
             Log::info('Discord war alert skipped due to overlapping lock', [
                 'war_id' => $event->warId,
             ]);
+
+            throw new RuntimeException('Discord war alert lock is already held.');
         }
     }
 
