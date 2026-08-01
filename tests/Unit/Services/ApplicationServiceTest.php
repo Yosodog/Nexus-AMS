@@ -138,6 +138,37 @@ class ApplicationServiceTest extends FeatureTestCase
         $service->publicResolveModerator('discord-no-access');
     }
 
+    public function test_resolve_moderator_rejects_non_admins_even_with_application_permission(): void
+    {
+        $nation = Nation::factory()->create();
+        $user = $this->grantPermissions(
+            User::factory()->verified()->create(['nation_id' => $nation->id]),
+            ['manage-applications'],
+        );
+        DiscordAccount::factory()->create([
+            'user_id' => $user->id,
+            'discord_id' => 'discord-non-admin',
+        ]);
+
+        $this->expectException(ApplicationException::class);
+        $this->expectExceptionMessage('You do not have permission to manage applications.');
+
+        $this->makeInspectableService()->publicResolveModerator('discord-non-admin');
+    }
+
+    public function test_resolve_moderator_honors_the_admin_mfa_requirement(): void
+    {
+        SettingService::setMfaRequiredForAdmins(true);
+        $moderator = $this->createModerator('discord-no-mfa');
+
+        $this->expectException(ApplicationException::class);
+        $this->expectExceptionMessage('Multi-factor authentication must be configured before managing applications.');
+
+        $this->makeInspectableService()->publicResolveModerator(
+            $moderator->activeDiscordAccount()->discord_id,
+        );
+    }
+
     public function test_approve_syncs_the_alliance_before_finalizing_the_application(): void
     {
         Queue::fake();

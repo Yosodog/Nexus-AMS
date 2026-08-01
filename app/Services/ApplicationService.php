@@ -821,7 +821,12 @@ class ApplicationService
             );
         }
 
-        if (! Gate::forUser($account->user)->allows('manage-applications')) {
+        $moderator = $account->user;
+
+        if (! $moderator->is_admin
+            || $moderator->disabled
+            || ! $moderator->isVerified()
+            || ! Gate::forUser($moderator)->allows('manage-applications')) {
             throw new ApplicationException(
                 'forbidden',
                 'You do not have permission to manage applications.',
@@ -829,7 +834,18 @@ class ApplicationService
             );
         }
 
-        return $account->user;
+        $requiresMfa = SettingService::isMfaRequiredForAllUsers()
+            || SettingService::isMfaRequiredForAdmins();
+
+        if ($requiresMfa && ! $moderator->hasEnabledTwoFactorAuthentication()) {
+            throw new ApplicationException(
+                'mfa_required',
+                'Multi-factor authentication must be configured before managing applications.',
+                403,
+            );
+        }
+
+        return $moderator;
     }
 
     /**
