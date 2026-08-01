@@ -2,26 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AlliancePositionEnum;
 use App\Models\Nation;
+use App\Services\AllianceMemberEligibilityService;
 use App\Services\AllianceMembershipService;
 use App\Services\NationMatchService;
-use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CounterFinderController extends Controller
 {
-    /**
-     * @return Factory|View|Application|RedirectResponse|object
-     */
     public function index(
         Request $request,
         NationMatchService $matchService,
+        AllianceMemberEligibilityService $memberEligibilityService,
         AllianceMembershipService $membershipService,
         ?int $nation = null
-    ) {
+    ): View|RedirectResponse {
+        $this->authorize('view-wars');
+        $memberEligibilityService->nationFor($request->user());
+
         $targetNation = null;
         $nations = collect();
 
@@ -36,10 +37,7 @@ class CounterFinderController extends Controller
 
             $ourNations = Nation::with('military')
                 ->whereIn('alliance_id', $membershipService->getAllianceIds())
-                ->where(function ($query) {
-                    $query->whereNull('alliance_position')
-                        ->orWhere('alliance_position', '!=', 'APPLICANT');
-                })
+                ->whereIn('alliance_position', $this->memberPositions())
                 ->where('vacation_mode_turns', 0)
                 ->get();
 
@@ -60,10 +58,7 @@ class CounterFinderController extends Controller
             // No target provided, just list all of our nations
             $nations = Nation::with('military')
                 ->whereIn('alliance_id', $membershipService->getAllianceIds())
-                ->where(function ($query) {
-                    $query->whereNull('alliance_position')
-                        ->orWhere('alliance_position', '!=', 'APPLICANT');
-                })
+                ->whereIn('alliance_position', $this->memberPositions())
                 ->get();
         }
 
@@ -71,5 +66,18 @@ class CounterFinderController extends Controller
             'target' => $targetNation,
             'nations' => $nations,
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function memberPositions(): array
+    {
+        return [
+            AlliancePositionEnum::MEMBER->value,
+            AlliancePositionEnum::OFFICER->value,
+            AlliancePositionEnum::HEIR->value,
+            AlliancePositionEnum::LEADER->value,
+        ];
     }
 }
