@@ -38,6 +38,10 @@ class UserController extends Controller
     {
         $this->authorize('view-users');
 
+        $actor = $request->user();
+        $canViewEmails = $actor->can('edit-users');
+        $canViewRoles = $actor->can('view-roles');
+
         $statsQuery = User::query();
 
         $stats = [
@@ -61,17 +65,38 @@ class UserController extends Controller
             'verification' => $verification,
         ];
 
+        $userColumns = [
+            'id',
+            'name',
+            'nation_id',
+            'is_admin',
+            'disabled',
+            'verified_at',
+            'last_active_at',
+        ];
+
+        if ($canViewEmails) {
+            $userColumns[] = 'email';
+        }
+
         $usersQuery = User::query()
-            ->with(['nation', 'roles'])
+            ->select($userColumns)
+            ->without('roles')
+            ->with('nation')
+            ->when($canViewRoles, fn ($query) => $query->with('roles'))
             ->latest('last_active_at');
 
         if ($filters['search'] !== '') {
-            $usersQuery->where(function ($query) use ($filters) {
+            $usersQuery->where(function ($query) use ($canViewEmails, $filters) {
                 $searchTerm = '%'.$filters['search'].'%';
 
-                $query->where('name', 'like', $searchTerm)
-                    ->orWhere('email', 'like', $searchTerm)
-                    ->orWhereHas('nation', fn ($nationQuery) => $nationQuery->where('discord', 'like', $searchTerm));
+                $query->where('name', 'like', $searchTerm);
+
+                if ($canViewEmails) {
+                    $query->orWhere('email', 'like', $searchTerm);
+                }
+
+                $query->orWhereHas('nation', fn ($nationQuery) => $nationQuery->where('discord', 'like', $searchTerm));
 
                 if (is_numeric($filters['search'])) {
                     $query->orWhere('nation_id', (int) $filters['search']);
@@ -116,7 +141,14 @@ class UserController extends Controller
             'admins' => SettingService::isMfaRequiredForAdmins(),
         ];
 
-        return view('admin.users.index', compact('users', 'stats', 'filters', 'mfaRequirements'));
+        return view('admin.users.index', compact(
+            'users',
+            'stats',
+            'filters',
+            'mfaRequirements',
+            'canViewEmails',
+            'canViewRoles'
+        ));
     }
 
     /**

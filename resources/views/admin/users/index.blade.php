@@ -19,7 +19,9 @@
     <x-header title="Manage Users" separator use-h1>
         <x-slot:subtitle>Filter accounts, review access posture, and jump directly into member management.</x-slot:subtitle>
         <x-slot:actions>
-            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline btn-primary btn-sm">Manage Roles</a>
+            @if($canViewRoles)
+                <a href="{{ route('admin.roles.index') }}" class="btn btn-outline btn-primary btn-sm">Manage Roles</a>
+            @endif
         </x-slot:actions>
     </x-header>
 
@@ -39,7 +41,7 @@
             </x-slot:title>
 
             <form method="GET" class="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                <x-input label="Search" name="search" :value="$filters['search']" placeholder="Name, email, Discord, or nation ID" class="xl:col-span-2" />
+                <x-input label="Search" name="search" :value="$filters['search']" :placeholder="$canViewEmails ? 'Name, email, Discord, or nation ID' : 'Name, Discord, or nation ID'" class="xl:col-span-2" />
 
                 <div>
                     <label for="filter-status" class="mb-1 block text-sm font-medium">Account Status</label>
@@ -83,7 +85,9 @@
                             <th>Discord</th>
                             <th>Nation</th>
                             <th>Alliance</th>
-                            <th>Roles</th>
+                            @if($canViewRoles)
+                                <th>Roles</th>
+                            @endif
                             <th>Last Active</th>
                             <th data-sortable="false" class="text-right">Actions</th>
                         </tr>
@@ -96,7 +100,9 @@
                             <tr>
                                 <td>
                                     <div class="font-semibold text-base-content">{{ $user->name }}</div>
-                                    <div class="text-sm text-base-content/60">{{ $user->email }}</div>
+                                    @if($canViewEmails)
+                                        <div class="text-sm text-base-content/60">{{ $user->email }}</div>
+                                    @endif
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         @if($user->is_admin)
                                             <x-badge value="Admin" class="badge-primary badge-sm" />
@@ -129,15 +135,17 @@
                                         <x-badge value="Outside" class="badge-ghost badge-sm" />
                                     @endif
                                 </td>
-                                <td>
-                                    <div class="flex flex-wrap gap-2">
-                                        @forelse($user->roles as $role)
-                                            <x-badge :value="\Illuminate\Support\Str::title($role->name)" class="badge-primary badge-outline badge-sm" />
-                                        @empty
-                                            <span class="text-sm text-base-content/50">No roles assigned</span>
-                                        @endforelse
-                                    </div>
-                                </td>
+                                @if($canViewRoles)
+                                    <td>
+                                        <div class="flex flex-wrap gap-2">
+                                            @forelse($user->roles as $role)
+                                                <x-badge :value="\Illuminate\Support\Str::title($role->name)" class="badge-primary badge-outline badge-sm" />
+                                            @empty
+                                                <span class="text-sm text-base-content/50">No roles assigned</span>
+                                            @endforelse
+                                        </div>
+                                    </td>
+                                @endif
                                 <td>{{ $user->last_active_at ? $user->last_active_at->diffForHumans() : 'Never' }}</td>
                                 <td class="text-right">
                                     <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-primary btn-sm">
