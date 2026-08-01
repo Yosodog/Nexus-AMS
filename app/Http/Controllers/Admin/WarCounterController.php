@@ -661,7 +661,7 @@ class WarCounterController extends Controller
             return $this->invalidReimbursementRedirect($exception);
         }
 
-        event(new AllianceExpenseOccurred(new AllianceFinanceData(
+        event(new AllianceExpenseOccurred((new AllianceFinanceData(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
             category: 'counter_reimbursement',
             description: sprintf('Counter reimbursement for Nation #%d (Counter #%d)', $nationId, $counter->id),
@@ -684,7 +684,7 @@ class WarCounterController extends Controller
                 'infra_loss_cost' => $infraLossCost,
                 'correlation_id' => $correlationId,
             ]
-        )->toArray()));
+        ))->toArray()));
 
         $auditLogger->recordAfterCommit(
             category: 'war_counter',
