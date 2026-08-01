@@ -3,11 +3,13 @@
 namespace Tests\Feature\Workflows;
 
 use App\GraphQL\Models\BankRecord;
+use App\GraphQL\Models\BankRecords;
 use App\Models\Account;
 use App\Models\DepositRequest;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\DepositCompletedNotification;
+use App\Services\BankRecordQueryService;
 use App\Services\DepositService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,8 +141,7 @@ class DepositProcessingTest extends TestCase
         ]);
 
         $record = $this->makeBankRecord(13, 779004, 777, 'ONCEONLY', ['money' => 2500]);
-        $mock = Mockery::mock('alias:App\Services\BankRecordQueryService');
-        $mock->shouldReceive('getAllianceDeposits')->once()->andReturn([$record]);
+        $this->mockAllianceDeposits([$record]);
 
         DepositService::processDeposits(777);
         DepositService::processDeposits(777);
@@ -178,8 +179,12 @@ class DepositProcessingTest extends TestCase
      */
     private function mockAllianceDeposits(array $records): void
     {
-        $mock = Mockery::mock('alias:App\Services\BankRecordQueryService');
-        $mock->shouldReceive('getAllianceDeposits')->once()->andReturn($records);
+        $mock = Mockery::mock(BankRecordQueryService::class);
+        $mock->shouldReceive('getAllianceDeposits')
+            ->once()
+            ->andReturn(new BankRecords($records));
+
+        $this->app->instance(BankRecordQueryService::class, $mock);
     }
 
     /**

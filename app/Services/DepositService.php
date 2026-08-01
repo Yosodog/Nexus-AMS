@@ -33,7 +33,7 @@ class DepositService
         $lastScannedId = SettingService::getLastScannedBankRecordId();
 
         // Step 3: Fetch all deposits since last scanned ID
-        $bankRecords = BankRecordQueryService::getAllianceDeposits($allianceId, options: [
+        $bankRecords = app(BankRecordQueryService::class)->getAllianceDeposits($allianceId, options: [
             'minId' => $lastScannedId + 1,
             'orderByColumn' => 'ID',
             'orderByDirection' => 'ASC',

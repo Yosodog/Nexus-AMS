@@ -17,7 +17,7 @@ class BankRecordQueryService
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function getAllianceDeposits(
+    public function getAllianceDeposits(
         int $aID,
         int $perQuery = 500,
         array $options = [],

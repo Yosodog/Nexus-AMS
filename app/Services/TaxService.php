@@ -176,7 +176,7 @@ class TaxService
         int $minimumId,
         ?QueryService $client = null
     ): Collection {
-        return collect(BankRecordQueryService::getAllianceDeposits(
+        return collect(app(BankRecordQueryService::class)->getAllianceDeposits(
             $allianceId,
             options: [
                 'minId' => max(1, $minimumId),
