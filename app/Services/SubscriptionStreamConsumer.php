@@ -15,10 +15,15 @@ use UnexpectedValueException;
 
 class SubscriptionStreamConsumer
 {
-    public function __construct(private readonly SubscriptionEventProcessor $processor) {}
+    public function __construct(
+        private readonly SubscriptionEventProcessor $processor,
+        private readonly SubscriptionEnvelopeAuthenticator $authenticator,
+    ) {}
 
     public function ensureConsumerGroup(): void
     {
+        $this->authenticator->assertConfigured();
+
         try {
             $this->rawCommand('XGROUP', 'CREATE', $this->stream(), $this->group(), '0', 'MKSTREAM');
         } catch (RedisException $exception) {
@@ -30,6 +35,8 @@ class SubscriptionStreamConsumer
 
     public function consumeOnce(): int
     {
+        $this->authenticator->assertConfigured();
+
         $messages = $this->claimStaleMessages();
 
         if ($messages === []) {
@@ -138,6 +145,7 @@ class SubscriptionStreamConsumer
 
         try {
             $message = $this->decodeMessage($fields);
+            $this->authenticator->reserveMessageId($message['message_id'], $streamId);
             $this->processor->process($message['model'], $message['event'], $message['payload']);
 
             $this->acknowledgeAndDelete($streamId);
@@ -197,6 +205,8 @@ class SubscriptionStreamConsumer
         if (! in_array($fields['source'], ['single', 'bulk'], true)) {
             throw new InvalidArgumentException("Unsupported subscription source [{$fields['source']}].");
         }
+
+        $this->authenticator->verify($fields);
 
         $payload = json_decode($fields['payload'], true, 512, JSON_THROW_ON_ERROR);
 

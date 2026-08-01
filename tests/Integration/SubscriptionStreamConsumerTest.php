@@ -3,6 +3,7 @@
 namespace Tests\Integration;
 
 use App\Jobs\UpdateNationJob;
+use App\Services\SubscriptionEnvelopeAuthenticator;
 use App\Services\SubscriptionEventProcessor;
 use App\Services\SubscriptionStreamConsumer;
 use Illuminate\Support\Facades\Log;
@@ -39,6 +40,11 @@ class SubscriptionStreamConsumerTest extends TestCase
         config()->set('subscriptions.redis.block_ms', 10);
         config()->set('subscriptions.redis.claim_idle_ms', 1);
         config()->set('subscriptions.redis.max_deliveries', 1);
+        config()->set('subscriptions.redis.hmac_secret', str_repeat('s', 32));
+        config()->set('subscriptions.redis.max_age_seconds', 300);
+        config()->set('subscriptions.redis.future_tolerance_seconds', 30);
+        config()->set('subscriptions.redis.replay_ttl_seconds', 300);
+        config()->set('subscriptions.redis.replay_prefix', "test:nexus:subscriptions:replay:{$suffix}:");
         config()->set('subscriptions.redis.dead_letter_file', $this->deadLetterFile);
 
         Redis::purge('subscriptions');
@@ -88,7 +94,7 @@ class SubscriptionStreamConsumerTest extends TestCase
         $processor = Mockery::mock(SubscriptionEventProcessor::class);
         $processor->shouldReceive('process')->once()->with('nation', 'update', ['id' => 4242]);
 
-        $consumer = new SubscriptionStreamConsumer($processor);
+        $consumer = new SubscriptionStreamConsumer($processor, app(SubscriptionEnvelopeAuthenticator::class));
         $consumer->ensureConsumerGroup();
         $this->publish(['id' => 4242]);
 
@@ -106,7 +112,7 @@ class SubscriptionStreamConsumerTest extends TestCase
         $processor = Mockery::mock(SubscriptionEventProcessor::class);
         $processor->shouldReceive('process')->times(5)->andThrow(new RuntimeException('Temporary processor failure.'));
 
-        $consumer = new SubscriptionStreamConsumer($processor);
+        $consumer = new SubscriptionStreamConsumer($processor, app(SubscriptionEnvelopeAuthenticator::class));
         $consumer->ensureConsumerGroup();
         $this->publish(['id' => 4242]);
 
@@ -137,12 +143,64 @@ class SubscriptionStreamConsumerTest extends TestCase
         $this->assertStringContainsString('Unsupported subscription schema version', file_get_contents($this->deadLetterFile));
     }
 
+    public function test_it_rejects_a_tampered_message_before_dispatch(): void
+    {
+        Queue::fake();
+        $consumer = app(SubscriptionStreamConsumer::class);
+        $consumer->ensureConsumerGroup();
+        $this->publish(['id' => 4242], ['signature' => str_repeat('0', 64)]);
+
+        $this->assertSame(1, $consumer->consumeOnce());
+
+        Queue::assertNothingPushed();
+        $this->assertStringContainsString('signature is invalid', file_get_contents($this->deadLetterFile));
+    }
+
+    public function test_it_rejects_stale_signed_messages(): void
+    {
+        Queue::fake();
+        $consumer = app(SubscriptionStreamConsumer::class);
+        $consumer->ensureConsumerGroup();
+        $this->publish(['id' => 4242], ['received_at' => now()->subMinutes(10)->toIso8601String()]);
+
+        $this->assertSame(1, $consumer->consumeOnce());
+
+        Queue::assertNothingPushed();
+        $this->assertStringContainsString('message is stale', file_get_contents($this->deadLetterFile));
+    }
+
+    public function test_it_atomically_rejects_a_replayed_message_id_on_a_different_stream_entry(): void
+    {
+        Queue::fake();
+        $consumer = app(SubscriptionStreamConsumer::class);
+        $consumer->ensureConsumerGroup();
+        $this->publish(['id' => 4242]);
+        $this->publish(['id' => 4242]);
+
+        $this->assertSame(2, $consumer->consumeOnce());
+
+        Queue::assertPushed(UpdateNationJob::class, 1);
+        $this->assertStringContainsString('has already been processed', file_get_contents($this->deadLetterFile));
+    }
+
+    public function test_consumer_refuses_to_start_without_a_configured_hmac_secret(): void
+    {
+        config()->set('subscriptions.redis.hmac_secret', null);
+
+        $this->artisan('subs:consume-stream --once')
+            ->assertFailed()
+            ->expectsOutputToContain('SUBS_REDIS_HMAC_SECRET');
+    }
+
     /**
      * @param  array<int|string, mixed>  $payload
      * @param  array<string, string>  $overrides
      */
     private function publish(array $payload, array $overrides = []): string
     {
+        $signatureOverride = $overrides['signature'] ?? null;
+        unset($overrides['signature']);
+
         $fields = array_merge([
             'message_id' => 'message-4242',
             'schema_version' => '1',
@@ -152,6 +210,11 @@ class SubscriptionStreamConsumerTest extends TestCase
             'received_at' => now()->toIso8601String(),
             'payload' => json_encode($payload, JSON_THROW_ON_ERROR),
         ], $overrides);
+        $fields['signature'] = $signatureOverride ?? hash_hmac(
+            'sha256',
+            SubscriptionEnvelopeAuthenticator::canonicalPayload($fields),
+            (string) config('subscriptions.redis.hmac_secret')
+        );
         $arguments = ['XADD', $this->stream, '*'];
 
         foreach ($fields as $field => $value) {
