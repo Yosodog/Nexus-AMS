@@ -85,8 +85,10 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
     Route::post('/applications/approve', [DiscordApplicationController::class, 'approve']);
     Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
-    Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel']);
-    Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive']);
+    Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel'])
+        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
+    Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive'])
+        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
     Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
     Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary'])
         ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
