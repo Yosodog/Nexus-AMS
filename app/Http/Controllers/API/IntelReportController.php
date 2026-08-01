@@ -22,7 +22,10 @@ class IntelReportController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
-        $report = $service->store($parsed, $request->input('source', 'discord'));
+        $source = $request->filled('source')
+            ? $request->string('source')->toString()
+            : 'discord';
+        $report = $service->store($parsed, $source);
 
         return response()->json([
             'id' => $report->id,

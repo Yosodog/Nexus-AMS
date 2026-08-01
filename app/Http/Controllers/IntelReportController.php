@@ -68,7 +68,11 @@ class IntelReportController extends Controller
             ]);
         }
 
-        $service->store($parsed, $request->input('source', 'web'), Auth::id());
+        $source = $request->filled('source')
+            ? $request->string('source')->toString()
+            : 'web';
+
+        $service->store($parsed, $source, Auth::id());
 
         return redirect()->route('defense.intel')->with([
             'alert-message' => 'Intel saved and shared with the alliance.',
