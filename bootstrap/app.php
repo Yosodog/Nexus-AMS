@@ -5,9 +5,7 @@ use App\Http\Middleware\EnforceTrustedHost;
 use App\Http\Middleware\PreventDisabledUsers;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UpdateLastActive;
-use App\Services\AuditLogger;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -103,29 +101,4 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 404);
         });
 
-        $exceptions->reportable(function (AuthorizationException $exception) {
-            $subject = null;
-            $arguments = $exception->getArguments();
-
-            if (is_array($arguments)) {
-                foreach ($arguments as $argument) {
-                    if ($argument instanceof Model) {
-                        $subject = $argument;
-                        break;
-                    }
-                }
-            }
-
-            app(AuditLogger::class)->denied(
-                category: 'security',
-                action: 'authorization_denied',
-                subject: $subject,
-                context: [
-                    'data' => [
-                        'ability' => $exception->getAbility(),
-                    ],
-                ],
-                message: 'Authorization denied.'
-            );
-        });
     })->create();
