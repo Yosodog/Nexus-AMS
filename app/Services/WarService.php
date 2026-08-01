@@ -172,10 +172,9 @@ class WarService
                 ->groupBy('def_id')
                 ->pluck('total', 'nation_id');
 
-            // Merge counts: add together if they exist in both
-            $combined = $attackerCounts->mergeRecursive($defenderCounts)->map(function ($value) {
-                return is_array($value) ? array_sum($value) : $value;
-            });
+            $combined = $attackerCounts->union($defenderCounts)
+                ->map(fn ($value, $nationId): int => (int) $attackerCounts->get($nationId, 0)
+                    + (int) $defenderCounts->get($nationId, 0));
 
             return $combined->sortDesc()->take($limit)->toArray();
         });
