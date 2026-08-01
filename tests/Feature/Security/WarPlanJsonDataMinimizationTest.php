@@ -49,7 +49,7 @@ class WarPlanJsonDataMinimizationTest extends TestCase
             'match_score' => 80,
         ]);
 
-        Sanctum::actingAs($this->createWarViewer($assignedFriendly));
+        Sanctum::actingAs($this->createWarRoomManager($assignedFriendly));
 
         $responses = [
             $this->getJson("/api/v1/war-plans/{$plan->id}/targets"),
@@ -183,12 +183,12 @@ class WarPlanJsonDataMinimizationTest extends TestCase
         return $nation;
     }
 
-    private function createWarViewer(Nation $nation): User
+    private function createWarRoomManager(Nation $nation): User
     {
         $role = Role::factory()->create();
         DB::table('role_permissions')->insert([
             'role_id' => $role->id,
-            'permission' => 'view-wars',
+            'permission' => 'manage-war-room',
         ]);
 
         $user = User::factory()->admin()->verified()->create(['nation_id' => $nation->id]);
