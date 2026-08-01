@@ -184,10 +184,6 @@ class InactivityModeService
             if (! $event->dd_opted_out_at) {
                 $event->forceFill(['dd_opted_out_at' => now()])->save();
             }
-
-            if (is_null($event->episode_ended_at)) {
-                $event->forceFill(['episode_ended_at' => now()])->save();
-            }
         });
     }
 
