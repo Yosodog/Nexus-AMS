@@ -118,6 +118,16 @@ class MarketService
         $basePrice = number_format((float) $basePrice, 4, '.', '');
 
         return DB::transaction(function () use ($user, $account, $resource, $amount, $basePrice): MarketTransaction {
+            $lockedUser = User::query()
+                ->lockForUpdate()
+                ->findOrFail($user->id);
+
+            if ($lockedUser->hasPermission('manage-market')) {
+                throw ValidationException::withMessages([
+                    'account' => 'Market managers cannot sell resources to the market they control.',
+                ]);
+            }
+
             $marketResource = MarketResource::query()
                 ->where('resource', $resource)
                 ->lockForUpdate()
@@ -162,6 +172,10 @@ class MarketService
                 ->lockForUpdate()
                 ->findOrFail($account->id);
 
+            if ($lockedAccount->nation_id !== $lockedUser->nation_id) {
+                throw new UserErrorException('You do not own that account.');
+            }
+
             if ($lockedAccount->frozen) {
                 throw ValidationException::withMessages([
                     'account' => 'This account is frozen. Sales are disabled.',
@@ -189,8 +203,8 @@ class MarketService
             $marketResource->save();
 
             $marketTransaction = MarketTransaction::create([
-                'user_id' => $user->id,
-                'nation_id' => $user->nation_id,
+                'user_id' => $lockedUser->id,
+                'nation_id' => $lockedUser->nation_id,
                 'account_id' => $lockedAccount->id,
                 'resource' => $resource,
                 'amount' => $amount,

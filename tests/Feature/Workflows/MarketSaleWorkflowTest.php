@@ -18,10 +18,12 @@ use Illuminate\Validation\ValidationException;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
 class MarketSaleWorkflowTest extends TestCase
 {
+    use BuildsTestUsers;
     use MockeryPHPUnitIntegration;
     use RefreshDatabase;
 
@@ -107,6 +109,29 @@ class MarketSaleWorkflowTest extends TestCase
             $this->assertSame(
                 ['This sale is too small to produce a positive payout.'],
                 $exception->errors()['amount']
+            );
+        }
+
+        $this->assertBalancesAndCap($account, $marketResource, money: 20, coal: 10, cap: 100);
+        $this->assertDatabaseCount('market_transactions', 0);
+        $this->assertDatabaseCount('manual_transactions', 0);
+    }
+
+    public function test_market_manager_cannot_sell_even_when_the_passed_user_has_stale_permissions(): void
+    {
+        [$user, $nation, $account] = $this->createMarketParticipant();
+        $staleUser = $user->fresh();
+        $this->grantPermissions($user, ['manage-market']);
+        $marketResource = $this->createMarketResource(adjustmentPercent: MarketResource::MAX_ADJUSTMENT_PERCENT);
+        $service = $this->marketService($nation, 100);
+
+        try {
+            $service->sell($staleUser, $account, 'coal', 2.50);
+            $this->fail('A market manager sold resources at a price they control.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                ['Market managers cannot sell resources to the market they control.'],
+                $exception->errors()['account']
             );
         }
 
