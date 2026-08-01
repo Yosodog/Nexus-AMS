@@ -398,7 +398,7 @@
                             <div class="rounded-box border border-base-300 bg-base-200/60 p-3 text-sm text-base-content/60">
                                 <div>Hi {leader_name},</div>
                                 <div class="mt-2">[Your message below]</div>
-                                <div class="mt-2">Please click [link={link to apply for city grants}]here[/here] to apply for a city grant</div>
+                                <div class="mt-2">Please click [link={link to apply for city grants}]here[/link] to apply for a city grant</div>
                             </div>
                             <textarea class="textarea min-h-40 w-full" rows="6" id="grantReminderMessage" name="message" required>{{ old('message', $defaultReminderMessage) }}</textarea>
                             <span class="text-xs text-base-content/60">We automatically add a greeting and the application link after this message.</span>

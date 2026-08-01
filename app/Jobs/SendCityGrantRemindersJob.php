@@ -79,6 +79,6 @@ class SendCityGrantRemindersJob implements ShouldQueue
 
     private function buildMessage(string $leaderName, string $message, string $applyUrl): string
     {
-        return "Hi {$leaderName},\n\n{$message}\n\nPlease click [link={$applyUrl}]here[/here] to apply for a city grant";
+        return "Hi {$leaderName},\n\n{$message}\n\nPlease click [link={$applyUrl}]here[/link] to apply for a city grant";
     }
 }
