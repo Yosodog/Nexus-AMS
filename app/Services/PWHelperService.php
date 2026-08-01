@@ -61,12 +61,35 @@ class PWHelperService
         return array_keys($projects);
     }
 
-    public static function getNationProjects(int $projectBits): array
+    public static function getNationProjects(int|string|null $projectBits): array
     {
+        if ($projectBits === null || $projectBits === '') {
+            return [];
+        }
+
+        if (is_string($projectBits) && preg_match('/^[01]+$/', $projectBits) === 1) {
+            $bits = str_pad($projectBits, count(self::PROJECTS), '0', STR_PAD_LEFT);
+
+            return collect(array_keys(self::PROJECTS))
+                ->filter(function (string $project, int $index) use ($bits): bool {
+                    $bitPosition = strlen($bits) - 1 - $index;
+
+                    return $bitPosition >= 0 && ($bits[$bitPosition] ?? '0') === '1';
+                })
+                ->values()
+                ->all();
+        }
+
+        if (is_string($projectBits)
+            && (preg_match('/^\d+$/', $projectBits) !== 1 || (int) $projectBits < 0)) {
+            return [];
+        }
+
+        $bitmask = (int) $projectBits;
         $ownedProjects = [];
 
         foreach (self::PROJECTS as $project => $bit) {
-            if ($projectBits & $bit) { // Bitwise AND to check if project is owned
+            if ($bitmask & $bit) { // Bitwise AND to check if project is owned
                 $ownedProjects[] = $project;
             }
         }

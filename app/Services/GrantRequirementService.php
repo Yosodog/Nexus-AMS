@@ -720,7 +720,7 @@ class GrantRequirementService
         $latestSignIn = $nation->latestSignIn;
         $military = $nation->military;
         $resources = $nation->resources;
-        $projects = collect(PWHelperService::getNationProjects((int) ($nation->project_bits ?? 0)))->values()->all();
+        $projects = collect(PWHelperService::getNationProjects($nation->project_bits))->values()->all();
         $cityCount = max(0, (int) ($nation->num_cities ?? 0));
         $cities = $nation->cities instanceof Collection ? $nation->cities : collect($nation->cities);
         $totalInfrastructure = round((float) $cities->sum('infrastructure'), 2);

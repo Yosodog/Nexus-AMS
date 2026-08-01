@@ -30,32 +30,14 @@ class NationNelHelper
      */
     public function hasProject(NelEvaluationContext $context, string $name): bool
     {
-        $projects = PWHelperService::projects();
-        $index = array_search($name, $projects, true);
-
-        if ($index === false) {
+        if (! in_array($name, PWHelperService::projects(), true)) {
             throw new UserErrorException('Unknown project "'.$name.'".');
         }
 
-        $projectBits = $this->normalizeProjectBits($context->variables['nation']['project_bits'] ?? '', count($projects));
-
-        $bitPosition = strlen($projectBits) - 1 - $index;
-
-        if ($bitPosition < 0 || ! isset($projectBits[$bitPosition])) {
-            return false;
-        }
-
-        return $projectBits[$bitPosition] === '1';
-    }
-
-    private function normalizeProjectBits(mixed $raw, int $projectCount): string
-    {
-        $bits = (string) $raw;
-
-        if (! preg_match('/^[01]+$/', $bits)) {
-            $bits = decbin((int) $bits);
-        }
-
-        return str_pad($bits, $projectCount, '0', STR_PAD_LEFT);
+        return in_array(
+            $name,
+            PWHelperService::getNationProjects($context->variables['nation']['project_bits'] ?? null),
+            true,
+        );
     }
 }

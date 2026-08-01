@@ -349,7 +349,7 @@ class Nation extends Model
      */
     public function getProjectsAttribute(): array
     {
-        $ownedProjects = collect(PWHelperService::getNationProjects((int) ($this->project_bits ?? 0)))
+        $ownedProjects = collect(PWHelperService::getNationProjects($this->project_bits))
             ->mapWithKeys(fn (string $project): array => [$this->normalizeProjectName($project) => true]);
 
         $projects = collect($this->defaultProjectsArray)
