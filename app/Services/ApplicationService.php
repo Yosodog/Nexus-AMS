@@ -7,7 +7,6 @@ use App\Enums\ApplicationStatus;
 use App\Exceptions\ApplicationException;
 use App\Exceptions\PWEntityDoesNotExist;
 use App\GraphQL\Models\Nation;
-use App\Jobs\SyncApplicationAllianceState;
 use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
@@ -21,6 +20,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ApplicationService
@@ -47,6 +47,12 @@ class ApplicationService
                 }
 
                 $this->assertNationInAlliance($this->fetchNationInAlliance($application->nation_id));
+                $this->syncAllianceDecisionOrFail(
+                    $application,
+                    ApplicationStatus::Approved,
+                    $moderator,
+                    $moderatorDiscordId,
+                );
                 $application->forceFill([
                     'status' => ApplicationStatus::Approved,
                     'pending_key' => null,
@@ -54,7 +60,6 @@ class ApplicationService
                     'approved_by_discord_id' => $moderatorDiscordId,
                     'approval_request_id' => $requestId,
                 ])->save();
-                SyncApplicationAllianceState::dispatch($application->id, ApplicationStatus::Approved, $moderator->id, $moderator->name)->afterCommit();
                 app(AuditLogger::class)->recordAfterCommit(
                     category: 'applications', action: 'application_approved', outcome: 'success', severity: 'info', subject: $application,
                     context: ['data' => ['nation_id' => $application->nation_id, 'moderator_discord_id' => $moderatorDiscordId]],
@@ -88,6 +93,12 @@ class ApplicationService
                     throw new ApplicationException('invalid_status', 'Only pending applications may be denied.', 409);
                 }
 
+                $this->syncAllianceDecisionOrFail(
+                    $application,
+                    ApplicationStatus::Denied,
+                    $moderator,
+                    $moderatorDiscordId,
+                );
                 $application->forceFill([
                     'status' => ApplicationStatus::Denied,
                     'pending_key' => null,
@@ -96,7 +107,6 @@ class ApplicationService
                     'denial_request_id' => $requestId,
                     'denial_reason' => $reason,
                 ])->save();
-                SyncApplicationAllianceState::dispatch($application->id, ApplicationStatus::Denied, $moderator->id, $moderator->name)->afterCommit();
                 app(AuditLogger::class)->recordAfterCommit(
                     category: 'applications', action: 'application_denied', outcome: 'denied', severity: 'warning', subject: $application,
                     context: ['data' => ['nation_id' => $application->nation_id, 'moderator_discord_id' => $moderatorDiscordId, 'reason' => $reason]],
@@ -125,6 +135,73 @@ class ApplicationService
             '/apply',
             ['status' => $status],
         );
+    }
+
+    /**
+     * @throws ApplicationException
+     */
+    private function syncAllianceDecisionOrFail(
+        Application $application,
+        ApplicationStatus $targetStatus,
+        User $moderator,
+        string $moderatorDiscordId,
+    ): void {
+        try {
+            if ($targetStatus === ApplicationStatus::Approved) {
+                $this->alliancePositionService->approveMember($application->nation_id);
+
+                return;
+            }
+
+            $nation = $this->fetchNationInAlliance($application->nation_id);
+
+            if ($this->isNationInAlliance($nation)) {
+                $this->alliancePositionService->removeMember($application->nation_id);
+            }
+        } catch (ApplicationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            $action = $targetStatus === ApplicationStatus::Approved
+                ? 'application_approval_sync_failed'
+                : 'application_denial_sync_failed';
+
+            Log::error('Failed to sync application decision to Politics & War.', [
+                'application_id' => $application->id,
+                'nation_id' => $application->nation_id,
+                'target_status' => $targetStatus->value,
+                'applicant_discord_id' => $application->discord_user_id,
+                'moderator_discord_id' => $moderatorDiscordId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            app(AuditLogger::class)->failure(
+                category: 'applications',
+                action: $action,
+                subject: $application,
+                context: [
+                    'data' => [
+                        'nation_id' => $application->nation_id,
+                        'applicant_discord_id' => $application->discord_user_id,
+                        'moderator_discord_id' => $moderatorDiscordId,
+                        'error' => Str::limit($exception->getMessage(), 500, ''),
+                    ],
+                ],
+                message: $targetStatus === ApplicationStatus::Approved
+                    ? 'Application approval could not sync to the alliance service.'
+                    : 'Application denial could not sync to the alliance service.',
+                actorOverride: [
+                    'type' => 'user',
+                    'id' => $moderator->id,
+                    'name' => $moderator->name,
+                ],
+            );
+
+            throw new ApplicationException(
+                'alliance_update_failed',
+                'Unable to update alliance position at this time.',
+                503,
+            );
+        }
     }
 
     /**
@@ -328,19 +405,19 @@ class ApplicationService
 
         $this->assertNationInAlliance($nation);
 
+        $this->syncAllianceDecisionOrFail(
+            $application,
+            ApplicationStatus::Approved,
+            $moderator,
+            $moderatorDiscordId,
+        );
+
         $application->status = ApplicationStatus::Approved;
         $application->pending_key = null;
         $application->approved_at = Carbon::now();
         $application->approved_by_discord_id = $moderatorDiscordId;
         $application->approval_request_id = $approvalRequestId;
         $application->save();
-
-        SyncApplicationAllianceState::dispatch(
-            applicationId: $application->id,
-            targetStatus: ApplicationStatus::Approved,
-            moderatorUserId: $moderator->id,
-            moderatorName: $moderator->name,
-        )->afterCommit();
 
         Log::info('Application approved', [
             'application_id' => $application->id,
@@ -420,19 +497,19 @@ class ApplicationService
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
 
+        $this->syncAllianceDecisionOrFail(
+            $application,
+            ApplicationStatus::Denied,
+            $moderator,
+            $moderatorDiscordId,
+        );
+
         $application->status = ApplicationStatus::Denied;
         $application->pending_key = null;
         $application->denied_at = Carbon::now();
         $application->denied_by_discord_id = $moderatorDiscordId;
         $application->denial_request_id = $denialRequestId;
         $application->save();
-
-        SyncApplicationAllianceState::dispatch(
-            applicationId: $application->id,
-            targetStatus: ApplicationStatus::Denied,
-            moderatorUserId: $moderator->id,
-            moderatorName: $moderator->name,
-        )->afterCommit();
 
         Log::info('Application denied', [
             'application_id' => $application->id,

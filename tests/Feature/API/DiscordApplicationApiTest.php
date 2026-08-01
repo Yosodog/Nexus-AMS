@@ -234,7 +234,7 @@ class DiscordApplicationApiTest extends TestCase
         ]);
     }
 
-    public function test_approve_endpoint_updates_the_application_and_queues_the_alliance_sync_job(): void
+    public function test_approve_endpoint_syncs_the_alliance_before_returning_success(): void
     {
         Queue::fake();
 
@@ -248,8 +248,11 @@ class DiscordApplicationApiTest extends TestCase
             'pending_key' => 1,
         ]);
 
+        $positionService = $this->createMock(AlliancePositionService::class);
+        $positionService->expects($this->once())->method('approveMember')->with(877004);
         $service = $this->makeApplicationService(
-            [877004 => $this->makeApplicantNation(877004)]
+            [877004 => $this->makeApplicantNation(877004)],
+            $positionService,
         );
         $this->app->instance(ApplicationService::class, $service);
 
@@ -273,12 +276,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->assertSame('interaction-approve-1', $application->approval_request_id);
 
-        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($application, $moderator): bool {
-            return $job->applicationId === $application->id
-                && $job->targetStatus === ApplicationStatus::Approved
-                && $job->moderatorUserId === $moderator->id
-                && $job->moderatorName === $moderator->name;
-        });
+        Queue::assertNothingPushed();
     }
 
     public function test_approve_endpoint_returns_success_for_a_retried_completed_approval(): void
@@ -450,7 +448,7 @@ class DiscordApplicationApiTest extends TestCase
         Queue::assertNotPushed(SyncApplicationAllianceState::class);
     }
 
-    public function test_deny_endpoint_updates_the_application_and_queues_the_alliance_sync_job(): void
+    public function test_deny_endpoint_syncs_the_alliance_before_returning_success(): void
     {
         Queue::fake();
 
@@ -464,8 +462,11 @@ class DiscordApplicationApiTest extends TestCase
             'pending_key' => 1,
         ]);
 
+        $positionService = $this->createMock(AlliancePositionService::class);
+        $positionService->expects($this->once())->method('removeMember')->with(877005);
         $service = $this->makeApplicationService(
-            [877005 => $this->makeApplicantNation(877005)]
+            [877005 => $this->makeApplicantNation(877005)],
+            $positionService,
         );
         $this->app->instance(ApplicationService::class, $service);
 
@@ -490,12 +491,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->assertSame('interaction-deny-1', $application->denial_request_id);
 
-        Queue::assertPushed(SyncApplicationAllianceState::class, function (SyncApplicationAllianceState $job) use ($application, $moderator): bool {
-            return $job->applicationId === $application->id
-                && $job->targetStatus === ApplicationStatus::Denied
-                && $job->moderatorUserId === $moderator->id
-                && $job->moderatorName === $moderator->name;
-        });
+        Queue::assertNothingPushed();
     }
 
     public function test_deny_endpoint_returns_success_for_a_retried_completed_denial(): void
