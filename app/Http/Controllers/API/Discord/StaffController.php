@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\ApplicationService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -230,6 +231,10 @@ class StaffController extends Controller
     {
         $actor = $request->attributes->get('discord_actor');
         abort_unless($actor instanceof User, 401, 'Discord actor context is missing.');
+
+        if (! $actor->is_admin) {
+            throw new AuthorizationException('Discord staff workflows require a Nexus administrator.');
+        }
 
         return $actor;
     }

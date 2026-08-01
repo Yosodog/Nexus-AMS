@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\DiscordAccount;
+use App\Services\SettingService;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -62,12 +63,24 @@ class ResolveDiscordActor
         }
 
         $discordAccount = $accounts->first();
+        $actor = $discordAccount->user;
 
-        if (! $discordAccount->user->nation_id) {
+        if (! $actor->nation_id) {
             return $this->error('discord_actor_has_no_nation', 'The linked Nexus user has no nation.', 403);
         }
 
-        $request->attributes->set(self::ACTOR_ATTRIBUTE, $discordAccount->user);
+        $requiresMfa = SettingService::isMfaRequiredForAllUsers()
+            || ($actor->is_admin && SettingService::isMfaRequiredForAdmins());
+
+        if ($requiresMfa && ! $actor->hasEnabledTwoFactorAuthentication()) {
+            return $this->error(
+                'mfa_required',
+                'Multi-factor authentication must be configured in Nexus before using Discord workflows.',
+                403,
+            );
+        }
+
+        $request->attributes->set(self::ACTOR_ATTRIBUTE, $actor);
         $request->attributes->set(self::ACCOUNT_ATTRIBUTE, $discordAccount);
 
         try {

@@ -9,12 +9,15 @@ use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Nation;
 use App\Models\User;
+use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
 class DiscordWorkflowApiTest extends TestCase
 {
+    use BuildsTestUsers;
     use RefreshDatabase;
 
     private const GUILD_ID = '123456789012345678';
@@ -125,6 +128,26 @@ class DiscordWorkflowApiTest extends TestCase
             ->assertJsonPath('error.code', 'validation_error');
 
         $this->assertSame(0, GrantApplication::query()->count());
+    }
+
+    public function test_discord_workflows_honor_the_site_mfa_requirement(): void
+    {
+        SettingService::setMfaRequiredForAllUsers(true);
+
+        $this->withHeaders($this->headers('901234567890123456'))
+            ->getJson('/api/v1/discord/me/requests')
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'mfa_required');
+    }
+
+    public function test_discord_staff_workflows_require_an_admin_even_with_the_permission(): void
+    {
+        $this->actor = $this->grantPermissions($this->actor, ['manage-applications']);
+
+        $this->withHeaders($this->headers('912345678901234567'))
+            ->getJson('/api/v1/discord/staff/applications')
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'forbidden');
     }
 
     /** @return array<string, string> */
