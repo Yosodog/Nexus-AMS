@@ -129,27 +129,92 @@ class GrantService
 
     public static function approveGrant(GrantApplication $application): void
     {
+        $approvalSnapshot = GrantApplication::query()
+            ->select(['id', 'grant_id', 'nation_id', 'account_id', 'status'])
+            ->findOrFail($application->id);
+
+        if ($approvalSnapshot->status !== 'pending') {
+            Log::warning('Grant approval skipped because status is not pending.', [
+                'application_id' => $approvalSnapshot->id,
+                'status' => $approvalSnapshot->status,
+            ]);
+
+            return;
+        }
+
         app(SelfApprovalGuard::class)->ensureNotSelf(
-            requestNationId: $application->nation_id,
+            requestNationId: $approvalSnapshot->nation_id,
             context: 'approve your own grant request'
         );
+
+        if (! SettingService::isGrantApprovalsEnabled()) {
+            Log::warning('Grant approval blocked by global approvals kill switch.', [
+                'application_id' => $approvalSnapshot->id,
+            ]);
+
+            throw ValidationException::withMessages([
+                'Grant approvals are currently paused.',
+            ]);
+        }
+
+        $grantSnapshot = Grants::query()->findOrFail($approvalSnapshot->grant_id);
+
+        if (! $grantSnapshot->is_enabled) {
+            Log::warning('Grant approval blocked because grant is disabled.', [
+                'application_id' => $approvalSnapshot->id,
+                'grant_id' => $grantSnapshot->id,
+            ]);
+
+            throw ValidationException::withMessages([
+                'This grant is currently disabled.',
+            ]);
+        }
+
+        app(AuthoritativeNationMembershipService::class)->validate($approvalSnapshot->nation_id);
 
         $approvedApplication = null;
         $deniedApplication = null;
 
-        DB::transaction(function () use ($application, &$approvedApplication, &$deniedApplication) {
+        DB::transaction(function () use ($approvalSnapshot, &$approvedApplication, &$deniedApplication) {
             $lockedApplication = GrantApplication::query()
                 ->lockForUpdate()
-                ->findOrFail($application->id);
+                ->findOrFail($approvalSnapshot->id);
 
             if ($lockedApplication->status !== 'pending') {
-                Log::warning('Grant approval skipped because status is not pending.', [
+                Log::warning('Grant approval blocked because status changed before locking.', [
                     'application_id' => $lockedApplication->id,
                     'status' => $lockedApplication->status,
                 ]);
 
-                return;
+                throw ValidationException::withMessages([
+                    'grant' => 'The grant application is no longer pending.',
+                ]);
             }
+
+            if (
+                (int) $lockedApplication->nation_id !== (int) $approvalSnapshot->nation_id
+                || (int) $lockedApplication->account_id !== (int) $approvalSnapshot->account_id
+                || (int) $lockedApplication->grant_id !== (int) $approvalSnapshot->grant_id
+            ) {
+                Log::warning('Grant approval blocked because its recipient context changed.', [
+                    'application_id' => $lockedApplication->id,
+                    'expected_nation_id' => $approvalSnapshot->nation_id,
+                    'actual_nation_id' => $lockedApplication->nation_id,
+                    'expected_account_id' => $approvalSnapshot->account_id,
+                    'actual_account_id' => $lockedApplication->account_id,
+                    'expected_grant_id' => $approvalSnapshot->grant_id,
+                    'actual_grant_id' => $lockedApplication->grant_id,
+                ]);
+
+                throw ValidationException::withMessages([
+                    'grant' => 'The grant application changed while approval was in progress. Please review it and try again.',
+                ]);
+            }
+
+            app(SelfApprovalGuard::class)->ensureNotSelf(
+                requestNationId: $lockedApplication->nation_id,
+                context: 'approve your own grant request'
+            );
 
             if (! SettingService::isGrantApprovalsEnabled()) {
                 Log::warning('Grant approval blocked by global approvals kill switch.', [
@@ -161,7 +226,9 @@ class GrantService
                 ]);
             }
 
-            $grant = $lockedApplication->grant;
+            $grant = Grants::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedApplication->grant_id);
 
             if (! $grant->is_enabled) {
                 Log::warning('Grant approval blocked because grant is disabled.', [
@@ -174,7 +241,13 @@ class GrantService
                 ]);
             }
 
-            $account = Account::findOrFail($lockedApplication->account_id);
+            $account = Account::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedApplication->account_id);
+
+            $nation = Nation::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedApplication->nation_id);
 
             if ($account->nation_id !== $lockedApplication->nation_id) {
                 Log::error('Grant approval denied due to account ownership mismatch.', [
@@ -190,7 +263,7 @@ class GrantService
                     'pending_key' => null,
                 ]);
 
-                $lockedApplication->nation->notify(
+                $nation->notify(
                     new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'denied')
                 );
 
@@ -201,7 +274,7 @@ class GrantService
                 return;
             }
 
-            app(AuthoritativeNationMembershipService::class)->validate($lockedApplication->nation_id);
+            app(NationEligibilityValidator::class, ['nation' => $nation])->validateAllianceMembership();
 
             $adminId = Auth::id();
             $ipAddress = Request::ip();
@@ -227,8 +300,6 @@ class GrantService
                     array_combine($resources, array_map(fn ($r) => $grant->$r, $resources))
                 )
             );
-
-            $nation = $lockedApplication->nation;
 
             $nation->notify(new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'approved'));
 

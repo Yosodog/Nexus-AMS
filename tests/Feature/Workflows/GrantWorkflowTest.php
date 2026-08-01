@@ -12,6 +12,7 @@ use App\Services\AuthoritativeNationMembershipService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\Concerns\BuildsTestUsers;
@@ -114,11 +115,13 @@ class GrantWorkflowTest extends TestCase
             'pending_key' => 1,
         ]);
         $admin = $this->createAdminWithPermission('manage-grants');
+        $testTransactionLevel = DB::connection()->transactionLevel();
         $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
         $membershipValidator->expects($this->once())
             ->method('validate')
             ->with($nation->id)
-            ->willReturnCallback(function () use ($account, $application): void {
+            ->willReturnCallback(function () use ($account, $application, $testTransactionLevel): void {
+                $this->assertSame($testTransactionLevel, DB::connection()->transactionLevel());
                 $this->assertSame(0.0, (float) $account->fresh()->money);
                 $this->assertSame('pending', $application->fresh()->status);
             });
@@ -150,6 +153,46 @@ class GrantWorkflowTest extends TestCase
             fn (GrantNotification $notification): bool => $notification->status === 'approved'
                 && $notification->application->is($application)
         );
+    }
+
+    public function test_grant_approval_rejects_a_recipient_change_after_live_membership_validation(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        [, $otherNation] = $this->createMemberWithAccount(777002);
+        $grant = $this->createGrant(['money' => 250000]);
+        $application = GrantApplication::query()->create([
+            'grant_id' => $grant->id,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-grants');
+        $testTransactionLevel = DB::connection()->transactionLevel();
+        $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
+        $membershipValidator->expects($this->once())
+            ->method('validate')
+            ->with($nation->id)
+            ->willReturnCallback(function () use ($application, $otherNation, $testTransactionLevel): void {
+                $this->assertSame($testTransactionLevel, DB::connection()->transactionLevel());
+                GrantApplication::query()->whereKey($application->id)->update([
+                    'nation_id' => $otherNation->id,
+                ]);
+            });
+        $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.approve', ['application' => $application->id]))
+            ->assertRedirect()
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', 'The grant application changed while approval was in progress. Please review it and try again.');
+
+        $this->assertSame('pending', $application->fresh()->status);
+        $this->assertSame(0.0, (float) $account->fresh()->money);
+        $this->assertDatabaseMissing('manual_transactions', [
+            'grant_application_id' => $application->id,
+        ]);
+        Notification::assertNothingSent();
     }
 
     public function test_admin_can_deny_a_pending_grant_application(): void

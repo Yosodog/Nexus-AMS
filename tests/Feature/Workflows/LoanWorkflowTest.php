@@ -132,11 +132,13 @@ class LoanWorkflowTest extends TestCase
             'accrued_interest_due' => 0,
         ]);
         $admin = $this->createAdminWithPermission('manage-loans');
+        $testTransactionLevel = DB::connection()->transactionLevel();
         $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
         $membershipValidator->expects($this->once())
             ->method('validate')
             ->with($nation->id)
-            ->willReturnCallback(function () use ($account, $loan): void {
+            ->willReturnCallback(function () use ($account, $loan, $testTransactionLevel): void {
+                $this->assertSame($testTransactionLevel, DB::connection()->transactionLevel());
                 $this->assertSame(0.0, (float) $account->fresh()->money);
                 $this->assertSame('pending', $loan->fresh()->status);
             });
@@ -173,6 +175,57 @@ class LoanWorkflowTest extends TestCase
             fn (LoanNotification $notification): bool => $notification->status === 'approved'
                 && $notification->loan->is($loan)
         );
+    }
+
+    public function test_loan_approval_rejects_a_recipient_change_after_live_membership_validation(): void
+    {
+        [, $nation, $account] = $this->createMemberWithAccount();
+        [, $otherNation] = $this->createMemberWithAccount(777002);
+        $loan = Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 250000,
+            'term_weeks' => 12,
+            'status' => 'pending',
+            'pending_key' => 1,
+            'remaining_balance' => 250000,
+            'weekly_interest_paid' => 0,
+            'scheduled_weekly_payment' => 0,
+            'past_due_amount' => 0,
+            'accrued_interest_due' => 0,
+        ]);
+        $admin = $this->createAdminWithPermission('manage-loans');
+        $testTransactionLevel = DB::connection()->transactionLevel();
+        $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
+        $membershipValidator->expects($this->once())
+            ->method('validate')
+            ->with($nation->id)
+            ->willReturnCallback(function () use ($loan, $otherNation, $testTransactionLevel): void {
+                $this->assertSame($testTransactionLevel, DB::connection()->transactionLevel());
+                Loan::query()->whereKey($loan->id)->update([
+                    'nation_id' => $otherNation->id,
+                ]);
+            });
+        $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
+
+        $this->actingAs($admin);
+
+        try {
+            app(LoanService::class)->approveLoan($loan, 225000.50, 6.5, 16);
+            $this->fail('Expected the changed loan recipient to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                'The loan application changed while approval was in progress. Please review it and try again.',
+                $exception->errors()['loan'][0]
+            );
+        }
+
+        $this->assertSame('pending', $loan->fresh()->status);
+        $this->assertSame(0.0, (float) $account->fresh()->money);
+        $this->assertDatabaseMissing('manual_transactions', [
+            'account_id' => $account->id,
+        ]);
+        Notification::assertNothingSent();
     }
 
     public function test_admin_cannot_approve_their_own_loan_application(): void

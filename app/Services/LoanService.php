@@ -115,8 +115,35 @@ class LoanService
 
     public function approveLoan(Loan $loan, float $amount, float $interestRate, int $termWeeks): Loan
     {
-        $updatedLoan = DB::transaction(function () use ($loan, $interestRate, $termWeeks, $amount) {
-            $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+        $approvalSnapshot = Loan::query()
+            ->select(['id', 'nation_id', 'account_id', 'amount', 'status'])
+            ->findOrFail($loan->id);
+
+        app(SelfApprovalGuard::class)->ensureNotSelf(
+            requestNationId: $approvalSnapshot->nation_id,
+            context: 'approve your own loan request'
+        );
+
+        if ($approvalSnapshot->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'loan' => 'Only pending loans can be approved.',
+            ]);
+        }
+
+        $this->validateApprovalTerms($approvalSnapshot, $amount, $interestRate, $termWeeks);
+        app(AuthoritativeNationMembershipService::class)->validate($approvalSnapshot->nation_id);
+
+        $updatedLoan = DB::transaction(function () use ($approvalSnapshot, $interestRate, $termWeeks, $amount) {
+            $lockedLoan = Loan::query()->whereKey($approvalSnapshot->id)->lockForUpdate()->firstOrFail();
+
+            if (
+                (int) $lockedLoan->nation_id !== (int) $approvalSnapshot->nation_id
+                || (int) $lockedLoan->account_id !== (int) $approvalSnapshot->account_id
+            ) {
+                throw ValidationException::withMessages([
+                    'loan' => 'The loan application changed while approval was in progress. Please review it and try again.',
+                ]);
+            }
 
             app(SelfApprovalGuard::class)->ensureNotSelf(
                 requestNationId: $lockedLoan->nation_id,
@@ -129,17 +156,7 @@ class LoanService
                 ]);
             }
 
-            $validated = Validator::make([
-                'amount' => $amount,
-                'interest_rate' => $interestRate,
-                'term_weeks' => $termWeeks,
-                'requested_amount' => (float) $lockedLoan->amount,
-            ], [
-                'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'lte:requested_amount'],
-                'interest_rate' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
-                'term_weeks' => ['required', 'integer', 'between:1,52'],
-                'requested_amount' => ['required', 'numeric'],
-            ])->validate();
+            $validated = $this->validateApprovalTerms($lockedLoan, $amount, $interestRate, $termWeeks);
 
             $approvedAmount = (float) $validated['amount'];
             $approvedInterestRate = (float) $validated['interest_rate'];
@@ -150,7 +167,21 @@ class LoanService
                 $approvedTermWeeks
             );
 
-            app(AuthoritativeNationMembershipService::class)->validate($lockedLoan->nation_id);
+            $account = Account::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedLoan->account_id);
+
+            if ((int) $account->nation_id !== (int) $lockedLoan->nation_id) {
+                throw ValidationException::withMessages([
+                    'account' => 'The selected account is no longer owned by the loan recipient.',
+                ]);
+            }
+
+            $nation = Nation::query()
+                ->lockForUpdate()
+                ->findOrFail($lockedLoan->nation_id);
+
+            app(NationEligibilityValidator::class, ['nation' => $nation])->validateAllianceMembership();
 
             $lockedLoan->update([
                 'interest_rate' => $approvedInterestRate,
@@ -167,7 +198,6 @@ class LoanService
                 'accrued_interest_due' => 0,
             ]);
 
-            $account = Account::findOrFail($lockedLoan->account_id);
             $adminId = Auth::id();
             $ipAddress = Request::ip();
 
@@ -176,8 +206,7 @@ class LoanService
                 'note' => "Loan Approved: \${$approvedAmount} deposited (Term: {$approvedTermWeeks} weeks, Weekly Interest: {$approvedInterestRate}%)",
             ], $adminId, $ipAddress);
 
-            $borrower = $lockedLoan->nation()->firstOrFail();
-            $borrower->notify(new LoanNotification($borrower->id, $lockedLoan->fresh(), 'approved'));
+            $nation->notify(new LoanNotification($nation->id, $lockedLoan->fresh(), 'approved'));
 
             return $lockedLoan->fresh();
         });
@@ -206,6 +235,24 @@ class LoanService
         );
 
         return $updatedLoan;
+    }
+
+    /**
+     * @return array{amount: numeric-string|float|int, interest_rate: numeric-string|float|int, term_weeks: int}
+     */
+    private function validateApprovalTerms(Loan $loan, float $amount, float $interestRate, int $termWeeks): array
+    {
+        return Validator::make([
+            'amount' => $amount,
+            'interest_rate' => $interestRate,
+            'term_weeks' => $termWeeks,
+            'requested_amount' => (float) $loan->amount,
+        ], [
+            'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'lte:requested_amount'],
+            'interest_rate' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
+            'term_weeks' => ['required', 'integer', 'between:1,52'],
+            'requested_amount' => ['required', 'numeric'],
+        ])->validate();
     }
 
     public function denyLoan(Loan $loan): void
