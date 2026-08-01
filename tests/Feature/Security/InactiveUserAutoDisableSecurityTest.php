@@ -58,7 +58,7 @@ class InactiveUserAutoDisableSecurityTest extends TestCase
         $this->assertSame(120, SettingService::getUserInactivityAutoDisableDays());
     }
 
-    public function test_command_disables_ordinary_inactive_users_but_preserves_protected_admins(): void
+    public function test_command_disables_inactive_users_including_unprotected_admins_but_preserves_protected_admins(): void
     {
         SettingService::setUserInactivityAutoDisableEnabled(true);
         SettingService::setUserInactivityAutoDisableDays(90);
@@ -77,6 +77,11 @@ class InactiveUserAutoDisableSecurityTest extends TestCase
             'last_active_at' => $inactiveAt,
             'created_at' => $inactiveAt,
         ]);
+        $unprotectedRole = Role::factory()->create([
+            'name' => 'delegated admin',
+            'protected' => false,
+        ]);
+        $unprotectedAdmin->roles()->attach($unprotectedRole);
 
         $inactiveUser = User::factory()->create([
             'last_active_at' => $inactiveAt,
@@ -89,7 +94,7 @@ class InactiveUserAutoDisableSecurityTest extends TestCase
         $this->artisan('users:disable-inactive')->assertSuccessful();
 
         $this->assertFalse($protectedAdmin->fresh()->disabled);
-        $this->assertFalse($unprotectedAdmin->fresh()->disabled);
+        $this->assertTrue($unprotectedAdmin->fresh()->disabled);
         $this->assertTrue($inactiveUser->fresh()->disabled);
         $this->assertFalse($activeUser->fresh()->disabled);
     }

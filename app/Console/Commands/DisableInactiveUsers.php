@@ -39,7 +39,6 @@ class DisableInactiveUsers extends Command
 
         $disabledCount = User::query()
             ->where('disabled', false)
-            ->where('is_admin', false)
             ->whereDoesntHave('roles', function ($query): void {
                 $query->where('protected', true);
             })
