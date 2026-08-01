@@ -16,11 +16,13 @@ use App\Services\RaidFinderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Mockery\MockInterface;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordOperationsApiTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const DISCORD_ID = '234567890123456789';
 
@@ -31,6 +33,7 @@ class DiscordOperationsApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config([
             'services.discord_bot_key' => 'operations-test-key',
@@ -165,11 +168,12 @@ class DiscordOperationsApiTest extends TestCase
     /** @return array<string, string> */
     private function headers(): array
     {
-        return [
-            'Authorization' => 'Bearer operations-test-key',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => self::DISCORD_ID,
-            'X-Discord-Interaction-ID' => '345678901234567890',
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'operations-test-key',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            '345678901234567890',
+            'war',
+        );
     }
 }

@@ -13,12 +13,14 @@ use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\Concerns\BuildsTestUsers;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordWorkflowApiTest extends TestCase
 {
     use BuildsTestUsers;
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const GUILD_ID = '123456789012345678';
 
@@ -33,6 +35,7 @@ class DiscordWorkflowApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config([
             'services.discord_bot_key' => 'workflow-test-key',
@@ -153,11 +156,12 @@ class DiscordWorkflowApiTest extends TestCase
     /** @return array<string, string> */
     private function headers(string $interactionId, string $discordId = self::DISCORD_ID): array
     {
-        return [
-            'Authorization' => 'Bearer workflow-test-key',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => $discordId,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'workflow-test-key',
+            self::GUILD_ID,
+            $discordId,
+            $interactionId,
+            'grant',
+        );
     }
 }

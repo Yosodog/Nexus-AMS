@@ -17,12 +17,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Event;
 use Tests\Concerns\BuildsTestUsers;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordOffshoreIdempotencyTest extends TestCase
 {
     use BuildsTestUsers;
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const DISCORD_ID = '234567890123456789';
 
@@ -31,6 +33,7 @@ class DiscordOffshoreIdempotencyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config()->set('services.pw.alliance_id', 877);
         config()->set('services.discord_bot_key', 'discord-test-token');
@@ -117,6 +120,63 @@ class DiscordOffshoreIdempotencyTest extends TestCase
 
         $this->assertDatabaseMissing('offshore_transfers', [
             'idempotency_key' => 'impersonation-attempt',
+        ]);
+    }
+
+    public function test_bot_token_and_asserted_admin_headers_do_not_authenticate_an_interaction(): void
+    {
+        [, $user] = $this->createTransferParties();
+        $nation = Nation::factory()->create();
+        $user->forceFill(['nation_id' => $nation->id, 'is_admin' => true])->save();
+        $moderator = $this->grantPermissions($user->fresh(), ['manage-offshores']);
+        DiscordAccount::factory()->create([
+            'user_id' => $moderator->id,
+            'discord_id' => self::DISCORD_ID,
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer discord-test-token',
+            'X-Discord-Guild-ID' => self::GUILD_ID,
+            'X-Discord-User-ID' => self::DISCORD_ID,
+            'X-Discord-Interaction-ID' => '678901234567890123',
+        ])->postJson('/api/v1/discord/offshores/sweep-primary', [
+            'request_id' => 'forged-actor-headers',
+        ])->assertUnauthorized()
+            ->assertJsonPath('error.code', 'invalid_discord_interaction');
+
+        $this->assertDatabaseMissing('offshore_transfers', [
+            'idempotency_key' => 'forged-actor-headers',
+        ]);
+    }
+
+    public function test_signed_interaction_for_another_command_cannot_trigger_a_sweep(): void
+    {
+        [, $user] = $this->createTransferParties();
+        $nation = Nation::factory()->create();
+        $user->forceFill(['nation_id' => $nation->id, 'is_admin' => true])->save();
+        $moderator = $this->grantPermissions($user->fresh(), ['manage-offshores']);
+        DiscordAccount::factory()->create([
+            'user_id' => $moderator->id,
+            'discord_id' => self::DISCORD_ID,
+        ]);
+
+        $headers = $this->signedDiscordInteractionHeaders(
+            'discord-test-token',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            '789012345678901234',
+            'ping',
+        );
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/discord/offshores/sweep-primary', [
+                'request_id' => 'wrong-signed-action',
+            ])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'discord_interaction_action_mismatch');
+
+        $this->assertDatabaseMissing('offshore_transfers', [
+            'idempotency_key' => 'wrong-signed-action',
         ]);
     }
 
@@ -246,12 +306,12 @@ class DiscordOffshoreIdempotencyTest extends TestCase
      */
     private function discordHeaders(string $interactionId): array
     {
-        return [
-            'Authorization' => 'Bearer discord-test-token',
-            'Accept' => 'application/json',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => self::DISCORD_ID,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'discord-test-token',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            $interactionId,
+            'sweepbank',
+        );
     }
 }

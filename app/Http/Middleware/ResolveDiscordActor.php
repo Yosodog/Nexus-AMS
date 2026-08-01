@@ -30,8 +30,8 @@ class ResolveDiscordActor
             return $this->error('discord_guild_not_configured', 'Discord guild validation is not configured.', 503);
         }
 
-        $guildId = trim((string) $request->header(self::GUILD_HEADER));
-        $discordUserId = trim((string) $request->header(self::USER_HEADER));
+        $guildId = trim((string) $request->attributes->get(VerifyDiscordInteraction::GUILD_ATTRIBUTE));
+        $discordUserId = trim((string) $request->attributes->get(VerifyDiscordInteraction::USER_ATTRIBUTE));
 
         if (! $this->isSnowflake($guildId) || ! hash_equals($configuredGuildId, $guildId)) {
             return $this->error('invalid_discord_guild', 'The Discord guild is not authorized.', 403);

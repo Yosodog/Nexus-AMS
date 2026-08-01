@@ -17,16 +17,25 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\BuildsTestUsers;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordApplicationApiTest extends TestCase
 {
     use BuildsTestUsers;
     use RefreshDatabase;
+    use SignsDiscordInteractions;
+
+    private const GUILD_ID = '123456789012345678';
+
+    private string $currentModeratorDiscordId = '';
+
+    private int $signedInteractionSequence = 0;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         Cache::flush();
         config()->set('services.pw.alliance_id', 877);
@@ -40,6 +49,7 @@ class DiscordApplicationApiTest extends TestCase
         SettingService::setApplicationsApprovalMessageTemplate('Welcome aboard');
 
         config()->set('services.discord_bot_key', 'discord-test-token');
+        config()->set('services.discord.guild_id', self::GUILD_ID);
     }
 
     public function test_store_returns_a_success_payload_for_an_eligible_applicant(): void
@@ -101,7 +111,7 @@ class DiscordApplicationApiTest extends TestCase
     {
         $service = $this->makeApplicationService();
         $this->app->instance(ApplicationService::class, $service);
-        $this->createModerator('staff-1');
+        $moderator = $this->createModerator('staff-1');
 
         $application = Application::query()->create([
             'nation_id' => 877003,
@@ -124,7 +134,7 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/messages', [
                 'discord_channel_id' => 'channel-123',
                 'discord_message_id' => 'message-1',
-                'discord_user_id' => 'staff-1',
+                'discord_user_id' => $moderator->activeDiscordAccount()->discord_id,
                 'discord_username' => 'Moderator',
                 'content' => 'Initial interview response',
                 'sent_at' => now()->timestamp,
@@ -138,7 +148,7 @@ class DiscordApplicationApiTest extends TestCase
             ->postJson('/api/v1/discord/applications/messages', [
                 'discord_channel_id' => 'channel-123',
                 'discord_message_id' => 'message-1',
-                'discord_user_id' => 'staff-1',
+                'discord_user_id' => $moderator->activeDiscordAccount()->discord_id,
                 'discord_username' => 'Changed name should not overwrite',
                 'content' => 'Duplicate gateway delivery',
                 'sent_at' => now()->timestamp,
@@ -256,7 +266,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => 'applicant-approve',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -301,7 +311,7 @@ class DiscordApplicationApiTest extends TestCase
         $service = $this->makeApplicationService([], $alliancePositionService);
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => 'applicant-approve-retry',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -328,7 +338,7 @@ class DiscordApplicationApiTest extends TestCase
             'approval_request_id' => 'interaction-original-approval',
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => $application->discord_user_id,
                 'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
@@ -339,7 +349,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('context.application_id', $application->id);
 
         $application->refresh();
-        $this->assertSame('moderator-original-approval', $application->approved_by_discord_id);
+        $this->assertSame($originalModerator->activeDiscordAccount()->discord_id, $application->approved_by_discord_id);
         $this->assertSame('interaction-original-approval', $application->approval_request_id);
     }
 
@@ -357,7 +367,7 @@ class DiscordApplicationApiTest extends TestCase
             'denied_by_discord_id' => 'original-denier',
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => $application->discord_user_id,
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -383,7 +393,7 @@ class DiscordApplicationApiTest extends TestCase
             'cancelled_at' => now(),
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => $application->discord_user_id,
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -428,7 +438,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('approve'))
             ->postJson('/api/v1/discord/applications/approve', [
                 'applicant_discord_id' => $applicantDiscordId,
                 'moderator_discord_id' => $moderatorDiscordId,
@@ -470,7 +480,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('deny'))
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => 'applicant-deny',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -516,7 +526,7 @@ class DiscordApplicationApiTest extends TestCase
         $service = $this->makeApplicationService([], $alliancePositionService);
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('deny'))
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => 'applicant-deny-retry',
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -543,7 +553,7 @@ class DiscordApplicationApiTest extends TestCase
             'denial_request_id' => 'interaction-original-denial',
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('deny'))
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => $application->discord_user_id,
                 'moderator_discord_id' => $retryModerator->activeDiscordAccount()->discord_id,
@@ -554,7 +564,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('context.application_id', $application->id);
 
         $application->refresh();
-        $this->assertSame('moderator-original-denial', $application->denied_by_discord_id);
+        $this->assertSame($originalModerator->activeDiscordAccount()->discord_id, $application->denied_by_discord_id);
         $this->assertSame('interaction-original-denial', $application->denial_request_id);
     }
 
@@ -572,7 +582,7 @@ class DiscordApplicationApiTest extends TestCase
             'approved_by_discord_id' => 'original-approver',
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('deny'))
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => $application->discord_user_id,
                 'moderator_discord_id' => $moderator->activeDiscordAccount()->discord_id,
@@ -617,7 +627,7 @@ class DiscordApplicationApiTest extends TestCase
         );
         $this->app->instance(ApplicationService::class, $service);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordHeaders('deny'))
             ->postJson('/api/v1/discord/applications/deny', [
                 'applicant_discord_id' => $applicantDiscordId,
                 'moderator_discord_id' => $moderatorDiscordId,
@@ -640,8 +650,18 @@ class DiscordApplicationApiTest extends TestCase
     /**
      * @return array<string, string>
      */
-    private function discordHeaders(): array
+    private function discordHeaders(string $command = 'ping'): array
     {
+        if ($this->currentModeratorDiscordId !== '') {
+            return $this->signedDiscordInteractionHeaders(
+                'discord-test-token',
+                self::GUILD_ID,
+                $this->currentModeratorDiscordId,
+                $this->snowflakeFor($command.':'.++$this->signedInteractionSequence),
+                $command,
+            );
+        }
+
         return [
             'Authorization' => 'Bearer discord-test-token',
             'Accept' => 'application/json',
@@ -650,6 +670,7 @@ class DiscordApplicationApiTest extends TestCase
 
     private function createModerator(string $discordId): User
     {
+        $this->currentModeratorDiscordId = $this->snowflakeFor($discordId);
         $nation = Nation::factory()->create([
             'id' => random_int(900000, 999999),
             'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
@@ -666,10 +687,15 @@ class DiscordApplicationApiTest extends TestCase
 
         DiscordAccount::factory()->create([
             'user_id' => $user->id,
-            'discord_id' => $discordId,
+            'discord_id' => $this->currentModeratorDiscordId,
         ]);
 
         return $user->fresh();
+    }
+
+    private function snowflakeFor(string $value): string
+    {
+        return '2'.str_pad(sprintf('%u', crc32($value)), 17, '0', STR_PAD_LEFT);
     }
 
     private function makeApplicantNation(int $nationId): GraphQlNation

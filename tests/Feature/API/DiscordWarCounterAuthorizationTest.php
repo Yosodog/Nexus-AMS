@@ -8,12 +8,14 @@ use App\Models\User;
 use App\Models\WarCounter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsTestUsers;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordWarCounterAuthorizationTest extends TestCase
 {
     use BuildsTestUsers;
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const DISCORD_ID = '234567890123456789';
 
@@ -22,6 +24,7 @@ class DiscordWarCounterAuthorizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config([
             'services.discord_bot_key' => 'discord-war-counter-test-key',
@@ -58,7 +61,7 @@ class DiscordWarCounterAuthorizationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('counter.discord_channel_id', '567890123456789012');
 
-        $this->withHeaders($this->headers('567890123456789012'))
+        $this->withHeaders($this->headers('567890123456789012', 'archivecounter'))
             ->postJson('/api/v1/discord/war-counters/archive', [
                 'war_counter_id' => $counter->id,
             ])
@@ -99,13 +102,14 @@ class DiscordWarCounterAuthorizationTest extends TestCase
     }
 
     /** @return array<string, string> */
-    private function headers(string $interactionId): array
+    private function headers(string $interactionId, string $command = 'war.counter'): array
     {
-        return [
-            'Authorization' => 'Bearer discord-war-counter-test-key',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => self::DISCORD_ID,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'discord-war-counter-test-key',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            $interactionId,
+            $command,
+        );
     }
 }

@@ -10,11 +10,13 @@ use App\Models\User;
 use App\Services\AllianceMembershipService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordAlertSubscriptionApiTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const GUILD_ID = '123456789012345678';
 
@@ -25,6 +27,7 @@ class DiscordAlertSubscriptionApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         $alliance = Alliance::factory()->create();
         config([
@@ -112,11 +115,12 @@ class DiscordAlertSubscriptionApiTest extends TestCase
     /** @return array<string, string> */
     private function headers(string $interactionId): array
     {
-        return [
-            'Authorization' => 'Bearer alerts-test-key',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => self::DISCORD_ID,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'alerts-test-key',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            $interactionId,
+            'alerts',
+        );
     }
 }

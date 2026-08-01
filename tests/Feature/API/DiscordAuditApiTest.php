@@ -11,11 +11,13 @@ use App\Models\Nation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordAuditApiTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const GUILD_ID = '123456789012345678';
 
@@ -28,6 +30,7 @@ class DiscordAuditApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config([
             'services.discord_bot_key' => 'audit-test-key',
@@ -94,11 +97,12 @@ class DiscordAuditApiTest extends TestCase
     /** @return array<string, string> */
     private function headers(string $interactionId): array
     {
-        return [
-            'Authorization' => 'Bearer audit-test-key',
-            'X-Discord-Guild-ID' => self::GUILD_ID,
-            'X-Discord-User-ID' => self::DISCORD_ID,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ];
+        return $this->signedDiscordInteractionHeaders(
+            'audit-test-key',
+            self::GUILD_ID,
+            self::DISCORD_ID,
+            $interactionId,
+            'audit',
+        );
     }
 }

@@ -16,11 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
 class DiscordFinanceApiTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsDiscordInteractions;
 
     private const GUILD_ID = '123456789012345678';
 
@@ -33,6 +35,7 @@ class DiscordFinanceApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->configureDiscordInteractionSigning();
 
         config([
             'services.discord_bot_key' => 'test-discord-bot-key',
@@ -228,12 +231,13 @@ class DiscordFinanceApiTest extends TestCase
         string $guildId = self::GUILD_ID,
         string $discordUserId = self::DISCORD_USER_ID,
     ): array {
-        return array_filter([
-            'Authorization' => 'Bearer test-discord-bot-key',
-            'X-Discord-Guild-ID' => $guildId,
-            'X-Discord-User-ID' => $discordUserId,
-            'X-Discord-Interaction-ID' => $interactionId,
-        ]);
+        return $this->signedDiscordInteractionHeaders(
+            'test-discord-bot-key',
+            $guildId,
+            $discordUserId,
+            $interactionId ?? '345678901234567890',
+            'withdraw',
+        );
     }
 
     private function withdrawalPayload(string $money = '10.00'): array

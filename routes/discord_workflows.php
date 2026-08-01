@@ -9,9 +9,10 @@ use App\Http\Controllers\API\Discord\WorkflowController;
 use App\Http\Middleware\EnsureDiscordInteractionIdempotency;
 use App\Http\Middleware\ResolveDiscordActor;
 use App\Http\Middleware\ValidateDiscordBotAPI;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware([ValidateDiscordBotAPI::class, ResolveDiscordActor::class])->group(function (): void {
+Route::middleware([ValidateDiscordBotAPI::class, VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function (): void {
     Route::prefix('me')->group(function (): void {
         Route::get('/requests', [WorkflowController::class, 'requests']);
         Route::get('/grants', [WorkflowController::class, 'grants']);

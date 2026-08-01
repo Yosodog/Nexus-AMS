@@ -4,12 +4,14 @@ namespace App\Http\Controllers\API\Discord;
 
 use App\Exceptions\ApplicationException;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolveDiscordActor;
 use App\Http\Requests\Discord\DiscordApplicationApproveRequest;
 use App\Http\Requests\Discord\DiscordApplicationDenyRequest;
 use App\Http\Requests\Discord\DiscordApplicationMessageRequest;
 use App\Http\Requests\Discord\DiscordApplicationStoreRequest;
 use App\Http\Requests\Discord\DiscordAttachChannelRequest;
 use App\Models\Application;
+use App\Models\DiscordAccount;
 use App\Services\ApplicationService;
 use Illuminate\Http\JsonResponse;
 
@@ -71,10 +73,15 @@ class ApplicationController extends Controller
 
     public function approve(DiscordApplicationApproveRequest $request): JsonResponse
     {
+        $moderatorDiscordId = $this->authenticatedModeratorDiscordId($request);
+        if ($moderatorDiscordId instanceof JsonResponse) {
+            return $moderatorDiscordId;
+        }
+
         try {
             $application = $this->applicationService->approveByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
-                $request->string('moderator_discord_id')->toString(),
+                $moderatorDiscordId,
                 $request->string('approval_request_id')->toString()
             );
         } catch (ApplicationException $e) {
@@ -90,10 +97,15 @@ class ApplicationController extends Controller
 
     public function deny(DiscordApplicationDenyRequest $request): JsonResponse
     {
+        $moderatorDiscordId = $this->authenticatedModeratorDiscordId($request);
+        if ($moderatorDiscordId instanceof JsonResponse) {
+            return $moderatorDiscordId;
+        }
+
         try {
             $application = $this->applicationService->denyByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
-                $request->string('moderator_discord_id')->toString(),
+                $moderatorDiscordId,
                 $request->string('denial_request_id')->toString()
             );
         } catch (ApplicationException $e) {
@@ -114,5 +126,21 @@ class ApplicationController extends Controller
             'message' => $exception->getMessage(),
             'context' => $exception->context,
         ], $exception->status);
+    }
+
+    private function authenticatedModeratorDiscordId(DiscordApplicationApproveRequest|DiscordApplicationDenyRequest $request): string|JsonResponse
+    {
+        $account = $request->attributes->get(ResolveDiscordActor::ACCOUNT_ATTRIBUTE);
+        $claimedDiscordId = $request->string('moderator_discord_id')->toString();
+
+        if (! $account instanceof DiscordAccount || ! hash_equals((string) $account->discord_id, $claimedDiscordId)) {
+            return response()->json([
+                'error' => 'discord_actor_mismatch',
+                'message' => 'The moderator does not match the signed Discord interaction.',
+                'context' => [],
+            ], 403);
+        }
+
+        return (string) $account->discord_id;
     }
 }

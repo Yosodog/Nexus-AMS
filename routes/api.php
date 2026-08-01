@@ -17,12 +17,14 @@ use App\Http\Controllers\API\TradePriceController;
 use App\Http\Controllers\API\WarSimulatorController as ApiWarSimulatorController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
+use App\Http\Middleware\EnsureDiscordInteractionCommand;
 use App\Http\Middleware\EnsureDiscordInteractionIdempotency;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use App\Http\Middleware\ResolveDiscordActor;
 use App\Http\Middleware\ValidateDiscordBotAPI;
 use App\Http\Middleware\ValidateNexusAPI;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -84,18 +86,38 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
-    Route::post('/applications/approve', [DiscordApplicationController::class, 'approve']);
-    Route::post('/applications/deny', [DiscordApplicationController::class, 'deny']);
+    Route::post('/applications/approve', [DiscordApplicationController::class, 'approve'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':approve',
+        ]);
+    Route::post('/applications/deny', [DiscordApplicationController::class, 'deny'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':deny',
+        ]);
     Route::post('/war-counters/attach-channel', [DiscordWarCounterController::class, 'attachChannel'])
-        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
+        ->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
     Route::post('/war-counters/archive', [DiscordWarCounterController::class, 'archive'])
-        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':archivecounter',
+            EnsureDiscordInteractionIdempotency::class,
+        ]);
     Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
     Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary'])
-        ->middleware([ResolveDiscordActor::class, EnsureDiscordInteractionIdempotency::class]);
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':sweepbank',
+            EnsureDiscordInteractionIdempotency::class,
+        ]);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
 
-    Route::prefix('me')->middleware(ResolveDiscordActor::class)->group(function () {
+    Route::prefix('me')->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function () {
         Route::get('/accounts', [DiscordFinanceController::class, 'accounts']);
         Route::get('/accounts/{account}/transactions', [DiscordFinanceController::class, 'transactions']);
         Route::get('/withdrawals/{intent}', [DiscordFinanceController::class, 'reviewWithdrawal']);
