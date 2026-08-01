@@ -150,6 +150,8 @@ class LoanService
                 $approvedTermWeeks
             );
 
+            app(AuthoritativeNationMembershipService::class)->validate($lockedLoan->nation_id);
+
             $lockedLoan->update([
                 'interest_rate' => $approvedInterestRate,
                 'amount' => $approvedAmount,

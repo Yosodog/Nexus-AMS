@@ -8,6 +8,7 @@ use App\Models\CityGrantRequest;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\CityGrantNotification;
+use App\Services\AuthoritativeNationMembershipService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,6 +33,10 @@ class CityGrantWorkflowTest extends TestCase
         SettingService::setCityAverage(15.0);
         SettingService::setCityAverageUpdatedAt(now());
         SettingService::setGrantApprovalsEnabled(true);
+        $this->app->instance(
+            AuthoritativeNationMembershipService::class,
+            $this->createStub(AuthoritativeNationMembershipService::class),
+        );
     }
 
     public function test_member_can_request_a_city_grant_with_an_owned_account(): void
@@ -117,6 +122,15 @@ class CityGrantWorkflowTest extends TestCase
             'pending_key' => 1,
         ]);
         $admin = $this->createAdminWithPermission('manage-city-grants');
+        $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
+        $membershipValidator->expects($this->once())
+            ->method('validate')
+            ->with($nation->id)
+            ->willReturnCallback(function () use ($account, $request): void {
+                $this->assertSame(0.0, (float) $account->fresh()->money);
+                $this->assertSame('pending', $request->fresh()->status);
+            });
+        $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
 
         $this->actingAs($admin)
             ->from(route('admin.grants.city'))

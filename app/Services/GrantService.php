@@ -201,6 +201,8 @@ class GrantService
                 return;
             }
 
+            app(AuthoritativeNationMembershipService::class)->validate($lockedApplication->nation_id);
+
             $adminId = Auth::id();
             $ipAddress = Request::ip();
             $correlationId = (string) Str::uuid();

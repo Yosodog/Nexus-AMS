@@ -11,6 +11,7 @@ use App\Models\Nation;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WarAidRequest;
+use App\Services\AuthoritativeNationMembershipService;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
@@ -40,6 +41,10 @@ class ManualDisbursementWorkflowTest extends TestCase
         SettingService::setLoanApplicationsEnabled(true);
         SettingService::setLoanPaymentsEnabled(true);
         SettingService::setWarAidEnabled(true);
+        $this->app->instance(
+            AuthoritativeNationMembershipService::class,
+            $this->createStub(AuthoritativeNationMembershipService::class),
+        );
     }
 
     public function test_replaying_the_same_manual_loan_uuid_returns_the_original_result_without_a_second_credit(): void

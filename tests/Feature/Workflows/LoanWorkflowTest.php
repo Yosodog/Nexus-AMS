@@ -8,6 +8,7 @@ use App\Models\LoanPayment;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\LoanNotification;
+use App\Services\AuthoritativeNationMembershipService;
 use App\Services\LoanService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,6 +35,10 @@ class LoanWorkflowTest extends TestCase
         Notification::fake();
         SettingService::setLoanApplicationsEnabled(true);
         SettingService::setLoanPaymentsEnabled(true);
+        $this->app->instance(
+            AuthoritativeNationMembershipService::class,
+            $this->createStub(AuthoritativeNationMembershipService::class),
+        );
     }
 
     public function test_member_can_submit_a_loan_application_with_an_owned_account(): void
@@ -127,6 +132,15 @@ class LoanWorkflowTest extends TestCase
             'accrued_interest_due' => 0,
         ]);
         $admin = $this->createAdminWithPermission('manage-loans');
+        $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
+        $membershipValidator->expects($this->once())
+            ->method('validate')
+            ->with($nation->id)
+            ->willReturnCallback(function () use ($account, $loan): void {
+                $this->assertSame(0.0, (float) $account->fresh()->money);
+                $this->assertSame('pending', $loan->fresh()->status);
+            });
+        $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
 
         $this->actingAs($admin)
             ->post(route('admin.loans.approve', ['Loan' => $loan->id]), [

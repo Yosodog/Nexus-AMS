@@ -8,6 +8,7 @@ use App\Models\Grants;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\GrantNotification;
+use App\Services\AuthoritativeNationMembershipService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -29,6 +30,10 @@ class GrantWorkflowTest extends TestCase
         Cache::forever('alliances:membership:ids', [777]);
         Notification::fake();
         SettingService::setGrantApprovalsEnabled(true);
+        $this->app->instance(
+            AuthoritativeNationMembershipService::class,
+            $this->createStub(AuthoritativeNationMembershipService::class),
+        );
     }
 
     public function test_member_can_submit_a_grant_application_with_an_owned_account(): void
@@ -109,6 +114,15 @@ class GrantWorkflowTest extends TestCase
             'pending_key' => 1,
         ]);
         $admin = $this->createAdminWithPermission('manage-grants');
+        $membershipValidator = $this->createMock(AuthoritativeNationMembershipService::class);
+        $membershipValidator->expects($this->once())
+            ->method('validate')
+            ->with($nation->id)
+            ->willReturnCallback(function () use ($account, $application): void {
+                $this->assertSame(0.0, (float) $account->fresh()->money);
+                $this->assertSame('pending', $application->fresh()->status);
+            });
+        $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
 
         $this->actingAs($admin)
             ->post(route('admin.grants.approve', ['application' => $application->id]))

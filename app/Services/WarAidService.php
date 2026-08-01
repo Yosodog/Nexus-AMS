@@ -99,6 +99,8 @@ class WarAidService
                 ]);
             }
 
+            app(AuthoritativeNationMembershipService::class)->validate($lockedRequest->nation_id);
+
             $lockedRequest->update([
                 ...$adjusted,
                 'status' => 'approved',
