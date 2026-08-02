@@ -2,17 +2,15 @@
 
 namespace App\Services\Audit;
 
+use App\Enums\AuditEvaluationStatus;
 use App\Enums\AuditTargetType;
 use App\Models\AuditResult;
 use App\Models\AuditRule;
 use App\Models\City;
 use App\Models\Nation;
-use App\Nel\CityNelHelper;
-use App\Nel\MathNelHelper;
-use App\Nel\NationNelHelper;
-use App\Nel\NelEngine;
 use App\Services\AllianceMembershipService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
 
-class AuditService
+final class AuditService
 {
     private const CHUNK_SIZE = 200;
 
@@ -30,13 +28,12 @@ class AuditService
     private const RUN_LOCK_SECONDS = 5400;
 
     public function __construct(
-        private readonly NelEngine $nelEngine,
+        private readonly AuditRuleEvaluator $evaluator,
+        private readonly AuditRuleDefinitionService $definitions,
+        private readonly AuditContextLoader $contextLoader,
         private readonly NationAuditMapper $nationAuditMapper,
         private readonly CityAuditMapper $cityAuditMapper,
         private readonly AllianceMembershipService $membershipService,
-        private readonly NationNelHelper $nationNelHelper,
-        private readonly CityNelHelper $cityNelHelper,
-        private readonly MathNelHelper $mathNelHelper,
         private readonly AuditRemediationService $remediationService,
     ) {}
 
@@ -44,293 +41,320 @@ class AuditService
     {
         return (bool) Cache::lock(self::RUN_LOCK_KEY, self::RUN_LOCK_SECONDS)
             ->get(function (): bool {
-                $this->runAllEnabledRulesWithoutLock();
+                $this->runRules(AuditRule::query()->enabled()->orderBy('id')->get());
 
                 return true;
             });
     }
 
-    private function runAllEnabledRulesWithoutLock(): void
+    public function runRule(AuditRule $rule): bool
     {
-        $rules = AuditRule::query()->enabled()->get();
-
-        if ($rules->isEmpty()) {
-            return;
+        if (! $rule->enabled) {
+            return true;
         }
 
-        $nationRules = $this->compileRules($rules->where('target_type', AuditTargetType::Nation));
-        $cityRules = $this->compileRules($rules->where('target_type', AuditTargetType::City));
-        $allianceIds = $this->membershipService->getAllianceIds()->all();
-        $evaluatedAt = now();
+        return (bool) Cache::lock(self::RUN_LOCK_KEY, self::RUN_LOCK_SECONDS)
+            ->get(function () use ($rule): bool {
+                return (bool) Cache::lock("audits:rule:{$rule->id}", self::RUN_LOCK_SECONDS)
+                    ->get(function () use ($rule): bool {
+                        $freshRule = AuditRule::query()->find($rule->id);
 
-        $this->clearIneligibleViolations($allianceIds);
+                        if ($freshRule?->enabled) {
+                            $this->runRules(collect([$freshRule]));
+                        }
 
-        if ($nationRules->isNotEmpty()) {
-            $nationHelpers = $this->helperBindingsFor(AuditTargetType::Nation);
-
-            $this->activeMemberNationQuery($allianceIds)
-                ->select([
-                    'id',
-                    'alliance_id',
-                    'alliance_position',
-                    'nation_name',
-                    'leader_name',
-                    'continent',
-                    'war_policy',
-                    'domestic_policy',
-                    'color',
-                    'num_cities',
-                    'score',
-                    'population',
-                    'projects',
-                    'project_bits',
-                    'wars_won',
-                    'wars_lost',
-                    'offensive_wars_count',
-                    'defensive_wars_count',
-                    'gross_national_income',
-                    'gross_domestic_product',
-                    'commendations',
-                    'denouncements',
-                ])
-                ->with([
-                    'resources:nation_id,money,coal,oil,uranium,iron,bauxite,lead,gasoline,munitions,steel,aluminum,food,credits',
-                    'military:nation_id,soldiers,tanks,aircraft,ships,missiles,nukes,spies',
-                    'accountProfile:nation_id,credits,last_active,discord_id',
-                    'latestSignIn' => function ($query): void {
-                        $query->select('nation_sign_ins.id', 'nation_sign_ins.nation_id', 'nation_sign_ins.mmr_score');
-                    },
-                ])
-                ->chunkById(self::CHUNK_SIZE, function (Collection $nations) use ($nationRules, $nationHelpers, $evaluatedAt): void {
-                    $this->runRulesForNationChunk($nations, $nationRules, $nationHelpers, $evaluatedAt);
-                });
-        }
-
-        if ($cityRules->isNotEmpty()) {
-            $cityHelpers = $this->helperBindingsFor(AuditTargetType::City);
-
-            City::query()
-                ->select([
-                    'id',
-                    'nation_id',
-                    'name',
-                    'infrastructure',
-                    'land',
-                    'powered',
-                    'oil_power',
-                    'wind_power',
-                    'coal_power',
-                    'nuclear_power',
-                    'coal_mine',
-                    'oil_well',
-                    'uranium_mine',
-                    'farm',
-                    'barracks',
-                    'police_station',
-                    'hospital',
-                    'recycling_center',
-                    'subway',
-                    'supermarket',
-                    'bank',
-                    'shopping_mall',
-                    'stadium',
-                    'lead_mine',
-                    'iron_mine',
-                    'bauxite_mine',
-                    'oil_refinery',
-                    'aluminum_refinery',
-                    'steel_mill',
-                    'munitions_factory',
-                    'factory',
-                    'hangar',
-                    'drydock',
-                ])
-                ->whereHas('nation', function (Builder $query) use ($allianceIds): void {
-                    $this->applyMemberConstraints($query, $allianceIds);
-                })
-                ->with(['nation:id,nation_name,leader_name,score,num_cities,color,project_bits'])
-                ->chunkById(self::CHUNK_SIZE, function (Collection $cities) use ($cityRules, $cityHelpers, $evaluatedAt): void {
-                    $this->runRulesForCityChunk($cities, $cityRules, $cityHelpers, $evaluatedAt);
-                });
-        }
+                        return true;
+                    });
+            });
     }
 
     /**
      * @param  Collection<int, AuditRule>  $rules
-     * @return Collection<int, CompiledAuditRule>
      */
-    private function compileRules(Collection $rules): Collection
+    private function runRules(Collection $rules): void
     {
-        return $rules
-            ->map(function (AuditRule $rule): ?CompiledAuditRule {
-                try {
-                    return new CompiledAuditRule($rule, $this->nelEngine->parse($rule->expression));
-                } catch (Throwable $exception) {
-                    Log::error('Audit rule compilation failed', [
-                        'rule_id' => $rule->id,
-                        'target_type' => $rule->target_type->value,
-                        'message' => $exception->getMessage(),
-                    ]);
+        if ($rules->isEmpty()) {
+            return;
+        }
 
-                    return null;
-                }
-            })
-            ->filter()
-            ->values();
-    }
+        $evaluatedAt = now();
+        $validRules = $this->prepareRules($rules, $evaluatedAt);
 
-    /**
-     * @param  Collection<int, Nation>  $nations
-     * @param  Collection<int, CompiledAuditRule>  $rules
-     * @param  array<string, callable>  $helpers
-     */
-    protected function runRulesForNationChunk(
-        Collection $nations,
-        Collection $rules,
-        array $helpers,
-        Carbon $evaluatedAt,
-    ): void {
-        $violations = [];
-        $resolvedTargetKeysByRule = [];
+        if ($validRules->isEmpty()) {
+            return;
+        }
 
-        foreach ($nations as $nation) {
-            $variables = $this->nationAuditMapper->buildVariables($nation);
-            $targetKey = self::targetKeyFor(AuditTargetType::Nation, $nation->id, null);
+        $this->clearIneligibleFindings($this->membershipService->getAllianceIds()->all());
+        $runState = $validRules->mapWithKeys(static fn (AuditRule $rule): array => [
+            $rule->id => [
+                'warnings' => [],
+                'errors' => 0,
+                'duration_ms' => 0,
+            ],
+        ])->all();
 
-            foreach ($rules as $compiledRule) {
-                $isViolation = $this->evaluateRule(
-                    $compiledRule,
-                    $variables,
-                    AuditTargetType::Nation,
-                    $nation->id,
-                    null,
-                    $helpers,
-                );
+        foreach (AuditTargetType::cases() as $targetType) {
+            $targetRules = $validRules
+                ->filter(fn (AuditRule $rule): bool => $rule->target_type === $targetType)
+                ->values();
 
-                if ($isViolation === null) {
-                    continue;
-                }
-
-                if ($isViolation) {
-                    $violations[] = $this->violationRow(
-                        $compiledRule,
-                        AuditTargetType::Nation,
-                        $nation->id,
-                        null,
-                        $targetKey,
-                        $evaluatedAt,
-                    );
-
-                    continue;
-                }
-
-                $resolvedTargetKeysByRule[$compiledRule->rule->id][] = $targetKey;
+            if ($targetRules->isNotEmpty()) {
+                $this->runTargetRules($targetType, $targetRules, $evaluatedAt, $runState);
             }
         }
 
-        $this->persistEvaluationChanges($violations, $resolvedTargetKeysByRule, AuditTargetType::Nation);
+        $this->finishRuleHealth($validRules, $runState, $evaluatedAt);
     }
 
     /**
-     * @param  Collection<int, City>  $cities
-     * @param  Collection<int, CompiledAuditRule>  $rules
-     * @param  array<string, callable>  $helpers
+     * @param  Collection<int, AuditRule>  $rules
+     * @return Collection<int, AuditRule>
      */
-    protected function runRulesForCityChunk(
-        Collection $cities,
-        Collection $rules,
-        array $helpers,
-        Carbon $evaluatedAt,
-    ): void {
-        $violations = [];
-        $resolvedTargetKeysByRule = [];
+    private function prepareRules(Collection $rules, Carbon $evaluatedAt): Collection
+    {
+        return $rules->filter(function (AuditRule $rule) use ($evaluatedAt): bool {
+            $inspection = $this->definitions->inspect($rule->definition, $rule->target_type);
 
-        foreach ($cities as $city) {
-            $variables = $this->cityAuditMapper->buildVariables($city);
-            $targetKey = self::targetKeyFor(AuditTargetType::City, $city->nation_id, $city->id);
+            if ($inspection['errors'] !== [] || $inspection['normalized'] === null) {
+                $this->saveEvaluationState($rule, [
+                    'last_evaluation_status' => AuditEvaluationStatus::Failed,
+                    'last_evaluated_at' => $evaluatedAt,
+                    'last_evaluation_error' => 'This rule has an invalid definition and was not evaluated.',
+                    'last_evaluation_duration_ms' => 0,
+                ]);
 
-            foreach ($rules as $compiledRule) {
-                $isViolation = $this->evaluateRule(
-                    $compiledRule,
-                    $variables,
-                    AuditTargetType::City,
-                    $city->nation_id,
-                    $city->id,
-                    $helpers,
-                );
+                Log::error('Audit rule definition is invalid', [
+                    'rule_id' => $rule->id,
+                    'target_type' => $rule->target_type->value,
+                    'validation_errors' => $inspection['errors'],
+                ]);
 
-                if ($isViolation === null) {
-                    continue;
-                }
-
-                if ($isViolation) {
-                    $violations[] = $this->violationRow(
-                        $compiledRule,
-                        AuditTargetType::City,
-                        $city->nation_id,
-                        $city->id,
-                        $targetKey,
-                        $evaluatedAt,
-                    );
-
-                    continue;
-                }
-
-                $resolvedTargetKeysByRule[$compiledRule->rule->id][] = $targetKey;
+                return false;
             }
-        }
 
-        $this->persistEvaluationChanges($violations, $resolvedTargetKeysByRule, AuditTargetType::City);
-    }
+            if (! $this->definitions->hasCriteria($inspection['normalized'])) {
+                $this->saveEvaluationState($rule, [
+                    'last_evaluation_status' => AuditEvaluationStatus::Failed,
+                    'last_evaluated_at' => $evaluatedAt,
+                    'last_evaluation_error' => 'Enabled rules must contain at least one alert condition.',
+                    'last_evaluation_duration_ms' => 0,
+                ]);
 
-    /**
-     * @param  array<string, mixed>  $variables
-     * @param  array<string, callable>  $helpers
-     */
-    protected function evaluateRule(
-        CompiledAuditRule $compiledRule,
-        array $variables,
-        AuditTargetType $targetType,
-        ?int $nationId,
-        ?int $cityId,
-        array $helpers,
-    ): ?bool {
-        try {
-            return (bool) $this->nelEngine->evaluateParsed(
-                $compiledRule->expression,
-                $variables,
-                helpers: $helpers,
-            );
-        } catch (Throwable $exception) {
-            Log::error('Audit rule evaluation failed', [
-                'rule_id' => $compiledRule->rule->id,
-                'target_type' => $targetType->value,
-                'nation_id' => $nationId,
-                'city_id' => $cityId,
-                'message' => $exception->getMessage(),
+                return false;
+            }
+
+            $rule->definition = $inspection['normalized'];
+            $this->saveEvaluationState($rule, [
+                'last_evaluation_status' => AuditEvaluationStatus::Pending,
+                'last_evaluation_error' => null,
             ]);
 
-            return null;
+            return true;
+        })->values();
+    }
+
+    /**
+     * @param  Collection<int, AuditRule>  $rules
+     * @param  array<int, array{warnings: array<int, string>, errors: int, duration_ms: int}>  &$runState
+     */
+    private function runTargetRules(
+        AuditTargetType $targetType,
+        Collection $rules,
+        Carbon $evaluatedAt,
+        array &$runState,
+    ): void {
+        $ruleDefinitions = $rules->mapWithKeys(
+            static fn (AuditRule $rule): array => [$rule->id => $rule->definition],
+        )->all();
+        $summaries = $rules->mapWithKeys(fn (AuditRule $rule): array => [
+            $rule->id => $this->definitions->summarize($rule->definition, $rule->target_type),
+        ])->all();
+
+        $this->contextLoader
+            ->query($targetType, array_values($ruleDefinitions))
+            ->chunkById(self::CHUNK_SIZE, function (Collection $targets) use (
+                $targetType,
+                $rules,
+                $evaluatedAt,
+                $summaries,
+                &$runState,
+            ): void {
+                $matches = [];
+                $resolvedTargetKeysByRule = [];
+
+                foreach ($targets as $target) {
+                    try {
+                        $context = $this->contextFor($targetType, $target);
+                        [$nationId, $cityId, $targetKey] = $this->targetIdentity($targetType, $target);
+                    } catch (Throwable $exception) {
+                        foreach ($rules as $rule) {
+                            $runState[$rule->id]['errors']++;
+                        }
+
+                        Log::error('Audit target context could not be loaded', [
+                            'target_type' => $targetType->value,
+                            'target_id' => $target->getKey(),
+                            'exception' => $exception,
+                        ]);
+
+                        continue;
+                    }
+
+                    foreach ($rules as $rule) {
+                        try {
+                            $evaluation = $this->evaluator->evaluate(
+                                $targetType,
+                                $rule->definition,
+                                $context,
+                                $evaluatedAt,
+                            );
+                            $runState[$rule->id]['duration_ms'] += $evaluation->durationMs;
+                            $runState[$rule->id]['warnings'] = array_values(array_unique([
+                                ...$runState[$rule->id]['warnings'],
+                                ...$evaluation->warnings,
+                            ]));
+
+                            if ($evaluation->matched) {
+                                $matches[] = $this->findingRow(
+                                    $rule,
+                                    $targetType,
+                                    $nationId,
+                                    $cityId,
+                                    $targetKey,
+                                    $evaluation,
+                                    $summaries[$rule->id],
+                                    $evaluatedAt,
+                                );
+                            } else {
+                                $resolvedTargetKeysByRule[$rule->id][] = $targetKey;
+                            }
+                        } catch (Throwable $exception) {
+                            $runState[$rule->id]['errors']++;
+
+                            Log::error('Audit target evaluation failed', [
+                                'rule_id' => $rule->id,
+                                'target_type' => $targetType->value,
+                                'nation_id' => $nationId,
+                                'city_id' => $cityId,
+                                'exception' => $exception,
+                            ]);
+                        }
+                    }
+                }
+
+                $this->persistEvaluationChanges($matches, $resolvedTargetKeysByRule, $targetType);
+            });
+    }
+
+    /**
+     * @param  Collection<int, AuditRule>  $rules
+     * @param  array<int, array{warnings: array<int, string>, errors: int, duration_ms: int}>  $runState
+     */
+    private function finishRuleHealth(Collection $rules, array $runState, Carbon $evaluatedAt): void
+    {
+        $matchCounts = AuditResult::query()
+            ->whereIn('audit_rule_id', $rules->pluck('id')->all())
+            ->selectRaw('audit_rule_id, COUNT(*) AS aggregate')
+            ->groupBy('audit_rule_id')
+            ->pluck('aggregate', 'audit_rule_id');
+
+        foreach ($rules as $rule) {
+            $state = $runState[$rule->id];
+            $status = match (true) {
+                $state['errors'] > 0 => AuditEvaluationStatus::Failed,
+                $state['warnings'] !== [] => AuditEvaluationStatus::Warning,
+                default => AuditEvaluationStatus::Success,
+            };
+            $message = match ($status) {
+                AuditEvaluationStatus::Failed => $state['errors'].' target(s) could not be evaluated; their existing findings were preserved.',
+                AuditEvaluationStatus::Warning => count($state['warnings']).' missing or invalid data warning(s) occurred during evaluation.',
+                default => null,
+            };
+
+            $this->saveEvaluationState($rule, [
+                'last_evaluation_status' => $status,
+                'last_evaluated_at' => $evaluatedAt,
+                'last_match_count' => (int) ($matchCounts[$rule->id] ?? 0),
+                'last_evaluation_error' => $message,
+                'last_evaluation_duration_ms' => $state['duration_ms'],
+            ]);
+        }
+    }
+
+    /**
+     * Evaluation health is operational state and must not make a rule look admin-edited.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function saveEvaluationState(AuditRule $rule, array $attributes): void
+    {
+        $timestamps = $rule->timestamps;
+        $rule->timestamps = false;
+
+        try {
+            $rule->forceFill($attributes)->save();
+        } finally {
+            $rule->timestamps = $timestamps;
         }
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function violationRow(
-        CompiledAuditRule $compiledRule,
+    private function contextFor(AuditTargetType $targetType, Model $target): array
+    {
+        return match ($targetType) {
+            AuditTargetType::Nation => $this->nationAuditMapper->buildContext($this->asNation($target)),
+            AuditTargetType::City => $this->cityAuditMapper->buildContext($this->asCity($target)),
+        };
+    }
+
+    /**
+     * @return array{int, int|null, string}
+     */
+    private function targetIdentity(AuditTargetType $targetType, Model $target): array
+    {
+        return match ($targetType) {
+            AuditTargetType::Nation => [
+                (int) $target->getKey(),
+                null,
+                self::targetKeyFor($targetType, (int) $target->getKey(), null),
+            ],
+            AuditTargetType::City => [
+                (int) $this->asCity($target)->nation_id,
+                (int) $target->getKey(),
+                self::targetKeyFor($targetType, (int) $this->asCity($target)->nation_id, (int) $target->getKey()),
+            ],
+        };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function findingRow(
+        AuditRule $rule,
         AuditTargetType $targetType,
-        ?int $nationId,
+        int $nationId,
         ?int $cityId,
         string $targetKey,
+        AuditEvaluationResult $evaluation,
+        string $summary,
         Carbon $evaluatedAt,
     ): array {
         return [
-            'audit_rule_id' => $compiledRule->rule->id,
+            'audit_rule_id' => $rule->id,
+            'rule_revision' => $rule->revision,
             'target_type' => $targetType->value,
             'target_key' => $targetKey,
             'nation_id' => $nationId,
             'city_id' => $cityId,
+            'details' => json_encode([
+                'rule_revision' => $rule->revision,
+                'summary' => $summary,
+                'evidence' => $evaluation->evidence,
+                'warnings' => $evaluation->warnings,
+                'evaluated_at' => $evaluatedAt->toIso8601String(),
+            ], JSON_THROW_ON_ERROR),
             'first_detected_at' => $evaluatedAt,
             'last_evaluated_at' => $evaluatedAt,
             'created_at' => $evaluatedAt,
@@ -339,37 +363,45 @@ class AuditService
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $violations
+     * @param  array<int, array<string, mixed>>  $matches
      * @param  array<int, array<int, string>>  $resolvedTargetKeysByRule
      */
     private function persistEvaluationChanges(
-        array $violations,
+        array $matches,
         array $resolvedTargetKeysByRule,
         AuditTargetType $targetType,
     ): void {
-        DB::transaction(function () use ($violations, $resolvedTargetKeysByRule, $targetType): void {
+        DB::transaction(function () use ($matches, $resolvedTargetKeysByRule, $targetType): void {
             $existingKeys = collect();
 
-            if ($violations !== []) {
-                $ruleIds = collect($violations)->pluck('audit_rule_id')->unique()->values()->all();
-                $targetKeys = collect($violations)->pluck('target_key')->unique()->values()->all();
+            if ($matches !== []) {
+                $ruleIds = collect($matches)->pluck('audit_rule_id')->unique()->values()->all();
+                $targetKeys = collect($matches)->pluck('target_key')->unique()->values()->all();
 
                 $existingKeys = AuditResult::query()
                     ->where('target_type', $targetType->value)
                     ->whereIn('audit_rule_id', $ruleIds)
                     ->whereIn('target_key', $targetKeys)
                     ->get(['id', 'audit_rule_id', 'target_key'])
-                    ->mapWithKeys(fn (AuditResult $result): array => [
+                    ->mapWithKeys(static fn (AuditResult $result): array => [
                         $result->audit_rule_id.'|'.$result->target_key => true,
                     ]);
 
                 AuditResult::query()->upsert(
-                    $violations,
+                    $matches,
                     ['audit_rule_id', 'target_type', 'target_key'],
-                    ['nation_id', 'city_id', 'last_evaluated_at', 'updated_at'],
+                    [
+                        'rule_revision',
+                        'nation_id',
+                        'city_id',
+                        'details',
+                        'last_evaluated_at',
+                        'updated_at',
+                    ],
                 );
 
                 AuditResult::query()
+                    ->with('rule')
                     ->where('target_type', $targetType->value)
                     ->whereIn('audit_rule_id', $ruleIds)
                     ->whereIn('target_key', $targetKeys)
@@ -384,6 +416,7 @@ class AuditService
             foreach ($resolvedTargetKeysByRule as $ruleId => $targetKeys) {
                 foreach (array_chunk(array_values(array_unique($targetKeys)), 1000) as $targetKeyChunk) {
                     $resolved = AuditResult::query()
+                        ->with('rule')
                         ->where('audit_rule_id', $ruleId)
                         ->where('target_type', $targetType->value)
                         ->whereIn('target_key', $targetKeyChunk)
@@ -412,74 +445,9 @@ class AuditService
     }
 
     /**
-     * @return array<string, callable>
-     */
-    private function helperBindingsFor(AuditTargetType $targetType): array
-    {
-        $helpers = [
-            ...$this->mathNelHelper->bindings(),
-            ...$this->nationNelHelper->bindings(),
-        ];
-
-        if ($targetType === AuditTargetType::City) {
-            $helpers = [
-                ...$helpers,
-                ...$this->cityNelHelper->bindings(),
-            ];
-        }
-
-        return $helpers;
-    }
-
-    /**
      * @param  array<int, int>  $allianceIds
      */
-    protected function activeMemberNationQuery(array $allianceIds): Builder
-    {
-        return $this->applyMemberConstraints(Nation::query(), $allianceIds);
-    }
-
-    /**
-     * @param  array<int, int>  $allianceIds
-     */
-    protected function applyMemberConstraints(Builder $query, array $allianceIds): Builder
-    {
-        return $query
-            ->whereIn('alliance_id', $allianceIds)
-            ->where(function (Builder $query): void {
-                $query->whereNull('alliance_position')
-                    ->orWhere('alliance_position', '!=', 'APPLICANT');
-            })
-            ->where(function (Builder $query): void {
-                $query->whereNull('vacation_mode_turns')
-                    ->orWhere('vacation_mode_turns', '<=', 0);
-            });
-    }
-
-    /**
-     * @param  array<int, int>  $allianceIds
-     */
-    protected function applyIneligibleMemberConstraints(Builder $query, array $allianceIds): Builder
-    {
-        return $query
-            ->whereNull('alliance_id')
-            ->orWhereNotIn('alliance_id', $allianceIds)
-            ->orWhere(function (Builder $query) use ($allianceIds): void {
-                $query->whereIn('alliance_id', $allianceIds)
-                    ->where(function (Builder $query): void {
-                        $query->where('alliance_position', 'APPLICANT')
-                            ->orWhere(function (Builder $query): void {
-                                $query->whereNotNull('vacation_mode_turns')
-                                    ->where('vacation_mode_turns', '>', 0);
-                            });
-                    });
-            });
-    }
-
-    /**
-     * @param  array<int, int>  $allianceIds
-     */
-    protected function clearIneligibleViolations(array $allianceIds): void
+    private function clearIneligibleFindings(array $allianceIds): void
     {
         $query = AuditResult::query();
 
@@ -487,12 +455,17 @@ class AuditService
             $query->where(function (Builder $query) use ($allianceIds): void {
                 $query->whereDoesntHave('nation')
                     ->orWhereHas('nation', function (Builder $query) use ($allianceIds): void {
-                        $this->applyIneligibleMemberConstraints($query, $allianceIds);
+                        $query
+                            ->where(function (Builder $query) use ($allianceIds): void {
+                                $query->whereNull('alliance_id')->orWhereNotIn('alliance_id', $allianceIds);
+                            })
+                            ->orWhere('alliance_position', 'APPLICANT')
+                            ->orWhere('vacation_mode_turns', '>', 0);
                     });
             });
         }
 
-        $query->chunkById(500, function (Collection $results): void {
+        $query->with('rule')->chunkById(500, function (Collection $results): void {
             DB::transaction(function () use ($results): void {
                 $results->each(fn (AuditResult $result) => $this->remediationService->recordEvent($result, 'removed_ineligible'));
                 AuditResult::query()->whereKey($results->modelKeys())->delete();
@@ -500,17 +473,11 @@ class AuditService
         });
     }
 
-    /**
-     * @return Collection<int, mixed>
-     */
     public function getNationViolations(Nation $nation): Collection
     {
         return $this->getNationViolationsById($nation->id);
     }
 
-    /**
-     * @return Collection<int, mixed>
-     */
     public function getNationViolationsById(int $nationId): Collection
     {
         return AuditResult::query()
@@ -525,23 +492,38 @@ class AuditService
      */
     public function getNationAndCityViolationsForNation(Nation $nation): array
     {
-        $cityIds = $nation->cities()->pluck('id');
-
         $nationResults = AuditResult::query()
             ->with('rule')
             ->where('target_type', AuditTargetType::Nation)
             ->where('nation_id', $nation->id)
             ->get();
-
         $cityResults = AuditResult::query()
             ->with(['rule', 'city'])
             ->where('target_type', AuditTargetType::City)
-            ->whereIn('city_id', $cityIds)
+            ->where('nation_id', $nation->id)
             ->get();
 
         return [
             'nation' => $nationResults,
             'cities' => $cityResults,
         ];
+    }
+
+    private function asNation(Model $model): Nation
+    {
+        if (! $model instanceof Nation) {
+            throw new InvalidArgumentException('Expected a nation audit target.');
+        }
+
+        return $model;
+    }
+
+    private function asCity(Model $model): City
+    {
+        if (! $model instanceof City) {
+            throw new InvalidArgumentException('Expected a city audit target.');
+        }
+
+        return $model;
     }
 }

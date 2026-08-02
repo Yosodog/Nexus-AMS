@@ -10,10 +10,14 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class AuditRemediationService
 {
-    public function __construct(private readonly AllianceMemberEligibilityService $eligibilityService) {}
+    public function __construct(
+        private readonly AllianceMemberEligibilityService $eligibilityService,
+        private readonly AuditRuleDefinitionService $definitions,
+    ) {}
 
     public function acknowledge(User $actor, AuditResult $result, ?string $note = null): AuditResult
     {
@@ -96,6 +100,8 @@ class AuditRemediationService
             return null;
         }
 
+        $snapshot = $this->ruleSnapshot($result);
+
         return AuditResultEvent::query()->create([
             'audit_result_id' => $result->id,
             'audit_rule_id' => $result->audit_rule_id,
@@ -105,9 +111,40 @@ class AuditRemediationService
             'city_id' => $result->city_id,
             'actor_user_id' => $actor?->id,
             'event_type' => $eventType,
-            'metadata' => $metadata === [] ? null : $metadata,
+            'metadata' => $metadata === [] && $snapshot === null
+                ? null
+                : [...$metadata, 'rule_snapshot' => $snapshot],
             'occurred_at' => now(),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function ruleSnapshot(AuditResult $result): ?array
+    {
+        $rule = $result->relationLoaded('rule') ? $result->rule : $result->rule()->first();
+
+        if ($rule === null) {
+            return null;
+        }
+
+        $summary = null;
+
+        if (is_array($rule->definition)) {
+            try {
+                $summary = $this->definitions->summarize($rule->definition, $rule->target_type);
+            } catch (Throwable) {
+                $summary = null;
+            }
+        }
+
+        return [
+            'name' => $rule->name,
+            'priority' => $rule->priority->value,
+            'revision' => (int) $rule->revision,
+            'summary' => $summary,
+        ];
     }
 
     private function assertOwnsResult(User $actor, AuditResult $result): void

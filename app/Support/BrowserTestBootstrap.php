@@ -5,6 +5,9 @@ namespace App\Support;
 use App\Models\Account;
 use App\Models\Alliance;
 use App\Models\AllianceFinanceEntry;
+use App\Models\AuditResult;
+use App\Models\AuditResultEvent;
+use App\Models\AuditRule;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Models\DiscordAccount;
@@ -117,6 +120,7 @@ class BrowserTestBootstrap
             $this->createAccount($adminNation, 'Staff test account', 500000);
 
             $this->createOperationalFixtures($memberNation, $memberAccount);
+            $this->createAuditFixtures($memberNation, $admin);
 
             Page::query()->create([
                 'slug' => 'browser-operations-guide',
@@ -212,6 +216,10 @@ class BrowserTestBootstrap
             'flag' => null,
             'num_cities' => 12,
             'score' => 2450.75,
+            'alliance_position' => 'MEMBER',
+            'alliance_position_id' => 2,
+            'vacation_mode_turns' => 0,
+            'beige_turns' => 0,
         ]);
     }
 
@@ -310,6 +318,120 @@ class BrowserTestBootstrap
             'account_id' => $memberAccount->id,
             'money' => 750000,
             'steel' => 500,
+        ]);
+    }
+
+    private function createAuditFixtures(Nation $memberNation, User $admin): void
+    {
+        $definition = [
+            'schema_version' => 1,
+            'criteria' => [
+                'group' => 'all',
+                'rules' => [[
+                    'id' => '11111111-1111-4111-8111-111111111111',
+                    'field' => 'nation.aircraft_per_city',
+                    'operator' => 'lt',
+                    'value' => 50,
+                ]],
+            ],
+            'exceptions' => [
+                'group' => 'any',
+                'rules' => [],
+            ],
+        ];
+
+        $rule = AuditRule::query()->create([
+            'name' => 'Aircraft readiness below target',
+            'description' => 'Your nation has fewer aircraft per city than the alliance readiness target.',
+            'remediation_guidance' => 'Purchase aircraft until you have at least 50 aircraft for each city.',
+            'admin_notes' => 'Stable browser fixture for the findings-first report.',
+            'target_type' => 'nation',
+            'priority' => 'high',
+            'definition' => $definition,
+            'revision' => 1,
+            'enabled' => true,
+            'last_evaluation_status' => 'success',
+            'last_evaluated_at' => now()->subMinutes(15),
+            'last_match_count' => 1,
+            'last_evaluation_duration_ms' => 12,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $finding = AuditResult::query()->create([
+            'audit_rule_id' => $rule->id,
+            'rule_revision' => 1,
+            'target_type' => 'nation',
+            'target_key' => (string) $memberNation->id,
+            'nation_id' => $memberNation->id,
+            'city_id' => null,
+            'details' => [
+                'rule_revision' => 1,
+                'summary' => 'Aircraft per city is less than 50.',
+                'evidence' => [
+                    [
+                        'scope' => 'criteria',
+                        'field_label' => 'Aircraft per city',
+                        'condition' => 'Aircraft per city is less than 50 aircraft per city.',
+                        'observed_display' => '35 aircraft per city',
+                        'expected_display' => '50 aircraft per city',
+                        'operator_label' => 'is less than',
+                        'matched' => true,
+                        'member_safe' => true,
+                    ],
+                    [
+                        'scope' => 'criteria',
+                        'field_label' => 'City count',
+                        'condition' => 'This readiness target is evaluated across 12 cities.',
+                        'observed_display' => '12 cities',
+                        'expected_display' => 'Current nation city count',
+                        'operator_label' => 'is available',
+                        'matched' => true,
+                        'member_safe' => true,
+                    ],
+                ],
+                'evaluated_at' => now()->subMinutes(15)->toIso8601String(),
+            ],
+            'first_detected_at' => now()->subDays(3),
+            'last_evaluated_at' => now()->subMinutes(15),
+            'due_at' => now()->subDay(),
+        ]);
+
+        AuditResultEvent::query()->create([
+            'audit_result_id' => $finding->id,
+            'audit_rule_id' => $rule->id,
+            'target_type' => 'nation',
+            'target_key' => (string) $memberNation->id,
+            'nation_id' => $memberNation->id,
+            'city_id' => null,
+            'actor_user_id' => null,
+            'event_type' => 'opened',
+            'metadata' => [
+                'rule_snapshot' => [
+                    'name' => $rule->name,
+                    'priority' => 'high',
+                    'revision' => 1,
+                    'summary' => 'Aircraft per city is less than 50.',
+                ],
+            ],
+            'occurred_at' => now()->subDays(3),
+        ]);
+
+        AuditRule::query()->create([
+            'name' => 'Imported rule needing rebuild',
+            'description' => 'This imported audit check needs a guided replacement.',
+            'remediation_guidance' => null,
+            'admin_notes' => null,
+            'target_type' => 'nation',
+            'priority' => 'medium',
+            'definition' => null,
+            'revision' => 1,
+            'enabled' => false,
+            'last_evaluation_status' => 'migration_failed',
+            'last_match_count' => 0,
+            'last_evaluation_error' => 'This imported rule could not be converted safely. Rebuild it with the guided rule editor.',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
         ]);
     }
 }

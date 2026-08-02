@@ -148,7 +148,7 @@ class DiscordBotGuideController extends Controller
                 'id' => 'defense',
                 'title' => 'Defense and intelligence',
                 'icon' => 'o-shield-check',
-                'summary' => "Bring {$appName} raid guidance, war context, assignments, and simulations into Discord.",
+                'summary' => "Bring {$appName} raid guidance, live war context, and simulations into Discord.",
                 'commands' => [
                     [
                         'command' => '/raid [nation] [sort] [limit]',
@@ -158,10 +158,6 @@ class DiscordBotGuideController extends Controller
                     [
                         'command' => '/war active',
                         'description' => 'View your active wars.',
-                    ],
-                    [
-                        'command' => '/war assignments',
-                        'description' => 'View war-plan and counter assignments, then acknowledge an assignment or report that you are unavailable.',
                     ],
                     [
                         'command' => '/war counter nation:<nation ID>',
@@ -254,10 +250,6 @@ class DiscordBotGuideController extends Controller
             [
                 'command' => '/deny user:<applicant>',
                 'description' => 'Run the established applicant denial workflow for a Discord user.',
-            ],
-            [
-                'command' => '/archivecounter war_counter_id:<ID>',
-                'description' => "Archive a {$appName} war counter and lock its associated Discord thread.",
             ],
             [
                 'command' => '/sweepbank [note]',

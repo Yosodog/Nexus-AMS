@@ -1,4 +1,5 @@
 import './bootstrap';
+import { initAuditRuleBuilders } from './audit-rule-builder';
 import { initGrantRequirementBuilders } from './grant-requirement-builder';
 
 const SORT_ASC = 'asc';
@@ -665,6 +666,7 @@ const initAppUi = (root = document) => {
     enableExclusiveMemberDropdowns(root);
     enableDepositRequests();
     enableConfirmations();
+    initAuditRuleBuilders(root);
     initGrantRequirementBuilders(root);
 };
 

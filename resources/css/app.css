@@ -675,6 +675,166 @@ html[data-theme] .ck.ck-editor__editable_inline {
         vertical-align: top;
     }
 
+    .audit-rule-editor {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--nexus-space-xl);
+        align-items: start;
+    }
+
+    .audit-rule-editor__authoring {
+        min-width: 0;
+        padding: var(--nexus-space-md);
+    }
+
+    .audit-rule-section {
+        display: grid;
+        gap: var(--nexus-space-lg);
+    }
+
+    .audit-rule-section + .audit-rule-section {
+        margin-top: var(--nexus-space-xl);
+        border-top: 1px solid var(--nexus-rule);
+        padding-top: var(--nexus-space-xl);
+    }
+
+    .audit-rule-section__heading {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--nexus-space-sm);
+    }
+
+    .audit-rule-section__step {
+        display: inline-grid;
+        width: 2rem;
+        height: 2rem;
+        flex: 0 0 2rem;
+        place-items: center;
+        border: 1px solid color-mix(in oklch, var(--color-primary) 36%, var(--nexus-rule));
+        border-radius: 9999px;
+        background: color-mix(in oklch, var(--color-primary) 10%, var(--color-base-100));
+        color: var(--color-primary);
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+
+    .audit-rule-section__title {
+        color: var(--color-base-content);
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+    }
+
+    .audit-rule-section__description {
+        max-width: var(--nexus-measure);
+        margin-top: var(--nexus-space-2xs);
+        color: color-mix(in oklch, var(--color-base-content) 68%, transparent);
+        font-size: 0.875rem;
+        line-height: 1.45;
+    }
+
+    .audit-rule-exceptions {
+        overflow: clip;
+        border: 1px solid var(--nexus-rule-strong);
+        border-radius: 0.5rem;
+        background: var(--color-base-100);
+    }
+
+    .audit-rule-exceptions__summary {
+        display: flex;
+        min-height: 3rem;
+        cursor: pointer;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--nexus-space-sm);
+        padding: var(--nexus-space-sm) var(--nexus-space-md);
+        color: var(--color-primary);
+        font-weight: 600;
+        list-style: none;
+    }
+
+    .audit-rule-exceptions__summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .audit-rule-exceptions[open] .audit-rule-exceptions__summary svg {
+        rotate: 180deg;
+    }
+
+    .audit-rule-review {
+        min-width: 0;
+    }
+
+    .audit-rule-review__inner {
+        display: grid;
+        gap: var(--nexus-space-lg);
+        padding: var(--nexus-space-md);
+    }
+
+    .audit-rule-review__block {
+        border-top: 1px solid var(--nexus-rule);
+        padding-top: var(--nexus-space-md);
+    }
+
+    .audit-rule-review__actions {
+        display: grid;
+        gap: var(--nexus-space-xs);
+        border-top: 1px solid var(--nexus-rule);
+        padding-top: var(--nexus-space-lg);
+    }
+
+    .audit-rule-field-picker {
+        width: min(42rem, calc(100vw - 2rem));
+        max-width: 42rem;
+        height: min(44rem, calc(100vh - 2rem));
+        max-height: calc(100vh - 2rem);
+        height: min(44rem, calc(100dvh - 2rem));
+        max-height: calc(100dvh - 2rem);
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        overflow: hidden;
+    }
+
+    .audit-rule-field-picker__results {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .audit-rule-value-chooser {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    @media (min-width: 48rem) {
+        .audit-rule-editor__authoring,
+        .audit-rule-review__inner {
+            padding: var(--nexus-space-lg);
+        }
+
+        .audit-finding-action-form {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+    }
+
+    @media (min-width: 64rem) {
+        .audit-rule-editor {
+            grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
+        }
+
+        .audit-rule-review {
+            position: sticky;
+            top: 5.5rem;
+        }
+
+        .audit-rule-condition-row {
+            grid-template-columns: minmax(12rem, 1.4fr) minmax(10rem, 0.8fr) minmax(11rem, 1fr) auto;
+            align-items: end;
+        }
+    }
+
     @media (min-width: 48rem) {
         .nexus-page-header {
             grid-template-columns: minmax(0, 1fr) auto;

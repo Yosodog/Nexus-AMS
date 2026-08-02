@@ -2,15 +2,20 @@
 
 namespace Tests\Unit\Audit;
 
+use App\Enums\AuditEvaluationStatus;
 use App\Enums\AuditPriority;
 use App\Enums\AuditTargetType;
+use App\Models\AuditResult;
 use App\Models\AuditRule;
 use App\Models\City;
 use App\Models\Nation;
+use App\Models\NationSignIn;
 use App\Services\AllianceMembershipService;
 use App\Services\Audit\AuditService;
 use App\Services\PWHelperService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -32,53 +37,73 @@ class AuditServiceTest extends TestCase
         $membership->refresh();
     }
 
-    public function test_creates_and_clears_violations_for_targets(): void
+    protected function tearDown(): void
     {
-        $nation = $this->createNation(score: 900);
-        $city = $this->createCity($nation, infrastructure: 510);
+        Carbon::setTestNow();
 
-        $nationRule = AuditRule::query()->create([
+        parent::tearDown();
+    }
+
+    public function test_opens_updates_and_resolves_findings_with_evidence(): void
+    {
+        Carbon::setTestNow('2026-08-02 12:00:00');
+        $nation = $this->createNation(score: 900);
+
+        $rule = AuditRule::query()->create([
             'name' => 'Score threshold',
+            'description' => 'Keep score above the alliance minimum.',
             'target_type' => AuditTargetType::Nation,
             'priority' => AuditPriority::High,
-            'expression' => 'nation.score < 1000',
-            'enabled' => true,
-        ]);
-
-        $cityRule = AuditRule::query()->create([
-            'name' => 'Infra alignment',
-            'target_type' => AuditTargetType::City,
-            'priority' => AuditPriority::Medium,
-            'expression' => 'city.infrastructure % 50 != 0',
+            'definition' => $this->definition('nation.score', 'lt', 1000),
+            'revision' => 3,
             'enabled' => true,
         ]);
 
         app(AuditService::class)->runAllEnabledRules();
+
+        $finding = AuditResult::query()->sole();
+        $firstDetectedAt = $finding->first_detected_at->copy();
+
+        $this->assertSame($rule->id, $finding->audit_rule_id);
+        $this->assertSame(3, $finding->rule_revision);
+        $this->assertSame('nation', $finding->target_type->value);
+        $this->assertSame("nation:{$nation->id}", $finding->target_key);
+        $this->assertSame(3, $finding->details['rule_revision']);
+        $this->assertStringContainsString('Score is less than 1,000 score', $finding->details['summary']);
+        $this->assertSame(900.0, (float) $finding->details['evidence'][0]['observed']);
+        $this->assertSame(1000, $finding->details['evidence'][0]['expected']);
+        $this->assertTrue($finding->details['evidence'][0]['matched']);
+        $this->assertTrue($finding->details['evidence'][0]['member_safe']);
+        $this->assertDatabaseHas('audit_result_events', [
+            'audit_result_id' => $finding->id,
+            'event_type' => 'opened',
+        ]);
+
+        Carbon::setTestNow('2026-08-02 13:00:00');
+        $nation->update(['score' => 800]);
+
         app(AuditService::class)->runAllEnabledRules();
 
-        $this->assertDatabaseCount('audit_results', 2);
-        $this->assertDatabaseHas('audit_results', [
-            'audit_rule_id' => $nationRule->id,
-            'nation_id' => $nation->id,
-            'target_type' => 'nation',
-            'target_key' => "nation:{$nation->id}",
-        ]);
-        $this->assertDatabaseHas('audit_results', [
-            'audit_rule_id' => $cityRule->id,
-            'city_id' => $city->id,
-            'target_type' => 'city',
-            'target_key' => "city:{$city->id}",
-        ]);
+        $updated = $finding->fresh();
+        $this->assertNotNull($updated);
+        $this->assertTrue($updated->first_detected_at->equalTo($firstDetectedAt));
+        $this->assertTrue($updated->last_evaluated_at->equalTo(now()));
+        $this->assertSame(800.0, (float) $updated->details['evidence'][0]['observed']);
+        $this->assertSame(1, DB::table('audit_result_events')->where('event_type', 'opened')->count());
 
+        Carbon::setTestNow('2026-08-02 14:00:00');
         $nation->update(['score' => 1500]);
-        $city->update(['infrastructure' => 500]);
 
         app(AuditService::class)->runAllEnabledRules();
 
         $this->assertDatabaseCount('audit_results', 0);
+        $this->assertDatabaseHas('audit_result_events', [
+            'audit_result_id' => $finding->id,
+            'event_type' => 'resolved',
+        ]);
     }
 
-    public function test_city_rules_can_use_nation_project_helpers(): void
+    public function test_city_rules_can_match_nation_project_collections(): void
     {
         $nation = $this->createNation(score: 900);
         $nation->update([
@@ -90,7 +115,8 @@ class AuditServiceTest extends TestCase
             'name' => 'Urban Planning owner',
             'target_type' => AuditTargetType::City,
             'priority' => AuditPriority::Medium,
-            'expression' => 'nation.has_project("Urban Planning")',
+            'definition' => $this->definition('nation.projects', 'contains_all', ['Urban Planning']),
+            'revision' => 2,
             'enabled' => true,
         ]);
 
@@ -101,7 +127,162 @@ class AuditServiceTest extends TestCase
             'nation_id' => $nation->id,
             'city_id' => $city->id,
             'target_type' => 'city',
+            'rule_revision' => 2,
         ]);
+
+        $finding = AuditResult::query()->sole();
+        $this->assertSame(['Urban Planning'], $finding->details['evidence'][0]['expected']);
+        $this->assertContains('Urban Planning', $finding->details['evidence'][0]['observed']);
+    }
+
+    public function test_missing_data_sets_warning_status_without_coercing_to_zero(): void
+    {
+        $this->createNation(score: 900);
+
+        $rule = AuditRule::query()->create([
+            'name' => 'Low account credits',
+            'target_type' => AuditTargetType::Nation,
+            'priority' => AuditPriority::Medium,
+            'definition' => $this->definition('nation.account_credits', 'lt', 1),
+            'enabled' => true,
+        ]);
+
+        app(AuditService::class)->runAllEnabledRules();
+
+        $rule->refresh();
+        $this->assertSame(AuditEvaluationStatus::Warning, $rule->last_evaluation_status);
+        $this->assertSame(0, $rule->last_match_count);
+        $this->assertStringContainsString('missing or invalid data warning', $rule->last_evaluation_error);
+        $this->assertNotNull($rule->last_evaluated_at);
+        $this->assertDatabaseCount('audit_results', 0);
+    }
+
+    public function test_latest_sign_in_dependencies_use_qualified_columns(): void
+    {
+        $nation = $this->createNation(score: 900);
+        NationSignIn::query()->create([
+            'nation_id' => $nation->id,
+            'mmr_score' => 25,
+            'created_at' => now()->subDay(),
+        ]);
+        NationSignIn::query()->create([
+            'nation_id' => $nation->id,
+            'mmr_score' => 75,
+            'created_at' => now(),
+        ]);
+
+        $rule = AuditRule::query()->create([
+            'name' => 'Low MMR score',
+            'target_type' => AuditTargetType::Nation,
+            'priority' => AuditPriority::High,
+            'definition' => $this->definition('nation.mmr_score', 'lt', 100),
+            'enabled' => true,
+        ]);
+
+        app(AuditService::class)->runAllEnabledRules();
+
+        $rule->refresh();
+        $finding = AuditResult::query()->sole();
+
+        $this->assertSame(AuditEvaluationStatus::Success, $rule->last_evaluation_status);
+        $this->assertSame(1, $rule->last_match_count);
+        $this->assertSame(75, $finding->details['evidence'][0]['observed']);
+    }
+
+    public function test_metadata_only_changes_keep_revision_and_existing_finding(): void
+    {
+        Carbon::setTestNow('2026-08-02 12:00:00');
+        $this->createNation(score: 900);
+        $rule = AuditRule::query()->create([
+            'name' => 'Score threshold',
+            'description' => 'Initial explanation.',
+            'target_type' => AuditTargetType::Nation,
+            'priority' => AuditPriority::Medium,
+            'definition' => $this->definition('nation.score', 'lt', 1000),
+            'revision' => 4,
+            'enabled' => true,
+        ]);
+
+        app(AuditService::class)->runAllEnabledRules();
+        $finding = AuditResult::query()->sole();
+        $firstDetectedAt = $finding->first_detected_at->copy();
+
+        $rule->update([
+            'description' => 'Clearer member explanation.',
+            'remediation_guidance' => 'Increase score before the next audit.',
+            'admin_notes' => 'Copy-only update.',
+            'priority' => AuditPriority::High,
+        ]);
+        Carbon::setTestNow('2026-08-02 13:00:00');
+
+        app(AuditService::class)->runAllEnabledRules();
+
+        $rule->refresh();
+        $finding->refresh();
+        $this->assertSame(4, $rule->revision);
+        $this->assertSame(4, $finding->rule_revision);
+        $this->assertTrue($finding->first_detected_at->equalTo($firstDetectedAt));
+        $this->assertSame(1, AuditResult::query()->count());
+    }
+
+    public function test_target_evaluation_failure_preserves_existing_finding(): void
+    {
+        Carbon::setTestNow('2026-08-02 12:00:00');
+        $nation = $this->createNation(score: 900);
+        DB::table('nation_accounts')->insert([
+            'nation_id' => $nation->id,
+            'last_active' => '2026-08-01 12:00:00',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $rule = AuditRule::query()->create([
+            'name' => 'Activity data available',
+            'target_type' => AuditTargetType::Nation,
+            'priority' => AuditPriority::Low,
+            'definition' => $this->definition('nation.last_activity', 'is_present'),
+            'enabled' => true,
+        ]);
+
+        app(AuditService::class)->runAllEnabledRules();
+        $finding = AuditResult::query()->sole();
+        $lastEvaluatedAt = $finding->last_evaluated_at->copy();
+
+        DB::table('nation_accounts')->where('nation_id', $nation->id)->update([
+            'last_active' => 'not-a-date',
+        ]);
+        Carbon::setTestNow('2026-08-02 13:00:00');
+
+        app(AuditService::class)->runAllEnabledRules();
+
+        $rule->refresh();
+        $finding->refresh();
+        $this->assertSame(AuditEvaluationStatus::Failed, $rule->last_evaluation_status);
+        $this->assertStringContainsString('could not be evaluated', $rule->last_evaluation_error);
+        $this->assertTrue($finding->last_evaluated_at->equalTo($lastEvaluatedAt));
+        $this->assertSame(1, AuditResult::query()->count());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function definition(string $field, string $operator, mixed $value = null): array
+    {
+        return [
+            'schema_version' => 1,
+            'criteria' => [
+                'group' => 'all',
+                'rules' => [[
+                    'id' => '10000000-0000-4000-8000-000000000001',
+                    'field' => $field,
+                    'operator' => $operator,
+                    'value' => $value,
+                ]],
+            ],
+            'exceptions' => [
+                'group' => 'any',
+                'rules' => [],
+            ],
+        ];
     }
 
     private function createNation(float $score): Nation
@@ -327,10 +508,18 @@ class AuditServiceTest extends TestCase
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->text('remediation_guidance')->nullable();
+            $table->text('admin_notes')->nullable();
             $table->string('target_type');
             $table->string('priority');
-            $table->text('expression');
+            $table->json('definition')->nullable();
+            $table->unsignedInteger('revision')->default(1);
             $table->boolean('enabled')->default(true);
+            $table->string('last_evaluation_status', 32)->default('never_run');
+            $table->timestamp('last_evaluated_at')->nullable();
+            $table->unsignedInteger('last_match_count')->nullable();
+            $table->text('last_evaluation_error')->nullable();
+            $table->unsignedInteger('last_evaluation_duration_ms')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -339,6 +528,7 @@ class AuditServiceTest extends TestCase
         Schema::create('audit_results', function ($table): void {
             $table->id();
             $table->foreignId('audit_rule_id')->constrained('audit_rules')->cascadeOnDelete();
+            $table->unsignedInteger('rule_revision')->default(1);
             $table->string('target_type');
             $table->string('target_key')->nullable();
             $table->foreignId('nation_id')->nullable()->constrained('nations')->nullOnDelete();
@@ -346,8 +536,31 @@ class AuditServiceTest extends TestCase
             $table->json('details')->nullable();
             $table->timestamp('first_detected_at');
             $table->timestamp('last_evaluated_at');
+            $table->timestamp('acknowledged_at')->nullable();
+            $table->unsignedBigInteger('acknowledged_by_user_id')->nullable();
+            $table->timestamp('snoozed_until')->nullable();
+            $table->unsignedBigInteger('snoozed_by_user_id')->nullable();
+            $table->timestamp('waived_until')->nullable();
+            $table->unsignedBigInteger('waived_by_user_id')->nullable();
+            $table->timestamp('due_at')->nullable();
+            $table->string('remediation_note', 500)->nullable();
             $table->timestamps();
             $table->unique(['audit_rule_id', 'target_type', 'target_key']);
+        });
+
+        Schema::create('audit_result_events', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('audit_result_id')->nullable();
+            $table->unsignedBigInteger('audit_rule_id')->nullable();
+            $table->string('target_type', 32);
+            $table->string('target_key', 191);
+            $table->unsignedBigInteger('nation_id')->nullable();
+            $table->unsignedBigInteger('city_id')->nullable();
+            $table->unsignedBigInteger('actor_user_id')->nullable();
+            $table->string('event_type', 32);
+            $table->json('metadata')->nullable();
+            $table->timestamp('occurred_at');
+            $table->timestamps();
         });
 
         Schema::create('offshores', function ($table): void {

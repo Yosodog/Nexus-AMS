@@ -75,7 +75,7 @@ class AuditController extends Controller
                 ? $this->recommendationService->buildDisplayGroups($recommendation->recommended_build_json ?? [])
                 : [],
             'remediationHistory' => AuditResultEvent::query()
-                ->with(['rule:id,name', 'city:id,name'])
+                ->with(['rule:id,name,priority', 'city:id,name'])
                 ->where('nation_id', $nation->id)
                 ->latest('occurred_at')
                 ->limit(25)

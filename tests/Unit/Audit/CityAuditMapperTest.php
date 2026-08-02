@@ -5,12 +5,13 @@ namespace Tests\Unit\Audit;
 use App\Models\City;
 use App\Models\Nation;
 use App\Services\Audit\CityAuditMapper;
+use App\Services\PWHelperService;
 use Carbon\Carbon;
 use Tests\TestCase;
 
 class CityAuditMapperTest extends TestCase
 {
-    public function test_builds_city_and_nation_variables(): void
+    public function test_builds_flat_city_context_with_capacity_alignment_and_projects(): void
     {
         $nation = new Nation([
             'id' => 1,
@@ -19,8 +20,9 @@ class CityAuditMapperTest extends TestCase
             'score' => 500,
             'num_cities' => 3,
             'color' => 'blue',
-            'project_bits' => '8192',
+            'project_bits' => (string) PWHelperService::PROJECTS['Urban Planning'],
         ]);
+        $nation->syncOriginal();
 
         $city = new City([
             'id' => 10,
@@ -58,17 +60,55 @@ class CityAuditMapperTest extends TestCase
             'hangar' => 0,
             'drydock' => 0,
         ]);
+        $city->syncOriginal();
 
         $city->setRelation('nation', $nation);
 
         $mapper = new CityAuditMapper;
-        $variables = $mapper->buildVariables($city);
+        $context = $mapper->buildContext($city);
 
-        $this->assertArrayHasKey('city', $variables);
-        $this->assertEquals(500, $variables['city']['infrastructure']);
-        $this->assertTrue($variables['city']['powered']);
-        $this->assertSame('Tester', $variables['nation']['leader_name']);
-        $this->assertSame(3, $variables['nation']['num_cities']);
-        $this->assertSame('8192', $variables['nation']['project_bits']);
+        $this->assertArrayNotHasKey('city', $context);
+        $this->assertSame(10, $context['city.id']);
+        $this->assertSame(500.0, $context['city.infrastructure']);
+        $this->assertSame(750.0, $context['city.land']);
+        $this->assertTrue($context['city.powered']);
+        $this->assertSame(14, $context['city.improvement_count']);
+        $this->assertSame(10, $context['city.improvement_capacity']);
+        $this->assertTrue($context['city.improvement_capacity_exceeded']);
+        $this->assertTrue($context['city.infrastructure_aligned']);
+        $this->assertTrue($context['city.land_aligned']);
+        $this->assertTrue($context['city.infrastructure_and_land_aligned']);
+        $this->assertTrue($context['city.land_at_least_infrastructure']);
+        $this->assertSame(3, $context['city.barracks']);
+        $this->assertSame('Tester', $context['nation.leader_name']);
+        $this->assertSame(3, $context['nation.num_cities']);
+        $this->assertContains('Urban Planning', $context['nation.projects']);
+    }
+
+    public function test_incomplete_improvement_data_stays_missing_and_alignment_is_typed(): void
+    {
+        $nation = new Nation(['id' => 1, 'project_bits' => null]);
+        $nation->syncOriginal();
+        $city = new City([
+            'id' => 11,
+            'nation_id' => 1,
+            'infrastructure' => 510,
+            'land' => 760,
+            'powered' => false,
+        ]);
+        $city->syncOriginal();
+        $city->setRelation('nation', $nation);
+
+        $context = (new CityAuditMapper)->buildContext($city);
+
+        $this->assertNull($context['city.improvement_count']);
+        $this->assertSame(10, $context['city.improvement_capacity']);
+        $this->assertNull($context['city.improvement_capacity_exceeded']);
+        $this->assertFalse($context['city.infrastructure_aligned']);
+        $this->assertFalse($context['city.land_aligned']);
+        $this->assertFalse($context['city.infrastructure_and_land_aligned']);
+        $this->assertTrue($context['city.land_at_least_infrastructure']);
+        $this->assertFalse($context['city.powered']);
+        $this->assertNull($context['nation.projects']);
     }
 }

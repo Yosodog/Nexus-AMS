@@ -3,32 +3,27 @@
 @section('title', 'Edit Audit Rule')
 
 @section('content')
-    <x-header title="Edit Audit Rule" separator use-h1>
-        <x-slot:subtitle>Update the expression or priority and keep violations in sync.</x-slot:subtitle>
+    <x-header :title="'Edit ' . $rule->name" separator use-h1>
+        <x-slot:subtitle>Update the rule in plain language. Logic changes create a fresh revision and replace current findings.</x-slot:subtitle>
         <x-slot:actions>
-            <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-primary btn-outline btn-sm">
-                <x-icon name="o-bolt" class="size-4" />
-                Violations
+            <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline">
+                <x-icon name="o-flag" class="size-5" aria-hidden="true" />
+                View findings
             </a>
         </x-slot:actions>
     </x-header>
 
-    <form method="POST" action="{{ route('admin.audits.rules.update', $rule) }}">
+    <form
+        method="POST"
+        action="{{ route('admin.audits.rules.update', $rule) }}"
+        data-audit-rule-builder
+        data-audit-preview-url="{{ route('admin.audits.rules.preview') }}"
+        data-existing-enabled="{{ $rule->enabled ? 'true' : 'false' }}"
+        data-existing-fingerprint="{{ $initialFingerprint }}"
+        data-rule-revision="{{ $rule->revision }}"
+    >
         @csrf
         @method('PUT')
-
-        <x-card title="Rule details" subtitle="Adjust the expression, target, and notification copy.">
-            @include('admin.audits.rules._form')
-
-            <x-slot:menu>
-                <div class="flex gap-2">
-                    <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-ghost btn-sm">Cancel</a>
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <x-icon name="o-check" class="size-4" />
-                        Update rule
-                    </button>
-                </div>
-            </x-slot:menu>
-        </x-card>
+        @include('admin.audits.rules._form')
     </form>
 @endsection

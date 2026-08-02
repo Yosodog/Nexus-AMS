@@ -38,21 +38,6 @@ class AdminPresentationAuthorizationTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_nel_reference_requires_diagnostic_permission(): void
-    {
-        $admin = $this->createAdmin();
-
-        $this->actingAs($admin)
-            ->get(route('admin.nel.docs'))
-            ->assertForbidden();
-
-        $diagnosticAdmin = $this->createAdmin(['view-diagnostic-info'], 930002);
-
-        $this->actingAs($diagnosticAdmin)
-            ->get(route('admin.nel.docs'))
-            ->assertOk();
-    }
-
     public function test_mmr_navigation_uses_the_mmr_permission(): void
     {
         $admin = $this->createAdmin(['view-mmr']);

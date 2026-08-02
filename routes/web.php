@@ -22,7 +22,6 @@ use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MemberTransferController as AdminMemberTransferController;
 use App\Http\Controllers\Admin\MMRController;
-use App\Http\Controllers\Admin\NelDocsController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\PayrollController;
 use App\Http\Controllers\Admin\RaidController;
@@ -298,6 +297,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::middleware('can:manage-audits')->group(function () {
             Route::get('/audits/rules/create', [AuditRuleController::class, 'create'])->name('admin.audits.rules.create');
             Route::post('/audits/rules', [AuditRuleController::class, 'store'])->name('admin.audits.rules.store');
+            Route::post('/audits/rules/preview', [AuditRuleController::class, 'preview'])->name('admin.audits.rules.preview');
             Route::get('/audits/rules/{auditRule}/edit', [AuditRuleController::class, 'edit'])->name('admin.audits.rules.edit');
             Route::put('/audits/rules/{auditRule}', [AuditRuleController::class, 'update'])->name('admin.audits.rules.update');
             Route::delete('/audits/rules/{auditRule}', [AuditRuleController::class, 'destroy'])->name('admin.audits.rules.destroy');
@@ -664,8 +664,6 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::post('/recruitment/test', [RecruitmentController::class, 'sendTest'])->name(
             'admin.recruitment.test'
         )->middleware(BlockWhenPWDown::class);
-
-        Route::get('/nel', NelDocsController::class)->name('admin.nel.docs');
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
         Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(

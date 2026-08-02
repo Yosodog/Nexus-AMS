@@ -83,7 +83,6 @@ class AppSidebar extends Component
                 ),
                 $this->item('Custom pages', 'o-paint-brush', route('admin.customization.index'), request()->routeIs('admin.customization.*'), null, $user->can('manage-custom-pages')),
                 $this->item('Audit logs', 'o-clipboard-document-list', route('admin.audit-logs.index'), request()->routeIs('admin.audit-logs.*'), null, $user->can('view-diagnostic-info')),
-                $this->item('NEL reference', 'o-code-bracket', route('admin.nel.docs'), request()->routeIs('admin.nel.docs'), null, $user->can('view-diagnostic-info')),
                 $this->item('Telescope', 'o-bug-ant', url('/telescope'), request()->is('telescope*'), null, $user->can('view-diagnostic-info')),
                 $this->item('Pulse', 'o-signal', url('/pulse'), request()->is('pulse*'), null, $user->can('view-diagnostic-info')),
                 $this->item('Log viewer', 'o-document-magnifying-glass', url('/log-viewer'), request()->is('log-viewer*'), null, $user->is_admin && $user->can('view-application-logs')),

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Nation;
+use App\Services\Rules\RuleTreeKernel;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -10,13 +11,15 @@ use InvalidArgumentException;
 
 class GrantRequirementService
 {
-    private const MAX_DEPTH = 5;
+    private const MAX_DEPTH = RuleTreeKernel::MAX_DEPTH;
 
-    private const MAX_NODES = 100;
+    private const MAX_NODES = RuleTreeKernel::MAX_NODES;
 
-    private const MAX_GROUP_CHILDREN = 25;
+    private const MAX_GROUP_CHILDREN = RuleTreeKernel::MAX_GROUP_CHILDREN;
 
-    private const MAX_MULTI_VALUES = 50;
+    private const MAX_MULTI_VALUES = RuleTreeKernel::MAX_MULTI_VALUES;
+
+    public function __construct(private readonly RuleTreeKernel $kernel) {}
 
     /**
      * @return array<string, mixed>
@@ -280,12 +283,19 @@ class GrantRequirementService
         }
 
         if ($node['group'] === 'any') {
+            $matches = [];
+
             foreach ($children as $child) {
                 $result = $this->evaluateNode($child, $context);
+                $matches[] = $result['passes'];
 
                 if ($result['passes']) {
                     return ['passes' => true, 'failures' => []];
                 }
+            }
+
+            if ($this->kernel->groupMatches('any', $matches)) {
+                return ['passes' => true, 'failures' => []];
             }
 
             return [
@@ -296,8 +306,11 @@ class GrantRequirementService
             ];
         }
 
+        $matches = [];
+
         foreach ($children as $child) {
             $result = $this->evaluateNode($child, $context);
+            $matches[] = $result['passes'];
 
             if ($result['passes']) {
                 return [
@@ -307,6 +320,15 @@ class GrantRequirementService
                     ],
                 ];
             }
+        }
+
+        if (! $this->kernel->groupMatches('not', $matches)) {
+            return [
+                'passes' => false,
+                'failures' => [
+                    'None of the following may be true: '.$this->describeChildList($children),
+                ],
+            ];
         }
 
         return ['passes' => true, 'failures' => []];

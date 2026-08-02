@@ -18,6 +18,7 @@ class AuditResult extends Model
         return [
             'target_type' => AuditTargetType::class,
             'details' => 'array',
+            'rule_revision' => 'integer',
             'first_detected_at' => 'datetime',
             'last_evaluated_at' => 'datetime',
             'acknowledged_at' => 'datetime',

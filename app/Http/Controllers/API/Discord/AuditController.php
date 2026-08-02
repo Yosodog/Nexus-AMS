@@ -8,6 +8,7 @@ use App\Models\AuditResult;
 use App\Models\User;
 use App\Services\AllianceMemberEligibilityService;
 use App\Services\Audit\AuditRemediationService;
+use App\Services\Audit\AuditRuleDefinitionService;
 use App\Services\Audit\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class AuditController extends Controller
         private readonly AllianceMemberEligibilityService $eligibilityService,
         private readonly AuditService $auditService,
         private readonly AuditRemediationService $remediationService,
+        private readonly AuditRuleDefinitionService $definitions,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -78,6 +80,8 @@ class AuditController extends Controller
     /** @return array<string, mixed> */
     private function present(AuditResult $result): array
     {
+        $safeDetails = $this->definitions->memberSafeDetails($result->details);
+
         return [
             'id' => $result->id,
             'name' => $result->rule?->name ?? 'Audit finding',
@@ -90,6 +94,11 @@ class AuditController extends Controller
             'snoozed_until' => $result->snoozed_until?->toIso8601String(),
             'waived_until' => $result->waived_until?->toIso8601String(),
             'due_at' => $result->due_at?->toIso8601String(),
+            'plain_language_summary' => $safeDetails['summary'] ?? null,
+            'remediation_guidance' => $result->rule?->remediation_guidance,
+            'rule_revision' => (int) $result->rule_revision,
+            'last_evaluated_at' => $result->last_evaluated_at?->toIso8601String(),
+            'evidence' => $safeDetails['evidence'] ?? [],
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AuditEvaluationStatus;
 use App\Enums\AuditPriority;
 use App\Enums\AuditTargetType;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,12 @@ class AuditRule extends Model
             'target_type' => AuditTargetType::class,
             'priority' => AuditPriority::class,
             'enabled' => 'boolean',
+            'definition' => 'array',
+            'revision' => 'integer',
+            'last_evaluation_status' => AuditEvaluationStatus::class,
+            'last_evaluated_at' => 'datetime',
+            'last_match_count' => 'integer',
+            'last_evaluation_duration_ms' => 'integer',
         ];
     }
 

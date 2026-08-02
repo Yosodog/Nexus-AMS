@@ -37,13 +37,17 @@ class DiscordBotGuideTest extends TestCase
             '/verify', '/ping', '/accounts', '/transactions', '/deposit', '/withdraw', '/requests',
             '/grant browse', '/grant apply', '/grant city', '/grant status',
             '/loan apply', '/loan status', '/loan pay', '/waraid apply', '/waraid status',
-            '/rebuild apply', '/rebuild status', '/raid', '/war active', '/war assignments',
+            '/rebuild apply', '/rebuild status', '/raid', '/war active',
             '/war counter', '/war simulate', '/spy assignments', '/apply', '/applications status',
             '/applications queue', '/applications review', '/applications approve', '/applications deny',
-            '/approve', '/deny', '/archivecounter', '/sweepbank',
+            '/approve', '/deny', '/sweepbank',
         ] as $command) {
             $response->assertSeeText($command);
         }
+
+        $response
+            ->assertDontSeeText('/war assignments')
+            ->assertDontSeeText('/archivecounter');
     }
 
     public function test_staff_account_menu_links_to_discord_bot_guide(): void
