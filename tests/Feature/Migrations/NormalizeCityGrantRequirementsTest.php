@@ -61,6 +61,23 @@ class NormalizeCityGrantRequirementsTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'id' => 904,
+                'description' => 'Legacy aliases',
+                'enabled' => true,
+                'grant_amount' => 100,
+                'city_number' => 9,
+                'requirements' => json_encode([
+                    'NRF' => true,
+                    'irondome' => false,
+                    'mmrScore' => 75,
+                    'infPerCity' => 2000,
+                    'govSupportAgency' => 1,
+                    'bureauDomesticAffairs' => 'true',
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         $this->migration()->up();
@@ -68,6 +85,7 @@ class NormalizeCityGrantRequirementsTest extends TestCase
         $legacy = json_decode((string) DB::table('city_grants')->where('id', 901)->value('requirements'), true);
         $empty = DB::table('city_grants')->where('id', 902)->value('requirements');
         $normalized = json_decode((string) DB::table('city_grants')->where('id', 903)->value('requirements'), true);
+        $aliased = json_decode((string) DB::table('city_grants')->where('id', 904)->value('requirements'), true);
 
         $this->assertSame('all', $legacy['group']);
         $this->assertEqualsCanonicalizing(
@@ -76,6 +94,16 @@ class NormalizeCityGrantRequirementsTest extends TestCase
         );
         $this->assertNull($empty);
         $this->assertSame($existingTree, $normalized);
+
+        $aliasedRules = collect($aliased['rules'])->keyBy('field');
+
+        $this->assertSame(75, $aliasedRules['mmr_score']['value']);
+        $this->assertSame(2000, $aliasedRules['avg_infrastructure_per_city']['value']);
+        $this->assertEqualsCanonicalizing([
+            'Nuclear Research Facility',
+            'Government Support Agency',
+            'Bureau of Domestic Affairs',
+        ], $aliasedRules['projects']['value']);
     }
 
     public function test_migration_aborts_for_unsupported_non_empty_legacy_requirements(): void
