@@ -18,7 +18,11 @@ class RefreshNationProfitabilitySnapshotJob implements ShouldBeUnique, ShouldQue
 
     public int $uniqueFor = 300;
 
-    public function __construct(private readonly int $nationId) {}
+    public function __construct(
+        public readonly int $nationId,
+        public readonly ?int $marketPriceSnapshotId = null,
+        public readonly ?int $radiationSnapshotId = null,
+    ) {}
 
     public function uniqueId(): string
     {
@@ -27,6 +31,10 @@ class RefreshNationProfitabilitySnapshotJob implements ShouldBeUnique, ShouldQue
 
     public function handle(NationProfitabilityService $profitabilityService): void
     {
-        $profitabilityService->refreshStoredSnapshotForNationId($this->nationId);
+        $profitabilityService->refreshStoredSnapshotForNationId(
+            $this->nationId,
+            $this->marketPriceSnapshotId,
+            $this->radiationSnapshotId
+        );
     }
 }

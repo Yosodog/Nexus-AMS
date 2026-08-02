@@ -4,6 +4,41 @@ namespace App\Services;
 
 class SelectionSetHelper
 {
+    public static function applyNationSelection(GraphQLQueryBuilder $builder): GraphQLQueryBuilder
+    {
+        return $builder
+            ->addFields(self::nationSet())
+            ->addNestedField('military_research', function (GraphQLQueryBuilder $researchBuilder): void {
+                $researchBuilder->addFields(self::militaryResearchSet());
+            })
+            ->addNestedField('treasures', function (GraphQLQueryBuilder $treasureBuilder): void {
+                $treasureBuilder->addFields(self::treasureSet());
+            });
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function militaryResearchSet(): array
+    {
+        return [
+            'ground_capacity',
+            'ground_cost',
+            'air_capacity',
+            'air_cost',
+            'naval_capacity',
+            'naval_cost',
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function treasureSet(): array
+    {
+        return ['name', 'bonus', 'nation_id'];
+    }
+
     /**
      * @return string[]
      */

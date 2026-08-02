@@ -2,72 +2,21 @@
 
 namespace App\Services;
 
-use App\Models\City;
+use App\DataTransferObjects\MarketPriceSet;
+use App\Exceptions\ProfitabilityContextUnavailable;
+use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Models\MMRTier;
 use App\Models\Nation;
 use App\Models\NationBuildRecommendation;
 use App\Models\RadiationSnapshot;
-use Carbon\Carbon;
+use App\Services\Economy\BuildOptimizer;
+use App\Services\Economy\EconomyRules;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class NationBuildRecommendationService
 {
-    private const POWER_FIELDS = [
-        'coal_power',
-        'oil_power',
-        'wind_power',
-        'nuclear_power',
-    ];
-
-    private const NON_POWER_FIELDS = [
-        'coal_mine',
-        'oil_well',
-        'uranium_mine',
-        'lead_mine',
-        'iron_mine',
-        'bauxite_mine',
-        'farm',
-        'oil_refinery',
-        'aluminum_refinery',
-        'munitions_factory',
-        'steel_mill',
-        'police_station',
-        'hospital',
-        'recycling_center',
-        'subway',
-        'supermarket',
-        'bank',
-        'shopping_mall',
-        'stadium',
-        'barracks',
-        'factory',
-        'hangar',
-        'drydock',
-    ];
-
-    private const CANDIDATE_FIELDS = [
-        'coal_mine',
-        'oil_well',
-        'uranium_mine',
-        'lead_mine',
-        'iron_mine',
-        'bauxite_mine',
-        'farm',
-        'oil_refinery',
-        'aluminum_refinery',
-        'munitions_factory',
-        'steel_mill',
-        'police_station',
-        'hospital',
-        'recycling_center',
-        'subway',
-        'supermarket',
-        'bank',
-        'shopping_mall',
-        'stadium',
-    ];
-
     private const CATEGORY_GROUPS = [
         'power' => ['coal_power', 'oil_power', 'wind_power', 'nuclear_power'],
         'raw_resource' => ['coal_mine', 'oil_well', 'uranium_mine', 'lead_mine', 'iron_mine', 'bauxite_mine', 'farm'],
@@ -109,24 +58,44 @@ class NationBuildRecommendationService
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly MMRService $mmrService,
-        private readonly NationProfitabilityService $profitabilityService
+        private readonly NationProfitabilityService $profitabilityService,
+        private readonly BuildOptimizer $optimizer,
     ) {}
 
-    public function refreshAllianceRecommendations(): int
-    {
-        $radiationSnapshot = $this->profitabilityService->getCurrentRadiationSnapshot();
-        $resourcePrices = $this->profitabilityService->getResourcePrices();
+    public function refreshAllianceRecommendations(
+        ?int $marketPriceSnapshotId = null,
+        ?int $radiationSnapshotId = null
+    ): int {
+        $prices = $this->profitabilityService->getMarketPriceSet($marketPriceSnapshotId);
+        $radiationSnapshot = $radiationSnapshotId !== null
+            ? RadiationSnapshot::query()->find($radiationSnapshotId)
+            : $this->profitabilityService->getCurrentRadiationSnapshot();
+
+        if ($radiationSnapshotId !== null && $radiationSnapshot === null) {
+            throw new ProfitabilityContextUnavailable("World snapshot {$radiationSnapshotId} is unavailable.");
+        }
         $eligibleNations = $this->eligibleNationQuery()->get();
 
+        if ($eligibleNations->isEmpty()) {
+            throw new RuntimeException('No eligible nations were returned for the recommendation refresh.');
+        }
+
+        $eligibleNations->each(
+            fn (Nation $nation) => $this->profitabilityService->assertCalculationContextAvailable(
+                $nation,
+                $radiationSnapshot
+            )
+        );
+
         foreach ($eligibleNations as $nation) {
-            $this->storeRecommendationForNation($nation, $radiationSnapshot, $resourcePrices);
+            $this->storeRecommendationForNation($nation, $radiationSnapshot, $prices);
         }
 
         $eligibleIds = $eligibleNations->pluck('id')->all();
-
         NationBuildRecommendation::query()
+            ->where('model_version', EconomyRules::MODEL_VERSION)
             ->when(
-                empty($eligibleIds),
+                $eligibleIds === [],
                 fn ($query) => $query,
                 fn ($query) => $query->whereNotIn('nation_id', $eligibleIds)
             )
@@ -135,28 +104,112 @@ class NationBuildRecommendationService
         return count($eligibleIds);
     }
 
-    public function refreshStoredRecommendationForNationId(int $nationId): ?NationBuildRecommendation
+    /**
+     * @return list<int>
+     */
+    public function eligibleNationIds(): array
     {
+        $nationIds = $this->eligibleNationQuery()->pluck('id')->map(fn (mixed $id): int => (int) $id)->all();
+
+        if ($nationIds === []) {
+            throw new RuntimeException('No eligible nations were returned for the recommendation refresh.');
+        }
+
+        return $nationIds;
+    }
+
+    /**
+     * @param  list<int>  $eligibleNationIds
+     */
+    public function pruneIneligibleRecommendations(array $eligibleNationIds): void
+    {
+        if ($eligibleNationIds === []) {
+            throw new RuntimeException('Refusing to prune recommendations without a validated eligibility set.');
+        }
+
+        NationBuildRecommendation::query()
+            ->where('model_version', EconomyRules::MODEL_VERSION)
+            ->whereNotIn('nation_id', $eligibleNationIds)
+            ->delete();
+    }
+
+    public function getPriceSetForBatch(): MarketPriceSet
+    {
+        return $this->profitabilityService->getMarketPriceSet();
+    }
+
+    public function getRadiationSnapshotForBatch(): RadiationSnapshot
+    {
+        return $this->profitabilityService->getCurrentRadiationSnapshot();
+    }
+
+    public function assertCalculationContextAvailable(
+        Nation $nation,
+        RadiationSnapshot $radiationSnapshot
+    ): void {
+        $this->profitabilityService->assertCalculationContextAvailable($nation, $radiationSnapshot);
+    }
+
+    /**
+     * @param  list<int>  $nationIds
+     */
+    public function assertBatchCalculationContextAvailable(
+        array $nationIds,
+        RadiationSnapshot $radiationSnapshot
+    ): void {
+        if ($nationIds === []) {
+            throw new RuntimeException('No eligible nations were available for context validation.');
+        }
+
+        $nations = Nation::query()
+            ->select([
+                'id',
+                'treasure_income_modifier',
+                'color_turn_bonus',
+                'economy_context_synced_at',
+            ])
+            ->whereIn('id', $nationIds)
+            ->get();
+
+        if ($nations->count() !== count($nationIds)) {
+            throw new ProfitabilityContextUnavailable(
+                'One or more eligible nations are missing economy context.'
+            );
+        }
+
+        $nations->each(
+            fn (Nation $nation) => $this->assertCalculationContextAvailable($nation, $radiationSnapshot)
+        );
+    }
+
+    public function refreshStoredRecommendationForNationId(
+        int $nationId,
+        ?int $marketPriceSnapshotId = null,
+        ?int $radiationSnapshotId = null
+    ): ?NationBuildRecommendation {
         $nation = $this->eligibleNationQuery()->find($nationId);
 
-        if (! $nation || ! $this->isEligibleNation($nation)) {
+        if ($nation === null || ! $this->isEligibleNation($nation)) {
             $this->deleteStoredRecommendationForNationId($nationId);
 
             return null;
         }
 
-        return $this->storeRecommendationForNation(
-            $nation,
-            $this->profitabilityService->getCurrentRadiationSnapshot(),
-            $this->profitabilityService->getResourcePrices()
-        );
+        $prices = $this->profitabilityService->getMarketPriceSet($marketPriceSnapshotId);
+        $radiationSnapshot = $radiationSnapshotId !== null
+            ? RadiationSnapshot::query()->find($radiationSnapshotId)
+            : $this->profitabilityService->getCurrentRadiationSnapshot();
+
+        if ($radiationSnapshotId !== null && $radiationSnapshot === null) {
+            throw new ProfitabilityContextUnavailable("World snapshot {$radiationSnapshotId} is unavailable.");
+        }
+
+        return $this->storeRecommendationForNation($nation, $radiationSnapshot, $prices);
     }
 
     public function deleteStoredRecommendationForNationId(int $nationId): void
     {
-        NationBuildRecommendation::query()
-            ->where('nation_id', $nationId)
-            ->delete();
+        NationBuildRecommendation::query()->where('nation_id', $nationId)->delete();
     }
 
     /**
@@ -190,15 +243,25 @@ class NationBuildRecommendationService
         return $groups;
     }
 
-    /**
-     * @param  array<string, float>  $resourcePrices
-     */
     private function storeRecommendationForNation(
         Nation $nation,
         ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
+        MarketPriceSet $prices
     ): ?NationBuildRecommendation {
-        $result = $this->calculateRecommendationForNation($nation, $radiationSnapshot, $resourcePrices);
+        if ($prices->snapshotId === null) {
+            throw new ProfitabilityPricingUnavailable('A market price snapshot is required to store a recommendation.');
+        }
+
+        $this->profitabilityService->assertCalculationContextAvailable($nation, $radiationSnapshot);
+
+        $tier = $this->mmrService->getTierForNation($nation);
+        $result = $this->optimizer->optimize(
+            $nation,
+            $nation->cities,
+            $this->minimumBuild($tier, $nation),
+            $radiationSnapshot,
+            $prices
+        );
 
         if ($result === null) {
             $this->deleteStoredRecommendationForNationId((int) $nation->id);
@@ -206,449 +269,110 @@ class NationBuildRecommendationService
             return null;
         }
 
-        return NationBuildRecommendation::query()->updateOrCreate(
-            ['nation_id' => $nation->id],
-            [
-                'alliance_id' => $nation->alliance_id,
-                'radiation_snapshot_id' => $radiationSnapshot?->id,
-                'recommended_build_json' => $result['recommended_build_json'],
-                'infra_needed' => $result['infra_needed'],
-                'land_used' => $result['land_used'],
-                'imp_total' => $result['imp_total'],
-                'converted_profit_per_day' => $result['converted_profit_per_day'],
-                'money_profit_per_day' => $result['money_profit_per_day'],
-                'resource_profit_per_day' => $result['resource_profit_per_day'],
-                'disease' => $result['disease'],
-                'pollution' => $result['pollution'],
-                'crime' => $result['crime'],
-                'commerce' => $result['commerce'],
-                'population' => $result['population'],
-                'price_basis' => '24h average trade prices',
-                'calculated_at' => now(),
-            ]
-        );
-    }
-
-    /**
-     * @param  array<string, float>  $resourcePrices
-     * @return array<string, mixed>|null
-     */
-    private function calculateRecommendationForNation(
-        Nation $nation,
-        ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
-    ): ?array {
-        if ($nation->cities->isEmpty()) {
-            return null;
-        }
-
-        $tier = $this->mmrService->getTierForNation($nation);
-        $profile = $this->buildRepresentativeProfile($nation->cities);
-        $seedBuild = $this->seedBuildFromTier($tier, $nation);
-        $maxSlots = $this->resolveSlotBudget($seedBuild, $nation, $profile, $radiationSnapshot, $resourcePrices);
-
-        if ($maxSlots === null) {
-            return null;
-        }
-
-        $best = $this->evaluateBuild($seedBuild, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices);
-
-        if ($best === null) {
-            return null;
-        }
-
-        while ($best['imp_total'] < $maxSlots) {
-            $candidate = $this->findBestAddition($best['base_build'], $best, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices);
-
-            if ($candidate === null) {
-                break;
-            }
-
-            $best = $candidate;
-        }
-
-        while (true) {
-            $candidate = $this->findBestSwap($best['base_build'], $best, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices);
-
-            if ($candidate === null) {
-                break;
-            }
-
-            $best = $candidate;
-        }
-
-        if ($best['imp_total'] !== $maxSlots) {
-            return null;
-        }
-
-        $normalizedBuild = $this->normalizeBuildJson($best['full_build'], $profile['target_infra']);
-
-        return [
+        $metrics = $result['metrics'];
+        $normalizedBuild = $this->normalizeBuildJson($result['build'], $result['target_infrastructure']);
+        $context = [
+            'model_version' => EconomyRules::MODEL_VERSION,
+            'target_strategy' => 'highest_recovered_city',
+            'city_count' => $nation->cities->count(),
+            'target_infrastructure' => $result['target_infrastructure'],
+            'available_slots' => $result['available_slots'],
+            'used_slots' => $result['used_slots'],
+            'cities_below_target' => $result['cities_below_target'],
+            'infrastructure_shortfall' => $result['infrastructure_shortfall'],
+            'market' => [
+                'snapshot_id' => $prices->snapshotId,
+                'calculated_at' => $prices->calculatedAt?->toIso8601String(),
+                'stale' => $prices->stale,
+                'fallback_resources' => $prices->fallbackResources,
+            ],
+            'radiation' => [
+                'snapshot_id' => $radiationSnapshot?->id,
+                'snapshot_at' => $radiationSnapshot?->snapshot_at?->toIso8601String(),
+                'game_date' => $radiationSnapshot?->game_date?->toDateString(),
+            ],
+            'world_snapshot_id' => $radiationSnapshot?->id,
+            'game_date' => $radiationSnapshot?->game_date?->toDateString(),
+            'season_month' => $radiationSnapshot?->game_date?->month,
+            'economy_context_synced_at' => $nation->economy_context_synced_at?->toIso8601String(),
+            'economy_context_stale' => false,
+        ];
+        $attributes = [
+            'alliance_id' => $nation->alliance_id,
+            'radiation_snapshot_id' => $radiationSnapshot?->id,
+            'market_price_snapshot_id' => $prices->snapshotId,
+            'model_version' => EconomyRules::MODEL_VERSION,
             'recommended_build_json' => $normalizedBuild,
-            'infra_needed' => $profile['target_infra'],
-            'land_used' => round($profile['land_used'], 2),
-            'imp_total' => $best['imp_total'],
-            'converted_profit_per_day' => $best['metrics']['converted_profit_per_day'],
-            'money_profit_per_day' => $best['metrics']['money_profit_per_day'],
-            'resource_profit_per_day' => $best['metrics']['resource_profit_per_day'],
-            'disease' => $best['metrics']['disease'],
-            'pollution' => $best['metrics']['pollution'],
-            'crime' => $best['metrics']['crime'],
-            'commerce' => $best['metrics']['commerce'],
-            'population' => $best['metrics']['population'],
+            'infra_needed' => $result['target_infrastructure'],
+            'land_used' => $result['land_used'],
+            'imp_total' => $result['used_slots'],
+            'available_slots' => $result['available_slots'],
+            'cities_below_target' => $result['cities_below_target'],
+            'infrastructure_shortfall' => $result['infrastructure_shortfall'],
+            'converted_profit_per_day' => $metrics['converted_profit_per_day'],
+            'money_profit_per_day' => $metrics['money_profit_per_day'],
+            'resource_profit_per_day' => $metrics['resource_profit_per_day'],
+            'disease' => $metrics['disease'],
+            'pollution' => $metrics['pollution'],
+            'crime' => $metrics['crime'],
+            'commerce' => $metrics['commerce'],
+            'population' => $metrics['population'],
+            'price_basis' => $prices->basis,
+            'calculation_context' => $context,
+            'calculated_at' => now(),
         ];
+
+        return DB::transaction(function () use ($nation, $prices, $radiationSnapshot, $attributes): NationBuildRecommendation {
+            $this->profitabilityService->assertPersistedCalculationContextIsCurrent($nation);
+            $existing = NationBuildRecommendation::query()
+                ->where('nation_id', $nation->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($this->hasNewerInputs($existing, $prices->snapshotId, $radiationSnapshot?->id)) {
+                return $existing;
+            }
+
+            return NationBuildRecommendation::query()->updateOrCreate(
+                ['nation_id' => $nation->id],
+                $attributes
+            );
+        }, 3);
     }
 
-    /**
-     * @param  array<string, int>  $seedBuild
-     * @param  array<string, mixed>  $profile
-     * @param  array<string, float>  $resourcePrices
-     */
-    private function resolveSlotBudget(
-        array $seedBuild,
-        Nation $nation,
-        array $profile,
-        ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
-    ): ?int {
-        $maxSlots = $profile['slots_budget'];
-
-        return $this->evaluateBuild($seedBuild, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices) !== null
-            ? $maxSlots
-            : null;
-    }
-
-    /**
-     * @param  array<string, int>  $baseBuild
-     * @param  array<string, mixed>  $current
-     * @param  array<string, mixed>  $profile
-     * @param  array<string, float>  $resourcePrices
-     * @return array<string, mixed>|null
-     */
-    private function findBestAddition(
-        array $baseBuild,
-        array $current,
-        Nation $nation,
-        array $profile,
-        int $maxSlots,
-        ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
-    ): ?array {
-        $best = null;
-        $currentProfit = (float) $current['metrics']['converted_profit_per_day'];
-        $mustFillSlots = (int) $current['imp_total'] < $maxSlots;
-
-        foreach (self::CANDIDATE_FIELDS as $field) {
-            if (($baseBuild[$field] ?? 0) >= $this->capFor($field, $nation)) {
-                continue;
-            }
-
-            if (! $this->isFieldAllowed($field, $nation)) {
-                continue;
-            }
-
-            $candidateBuild = $baseBuild;
-            $candidateBuild[$field]++;
-
-            $candidate = $this->evaluateBuild($candidateBuild, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices);
-
-            if ($candidate === null) {
-                continue;
-            }
-
-            $delta = (float) $candidate['metrics']['converted_profit_per_day'] - $currentProfit;
-
-            if (! $mustFillSlots && $delta <= 0.01) {
-                continue;
-            }
-
-            if (
-                $best === null
-                || ($mustFillSlots && (
-                    (float) $candidate['metrics']['converted_profit_per_day'] > (float) $best['metrics']['converted_profit_per_day']
-                    || (
-                        (float) $candidate['metrics']['converted_profit_per_day'] === (float) $best['metrics']['converted_profit_per_day']
-                        && (float) $candidate['metrics']['money_profit_per_day'] > (float) $best['metrics']['money_profit_per_day']
-                    )
-                ))
-                || (! $mustFillSlots && $delta > $best['delta'])
-            ) {
-                $best = $candidate + ['delta' => $delta];
-            }
+    private function hasNewerInputs(
+        ?NationBuildRecommendation $existing,
+        ?int $marketPriceSnapshotId,
+        ?int $radiationSnapshotId
+    ): bool {
+        if ($existing === null || $existing->model_version !== EconomyRules::MODEL_VERSION) {
+            return false;
         }
 
-        return $best;
+        return ((int) $existing->market_price_snapshot_id > 0
+                && ($marketPriceSnapshotId === null || $marketPriceSnapshotId < (int) $existing->market_price_snapshot_id))
+            || ((int) $existing->radiation_snapshot_id > 0
+                && ($radiationSnapshotId === null || $radiationSnapshotId < (int) $existing->radiation_snapshot_id));
     }
 
     /**
-     * @param  array<string, int>  $baseBuild
-     * @param  array<string, mixed>  $current
-     * @param  array<string, mixed>  $profile
-     * @param  array<string, float>  $resourcePrices
-     * @return array<string, mixed>|null
-     */
-    private function findBestSwap(
-        array $baseBuild,
-        array $current,
-        Nation $nation,
-        array $profile,
-        int $maxSlots,
-        ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
-    ): ?array {
-        $best = null;
-        $currentProfit = (float) $current['metrics']['converted_profit_per_day'];
-
-        foreach (self::CANDIDATE_FIELDS as $removeField) {
-            if (($baseBuild[$removeField] ?? 0) <= 0) {
-                continue;
-            }
-
-            foreach (self::CANDIDATE_FIELDS as $addField) {
-                if ($addField === $removeField) {
-                    continue;
-                }
-
-                if (! $this->isFieldAllowed($addField, $nation)) {
-                    continue;
-                }
-
-                if (($baseBuild[$addField] ?? 0) >= $this->capFor($addField, $nation)) {
-                    continue;
-                }
-
-                $candidateBuild = $baseBuild;
-                $candidateBuild[$removeField]--;
-                $candidateBuild[$addField]++;
-
-                $candidate = $this->evaluateBuild($candidateBuild, $nation, $profile, $maxSlots, $radiationSnapshot, $resourcePrices);
-
-                if ($candidate === null) {
-                    continue;
-                }
-
-                $delta = (float) $candidate['metrics']['converted_profit_per_day'] - $currentProfit;
-
-                if ($delta <= 0.01) {
-                    continue;
-                }
-
-                if ($best === null || $delta > $best['delta']) {
-                    $best = $candidate + ['delta' => $delta];
-                }
-            }
-        }
-
-        return $best;
-    }
-
-    /**
-     * @param  array<string, int>  $baseBuild
-     * @param  array<string, mixed>  $profile
-     * @param  array<string, float>  $resourcePrices
-     * @return array<string, mixed>|null
-     */
-    private function evaluateBuild(
-        array $baseBuild,
-        Nation $nation,
-        array $profile,
-        int $maxSlots,
-        ?RadiationSnapshot $radiationSnapshot,
-        array $resourcePrices
-    ): ?array {
-        $fullBuild = array_merge($baseBuild, $this->optimalPowerBuild($profile['target_infra'], $nation));
-        $impTotal = $this->buildingCount($fullBuild, array_merge(self::NON_POWER_FIELDS, self::POWER_FIELDS));
-
-        if ($impTotal > $maxSlots) {
-            return null;
-        }
-
-        $city = $this->makeCityFromBuild($fullBuild, $profile, $profile['target_infra']);
-        $metrics = $this->profitabilityService->calculateCityRecommendationMetrics(
-            $nation,
-            $city,
-            $radiationSnapshot,
-            $resourcePrices
-        );
-
-        return [
-            'base_build' => $baseBuild,
-            'full_build' => $fullBuild,
-            'imp_total' => $impTotal,
-            'metrics' => $metrics,
-        ];
-    }
-
-    /**
-     * @param  EloquentCollection<int, City>  $cities
-     * @return array<string, mixed>
-     */
-    private function buildRepresentativeProfile(EloquentCollection $cities): array
-    {
-        $medianLand = (float) $this->medianValue($cities->pluck('land')->map(fn ($value) => (float) $value)->all());
-        $medianInfra = (float) $this->medianValue($cities->pluck('infrastructure')->map(fn ($value) => (float) $value)->all());
-        $sortedDates = $cities->pluck('date')
-            ->map(fn ($value) => Carbon::parse($value))
-            ->sort()
-            ->values();
-        $medianDate = $sortedDates->get((int) floor(($sortedDates->count() - 1) / 2)) ?? now();
-
-        return [
-            'land_used' => max(0.0, $medianLand),
-            'target_infra' => max(50, (int) floor($medianInfra / 50) * 50),
-            'slots_budget' => max(1, (int) floor($medianInfra / 50)),
-            'city_date' => $medianDate,
-        ];
-    }
-
-    /**
-     * @param  array<int, float>  $values
-     */
-    private function medianValue(array $values): float
-    {
-        sort($values, SORT_NUMERIC);
-        $count = count($values);
-
-        if ($count === 0) {
-            return 0.0;
-        }
-
-        $middle = (int) floor(($count - 1) / 2);
-
-        if ($count % 2 === 1) {
-            return (float) $values[$middle];
-        }
-
-        return ((float) $values[$middle] + (float) $values[$middle + 1]) / 2;
-    }
-
-    /**
-     * @param  array<string, int>  $build
-     */
-    private function makeCityFromBuild(array $build, array $profile, int $infraNeeded): City
-    {
-        return new City([
-            'name' => 'Recommended Build',
-            'date' => $profile['city_date'],
-            'nuke_date' => null,
-            'infrastructure' => $infraNeeded,
-            'land' => $profile['land_used'],
-            'powered' => true,
-            'oil_power' => $build['oil_power'],
-            'wind_power' => $build['wind_power'],
-            'coal_power' => $build['coal_power'],
-            'nuclear_power' => $build['nuclear_power'],
-            'coal_mine' => $build['coal_mine'],
-            'oil_well' => $build['oil_well'],
-            'uranium_mine' => $build['uranium_mine'],
-            'barracks' => $build['barracks'],
-            'farm' => $build['farm'],
-            'police_station' => $build['police_station'],
-            'hospital' => $build['hospital'],
-            'recycling_center' => $build['recycling_center'],
-            'subway' => $build['subway'],
-            'supermarket' => $build['supermarket'],
-            'bank' => $build['bank'],
-            'shopping_mall' => $build['shopping_mall'],
-            'stadium' => $build['stadium'],
-            'lead_mine' => $build['lead_mine'],
-            'iron_mine' => $build['iron_mine'],
-            'bauxite_mine' => $build['bauxite_mine'],
-            'oil_refinery' => $build['oil_refinery'],
-            'aluminum_refinery' => $build['aluminum_refinery'],
-            'steel_mill' => $build['steel_mill'],
-            'munitions_factory' => $build['munitions_factory'],
-            'factory' => $build['factory'],
-            'hangar' => $build['hangar'],
-            'drydock' => $build['drydock'],
-        ]);
-    }
-
-    /**
-     * Mirrors Locutus' `setOptimalPower` baseline.
-     *
      * @return array<string, int>
      */
-    private function optimalPowerBuild(int $targetInfra, Nation $nation): array
+    private function minimumBuild(?MMRTier $tier, Nation $nation): array
     {
-        $nuclear = 0;
-        $coal = 0;
-        $oil = 0;
-        $wind = 0;
-        $remainingInfra = $targetInfra;
+        $build = array_fill_keys(EconomyRules::BUILD_FIELDS, 0);
 
-        while ($remainingInfra > 500 || ($targetInfra > 2000 && $remainingInfra > 250)) {
-            $nuclear++;
-            $remainingInfra -= 2000;
+        if ($tier === null) {
+            return $build;
         }
 
-        while ($remainingInfra > 250) {
-            if ($this->canBuildCoalPower($nation)) {
-                $coal++;
-                $remainingInfra -= 500;
-            } elseif ($this->canBuildOilPower($nation)) {
-                $oil++;
-                $remainingInfra -= 500;
-            } else {
-                break;
-            }
-        }
+        $hasProject = fn (string $project): bool => (bool) data_get($nation->projects, $project, false);
+        $build['barracks'] = min((int) $tier->barracks, EconomyRules::improvementCap('barracks', $hasProject));
+        $build['factory'] = min((int) $tier->factories, EconomyRules::improvementCap('factory', $hasProject));
+        $build['hangar'] = min((int) $tier->hangars, EconomyRules::improvementCap('hangar', $hasProject));
+        $build['drydock'] = min((int) $tier->drydocks, EconomyRules::improvementCap('drydock', $hasProject));
 
-        while ($remainingInfra > 0) {
-            $wind++;
-            $remainingInfra -= 250;
-        }
-
-        return [
-            'coal_power' => $coal,
-            'oil_power' => $oil,
-            'wind_power' => $wind,
-            'nuclear_power' => $nuclear,
-        ];
-    }
-
-    /**
-     * @return Builder<Nation>
-     */
-    private function eligibleNationQuery()
-    {
-        $allianceIds = $this->membershipService->getAllianceIds()->values()->all();
-
-        return Nation::query()
-            ->select([
-                'id',
-                'alliance_id',
-                'alliance_position',
-                'vacation_mode_turns',
-                'leader_name',
-                'nation_name',
-                'continent',
-                'domestic_policy',
-                'num_cities',
-                'project_bits',
-            ])
-            ->with([
-                'cities:id,nation_id,date,infrastructure,land',
-            ])
-            ->whereIn('alliance_id', $allianceIds)
-            ->where('alliance_position', '!=', 'APPLICANT')
-            ->where('vacation_mode_turns', '=', 0);
-    }
-
-    private function isEligibleNation(Nation $nation): bool
-    {
-        return $this->membershipService->contains($nation->alliance_id)
-            && $nation->alliance_position !== 'APPLICANT'
-            && (int) ($nation->vacation_mode_turns ?? 0) === 0;
-    }
-
-    /**
-     * @param  array<string, int>  $build
-     * @param  array<int, string>  $fields
-     */
-    private function buildingCount(array $build, array $fields): int
-    {
-        return collect($fields)->sum(fn (string $field): int => (int) ($build[$field] ?? 0));
+        return $build;
     }
 
     /**
@@ -659,7 +383,9 @@ class NationBuildRecommendationService
     {
         return [
             'infra_needed' => $infraNeeded,
-            'imp_total' => $this->buildingCount($build, array_merge(self::NON_POWER_FIELDS, self::POWER_FIELDS)),
+            'imp_total' => collect(EconomyRules::BUILD_FIELDS)->sum(
+                fn (string $field): int => (int) ($build[$field] ?? 0)
+            ),
             'imp_coalpower' => (int) ($build['coal_power'] ?? 0),
             'imp_oilpower' => (int) ($build['oil_power'] ?? 0),
             'imp_windpower' => (int) ($build['wind_power'] ?? 0),
@@ -691,70 +417,40 @@ class NationBuildRecommendationService
     }
 
     /**
-     * @return array<string, int>
+     * @return Builder<Nation>
      */
-    private function seedBuildFromTier(?MMRTier $tier, Nation $nation): array
+    private function eligibleNationQuery(): Builder
     {
-        $build = array_fill_keys(array_merge(self::NON_POWER_FIELDS, self::POWER_FIELDS), 0);
+        $allianceIds = $this->membershipService->getAllianceIds()->values()->all();
 
-        if ($tier === null) {
-            return $build;
-        }
-
-        $build['barracks'] = min((int) $tier->barracks, $this->capFor('barracks', $nation));
-        $build['factory'] = min((int) $tier->factories, $this->capFor('factory', $nation));
-        $build['hangar'] = min((int) $tier->hangars, $this->capFor('hangar', $nation));
-        $build['drydock'] = min((int) $tier->drydocks, $this->capFor('drydock', $nation));
-
-        return $build;
+        return Nation::query()
+            ->select([
+                'id',
+                'alliance_id',
+                'alliance_position',
+                'vacation_mode_turns',
+                'leader_name',
+                'nation_name',
+                'continent',
+                'color',
+                'domestic_policy',
+                'num_cities',
+                'project_bits',
+                'treasure_income_modifier',
+                'color_turn_bonus',
+                'economy_context_synced_at',
+            ])
+            ->with(['cities'])
+            ->whereIn('alliance_id', $allianceIds)
+            ->where('alliance_position', '!=', 'APPLICANT')
+            ->where('vacation_mode_turns', 0);
     }
 
-    private function capFor(string $field, Nation $nation): int
+    private function isEligibleNation(Nation $nation): bool
     {
-        $hasProject = fn (string $project): bool => (bool) data_get($nation->projects, $project, false);
-
-        return match ($field) {
-            'coal_mine', 'oil_well', 'lead_mine', 'iron_mine', 'bauxite_mine' => 10,
-            'uranium_mine' => 5,
-            'farm' => 20,
-            'oil_refinery', 'aluminum_refinery', 'munitions_factory', 'steel_mill' => 5,
-            'subway' => 1,
-            'supermarket' => 4,
-            'bank' => $hasProject('international_trade_center') ? 6 : 5,
-            'shopping_mall' => $hasProject('telecommunications_satellite') ? 5 : 4,
-            'stadium' => 3,
-            'police_station' => 5,
-            'hospital' => $hasProject('clinical_research_center') ? 6 : 5,
-            'recycling_center' => $hasProject('recycling_initiative') ? 4 : 3,
-            'barracks', 'factory', 'hangar' => 5,
-            'drydock' => 3,
-            default => 0,
-        };
-    }
-
-    private function isFieldAllowed(string $field, Nation $nation): bool
-    {
-        $continent = strtoupper((string) $nation->continent);
-
-        return match ($field) {
-            'coal_mine' => in_array($continent, ['NA', 'EU', 'AU', 'AN'], true),
-            'oil_well' => in_array($continent, ['SA', 'AF', 'AS', 'AN'], true),
-            'uranium_mine' => in_array($continent, ['NA', 'AF', 'AS', 'AN'], true),
-            'lead_mine' => in_array($continent, ['SA', 'EU', 'AU'], true),
-            'iron_mine' => in_array($continent, ['NA', 'EU', 'AS'], true),
-            'bauxite_mine' => in_array($continent, ['SA', 'AF', 'AU'], true),
-            default => true,
-        };
-    }
-
-    private function canBuildCoalPower(Nation $nation): bool
-    {
-        return true;
-    }
-
-    private function canBuildOilPower(Nation $nation): bool
-    {
-        return true;
+        return $this->membershipService->contains($nation->alliance_id)
+            && $nation->alliance_position !== 'APPLICANT'
+            && (int) ($nation->vacation_mode_turns ?? 0) === 0;
     }
 
     private function jsonKeyForField(string $field): string

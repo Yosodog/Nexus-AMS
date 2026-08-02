@@ -13,6 +13,8 @@ class NationProfitabilitySnapshot extends Model
     {
         return [
             'resource_profit_per_day' => 'array',
+            'calculation_context' => 'array',
+            'model_version' => 'integer',
             'converted_profit_per_day' => 'float',
             'money_profit_per_day' => 'float',
             'city_income_per_day' => 'float',
@@ -31,5 +33,10 @@ class NationProfitabilitySnapshot extends Model
     public function radiationSnapshot(): BelongsTo
     {
         return $this->belongsTo(RadiationSnapshot::class, 'radiation_snapshot_id');
+    }
+
+    public function marketPriceSnapshot(): BelongsTo
+    {
+        return $this->belongsTo(MarketPriceSnapshot::class, 'market_price_snapshot_id');
     }
 }

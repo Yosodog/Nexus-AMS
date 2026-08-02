@@ -14,6 +14,11 @@ class NationBuildRecommendation extends Model
         return [
             'recommended_build_json' => 'array',
             'resource_profit_per_day' => 'array',
+            'calculation_context' => 'array',
+            'model_version' => 'integer',
+            'available_slots' => 'integer',
+            'cities_below_target' => 'integer',
+            'infrastructure_shortfall' => 'float',
             'land_used' => 'float',
             'converted_profit_per_day' => 'float',
             'money_profit_per_day' => 'float',
@@ -34,5 +39,10 @@ class NationBuildRecommendation extends Model
     public function radiationSnapshot(): BelongsTo
     {
         return $this->belongsTo(RadiationSnapshot::class, 'radiation_snapshot_id');
+    }
+
+    public function marketPriceSnapshot(): BelongsTo
+    {
+        return $this->belongsTo(MarketPriceSnapshot::class, 'market_price_snapshot_id');
     }
 }

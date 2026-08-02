@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Security;
 
+use App\Exceptions\ProfitabilityContextUnavailable;
+use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
@@ -65,13 +67,33 @@ class ProfitabilityAccessControlTest extends TestCase
         $profitabilityService->shouldReceive('calculateLiveNationProfitabilityById')
             ->once()
             ->with(1234)
-            ->andReturn(['nation_id' => 1234, 'converted_profit_per_day' => 500000]);
+            ->andReturn([
+                'nation_id' => 1234,
+                'converted_profit_per_day' => 500000,
+                'calculation_context' => [
+                    'world_snapshot_id' => 18,
+                    'game_date' => '2126-09-21',
+                    'season_month' => 9,
+                    'economy_context_synced_at' => '2026-08-02T12:16:00+00:00',
+                    'economy_context_stale' => false,
+                    'treasure_income_modifier' => 0.05,
+                    'color_turn_bonus' => 195255,
+                    'military_research' => ['air_capacity' => 12],
+                ],
+            ]);
         $this->app->instance(NationProfitabilityService::class, $profitabilityService);
 
         $this->actingAsSanctum($user);
         $this->getJson('/api/v1/nations/1234/profitability')
             ->assertOk()
-            ->assertJsonPath('nation_id', 1234);
+            ->assertJsonPath('nation_id', 1234)
+            ->assertJsonPath('calculation_context.world_snapshot_id', 18)
+            ->assertJsonPath('calculation_context.game_date', '2126-09-21')
+            ->assertJsonPath('calculation_context.season_month', 9)
+            ->assertJsonPath('calculation_context.economy_context_stale', false)
+            ->assertJsonMissingPath('calculation_context.treasure_income_modifier')
+            ->assertJsonMissingPath('calculation_context.color_turn_bonus')
+            ->assertJsonMissingPath('calculation_context.military_research');
     }
 
     public function test_live_profitability_api_is_rate_limited_per_user(): void
@@ -89,6 +111,36 @@ class ProfitabilityAccessControlTest extends TestCase
         }
 
         $this->getJson('/api/v1/nations/1234/profitability')->assertTooManyRequests();
+    }
+
+    public function test_live_profitability_api_reports_unavailable_pricing(): void
+    {
+        $user = $this->userWithNation(777);
+        $profitabilityService = Mockery::mock(NationProfitabilityService::class);
+        $profitabilityService->shouldReceive('calculateLiveNationProfitabilityById')
+            ->once()
+            ->andThrow(new ProfitabilityPricingUnavailable);
+        $this->app->instance(NationProfitabilityService::class, $profitabilityService);
+        $this->actingAsSanctum($user);
+
+        $this->getJson('/api/v1/nations/1234/profitability')
+            ->assertServiceUnavailable()
+            ->assertJsonPath('code', 'PROFITABILITY_PRICING_UNAVAILABLE');
+    }
+
+    public function test_live_profitability_api_reports_unavailable_economy_context(): void
+    {
+        $user = $this->userWithNation(777);
+        $profitabilityService = Mockery::mock(NationProfitabilityService::class);
+        $profitabilityService->shouldReceive('calculateLiveNationProfitabilityById')
+            ->once()
+            ->andThrow(new ProfitabilityContextUnavailable);
+        $this->app->instance(NationProfitabilityService::class, $profitabilityService);
+        $this->actingAsSanctum($user);
+
+        $this->getJson('/api/v1/nations/1234/profitability')
+            ->assertServiceUnavailable()
+            ->assertJsonPath('code', 'PROFITABILITY_CONTEXT_UNAVAILABLE');
     }
 
     private function userWithNation(int $allianceId, string $position = 'MEMBER'): User

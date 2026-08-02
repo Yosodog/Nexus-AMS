@@ -23,6 +23,12 @@ class Nation extends Model
         'discord',
         'discord_id',
         'tax_id',
+        'ground_capacity_research',
+        'ground_cost_research',
+        'air_capacity_research',
+        'air_cost_research',
+        'naval_capacity_research',
+        'naval_cost_research',
     ];
 
     /**
@@ -31,6 +37,21 @@ class Nation extends Model
     public array $projectsArray;
 
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'treasure_income_modifier' => 'float',
+            'color_turn_bonus' => 'integer',
+            'economy_context_synced_at' => 'datetime',
+            'ground_capacity_research' => 'integer',
+            'ground_cost_research' => 'integer',
+            'air_capacity_research' => 'integer',
+            'air_cost_research' => 'integer',
+            'naval_capacity_research' => 'integer',
+            'naval_cost_research' => 'integer',
+        ];
+    }
 
     // Projects array to interpret bit values
     protected $table = 'nations';
@@ -93,6 +114,12 @@ class Nation extends Model
                 'war_policy_turns',
                 'domestic_policy_turns',
                 'color',
+                'ground_capacity_research',
+                'ground_cost_research',
+                'air_capacity_research',
+                'air_cost_research',
+                'naval_capacity_research',
+                'naval_cost_research',
                 'num_cities',
                 'score',
                 'update_tz',
@@ -144,6 +171,14 @@ class Nation extends Model
 
         if ($nation) {
             $nation->fill($nationPayload);
+
+            if ($nation->isDirty(['alliance_id', 'alliance_position', 'color'])) {
+                $nation->forceFill([
+                    'treasure_income_modifier' => null,
+                    'color_turn_bonus' => null,
+                    'economy_context_synced_at' => null,
+                ]);
+            }
 
             if ($nation->isDirty()) {
                 $nation->save();

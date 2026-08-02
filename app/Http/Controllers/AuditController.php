@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AuditPriority;
+use App\Exceptions\ProfitabilityContextUnavailable;
+use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Http\Requests\AuditAcknowledgeRequest;
 use App\Http\Requests\AuditSnoozeRequest;
 use App\Http\Requests\RegenerateNationBuildRecommendationRequest;
@@ -12,6 +14,7 @@ use App\Models\AuditResultEvent;
 use App\Services\AllianceMemberEligibilityService;
 use App\Services\Audit\AuditRemediationService;
 use App\Services\Audit\AuditService;
+use App\Services\Economy\EconomyRules;
 use App\Services\NationBuildRecommendationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +58,10 @@ class AuditController extends Controller
         ];
 
         $recommendation = $nation->buildRecommendation;
+
+        if ($recommendation?->model_version !== EconomyRules::MODEL_VERSION) {
+            $recommendation = null;
+        }
 
         return view('audit.index', [
             'nation' => $nation,
@@ -108,7 +115,26 @@ class AuditController extends Controller
     {
         $nation = $this->eligibilityService->nationFor($request->user());
 
-        RefreshNationBuildRecommendationJob::dispatch((int) $nation->id);
+        try {
+            $prices = $this->recommendationService->getPriceSetForBatch();
+
+            if ($prices->snapshotId === null) {
+                throw new ProfitabilityPricingUnavailable;
+            }
+
+            $radiationSnapshot = $this->recommendationService->getRadiationSnapshotForBatch();
+            $this->recommendationService->assertCalculationContextAvailable($nation, $radiationSnapshot);
+            RefreshNationBuildRecommendationJob::dispatch(
+                (int) $nation->id,
+                $prices->snapshotId,
+                $radiationSnapshot->id
+            );
+        } catch (ProfitabilityPricingUnavailable|ProfitabilityContextUnavailable) {
+            return redirect()->route('audit.index')->with([
+                'alert-message' => 'Build calculation inputs are temporarily unavailable. The current recommendation remains active.',
+                'alert-type' => 'error',
+            ]);
+        }
 
         return redirect()->route('audit.index')->with([
             'alert-message' => 'Build recommendation queued for regeneration.',

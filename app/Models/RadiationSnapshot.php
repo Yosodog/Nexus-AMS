@@ -12,6 +12,7 @@ class RadiationSnapshot extends Model
     {
         return [
             'snapshot_at' => 'datetime',
+            'game_date' => 'immutable_date',
             'global' => 'float',
             'north_america' => 'float',
             'south_america' => 'float',

@@ -18,7 +18,13 @@ class RefreshNationBuildRecommendationJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 300;
 
-    public function __construct(private readonly int $nationId) {}
+    public function __construct(
+        public readonly int $nationId,
+        public readonly ?int $marketPriceSnapshotId = null,
+        public readonly ?int $radiationSnapshotId = null,
+    ) {
+        $this->onQueue('default');
+    }
 
     public function uniqueId(): string
     {
@@ -27,6 +33,10 @@ class RefreshNationBuildRecommendationJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(NationBuildRecommendationService $recommendationService): void
     {
-        $recommendationService->refreshStoredRecommendationForNationId($this->nationId);
+        $recommendationService->refreshStoredRecommendationForNationId(
+            $this->nationId,
+            $this->marketPriceSnapshotId,
+            $this->radiationSnapshotId
+        );
     }
 }

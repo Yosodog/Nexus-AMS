@@ -140,6 +140,7 @@ class GrowthCircleDistributionTest extends TestCase
 
         NationProfitabilitySnapshot::query()->create([
             'nation_id' => $nation->id,
+            'model_version' => 2,
             'leader_name' => 'Growth Leader',
             'nation_name' => 'Growth Nation',
             'cities' => 8,
@@ -169,5 +170,30 @@ class GrowthCircleDistributionTest extends TestCase
             'lead' => 0.0,
             'food' => 9.0,
         ], $shortfalls);
+    }
+
+    public function test_daily_growth_circle_shortfalls_ignore_stale_current_version_snapshots(): void
+    {
+        $nation = Nation::factory()->create([
+            'id' => 777004,
+        ]);
+
+        NationProfitabilitySnapshot::query()->create([
+            'nation_id' => $nation->id,
+            'model_version' => 2,
+            'leader_name' => 'Stale Leader',
+            'nation_name' => 'Stale Nation',
+            'cities' => 8,
+            'resource_profit_per_day' => [
+                'coal' => -12.5,
+                'uranium' => -7.0,
+                'food' => -9.0,
+            ],
+            'calculated_at' => now()->subHours(49),
+        ]);
+
+        $this->assertNull(
+            app(NationProfitabilityService::class)->getDailyGrowthCircleShortfalls($nation)
+        );
     }
 }

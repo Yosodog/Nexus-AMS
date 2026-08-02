@@ -46,7 +46,7 @@
                     <p class="text-xs uppercase tracking-wide text-base-content/60">Recommended build</p>
                     <h2 class="text-2xl font-bold leading-tight">Alliance build recommendation</h2>
                     <p class="text-sm text-base-content/70">
-                        One duplicate-across-all-cities build, optimized against the current profitability model and your nation's MMR floor.
+                        One build evaluated across your real city profiles at the highest recovered city capacity, while preserving your nation's MMR floor.
                     </p>
                 </div>
 
@@ -78,6 +78,25 @@
 
             @if($buildRecommendation)
                 <div class="space-y-5 p-5">
+                    @if(data_get($buildRecommendation->calculation_context, 'market.stale'))
+                        <div class="alert alert-warning">
+                            Market pricing is stale. The build uses the latest usable snapshot and will refresh automatically.
+                        </div>
+                    @endif
+
+                    @if(filled(data_get($buildRecommendation->calculation_context, 'market.fallback_resources')))
+                        <div class="alert alert-warning">
+                            Aggregate fallback pricing was used for:
+                            {{ implode(', ', data_get($buildRecommendation->calculation_context, 'market.fallback_resources', [])) }}.
+                        </div>
+                    @endif
+
+                    @if($buildRecommendation->cities_below_target > 0)
+                        <div class="alert alert-info">
+                            {{ $buildRecommendation->cities_below_target }} {{ \Illuminate\Support\Str::plural('city', $buildRecommendation->cities_below_target) }}
+                            require {{ number_format($buildRecommendation->infrastructure_shortfall, 2) }} total infrastructure to run this build everywhere.
+                        </div>
+                    @endif
                     <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
                         <div class="rounded-xl border border-base-300 bg-base-200/60 p-4">
                             <p class="text-xs uppercase tracking-wide text-base-content/60">Profit / Day</p>
@@ -120,7 +139,14 @@
                                 <div class="flex flex-wrap gap-2 text-sm">
                                     <span class="badge badge-outline">Infra {{ number_format($buildRecommendation->infra_needed) }}</span>
                                     <span class="badge badge-outline">Land {{ number_format($buildRecommendation->land_used, 2) }}</span>
-                                    <span class="badge badge-outline">{{ $buildRecommendation->imp_total }} improvements</span>
+                                    <span class="badge badge-outline">{{ $buildRecommendation->imp_total }} / {{ $buildRecommendation->available_slots }} slots</span>
+                                    <span class="badge badge-outline">Highest recovered city target</span>
+                                    <span class="badge badge-outline">{{ $buildRecommendation->price_basis }}</span>
+                                    @if(filled(data_get($buildRecommendation->calculation_context, 'market.calculated_at')))
+                                        <span class="badge badge-outline">
+                                            Prices {{ \Illuminate\Support\Carbon::parse(data_get($buildRecommendation->calculation_context, 'market.calculated_at'))->toDayDateTimeString() }}
+                                        </span>
+                                    @endif
                                     <span class="badge badge-ghost">Updated {{ $buildRecommendation->calculated_at?->diffForHumans() }}</span>
                                 </div>
                             </div>
@@ -169,7 +195,7 @@
                     <div class="rounded-xl border border-dashed border-base-300 bg-base-200/40 p-5">
                         <h3 class="font-semibold text-lg">No build recommendation yet</h3>
                         <p class="mt-2 text-sm text-base-content/70">
-                            Generate one to see the recommended JSON, profitability, city stats, and quick import actions.
+                            The current calculation is pending. Generate one to see the recommended JSON, profitability, city stats, and quick import actions.
                         </p>
                     </div>
                 </div>

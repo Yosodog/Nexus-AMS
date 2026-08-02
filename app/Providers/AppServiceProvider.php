@@ -138,6 +138,7 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(10)->by('profitability:user:'.$request->user()->getAuthIdentifier()),
                 Limit::perMinute(30)->by('profitability:ip:'.$request->ip()),
+                Limit::perMinute(60)->by('profitability:global'),
             ];
         });
 

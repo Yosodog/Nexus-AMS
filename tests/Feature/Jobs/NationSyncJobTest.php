@@ -57,6 +57,12 @@ class NationSyncJobTest extends TestCase
             'vip' => 0,
             'commendations' => 0,
             'denouncements' => 0,
+            'ground_capacity_research' => 4,
+            'ground_cost_research' => 5,
+            'air_capacity_research' => 6,
+            'air_cost_research' => 7,
+            'naval_capacity_research' => 8,
+            'naval_cost_research' => 9,
         ]);
         $this->assertDatabaseHas('nation_resources', [
             'nation_id' => 1001,
@@ -78,6 +84,8 @@ class NationSyncJobTest extends TestCase
 
             return str_contains($query, 'project_bits')
                 && str_contains($query, 'cities')
+                && str_contains($query, 'military_research')
+                && str_contains($query, 'ground_capacity')
                 && ! str_contains($query, 'iron_works')
                 && ! str_contains($query, 'paginatorInfo');
         });
@@ -102,6 +110,29 @@ class NationSyncJobTest extends TestCase
         $this->assertNull(NationResources::withTrashed()->where('nation_id', 1001)->firstOrFail()->deleted_at);
         $this->assertNull(NationMilitary::withTrashed()->where('nation_id', 1001)->firstOrFail()->deleted_at);
         $this->assertNull(City::withTrashed()->findOrFail(3001)->deleted_at);
+    }
+
+    public function test_job_invalidates_economy_context_when_a_source_field_changes(): void
+    {
+        $changed = $this->nationPayload(1001);
+        $changed['color'] = 'red';
+        Http::fakeSequence()
+            ->push($this->nationResponse([$this->nationPayload(1001)]))
+            ->push($this->nationResponse([$changed]));
+        (new SyncNationsJob(1, 100))->handle();
+        Nation::query()->whereKey(1001)->update([
+            'treasure_income_modifier' => 0.05,
+            'color_turn_bonus' => 125,
+            'economy_context_synced_at' => now(),
+        ]);
+
+        (new SyncNationsJob(1, 100))->handle();
+
+        $nation = Nation::query()->findOrFail(1001);
+        $this->assertSame('red', $nation->color);
+        $this->assertNull($nation->treasure_income_modifier);
+        $this->assertNull($nation->color_turn_bonus);
+        $this->assertNull($nation->economy_context_synced_at);
     }
 
     public function test_empty_page_is_reported_as_a_failed_sync(): void
@@ -212,6 +243,14 @@ class NationSyncJobTest extends TestCase
             'denouncements' => null,
             'offensive_wars_count' => 1,
             'defensive_wars_count' => 2,
+            'military_research' => [
+                'ground_capacity' => 4,
+                'ground_cost' => 5,
+                'air_capacity' => 6,
+                'air_cost' => 7,
+                'naval_capacity' => 8,
+                'naval_cost' => 9,
+            ],
             'money_looted' => 50.5,
             'total_infrastructure_destroyed' => 60.5,
             'total_infrastructure_lost' => 70.5,

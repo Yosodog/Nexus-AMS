@@ -9,9 +9,20 @@
     $radiationSnapshotAt = filled($activePayload['radiation_snapshot_at'] ?? null)
         ? \Illuminate\Support\Carbon::parse($activePayload['radiation_snapshot_at'])->toDayDateTimeString()
         : 'Not available';
+    $marketPricesAt = filled($activePayload['market_prices_calculated_at'] ?? null)
+        ? \Illuminate\Support\Carbon::parse($activePayload['market_prices_calculated_at'])->toDayDateTimeString()
+        : 'Aggregate fallback';
 @endphp
 
 <div class="nexus-stack">
+    @if(($activePayload['missing_current_version_count'] ?? 0) > 0)
+        <div class="alert alert-info">
+            {{ number_format($activePayload['missing_current_version_count']) }} eligible
+            {{ \Illuminate\Support\Str::plural('nation', $activePayload['missing_current_version_count']) }}
+            {{ ($activePayload['missing_current_version_count'] ?? 0) === 1 ? 'is' : 'are' }} awaiting the current calculation.
+        </div>
+    @endif
+
     <section class="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]" aria-labelledby="profitability-summary-title">
         <div class="nexus-panel">
             <div class="nexus-panel__header">
@@ -66,7 +77,16 @@
             <dl class="divide-y divide-base-300">
                 <div class="px-5 py-4">
                     <dt class="nexus-stat-label">Price basis</dt>
-                    <dd class="mt-1 text-sm font-semibold text-base-content">{{ $activePayload['price_basis'] ?? '24h average trade prices' }}</dd>
+                    <dd class="mt-1 text-sm font-semibold text-base-content">
+                        {{ $activePayload['price_basis'] ?? \App\DataTransferObjects\MarketPriceSet::BASIS }}
+                        @if($activePayload['market_prices_stale'] ?? false)
+                            <span class="badge badge-warning badge-sm ml-2">Stale</span>
+                        @endif
+                    </dd>
+                </div>
+                <div class="px-5 py-4">
+                    <dt class="nexus-stat-label">Market snapshot</dt>
+                    <dd class="mt-1 text-sm font-semibold text-base-content">{{ $marketPricesAt }}</dd>
                 </div>
                 <div class="px-5 py-4">
                     <dt class="nexus-stat-label">Ranking generated</dt>

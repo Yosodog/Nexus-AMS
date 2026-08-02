@@ -9,7 +9,7 @@ class SyncRadiation extends Command
 {
     protected $signature = 'pw:sync-radiation';
 
-    protected $description = 'Fetch and store the current Politics & War radiation snapshot';
+    protected $description = 'Fetch and store the current Politics & War world snapshot';
 
     public function __construct(private readonly RadiationService $radiationService)
     {
@@ -21,12 +21,15 @@ class SyncRadiation extends Command
         $snapshot = $this->radiationService->refresh();
 
         if (! $snapshot) {
-            $this->error('Failed to refresh radiation snapshot.');
+            $this->error('Failed to refresh the world snapshot.');
 
             return self::FAILURE;
         }
 
-        $this->info('Radiation snapshot saved for '.$snapshot->snapshot_at?->toDateTimeString().'.');
+        $this->info(
+            'World snapshot saved for '.$snapshot->snapshot_at?->toDateTimeString()
+            .' using game date '.$snapshot->game_date?->toDateString().'.'
+        );
 
         return self::SUCCESS;
     }

@@ -23,7 +23,7 @@ class NationQueryService
             ->setRootField('nations')
             ->addArgument('id', $nID)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
-                $builder->addFields(SelectionSetHelper::nationSet());
+                SelectionSetHelper::applyNationSelection($builder);
             });
 
         $response = $client->sendQuery($builder);
@@ -50,8 +50,8 @@ class NationQueryService
             ->setRootField('nations')
             ->addArgument('id', $nID)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
-                $builder->addFields(SelectionSetHelper::nationSet())
-                    ->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder) {
+                SelectionSetHelper::applyNationSelection($builder)
+                    ->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder): void {
                         $cityBuilder->addFields(SelectionSetHelper::citySet());
                     });
             });
@@ -88,13 +88,12 @@ class NationQueryService
             ->addArgument('first', $perPage)
             ->addArgument($arguments)
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) use ($withCities) {
+                SelectionSetHelper::applyNationSelection($builder);
+
                 if ($withCities) {
-                    $builder->addFields(SelectionSetHelper::nationSet())
-                        ->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder) {
-                            $cityBuilder->addFields(SelectionSetHelper::citySet());
-                        });
-                } else {
-                    $builder->addFields(SelectionSetHelper::nationSet());
+                    $builder->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder): void {
+                        $cityBuilder->addFields(SelectionSetHelper::citySet());
+                    });
                 }
             });
 
@@ -123,6 +122,7 @@ class NationQueryService
      * @param  array<string, mixed>  $arguments
      * @param  list<string>  $nationFields
      * @param  list<string>  $cityFields
+     * @param  array<string, list<string>>  $nationNestedFields
      * @return list<array<string, mixed>>
      *
      * @throws ConnectionException
@@ -132,7 +132,8 @@ class NationQueryService
         array $arguments,
         int $perPage,
         array $nationFields,
-        array $cityFields = []
+        array $cityFields = [],
+        array $nationNestedFields = [],
     ): array {
         $client = new QueryService;
 
@@ -140,11 +141,17 @@ class NationQueryService
             ->setRootField('nations')
             ->addArgument('first', $perPage)
             ->addArgument($arguments)
-            ->addNestedField('data', function (GraphQLQueryBuilder $builder) use ($nationFields, $cityFields) {
+            ->addNestedField('data', function (GraphQLQueryBuilder $builder) use ($nationFields, $cityFields, $nationNestedFields) {
                 $builder->addFields($nationFields);
 
+                foreach ($nationNestedFields as $field => $fields) {
+                    $builder->addNestedField($field, function (GraphQLQueryBuilder $nestedBuilder) use ($fields): void {
+                        $nestedBuilder->addFields($fields);
+                    });
+                }
+
                 if ($cityFields !== []) {
-                    $builder->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder) use ($cityFields) {
+                    $builder->addNestedField('cities', function (GraphQLQueryBuilder $cityBuilder) use ($cityFields): void {
                         $cityBuilder->addFields($cityFields);
                     });
                 }

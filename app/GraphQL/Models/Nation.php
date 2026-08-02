@@ -267,6 +267,23 @@ class Nation
 
     public ?Alliance $alliance = null;
 
+    public ?MilitaryResearch $military_research = null;
+
+    /** @var list<Treasure>|null */
+    public ?array $treasures = null;
+
+    public ?int $ground_capacity_research = null;
+
+    public ?int $ground_cost_research = null;
+
+    public ?int $air_capacity_research = null;
+
+    public ?int $air_cost_research = null;
+
+    public ?int $naval_capacity_research = null;
+
+    public ?int $naval_cost_research = null;
+
     /**
      * I hate the function. Look away now.
      */
@@ -314,6 +331,27 @@ class Nation
                 $warModel = new War;
                 $warModel->buildWithJSON((object) $war);
                 $this->wars->add($warModel);
+            }
+        }
+
+        if (isset($json->military_research) && (is_object($json->military_research) || is_array($json->military_research))) {
+            $this->military_research = new MilitaryResearch;
+            $this->military_research->buildWithJSON((object) $json->military_research);
+            $this->ground_capacity_research = $this->military_research->ground_capacity;
+            $this->ground_cost_research = $this->military_research->ground_cost;
+            $this->air_capacity_research = $this->military_research->air_capacity;
+            $this->air_cost_research = $this->military_research->air_cost;
+            $this->naval_capacity_research = $this->military_research->naval_capacity;
+            $this->naval_cost_research = $this->military_research->naval_cost;
+        }
+
+        if (isset($json->treasures) && is_array($json->treasures)) {
+            $this->treasures = [];
+
+            foreach ($json->treasures as $treasureData) {
+                $treasure = new Treasure;
+                $treasure->buildWithJSON((object) $treasureData);
+                $this->treasures[] = $treasure;
             }
         }
 
@@ -449,6 +487,20 @@ class Nation
 
     public function hasSourceField(string $field): bool
     {
+        $researchField = match ($field) {
+            'ground_capacity_research' => 'ground_capacity',
+            'ground_cost_research' => 'ground_cost',
+            'air_capacity_research' => 'air_capacity',
+            'air_cost_research' => 'air_cost',
+            'naval_capacity_research' => 'naval_capacity',
+            'naval_cost_research' => 'naval_cost',
+            default => null,
+        };
+
+        if ($researchField !== null) {
+            return $this->military_research?->hasSourceField($researchField) ?? false;
+        }
+
         return isset($this->sourceFields[$field]);
     }
 

@@ -212,6 +212,13 @@ class SubscriptionEventProcessor
                 'alliance_id' => ['nullable', 'integer', 'min:1'],
                 'alliance_position_id' => ['nullable', 'integer', 'min:0'],
                 'alliance_position' => ['nullable', 'string', 'max:50'],
+                'military_research' => ['nullable', 'array:ground_capacity,ground_cost,air_capacity,air_cost,naval_capacity,naval_cost'],
+                'military_research.ground_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
+                'military_research.ground_cost' => ['nullable', 'integer', 'min:0', 'max:20'],
+                'military_research.air_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
+                'military_research.air_cost' => ['nullable', 'integer', 'min:0', 'max:20'],
+                'military_research.naval_capacity' => ['nullable', 'integer', 'min:0', 'max:20'],
+                'military_research.naval_cost' => ['nullable', 'integer', 'min:0', 'max:20'],
             ],
             'alliance:update' => [
                 'name' => ['nullable', 'string', 'max:255'],

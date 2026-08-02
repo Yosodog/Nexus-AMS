@@ -44,6 +44,9 @@ class NationSubscriptionNullTransitionTest extends TestCase
             'flag' => 'https://example.test/original-flag.png',
             'vip' => true,
             'commendations' => 13,
+            'treasure_income_modifier' => 0.05,
+            'color_turn_bonus' => 125,
+            'economy_context_synced_at' => now(),
         ]);
         Event::fake([NationAllianceChanged::class]);
 
@@ -82,6 +85,9 @@ class NationSubscriptionNullTransitionTest extends TestCase
         $this->assertSame('https://example.test/original-flag.png', $nation->flag);
         $this->assertTrue((bool) $nation->vip);
         $this->assertSame(13, $nation->commendations);
+        $this->assertNull($nation->treasure_income_modifier);
+        $this->assertNull($nation->color_turn_bonus);
+        $this->assertNull($nation->economy_context_synced_at);
 
         Event::assertDispatchedTimes(NationAllianceChanged::class, 1);
         Event::assertDispatched(
@@ -91,5 +97,26 @@ class NationSubscriptionNullTransitionTest extends TestCase
                 && $event->newAllianceId === null
                 && $event->newAlliancePosition === 'NOALLIANCE'
         );
+    }
+
+    public function test_partial_research_updates_preserve_omitted_research_fields(): void
+    {
+        $nation = Nation::factory()->create([
+            'ground_capacity_research' => 9,
+            'ground_cost_research' => 4,
+        ]);
+        $payload = new GraphQLNation;
+        $payload->buildWithJSON((object) [
+            'id' => $nation->id,
+            'military_research' => (object) [
+                'ground_cost' => 12,
+            ],
+        ]);
+
+        Nation::updateFromAPI($payload);
+        $nation->refresh();
+
+        $this->assertSame(9, $nation->ground_capacity_research);
+        $this->assertSame(12, $nation->ground_cost_research);
     }
 }

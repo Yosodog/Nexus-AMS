@@ -2,8 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Services\NationProfitabilityService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RefreshNationProfitabilitySnapshots extends Command
 {
@@ -13,10 +16,24 @@ class RefreshNationProfitabilitySnapshots extends Command
 
     public function handle(NationProfitabilityService $profitabilityService): int
     {
-        $count = $profitabilityService->refreshAllianceSnapshots();
+        try {
+            $prices = $profitabilityService->getMarketPriceSet();
 
-        $this->info('Refreshed profitability snapshots for '.$count.' nations.');
+            if ($prices->snapshotId === null) {
+                throw new ProfitabilityPricingUnavailable(
+                    'A completed-market price snapshot is required before refreshing profitability.'
+                );
+            }
 
-        return self::SUCCESS;
+            $count = $profitabilityService->refreshAllianceSnapshots($prices->snapshotId);
+            $this->info('Refreshed profitability snapshots for '.$count.' nations.');
+
+            return self::SUCCESS;
+        } catch (Throwable $exception) {
+            Log::error('Profitability snapshot refresh failed', ['exception' => $exception]);
+            $this->error('Profitability snapshots were not refreshed. Existing snapshots remain active.');
+
+            return self::FAILURE;
+        }
     }
 }

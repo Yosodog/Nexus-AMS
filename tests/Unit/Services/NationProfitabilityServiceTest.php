@@ -5,11 +5,8 @@ namespace Tests\Unit\Services;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\NationMilitary;
-use App\Services\AllianceMembershipService;
 use App\Services\NationProfitabilityService;
 use App\Services\PWHelperService;
-use App\Services\RadiationService;
-use App\Services\TradePriceService;
 use Illuminate\Database\Eloquent\Collection;
 use Tests\TestCase;
 
@@ -75,11 +72,7 @@ class NationProfitabilityServiceTest extends TestCase
 
     private function service(): NationProfitabilityService
     {
-        return new NationProfitabilityService(
-            $this->createMock(AllianceMembershipService::class),
-            $this->createMock(TradePriceService::class),
-            $this->createMock(RadiationService::class),
-        );
+        return app(NationProfitabilityService::class);
     }
 
     /**

@@ -116,6 +116,12 @@ class SyncNationsJob implements ShouldQueue
         'war_policy_turns',
         'domestic_policy_turns',
         'color',
+        'ground_capacity_research',
+        'ground_cost_research',
+        'air_capacity_research',
+        'air_cost_research',
+        'naval_capacity_research',
+        'naval_cost_research',
         'num_cities',
         'score',
         'update_tz',
@@ -221,6 +227,20 @@ class SyncNationsJob implements ShouldQueue
         ...self::NATION_COLUMNS,
         ...self::RESOURCE_COLUMNS,
         ...self::MILITARY_COLUMNS,
+    ];
+
+    private const RESEARCH_COLUMNS = [
+        'ground_capacity_research',
+        'ground_cost_research',
+        'air_capacity_research',
+        'air_cost_research',
+        'naval_capacity_research',
+        'naval_cost_research',
+    ];
+
+    private const NATION_PERSIST_COLUMNS = [
+        ...self::NATION_COLUMNS,
+        ...self::RESEARCH_COLUMNS,
     ];
 
     /**
@@ -411,6 +431,16 @@ class SyncNationsJob implements ShouldQueue
                 perPage: $this->perPage,
                 nationFields: self::NATION_QUERY_FIELDS,
                 cityFields: self::CITY_COLUMNS,
+                nationNestedFields: [
+                    'military_research' => [
+                        'ground_capacity',
+                        'ground_cost',
+                        'air_capacity',
+                        'air_cost',
+                        'naval_capacity',
+                        'naval_cost',
+                    ],
+                ],
             );
             $apiMilliseconds = $this->elapsedMilliseconds($stageStartedAt);
 
@@ -494,6 +524,21 @@ class SyncNationsJob implements ShouldQueue
      */
     private function normalizeNationPayload(array $nation): array
     {
+        if (! array_key_exists('military_research', $nation)) {
+            throw new RuntimeException('Nation synchronization response omitted military research.');
+        }
+
+        $research = $nation['military_research'] !== null
+            ? (array) $nation['military_research']
+            : [];
+
+        foreach (self::RESEARCH_COLUMNS as $column) {
+            $apiField = str_replace('_research', '', $column);
+            $nation[$column] = array_key_exists($apiField, $research) && $research[$apiField] !== null
+                ? max(0, min(20, (int) $research[$apiField]))
+                : null;
+        }
+
         foreach (self::ZERO_DEFAULT_COLUMNS as $column) {
             if (! isset($nation[$column])) {
                 $nation[$column] = 0;
@@ -514,7 +559,7 @@ class SyncNationsJob implements ShouldQueue
      */
     private function extractNationData(array $nation): array
     {
-        $data = $this->mapValues($nation, self::NATION_COLUMNS, 'nation');
+        $data = $this->mapValues($nation, self::NATION_PERSIST_COLUMNS, 'nation');
         $data['updated_at'] = $this->syncTimestampString;
         $data['created_at'] = $this->syncTimestampString;
         $data['deleted_at'] = null;
@@ -596,6 +641,8 @@ class SyncNationsJob implements ShouldQueue
         Telescope::withoutRecording(function () use ($nationData, $resourcesData, $militaryData, $citiesData): void {
             DB::transaction(function () use ($nationData, $resourcesData, $militaryData, $citiesData) {
                 if (! empty($nationData)) {
+                    $this->invalidateChangedEconomyContext($nationData);
+
                     foreach (array_chunk($nationData, self::UPSERT_CHUNK_SIZE) as $chunk) {
                         // Query builder upserts avoid the overhead of hydrating Eloquent models per row.
                         DB::table(self::TABLE_NATIONS)->upsert($chunk, ['id'], self::NATION_UPDATE_COLUMNS);
@@ -618,6 +665,52 @@ class SyncNationsJob implements ShouldQueue
                 }
             }, 3);
         });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $nationData
+     */
+    private function invalidateChangedEconomyContext(array $nationData): void
+    {
+        $incomingById = collect($nationData)->keyBy(fn (array $nation): int => (int) $nation['id']);
+        $existingNations = DB::table(self::TABLE_NATIONS)
+            ->whereIn('id', $incomingById->keys()->all())
+            ->lockForUpdate()
+            ->get(['id', 'alliance_id', 'alliance_position', 'color']);
+        $changedNationIds = [];
+
+        foreach ($existingNations as $existingNation) {
+            $incoming = $incomingById->get((int) $existingNation->id);
+
+            if ($incoming === null) {
+                continue;
+            }
+
+            $existingAllianceId = $existingNation->alliance_id === null
+                ? null
+                : (int) $existingNation->alliance_id;
+            $incomingAllianceId = $incoming['alliance_id'] === null
+                ? null
+                : (int) $incoming['alliance_id'];
+
+            if (
+                $existingAllianceId !== $incomingAllianceId
+                || (string) $existingNation->alliance_position !== (string) $incoming['alliance_position']
+                || strtolower((string) $existingNation->color) !== strtolower((string) $incoming['color'])
+            ) {
+                $changedNationIds[] = (int) $existingNation->id;
+            }
+        }
+
+        if ($changedNationIds !== []) {
+            DB::table(self::TABLE_NATIONS)
+                ->whereIn('id', $changedNationIds)
+                ->update([
+                    'treasure_income_modifier' => null,
+                    'color_turn_bonus' => null,
+                    'economy_context_synced_at' => null,
+                ]);
+        }
     }
 
     /**

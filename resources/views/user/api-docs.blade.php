@@ -346,13 +346,34 @@ Accept: application/json</code></pre>
   "military_upkeep_per_day": -205000.11,
   "stored_snapshot_updated": true,
   "source": "live",
-  "price_basis": "24h average trade prices",
+  "model_version": 2,
+  "price_basis": "7-day completed market prices (side-specific)",
+  "market_prices_calculated_at": "2026-08-01T18:12:00.000000Z",
+  "market_prices_stale": false,
+  "market_price_fallback_resources": [],
+  "calculation_context": {
+    "model_version": 2,
+    "game_date": "2126-09-23",
+    "season_month": 9,
+    "world_snapshot_id": 18,
+    "economy_context_synced_at": "2026-08-02T12:16:00.000000Z",
+    "economy_context_stale": false,
+    "radiation": {
+      "snapshot_id": 18,
+      "snapshot_at": "2026-08-02T12:18:00.000000Z",
+      "game_date": "2126-09-23"
+    }
+  },
   "radiation_snapshot_id": 18,
-  "radiation_snapshot_at": "2026-03-28T18:18:00.000000Z"
+  "radiation_snapshot_at": "2026-08-02T12:18:00.000000Z",
+  "game_date": "2126-09-23"
 }</code></pre>
                     </div>
                     <p class="text-xs text-base-content/60">
                         The endpoint does not read from the stored profitability snapshot table for its calculation. It calculates fresh, then optionally persists the result for eligible alliance members.
+                    </p>
+                    <p class="text-xs text-base-content/60">
+                        If market prices are unavailable, the endpoint returns HTTP 503 with <code>PROFITABILITY_PRICING_UNAVAILABLE</code>. If the game-date, radiation, color, or treasure inputs are unavailable or stale, it returns HTTP 503 with <code>PROFITABILITY_CONTEXT_UNAVAILABLE</code>.
                     </p>
                 </div>
             </x-utils.card>

@@ -44,7 +44,7 @@ class AllianceQueryService
             ->addNestedField('data', function (GraphQLQueryBuilder $builder) {
                 $builder->addFields(SelectionSetHelper::allianceSet())
                     ->addNestedField('nations', function (GraphQLQueryBuilder $nationBuilder) {
-                        $nationBuilder->addFields(SelectionSetHelper::nationSet());
+                        SelectionSetHelper::applyNationSelection($nationBuilder);
                     });
             });
 
