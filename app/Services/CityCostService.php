@@ -8,7 +8,10 @@ use Throwable;
 
 class CityCostService
 {
-    public function __construct(private readonly QueryService $query) {}
+    public function __construct(
+        private readonly QueryService $query,
+        private readonly GrantRequirementService $grantRequirementService,
+    ) {}
 
     public function getTop20Average(bool $refreshIfStale = true): ?float
     {
@@ -124,16 +127,14 @@ class CityCostService
 
     public function grantRequiresBureauOfDomesticAffairs(CityGrant $grant): bool
     {
-        $requirements = $grant->requirements ?? [];
-        $projects = $requirements['required_projects'] ?? [];
+        $projects = $this->grantRequirementService->guaranteedProjects($grant->requirements);
 
         return in_array('Bureau of Domestic Affairs', $projects, true);
     }
 
     public function grantRequiresGovernmentSupportAgency(CityGrant $grant): bool
     {
-        $requirements = $grant->requirements ?? [];
-        $projects = $requirements['required_projects'] ?? [];
+        $projects = $this->grantRequirementService->guaranteedProjects($grant->requirements);
 
         return in_array('Government Support Agency', $projects, true);
     }

@@ -1,4 +1,5 @@
 import './bootstrap';
+import { initGrantRequirementBuilders } from './grant-requirement-builder';
 
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
@@ -664,6 +665,7 @@ const initAppUi = (root = document) => {
     enableExclusiveMemberDropdowns(root);
     enableDepositRequests();
     enableConfirmations();
+    initGrantRequirementBuilders(root);
 };
 
 if (document.readyState === 'loading') {

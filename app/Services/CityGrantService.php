@@ -111,7 +111,7 @@ class CityGrantService
         $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
 
         $validator->validateAllianceMembership();
-        $validator->validateRequiredProjects($grant->requirements['required_projects'] ?? []);
+        self::assertRequirementsEligible($grant, $nation, 'submission');
     }
 
     /**
@@ -170,7 +170,7 @@ class CityGrantService
 
             $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
             $validator->validateAllianceMembership();
-            $validator->validateRequiredProjects($grant->requirements['required_projects'] ?? []);
+            self::assertRequirementsEligible($grant, $nation, 'approval');
 
             // Fetch the recipient account
             $account = Account::findOrFail($lockedRequest->account_id);
@@ -391,5 +391,23 @@ class CityGrantService
                 'threshold' => $threshold,
             ]);
         }
+    }
+
+    private static function assertRequirementsEligible(CityGrant $grant, Nation $nation, string $context): void
+    {
+        $requirementService = app(GrantRequirementService::class);
+        $inspection = $requirementService->inspect($grant->requirements);
+
+        if ($inspection['errors'] !== []) {
+            Log::warning('City grant has malformed stored eligibility requirements.', [
+                'city_grant_id' => $grant->id,
+                'city_number' => $grant->city_number,
+                'nation_id' => $nation->id,
+                'context' => $context,
+                'errors' => $inspection['errors'],
+            ]);
+        }
+
+        $requirementService->assertEligible($grant->requirements, $nation);
     }
 }

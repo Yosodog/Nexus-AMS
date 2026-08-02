@@ -8,6 +8,7 @@ use App\Models\CityGrantRequest;
 use App\Services\AccountService;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
+use App\Services\GrantRequirementService;
 use App\Services\SettingService;
 use Exception;
 use Illuminate\Contracts\View\View;
@@ -27,6 +28,44 @@ class CityGrantController
             ->get();
         $accounts = $nation->accounts;
         $nextCityNumber = $nation->num_cities + 1;
+        $requirementService = app(GrantRequirementService::class);
+
+        $grants->each(function (CityGrant $grant) use ($nation, $requirementService): void {
+            $inspection = $requirementService->inspect($grant->requirements);
+
+            if ($inspection['errors'] !== []) {
+                Log::warning('City grant page encountered malformed stored requirements.', [
+                    'city_grant_id' => $grant->id,
+                    'city_number' => $grant->city_number,
+                    'nation_id' => $nation->id,
+                    'errors' => $inspection['errors'],
+                ]);
+            }
+
+            $grant->requirements = $inspection['normalized'];
+            $grant->setAttribute('requirements_valid', $inspection['errors'] === []);
+            $grant->setAttribute(
+                'requirement_summary',
+                $inspection['errors'] === []
+                    ? $requirementService->summarize($inspection['normalized'])
+                    : ['City grant requirements are unavailable because the saved configuration is invalid.']
+            );
+        });
+
+        $nextGrant = $grants->firstWhere('city_number', $nextCityNumber);
+        $nextEligibilityReport = match (true) {
+            $nextGrant === null => [
+                'passes' => false,
+                'failures' => ['No city grant is currently available for your next city.'],
+                'summary' => [],
+            ],
+            ! $nextGrant->getAttribute('requirements_valid') => [
+                'passes' => false,
+                'failures' => ['This city grant has invalid eligibility requirements. Please contact an administrator.'],
+                'summary' => $nextGrant->requirement_summary,
+            ],
+            default => $requirementService->evaluate($nextGrant->requirements, $nation),
+        };
         $grantRequests = CityGrantRequest::where('nation_id', $nation->id)
             ->orderByDesc('city_number')
             ->orderBy('created_at', 'desc')
@@ -45,7 +84,8 @@ class CityGrantController
             'grantRequests',
             'grantAmounts',
             'cityAverage',
-            'cityAverageUpdatedAt'
+            'cityAverageUpdatedAt',
+            'nextEligibilityReport'
         ));
     }
 

@@ -3,10 +3,12 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\CityGrant;
-use App\Services\PWHelperService;
+use App\Rules\ValidGrantRequirementTree;
+use App\Services\GrantRequirementService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use JsonException;
 
 class UpdateCityGrantRequest extends FormRequest
 {
@@ -38,8 +40,7 @@ class UpdateCityGrantRequest extends FormRequest
             'grant_amount' => ['required', 'integer', 'min:1', 'max:1000'],
             'enabled' => ['required', 'boolean'],
             'description' => ['nullable', 'string', 'max:255'],
-            'projects' => ['nullable', 'array'],
-            'projects.*' => ['string', Rule::in(array_keys(PWHelperService::PROJECTS))],
+            'requirements' => ['nullable', new ValidGrantRequirementTree(app(GrantRequirementService::class))],
         ];
     }
 
@@ -53,5 +54,26 @@ class UpdateCityGrantRequest extends FormRequest
             'city_number.unique' => 'A city grant already exists for that city number.',
             'grant_amount.max' => 'City grant percentage must be 1000% or less.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $rawRequirements = $this->input('requirements_json');
+
+        if ($rawRequirements === null || trim((string) $rawRequirements) === '') {
+            $this->merge(['requirements' => null]);
+
+            return;
+        }
+
+        try {
+            $decodedRequirements = json_decode((string) $rawRequirements, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $this->merge(['requirements' => '__invalid_json__']);
+
+            return;
+        }
+
+        $this->merge(['requirements' => $decodedRequirements]);
     }
 }

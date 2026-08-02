@@ -3,6 +3,7 @@
 namespace Tests\Feature\API;
 
 use App\Models\Account;
+use App\Models\CityGrant;
 use App\Models\DiscordAccount;
 use App\Models\DiscordActionIntent;
 use App\Models\GrantApplication;
@@ -105,6 +106,34 @@ class DiscordWorkflowApiTest extends TestCase
             ->assertJsonPath('error.code', 'validation_error')
             ->assertJsonPath('meta.contract_version', 1)
             ->assertJsonStructure(['error' => ['details' => ['grant_id', 'account_id']]]);
+    }
+
+    public function test_city_grant_preview_enforces_custom_requirement_trees(): void
+    {
+        $nation = $this->actor->nation;
+        CityGrant::query()->create([
+            'description' => 'City workflow requirements',
+            'enabled' => true,
+            'grant_amount' => 100,
+            'city_number' => $nation->num_cities + 1,
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'num_cities',
+                    'operator' => 'gte',
+                    'value' => 999,
+                    'message' => 'Custom city requirement failed.',
+                ]],
+            ],
+        ]);
+
+        $this->withHeaders($this->headers('578901234567890123'))
+            ->postJson('/api/v1/discord/me/city-grant-requests/preview', [
+                'account_id' => $this->account->id,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'city_grant_ineligible')
+            ->assertJsonPath('error.details.grant.0', 'Custom city requirement failed.');
     }
 
     public function test_workflow_intent_cannot_be_confirmed_by_another_linked_actor(): void

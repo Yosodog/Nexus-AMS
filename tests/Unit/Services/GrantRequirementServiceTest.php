@@ -149,6 +149,94 @@ class GrantRequirementServiceTest extends FeatureTestCase
         ], $this->makeNation());
     }
 
+    public function test_normalize_coerces_city_infrastructure_requirements(): void
+    {
+        $normalized = app(GrantRequirementService::class)->normalize([
+            'minimum_infra_per_city' => 1800,
+        ]);
+
+        $this->assertSame([
+            'group' => 'all',
+            'rules' => [[
+                'field' => 'avg_infrastructure_per_city',
+                'operator' => 'gte',
+                'value' => 1800.0,
+                'message' => '',
+            ]],
+        ], $normalized);
+    }
+
+    public function test_guaranteed_projects_supports_nested_group_semantics(): void
+    {
+        $service = app(GrantRequirementService::class);
+
+        $requirements = [
+            'group' => 'all',
+            'rules' => [
+                [
+                    'field' => 'projects',
+                    'operator' => 'contains_all',
+                    'value' => ['Bureau of Domestic Affairs'],
+                    'message' => '',
+                ],
+                [
+                    'group' => 'any',
+                    'rules' => [
+                        [
+                            'field' => 'projects',
+                            'operator' => 'contains_all',
+                            'value' => ['Government Support Agency', 'Urban Planning'],
+                            'message' => '',
+                        ],
+                        [
+                            'field' => 'projects',
+                            'operator' => 'contains_any',
+                            'value' => ['Government Support Agency'],
+                            'message' => '',
+                        ],
+                    ],
+                ],
+                [
+                    'group' => 'not',
+                    'rules' => [[
+                        'field' => 'projects',
+                        'operator' => 'contains_all',
+                        'value' => ['Advanced Urban Planning'],
+                        'message' => '',
+                    ]],
+                ],
+            ],
+        ];
+
+        $this->assertEqualsCanonicalizing([
+            'Bureau of Domestic Affairs',
+            'Government Support Agency',
+        ], $service->guaranteedProjects($requirements));
+    }
+
+    public function test_guaranteed_projects_does_not_infer_from_optional_project_paths(): void
+    {
+        $requirements = [
+            'group' => 'any',
+            'rules' => [
+                [
+                    'field' => 'projects',
+                    'operator' => 'contains_all',
+                    'value' => ['Bureau of Domestic Affairs'],
+                    'message' => '',
+                ],
+                [
+                    'field' => 'num_cities',
+                    'operator' => 'gte',
+                    'value' => 10,
+                    'message' => '',
+                ],
+            ],
+        ];
+
+        $this->assertSame([], app(GrantRequirementService::class)->guaranteedProjects($requirements));
+    }
+
     private function makeNation(): Nation
     {
         return Nation::factory()->create([

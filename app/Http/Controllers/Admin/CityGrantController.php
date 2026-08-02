@@ -11,7 +11,7 @@ use App\Models\CityGrantRequest;
 use App\Services\AuditLogger;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
-use App\Services\PWHelperService;
+use App\Services\GrantRequirementService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
@@ -19,13 +19,17 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CityGrantController
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly GrantRequirementService $grantRequirementService,
+    ) {}
 
     /**
      * @return Factory|View|Application|object
@@ -40,7 +44,26 @@ class CityGrantController
             ->with('nation')
             ->where('status', 'pending')
             ->get();
-        $grants = CityGrant::orderBy('city_number')->get();
+        $grants = CityGrant::orderBy('city_number')->get()
+            ->each(function (CityGrant $grant): void {
+                $inspection = $this->grantRequirementService->inspect($grant->requirements);
+
+                if ($inspection['errors'] !== []) {
+                    Log::warning('City grant has malformed stored requirements.', [
+                        'city_grant_id' => $grant->id,
+                        'city_number' => $grant->city_number,
+                        'errors' => $inspection['errors'],
+                    ]);
+                }
+
+                $grant->requirements = $inspection['normalized'];
+                $grant->setAttribute(
+                    'requirement_summary',
+                    $inspection['errors'] === []
+                        ? $this->grantRequirementService->summarize($inspection['normalized'])
+                        : ['Stored city grant requirements are invalid and must be re-saved.']
+                );
+            });
         $cityCostService = app(CityCostService::class);
         $grantAmounts = $grants->mapWithKeys(
             fn (CityGrant $grant) => [$grant->id => $cityCostService->calculateGrantAmount($grant)]
@@ -65,7 +88,7 @@ class CityGrantController
                 'totalFundsDistributed',
                 'grantApprovalsEnabled'
             )
-        );
+        )->with('grantRequirementBuilderConfig', $this->grantRequirementService->getBuilderConfig());
     }
 
     /**
@@ -143,23 +166,13 @@ class CityGrantController
         $validated = $request->validated();
         $before = $city_grant->only(['city_number', 'grant_amount', 'enabled', 'description', 'requirements']);
 
-        // Convert selected projects to project bits
-        $selectedProjects = $validated['projects'] ?? [];
-        $projectBits = 0;
-        foreach ($selectedProjects as $project) {
-            $projectBits |= PWHelperService::PROJECTS[$project];
-        }
-
         // Update city grant details
         $city_grant->update([
             'city_number' => $validated['city_number'],
             'grant_amount' => $validated['grant_amount'],
             'enabled' => $validated['enabled'],
-            'description' => $validated['description'],
-            'requirements' => [
-                'required_projects' => $selectedProjects,
-                'project_bits' => $projectBits,
-            ],
+            'description' => $validated['description'] ?? '',
+            'requirements' => $this->grantRequirementService->normalize($validated['requirements'] ?? null),
         ]);
 
         $after = $city_grant->fresh()->only(['city_number', 'grant_amount', 'enabled', 'description', 'requirements']);
@@ -202,15 +215,7 @@ class CityGrantController
      */
     public function createCityGrant(StoreCityGrantRequest $request): RedirectResponse
     {
-        // TODO this needs to be in the CityGrantService, not here.
         $validated = $request->validated();
-
-        // Convert selected projects to project bits
-        $selectedProjects = $validated['projects'] ?? [];
-        $projectBits = 0;
-        foreach ($selectedProjects as $project) {
-            $projectBits |= PWHelperService::PROJECTS[$project];
-        }
 
         // Create new city grant
         $cityGrant = CityGrant::create([
@@ -218,10 +223,7 @@ class CityGrantController
             'grant_amount' => $validated['grant_amount'],
             'enabled' => $validated['enabled'],
             'description' => $validated['description'] ?? '',
-            'requirements' => [
-                'required_projects' => $selectedProjects,
-                'project_bits' => $projectBits,
-            ],
+            'requirements' => $this->grantRequirementService->normalize($validated['requirements'] ?? null),
         ]);
 
         $this->auditLogger->success(

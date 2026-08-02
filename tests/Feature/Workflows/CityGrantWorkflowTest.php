@@ -103,7 +103,7 @@ class CityGrantWorkflowTest extends TestCase
             ->assertSessionHas('alert-type', 'error')
             ->assertSessionHas(
                 'alert-message',
-                'You are not eligible for this grant. You must own the Urban Planning project to be eligible.',
+                'You are not eligible for this grant. You must have all of these projects: Urban Planning.',
             );
 
         $this->assertDatabaseCount('city_grant_requests', 0);
@@ -181,7 +181,7 @@ class CityGrantWorkflowTest extends TestCase
             ->assertSessionHas('alert-type', 'error')
             ->assertSessionHas(
                 'alert-message',
-                'You must own the Urban Planning project to be eligible.',
+                'You must have all of these projects: Urban Planning.',
             );
 
         $request->refresh();
@@ -190,6 +190,205 @@ class CityGrantWorkflowTest extends TestCase
         $this->assertSame('pending', $request->status);
         $this->assertSame(1, $request->pending_key);
         $this->assertSame(0.0, (float) $account->money);
+    }
+
+    public function test_member_cannot_request_a_city_grant_when_custom_nested_requirements_fail(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'group' => 'any',
+                    'rules' => [
+                        [
+                            'field' => 'num_cities',
+                            'operator' => 'gte',
+                            'value' => 10,
+                            'message' => '',
+                        ],
+                        [
+                            'field' => 'color',
+                            'operator' => 'eq',
+                            'value' => 'RED',
+                            'message' => '',
+                        ],
+                    ],
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas('alert-message', function (string $message): bool {
+                return str_contains($message, 'At least one of the following must be true:');
+            });
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_city_grant_custom_failure_message_is_returned_to_the_member(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'num_cities',
+                    'operator' => 'gte',
+                    'value' => 10,
+                    'message' => 'Reach city 10 before requesting this tier.',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'You are not eligible for this grant. Reach city 10 before requesting this tier.',
+            );
+    }
+
+    public function test_member_city_grant_page_shows_requirement_summary_and_failures(): void
+    {
+        [$user, $nation] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'num_cities',
+                    'operator' => 'gte',
+                    'value' => 10,
+                    'message' => 'Reach city 10 before requesting this tier.',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('grants.city'))
+            ->assertOk()
+            ->assertSee('City count &gt;= 10', false)
+            ->assertSee('Reach city 10 before requesting this tier.')
+            ->assertSee('Requirements not met');
+    }
+
+    public function test_admin_city_grant_table_shows_full_requirement_summaries(): void
+    {
+        $grant = $this->createCityGrant(6);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'color',
+                    'operator' => 'eq',
+                    'value' => 'BLUE',
+                    'message' => '',
+                ]],
+            ],
+        ]);
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+        $admin = $this->grantPermissions($admin, ['view-city-grants']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.grants.city'))
+            ->assertOk()
+            ->assertSee('Color is Blue');
+    }
+
+    public function test_malformed_city_grant_requirements_fail_closed(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->requirements = '__invalid_requirements__';
+        $grant->save();
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'You are not eligible for this grant. This grant has invalid eligibility requirements. Contact an administrator.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_admin_can_create_and_update_city_grant_requirement_trees(): void
+    {
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+        $initialRequirements = [
+            'group' => 'all',
+            'rules' => [[
+                'field' => 'num_cities',
+                'operator' => 'gte',
+                'value' => 5,
+                'message' => '',
+            ]],
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.city.create'), [
+                'city_number' => 6,
+                'grant_amount' => 100,
+                'enabled' => '1',
+                'description' => 'Growth support',
+                'requirements_json' => json_encode($initialRequirements, JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $grant = CityGrant::query()->sole();
+        $this->assertSame($initialRequirements, $grant->requirements);
+
+        $updatedRequirements = [
+            'group' => 'any',
+            'rules' => [[
+                'field' => 'color',
+                'operator' => 'eq',
+                'value' => 'BLUE',
+                'message' => 'Move to blue before applying.',
+            ]],
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.grants.city.update', $grant), [
+                'city_number' => 6,
+                'grant_amount' => 90,
+                'enabled' => '1',
+                'description' => 'Updated support',
+                'requirements_json' => json_encode($updatedRequirements, JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $this->assertSame($updatedRequirements, $grant->fresh()->requirements);
+    }
+
+    public function test_admin_city_grant_form_rejects_invalid_requirement_json(): void
+    {
+        $admin = $this->createAdminWithPermission('manage-city-grants');
+
+        $this->actingAs($admin)
+            ->from(route('admin.grants.city'))
+            ->post(route('admin.grants.city.create'), [
+                'city_number' => 6,
+                'grant_amount' => 100,
+                'enabled' => '1',
+                'description' => 'Growth support',
+                'requirements_json' => '{invalid',
+            ])
+            ->assertRedirect(route('admin.grants.city'))
+            ->assertSessionHasErrors('requirements')
+            ->assertSessionHasInput('requirements_json', '{invalid');
+
+        $this->assertDatabaseCount('city_grants', 0);
     }
 
     public function test_admin_can_deny_a_pending_city_grant_request(): void

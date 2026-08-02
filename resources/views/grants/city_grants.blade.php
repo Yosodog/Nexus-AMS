@@ -10,6 +10,14 @@
 
         $nextGrant = $grants->firstWhere('city_number', $nextCity);
         $nextGrantAmount = $nextGrant ? ($grantAmounts[$nextGrant->id] ?? null) : null;
+        $nextEligibilityReport = $nextEligibilityReport ?? ['passes' => true, 'failures' => [], 'summary' => []];
+        $nextRequirementSummary = collect($nextGrant?->requirement_summary ?? ($nextEligibilityReport['summary'] ?? []))
+            ->values()
+            ->all();
+        $nextEligibilityFailures = collect($nextEligibilityReport['failures'] ?? [])->values()->all();
+        $nextRequirementsPass = ($nextEligibilityReport['passes'] ?? false) === true;
+        $hasEligibilityFailures = $nextEligibilityFailures !== [];
+        $requirementsNotMet = ! $nextRequirementsPass || $hasEligibilityFailures;
 
         $pendingRequest = $grantRequests->firstWhere('status', 'pending');
         $hasPendingRequest = $pendingRequest !== null;
@@ -90,13 +98,20 @@
                                     Select a destination account and submit for economics review.
                                 </p>
                             </div>
-                            <span @class([
-                                'badge badge-outline text-xs',
-                                'badge-warning' => $hasPendingRequest,
-                                'badge-primary' => ! $hasPendingRequest,
-                            ])>
-                                {{ $hasPendingRequest ? 'Already pending' : 'Ready to submit' }}
-                            </span>
+                            <div class="flex flex-wrap gap-2">
+                                @if ($nextGrant)
+                                    <span @class([
+                                        'badge badge-outline text-xs',
+                                        'badge-success' => ! $requirementsNotMet,
+                                        'badge-warning' => $requirementsNotMet,
+                                    ])>
+                                        {{ $requirementsNotMet ? 'Requirements not met' : 'Eligible' }}
+                                    </span>
+                                @endif
+                                @if ($hasPendingRequest)
+                                    <span class="badge badge-warning badge-outline text-xs">Already pending</span>
+                                @endif
+                            </div>
                         </div>
 
                         @if ($nextGrant)
@@ -120,6 +135,53 @@
                                     </p>
                                 </div>
                             </div>
+
+                            <section class="space-y-3 rounded-xl border border-base-300 bg-base-100 p-4" aria-labelledby="next-city-grant-requirements">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <h3 id="next-city-grant-requirements" class="text-sm font-semibold uppercase tracking-wide text-base-content/75">Eligibility requirements</h3>
+                                    <span @class([
+                                        'badge badge-sm badge-outline',
+                                        'badge-success' => ! $requirementsNotMet,
+                                        'badge-warning' => $requirementsNotMet,
+                                    ])>
+                                        {{ $requirementsNotMet ? 'Not met' : 'Eligible' }}
+                                    </span>
+                                </div>
+
+                                @if ($nextRequirementSummary !== [])
+                                    <div class="space-y-2">
+                                        @foreach ($nextRequirementSummary as $summary)
+                                            <div class="flex items-start gap-2 rounded-lg bg-base-200/70 px-3 py-2 text-sm text-base-content/80">
+                                                <span class="mt-0.5 text-primary" aria-hidden="true">•</span>
+                                                <span>{{ $summary }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="rounded-lg border border-dashed border-base-300 bg-base-200/50 px-3 py-2 text-sm text-base-content/70">
+                                        This city grant has no custom requirements beyond the standard application checks.
+                                    </p>
+                                @endif
+
+                                @if ($requirementsNotMet)
+                                    <div class="alert alert-warning" role="status">
+                                        <div>
+                                            <p class="font-semibold">You do not currently meet this city grant's requirements.</p>
+                                            @if ($hasEligibilityFailures)
+                                                <ul class="mt-2 list-inside list-disc space-y-1 text-sm">
+                                                    @foreach ($nextEligibilityFailures as $failure)
+                                                        <li>{{ $failure }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="alert alert-success" role="status">
+                                        <span>You currently meet this city grant's eligibility requirements.</span>
+                                    </div>
+                                @endif
+                            </section>
                         @endif
 
                         <form method="POST" action="{{ route('grants.city.request') }}" class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
@@ -143,9 +205,9 @@
                             <button
                                 type="submit"
                                 class="btn btn-primary w-full"
-                                @disabled($nextGrantAmount === null || $hasPendingRequest)
+                                @disabled($nextGrantAmount === null || $hasPendingRequest || $requirementsNotMet)
                             >
-                                {{ $hasPendingRequest ? 'Request pending' : 'Request grant' }}
+                                {{ $hasPendingRequest ? 'Request pending' : ($requirementsNotMet ? 'Requirements not met' : 'Request grant') }}
                             </button>
                         </form>
 
@@ -277,6 +339,9 @@
                         $computedAmount = $grantAmounts[$grant->id] ?? null;
                         $isCurrent = $grant->city_number === $nextCity;
                         $isPast = $grant->city_number < $nextCity;
+                        $requirementSummary = collect($grant->requirement_summary ?? [])->values()->all();
+                        $visibleRequirementSummary = array_slice($requirementSummary, 0, 3);
+                        $remainingRequirementSummary = array_slice($requirementSummary, 3);
                     @endphp
 
                     <article @class([
@@ -292,7 +357,11 @@
                                     <p class="text-xs uppercase tracking-wide text-base-content/60">Grant Step {{ $grant->city_number }}</p>
                                 </div>
                                 @if ($isCurrent)
-                                    <span class="badge badge-primary badge-outline">Eligible now</span>
+                                    @if (! $requirementsNotMet)
+                                        <span class="badge badge-primary badge-outline">Eligible now</span>
+                                    @else
+                                        <span class="badge badge-warning badge-outline">Requirements not met</span>
+                                    @endif
                                 @elseif ($isPast)
                                     <span class="badge badge-success badge-outline">Passed</span>
                                 @else
@@ -310,21 +379,22 @@
                                 <p class="text-xs text-base-content/65">{{ number_format($grant->grant_amount) }}% of projected city cost</p>
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-2">
-                                @if (!empty($grant->requirements['required_projects']))
-                                    <div class="tooltip tooltip-info" data-tip="{{ implode(', ', $grant->requirements['required_projects']) }}">
-                                        <span class="badge badge-info badge-outline">Projects required</span>
-                                    </div>
-                                @endif
+                            <div class="flex flex-wrap items-center gap-2" aria-label="City grant requirements">
+                                @forelse ($visibleRequirementSummary as $summary)
+                                    <span class="badge badge-ghost h-auto min-h-6 whitespace-normal py-1 text-left text-xs">{{ $summary }}</span>
+                                @empty
+                                    <span class="badge badge-outline">No custom requirements</span>
+                                @endforelse
 
-                                @if (!empty($grant->requirements['minimum_infra_per_city']))
-                                    <div class="tooltip tooltip-info" data-tip="{{ number_format((float) $grant->requirements['minimum_infra_per_city']) }}">
-                                        <span class="badge badge-warning badge-outline">Min infra / city</span>
+                                @if ($remainingRequirementSummary !== [])
+                                    <div
+                                        class="tooltip tooltip-info"
+                                        data-tip="{{ implode(' • ', $remainingRequirementSummary) }}"
+                                        tabindex="0"
+                                        aria-label="{{ count($remainingRequirementSummary) }} more requirements: {{ implode('; ', $remainingRequirementSummary) }}"
+                                    >
+                                        <span class="badge badge-neutral">+{{ count($remainingRequirementSummary) }} more</span>
                                     </div>
-                                @endif
-
-                                @if (empty($grant->requirements['required_projects']) && empty($grant->requirements['minimum_infra_per_city']))
-                                    <span class="badge badge-outline">No extra requirements</span>
                                 @endif
                             </div>
                         </div>

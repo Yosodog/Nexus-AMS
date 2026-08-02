@@ -1,8 +1,18 @@
 @php
-    use App\Services\PWHelperService;
-
     $defaultReminderMessage = 'You are eligible for a city grant to help cover the cost of your next city. '
         .'If you are planning to expand soon, please submit an application so we can review it promptly.';
+    $oldCityGrantPayload = $oldCityGrantPayload ?? null;
+
+    if ($oldCityGrantPayload === null && old('requirements_json') !== null) {
+        $oldCityGrantPayload = [
+            'id' => old('id'),
+            'city_number' => old('city_number', ''),
+            'grant_amount' => old('grant_amount', 100),
+            'enabled' => filter_var(old('enabled', '1'), FILTER_VALIDATE_BOOLEAN),
+            'description' => old('description', ''),
+            'requirements' => old('requirements') ?: (old('requirements_json') ? json_decode((string) old('requirements_json'), true) : null),
+        ];
+    }
     $canManageCityGrants = auth()->user()?->can('manage-city-grants') ?? false;
     $canBypassSelfRestrictions = auth()->user()?->can('bypass-self-restrictions') ?? false;
 @endphp
@@ -220,7 +230,7 @@
         <div class="nexus-panel__header">
             <div>
                 <h2 id="city-grant-tiers-title" class="nexus-section-title">City grant tiers</h2>
-                <p class="nexus-body-muted mt-1">Calculated funding, availability, and required projects for each city level.</p>
+                <p class="nexus-body-muted mt-1">Calculated funding, availability, and eligibility requirements for each city level.</p>
             </div>
             @can('manage-city-grants')
                 <button class="btn btn-primary btn-sm" type="button" data-city-grant-create>Create city grant</button>
@@ -234,7 +244,7 @@
                     <th>Amount</th>
                     <th>Status</th>
                     <th>Description</th>
-                    <th>Required Projects</th>
+                    <th>Requirements</th>
                     <th data-sortable="false">Actions</th>
                 </tr>
                 </thead>
@@ -260,19 +270,22 @@
                         </td>
                         <td>{{ $grant->description }}</td>
                         <td>
-                            @if(isset($grant->requirements['required_projects']))
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($grant->requirements['required_projects'] as $project)
-                                        <x-badge :value="$project" class="badge-primary badge-outline badge-sm" />
+                            @if (!empty($grant->requirement_summary))
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach (array_slice($grant->requirement_summary, 0, 3) as $summary)
+                                        <x-badge :value="$summary" class="badge-ghost badge-sm" />
                                     @endforeach
+                                    @if (count($grant->requirement_summary) > 3)
+                                        <x-badge value="+{{ count($grant->requirement_summary) - 3 }} more" class="badge-neutral badge-sm" />
+                                    @endif
                                 </div>
                             @else
-                                <span class="text-base-content/60">None</span>
+                                <span class="text-sm text-base-content/50">No custom requirements</span>
                             @endif
                         </td>
                         <td>
                             @can('manage-city-grants')
-                                <button class="btn btn-primary btn-outline btn-sm" type="button" data-city-grant-edit='@json($grant)'>Edit</button>
+                                <button class="btn btn-primary btn-outline btn-sm" type="button" data-city-grant-edit="{{ $grant->id }}">Edit</button>
                             @else
                                 <span class="text-base-content/50">—</span>
                             @endcan
@@ -289,55 +302,61 @@
     </section>
 
     @can('manage-city-grants')
-    <dialog id="grantModal" class="modal" aria-labelledby="grantModalLabel">
-        <div class="modal-box max-w-3xl">
-            <form id="grantForm" method="POST" class="space-y-4">
+    <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="city-grant-modal-title" data-city-grant-modal>
+        <div class="modal-box max-h-[90vh] w-11/12 max-w-5xl overflow-y-auto">
+            <form method="POST" data-city-grant-form>
                 @csrf
-                <input type="hidden" name="id" id="grant_id">
+                <input type="hidden" name="id" data-city-grant-field="id">
 
-                <div class="flex items-start justify-between gap-4">
+                <div class="mb-4 flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="text-lg font-semibold" id="grantModalLabel">Manage City Grant</h3>
-                        <p class="text-sm text-base-content/60">Adjust thresholds, status, and project requirements.</p>
+                        <h3 class="text-lg font-semibold" id="city-grant-modal-title" data-city-grant-modal-title>Manage City Grant</h3>
+                        <p class="text-sm text-base-content/60">Configure city funding and the complete eligibility rule tree.</p>
                     </div>
-                    <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('grantModal').close()">Close</button>
+                    <button type="button" class="btn btn-sm btn-ghost" data-city-grant-close>Close</button>
                 </div>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-medium">City Number</span>
-                    <input type="number" class="input w-full" name="city_number" id="city_number" required>
-                </label>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
+                    <div class="rounded-box space-y-4 bg-base-200 p-4 lg:col-span-2">
+                        <div class="font-semibold">City grant basics</div>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-medium">Grant Percentage</span>
-                    <input type="number" class="input w-full" name="grant_amount" id="grant_amount" min="1" step="1" required>
-                </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">City Number</span>
+                            <input type="number" class="input w-full" name="city_number" required data-city-grant-field="city_number">
+                        </label>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-medium">Status</span>
-                    <select class="select w-full" name="enabled" id="enabled">
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </select>
-                </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Grant Percentage</span>
+                            <input type="number" class="input w-full" name="grant_amount" min="1" step="1" required data-city-grant-field="grant_amount">
+                        </label>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-medium">Required Projects</span>
-                    <select class="select min-h-40 w-full" name="projects[]" id="projects" multiple>
-                        @foreach (array_keys(PWHelperService::PROJECTS) as $project)
-                            <option value="{{ $project }}">{{ $project }}</option>
-                        @endforeach
-                    </select>
-                </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Status</span>
+                            <select class="select w-full" name="enabled" data-city-grant-field="enabled">
+                                <option value="1">Enabled</option>
+                                <option value="0">Disabled</option>
+                            </select>
+                        </label>
 
-                <label class="block space-y-2">
-                    <span class="text-sm font-medium">Description</span>
-                    <textarea class="textarea min-h-28 w-full" name="description" id="description"></textarea>
-                </label>
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Description</span>
+                            <textarea class="textarea min-h-28 w-full" name="description" data-city-grant-field="description"></textarea>
+                        </label>
+                    </div>
 
-                <div class="flex justify-end gap-2">
-                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('grantModal').close()">Close</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <div class="lg:col-span-3">
+                        @include('admin.grants.partials.requirement-builder', [
+                            'inputName' => 'requirements_json',
+                            'builderConfig' => $grantRequirementBuilderConfig,
+                            'showValidationErrors' => $oldCityGrantPayload && $errors->any(),
+                            'emptySummaryHint' => 'Applications will only enforce the standard alliance, pending request, and prior-award checks until you add rules.',
+                        ])
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn btn-ghost" data-city-grant-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save City Grant</button>
                 </div>
             </form>
         </div>
@@ -420,80 +439,144 @@
 
 @push("scripts")
     <script>
-        function editGrant(grant) {
-            document.getElementById('grantForm').action = `{{ url('admin/grants/city') }}/${grant.id}/update`;
-            document.getElementById('grant_id').value = grant.id || '';
-            document.getElementById('city_number').value = grant.city_number || '';
-            document.getElementById('grant_amount').value = grant.grant_amount || '';
-            document.getElementById('enabled').value = grant.enabled ? '1' : '0';
-            document.getElementById('description').value = grant.description || '';
+        (() => {
+            const cityGrants = new Map(
+                {{ Illuminate\Support\Js::from($grants->values()) }}.map((grant) => [String(grant.id), grant]),
+            );
+            const oldCityGrantPayload = {{ Illuminate\Support\Js::from($oldCityGrantPayload) }};
+            const shouldReopenReminderModal = @json($errors->has('grant_ids') || $errors->has('message'));
 
-            const projectSelect = document.getElementById('projects');
-            for (const option of projectSelect.options) {
-                option.selected = grant.requirements?.required_projects?.includes(option.value) || false;
+            function setBuilderValue(form, value) {
+                const builderRoot = form.querySelector('[data-grant-requirement-builder]');
+
+                if (!builderRoot) {
+                    return;
+                }
+
+                if (builderRoot.grantRequirementBuilder) {
+                    builderRoot.grantRequirementBuilder.setValue(value);
+                    return;
+                }
+
+                builderRoot.dataset.grantRequirementInitialValue = typeof value === 'string'
+                    ? value
+                    : JSON.stringify(value ?? null);
             }
 
-            document.getElementById('grantModalLabel').textContent = 'Edit City Grant';
-            document.getElementById('grantModal').showModal();
-        }
+            function populateCityGrantForm(form, grant = {}) {
+                form.reset();
+                form.querySelector('[data-city-grant-field="id"]').value = grant.id || '';
+                form.querySelector('[data-city-grant-field="city_number"]').value = grant.city_number ?? '';
+                form.querySelector('[data-city-grant-field="grant_amount"]').value = grant.grant_amount ?? 100;
+                form.querySelector('[data-city-grant-field="enabled"]').value = [false, 0, '0'].includes(grant.enabled) ? '0' : '1';
+                form.querySelector('[data-city-grant-field="description"]').value = grant.description || '';
+                setBuilderValue(form, grant.requirements ?? grant.requirements_json ?? null);
+            }
 
-        function clearGrantForm() {
-            document.getElementById('grantForm').action = `{{ url('admin/grants/city/create') }}`;
-            document.getElementById('grantForm').reset();
-            document.getElementById('grant_id').value = '';
-            document.getElementById('grant_amount').value = 100;
-            document.getElementById('grantModalLabel').textContent = 'Create City Grant';
-            document.getElementById('grantModal').showModal();
-        }
+            function openCityGrantForm(grant = null) {
+                const modal = document.querySelector('[data-city-grant-modal]');
+                const form = modal?.querySelector('[data-city-grant-form]');
+                const title = modal?.querySelector('[data-city-grant-modal-title]');
 
-        function setGrantReminderSelection(isChecked) {
-            document.querySelectorAll('input[name="grant_ids[]"]').forEach((input) => {
-                input.checked = isChecked;
-            });
-        }
-
-        function initCityGrantAdminPage() {
-            document.querySelectorAll('[data-city-grant-create]').forEach((button) => {
-                if (button.dataset.bound === 'true') {
+                if (!modal || !form || !title) {
                     return;
                 }
 
-                button.dataset.bound = 'true';
-                button.addEventListener('click', () => clearGrantForm());
-            });
-
-            document.querySelectorAll('[data-city-grant-edit]').forEach((button) => {
-                if (button.dataset.bound === 'true') {
-                    return;
+                if (grant?.id) {
+                    form.action = `{{ url('admin/grants/city') }}/${grant.id}/update`;
+                    title.textContent = 'Edit City Grant';
+                    populateCityGrantForm(form, grant);
+                } else {
+                    form.action = `{{ url('admin/grants/city/create') }}`;
+                    title.textContent = 'Create City Grant';
+                    populateCityGrantForm(form);
                 }
 
-                button.dataset.bound = 'true';
-                button.addEventListener('click', () => {
-                    editGrant(JSON.parse(button.dataset.cityGrantEdit || '{}'));
-                });
-            });
+                if (!modal.open) {
+                    modal.showModal();
+                }
+            }
 
-            document.querySelectorAll('[data-grant-reminder-select]').forEach((button) => {
-                if (button.dataset.bound === 'true') {
-                    return;
+            function setGrantReminderSelection(isChecked) {
+                document.querySelectorAll('#grantReminderForm input[name="grant_ids[]"]').forEach((input) => {
+                    input.checked = isChecked;
+                });
+            }
+
+            function initCityGrantAdminPage() {
+                document.querySelectorAll('[data-city-grant-create]').forEach((button) => {
+                    if (button.dataset.bound === 'true') {
+                        return;
+                    }
+
+                    button.dataset.bound = 'true';
+                    button.addEventListener('click', () => openCityGrantForm());
+                });
+
+                document.querySelectorAll('[data-city-grant-edit]').forEach((button) => {
+                    if (button.dataset.bound === 'true') {
+                        return;
+                    }
+
+                    button.dataset.bound = 'true';
+                    button.addEventListener('click', () => {
+                        const grant = cityGrants.get(button.dataset.cityGrantEdit || '');
+
+                        if (grant) {
+                            openCityGrantForm(grant);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('[data-city-grant-close]').forEach((button) => {
+                    if (button.dataset.bound === 'true') {
+                        return;
+                    }
+
+                    button.dataset.bound = 'true';
+                    button.addEventListener('click', () => {
+                        button.closest('dialog')?.close();
+                    });
+                });
+
+                document.querySelectorAll('[data-grant-reminder-select]').forEach((button) => {
+                    if (button.dataset.bound === 'true') {
+                        return;
+                    }
+
+                    button.dataset.bound = 'true';
+                    button.addEventListener('click', () => {
+                        setGrantReminderSelection(button.dataset.grantReminderSelect === 'all');
+                    });
+                });
+
+                const cityGrantForm = document.querySelector('[data-city-grant-form]');
+
+                if (oldCityGrantPayload && cityGrantForm?.dataset.validationReopened !== 'true') {
+                    cityGrantForm.dataset.validationReopened = 'true';
+                    openCityGrantForm(oldCityGrantPayload);
                 }
 
-                button.dataset.bound = 'true';
-                button.addEventListener('click', () => {
-                    setGrantReminderSelection(button.dataset.grantReminderSelect === 'all');
-                });
-            });
-        }
+                const reminderModal = document.getElementById('grantReminderModal');
 
-        document.addEventListener('codex:page-ready', initCityGrantAdminPage);
-        initCityGrantAdminPage();
+                if (
+                    shouldReopenReminderModal
+                    && !oldCityGrantPayload
+                    && reminderModal?.dataset.validationReopened !== 'true'
+                ) {
+                    reminderModal.dataset.validationReopened = 'true';
+                    reminderModal.showModal();
+                }
+            }
 
-        @can('manage-city-grants')
-            @if ($errors->has('grant_ids') || $errors->has('message'))
-                document.addEventListener('codex:page-ready', () => {
-                    document.getElementById('grantReminderModal')?.showModal();
-                });
-            @endif
-        @endcan
+            window.initCityGrantAdminPage = initCityGrantAdminPage;
+
+            if (document.documentElement.dataset.cityGrantLifecycleBound !== 'true') {
+                document.documentElement.dataset.cityGrantLifecycleBound = 'true';
+                document.addEventListener('codex:page-ready', () => window.initCityGrantAdminPage?.());
+            }
+
+            initCityGrantAdminPage();
+        })();
     </script>
 @endpush

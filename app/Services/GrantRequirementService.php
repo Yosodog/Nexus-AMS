@@ -170,6 +170,22 @@ class GrantRequirementService
     }
 
     /**
+     * Return projects that every qualifying path requires the nation to own.
+     *
+     * @return array<int, string>
+     */
+    public function guaranteedProjects(mixed $definition): array
+    {
+        $inspection = $this->inspect($definition);
+
+        if ($inspection['errors'] !== [] || $inspection['normalized'] === null) {
+            return [];
+        }
+
+        return $this->guaranteedProjectsForNode($inspection['normalized']);
+    }
+
+    /**
      * @param  array<string, mixed>  $node
      * @param  array<string, mixed>  $context
      * @return array{passes: bool, failures: array<int, string>}
@@ -181,6 +197,58 @@ class GrantRequirementService
         }
 
         return $this->evaluateCondition($node, $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array<int, string>
+     */
+    private function guaranteedProjectsForNode(array $node): array
+    {
+        if (! isset($node['group'])) {
+            if (($node['field'] ?? null) !== 'projects') {
+                return [];
+            }
+
+            $values = array_values(array_unique(array_map(
+                static fn (mixed $value): string => (string) $value,
+                is_array($node['value'] ?? null) ? $node['value'] : []
+            )));
+
+            return match ($node['operator'] ?? null) {
+                'contains_all' => $values,
+                'contains_any' => count($values) === 1 ? $values : [],
+                default => [],
+            };
+        }
+
+        if (($node['group'] ?? null) === 'not') {
+            return [];
+        }
+
+        /** @var array<int, array<string, mixed>> $children */
+        $children = $node['rules'] ?? [];
+
+        if ($children === []) {
+            return [];
+        }
+
+        $guaranteedByChild = array_map(
+            fn (array $child): array => $this->guaranteedProjectsForNode($child),
+            $children
+        );
+
+        if ($node['group'] === 'all') {
+            return array_values(array_unique(array_merge(...$guaranteedByChild)));
+        }
+
+        $intersection = array_shift($guaranteedByChild) ?? [];
+
+        foreach ($guaranteedByChild as $projects) {
+            $intersection = array_values(array_intersect($intersection, $projects));
+        }
+
+        return $intersection;
     }
 
     /**
@@ -1021,6 +1089,7 @@ class GrantRequirementService
         $maxScore = $this->normalizeNumericValue($definition['max_score'] ?? null);
         $minMmr = $this->normalizeNumericValue($definition['min_mmr_score'] ?? $definition['mmr_score'] ?? null);
         $maxMmr = $this->normalizeNumericValue($definition['max_mmr_score'] ?? null);
+        $minimumInfrastructurePerCity = $this->normalizeNumericValue($definition['minimum_infra_per_city'] ?? null);
 
         if ($minCities !== null && $minCities > 0) {
             $rules[] = ['field' => 'num_cities', 'operator' => 'gte', 'value' => $minCities, 'message' => ''];
@@ -1044,6 +1113,15 @@ class GrantRequirementService
 
         if ($maxMmr !== null && $maxMmr > 0) {
             $rules[] = ['field' => 'mmr_score', 'operator' => 'lte', 'value' => $maxMmr, 'message' => ''];
+        }
+
+        if ($minimumInfrastructurePerCity !== null && $minimumInfrastructurePerCity > 0) {
+            $rules[] = [
+                'field' => 'avg_infrastructure_per_city',
+                'operator' => 'gte',
+                'value' => $minimumInfrastructurePerCity,
+                'message' => '',
+            ];
         }
 
         $requiredProjects = $this->normalizeLegacySelections($definition['required_projects'] ?? $definition['projects'] ?? null, 'projects');
