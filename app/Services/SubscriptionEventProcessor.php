@@ -210,7 +210,7 @@ class SubscriptionEventProcessor
         $eventRules = match ("{$model}:{$event}") {
             'nation:create', 'nation:update' => [
                 'alliance_id' => ['nullable', 'integer', 'min:1'],
-                'alliance_position_id' => ['nullable', 'integer', 'min:1'],
+                'alliance_position_id' => ['nullable', 'integer', 'min:0'],
                 'alliance_position' => ['nullable', 'string', 'max:50'],
             ],
             'alliance:update' => [

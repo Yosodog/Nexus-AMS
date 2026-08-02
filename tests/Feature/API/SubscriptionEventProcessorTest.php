@@ -108,6 +108,26 @@ class SubscriptionEventProcessorTest extends TestCase
         ]);
     }
 
+    public function test_nation_update_accepts_no_alliance_position_sentinel(): void
+    {
+        Queue::fake();
+
+        app(SubscriptionEventProcessor::class)->process('nation', 'update', [
+            'id' => 701,
+            'alliance_id' => null,
+            'alliance_position_id' => 0,
+            'alliance_position' => 'NOALLIANCE',
+        ]);
+
+        Queue::assertPushed(UpdateNationJob::class, fn (UpdateNationJob $job): bool => $job->nationsData === [[
+            'id' => 701,
+            'alliance_id' => null,
+            'alliance_position_id' => 0,
+            'alliance_position' => 'NOALLIANCE',
+        ]]);
+        $this->assertFileDoesNotExist($this->quarantineFile);
+    }
+
     public function test_it_accepts_an_empty_batch_without_dispatching_work(): void
     {
         Queue::fake();
