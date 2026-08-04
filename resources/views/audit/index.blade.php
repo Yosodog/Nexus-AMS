@@ -393,7 +393,7 @@
                             Open profitability, improvements, and bulk-import JSON.
                         </p>
                     </div>
-                    <span class="badge badge-outline">{{ $buildRecommendation ? 'Recommendation ready' : 'Not generated' }}</span>
+                    <span class="badge badge-outline">{{ $buildRecommendation ? 'Recommendation ready' : ($buildRecommendationPending ? 'Recalculating' : 'Not generated') }}</span>
                 </div>
             </summary>
 
@@ -524,9 +524,13 @@
                     </details>
                 @else
                     <div class="rounded-lg border border-dashed border-base-300 bg-base-200/40 p-6">
-                        <h3 class="text-xl font-semibold">No build recommendation yet</h3>
+                        <h3 class="text-xl font-semibold">{{ $buildRecommendationPending ? 'Build recommendation is updating' : 'No build recommendation yet' }}</h3>
                         <p class="mt-2 max-w-prose text-base text-base-content/70">
-                            Generate one to see the recommended JSON, profitability, city statistics, and quick import actions.
+                            @if($buildRecommendationPending)
+                                The current calculation is pending. Your older recommendation stays hidden so it cannot be mistaken for current data.
+                            @else
+                                Generate one to see the recommended JSON, profitability, city statistics, and quick import actions.
+                            @endif
                         </p>
                     </div>
                 @endif

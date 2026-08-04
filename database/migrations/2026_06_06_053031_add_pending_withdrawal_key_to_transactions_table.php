@@ -24,16 +24,20 @@ return new class extends Migration
 
         $this->quarantineDuplicatePendingWithdrawals();
 
-        DB::table('transactions')
+        $pendingWithdrawals = DB::table('transactions')
             ->where('is_pending', true)
             ->where('transaction_type', 'withdrawal')
             ->whereNull('to_account_id')
-            ->whereNotNull('nation_id')
-            ->where(function ($query): void {
+            ->whereNotNull('nation_id');
+
+        if (Schema::hasColumn('transactions', 'bank_attempt_status')) {
+            $pendingWithdrawals->where(function ($query): void {
                 $query->whereNull('bank_attempt_status')
                     ->orWhere('bank_attempt_status', '!=', 'needs_reconciliation');
-            })
-            ->update(['pending_withdrawal_key' => self::KEY_VALUE]);
+            });
+        }
+
+        $pendingWithdrawals->update(['pending_withdrawal_key' => self::KEY_VALUE]);
 
         Schema::table('transactions', function (Blueprint $table): void {
             $table->unique(['nation_id', 'pending_withdrawal_key'], self::INDEX_NAME);
@@ -68,15 +72,20 @@ return new class extends Migration
             $duplicates = $withdrawals->slice(1);
 
             foreach ($duplicates as $duplicate) {
+                $updates = [
+                    'requires_admin_approval' => true,
+                    'pending_withdrawal_key' => null,
+                    'pending_reason' => 'Quarantined during pending withdrawal guard migration because another pending withdrawal already existed for this nation. Verify external bank state before refunding or completing it.',
+                    'updated_at' => now(),
+                ];
+
+                if (Schema::hasColumn('transactions', 'bank_attempt_status')) {
+                    $updates['bank_attempt_status'] = 'needs_reconciliation';
+                }
+
                 DB::table('transactions')
                     ->where('id', $duplicate->id)
-                    ->update([
-                        'requires_admin_approval' => true,
-                        'bank_attempt_status' => 'needs_reconciliation',
-                        'pending_withdrawal_key' => null,
-                        'pending_reason' => 'Quarantined during pending withdrawal guard migration because another pending withdrawal already existed for this nation. Verify external bank state before refunding or completing it.',
-                        'updated_at' => now(),
-                    ]);
+                    ->update($updates);
             }
         }
     }

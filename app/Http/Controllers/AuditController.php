@@ -58,8 +58,10 @@ class AuditController extends Controller
         ];
 
         $recommendation = $nation->buildRecommendation;
+        $buildRecommendationPending = $recommendation !== null
+            && $recommendation->model_version !== EconomyRules::MODEL_VERSION;
 
-        if ($recommendation?->model_version !== EconomyRules::MODEL_VERSION) {
+        if ($buildRecommendationPending) {
             $recommendation = null;
         }
 
@@ -68,6 +70,7 @@ class AuditController extends Controller
             'violationsByPriority' => $grouped,
             'priorityOrder' => $priorityOrder,
             'buildRecommendation' => $recommendation,
+            'buildRecommendationPending' => $buildRecommendationPending,
             'buildRecommendationJson' => $recommendation
                 ? json_encode($recommendation->recommended_build_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
                 : null,
