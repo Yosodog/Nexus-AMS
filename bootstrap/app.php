@@ -4,6 +4,7 @@ use App\Http\Middleware\ApplySeoRobotsHeaders;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnforceTrustedHost;
 use App\Http\Middleware\PreventDisabledUsers;
+use App\Http\Middleware\RejectLegacyMilcomMutations;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UpdateLastActive;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -43,11 +44,13 @@ return Application::configure(basePath: dirname(__DIR__))
             AssignRequestId::class,
         ]);
         $middleware->appendToGroup('web', [
+            RejectLegacyMilcomMutations::class,
             UpdateLastActive::class,
             PreventDisabledUsers::class,
             SecurityHeaders::class,
         ]);
         $middleware->appendToGroup('api', [
+            RejectLegacyMilcomMutations::class,
             PreventDisabledUsers::class,
         ]);
     })
@@ -55,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $isDiscordActorApi = static fn (Request $request): bool => $request->is('api/v1/discord/me/*')
             || $request->is('api/v1/discord/staff/*')
             || $request->is('api/v1/discord/war-counters/*')
+            || $request->is('api/v1/discord/milcom/*')
             || $request->is('api/v1/discord/offshores/sweep-primary');
 
         $exceptions->render(function (ValidationException $exception, Request $request) use ($isDiscordActorApi) {

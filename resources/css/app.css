@@ -451,6 +451,53 @@ html[data-theme] .ck.ck-editor__editable_inline {
         font-weight: 650;
     }
 
+    .link:not(.btn) {
+        color: var(--color-primary);
+        text-decoration-line: underline;
+        text-decoration-color: color-mix(in oklch, var(--color-primary) 48%, transparent);
+        text-decoration-thickness: 0.08em;
+        text-underline-offset: 0.18em;
+    }
+
+    .link:not(.btn):hover {
+        color: color-mix(in oklch, var(--color-primary) 78%, var(--color-base-content));
+        text-decoration-color: currentColor;
+    }
+
+    .milcom-plan-inspector {
+        position: relative;
+        min-width: 0;
+        scroll-margin-top: 5rem;
+    }
+
+    .milcom-plan-inspector__close {
+        display: none;
+    }
+
+    .milcom-plan-inspector__nav {
+        display: flex;
+        min-width: 0;
+        gap: 0.25rem;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--nexus-rule);
+        background: var(--color-base-100);
+        padding: 0.5rem 0.75rem;
+        scrollbar-gutter: stable;
+    }
+
+    .milcom-plan-inspector__nav [aria-current="true"] {
+        background: color-mix(in oklch, var(--color-primary) 10%, var(--color-base-100));
+        color: var(--color-primary);
+    }
+
+    .milcom-plan-inspector__body {
+        min-width: 0;
+    }
+
+    .milcom-plan-inspector__actions {
+        background: var(--color-base-100);
+    }
+
     .btn {
         min-height: 2.5rem;
         border-radius: 0.375rem;
@@ -832,6 +879,101 @@ html[data-theme] .ck.ck-editor__editable_inline {
         .audit-rule-condition-row {
             grid-template-columns: minmax(12rem, 1.4fr) minmax(10rem, 0.8fr) minmax(11rem, 1fr) auto;
             align-items: end;
+        }
+    }
+
+    @media (max-width: 79.999rem) {
+        body.milcom-plan-inspector-open {
+            overflow: hidden;
+        }
+
+        .milcom-plan-inspector {
+            position: fixed;
+            inset: 4rem 0 0;
+            z-index: var(--nexus-z-modal);
+            display: none;
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 0;
+            background: var(--color-base-100);
+        }
+
+        .milcom-plan-inspector[data-milcom-sheet-open="true"] {
+            display: grid;
+            grid-template-rows: minmax(0, 1fr);
+        }
+
+        .milcom-plan-inspector__close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            z-index: var(--nexus-z-dropdown);
+            display: inline-flex !important;
+        }
+
+        .milcom-plan-inspector .nexus-panel__header {
+            padding-right: 9.5rem;
+        }
+
+        .milcom-plan-inspector > [data-milcom-inspector-content]:not(.hidden) {
+            display: grid;
+            min-height: 0;
+            grid-template-rows: auto auto minmax(0, 1fr) auto;
+            overflow: hidden;
+        }
+
+        .milcom-plan-inspector__body {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+    }
+
+    @media (min-width: 80rem) {
+        .milcom-plan-inspector__close {
+            display: none !important;
+        }
+
+        .milcom-plan-workbench {
+            position: sticky;
+            top: 5rem;
+            height: calc(100dvh - 6rem);
+            align-items: stretch;
+        }
+
+        .milcom-plan-targets,
+        .milcom-plan-inspector {
+            height: 100%;
+            min-height: 0;
+        }
+
+        .milcom-plan-targets__form {
+            display: grid;
+            height: 100%;
+            min-height: 0;
+            grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+        }
+
+        .milcom-plan-target-list,
+        .milcom-plan-inspector__body {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+
+        .milcom-plan-inspector {
+            display: grid;
+            grid-template-rows: minmax(0, 1fr);
+            overflow: hidden;
+        }
+
+        .milcom-plan-inspector > [data-milcom-inspector-content]:not(.hidden) {
+            display: grid;
+            min-height: 0;
+            grid-template-rows: auto auto minmax(0, 1fr) auto;
+            overflow: hidden;
         }
     }
 

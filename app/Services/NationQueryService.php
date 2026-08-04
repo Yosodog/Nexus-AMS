@@ -7,6 +7,7 @@ use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\PWRateLimitHitException;
 use App\GraphQL\Models\Nation;
 use App\GraphQL\Models\Nations;
+use Generator;
 use Illuminate\Http\Client\ConnectionException;
 
 class NationQueryService
@@ -111,6 +112,40 @@ class NationQueryService
         }
 
         return $nations;
+    }
+
+    /**
+     * Fetch an exact nation set with bounded concurrency and memory use.
+     *
+     * @param  list<int>  $nationIds
+     * @return Generator<int, Nation>
+     */
+    public static function getMultipleNationsByIdsConcurrently(
+        array $nationIds,
+        int $maxConcurrency = 2,
+    ): Generator {
+        $builders = [];
+
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $nationIds))), 500) as $chunk) {
+            $builders[] = (new GraphQLQueryBuilder)
+                ->setRootField('nations')
+                ->addArgument('first', count($chunk))
+                ->addArgument(['id' => $chunk])
+                ->addNestedField('data', function (GraphQLQueryBuilder $builder): void {
+                    SelectionSetHelper::applyNationSelection($builder);
+                });
+        }
+
+        $client = new QueryService;
+
+        foreach ($client->sendQueriesConcurrently($builders, $maxConcurrency) as $response) {
+            foreach ($response as $queryNation) {
+                $nation = new Nation;
+                $nation->buildWithJSON((object) $queryNation);
+
+                yield $nation;
+            }
+        }
     }
 
     /**

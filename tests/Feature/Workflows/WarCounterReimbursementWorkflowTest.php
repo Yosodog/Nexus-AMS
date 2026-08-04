@@ -26,6 +26,8 @@ class WarCounterReimbursementWorkflowTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('milcom.v2_requested', false);
+        config()->set('milcom.v2_enabled', false);
         Cache::flush();
         Cache::forever('alliances:membership:ids', [777]);
         Event::fake([AllianceExpenseOccurred::class]);

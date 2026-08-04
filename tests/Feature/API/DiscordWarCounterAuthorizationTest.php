@@ -25,6 +25,8 @@ class DiscordWarCounterAuthorizationTest extends TestCase
     {
         parent::setUp();
         $this->configureDiscordInteractionSigning();
+        config()->set('milcom.v2_requested', false);
+        config()->set('milcom.v2_enabled', false);
 
         config([
             'services.discord_bot_key' => 'discord-war-counter-test-key',

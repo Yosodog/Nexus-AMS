@@ -5,11 +5,14 @@ namespace App\Providers;
 use App\Events\AllianceExpenseOccurred;
 use App\Events\AllianceIncomeOccurred;
 use App\Events\NationAllianceChanged;
+use App\Events\WarAttackRecorded;
 use App\Events\WarDeclared;
+use App\Events\WarStateChanged;
 use App\Listeners\AuditLogin;
 use App\Listeners\AuditLoginFailed;
 use App\Listeners\AuditLogout;
-use App\Listeners\CreateCounterOnWarDeclared;
+use App\Listeners\IngestMilcomIncident;
+use App\Listeners\ReconcileMilcomWarState;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
@@ -39,7 +42,14 @@ class EventServiceProvider extends ServiceProvider
             AuditLogout::class,
         ],
         WarDeclared::class => [
-            CreateCounterOnWarDeclared::class,
+            IngestMilcomIncident::class,
+            ReconcileMilcomWarState::class,
+        ],
+        WarStateChanged::class => [
+            ReconcileMilcomWarState::class,
+        ],
+        WarAttackRecorded::class => [
+            ReconcileMilcomWarState::class,
         ],
         NationAllianceChanged::class => [
             SendAllianceDepartureDiscordNotification::class,

@@ -112,11 +112,13 @@ test('full admin can review populated grant, city grant, and loan queues', async
 });
 
 test('full admin can reach war planning, settings, and custom-page editing', async ({ page }) => {
-  await page.goto('/_browser/login/admin?redirect=/admin/war-room');
+  await page.goto('/_browser/login/admin?redirect=/admin/milcom');
 
   await expectApplicationShell(page);
-  await expect(page.getByRole('heading', { name: 'War Room Dashboard' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Create War Plan' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Milcom Command Desk' })).toBeVisible();
+  await page.getByRole('link', { name: 'Mass planning' }).click();
+  await expect(page.getByRole('heading', { name: 'Mass War Planning' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'New operation' })).toBeVisible();
 
   await page.goto('/admin/settings');
   await expectApplicationShell(page);

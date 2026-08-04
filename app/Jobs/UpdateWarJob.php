@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\WarStateChanged;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\SubscriptionRecordQuarantine;
@@ -36,7 +37,8 @@ class UpdateWarJob implements ShouldQueue
                     continue;
                 }
 
-                War::updateFromAPI((object) $warData);
+                $war = War::updateFromAPI((object) $warData);
+                event(new WarStateChanged((int) $war->id));
             } catch (InvalidArgumentException|TypeError|ValueError $exception) {
                 $quarantine->quarantine(
                     'war',

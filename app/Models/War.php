@@ -156,4 +156,30 @@ class War extends Model
             ->where('turns_left', '>', 0)
         );
     }
+
+    /**
+     * @param  Builder<War>  $query
+     * @param  list<int>  $firstNationIds
+     * @param  list<int>  $secondNationIds
+     * @return Builder<War>
+     */
+    public function scopeBetweenNationSets(
+        Builder $query,
+        array $firstNationIds,
+        array $secondNationIds,
+    ): Builder {
+        return $query->where(function (Builder $pairQuery) use ($firstNationIds, $secondNationIds): void {
+            $pairQuery
+                ->where(function (Builder $forward) use ($firstNationIds, $secondNationIds): void {
+                    $forward
+                        ->whereIn('att_id', $firstNationIds)
+                        ->whereIn('def_id', $secondNationIds);
+                })
+                ->orWhere(function (Builder $reverse) use ($firstNationIds, $secondNationIds): void {
+                    $reverse
+                        ->whereIn('def_id', $firstNationIds)
+                        ->whereIn('att_id', $secondNationIds);
+                });
+        });
+    }
 }

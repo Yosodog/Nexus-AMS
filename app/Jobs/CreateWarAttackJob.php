@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\WarAttackTypeEnum;
+use App\Events\WarAttackRecorded;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
@@ -73,7 +74,11 @@ class CreateWarAttackJob implements ShouldQueue
                     continue;
                 }
 
-                WarAttack::storeFromEvent($warAttack);
+                $attack = WarAttack::storeFromEvent($warAttack);
+
+                if ($attack !== null) {
+                    event(new WarAttackRecorded((int) $attack->id, (int) $attack->war_id));
+                }
             }
 
             WarAttack::pruneOlderThanDays(30);

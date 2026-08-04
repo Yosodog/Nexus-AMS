@@ -1,4 +1,5 @@
 import './bootstrap';
+import './milcom';
 import { initAuditRuleBuilders } from './audit-rule-builder';
 import { initGrantRequirementBuilders } from './grant-requirement-builder';
 

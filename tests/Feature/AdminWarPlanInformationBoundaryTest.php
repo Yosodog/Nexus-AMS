@@ -16,6 +16,14 @@ class AdminWarPlanInformationBoundaryTest extends TestCase
     use BuildsTestUsers;
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('milcom.v2_requested', false);
+        config()->set('milcom.v2_enabled', false);
+    }
+
     public function test_war_viewer_cannot_read_operational_plans_or_plan_data(): void
     {
         $admin = $this->createAdmin(['view-wars']);

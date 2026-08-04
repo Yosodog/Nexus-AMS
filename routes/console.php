@@ -5,6 +5,7 @@ use App\Console\Commands\ProcessDeposits;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
 use App\Jobs\ReconcileBlockadeReliefRequests;
+use App\Jobs\ReconcileMilcomLifecycleJob;
 use App\Jobs\SendAuditRemindersJob;
 use App\Services\PWHealthService;
 use App\Services\SettingService;
@@ -82,7 +83,14 @@ Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('23:30');
 Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOverlapping(1);
 Schedule::command('users:disable-inactive')->dailyAt('01:05')->withoutOverlapping(120);
 Schedule::command('audit:prune')->dailyAt('01:15');
-Schedule::command('war-counters:archive-stale')->hourly()->withoutOverlapping(55);
+Schedule::command('war-counters:archive-stale')
+    ->hourly()
+    ->withoutOverlapping(55)
+    ->when(fn (): bool => ! (bool) config('milcom.v2_enabled', false));
+Schedule::job(new ReconcileMilcomLifecycleJob, 'default')
+    ->everyMinute()
+    ->withoutOverlapping(1)
+    ->onOneServer();
 Schedule::job(new EvaluateAlertSubscriptionsJob, 'sync')
     ->hourlyAt(25)
     ->withoutOverlapping(55)

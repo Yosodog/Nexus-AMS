@@ -63,7 +63,9 @@ class AppSidebar extends Component
                 $this->item('Weekly lottery', 'o-ticket', route('admin.lottery.index'), request()->routeIs('admin.lottery.*'), null, $user->canAny(['view-lottery', 'manage-lottery'])),
             ]),
             $this->group('Defense', [
-                $this->item('War room', 'o-command-line', route('admin.war-room'), request()->routeIs('admin.war-room', 'admin.war-plans.*', 'admin.war-counters.*'), null, $user->can('manage-war-room')),
+                (bool) config('milcom.v2_enabled', false)
+                    ? $this->item('Milcom', 'o-command-line', route('admin.milcom.dashboard'), request()->routeIs('admin.milcom.*'), null, $user->can('manage-war-room'))
+                    : $this->item('War room', 'o-command-line', route('admin.war-room'), request()->routeIs('admin.war-room', 'admin.war-plans.*', 'admin.war-counters.*'), null, $user->can('manage-war-room')),
                 $this->item('Wars', 'o-bolt', route('admin.wars'), request()->routeIs('admin.wars'), null, $user->can('view-wars')),
                 $this->item('War aid', 'o-heart', route('admin.war-aid'), request()->routeIs('admin.war-aid'), $pendingCounts['war_aid'] ?? 0, $user->can('view-war-aid')),
                 $this->item('Rebuilding', 'o-wrench-screwdriver', route('admin.rebuilding.index'), request()->routeIs('admin.rebuilding.*'), $pendingCounts['rebuilding'] ?? 0, $user->can('view-rebuilding')),

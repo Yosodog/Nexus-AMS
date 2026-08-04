@@ -13,6 +13,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use stdClass;
 use Throwable;
 
@@ -153,6 +154,59 @@ class QueryService
         }
 
         return (object) $allResults->toArray();
+    }
+
+    /**
+     * Execute independent, unpaginated queries in bounded concurrent batches.
+     *
+     * Results are yielded one response at a time so callers can persist and
+     * release each batch instead of retaining the full result set in memory.
+     *
+     * @param  list<GraphQLQueryBuilder>  $builders
+     * @return \Generator<int, stdClass>
+     */
+    public function sendQueriesConcurrently(array $builders, int $maxConcurrency = 2): \Generator
+    {
+        $maxConcurrency = max(1, $maxConcurrency);
+
+        foreach (array_chunk($builders, $maxConcurrency) as $builderBatch) {
+            $promises = [];
+
+            foreach ($builderBatch as $builder) {
+                $retryCount = 0;
+                $delay = $this->initialDelay;
+                $promises[] = $this->sendPageQuery(
+                    $builder->build(),
+                    [],
+                    $retryCount,
+                    $delay,
+                );
+            }
+
+            $responses = Utils::settle($promises)->wait();
+
+            foreach ($responses as $index => $response) {
+                if (($response['state'] ?? null) !== 'fulfilled') {
+                    $reason = $response['reason'] ?? null;
+
+                    if ($reason instanceof Throwable) {
+                        throw $reason;
+                    }
+
+                    throw new RuntimeException('A concurrent Politics & War query failed.');
+                }
+
+                $payload = $response['value'] ?? null;
+                $rootField = $builderBatch[$index]->getRootField();
+                $rootPayload = is_array($payload) ? ($payload['data'][$rootField] ?? null) : null;
+
+                if (! is_array($rootPayload)) {
+                    throw new PWQueryFailedException('A concurrent Politics & War query returned an unusable response.');
+                }
+
+                yield (object) ($rootPayload['data'] ?? $rootPayload);
+            }
+        }
     }
 
     /**

@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ManualDisbursementController;
 use App\Http\Controllers\Admin\MarketController as AdminMarketController;
 use App\Http\Controllers\Admin\MembersController as AdminMembersController;
 use App\Http\Controllers\Admin\MemberTransferController as AdminMemberTransferController;
+use App\Http\Controllers\Admin\MilcomPageController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\PayrollController;
@@ -72,6 +73,7 @@ use App\Http\Middleware\BlockWhenPWDown;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
+use App\Http\Middleware\RequireMilcomV2;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
@@ -526,6 +528,27 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/defense/wars', [AdminWarController::class, 'index'])->name('admin.wars');
 
         // War Room & Campaign management
+        Route::prefix('milcom')->middleware(['can:manage-war-room', RequireMilcomV2::class])->group(function () {
+            Route::get('/', [MilcomPageController::class, 'dashboard'])->name('admin.milcom.dashboard');
+            Route::get('/plans', [MilcomPageController::class, 'plans'])->name('admin.milcom.plans');
+            Route::get('/plans/create', [MilcomPageController::class, 'createPlan'])
+                ->name('admin.milcom.plans.create');
+            Route::get('/plans/{operation}/export.csv', [MilcomPageController::class, 'exportPlanCsv'])
+                ->name('admin.milcom.plans.export');
+            Route::get('/plans/{operation}', [MilcomPageController::class, 'showPlan'])
+                ->name('admin.milcom.plans.show');
+            Route::get('/counters', [MilcomPageController::class, 'counters'])
+                ->name('admin.milcom.counters');
+            Route::get('/archive', [MilcomPageController::class, 'archive'])
+                ->name('admin.milcom.archive');
+            Route::get('/archive/legacy/{type}/{id}', [MilcomPageController::class, 'legacyHistory'])
+                ->name('admin.milcom.archive.legacy');
+            Route::get('/archive/{operation}', [MilcomPageController::class, 'operationHistory'])
+                ->name('admin.milcom.archive.show');
+            Route::get('/settings', [MilcomPageController::class, 'settings'])
+                ->name('admin.milcom.settings');
+        });
+
         Route::get('/war-room', [WarRoomController::class, 'index'])->name('admin.war-room');
         Route::post('/war-room/discord-channel', [WarRoomController::class, 'updateDiscordChannel'])
             ->name('admin.war-room.discord-channel');
