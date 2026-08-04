@@ -5,15 +5,18 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
-$defaultStatefulDomains = [
-    'localhost',
-    'localhost:3000',
-    '127.0.0.1',
-    '127.0.0.1:8000',
-    '::1',
-    Sanctum::currentApplicationUrlWithPort(),
-    Sanctum::currentRequestHost(),
-];
+$defaultStatefulDomains = array_values(array_filter(array_map(
+    static fn (string $domain): string => trim($domain),
+    explode(',', implode(',', [
+        'localhost',
+        'localhost:3000',
+        '127.0.0.1',
+        '127.0.0.1:8000',
+        '::1',
+        Sanctum::currentApplicationUrlWithPort(),
+        Sanctum::currentRequestHost(),
+    ]))
+)));
 
 $configuredStatefulDomains = array_values(array_filter(array_map(
     static fn (string $domain): string => trim($domain),
