@@ -8,7 +8,7 @@
             <div class="max-w-3xl">
                 <p class="nexus-kicker">Membership application</p>
                 <h1 class="mt-3 font-display text-4xl font-bold leading-none text-base-content sm:text-5xl">
-                    Your path into {{ config('app.name') }}
+                    Your path into {{ $seo?->siteName ?? config('app.name') }}
                 </h1>
                 <p class="mt-5 max-w-2xl text-base leading-7 text-base-content/70">
                     Review the current requirements and application instructions before creating an account. The record below is maintained by alliance staff.

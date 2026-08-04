@@ -1,10 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    @php
+        $resolvedSeo = $seo ?? null;
+        $publicSiteName = $resolvedSeo?->siteName ?? config('app.name');
+    @endphp
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
-    <title>@yield('title', $title ?? config('app.name'))</title>
+    <title>@if($resolvedSeo){{ $resolvedSeo->title }}@else@yield('title', $title ?? config('app.name'))@endif</title>
+    <meta name="robots" content="{{ $resolvedSeo?->robots ?? 'noindex, nofollow' }}">
+
+    @if($resolvedSeo)
+        <meta name="description" content="{{ $resolvedSeo->description }}">
+        <link rel="canonical" href="{{ $resolvedSeo->canonical }}">
+
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ $resolvedSeo->siteName }}">
+        <meta property="og:title" content="{{ $resolvedSeo->title }}">
+        <meta property="og:description" content="{{ $resolvedSeo->description }}">
+        <meta property="og:url" content="{{ $resolvedSeo->canonical }}">
+        <meta name="twitter:card" content="{{ $resolvedSeo->twitterCard() }}">
+        <meta name="twitter:title" content="{{ $resolvedSeo->title }}">
+        <meta name="twitter:description" content="{{ $resolvedSeo->description }}">
+
+        @if($resolvedSeo->imageUrl)
+            <meta property="og:image" content="{{ $resolvedSeo->imageUrl }}">
+            <meta property="og:image:alt" content="{{ $resolvedSeo->imageAlt }}">
+            <meta name="twitter:image" content="{{ $resolvedSeo->imageUrl }}">
+            <meta name="twitter:image:alt" content="{{ $resolvedSeo->imageAlt }}">
+        @endif
+
+        @if($resolvedSeo->structuredData)
+            <script type="application/ld+json">{!! Illuminate\Support\Js::encode($resolvedSeo->structuredData) !!}</script>
+        @endif
+    @endif
+
     <link rel="icon" href="{{ $faviconUrl ?? asset('favicon.ico') }}">
 
     <x-theme-init />
@@ -19,10 +50,10 @@
 
     <header class="public-nav">
         <div class="public-nav__inner">
-            <a href="{{ route('home') }}" class="public-brand" aria-label="{{ config('app.name') }} home">
-                <span class="public-brand__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
+            <a href="{{ route('home') }}" class="public-brand" aria-label="{{ $publicSiteName }} home">
+                <span class="public-brand__mark" aria-hidden="true">{{ Str::of($publicSiteName)->substr(0, 1)->upper() }}</span>
                 <span class="min-w-0">
-                    <span class="public-brand__name">{{ config('app.name') }}</span>
+                    <span class="public-brand__name">{{ $publicSiteName }}</span>
                     <span class="public-brand__descriptor">Alliance operations</span>
                 </span>
             </a>
@@ -70,7 +101,7 @@
         @yield('content')
     </main>
 
-    <x-footer />
+    <x-footer :site-name="$publicSiteName" />
 
     <x-confirmation-dialog />
 

@@ -1,9 +1,15 @@
+@props(['siteName' => null])
+
+@php
+    $resolvedSiteName = $siteName ?? config('app.name');
+@endphp
+
 <footer class="site-footer">
     <div class="site-footer__inner">
         <div class="site-footer__identity">
-            <span class="public-brand__mark" aria-hidden="true">{{ Str::of(config('app.name'))->substr(0, 1)->upper() }}</span>
+            <span class="public-brand__mark" aria-hidden="true">{{ Str::of($resolvedSiteName)->substr(0, 1)->upper() }}</span>
             <div>
-                <p class="site-footer__name">{{ config('app.name') }}</p>
+                <p class="site-footer__name">{{ $resolvedSiteName }}</p>
                 <p class="site-footer__summary">Member services and alliance operations.</p>
             </div>
         </div>

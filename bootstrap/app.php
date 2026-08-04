@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplySeoRobotsHeaders;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnforceTrustedHost;
 use App\Http\Middleware\PreventDisabledUsers;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             subdomains: false,
         );
         $middleware->append(EnforceTrustedHost::class);
+        $middleware->append(ApplySeoRobotsHeaders::class);
         $middleware->statefulApi();
         $middleware->prependToGroup('web', [
             AssignRequestId::class,

@@ -191,6 +191,226 @@
             </form>
             </x-card>
 
+            <x-card title="Search & Sharing" subtitle="Control how the public alliance site appears in search results and link previews." class="lg:col-span-2">
+            <x-slot:menu>
+                <span class="badge {{ $seoSettings['effective_indexing_enabled'] ? 'badge-success' : 'badge-warning' }}">
+                    {{ $seoSettings['effective_indexing_enabled'] ? 'Indexable' : 'Noindex' }}
+                </span>
+            </x-slot:menu>
+
+            <div class="space-y-6">
+                @if($seoSettings['warnings'] !== [])
+                    <div class="alert alert-warning">
+                        <div>
+                            <p class="font-semibold">SEO readiness needs attention</p>
+                            <ul class="mt-2 grid gap-1 text-sm">
+                                @foreach($seoSettings['warnings'] as $warning)
+                                    <li class="flex items-start gap-2">
+                                        <span aria-hidden="true">&bull;</span>
+                                        <span>{{ $warning }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Site name</dt>
+                        <dd class="mt-1 break-words font-semibold">{{ $seoSettings['identity']['site_name'] }}</dd>
+                    </div>
+                    <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Alliance</dt>
+                        <dd class="mt-1 break-words font-semibold">{{ $seoSettings['identity']['alliance_name'] }}</dd>
+                    </div>
+                    <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Acronym</dt>
+                        <dd class="mt-1 font-semibold">{{ $seoSettings['identity']['alliance_acronym'] ?? 'Not available' }}</dd>
+                    </div>
+                    <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Canonical home</dt>
+                        <dd class="mt-1 break-all text-sm font-semibold">{{ $seoSettings['home_metadata']->canonical }}</dd>
+                    </div>
+                </dl>
+
+                <form method="POST" action="{{ route('admin.settings.seo') }}" enctype="multipart/form-data" class="space-y-6">
+                    @csrf
+                    <input type="hidden" name="indexing_enabled" value="0">
+                    <input type="hidden" name="remove_social_image" value="0">
+
+                    <label class="label cursor-pointer justify-start gap-3 rounded-box border border-base-300 p-4">
+                        <input
+                            class="toggle toggle-primary"
+                            type="checkbox"
+                            id="seoIndexingEnabled"
+                            name="indexing_enabled"
+                            value="1"
+                            @checked(old('indexing_enabled', $seoSettings['configuration']['indexing_enabled']))
+                        >
+                        <span>
+                            <span class="block font-semibold">Allow public pages to appear in search</span>
+                            <span class="block text-xs text-base-content/60">The environment and canonical URL safety checks remain authoritative.</span>
+                        </span>
+                    </label>
+
+                    <div>
+                        <h3 class="font-semibold">Identity overrides</h3>
+                        <p class="mt-1 text-sm text-base-content/60">Leave a field blank to keep deriving it from APP_NAME and the configured primary alliance.</p>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Site name override</span>
+                            <input
+                                type="text"
+                                class="input"
+                                name="site_name_override"
+                                maxlength="120"
+                                value="{{ old('site_name_override', $seoSettings['configuration']['site_name_override']) }}"
+                                placeholder="{{ $seoSettings['identity']['site_name'] }}"
+                            >
+                            <span class="text-xs text-base-content/60">Automatic: {{ $seoSettings['identity']['site_name'] }}</span>
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Alliance name override</span>
+                            <input
+                                type="text"
+                                class="input"
+                                name="alliance_name_override"
+                                maxlength="120"
+                                value="{{ old('alliance_name_override', $seoSettings['configuration']['alliance_name_override']) }}"
+                                placeholder="{{ $seoSettings['identity']['alliance_name'] }}"
+                            >
+                            <span class="text-xs text-base-content/60">Automatic: {{ $seoSettings['identity']['alliance_name'] }}</span>
+                        </label>
+
+                        <label class="block space-y-2">
+                            <span class="text-sm font-medium">Alliance acronym override</span>
+                            <input
+                                type="text"
+                                class="input"
+                                name="alliance_acronym_override"
+                                maxlength="20"
+                                value="{{ old('alliance_acronym_override', $seoSettings['configuration']['alliance_acronym_override']) }}"
+                                placeholder="{{ $seoSettings['identity']['alliance_acronym'] ?? 'None' }}"
+                            >
+                            <span class="text-xs text-base-content/60">Automatic: {{ $seoSettings['identity']['alliance_acronym'] ?? 'none' }}</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold">Page metadata overrides</h3>
+                        <p class="mt-1 text-sm text-base-content/60">Blank fields keep the generated titles and descriptions shown in the previews below.</p>
+                    </div>
+
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <div class="space-y-4">
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Homepage title override</span>
+                                <input
+                                    type="text"
+                                    class="input"
+                                    name="home_title_override"
+                                    maxlength="120"
+                                    value="{{ old('home_title_override', $seoSettings['configuration']['home_title_override']) }}"
+                                    placeholder="{{ $seoSettings['home_metadata']->title }}"
+                                >
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Homepage description override</span>
+                                <textarea
+                                    class="textarea min-h-24"
+                                    name="home_description_override"
+                                    maxlength="320"
+                                    placeholder="{{ $seoSettings['home_metadata']->description }}"
+                                >{{ old('home_description_override', $seoSettings['configuration']['home_description_override']) }}</textarea>
+                            </label>
+                            <div class="rounded-box border border-base-300 bg-base-100 p-4">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/50">Homepage preview</p>
+                                <p class="mt-2 break-words text-base font-semibold text-primary">{{ $seoSettings['home_metadata']->title }}</p>
+                                <p class="mt-1 break-all text-xs text-success">{{ $seoSettings['home_metadata']->canonical }}</p>
+                                <p class="mt-2 text-sm leading-6 text-base-content/70">{{ $seoSettings['home_metadata']->description }}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Application title override</span>
+                                <input
+                                    type="text"
+                                    class="input"
+                                    name="apply_title_override"
+                                    maxlength="120"
+                                    value="{{ old('apply_title_override', $seoSettings['configuration']['apply_title_override']) }}"
+                                    placeholder="{{ $seoSettings['apply_metadata']->title }}"
+                                >
+                            </label>
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Application description override</span>
+                                <textarea
+                                    class="textarea min-h-24"
+                                    name="apply_description_override"
+                                    maxlength="320"
+                                    placeholder="{{ $seoSettings['apply_metadata']->description }}"
+                                >{{ old('apply_description_override', $seoSettings['configuration']['apply_description_override']) }}</textarea>
+                            </label>
+                            <div class="rounded-box border border-base-300 bg-base-100 p-4">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/50">Application preview</p>
+                                <p class="mt-2 break-words text-base font-semibold text-primary">{{ $seoSettings['apply_metadata']->title }}</p>
+                                <p class="mt-1 break-all text-xs text-success">{{ $seoSettings['apply_metadata']->canonical }}</p>
+                                <p class="mt-2 text-sm leading-6 text-base-content/70">{{ $seoSettings['apply_metadata']->description }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                        <div class="space-y-4">
+                            <div>
+                                <h3 class="font-semibold">Social preview image</h3>
+                                <p class="mt-1 text-sm text-base-content/60">Current source: {{ $seoSettings['social_image_source'] }}. A custom upload overrides the alliance flag.</p>
+                            </div>
+
+                            <label class="block space-y-2">
+                                <span class="text-sm font-medium">Custom image</span>
+                                <input
+                                    type="file"
+                                    class="file-input"
+                                    name="social_image"
+                                    accept=".png,.jpg,.jpeg,.webp"
+                                >
+                                <span class="text-xs text-base-content/60">PNG, JPG, or WebP up to 5 MB. Recommended: 1200×630.</span>
+                            </label>
+
+                            @if($seoSettings['configuration']['social_image_path'])
+                                <label class="label cursor-pointer justify-start gap-3">
+                                    <input class="checkbox checkbox-warning" type="checkbox" name="remove_social_image" value="1">
+                                    <span>Remove the custom image and return to the alliance flag fallback</span>
+                                </label>
+                            @endif
+                        </div>
+
+                        <div class="grid min-h-40 place-items-center overflow-hidden rounded-box border border-base-300 bg-base-200/50 p-3">
+                            @if($seoSettings['home_metadata']->imageUrl)
+                                <img
+                                    src="{{ $seoSettings['home_metadata']->imageUrl }}"
+                                    alt="Current social preview"
+                                    class="max-h-48 w-full object-contain"
+                                >
+                            @else
+                                <p class="text-center text-sm text-base-content/55">No social preview image is currently available.</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button class="btn btn-primary" type="submit">Save Search & Sharing</button>
+                    </div>
+                </form>
+            </div>
+            </x-card>
+
             @php
                 $canUploadFavicon = auth()->user()?->can('view-diagnostic-info') ?? false;
             @endphp

@@ -60,6 +60,7 @@ use App\Http\Controllers\MemberTransferController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
 use App\Http\Controllers\RebuildingController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
@@ -72,6 +73,9 @@ use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
 Route::get('/', HomeController::class)->name('home');
 
@@ -691,6 +695,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             ->name('admin.settings.discord.city-tiers');
         Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
+        );
+        Route::post('/settings/seo', [SettingsController::class, 'updateSeo'])->name(
+            'admin.settings.seo'
         );
         Route::post('/settings/favicon', [SettingsController::class, 'updateFavicon'])->name(
             'admin.settings.favicon'

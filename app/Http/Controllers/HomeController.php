@@ -4,18 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Alliance;
 use App\Services\AllianceMembershipService;
+use App\Services\SeoService;
 use App\Services\SettingService;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function __invoke(AllianceMembershipService $membershipService): View
+    public function __invoke(AllianceMembershipService $membershipService, SeoService $seoService): View
     {
         $allianceId = $membershipService->getPrimaryAllianceId();
         $alliance = $allianceId ? Alliance::query()->find($allianceId) : null;
 
-        $appName = config('app.name');
-        $allianceName = $alliance?->name ?? $appName;
+        $seoIdentity = $seoService->resolvedIdentity($alliance);
+        $appName = $seoIdentity['site_name'];
+        $allianceName = $seoIdentity['alliance_name'];
 
         $activeNationQuery = $alliance?->nations()
             ->where(function ($query) {
@@ -55,10 +57,10 @@ class HomeController extends Controller
             'avgScore' => $activeNationQuery?->avg('score'),
             'rank' => $alliance?->rank,
             'color' => $alliance?->color,
-            'flag' => $alliance?->flag,
-            'discord_link' => $this->safePublicUrl($alliance?->discord_link),
-            'forum_link' => $this->safePublicUrl($alliance?->forum_link),
-            'wiki_link' => $this->safePublicUrl($alliance?->wiki_link),
+            'flag' => $seoService->safePublicUrl($alliance?->flag),
+            'discord_link' => $seoService->safePublicUrl($alliance?->discord_link),
+            'forum_link' => $seoService->safePublicUrl($alliance?->forum_link),
+            'wiki_link' => $seoService->safePublicUrl($alliance?->wiki_link),
             'totalCities' => $totalCities,
             'totalWarsWon' => $totalWarsWon,
             'winRate' => $winRate,
@@ -71,23 +73,7 @@ class HomeController extends Controller
             'alliance' => $alliance,
             'homeContent' => $homeContent,
             'publicStats' => $publicStats,
+            'seo' => $seoService->homeMetadata($alliance, $homeContent['tagline']),
         ]);
-    }
-
-    private function safePublicUrl(?string $url): ?string
-    {
-        $url = is_string($url) ? trim($url) : '';
-
-        if ($url === '' || preg_match('/[\x00-\x1F\x7F]/', $url) === 1) {
-            return null;
-        }
-
-        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-
-        if (! in_array($scheme, ['http', 'https'], true)) {
-            return null;
-        }
-
-        return filter_var($url, FILTER_VALIDATE_URL) !== false ? $url : null;
     }
 }

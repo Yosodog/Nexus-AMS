@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use App\Services\PageRenderer;
+use App\Services\SeoService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
 
@@ -16,7 +17,10 @@ class ApplyPageController extends Controller
 
     private const CACHE_TTL_MINUTES = 5;
 
-    public function __construct(private readonly PageRenderer $renderer) {}
+    public function __construct(
+        private readonly PageRenderer $renderer,
+        private readonly SeoService $seoService,
+    ) {}
 
     /**
      * Display the published Apply page, falling back gracefully when no content exists.
@@ -53,6 +57,7 @@ class ApplyPageController extends Controller
         return view('pages.apply', [
             'title' => 'Apply',
             'content' => $content,
+            'seo' => $this->seoService->applyMetadata(),
         ]);
     }
 }

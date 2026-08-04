@@ -1219,7 +1219,7 @@ class SettingService
     {
         $default = "Build your next chapter with {$allianceName}";
 
-        return self::getStringSetting('home_headline', $default);
+        return self::getStringSettingWithoutPersisting('home_headline', $default);
     }
 
     public static function setHomepageHeadline(string $headline): void
@@ -1231,7 +1231,7 @@ class SettingService
     {
         $default = "{$allianceName} is where ambitious nations find real support, sharp coordination, and a community worth staying for.";
 
-        return self::getStringSetting('home_tagline', $default);
+        return self::getStringSettingWithoutPersisting('home_tagline', $default);
     }
 
     public static function setHomepageTagline(string $tagline): void
@@ -1243,7 +1243,7 @@ class SettingService
     {
         $default = "{$allianceName} is for members who want a steady alliance, active leadership, and a community that works well together.";
 
-        return self::getStringSetting('home_about', $default);
+        return self::getStringSettingWithoutPersisting('home_about', $default);
     }
 
     public static function setHomepageAbout(string $about): void
@@ -1289,7 +1289,7 @@ class SettingService
     {
         $default = 'A quick look at where the alliance stands today.';
 
-        return self::getStringSetting('home_stats_intro', $default);
+        return self::getStringSettingWithoutPersisting('home_stats_intro', $default);
     }
 
     public static function setHomepageStatsIntro(string $intro): void
@@ -1301,7 +1301,7 @@ class SettingService
     {
         $default = "If {$allianceName} feels like the right fit, send in your application and come meet the team.";
 
-        return self::getStringSetting('home_closing_text', $default);
+        return self::getStringSettingWithoutPersisting('home_closing_text', $default);
     }
 
     public static function setHomepageClosingText(string $text): void
@@ -1311,7 +1311,7 @@ class SettingService
 
     public static function getHomepageHeroBadge(): string
     {
-        return self::getStringSetting('home_hero_badge', 'Recruiting now');
+        return self::getStringSettingWithoutPersisting('home_hero_badge', 'Recruiting now');
     }
 
     public static function setHomepageHeroBadge(string $badge): void
@@ -1321,7 +1321,7 @@ class SettingService
 
     public static function getHomepageCtaLabel(): string
     {
-        return self::getStringSetting('home_cta_label', 'Start your application');
+        return self::getStringSettingWithoutPersisting('home_cta_label', 'Start your application');
     }
 
     public static function setHomepageCtaLabel(string $label): void
@@ -1363,5 +1363,12 @@ class SettingService
         }
 
         return (string) $value;
+    }
+
+    protected static function getStringSettingWithoutPersisting(string $key, string $default): string
+    {
+        $value = self::getValue($key);
+
+        return is_null($value) || $value === '' ? $default : (string) $value;
     }
 }

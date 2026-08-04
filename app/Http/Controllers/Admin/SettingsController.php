@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFaviconRequest;
 use App\Http\Requests\Admin\UpdateDiscordCityTierSettingsRequest;
+use App\Http\Requests\Admin\UpdateSeoSettingsRequest;
 use App\Http\Requests\Admin\UpdateUserInactivityAutoDisableRequest;
 use App\Models\Application;
 use App\Models\BlockadeReliefRequest;
@@ -18,6 +19,7 @@ use App\Models\WarAidRequest;
 use App\Services\AuditLogger;
 use App\Services\Discord\PrivateNotificationService;
 use App\Services\LoanService;
+use App\Services\SeoService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
@@ -30,14 +32,19 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class SettingsController extends Controller
 {
     private const DEFAULT_STALE_PENDING_HOURS = 24;
 
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly SeoService $seoService,
+    ) {}
 
     /**
      * @throws AuthorizationException
@@ -62,17 +69,21 @@ class SettingsController extends Controller
         $allianceBatch = $allianceBatchId ? Bus::findBatch($allianceBatchId) : null;
         $warBatch = $warBatchId ? Bus::findBatch($warBatchId) : null;
 
-        $appName = config('app.name');
+        $seoIdentity = $canViewDiagnostics ? $this->seoService->resolvedIdentity() : null;
+        $homepageAllianceName = $seoIdentity['alliance_name'] ?? (string) config('app.name');
         $homepageSettings = [
-            'headline' => SettingService::getHomepageHeadline($appName),
-            'tagline' => SettingService::getHomepageTagline($appName),
-            'about' => SettingService::getHomepageAbout($appName),
+            'headline' => SettingService::getHomepageHeadline($homepageAllianceName),
+            'tagline' => SettingService::getHomepageTagline($homepageAllianceName),
+            'about' => SettingService::getHomepageAbout($homepageAllianceName),
             'highlights' => SettingService::getHomepageHighlights(),
             'stats_intro' => SettingService::getHomepageStatsIntro(),
             'hero_badge' => SettingService::getHomepageHeroBadge(),
             'cta_label' => SettingService::getHomepageCtaLabel(),
-            'closing_text' => SettingService::getHomepageClosingText($appName),
+            'closing_text' => SettingService::getHomepageClosingText($homepageAllianceName),
         ];
+        $seoSettings = $canViewDiagnostics
+            ? $this->seoService->settingsContext($homepageSettings['tagline'])
+            : null;
 
         return view('admin.settings', [
             'nationBatch' => $nationBatch,
@@ -86,6 +97,7 @@ class SettingsController extends Controller
             'discordPrivateNotificationsEnabled' => SettingService::areDiscordPrivateNotificationsEnabled(),
             'discordCityTierBucketSize' => SettingService::getDiscordCityTierBucketSize(),
             'homepageSettings' => $homepageSettings,
+            'seoSettings' => $seoSettings,
             'autoWithdrawEnabled' => SettingService::isAutoWithdrawEnabled(),
             'backupsEnabled' => SettingService::isBackupsEnabled(),
             'backupDisks' => config('backup.backup.destination.disks', []),
@@ -641,6 +653,93 @@ class SettingsController extends Controller
         ]);
     }
 
+    public function updateSeo(UpdateSeoSettingsRequest $request): RedirectResponse
+    {
+        $this->authorize('view-diagnostic-info');
+
+        $previous = $this->seoService->configuration();
+        $validated = $request->validated();
+        $next = $previous;
+
+        foreach ([
+            'site_name_override',
+            'alliance_name_override',
+            'alliance_acronym_override',
+            'home_title_override',
+            'home_description_override',
+            'apply_title_override',
+            'apply_description_override',
+        ] as $key) {
+            $next[$key] = $validated[$key] ?? null;
+        }
+
+        $next['indexing_enabled'] = (bool) $validated['indexing_enabled'];
+        $previousImagePath = $previous['social_image_path'];
+        $nextImagePath = $previousImagePath;
+        $storedImagePath = null;
+        $file = $request->file('social_image');
+
+        if ($file instanceof UploadedFile) {
+            $extension = $this->socialImageExtension($file);
+            $storedImagePath = $file->storeAs(
+                'branding',
+                'seo-social-'.Str::uuid().'.'.$extension,
+                'public',
+            );
+
+            if (! is_string($storedImagePath)) {
+                throw ValidationException::withMessages([
+                    'social_image' => 'The social image could not be stored.',
+                ]);
+            }
+
+            $nextImagePath = $storedImagePath;
+        } elseif ((bool) $validated['remove_social_image']) {
+            $nextImagePath = null;
+        }
+
+        $next['social_image_path'] = $nextImagePath;
+
+        try {
+            $this->seoService->saveConfiguration($next);
+        } catch (Throwable $exception) {
+            if ($storedImagePath !== null && Storage::disk('public')->exists($storedImagePath)) {
+                Storage::disk('public')->delete($storedImagePath);
+            }
+
+            throw $exception;
+        }
+
+        if ($previousImagePath !== null
+            && $previousImagePath !== $nextImagePath
+            && Storage::disk('public')->exists($previousImagePath)) {
+            Storage::disk('public')->delete($previousImagePath);
+        }
+
+        $changes = [];
+
+        foreach ($next as $key => $value) {
+            if (($previous[$key] ?? null) !== $value) {
+                $changes[$key] = [
+                    'from' => $previous[$key] ?? null,
+                    'to' => $value,
+                ];
+            }
+        }
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'seo_settings_updated',
+            context: ['changes' => $changes],
+            message: 'Search and sharing settings updated.',
+        );
+
+        return redirect()->route('admin.settings')->with([
+            'alert-message' => 'Search and sharing settings updated.',
+            'alert-type' => 'success',
+        ]);
+    }
+
     private function faviconExtension(UploadedFile $file): string
     {
         return match ($file->getMimeType()) {
@@ -649,6 +748,18 @@ class SettingsController extends Controller
             'image/x-icon', 'image/vnd.microsoft.icon' => 'ico',
             default => throw ValidationException::withMessages([
                 'favicon' => 'The favicon must be a PNG, JPG, or ICO file.',
+            ]),
+        };
+    }
+
+    private function socialImageExtension(UploadedFile $file): string
+    {
+        return match ($file->getMimeType()) {
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            default => throw ValidationException::withMessages([
+                'social_image' => 'The social image must be a PNG, JPG, or WebP file.',
             ]),
         };
     }
