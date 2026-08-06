@@ -37,7 +37,7 @@ final class EconomyCalculator
             $components['food_cost_per_day'] += $cityResult['food_cost_per_day'];
         }
 
-        $colorBonus = max(0, (int) ($nation->color_turn_bonus ?? 0)) * 12;
+        $colorBonus = max(0, (int) ($nation->color_turn_bonus ?? 0)) * EconomyRules::TURNS_PER_DAY;
         $profit['money'] += $colorBonus;
         $components['color_bonus_per_day'] = $colorBonus;
 

@@ -21,6 +21,7 @@ use App\Services\DirectDepositService;
 use App\Services\GrowthCircleService;
 use App\Services\LoanService;
 use App\Services\MemberTransferService;
+use App\Services\MMRAssistantService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use App\Services\TradePriceService;
@@ -360,7 +361,8 @@ class AccountsController extends Controller
 
     protected function buildDashboardContext(): array|RedirectResponse
     {
-        $nationId = Auth::user()->nation_id;
+        $nation = Auth::user()->nation;
+        $nationId = $nation->id;
         $accounts = AccountService::getAccountsByNid($nationId);
 
         if ($accounts->count() === 0) {
@@ -383,6 +385,9 @@ class AccountsController extends Controller
             ->where('nation_id', $nationId)
             ->latest('created_at')
             ->value('money') ?? 0);
+        $mmrAutoPlan = $config?->enabled
+            ? app(MMRAssistantService::class)->previewAutomaticPlan($nation, $afterTaxIncome)
+            : null;
 
         $mmrAccountIds = $accounts->pluck('id');
 
@@ -445,6 +450,7 @@ class AccountsController extends Controller
             'mmrEnabled' => $mmrEnabled,
             'mmrLogs' => $logs,
             'mmrAfterTaxIncome' => $afterTaxIncome,
+            'mmrAutoPlan' => $mmrAutoPlan,
             'mmrPrices' => $mmrPrices,
             'incomingMemberTransfers' => $incomingMemberTransfers,
             'outgoingMemberTransfers' => $outgoingMemberTransfers,

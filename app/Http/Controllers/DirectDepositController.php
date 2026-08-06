@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\UserErrorException;
+use App\Http\Requests\UpdateMMRAssistantPreferencesRequest;
 use App\Models\Account;
 use App\Models\MMRConfig;
 use App\Services\DirectDepositService;
@@ -70,52 +71,40 @@ class DirectDepositController extends Controller
         ]);
     }
 
-    /**
-     * @return RedirectResponse
-     */
-    public function updateMMRA(Request $request)
+    public function updateMMRA(UpdateMMRAssistantPreferencesRequest $request): RedirectResponse
     {
         $nation = Auth::user()->nation;
         $nationId = $nation->id;
-
-        $data = $request->validate(array_merge([
-            'enabled' => 'nullable|boolean',
-            'account_id' => ['required', $this->activeOwnedAccountRule($nationId)],
-        ],
-            collect(PWHelperService::resources(false))->mapWithKeys(fn ($r) => [
-                "{$r}_pct" => 'nullable|numeric|min:0|max:100',
-            ])->toArray()));
-
-        $total = collect($data)->filter(fn ($v, $k) => str_ends_with($k, '_pct'))->sum();
-
-        if ($total > 100) {
-            return back()->with([
-                'alert-message' => 'Total percentage cannot exceed 100%',
-                'alert-type' => 'error',
-            ]);
-        } else {
-            if ($total < 0) {
-                return back()->with([
-                    'alert-message' => 'Total percentage cannot be below 0%',
-                    'alert-type' => 'error',
-                ]);
-            }
-        }
+        $data = $request->validated();
 
         $previous = MMRConfig::where('nation_id', $nationId)->first();
         $enabled = array_key_exists('enabled', $data)
             ? (bool) $data['enabled']
             : ($previous?->enabled ?? false);
+        $autoCoverResourceDeficits = array_key_exists('auto_cover_resource_deficits', $data)
+            ? (bool) $data['auto_cover_resource_deficits']
+            : ($previous?->auto_cover_resource_deficits ?? false);
+
+        $resourcePercentages = collect(PWHelperService::resources(false))
+            ->mapWithKeys(function (string $resource) use ($data, $previous): array {
+                $field = "{$resource}_pct";
+
+                return [
+                    $field => array_key_exists($field, $data)
+                        ? (float) $data[$field]
+                        : (float) ($previous?->getAttribute($field) ?? 0),
+                ];
+            })
+            ->all();
 
         MMRConfig::updateOrCreate(
             ['nation_id' => $nationId],
-            array_merge(
-                ['enabled' => $enabled],
-                ['account_id' => $data['account_id']],
-                collect(PWHelperService::resources(false))->mapWithKeys(fn ($r) => [
-                    "{$r}_pct" => floatval($data["{$r}_pct"] ?? 0),
-                ])->toArray()
-            )
+            [
+                'enabled' => $enabled,
+                'auto_cover_resource_deficits' => $autoCoverResourceDeficits,
+                'account_id' => $data['account_id'],
+                ...$resourcePercentages,
+            ]
         );
 
         return back()->with([
@@ -128,7 +117,7 @@ class DirectDepositController extends Controller
     {
         return Rule::exists('accounts', 'id')
             ->where('nation_id', $nationId)
-            ->where('frozen', false)
+            ->where('frozen', 0)
             ->whereNull('deleted_at');
     }
 }

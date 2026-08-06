@@ -7,12 +7,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MMRAssistantPurchase extends Model
 {
+    public const ALLOCATION_MODE_MANUAL = 'manual';
+
+    public const ALLOCATION_MODE_AUTOMATIC = 'automatic';
+
     /**
      * @var string[]
      */
     protected $fillable = [
         'account_id',
         'total_spent',
+        'allocation_mode',
+        'projection_calculated_at',
         'coal', 'coal_ppu',
         'oil', 'oil_ppu',
         'uranium', 'uranium_ppu',
@@ -31,6 +37,7 @@ class MMRAssistantPurchase extends Model
      */
     protected $casts = [
         'total_spent' => 'float',
+        'projection_calculated_at' => 'datetime',
         'coal' => 'float', 'coal_ppu' => 'float',
         'oil' => 'float', 'oil_ppu' => 'float',
         'uranium' => 'float', 'uranium_ppu' => 'float',

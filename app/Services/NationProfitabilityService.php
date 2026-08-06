@@ -16,6 +16,7 @@ use App\Services\Economy\EconomyCalculator;
 use App\Services\Economy\EconomyRules;
 use App\Services\Economy\MarketValuationService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,31 @@ class NationProfitabilityService
                 $resource => max(0.0, -(float) ($perDay[$resource] ?? 0.0)),
             ])
             ->all();
+    }
+
+    /**
+     * @return array{calculated_at: Carbon, shortfalls_per_day: array<string, float>}|null
+     */
+    public function getDailyTradeResourceShortfallProjection(
+        Nation $nation,
+        int $maximumAgeHours = 48
+    ): ?array {
+        $snapshot = $this->currentSnapshotQuery($nation, $maximumAgeHours)->first();
+
+        if ($snapshot === null) {
+            return null;
+        }
+
+        $perDay = $snapshot->resource_profit_per_day ?? [];
+
+        return [
+            'calculated_at' => Carbon::instance($snapshot->calculated_at),
+            'shortfalls_per_day' => collect(EconomyRules::TRADE_RESOURCES)
+                ->mapWithKeys(fn (string $resource): array => [
+                    $resource => max(0.0, -(float) ($perDay[$resource] ?? 0.0)),
+                ])
+                ->all(),
+        ];
     }
 
     /**
@@ -465,12 +491,12 @@ class NationProfitabilityService
                 && ($radiationSnapshotId === null || $radiationSnapshotId < (int) $existing->radiation_snapshot_id));
     }
 
-    private function currentSnapshotQuery(Nation $nation)
+    private function currentSnapshotQuery(Nation $nation, int $maximumAgeHours = 48): Builder
     {
         return NationProfitabilitySnapshot::query()
             ->where('nation_id', $nation->id)
             ->where('model_version', EconomyRules::MODEL_VERSION)
-            ->where('calculated_at', '>=', now()->subHours(48))
+            ->where('calculated_at', '>=', now()->subHours(max(1, $maximumAgeHours)))
             ->latest('calculated_at');
     }
 

@@ -6,9 +6,11 @@ final class EconomyRules
 {
     public const MODEL_VERSION = 2;
 
+    public const TURNS_PER_DAY = 12;
+
     public const NUCLEAR_FUEL_PER_THOUSAND_INFRASTRUCTURE = 3.0;
 
-    public const NUKE_POLLUTION_TURNS = 11 * 12;
+    public const NUKE_POLLUTION_TURNS = 11 * self::TURNS_PER_DAY;
 
     public const NUKE_POLLUTION_MAX = 400;
 

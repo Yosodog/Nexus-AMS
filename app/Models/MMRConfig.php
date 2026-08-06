@@ -14,6 +14,7 @@ class MMRConfig extends Model
         'nation_id',
         'account_id',
         'enabled',
+        'auto_cover_resource_deficits',
         'coal_pct',
         'oil_pct',
         'uranium_pct',
@@ -32,6 +33,7 @@ class MMRConfig extends Model
      */
     protected $casts = [
         'enabled' => 'boolean',
+        'auto_cover_resource_deficits' => 'boolean',
         'coal_pct' => 'float',
         'oil_pct' => 'float',
         'uranium_pct' => 'float',
