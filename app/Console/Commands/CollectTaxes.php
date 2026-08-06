@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\TaxImportCheckpoint;
 use App\Services\AllianceMembershipService;
 use App\Services\QueryService;
 use App\Services\TaxService;
@@ -36,12 +37,17 @@ class CollectTaxes extends Command
         }
 
         $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
+        $hadFailures = false;
 
         foreach ($allianceIds as $allianceId) {
             $credentials = $this->membershipService->getCredentialsForAlliance($allianceId);
 
             if ($credentials === null) {
                 if ($allianceId === $primaryAllianceId) {
+                    TaxImportCheckpoint::recordFailure(
+                        $allianceId,
+                        'Primary alliance API credentials are not configured.',
+                    );
                     $this->error('Primary alliance API credentials are not configured.');
 
                     return Command::FAILURE;
@@ -59,6 +65,15 @@ class CollectTaxes extends Command
                 );
             } catch (Throwable $exception) {
                 $this->error("Failed to update taxes for alliance {$allianceId}: {$exception->getMessage()}");
+                $hadFailures = true;
+
+                continue;
+            }
+
+            $checkpoint = TaxImportCheckpoint::query()->where('alliance_id', $allianceId)->first();
+            if ($checkpoint?->latestAttemptFailed()) {
+                $this->error("Tax import for alliance {$allianceId} stopped before the feed was fully processed.");
+                $hadFailures = true;
 
                 continue;
             }
@@ -66,7 +81,7 @@ class CollectTaxes extends Command
             $this->info("Updated alliance {$allianceId} taxes. Last scanned ID: {$lastScanned}");
         }
 
-        return Command::SUCCESS;
+        return $hadFailures ? Command::FAILURE : Command::SUCCESS;
     }
 
     /**

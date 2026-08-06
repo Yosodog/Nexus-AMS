@@ -718,4 +718,8 @@
             </x-card>
         @endcan
     </div>
+
+    @can('view-diagnostic-info')
+        @include('components.admin.system-health', ['health' => $systemHealth])
+    @endcan
 @endsection

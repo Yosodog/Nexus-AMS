@@ -29,16 +29,26 @@ class TaxService
      */
     public static function updateAllianceTaxes(int $alliance_id, ?QueryService $client = null): int
     {
+        TaxImportCheckpoint::recordAttempt($alliance_id);
+
         Cache::forget('tax_summary_stats');
         Cache::forget('tax_resource_chart_data');
         Cache::forget('tax_daily_totals');
 
         $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
-        $bankRecords = self::getAllianceTaxRecords($alliance_id, $lastTaxId + 1, $client);
+        try {
+            $bankRecords = self::getAllianceTaxRecords($alliance_id, $lastTaxId + 1, $client);
+        } catch (Throwable $exception) {
+            TaxImportCheckpoint::recordFailure($alliance_id, $exception->getMessage());
+
+            throw $exception;
+        }
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
         $updatedDates = [];
+        $importedRecords = false;
+        $importFailure = null;
 
         foreach ($bankRecords->sortBy(fn (object $record): int => $record->id)->values() as $record) {
             if ($record->id <= $newLastId) {
@@ -53,6 +63,8 @@ class TaxService
                     'receiver_type' => $record->receiver_type,
                 ]);
 
+                $importFailure = 'Received a bank record outside the requested alliance.';
+
                 break;
             }
 
@@ -61,6 +73,8 @@ class TaxService
                     'alliance_id' => $alliance_id,
                     'record_id' => $record->id,
                 ]);
+
+                $importFailure = 'Received a bank record without a tax bracket ID.';
 
                 break;
             }
@@ -73,6 +87,8 @@ class TaxService
                         'tax_id' => $record->id,
                         'existing_receiver_id' => $existingTax->receiver_id,
                     ]);
+
+                    $importFailure = 'A tax record ID conflicts with another alliance.';
 
                     break;
                 }
@@ -139,6 +155,7 @@ class TaxService
                 if ($taxModel) {
                     $dateKey = Carbon::parse($taxModel->date)->toDateString();
                     $updatedDates[$dateKey] = true;
+                    $importedRecords = true;
                 }
 
                 self::advanceCheckpoint($alliance_id, $record->id);
@@ -149,18 +166,36 @@ class TaxService
                     'error' => $e->getMessage(),
                 ]);
 
+                $importFailure = "Failed to process tax record {$record->id}: {$e->getMessage()}";
+
                 break;
             }
         }
 
-        foreach (array_keys($updatedDates) as $date) {
-            self::recordDailyTaxIncome($date);
+        if ($importedRecords) {
+            TaxImportCheckpoint::recordImport($alliance_id);
         }
 
-        // Pre-warm cache so users don't wait on page load
-        self::getSummaryStats();
-        self::getResourceChartData();
-        self::getDailyTotals();
+        try {
+            foreach (array_keys($updatedDates) as $date) {
+                self::recordDailyTaxIncome($date);
+            }
+
+            // Pre-warm cache so users don't wait on page load
+            self::getSummaryStats();
+            self::getResourceChartData();
+            self::getDailyTotals();
+        } catch (Throwable $exception) {
+            TaxImportCheckpoint::recordFailure($alliance_id, $exception->getMessage());
+
+            throw $exception;
+        }
+
+        if ($importFailure === null) {
+            TaxImportCheckpoint::recordSuccess($alliance_id);
+        } else {
+            TaxImportCheckpoint::recordFailure($alliance_id, $importFailure);
+        }
 
         return $newLastId;
     }

@@ -40,6 +40,12 @@ class TaxImportCheckpointTest extends TestCase
             'id' => 102,
             'receiver_id' => 777,
         ]);
+
+        $checkpoint = TaxImportCheckpoint::query()->where('alliance_id', 777)->firstOrFail();
+        $this->assertNotNull($checkpoint->last_attempted_at);
+        $this->assertNotNull($checkpoint->last_failed_at);
+        $this->assertNull($checkpoint->last_succeeded_at);
+        $this->assertTrue($checkpoint->latestAttemptFailed());
     }
 
     public function test_tax_import_quarantines_invalid_timestamps_and_continues(): void
@@ -70,6 +76,12 @@ class TaxImportCheckpointTest extends TestCase
             'alliance_id' => 777,
             'last_scanned_id' => 102,
         ]);
+
+        $checkpoint = TaxImportCheckpoint::query()->where('alliance_id', 777)->firstOrFail();
+        $this->assertNotNull($checkpoint->last_attempted_at);
+        $this->assertNotNull($checkpoint->last_succeeded_at);
+        $this->assertNotNull($checkpoint->last_imported_at);
+        $this->assertFalse($checkpoint->latestAttemptFailed());
     }
 
     public function test_tax_import_orders_records_before_advancing_its_checkpoint(): void

@@ -21,6 +21,7 @@ use App\Services\Discord\PrivateNotificationService;
 use App\Services\LoanService;
 use App\Services\SeoService;
 use App\Services\SettingService;
+use App\Services\SystemHealthService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Bus\Batch;
 use Illuminate\Database\Eloquent\Model;
@@ -44,6 +45,7 @@ class SettingsController extends Controller
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly SeoService $seoService,
+        private readonly SystemHealthService $systemHealthService,
     ) {}
 
     /**
@@ -112,6 +114,7 @@ class SettingsController extends Controller
             'userInactivityAutoDisableDays' => SettingService::getUserInactivityAutoDisableDays(),
             'stalePendingDefaultHours' => self::DEFAULT_STALE_PENDING_HOURS,
             'pendingRecoveryItems' => $canViewDiagnostics ? $this->buildPendingRecoveryItems() : [],
+            'systemHealth' => $canViewDiagnostics ? $this->systemHealthService->snapshot() : null,
         ]);
     }
 
