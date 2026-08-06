@@ -73,7 +73,7 @@
                 @endauth
 
                 <details class="public-nav__mobile">
-                    <summary class="btn btn-ghost btn-circle btn-sm" aria-label="Open navigation">
+                    <summary class="btn btn-ghost btn-circle btn-sm nexus-icon-button" aria-label="Open navigation">
                         <x-icon name="o-bars-3" class="size-5" />
                     </summary>
                     <nav class="public-nav__mobile-menu" aria-label="Mobile navigation">

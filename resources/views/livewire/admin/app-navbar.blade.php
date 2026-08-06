@@ -1,6 +1,6 @@
 <header class="admin-topbar">
     <div class="admin-topbar__inner">
-        <label for="admin-sidebar" class="btn btn-ghost btn-circle btn-sm lg:hidden" aria-label="Open administrative navigation">
+        <label for="admin-sidebar" class="btn btn-ghost btn-circle btn-sm nexus-icon-button lg:hidden" aria-label="Open administrative navigation">
             <x-icon name="o-bars-3" class="size-5" />
         </label>
 
@@ -26,7 +26,7 @@
 
             @if($user)
                 <details class="account-control">
-                    <summary class="account-control__trigger" aria-label="Open staff account menu">
+                    <summary class="account-control__trigger nexus-icon-button" aria-label="Open staff account menu">
                         @if($nation?->flag)
                             <img src="{{ $nation->flag }}" alt="" class="account-control__avatar">
                         @else

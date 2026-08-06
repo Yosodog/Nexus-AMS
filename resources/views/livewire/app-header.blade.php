@@ -8,16 +8,17 @@
         <div class="member-header__topbar">
             <div class="member-header__inner">
                 @if($showMemberNavigation)
-                    <button
-                        type="button"
-                        class="btn btn-ghost btn-circle btn-sm lg:hidden"
-                        @click="menuOpen = true"
-                        aria-label="Open member navigation"
-                        :aria-expanded="menuOpen.toString()"
+                    <x-icon-button
+                        label="Open member navigation"
+                        tooltip="Open member navigation"
+                        variant="compact"
+                        class="btn-ghost btn-circle lg:hidden"
+                        x-on:click="menuOpen = true"
+                        ::aria-expanded="menuOpen.toString()"
                         aria-controls="member-navigation-drawer"
                     >
                         <x-icon name="o-bars-3" class="size-5" />
-                    </button>
+                    </x-icon-button>
                 @endif
 
                 <a href="{{ $showMemberNavigation ? route('user.dashboard') : route('home') }}" class="member-brand">
@@ -51,7 +52,7 @@
 
                     @if($user)
                         <details class="account-control">
-                            <summary class="account-control__trigger" aria-label="Open account menu">
+                            <summary class="account-control__trigger nexus-icon-button" aria-label="Open account menu">
                                 @if(data_get($user, 'nation.flag'))
                                     <img
                                         src="{{ data_get($user, 'nation.flag') }}"
@@ -178,9 +179,15 @@
                     <p class="nexus-kicker">Member app</p>
                     <p class="member-drawer__title">Navigate</p>
                 </div>
-                <button type="button" class="btn btn-ghost btn-circle btn-sm" @click="menuOpen = false" aria-label="Close member navigation">
+                <x-icon-button
+                    label="Close member navigation"
+                    tooltip="Close member navigation"
+                    variant="compact"
+                    class="btn-ghost btn-circle"
+                    x-on:click="menuOpen = false"
+                >
                     <x-icon name="o-x-mark" class="size-5" />
-                </button>
+                </x-icon-button>
             </div>
 
             <nav class="member-drawer__nav" aria-label="Member navigation drawer">

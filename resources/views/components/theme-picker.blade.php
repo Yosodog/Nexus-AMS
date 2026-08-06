@@ -1,5 +1,5 @@
 <details class="theme-control">
-    <summary class="btn btn-ghost btn-circle btn-sm" aria-label="Choose appearance">
+    <summary class="btn btn-ghost btn-circle btn-sm nexus-icon-button" aria-label="Choose appearance">
         <x-icon name="o-swatch" class="size-5" />
     </summary>
 
