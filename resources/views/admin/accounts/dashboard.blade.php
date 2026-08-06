@@ -432,7 +432,7 @@
     </x-card>
 
     {{-- Withdrawal Limits + Insights --}}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+    <div id="withdrawal-limits" class="grid scroll-mt-24 grid-cols-1 gap-4 mb-6 xl:grid-cols-3">
         @can('manage-accounts')
             <div class="xl:col-span-2">
                 <x-card class="{{ $surfaceCardClass }} h-full">

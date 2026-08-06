@@ -176,7 +176,7 @@
     @endif
 
     {{-- Inactivity Settings --}}
-    <x-card class="mb-6">
+    <x-card id="member-inactivity-settings" class="mb-6 scroll-mt-24">
         <x-slot:title>
             <div>
                 Inactivity Mode

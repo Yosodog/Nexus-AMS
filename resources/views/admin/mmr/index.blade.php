@@ -316,7 +316,7 @@
             </form>
         </x-card>
 
-        <x-card title="MMR Assistant Resource Settings">
+        <x-card id="mmr-assistant-settings" title="MMR Assistant Resource Settings" class="scroll-mt-24">
             <p class="mb-4 text-sm text-base-content/60">
                 Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they are purchasable via MMR Assistant.
             </p>

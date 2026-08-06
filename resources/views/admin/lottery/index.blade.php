@@ -64,7 +64,7 @@
             @endif
         </x-card>
 
-        <x-card title="Lottery configuration" subtitle="Guardrails apply immediately; economic changes start with the next drawing created.">
+        <x-card id="lottery-settings" title="Lottery configuration" subtitle="Guardrails apply immediately; economic changes start with the next drawing created." class="scroll-mt-24">
             <x-slot:menu>
                 <span class="badge badge-outline">{{ $canManageLottery ? 'Editable' : 'View only' }}</span>
             </x-slot:menu>

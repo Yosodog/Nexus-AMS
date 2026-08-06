@@ -7,7 +7,7 @@
         <x-slot:subtitle>Manage the primary and follow-up messages sent to eligible recruits.</x-slot:subtitle>
     </x-header>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+    <div id="recruitment-settings" class="grid scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <x-card title="Message Templates">
             <form method="POST" action="{{ route('admin.recruitment.update') }}" class="space-y-5">
                 @csrf

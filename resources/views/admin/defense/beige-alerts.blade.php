@@ -5,7 +5,7 @@
         <x-slot:subtitle>Track enemy alliances for beige sniping windows, early exits, and next-turn opportunities.</x-slot:subtitle>
     </x-header>
 
-    <x-card title="Alert Settings" class="mb-6">
+    <x-card id="beige-alert-settings" title="Alert Settings" class="mb-6 scroll-mt-24">
         <form method="POST" action="{{ route('admin.beige-alerts.settings') }}" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] md:items-end">
             @csrf
             <input type="hidden" name="beige_alerts_enabled" value="0">

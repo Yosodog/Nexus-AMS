@@ -302,7 +302,7 @@
         </details>
         @endcan
 
-        <section class="nexus-panel" aria-labelledby="loan-settings-title">
+        <section id="loan-settings" class="nexus-panel scroll-mt-24" aria-labelledby="loan-settings-title">
             <div class="nexus-panel__header">
                 <div>
                     <h2 id="loan-settings-title" class="nexus-section-title">Loan intake settings</h2>

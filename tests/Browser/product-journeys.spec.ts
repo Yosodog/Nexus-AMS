@@ -124,6 +124,12 @@ test('full admin can reach war planning, settings, and custom-page editing', asy
   await expectApplicationShell(page);
   await expect(page.getByRole('heading', { name: 'Admin Settings' })).toBeVisible();
   await expect(page.getByText('Synchronization')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Directory' })).toHaveAttribute('aria-selected', 'true');
+
+  await page.getByRole('searchbox', { name: 'Find a setting' }).fill('backup');
+  await page.getByRole('link', { name: /Backups/ }).click();
+  await expect(page.getByRole('tab', { name: 'Operations' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('checkbox', { name: /Enable scheduled backups/ })).toBeVisible();
 
   await page.goto('/admin/customization');
   await expectApplicationShell(page);

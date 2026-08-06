@@ -8,7 +8,7 @@
             @endphp
 
             {{-- Settings card --}}
-            <x-card title="Growth Circles Settings">
+            <x-card id="growth-circles-settings" title="Growth Circles Settings" class="scroll-mt-24">
                 <form method="POST" action="{{ route('admin.growth-circles.settings') }}">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

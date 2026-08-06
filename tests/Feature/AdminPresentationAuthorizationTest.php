@@ -118,6 +118,37 @@ class AdminPresentationAuthorizationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_feature_viewers_can_use_the_permission_filtered_settings_directory(): void
+    {
+        $lotteryViewer = $this->createAdmin(['view-lottery'], 930007);
+
+        $this->actingAs($lotteryViewer)
+            ->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Find a setting')
+            ->assertSee('Lottery configuration')
+            ->assertSee(route('admin.lottery.index').'#lottery-settings', false)
+            ->assertDontSee('Homepage Messaging')
+            ->assertDontSee('Backups');
+
+        Livewire::test(AppSidebar::class)
+            ->assertSee('Settings');
+    }
+
+    public function test_full_admin_settings_directory_renders_feature_destinations(): void
+    {
+        $fullAdmin = $this->createAdmin(config('permissions'), 930008);
+
+        $this->actingAs($fullAdmin)
+            ->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Settings in feature areas')
+            ->assertSee('MFA requirements')
+            ->assertSee('Resource pricing &amp; purchase caps', false)
+            ->assertSee('Roles &amp; permissions', false)
+            ->assertSee('Audit rules');
+    }
+
     /**
      * @param  array<int, string>  $permissions
      */

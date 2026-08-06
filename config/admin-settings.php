@@ -1,0 +1,33 @@
+<?php
+
+return [
+    'access_permissions' => [
+        'view-diagnostic-info',
+        'manage-accounts',
+        'manage-loans',
+        'manage-grants',
+        'edit-users',
+        'view-users',
+        'view-roles',
+        'view-audits',
+        'view-members',
+        'view-applications',
+        'view-recruitment',
+        'view-accounts',
+        'view-lottery',
+        'manage-lottery',
+        'view-growth-circles',
+        'view-loans',
+        'view-market',
+        'view-offshores',
+        'view_payroll',
+        'view-city-grants',
+        'view-grants',
+        'view-war-aid',
+        'view-rebuilding',
+        'view-raids',
+        'view-mmr',
+        'manage-war-room',
+        'manage-custom-pages',
+    ],
+];

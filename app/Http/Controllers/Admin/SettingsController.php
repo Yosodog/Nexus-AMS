@@ -54,10 +54,7 @@ class SettingsController extends Controller
     public function index(): View
     {
         $user = request()->user();
-        abort_unless(
-            $user?->canAny(['view-diagnostic-info', 'manage-accounts', 'manage-loans', 'manage-grants', 'edit-users']),
-            403,
-        );
+        abort_unless($user?->canAny((array) config('admin-settings.access_permissions')), 403);
 
         $canViewDiagnostics = $user->can('view-diagnostic-info');
 

@@ -143,7 +143,7 @@
         @endif
     </section>
 
-    <details class="nexus-panel" @if($errors->any()) open @endif>
+    <details id="application-settings" class="nexus-panel scroll-mt-24" @if($errors->any()) open @endif>
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
             <span>
                 <span class="block font-semibold">Discord and alliance settings</span>

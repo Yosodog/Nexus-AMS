@@ -167,7 +167,7 @@
     </div>
 
     @can('bypass-self-restrictions')
-        <x-card>
+        <x-card id="mfa-requirements" class="scroll-mt-24">
             <x-slot:title>
                 <div>
                     MFA Requirements

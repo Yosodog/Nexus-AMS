@@ -181,7 +181,7 @@
             @endif
         </x-card>
 
-        <div class="grid gap-6 xl:grid-cols-2">
+        <div id="war-room-settings" class="grid scroll-mt-24 gap-6 xl:grid-cols-2">
             <x-card title="Discord War Alerts" subtitle="Channel ID used for {{ config('app.name') }} → Discord war alerts.">
                 <form method="post" action="{{ route('admin.war-room.discord-channel') }}" class="space-y-4">
                     @csrf
