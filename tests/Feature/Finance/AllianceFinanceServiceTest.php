@@ -69,4 +69,24 @@ class AllianceFinanceServiceTest extends FeatureTestCase
         $this->assertSame($occurredAt->toAtomString(), $entry->created_at->toAtomString());
         $this->assertSame($occurredAt->toAtomString(), $entry->updated_at->toAtomString());
     }
+
+    public function test_replaying_a_sourced_entry_does_not_duplicate_it(): void
+    {
+        $data = new AllianceFinanceData(
+            direction: AllianceFinanceEntry::DIRECTION_INCOME,
+            category: 'tax',
+            description: 'Imported tax record',
+            date: Carbon::parse('2026-08-02'),
+            money: 125,
+            sourceType: 'tax_record',
+            sourceId: 456,
+        );
+
+        $service = app(AllianceFinanceService::class);
+        $first = $service->recordIncome($data);
+        $second = $service->recordIncome($data);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertDatabaseCount('alliance_finance_entries', 1);
+    }
 }

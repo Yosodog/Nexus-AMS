@@ -11,6 +11,7 @@ use App\Events\WarStateChanged;
 use App\Listeners\AuditLogin;
 use App\Listeners\AuditLoginFailed;
 use App\Listeners\AuditLogout;
+use App\Listeners\CreateCounterOnWarDeclared;
 use App\Listeners\IngestMilcomIncident;
 use App\Listeners\ReconcileMilcomWarState;
 use App\Listeners\RecordAllianceExpense;
@@ -44,6 +45,7 @@ class EventServiceProvider extends ServiceProvider
         WarDeclared::class => [
             IngestMilcomIncident::class,
             ReconcileMilcomWarState::class,
+            CreateCounterOnWarDeclared::class,
         ],
         WarStateChanged::class => [
             ReconcileMilcomWarState::class,

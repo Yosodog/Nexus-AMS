@@ -9,14 +9,11 @@ class IngestMilcomIncident
 {
     public function __construct(
         private readonly IncidentService $incidents,
-        private readonly CreateCounterOnWarDeclared $legacyListener,
     ) {}
 
     public function handle(WarDeclared $event): void
     {
         if (! (bool) config('milcom.v2_enabled', false)) {
-            $this->legacyListener->handle($event);
-
             return;
         }
 

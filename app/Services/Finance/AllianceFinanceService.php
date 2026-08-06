@@ -6,6 +6,7 @@ use App\DataTransferObjects\AllianceFinanceData;
 use App\Models\AllianceFinanceEntry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -253,7 +254,26 @@ final class AllianceFinanceService
             $attributes['updated_at'] = $occurredAt;
         }
 
-        return AllianceFinanceEntry::create($attributes);
+        try {
+            return AllianceFinanceEntry::create($attributes);
+        } catch (UniqueConstraintViolationException $exception) {
+            if (! $data->sourceType() || ! $data->sourceId()) {
+                throw $exception;
+            }
+
+            $existing = AllianceFinanceEntry::query()
+                ->where('source_type', $data->sourceType())
+                ->where('source_id', $data->sourceId())
+                ->where('direction', $direction)
+                ->where('category', $data->category)
+                ->first();
+
+            if (! $existing) {
+                throw $exception;
+            }
+
+            return $existing;
+        }
     }
 
     /**
