@@ -96,6 +96,10 @@ class UpdateAllianceJob implements ShouldQueue
 
         foreach (self::UPDATABLE_FIELDS as $field) {
             if (array_key_exists($field, $allianceData)) {
+                if ($field === 'acronym' && $allianceData[$field] === null) {
+                    continue;
+                }
+
                 $allianceModel->{$field} = $allianceData[$field];
             }
         }

@@ -182,6 +182,29 @@ class SubsIngestionTest extends FeatureTestCase
         }
     }
 
+    public function test_alliance_update_job_preserves_acronym_when_payload_contains_null(): void
+    {
+        Alliance::factory()->create([
+            'id' => 77,
+            'name' => 'Existing Alliance',
+            'acronym' => 'EA',
+        ]);
+
+        (new UpdateAllianceJob([[
+            'id' => 77,
+            'acronym' => null,
+            'accept_members' => true,
+            'forum_link' => null,
+            'discord_link' => null,
+        ]]))->handle();
+
+        $this->assertDatabaseHas('alliances', [
+            'id' => 77,
+            'acronym' => 'EA',
+            'accept_members' => true,
+        ]);
+    }
+
     public function test_alliance_delete_removes_the_record(): void
     {
         Alliance::factory()->create([
