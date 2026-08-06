@@ -45,7 +45,7 @@ class CityGrantNotification extends Notification implements ShouldQueue
             $notifiable,
             'city_grant_request_'.$this->status,
             ['type' => 'city_grant_request', 'id' => $this->request->id, 'label' => 'City #'.$this->request->city_number],
-            '/grants/city',
+            route('grants.city', absolute: false),
             ['status' => $this->status, 'city_number' => $this->request->city_number],
         );
     }

@@ -20,6 +20,7 @@ use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\Discord\DiscordLoanIntentService;
 use App\Services\Discord\DiscordWorkflowIntentService;
+use App\Services\Discord\DiscordWorkflowLinkService;
 use App\Services\GrantRequirementService;
 use App\Services\GrantService;
 use App\Services\LoanService;
@@ -36,6 +37,8 @@ use Illuminate\Validation\ValidationException;
 class WorkflowController extends Controller
 {
     use DiscordApiResponses;
+
+    public function __construct(private readonly DiscordWorkflowLinkService $links) {}
 
     public function requests(Request $request): JsonResponse
     {
@@ -92,13 +95,13 @@ class WorkflowController extends Controller
                 'one_time' => $grant->is_one_time,
                 'eligible' => (bool) $report['passes'],
                 'eligibility_summary' => $report['summary'],
-                'deep_link_path' => '/grants/'.$grant->slug,
+                'deep_link_path' => $this->links->availableGrant($grant),
             ];
         })->when($filters['eligible_only'] ?? false, fn ($items) => $items->where('eligible', true))->values();
 
         return $this->discordData([
             'available' => $available,
-            'requests' => GrantApplication::query()->where('nation_id', $nation->id)->latest()->limit(50)->get()
+            'requests' => GrantApplication::query()->with('grant')->where('nation_id', $nation->id)->latest()->limit(50)->get()
                 ->map(fn (GrantApplication $application): array => $this->requestSummary('grant', $application)),
         ]);
     }
@@ -356,7 +359,7 @@ class WorkflowController extends Controller
         $nationId = (int) $actor->nation_id;
 
         return [
-            'grant' => GrantApplication::query()->where('nation_id', $nationId),
+            'grant' => GrantApplication::query()->with('grant')->where('nation_id', $nationId),
             'city_grant' => CityGrantRequest::query()->where('nation_id', $nationId),
             'loan' => Loan::query()->where('nation_id', $nationId),
             'war_aid' => WarAidRequest::query()->where('nation_id', $nationId),
@@ -402,16 +405,7 @@ class WorkflowController extends Controller
                 : (is_object($model->status) && property_exists($model->status, 'value') ? $model->status->value : $model->status),
             'created_at' => optional($model->created_at)->toIso8601String(),
             'updated_at' => optional($model->updated_at)->toIso8601String(),
-            'deep_link_path' => match ($type) {
-                'grant' => '/grants',
-                'city_grant' => '/grants/city',
-                'loan' => '/loans',
-                'war_aid' => '/defense/waraid',
-                'rebuilding' => '/defense/rebuilding',
-                'withdrawal' => '/accounts',
-                'member_transfer' => '/accounts',
-                'application' => '/apply',
-            },
+            'deep_link_path' => $this->links->member($type, $model),
         ];
     }
 
@@ -488,7 +482,7 @@ class WorkflowController extends Controller
             'current_amount_due' => $service->calculateCurrentAmountDue($loan),
             'next_due_date' => optional($loan->next_due_date)->toDateString(),
             'created_at' => optional($loan->created_at)->toIso8601String(),
-            'deep_link_path' => '/loans',
+            'deep_link_path' => $this->links->member('loan', $loan),
         ];
     }
 }

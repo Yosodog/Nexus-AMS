@@ -40,7 +40,7 @@ class WarAidNotification extends Notification implements ShouldQueue
             $notifiable,
             'war_aid_request_'.$this->status,
             ['type' => 'war_aid_request', 'id' => $this->request->id],
-            '/defense/war-aid',
+            route('defense.war-aid', absolute: false),
             ['status' => $this->status],
         );
     }

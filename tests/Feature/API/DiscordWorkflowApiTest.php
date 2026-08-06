@@ -69,6 +69,14 @@ class DiscordWorkflowApiTest extends TestCase
 
     public function test_grant_preview_and_confirmation_use_hashed_actor_bound_intent_and_idempotency(): void
     {
+        $this->withHeaders($this->headers('234567890123456789'))
+            ->getJson('/api/v1/discord/me/grants')
+            ->assertOk()
+            ->assertJsonPath(
+                'data.available.0.deep_link_path',
+                route('grants.show_grants', ['grant' => $this->grant->slug], absolute: false),
+            );
+
         $preview = $this->withHeaders($this->headers('345678901234567890'))
             ->postJson('/api/v1/discord/me/grant-applications/preview', [
                 'grant_id' => $this->grant->id,
@@ -87,7 +95,11 @@ class DiscordWorkflowApiTest extends TestCase
         $headers = $this->headers('456789012345678901');
         $first = $this->withHeaders($headers)->postJson('/api/v1/discord/me/grant-applications/confirm', [
             'intent_id' => $token,
-        ])->assertCreated();
+        ])->assertCreated()
+            ->assertJsonPath(
+                'data.deep_link_path',
+                route('grants.show_grants', ['grant' => $this->grant->slug], absolute: false),
+            );
         $this->withHeaders($headers)->postJson('/api/v1/discord/me/grant-applications/confirm', [
             'intent_id' => $token,
         ])->assertCreated()

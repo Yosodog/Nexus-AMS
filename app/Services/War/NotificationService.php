@@ -85,7 +85,7 @@ class NotificationService
                 'war_assignment_created',
                 'war-plan-assignment-'.$assignment->id.'-created',
                 ['type' => 'war_plan_assignment', 'id' => $assignment->id, 'label' => $plan->name],
-                '/defense/war-plans',
+                route('admin.war-plans.show', ['plan' => $plan], absolute: false),
                 ['status' => 'assigned'],
             );
         });
@@ -190,7 +190,7 @@ class NotificationService
                 'war_assignment_created',
                 'war-counter-assignment-'.$assignment->id.'-created',
                 ['type' => 'war_counter_assignment', 'id' => $assignment->id, 'label' => 'Counter #'.$counter->id],
-                '/defense/war-rooms',
+                route('admin.war-counters.show', ['counter' => $counter], absolute: false),
                 ['status' => 'assigned'],
             );
         });

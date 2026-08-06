@@ -92,7 +92,7 @@ class AlertSubscriptionService
             'watchlist_test',
             'watchlist-test-'.$subscription->id.'-'.Str::uuid(),
             ['type' => 'alert_subscription', 'id' => $subscription->id, 'label' => $subscription->displayName()],
-            '/user/alerts',
+            route('user.alerts.index', absolute: false),
             ['status' => 'triggered', 'event' => 'Test alert'],
         )) {
             throw ValidationException::withMessages([

@@ -95,7 +95,7 @@ class SendSpyAssignmentsNotificationJob implements ShouldQueue
                         'id' => $round->id,
                         'label' => $round->campaign?->name ?? 'Spy campaign',
                     ],
-                    '/defense/spy-operations',
+                    route('admin.spy-campaigns.rounds.show', ['spyRound' => $round], absolute: false),
                     ['status' => 'assigned'],
                 );
             }

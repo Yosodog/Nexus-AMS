@@ -48,7 +48,7 @@ class LoanNotification extends Notification implements ShouldQueue
             $notifiable,
             'loan_'.$this->status,
             ['type' => 'loan', 'id' => $this->loan->id],
-            '/loans',
+            route('loans.index', absolute: false),
             ['status' => $this->status],
         );
     }

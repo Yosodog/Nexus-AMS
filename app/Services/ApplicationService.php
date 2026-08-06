@@ -132,7 +132,7 @@ class ApplicationService
             'application_'.$status,
             'application-'.$application->id.'-'.$status,
             ['type' => 'application', 'id' => $application->id],
-            '/apply',
+            route('apply.show', absolute: false),
             ['status' => $status],
         );
     }

@@ -93,7 +93,7 @@ class AlertSubscriptionController extends Controller
             'expires_at' => $subscription->expires_at?->toIso8601String(),
             'last_evaluated_at' => $subscription->last_evaluated_at?->toIso8601String(),
             'last_triggered_at' => $subscription->last_triggered_at?->toIso8601String(),
-            'deep_link_path' => '/user/alerts',
+            'deep_link_path' => route('user.alerts.index', absolute: false),
         ];
     }
 

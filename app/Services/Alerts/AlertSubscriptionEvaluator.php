@@ -57,7 +57,7 @@ class AlertSubscriptionEvaluator
             'watchlist_triggered',
             'watchlist-'.$subscription->id.'-'.substr(hash('sha256', json_encode($state, JSON_THROW_ON_ERROR)), 0, 24),
             ['type' => 'alert_subscription', 'id' => $subscription->id, 'label' => $subscription->displayName()],
-            '/user/alerts',
+            route('user.alerts.index', absolute: false),
             [
                 'status' => 'triggered',
                 'alert_type' => $subscription->type->label(),

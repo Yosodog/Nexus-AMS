@@ -38,7 +38,7 @@ class BlockadeReliefNotificationService
                         'id' => $request->id,
                         'label' => 'Request #'.$request->id,
                     ],
-                    '/defense/blockade-relief',
+                    route('defense.blockade-relief', absolute: false),
                     [
                         'status' => $request->status->value,
                         'event' => str_replace('_', ' ', $eventType),

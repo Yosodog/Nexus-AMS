@@ -159,6 +159,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S · **Type:** Correctness, cross-channel UX
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Several Discord workflow messages link to paths that no longer match the web application, including examples in `app/Http/Controllers/API/Discord/StaffController.php` and `WorkflowController.php`.
 
 **How it should work:** Generate every internal link from a named route rather than concatenating path strings. Add a small link-building service for Discord if payload construction is repeated. Messages should deep-link to the exact record and action context when authorization permits, with a safe queue-level fallback if the record is unavailable.

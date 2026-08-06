@@ -44,7 +44,7 @@ class GrantNotification extends Notification
             $notifiable,
             'grant_application_'.$this->status,
             ['type' => 'grant_application', 'id' => $this->application->id, 'label' => $this->application->grant->name],
-            '/grants',
+            route('grants.show_grants', ['grant' => $this->application->grant->slug], absolute: false),
             ['status' => $this->status],
         );
     }

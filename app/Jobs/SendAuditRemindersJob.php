@@ -42,7 +42,7 @@ class SendAuditRemindersJob implements ShouldQueue
                     'audit_summary_reminder',
                     'audit-reminder:'.$nationId.':'.now()->toDateString(),
                     ['type' => 'audit_summary', 'id' => (int) $nationId, 'label' => 'Audit findings'],
-                    '/audit',
+                    route('audit.index', absolute: false),
                     [
                         'finding_count' => $results->count(),
                         'overdue_count' => $results->filter(fn (AuditResult $result): bool => $result->due_at?->isPast() ?? false)->count(),

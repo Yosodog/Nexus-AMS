@@ -34,7 +34,7 @@ class RebuildingNotification extends Notification
             $notifiable,
             'rebuilding_request_'.$this->status,
             ['type' => 'rebuilding_request', 'id' => $this->request->id],
-            '/defense/rebuilding',
+            route('defense.rebuilding', absolute: false),
             ['status' => $this->status, 'cycle_id' => $this->request->cycle_id],
         );
     }

@@ -122,7 +122,7 @@ class OperationsController extends Controller
                 'target' => $this->nationSummary($counter->aggressor),
                 'team_size' => $counter->team_size,
                 'assigned_nation_ids' => $counter->assignments->pluck('friendly_nation_id')->map(fn ($id) => (int) $id)->all(),
-                'deep_link_path' => '/admin/war-counters/'.$counter->id,
+                'deep_link_path' => route('admin.war-counters.show', ['counter' => $counter], absolute: false),
             ]],
         ]);
     }
@@ -151,7 +151,7 @@ class OperationsController extends Controller
                 data_get($payload, 'context.blockade_owner', 'none'),
             ),
             'context' => $payload['context'],
-            'deep_link_path' => '/defense/war-simulators?war='.$war->id,
+            'deep_link_path' => route('defense.simulators', ['war' => $war->id], absolute: false),
         ]);
     }
 
@@ -267,7 +267,7 @@ class OperationsController extends Controller
             'status' => $application->status->value,
             'created_at' => $application->created_at->toIso8601String(),
             'updated_at' => $application->updated_at->toIso8601String(),
-            'deep_link_path' => '/apply',
+            'deep_link_path' => route('apply.show', ['application' => $application->id], absolute: false),
         ])->all());
     }
 

@@ -35,7 +35,7 @@ class AuditViolationSummaryNotification extends Notification implements ShouldQu
             $notifiable,
             'audit_summary_reminder',
             ['type' => 'audit_summary', 'id' => $this->nationId, 'label' => 'Audit findings'],
-            '/audit',
+            route('audit.index', absolute: false),
             ['finding_count' => count($this->lines)],
         );
     }

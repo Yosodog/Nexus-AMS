@@ -91,7 +91,7 @@ class BlockadeReliefController extends Controller
             ] : null,
             'deadline_at' => $request->deadline_at->toIso8601String(),
             'created_at' => $request->created_at->toIso8601String(),
-            'deep_link_path' => '/defense/blockade-relief',
+            'deep_link_path' => route('defense.blockade-relief', absolute: false),
         ];
     }
 

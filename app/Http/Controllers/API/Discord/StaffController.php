@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\ApplicationService;
+use App\Services\Discord\DiscordWorkflowLinkService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,8 @@ use Illuminate\Validation\Rule;
 class StaffController extends Controller
 {
     use DiscordApiResponses;
+
+    public function __construct(private readonly DiscordWorkflowLinkService $links) {}
 
     public function requests(Request $request): JsonResponse
     {
@@ -41,7 +44,7 @@ class StaffController extends Controller
             if (isset($data['type']) && $data['type'] !== $type) {
                 continue;
             }
-            [$query, $statusColumn, $deepLink] = $source;
+            [$query, $statusColumn] = $source;
             if (isset($data['status'])) {
                 $this->applyQueueStatus($query, $type, $data['status']);
             } elseif ($type === 'withdrawal') {
@@ -58,7 +61,7 @@ class StaffController extends Controller
                     : ($model->{$statusColumn} instanceof \BackedEnum ? $model->{$statusColumn}->value : $model->{$statusColumn}),
                 'nation_id' => $model->nation_id ?? $model->from_nation_id ?? null,
                 'created_at' => optional($model->created_at)->toIso8601String(),
-                'deep_link_path' => $deepLink,
+                'deep_link_path' => $this->links->staff($type, $model),
             ]));
         }
 
@@ -144,29 +147,29 @@ class StaffController extends Controller
         return $this->discordData($this->applicationPayload($application, false));
     }
 
-    /** @return array<string, array{0:Builder,1:string,2:string}> */
+    /** @return array<string, array{0:Builder,1:string}> */
     private function permittedSources(User $actor): array
     {
         $sources = [];
         if ($actor->hasPermission('manage-grants')) {
-            $sources['grant'] = [GrantApplication::query(), 'status', '/admin/grants'];
-            $sources['city_grant'] = [CityGrantRequest::query(), 'status', '/admin/grants/cities'];
+            $sources['grant'] = [GrantApplication::query(), 'status'];
+            $sources['city_grant'] = [CityGrantRequest::query(), 'status'];
         }
         if ($actor->hasPermission('manage-loans')) {
-            $sources['loan'] = [Loan::query(), 'status', '/admin/loans'];
+            $sources['loan'] = [Loan::query(), 'status'];
         }
         if ($actor->hasPermission('view-war-aid')) {
-            $sources['war_aid'] = [WarAidRequest::query(), 'status', '/admin/defense/war-aid'];
+            $sources['war_aid'] = [WarAidRequest::query(), 'status'];
         }
         if ($actor->hasPermission('view-rebuilding')) {
-            $sources['rebuilding'] = [RebuildingRequest::query(), 'status', '/admin/defense/rebuilding'];
+            $sources['rebuilding'] = [RebuildingRequest::query(), 'status'];
         }
         if ($actor->hasPermission('manage-accounts')) {
-            $sources['withdrawal'] = [Transaction::query()->where('transaction_type', 'withdrawal'), 'is_pending', '/admin/withdrawals'];
-            $sources['member_transfer'] = [MemberTransfer::query(), 'status', '/admin/accounts/member-transfers'];
+            $sources['withdrawal'] = [Transaction::query()->where('transaction_type', 'withdrawal'), 'is_pending'];
+            $sources['member_transfer'] = [MemberTransfer::query(), 'status'];
         }
         if ($actor->hasPermission('manage-applications')) {
-            $sources['application'] = [Application::query(), 'status', '/admin/applications'];
+            $sources['application'] = [Application::query(), 'status'];
         }
 
         return $sources;
@@ -184,7 +187,7 @@ class StaffController extends Controller
             'discord_channel_id' => $application->discord_channel_id,
             'denial_reason' => $application->denial_reason,
             'created_at' => $application->created_at->toIso8601String(),
-            'deep_link_path' => '/admin/applications/'.$application->id,
+            'deep_link_path' => $this->links->staff('application', $application),
             'messages' => $withMessages ? $application->messages->map(fn ($message): array => [
                 'id' => $message->id,
                 'author' => $message->discord_username,
