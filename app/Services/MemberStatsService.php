@@ -12,6 +12,8 @@ use App\Models\Nation;
 use App\Models\NationSignIn;
 use App\Models\Taxes;
 use App\Models\User;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class MemberStatsService
@@ -252,6 +254,7 @@ class MemberStatsService
             ->get(['created_at', 'score']);
 
         $taxHistory = $canViewTaxes ? $this->taxHistory($nationId) : collect();
+        $taxSummary = $canViewTaxes ? $this->thirtyDayTaxSummary($nationId) : null;
 
         // 5. Recent Requests
         $recentCityGrants = $canViewCityGrants
@@ -311,6 +314,7 @@ class MemberStatsService
             'resourceHistory' => $resourceHistory,
             'scoreHistory' => $scoreHistory,
             'taxHistory' => $taxHistory,
+            'taxSummary' => $taxSummary,
 
             'recentCityGrants' => $recentCityGrants,
             'recentCustomGrants' => $recentCustomGrants,
@@ -333,10 +337,12 @@ class MemberStatsService
      */
     private function taxHistory(int $nationId): Collection
     {
+        [$windowStartsAt, $windowEndsAt] = $this->utcWindow(365);
+
         return Taxes::query()
             ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(gasoline) AS gasoline, SUM(aluminum) AS aluminum, SUM(munitions) AS munitions, SUM(uranium) AS uranium, SUM(food) AS food')
             ->where('sender_id', $nationId)
-            ->where('date', '>=', now()->subDays(365))
+            ->whereBetween('date', [$windowStartsAt, $windowEndsAt])
             ->groupBy('day')
             ->orderBy('day')
             ->get()
@@ -358,10 +364,12 @@ class MemberStatsService
      */
     private function recentTaxes(int $nationId): Collection
     {
+        [$windowStartsAt, $windowEndsAt] = $this->utcWindow(7);
+
         return Taxes::query()
             ->selectRaw('day AS date, SUM(money) AS money, SUM(steel) AS steel, SUM(munitions) AS munitions, SUM(food) AS food')
             ->where('sender_id', $nationId)
-            ->where('date', '>=', now()->subDays(7))
+            ->whereBetween('date', [$windowStartsAt, $windowEndsAt])
             ->groupBy('day')
             ->orderBy('day')
             ->get()
@@ -373,5 +381,52 @@ class MemberStatsService
                 'food' => (float) ($row->food ?? 0),
             ])
             ->values();
+    }
+
+    /**
+     * Uses the synchronized post-Direct Deposit money amount that TaxService records in the finance ledger.
+     *
+     * @return array{
+     *     total_money: float,
+     *     window_starts_at: CarbonInterface,
+     *     window_ends_at: CarbonInterface,
+     *     latest_recorded_at: CarbonInterface|null,
+     *     timezone: string
+     * }
+     */
+    private function thirtyDayTaxSummary(int $nationId): array
+    {
+        [$windowStartsAt, $windowEndsAt] = $this->utcWindow(30);
+
+        $summary = Taxes::query()
+            ->where('sender_id', $nationId)
+            ->whereBetween('date', [$windowStartsAt, $windowEndsAt])
+            ->selectRaw('COALESCE(SUM(`money`), 0) AS `total_money`, MAX(`date`) AS `latest_recorded_at`')
+            ->first();
+
+        $latestRecordedAt = $summary?->latest_recorded_at
+            ? Carbon::parse((string) $summary->latest_recorded_at, 'UTC')->utc()
+            : null;
+
+        return [
+            'total_money' => (float) ($summary?->total_money ?? 0.0),
+            'window_starts_at' => $windowStartsAt,
+            'window_ends_at' => $windowEndsAt,
+            'latest_recorded_at' => $latestRecordedAt,
+            'timezone' => 'UTC',
+        ];
+    }
+
+    /**
+     * Tax records are imported and stored as UTC instants, so member tax windows remain UTC
+     * regardless of the configured application display timezone.
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function utcWindow(int $days): array
+    {
+        $windowEndsAt = now('UTC');
+
+        return [$windowEndsAt->copy()->subDays($days), $windowEndsAt];
     }
 }

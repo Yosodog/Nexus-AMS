@@ -12,13 +12,23 @@
     </x-header>
 
     {{-- Stats --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <x-stat title="Score" :value="number_format($lastScore, 2)" icon="o-chart-bar" color="text-primary" />
-        <x-stat title="Cities" :value="$lastCities" icon="o-building-office-2" color="text-success" />
+    <div class="mb-6">
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <x-stat title="Score" :value="number_format($lastScore, 2)" icon="o-chart-bar" color="text-primary" />
+            <x-stat title="Cities" :value="$lastCities" icon="o-building-office-2" color="text-success" />
+            @if($canViewTaxes)
+                <x-stat title="Total Taxes (30d)" :value="'$' . number_format($taxSummary['total_money'], 2)" icon="o-banknotes" color="text-info" />
+            @endif
+            <x-stat title="Updates" :value="$scoreHistory->count() . ' records'" icon="o-clock" color="text-warning" />
+        </div>
+
         @if($canViewTaxes)
-            <x-stat title="Total Taxes (30d)" :value="'$' . number_format($taxHistory->take(30)->sum('money'))" icon="o-banknotes" color="text-info" />
+            <p class="mt-2 text-xs text-base-content/60">
+                UTC window: {{ $taxSummary['window_starts_at']->format('M j, Y H:i') }} through {{ $taxSummary['window_ends_at']->format('M j, Y H:i') }}.
+                Uses synchronized post-Direct Deposit money-tax amounts, matching the finance ledger.
+                Latest included record: {{ $taxSummary['latest_recorded_at'] ? $taxSummary['latest_recorded_at']->format('M j, Y H:i').' UTC' : 'none in this window' }}.
+            </p>
         @endif
-        <x-stat title="Updates" :value="$scoreHistory->count() . ' records'" icon="o-clock" color="text-warning" />
     </div>
 
     {{-- Charts --}}
