@@ -16,14 +16,14 @@
     <div class="space-y-6">
         <div>
             <h2 class="text-lg font-semibold">Defined MMR Tiers</h2>
-            <p class="text-sm text-base-content/60">
+            <p class="text-sm nexus-text-muted">
                 Each city-count tier defines per-city minimum resource and unit expectations. Tier 0 is the fallback and cannot be deleted.
             </p>
         </div>
 
         <div class="grid gap-6 xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
             <x-card title="Create a New Tier">
-                <p class="mb-4 text-sm text-base-content/60">Add the city count first, then use the configuration section below to set per-city minimums.</p>
+                <p class="mb-4 text-sm nexus-text-muted">Add the city count first, then use the configuration section below to set per-city minimums.</p>
 
                 <form method="POST" action="{{ route('admin.mmr.store') }}" class="space-y-4">
                     @csrf
@@ -41,14 +41,14 @@
                         <a href="#tier-config-table" class="btn btn-outline btn-sm">Jump to configuration</a>
                     </div>
 
-                    <div class="rounded-box border border-base-300 bg-base-200/50 p-3 text-sm text-base-content/60">
+                    <div class="rounded-box border border-base-300 bg-base-200/50 p-3 text-sm nexus-text-muted">
                         Use the grouped forms below to enter expected resources and readiness for each tier.
                     </div>
                 </form>
             </x-card>
 
             <x-card title="Tier Housekeeping">
-                <p class="mb-4 text-sm text-base-content/60">Remove tiers you no longer use. Tier 0 is protected.</p>
+                <p class="mb-4 text-sm nexus-text-muted">Remove tiers you no longer use. Tier 0 is protected.</p>
 
                 <form method="POST" action="{{ route('admin.mmr.destroy') }}" class="space-y-4" data-confirm="Delete this MMR tier? This cannot be undone." data-confirm-title="Delete MMR tier?" data-confirm-label="Delete tier" data-confirm-tone="error">
                     @csrf
@@ -74,7 +74,7 @@
                     </div>
                 </form>
 
-                <div class="mt-4 rounded-box border border-base-300 bg-base-200/50 p-3 text-sm text-base-content/60">
+                <div class="mt-4 rounded-box border border-base-300 bg-base-200/50 p-3 text-sm nexus-text-muted">
                     Tier 0 is the default fallback and cannot be deleted.
                 </div>
             </x-card>
@@ -89,7 +89,7 @@
                 @csrf
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="text-sm text-base-content/60">Numbers are minimum expectations per tier. Empty values default to 0.</div>
+                    <div class="text-sm nexus-text-muted">Numbers are minimum expectations per tier. Empty values default to 0.</div>
                     <button type="submit" class="btn btn-success btn-sm">
                         <x-icon name="o-check" class="size-4" />
                         Save all tiers
@@ -105,7 +105,7 @@
                                     <span class="badge badge-primary">{{ $tier->city_count }}</span>
                                     <div>
                                         <div class="font-semibold">City count {{ $tier->city_count }}</div>
-                                        <div class="text-sm text-base-content/60">Configure per-city resource minimums and readiness.</div>
+                                        <div class="text-sm nexus-text-muted">Configure per-city resource minimums and readiness.</div>
                                     </div>
                                 </div>
                             </div>
@@ -167,7 +167,7 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="text-sm text-base-content/60">Changes save everything at once, so review the tiers before submitting.</div>
+                    <div class="text-sm nexus-text-muted">Changes save everything at once, so review the tiers before submitting.</div>
                     <button type="submit" class="btn btn-success">
                         <x-icon name="o-check" class="size-4" />
                         Save all tiers
@@ -210,7 +210,7 @@
                             <div class="text-sm text-error">{{ $message }}</div>
                         @enderror
 
-                        <div class="text-sm text-base-content/60">Choose one or more city-count tiers to update together.</div>
+                        <div class="text-sm nexus-text-muted">Choose one or more city-count tiers to update together.</div>
                     </div>
 
                     <div class="space-y-6">
@@ -257,7 +257,7 @@
                 @enderror
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="text-sm text-base-content/60">Filled fields replace per-city values on the selected tiers.</div>
+                    <div class="text-sm nexus-text-muted">Filled fields replace per-city values on the selected tiers.</div>
                     <button type="submit" class="btn btn-primary">
                         <x-icon name="o-check-circle" class="size-4" />
                         Apply Bulk Edit
@@ -283,7 +283,7 @@
                         <label class="block space-y-2">
                             <span class="flex justify-between text-sm font-medium capitalize">
                                 <span>{{ $resource }}</span>
-                                <span class="text-base-content/60">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
+                                <span class="nexus-text-muted">{{ number_format($weights[$resource] ?? 0, 2) }}%</span>
                             </span>
                             <div class="join w-full">
                                 <input
@@ -304,7 +304,7 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="text-sm text-base-content/60">Adjust weights to emphasize specific resources. The live total updates as you type.</div>
+                    <div class="text-sm nexus-text-muted">Adjust weights to emphasize specific resources. The live total updates as you type.</div>
                     <div class="flex flex-wrap items-center gap-3">
                         <span class="font-semibold" id="mmrWeightTotal">Total: {{ number_format($weightTotal, 2) }}%</span>
                         <button type="submit" class="btn btn-primary btn-sm">
@@ -317,7 +317,7 @@
         </x-card>
 
         <x-card id="mmr-assistant-settings" title="MMR Assistant Resource Settings" class="scroll-mt-24">
-            <p class="mb-4 text-sm text-base-content/60">
+            <p class="mb-4 text-sm nexus-text-muted">
                 Enable or disable specific resources and adjust surcharge values. These affect how resources are priced and whether they are purchasable via MMR Assistant.
             </p>
 
@@ -366,7 +366,7 @@
                     </button>
 
                     <div class="flex flex-wrap items-center gap-2">
-                        <label class="text-sm text-base-content/60" for="setAllSurcharge">Set all surcharges to</label>
+                        <label class="text-sm nexus-text-muted" for="setAllSurcharge">Set all surcharges to</label>
                         <input type="number" id="setAllSurcharge" class="input input-sm w-28" step="0.01" min="{{ \App\Models\MMRSetting::MIN_SURCHARGE_PCT }}" max="{{ \App\Models\MMRSetting::MAX_SURCHARGE_PCT }}">
                         <button type="button" class="btn btn-outline btn-sm" id="applySurchargeToAll">Apply</button>
                     </div>
@@ -377,7 +377,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-lg font-semibold">Member Resource Totals</h2>
-                <p class="text-sm text-base-content/60">
+                <p class="text-sm nexus-text-muted">
                     Requirements scale by city count. Resources include on-hand and banked values at the last sign-in; red cells indicate members below the required minimums.
                 </p>
             </div>
@@ -422,7 +422,7 @@
                                     $required = $tier->$resource * $nation->num_cities;
                                     $meets = $have >= $required;
                                 @endphp
-                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($required === 0 ? 'text-base-content/50' : '') }}">
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($required === 0 ? 'nexus-text-muted' : '') }}">
                                     <span
                                         class="tooltip tooltip-left cursor-help"
                                         data-tip="Required: {{ number_format($required) }} ({{ number_format($tier->$resource) }} per city)"
@@ -449,7 +449,7 @@
                                         <progress class="progress {{ $score >= 90 ? 'progress-success' : ($score >= 70 ? 'progress-warning' : 'progress-error') }} h-2 w-full" value="{{ min($score, 100) }}" max="100"></progress>
                                     </div>
                                 @else
-                                    <span class="text-base-content/60">N/A</span>
+                                    <span class="nexus-text-muted">N/A</span>
                                 @endif
                             </td>
                         </tr>
@@ -461,7 +461,7 @@
 
         <div>
             <h2 class="text-lg font-semibold">Member Military Units</h2>
-            <p class="text-sm text-base-content/60">Military minimums are derived from each member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
+            <p class="text-sm nexus-text-muted">Military minimums are derived from each member’s city count and tier requirements. Red cells indicate under-preparedness.</p>
         </div>
 
         <x-card>
@@ -498,7 +498,7 @@
                                     $min = $required[$unit];
                                     $meets = $have >= $min;
                                 @endphp
-                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($min === 0 ? 'text-base-content/50' : '') }}">
+                                <td class="{{ ! $meets ? 'bg-error/10 text-error' : ($min === 0 ? 'nexus-text-muted' : '') }}">
                                     <span
                                         class="tooltip tooltip-left cursor-help"
                                         data-tip="Required: {{ number_format($min) }}"

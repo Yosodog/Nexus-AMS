@@ -63,7 +63,7 @@
             <div class="nexus-panel__header">
                 <div>
                     <h2 id="attention-findings-heading" class="nexus-section-title">Needs attention</h2>
-                    <p class="mt-1 text-sm text-base-content/60">High-priority and overdue findings, ordered by urgency.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">High-priority and overdue findings, ordered by urgency.</p>
                 </div>
             </div>
             <div class="divide-y divide-base-300">
@@ -77,7 +77,7 @@
                                 @endif
                                 <span class="badge badge-outline">{{ ucfirst($finding->rule?->priority?->value ?? 'info') }}</span>
                             </div>
-                            <p class="mt-1 text-sm text-base-content/60">
+                            <p class="mt-1 text-sm nexus-text-muted">
                                 {{ $finding->city?->name ?? 'Nation-wide' }} · {{ $finding->nation?->nation_name ?? 'Unknown nation' }}
                                 @if($finding->due_at)
                                     · Due {{ $finding->due_at->toFormattedDateString() }}
@@ -95,7 +95,7 @@
         <div class="nexus-panel__header">
             <div>
                 <h2 id="rule-health-heading" class="nexus-section-title">Rule health</h2>
-                <p class="mt-1 text-sm text-base-content/60">Current evaluation status and open-finding count for every rule.</p>
+                <p class="mt-1 text-sm nexus-text-muted">Current evaluation status and open-finding count for every rule.</p>
             </div>
             <a href="{{ route('admin.audits.rules.index') }}" class="btn btn-outline btn-sm">Rules</a>
         </div>
@@ -126,7 +126,7 @@
                     <tr>
                         <td class="max-w-prose whitespace-normal">
                             <div class="font-semibold">{{ $rule->name }}</div>
-                            <p class="mt-1 line-clamp-2 text-sm text-base-content/60">{{ $rule->plain_language_summary }}</p>
+                            <p class="mt-1 line-clamp-2 text-sm nexus-text-muted">{{ $rule->plain_language_summary }}</p>
                         </td>
                         <td>
                             <div class="flex flex-wrap gap-2">
@@ -137,7 +137,7 @@
                         <td>
                             <span class="badge {{ $healthBadge }} badge-soft">{{ $rule->last_evaluation_status?->label() ?? 'Never run' }}</span>
                             @if($rule->last_evaluation_error)
-                                <p class="mt-2 max-w-xs whitespace-normal text-sm text-base-content/60">{{ $rule->last_evaluation_error }}</p>
+                                <p class="mt-2 max-w-xs whitespace-normal text-sm nexus-text-muted">{{ $rule->last_evaluation_error }}</p>
                             @endif
                         </td>
                         <td data-order="{{ $rule->last_evaluated_at?->timestamp ?? 0 }}">
@@ -149,7 +149,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-8 text-center text-base-content/60">No audit rules have been configured.</td></tr>
+                    <tr><td colspan="6" class="py-8 text-center nexus-text-muted">No audit rules have been configured.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -160,7 +160,7 @@
                 <article class="grid gap-3 p-4">
                     <div>
                         <h3 class="text-xl font-semibold">{{ $rule->name }}</h3>
-                        <p class="mt-1 text-sm text-base-content/60">{{ $rule->plain_language_summary }}</p>
+                        <p class="mt-1 text-sm nexus-text-muted">{{ $rule->plain_language_summary }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <span class="badge badge-outline">{{ ucfirst($rule->target_type->value) }}</span>
@@ -170,7 +170,7 @@
                     <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline">{{ number_format($rule->results_count) }} findings</a>
                 </article>
             @empty
-                <p class="p-6 text-center text-base-content/60">No audit rules have been configured.</p>
+                <p class="p-6 text-center nexus-text-muted">No audit rules have been configured.</p>
             @endforelse
         </div>
     </section>

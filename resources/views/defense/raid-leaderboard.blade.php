@@ -113,13 +113,13 @@
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">MVP</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">MVP</p>
                     <h2 class="card-title">Top looter</h2>
                     @if($topLooter)
                         <p class="text-2xl font-bold">{{ $topLooter['leader_name'] }}</p>
-                        <p class="text-sm text-base-content/60">{{ $topLooter['nation_name'] }}</p>
+                        <p class="text-sm nexus-text-muted">{{ $topLooter['nation_name'] }}</p>
                         <p class="mt-2 text-lg font-semibold">${{ number_format($topLooter['loot_value'], 0) }}</p>
-                        <p class="text-xs text-base-content/60">{{ $topLooter['victories'] }} victories • {{ $topLooter['attacks'] }} attacks</p>
+                        <p class="text-xs nexus-text-muted">{{ $topLooter['victories'] }} victories • {{ $topLooter['attacks'] }} attacks</p>
                     @else
                         <p class="text-base-content/70">No raiders yet.</p>
                     @endif
@@ -127,13 +127,13 @@
             </div>
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Closer</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Closer</p>
                     <h2 class="card-title">Most victories</h2>
                     @if($topCloser)
                         <p class="text-2xl font-bold">{{ $topCloser['leader_name'] }}</p>
-                        <p class="text-sm text-base-content/60">{{ $topCloser['nation_name'] }}</p>
+                        <p class="text-sm nexus-text-muted">{{ $topCloser['nation_name'] }}</p>
                         <p class="mt-2 text-lg font-semibold">{{ number_format($topCloser['victories']) }} wins</p>
-                        <p class="text-xs text-base-content/60">${{ number_format($topCloser['loot_value'], 0) }} loot value</p>
+                        <p class="text-xs nexus-text-muted">${{ number_format($topCloser['loot_value'], 0) }} loot value</p>
                     @else
                         <p class="text-base-content/70">No victories yet.</p>
                     @endif
@@ -141,10 +141,10 @@
             </div>
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Damage</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Damage</p>
                     <h2 class="card-title">Infra per attack</h2>
                     <p class="text-3xl font-bold">${{ number_format($totals['avg_infra_per_attack'] ?? 0, 0) }}</p>
-                    <p class="text-xs text-base-content/60">Average value burned per hit</p>
+                    <p class="text-xs nexus-text-muted">Average value burned per hit</p>
                 </div>
             </div>
         </div>
@@ -184,46 +184,46 @@
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body grid grid-cols-1 xl:grid-cols-3 gap-6">
                     <div class="xl:col-span-2 space-y-3">
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Your raid performance</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Your raid performance</p>
                         <h2 class="card-title text-2xl">Personal Trophy Case</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="p-4 rounded-md bg-secondary/10 border border-secondary/30">
                                 <p class="text-xs uppercase text-base-content/70">Loot value</p>
                                 <p class="text-2xl font-bold text-secondary">${{ number_format($selfStats['stats']['loot_value'] ?? 0, 0) }}</p>
-                                <p class="text-xs text-base-content/60">Rank #{{ $lootRank ?? '-' }} of {{ $memberCount }} • Top {{ $lootPercentile }}%</p>
+                                <p class="text-xs nexus-text-muted">Rank #{{ $lootRank ?? '-' }} of {{ $memberCount }} • Top {{ $lootPercentile }}%</p>
                             </div>
                             <div class="p-4 rounded-md bg-primary/10 border border-primary/30">
                                 <p class="text-xs uppercase text-base-content/70">Victories</p>
                                 <p class="text-2xl font-bold text-primary">{{ number_format($selfStats['stats']['victories'] ?? 0) }}</p>
-                                <p class="text-xs text-base-content/60">Rank #{{ $victoryRank ?? '-' }} • {{ number_format($selfStats['stats']['attacks'] ?? 0) }} attacks</p>
+                                <p class="text-xs nexus-text-muted">Rank #{{ $victoryRank ?? '-' }} • {{ number_format($selfStats['stats']['attacks'] ?? 0) }} attacks</p>
                             </div>
                             <div class="p-4 rounded-md bg-accent/10 border border-accent/30">
                                 <p class="text-xs uppercase text-base-content/70">Loot per attack</p>
                                 <p class="text-2xl font-bold text-accent">${{ number_format($selfStats['stats']['loot_per_attack'] ?? 0, 0) }}</p>
-                                <p class="text-xs text-base-content/60">Rank #{{ $lootRateRank ?? '-' }}</p>
+                                <p class="text-xs nexus-text-muted">Rank #{{ $lootRateRank ?? '-' }}</p>
                             </div>
                             <div class="p-4 rounded-md bg-info/10 border border-info/30">
                                 <p class="text-xs uppercase text-base-content/70">Kill score per attack</p>
                                 <p class="text-2xl font-bold text-info">{{ number_format($selfStats['stats']['kill_score_per_attack'] ?? 0, 2) }}</p>
-                                <p class="text-xs text-base-content/60">Rank #{{ $killRateRank ?? '-' }}</p>
+                                <p class="text-xs nexus-text-muted">Rank #{{ $killRateRank ?? '-' }}</p>
                             </div>
                         </div>
                     </div>
                     <div class="space-y-3">
                         <div class="p-4 rounded-md bg-base-200/60 border border-base-300">
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Your share of loot</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Your share of loot</p>
                             <p class="text-3xl font-bold text-secondary">{{ number_format($selfStats['loot_share'] ?? 0, 2) }}%</p>
-                            <p class="text-xs text-base-content/60">Of alliance loot value</p>
+                            <p class="text-xs nexus-text-muted">Of alliance loot value</p>
                         </div>
                         <div class="p-4 rounded-md bg-base-200/60 border border-base-300">
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Infra damage</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Infra damage</p>
                             <p class="text-2xl font-bold text-primary">${{ number_format($selfStats['stats']['infra_destroyed_value'] ?? 0, 0) }}</p>
-                            <p class="text-xs text-base-content/60">{{ number_format($selfStats['stats']['infra_destroyed'] ?? 0, 2) }} infra destroyed</p>
+                            <p class="text-xs nexus-text-muted">{{ number_format($selfStats['stats']['infra_destroyed'] ?? 0, 2) }} infra destroyed</p>
                         </div>
                         <div class="p-4 rounded-md bg-base-200/60 border border-base-300">
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Unit score</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Unit score</p>
                             <p class="text-2xl font-bold text-accent">{{ number_format($selfStats['stats']['unit_score'] ?? 0, 2) }}</p>
-                            <p class="text-xs text-base-content/60">Weighted kills total</p>
+                            <p class="text-xs nexus-text-muted">Weighted kills total</p>
                         </div>
                     </div>
                 </div>
@@ -235,7 +235,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Loot velocity</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Loot velocity</p>
                             <h2 class="card-title">Daily loot value</h2>
                         </div>
                         <span class="badge badge-outline text-xs">24h avg pricing</span>
@@ -247,7 +247,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">City damage</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">City damage</p>
                             <h2 class="card-title">Infra destroyed value</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Daily totals</span>
@@ -262,7 +262,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Tempo</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Tempo</p>
                             <h2 class="card-title">Daily attacks</h2>
                         </div>
                         <span class="badge badge-outline text-xs">All members</span>
@@ -276,14 +276,14 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Raid momentum</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Raid momentum</p>
                             <h2 class="card-title">Peak performance</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Highlights</span>
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-3">
                         <div class="p-4 rounded-md bg-base-200/60 border border-base-300">
-                            <p class="text-xs uppercase text-base-content/60">Best loot day</p>
+                            <p class="text-xs uppercase nexus-text-muted">Best loot day</p>
                             <p class="text-2xl font-bold text-secondary">
                                 @if($totals['best_loot_day'])
                                     ${{ number_format($totals['best_loot_day']['value'], 0) }}
@@ -291,16 +291,16 @@
                                     $0
                                 @endif
                             </p>
-                            <p class="text-xs text-base-content/60">
+                            <p class="text-xs nexus-text-muted">
                                 {{ $totals['best_loot_day']['label'] ?? 'No data yet' }}
                             </p>
                         </div>
                         <div class="p-4 rounded-md bg-base-200/60 border border-base-300">
-                            <p class="text-xs uppercase text-base-content/60">Best attack day</p>
+                            <p class="text-xs uppercase nexus-text-muted">Best attack day</p>
                             <p class="text-2xl font-bold text-primary">
                                 {{ number_format($totals['best_attack_day']['value'] ?? 0) }} hits
                             </p>
-                            <p class="text-xs text-base-content/60">
+                            <p class="text-xs nexus-text-muted">
                                 {{ $totals['best_attack_day']['label'] ?? 'No data yet' }}
                             </p>
                         </div>
@@ -324,7 +324,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Loot leaderboard</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Loot leaderboard</p>
                             <h2 class="card-title">Top Looters</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Value</span>
@@ -338,12 +338,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['loot_value'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['victories'] }} victories</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['victories'] }} victories</p>
                                 </div>
                             </div>
                         @empty
@@ -356,7 +356,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Infra leaderboard</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Infra leaderboard</p>
                             <h2 class="card-title">City Wreckers</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Value</span>
@@ -370,12 +370,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['infra_destroyed_value'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ number_format($row['infra_destroyed'], 2) }} infra</p>
+                                    <p class="text-xs nexus-text-muted">{{ number_format($row['infra_destroyed'], 2) }} infra</p>
                                 </div>
                             </div>
                         @empty
@@ -391,7 +391,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Kill leaderboard</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Kill leaderboard</p>
                             <h2 class="card-title">Unit Takers</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Score</span>
@@ -405,12 +405,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">{{ number_format($row['unit_score'], 2) }} score</p>
-                                    <p class="text-xs text-base-content/60">
+                                    <p class="text-xs nexus-text-muted">
                                         {{ number_format($row['soldiers_killed']) }}s • {{ number_format($row['tanks_killed']) }}t •
                                         {{ number_format($row['aircraft_killed']) }}a • {{ number_format($row['ships_killed']) }}sh
                                     </p>
@@ -426,7 +426,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Victory leaderboard</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Victory leaderboard</p>
                             <h2 class="card-title">Closers</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Victories</span>
@@ -440,12 +440,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">{{ number_format($row['victories']) }} wins</p>
-                                    <p class="text-xs text-base-content/60">${{ number_format($row['loot_value'], 0) }} loot value</p>
+                                    <p class="text-xs nexus-text-muted">${{ number_format($row['loot_value'], 0) }} loot value</p>
                                 </div>
                             </div>
                         @empty
@@ -461,7 +461,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Efficiency</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Efficiency</p>
                             <h2 class="card-title">Loot per Attack</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Value</span>
@@ -475,12 +475,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['loot_per_attack'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['attacks'] }} attacks</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['attacks'] }} attacks</p>
                                 </div>
                             </div>
                         @empty
@@ -493,7 +493,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Closers</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Closers</p>
                             <h2 class="card-title">Loot per Victory</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Value</span>
@@ -507,12 +507,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['loot_per_victory'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['victories'] }} victories</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['victories'] }} victories</p>
                                 </div>
                             </div>
                         @empty
@@ -525,7 +525,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Hitters</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Hitters</p>
                             <h2 class="card-title">Most Attacks</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Volume</span>
@@ -539,12 +539,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">{{ number_format($row['attacks']) }} attacks</p>
-                                    <p class="text-xs text-base-content/60">${{ number_format($row['loot_value'], 0) }} loot value</p>
+                                    <p class="text-xs nexus-text-muted">${{ number_format($row['loot_value'], 0) }} loot value</p>
                                 </div>
                             </div>
                         @empty
@@ -560,7 +560,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Pressure</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Pressure</p>
                             <h2 class="card-title">Infra per Attack</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Value</span>
@@ -574,12 +574,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['infra_per_attack'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['attacks'] }} attacks</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['attacks'] }} attacks</p>
                                 </div>
                             </div>
                         @empty
@@ -592,7 +592,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Kill rate</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Kill rate</p>
                             <h2 class="card-title">Kill Score per Attack</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Score</span>
@@ -606,12 +606,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">{{ number_format($row['kill_score_per_attack'], 2) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['attacks'] }} attacks</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['attacks'] }} attacks</p>
                                 </div>
                             </div>
                         @empty
@@ -627,7 +627,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Money bags</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Money bags</p>
                             <h2 class="card-title">Cash Looted</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Money</span>
@@ -641,12 +641,12 @@
                                     </div>
                                     <div>
                                         <p class="font-semibold">{{ $row['leader_name'] }}</p>
-                                        <p class="text-xs text-base-content/60">{{ $row['nation_name'] }}</p>
+                                        <p class="text-xs nexus-text-muted">{{ $row['nation_name'] }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold">${{ number_format($row['money_looted'], 0) }}</p>
-                                    <p class="text-xs text-base-content/60">{{ $row['victories'] }} victories</p>
+                                    <p class="text-xs nexus-text-muted">{{ $row['victories'] }} victories</p>
                                 </div>
                             </div>
                         @empty
@@ -659,22 +659,22 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Top charts</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Top charts</p>
                             <h2 class="card-title">Leaderboard Spotlights</h2>
                         </div>
                         <span class="badge badge-outline text-xs">Top 6</span>
                     </div>
                     <div class="mt-4 space-y-4">
                         <div>
-                            <p class="text-xs uppercase text-base-content/60">Loot value</p>
+                            <p class="text-xs uppercase nexus-text-muted">Loot value</p>
                             <canvas id="topLootChart" class="mt-2"></canvas>
                         </div>
                         <div>
-                            <p class="text-xs uppercase text-base-content/60">Infra value</p>
+                            <p class="text-xs uppercase nexus-text-muted">Infra value</p>
                             <canvas id="topInfraChart" class="mt-2"></canvas>
                         </div>
                         <div>
-                            <p class="text-xs uppercase text-base-content/60">Efficiency</p>
+                            <p class="text-xs uppercase nexus-text-muted">Efficiency</p>
                             <canvas id="topEfficiencyChart" class="mt-2"></canvas>
                         </div>
                     </div>
@@ -686,7 +686,7 @@
             <div class="card-body">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Loot breakdown</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Loot breakdown</p>
                         <h2 class="card-title">Resources hauled (all members)</h2>
                     </div>
                     <span class="badge badge-ghost text-xs">{{ $fromLabel }} - {{ $toLabel }}</span>
@@ -695,9 +695,9 @@
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                         @forelse($resourceTotals as $resource => $amount)
                             <div class="p-3 rounded-xl bg-base-200/60 border border-base-300">
-                                <p class="text-xs uppercase text-base-content/60">{{ $resource }}</p>
+                                <p class="text-xs uppercase nexus-text-muted">{{ $resource }}</p>
                                 <p class="text-lg font-semibold">{{ number_format($amount, 2) }}</p>
-                                <p class="text-xs text-base-content/60">${{ number_format($resourceValues[$resource] ?? 0, 0) }} value</p>
+                                <p class="text-xs nexus-text-muted">${{ number_format($resourceValues[$resource] ?? 0, 0) }} value</p>
                             </div>
                         @empty
                             <p class="text-base-content/70">No resources looted yet.</p>
@@ -705,16 +705,16 @@
                         <div class="p-3 rounded-xl bg-primary/10 border border-primary/30">
                             <p class="text-xs uppercase text-base-content/70">Resource value</p>
                             <p class="text-lg font-semibold text-primary">${{ number_format($totals['resources_value'] ?? 0, 0) }}</p>
-                            <p class="text-xs text-base-content/60">At 24h avg prices</p>
+                            <p class="text-xs nexus-text-muted">At 24h avg prices</p>
                         </div>
                         <div class="p-3 rounded-xl bg-secondary/10 border border-secondary/30">
                             <p class="text-xs uppercase text-base-content/70">Money looted</p>
                             <p class="text-lg font-semibold text-secondary">${{ number_format($totals['money_looted'] ?? 0, 0) }}</p>
-                            <p class="text-xs text-base-content/60">Hard cash wins wars</p>
+                            <p class="text-xs nexus-text-muted">Hard cash wins wars</p>
                         </div>
                     </div>
                     <div class="bg-base-200/40 border border-base-300 rounded-xl p-4">
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Loot mix</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Loot mix</p>
                         <canvas id="resourceMixChart" class="mt-3"></canvas>
                     </div>
                 </div>

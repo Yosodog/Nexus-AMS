@@ -9,7 +9,7 @@
         <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Banking workspace</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Banking workspace</p>
                     <h1 class="text-2xl font-bold">Manage your accounts</h1>
                     <p class="text-sm text-base-content/70">Transfer, request deposits, and keep balances tidy.</p>
                 </div>

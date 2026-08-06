@@ -98,7 +98,7 @@
             <h2 id="side-comparison-title" class="nexus-section-title">Side comparison</h2>
             <p class="mt-1 max-w-3xl text-sm text-base-content/65">Compare the nations in this wave, then see what each side has done in matched wars.</p>
         </div>
-        <div class="text-right text-xs text-base-content/55">
+        <div class="text-right text-xs nexus-text-muted">
             <div>{{ data_get($forces, 'source') === 'latest_generation' ? 'Roster from the latest team generation' : 'Roster from this wave' }}</div>
             <div>Nation data updated {{ $formatDate(data_get($forces, 'as_of')) }}</div>
         </div>
@@ -108,12 +108,12 @@
         <div class="min-w-0">
             <div class="border-b border-base-300 px-4 py-3">
                 <h3 class="font-semibold">Current forces</h3>
-                <p class="mt-1 text-xs text-base-content/60">Totals use the latest stored P&amp;W data. Per-city figures make differently sized sides easier to compare.</p>
-                <p class="mt-1 text-xs text-base-content/50">Military data: {{ number_format((int) data_get($forces, 'friendly.military_reports', 0)) }} of {{ number_format((int) data_get($forces, 'friendly.nations', 0)) }} friendly nations · {{ number_format((int) data_get($forces, 'enemy.military_reports', 0)) }} of {{ number_format((int) data_get($forces, 'enemy.nations', 0)) }} target nations</p>
+                <p class="mt-1 text-xs nexus-text-muted">Totals use the latest stored P&amp;W data. Per-city figures make differently sized sides easier to compare.</p>
+                <p class="mt-1 text-xs nexus-text-muted">Military data: {{ number_format((int) data_get($forces, 'friendly.military_reports', 0)) }} of {{ number_format((int) data_get($forces, 'friendly.nations', 0)) }} friendly nations · {{ number_format((int) data_get($forces, 'enemy.military_reports', 0)) }} of {{ number_format((int) data_get($forces, 'enemy.nations', 0)) }} target nations</p>
             </div>
             <div class="grid grid-cols-[minmax(0,1fr)_minmax(5.75rem,auto)_minmax(0,1fr)] items-center gap-3 border-b border-base-300 bg-base-200/45 px-4 py-2 text-xs font-semibold sm:gap-5">
                 <div class="text-right text-success">Your side</div>
-                <div class="text-center text-base-content/50">Measure</div>
+                <div class="text-center nexus-text-muted">Measure</div>
                 <div class="text-error">Target side</div>
             </div>
             <dl class="divide-y divide-base-300">
@@ -160,11 +160,11 @@
         <div class="min-w-0">
             <div class="border-b border-base-300 px-4 py-3">
                 <h3 class="font-semibold">Battle results</h3>
-                <p class="mt-1 text-xs text-base-content/60">Only attacks and declarations linked to this wave count here.</p>
+                <p class="mt-1 text-xs nexus-text-muted">Only attacks and declarations linked to this wave count here.</p>
             </div>
             <div class="grid grid-cols-[minmax(0,1fr)_minmax(5.75rem,auto)_minmax(0,1fr)] items-center gap-3 border-b border-base-300 bg-base-200/45 px-4 py-2 text-xs font-semibold sm:gap-5">
                 <div class="text-right text-success">Your side</div>
-                <div class="text-center text-base-content/50">Result</div>
+                <div class="text-center nexus-text-muted">Result</div>
                 <div class="text-error">Target side</div>
             </div>
             <dl class="divide-y divide-base-300">
@@ -277,11 +277,11 @@
                                 <tr>
                                     <td>
                                         <x-pw-nation-link :nation-id="data_get($row, 'friendly.id')" :label="data_get($row, 'friendly.nation_name', 'Unknown nation')" class="font-semibold" />
-                                        <div class="text-xs text-base-content/60"><x-pw-nation-link :nation-id="data_get($row, 'friendly.id')" :label="data_get($row, 'friendly.leader_name', 'Unknown leader')" /></div>
+                                        <div class="text-xs nexus-text-muted"><x-pw-nation-link :nation-id="data_get($row, 'friendly.id')" :label="data_get($row, 'friendly.leader_name', 'Unknown leader')" /></div>
                                     </td>
                                     <td>
                                         <x-pw-nation-link :nation-id="data_get($row, 'target.id')" :label="data_get($row, 'target.nation_name', 'Unknown nation')" class="font-semibold" />
-                                        <div class="text-xs text-base-content/60"><x-pw-nation-link :nation-id="data_get($row, 'target.id')" :label="data_get($row, 'target.leader_name', 'Unknown leader')" /></div>
+                                        <div class="text-xs nexus-text-muted"><x-pw-nation-link :nation-id="data_get($row, 'target.id')" :label="data_get($row, 'target.leader_name', 'Unknown leader')" /></div>
                                     </td>
                                     <td class="whitespace-nowrap text-sm">{{ $formatDate(data_get($row, 'deadline_at')) }}</td>
                                 </tr>
@@ -290,7 +290,7 @@
                     </table>
                 </div>
                 @if ((int) data_get($attention, 'waiting_to_declare', 0) > $waitingRows->count())
-                    <p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">Showing the {{ number_format($waitingRows->count()) }} most urgent assignments.</p>
+                    <p class="border-t border-base-300 px-4 py-3 text-xs nexus-text-muted">Showing the {{ number_format($waitingRows->count()) }} most urgent assignments.</p>
                 @endif
             </div>
         @endif
@@ -310,9 +310,9 @@
             @if ($hasChartActivity)
                 <canvas id="milcom-activity-chart" role="img" aria-label="Daily outgoing and incoming attacks for this operation"></canvas>
             @else
-                <div class="grid h-full place-items-center text-center text-sm text-base-content/60">
+                <div class="grid h-full place-items-center text-center text-sm nexus-text-muted">
                     <div>
-                        <x-icon name="o-chart-bar" class="mx-auto size-9 text-base-content/30" aria-hidden="true" />
+                        <x-icon name="o-chart-bar" class="mx-auto size-9 nexus-text-muted" aria-hidden="true" />
                         <p class="mt-2 font-semibold text-base-content/75">No attacks recorded yet</p>
                         <p>The chart will fill in as assigned wars begin.</p>
                     </div>
@@ -333,9 +333,9 @@
             @if ($hasChartActivity)
                 <canvas id="milcom-damage-chart" role="img" aria-label="Daily infrastructure damage inflicted and taken for this operation"></canvas>
             @else
-                <div class="grid h-full place-items-center text-center text-sm text-base-content/60">
+                <div class="grid h-full place-items-center text-center text-sm nexus-text-muted">
                     <div>
-                        <x-icon name="o-chart-bar" class="mx-auto size-9 text-base-content/30" aria-hidden="true" />
+                        <x-icon name="o-chart-bar" class="mx-auto size-9 nexus-text-muted" aria-hidden="true" />
                         <p class="mt-2 font-semibold text-base-content/75">No damage recorded yet</p>
                         <p>Matched war attacks will appear here.</p>
                     </div>
@@ -356,9 +356,9 @@
 
     @if ($currentWars->isEmpty())
         <div class="p-8 text-center">
-            <x-icon name="o-shield-check" class="mx-auto size-10 text-base-content/30" aria-hidden="true" />
+            <x-icon name="o-shield-check" class="mx-auto size-10 nexus-text-muted" aria-hidden="true" />
             <p class="mt-3 font-semibold">No active wars are linked to this wave</p>
-            <p class="mt-1 text-sm text-base-content/60">Wars will appear as assigned nations declare on their targets.</p>
+            <p class="mt-1 text-sm nexus-text-muted">Wars will appear as assigned nations declare on their targets.</p>
         </div>
     @else
         <div class="overflow-x-auto">
@@ -379,10 +379,10 @@
                             <td class="min-w-64">
                                 <div class="flex items-center gap-2">
                                     <x-pw-nation-link :nation-id="data_get($war, 'friendly.id')" :label="data_get($war, 'friendly.nation_name', 'Unknown nation')" class="font-semibold" />
-                                    <span class="text-base-content/35" aria-hidden="true">→</span>
+                                    <span class="nexus-text-muted" aria-hidden="true">→</span>
                                     <x-pw-nation-link :nation-id="data_get($war, 'target.id')" :label="data_get($war, 'target.nation_name', 'Unknown nation')" class="font-semibold" />
                                 </div>
-                                <div class="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-base-content/60">
+                                <div class="mt-1 flex flex-wrap items-center gap-x-1 text-xs nexus-text-muted">
                                     <x-pw-nation-link :nation-id="data_get($war, 'friendly.id')" :label="data_get($war, 'friendly.leader_name', 'Unknown leader')" />
                                     <span aria-hidden="true">vs.</span>
                                     <x-pw-nation-link :nation-id="data_get($war, 'target.id')" :label="data_get($war, 'target.leader_name', 'Unknown leader')" />
@@ -396,16 +396,16 @@
                                 @else
                                     <span class="nexus-status nexus-status--success">On track</span>
                                 @endif
-                                <div class="mt-1 text-xs text-base-content/55">Last attack: {{ $formatDate(data_get($war, 'last_attack_at')) }}</div>
+                                <div class="mt-1 text-xs nexus-text-muted">Last attack: {{ $formatDate(data_get($war, 'last_attack_at')) }}</div>
                             </td>
                             <td class="text-right tabular-nums">
                                 <span class="font-semibold text-success">{{ number_format((int) data_get($war, 'outgoing_attacks', 0)) }}</span>
-                                <span class="text-base-content/40">/</span>
+                                <span class="nexus-text-muted">/</span>
                                 <span class="text-error">{{ number_format((int) data_get($war, 'incoming_attacks', 0)) }}</span>
                             </td>
                             <td class="text-right tabular-nums">
                                 <span class="font-semibold {{ (int) data_get($war, 'friendly_resistance', 0) <= 25 ? 'text-error' : '' }}">{{ number_format((int) data_get($war, 'friendly_resistance', 0)) }}</span>
-                                <span class="text-base-content/40">/</span>
+                                <span class="nexus-text-muted">/</span>
                                 <span>{{ number_format((int) data_get($war, 'target_resistance', 0)) }}</span>
                             </td>
                             <td class="text-right text-sm tabular-nums">
@@ -419,7 +419,7 @@
             </table>
         </div>
         @if ((int) data_get($stats, 'current_wars_total', 0) > $currentWars->count())
-            <p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">Showing the {{ number_format($currentWars->count()) }} wars that need attention soonest.</p>
+            <p class="border-t border-base-300 px-4 py-3 text-xs nexus-text-muted">Showing the {{ number_format($currentWars->count()) }} wars that need attention soonest.</p>
         @endif
     @endif
 </section>
@@ -432,7 +432,7 @@
             </div>
         </div>
         @if ($allianceStats->isEmpty())
-            <p class="p-6 text-sm text-base-content/60">Alliance stats will appear after the first matched declaration.</p>
+            <p class="p-6 text-sm nexus-text-muted">Alliance stats will appear after the first matched declaration.</p>
         @else
             <div class="overflow-x-auto">
                 <table class="table table-sm">
@@ -463,7 +463,7 @@
                                     </div>
                                 </td>
                                 <td><span class="badge {{ data_get($row, 'side') === 'friendly' ? 'badge-success badge-soft' : 'badge-error badge-soft' }}">{{ data_get($row, 'side') === 'friendly' ? 'Your side' : 'Target side' }}</span></td>
-                                <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wars', 0)) }} <span class="text-xs text-base-content/50">({{ number_format((int) data_get($row, 'active_wars', 0)) }} live)</span></td>
+                                <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wars', 0)) }} <span class="text-xs nexus-text-muted">({{ number_format((int) data_get($row, 'active_wars', 0)) }} live)</span></td>
                                 <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wins', 0)) }}–{{ number_format((int) data_get($row, 'losses', 0)) }}</td>
                                 <td class="text-right font-semibold tabular-nums {{ (float) data_get($row, 'net_infra_value', 0) < 0 ? 'text-error' : 'text-success' }}">{{ $formatMoney(data_get($row, 'net_infra_value', 0)) }}</td>
                                 <td class="text-right tabular-nums">{{ $formatMoney(data_get($row, 'loot', 0)) }}</td>
@@ -483,7 +483,7 @@
         </div>
     </div>
     @if ($contributors->isEmpty())
-        <p class="p-6 text-sm text-base-content/60">Contributor stats will appear after the first matched declaration.</p>
+        <p class="p-6 text-sm nexus-text-muted">Contributor stats will appear after the first matched declaration.</p>
     @else
         <div class="overflow-x-auto">
             <table class="table table-sm">
@@ -506,7 +506,7 @@
                         <tr>
                             <td>
                                 <x-pw-nation-link :nation-id="data_get($nation, 'id')" :label="data_get($nation, 'nation_name', 'Unknown nation')" class="font-semibold" />
-                                <div class="text-xs text-base-content/60"><x-pw-nation-link :nation-id="data_get($nation, 'id')" :label="data_get($nation, 'leader_name', 'Unknown leader')" /></div>
+                                <div class="text-xs nexus-text-muted"><x-pw-nation-link :nation-id="data_get($nation, 'id')" :label="data_get($nation, 'leader_name', 'Unknown leader')" /></div>
                             </td>
                             <td>
                                 @if (data_get($alliance, 'url'))
@@ -515,7 +515,7 @@
                                     {{ data_get($alliance, 'name', 'No alliance') }}
                                 @endif
                             </td>
-                            <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wars', 0)) }} <span class="text-xs text-base-content/50">({{ number_format((int) data_get($row, 'active_wars', 0)) }} live)</span></td>
+                            <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wars', 0)) }} <span class="text-xs nexus-text-muted">({{ number_format((int) data_get($row, 'active_wars', 0)) }} live)</span></td>
                             <td class="text-right tabular-nums">{{ number_format((int) data_get($row, 'wins', 0)) }}</td>
                             <td class="text-right font-semibold text-success tabular-nums">{{ $formatMoney(data_get($row, 'infra_inflicted_value', 0)) }}</td>
                             <td class="text-right tabular-nums">{{ $formatMoney(data_get($row, 'loot', 0)) }}</td>
@@ -527,7 +527,7 @@
     @endif
 </section>
 
-<p class="text-right text-xs text-base-content/50">Updated {{ $formatDate(data_get($stats, 'generated_at')) }}</p>
+<p class="text-right text-xs nexus-text-muted">Updated {{ $formatDate(data_get($stats, 'generated_at')) }}</p>
 
 @if ($hasChartActivity)
     <table class="sr-only">

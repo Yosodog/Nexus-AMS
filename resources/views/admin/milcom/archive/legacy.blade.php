@@ -51,7 +51,7 @@
                             <tr>
                                 <td>
                                     <div class="font-semibold"><x-pw-nation-link :nation-id="$row->nation_id" :label="$row->nation?->nation_name ?? 'Unknown nation'" /></div>
-                                    <div class="text-xs text-base-content/55"><x-pw-nation-link :nation-id="$row->nation_id" :label="$row->nation?->leader_name ?? 'Unknown leader'" /></div>
+                                    <div class="text-xs nexus-text-muted"><x-pw-nation-link :nation-id="$row->nation_id" :label="$row->nation?->leader_name ?? 'Unknown leader'" /></div>
                                 </td>
                                 <td class="tabular-nums">{{ number_format((float) $row->target_priority_score, 1) }}</td>
                                 <td>{{ str((string) $row->preferred_war_type)->headline() }}</td>
@@ -62,7 +62,7 @@
                             <tr>
                                 <td>
                                     <div class="font-semibold"><x-pw-nation-link :nation-id="$row->friendly_nation_id" :label="$row->friendlyNation?->nation_name ?? 'Unknown nation'" /></div>
-                                    <div class="text-xs text-base-content/55"><x-pw-nation-link :nation-id="$row->friendly_nation_id" :label="$row->friendlyNation?->leader_name ?? 'Unknown leader'" /></div>
+                                    <div class="text-xs nexus-text-muted"><x-pw-nation-link :nation-id="$row->friendly_nation_id" :label="$row->friendlyNation?->leader_name ?? 'Unknown leader'" /></div>
                                 </td>
                                 <td class="tabular-nums">{{ number_format((float) $row->match_score, 1) }}</td>
                                 <td>{{ str((string) $row->status)->headline() }}</td>

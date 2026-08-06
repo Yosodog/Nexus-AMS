@@ -13,7 +13,7 @@
                 </span>
             </div>
         </div>
-        <div class="text-sm text-right text-base-content/60">
+        <div class="text-sm text-right nexus-text-muted">
             <p>Cooldown: 24h per resource</p>
             <p>Source: single selected account</p>
         </div>
@@ -103,7 +103,7 @@
         </div>
 
         <div class="flex items-center justify-end gap-3">
-            <p class="text-sm text-base-content/60">Only runs when resources fall below thresholds and accounts have funds.</p>
+            <p class="text-sm nexus-text-muted">Only runs when resources fall below thresholds and accounts have funds.</p>
             <button class="btn btn-primary" @disabled($disabledByAdmin)>
                 Save auto withdraw
             </button>

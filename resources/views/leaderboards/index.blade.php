@@ -48,10 +48,10 @@
                             {{ $board['icon'] }}
                         </span>
                         <span class="min-w-0">
-                            <span class="block text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">{{ $board['eyebrow'] }}</span>
+                            <span class="block text-xs font-semibold uppercase tracking-[0.16em] nexus-text-muted">{{ $board['eyebrow'] }}</span>
                             <span class="mt-1 block font-semibold text-base-content group-hover:text-primary">{{ $board['name'] }}</span>
                         </span>
-                        <x-icon name="o-chevron-right" class="ml-auto size-4 shrink-0 text-base-content/40" aria-hidden="true" />
+                        <x-icon name="o-chevron-right" class="ml-auto size-4 shrink-0 nexus-text-muted" aria-hidden="true" />
                     </a>
                 @endforeach
             </div>
@@ -85,7 +85,7 @@
                                         <a href="{{ $champion['nation_url'] }}" target="_blank" rel="noopener noreferrer" class="mt-2 block truncate text-xl font-bold text-primary hover:underline">
                                             {{ $champion['nation_name'] }}
                                         </a>
-                                        <p class="mt-1 truncate text-sm text-base-content/60">{{ $champion['leader_name'] }}</p>
+                                        <p class="mt-1 truncate text-sm nexus-text-muted">{{ $champion['leader_name'] }}</p>
                                     </div>
                                     <div class="sm:text-right">
                                         <p class="nexus-stat-label">{{ $champion['metric_label'] }}</p>
@@ -95,7 +95,7 @@
                             @else
                                 <div class="nexus-empty-state min-h-0 py-5">
                                     <p class="font-semibold">No ranking data yet</p>
-                                    <p class="text-sm text-base-content/60">This board will populate after its source data is refreshed.</p>
+                                    <p class="text-sm nexus-text-muted">This board will populate after its source data is refreshed.</p>
                                 </div>
                             @endif
 

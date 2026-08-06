@@ -68,7 +68,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="py-6 text-center text-sm text-base-content/60">No entries in no-raid list.</td>
+                            <td colspan="4" class="py-6 text-center text-sm nexus-text-muted">No entries in no-raid list.</td>
                         </tr>
                     @endforelse
                     </tbody>

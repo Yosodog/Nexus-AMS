@@ -5,7 +5,7 @@
         <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Defense desk</p>
                     <h1 class="text-3xl font-bold leading-tight">Rebuilding</h1>
                     <p class="text-sm text-base-content/70">Apply for help rebuilding infrastructure after war.</p>
                 </div>
@@ -25,15 +25,15 @@
         <x-utils.card>
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-xl border border-base-300 p-4">
-                    <p class="text-xs uppercase text-base-content/60">Cycle</p>
+                    <p class="text-xs uppercase nexus-text-muted">Cycle</p>
                     <p class="text-2xl font-semibold">{{ $cycleId }}</p>
                 </div>
                 <div class="rounded-xl border border-base-300 p-4">
-                    <p class="text-xs uppercase text-base-content/60">Status</p>
+                    <p class="text-xs uppercase nexus-text-muted">Status</p>
                     <p class="text-2xl font-semibold">{{ $enabled ? 'Open' : 'Closed' }}</p>
                 </div>
                 <div class="rounded-xl border border-base-300 p-4">
-                    <p class="text-xs uppercase text-base-content/60">Estimated rebuild</p>
+                    <p class="text-xs uppercase nexus-text-muted">Estimated rebuild</p>
                     <p class="text-2xl font-semibold">${{ number_format((float) $estimate['amount']) }}</p>
                 </div>
             </div>
@@ -75,7 +75,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-base-content/55">No rebuilding requests yet.</td>
+                            <td colspan="6" class="text-center nexus-text-muted">No rebuilding requests yet.</td>
                         </tr>
                     @endforelse
                     </tbody>

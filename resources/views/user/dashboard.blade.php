@@ -51,7 +51,7 @@
                         {{ number_format($nation->score, 2) }} score
                     </p>
                     @if($latestSignIn && $nation->updated_at)
-                        <p class="text-xs text-base-content/60">
+                        <p class="text-xs nexus-text-muted">
                             Member record updated
                             <time
                                 datetime="{{ $nation->updated_at->toIso8601String() }}"
@@ -136,7 +136,7 @@
                     </div>
                 @else
                     <div class="nexus-empty-state min-h-0 place-items-start p-0 text-left">
-                        <x-icon name="o-arrow-path" class="size-6 text-base-content/45" aria-hidden="true" />
+                        <x-icon name="o-arrow-path" class="size-6 nexus-text-muted" aria-hidden="true" />
                         <div>
                             <p class="font-semibold">No readiness snapshot yet</p>
                             <p class="mt-1 text-sm leading-6 text-base-content/65">
@@ -213,7 +213,7 @@
                 <div class="bg-base-100 p-4 sm:p-5">
                     <dt class="nexus-stat-label">Lifetime cash grants received</dt>
                     @if($grantTotal === null)
-                        <dd class="nexus-stat-value mt-2 break-words text-base-content/60">Unavailable</dd>
+                        <dd class="nexus-stat-value mt-2 break-words nexus-text-muted">Unavailable</dd>
                         <p class="nexus-stat-helper">Grant records could not be loaded</p>
                     @else
                         <dd class="nexus-stat-value mt-2 break-words">${{ number_format((float) $grantTotal, 2) }}</dd>
@@ -223,7 +223,7 @@
                 <div class="bg-base-100 p-4 sm:p-5">
                     <dt class="nexus-stat-label">Outstanding loan principal</dt>
                     @if($loanTotal === null)
-                        <dd class="nexus-stat-value mt-2 break-words text-base-content/60">Unavailable</dd>
+                        <dd class="nexus-stat-value mt-2 break-words nexus-text-muted">Unavailable</dd>
                         <p class="nexus-stat-helper">Loan records could not be loaded</p>
                     @else
                         <dd class="nexus-stat-value mt-2 break-words">${{ number_format((float) $loanTotal, 2) }}</dd>
@@ -322,7 +322,7 @@
 
             @if($recentTransactions->isEmpty())
                 <div class="nexus-empty-state">
-                    <x-icon name="o-inbox" class="size-7 text-base-content/40" aria-hidden="true" />
+                    <x-icon name="o-inbox" class="size-7 nexus-text-muted" aria-hidden="true" />
                     <div>
                         <p class="font-semibold">No account activity recorded</p>
                         <p class="mt-1 text-sm leading-6 text-base-content/65">
@@ -342,7 +342,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <p class="font-semibold">{{ $direction }}</p>
-                                    <time class="mt-1 block text-xs text-base-content/60" datetime="{{ $tx->created_at->toIso8601String() }}">
+                                    <time class="mt-1 block text-xs nexus-text-muted" datetime="{{ $tx->created_at->toIso8601String() }}">
                                         {{ $tx->created_at->format('M j, Y \a\t g:i A') }}
                                     </time>
                                 </div>

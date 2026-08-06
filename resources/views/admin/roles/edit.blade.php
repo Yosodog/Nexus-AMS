@@ -23,7 +23,7 @@
                 <x-slot:title>
                     <div>
                         Role Details
-                        <div class="text-sm font-normal text-base-content/60">Keep names purposeful so teammates understand when to use this role.</div>
+                        <div class="text-sm font-normal nexus-text-muted">Keep names purposeful so teammates understand when to use this role.</div>
                     </div>
                 </x-slot:title>
 
@@ -62,7 +62,7 @@
                             <div class="flex items-center justify-between gap-3">
                                 <div>
                                     <div class="font-semibold text-base-content">Assigned Members</div>
-                                    <div class="text-sm text-base-content/60">{{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}</div>
+                                    <div class="text-sm nexus-text-muted">{{ $totalUsers ? 'People currently using this role.' : 'No members have this role yet.' }}</div>
                                 </div>
                                 <x-badge :value="(string) $totalUsers" class="badge-ghost badge-sm" />
                             </div>
@@ -86,11 +86,11 @@
                                         @endif
                                         <div class="min-w-0">
                                             <div class="truncate font-semibold text-base-content">{{ $user->name }}</div>
-                                            <div class="truncate text-sm text-base-content/60">{{ $nationName ?: 'No nation linked' }}</div>
+                                            <div class="truncate text-sm nexus-text-muted">{{ $nationName ?: 'No nation linked' }}</div>
                                         </div>
                                     </a>
                                 @empty
-                                    <div class="rounded-lg border border-dashed border-base-300 px-4 py-5 text-sm text-base-content/60">
+                                    <div class="rounded-lg border border-dashed border-base-300 px-4 py-5 text-sm nexus-text-muted">
                                         No members have this role yet.
                                     </div>
                                 @endforelse
@@ -108,7 +108,7 @@
                 <x-slot:title>
                     <div>
                         Permissions
-                        <div class="text-sm font-normal text-base-content/60">Enable only the capabilities this role should have.</div>
+                        <div class="text-sm font-normal nexus-text-muted">Enable only the capabilities this role should have.</div>
                     </div>
                 </x-slot:title>
                 <x-slot:menu>
@@ -117,7 +117,7 @@
                             <button class="btn btn-outline btn-primary btn-sm join-item" type="button" data-permission-select="all" {{ $role->protected ? 'disabled' : '' }}>Select all</button>
                             <button class="btn btn-ghost btn-sm join-item" type="button" data-permission-select="none" {{ $role->protected ? 'disabled' : '' }}>Clear</button>
                         </div>
-                        <x-input placeholder="Filter permissions" icon="o-magnifying-glass" data-permission-search :disabled="$role->protected" class="input-sm w-56" />
+                        <x-input aria-label="Filter permissions" placeholder="Filter permissions" icon="o-magnifying-glass" data-permission-search :disabled="$role->protected" class="input-sm w-56" />
                     </div>
                 </x-slot:menu>
 
@@ -145,7 +145,7 @@
                                     <span class="font-semibold text-base-content">{{ Str::headline($perm) }}</span>
                                     <x-badge :value="$typeLabel" class="{{ $typeClass }} badge-sm" />
                                 </span>
-                                <span class="mt-1 block text-sm text-base-content/60">{{ $description }}</span>
+                                <span class="mt-1 block text-sm nexus-text-muted">{{ $description }}</span>
                             </span>
                         </label>
                     @endforeach

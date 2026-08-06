@@ -104,7 +104,7 @@
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Damage over time</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Damage over time</p>
                             <h2 class="card-title">Infrastructure swing (value)</h2>
                         </div>
                         <div class="badge badge-outline text-xs">
@@ -116,12 +116,12 @@
             </div>
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Resource burn</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Resource burn</p>
                     <h2 class="card-title">Fuel + Ammo</h2>
                     <div class="grid grid-cols-2 gap-3 text-sm mt-2">
                         @foreach($resourceUsage as $resource => $value)
                             <div class="p-3 rounded-xl bg-base-200/60 border border-base-300 flex flex-col gap-1">
-                                <div class="flex items-center justify-between text-xs uppercase text-base-content/60">
+                                <div class="flex items-center justify-between text-xs uppercase nexus-text-muted">
                                     <span>{{ $resource }}</span>
                                     <span class="badge badge-ghost badge-sm">{{ $offensiveCount }} off / {{ $defensiveCount }} def</span>
                                 </div>
@@ -139,12 +139,12 @@
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Unit trades</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Unit trades</p>
                     <h2 class="card-title">Kills vs losses (normalized)</h2>
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         @foreach($unitScoreExchange['inflicted'] as $unit => $score)
                             <div class="p-3 rounded-xl bg-base-200/60 border border-base-300">
-                                <div class="flex items-center justify-between text-xs uppercase text-base-content/60">
+                                <div class="flex items-center justify-between text-xs uppercase nexus-text-muted">
                                     <span>{{ ucfirst($unit) }}</span>
                                     <span class="badge badge-outline badge-xs">Score</span>
                                 </div>
@@ -159,7 +159,7 @@
                                 <div class="text-xs text-base-content/70 mb-1">
                                     Lost {{ number_format($rawLost) }} • Net {{ $rawNet >= 0 ? '+' : '' }}{{ number_format($rawNet) }}
                                 </div>
-                                <div class="text-xs text-base-content/60 border-t border-base-300 pt-2">
+                                <div class="text-xs nexus-text-muted border-t border-base-300 pt-2">
                                     Power: {{ number_format($score, 2) }} | Lost {{ number_format($lost, 2) }} | Net {{ $net >= 0 ? '+' : '' }}{{ number_format($net, 2) }}
                                 </div>
                             </div>
@@ -172,7 +172,7 @@
             </div>
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body !block space-y-4">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60 m-0 mb-1 leading-none">War mix</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted m-0 mb-1 leading-none">War mix</p>
                     <h2 class="card-title">War types</h2>
                     <div class="mt-2">
                         <canvas id="warTypeChart" class="w-full max-h-56"></canvas>
@@ -189,11 +189,11 @@
                         @endforelse
                     </div>
                     <div class="mt-4 p-3 rounded-xl bg-base-200/70 border border-base-300">
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Infra impact</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Infra impact</p>
                         <p class="text-sm flex items-center gap-2">
                             <span class="badge badge-success badge-sm">Inflicted</span>
                             ${{ number_format($infraExchange['value']['inflicted'], 0) }}
-                            <span class="text-base-content/60">vs</span>
+                            <span class="nexus-text-muted">vs</span>
                             <span class="badge badge-error badge-sm">Taken</span>
                             ${{ number_format($infraExchange['value']['taken'], 0) }}
                         </p>
@@ -202,7 +202,7 @@
             </div>
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body !block space-y-3">
-                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Favorite opponents</p>
+                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Favorite opponents</p>
                     <h2 class="card-title">Who you keep meeting</h2>
                     <div class="space-y-3">
                         @forelse($opponents as $opponent)
@@ -249,7 +249,7 @@
                         <div class="card-body gap-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">
+                                    <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">
                                         {{ $isAttacker ? 'Offense' : 'Defense' }} • {{ strtoupper($war->war_type) }}
                                     </p>
                                     <h3 class="text-lg font-semibold">
@@ -260,39 +260,39 @@
                                 </div>
                                 <div class="text-right space-y-1">
                                     <span class="badge badge-outline">{{ $war->reason ?: 'No reason given' }}</span>
-                                    <p class="text-xs text-base-content/60">Turns left: {{ $war->turns_left ?? 0 }}</p>
+                                    <p class="text-xs nexus-text-muted">Turns left: {{ $war->turns_left ?? 0 }}</p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <p class="text-xs uppercase text-base-content/60 mb-1">Your resistance</p>
+                                    <p class="text-xs uppercase nexus-text-muted mb-1">Your resistance</p>
                                     <progress class="progress progress-primary w-full" value="{{ $ourResistance }}" max="100"></progress>
                                     <p class="text-xs text-base-content/70 mt-1">{{ $ourResistance }} / 100</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs uppercase text-base-content/60 mb-1">Opponent resistance</p>
+                                    <p class="text-xs uppercase nexus-text-muted mb-1">Opponent resistance</p>
                                     <progress class="progress progress-secondary w-full" value="{{ $theirResistance }}" max="100"></progress>
                                     <p class="text-xs text-base-content/70 mt-1">{{ $theirResistance }} / 100</p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                                 <div class="p-3 rounded-xl bg-base-200/70 border border-base-300">
-                                    <p class="text-xs uppercase text-base-content/60">Infra impact</p>
+                                    <p class="text-xs uppercase nexus-text-muted">Infra impact</p>
                                     <p class="font-semibold text-success">+${{ number_format($isAttacker ? ($war->att_infra_destroyed_value ?? 0) : ($war->def_infra_destroyed_value ?? 0), 0) }}</p>
                                     <p class="text-xs text-base-content/70">Taken: ${{ number_format($isAttacker ? ($war->def_infra_destroyed_value ?? 0) : ($war->att_infra_destroyed_value ?? 0), 0) }}</p>
                                 </div>
                                 <div class="p-3 rounded-xl bg-base-200/70 border border-base-300">
-                                    <p class="text-xs uppercase text-base-content/60">Loot so far</p>
+                                    <p class="text-xs uppercase nexus-text-muted">Loot so far</p>
                                     <p class="font-semibold text-info">${{ number_format($isAttacker ? ($war->att_money_looted ?? 0) : ($war->def_money_looted ?? 0), 0) }}</p>
                                     <p class="text-xs text-base-content/70">Points: {{ $isAttacker ? ($war->att_points ?? 0) : ($war->def_points ?? 0) }}</p>
                                 </div>
                                 <div class="p-3 rounded-xl bg-base-200/70 border border-base-300">
-                                    <p class="text-xs uppercase text-base-content/60">Missiles</p>
+                                    <p class="text-xs uppercase nexus-text-muted">Missiles</p>
                                     <p class="font-semibold">{{ $isAttacker ? ($war->att_missiles_used ?? 0) : ($war->def_missiles_used ?? 0) }}</p>
                                     <p class="text-xs text-base-content/70">Nukes: {{ $isAttacker ? ($war->att_nukes_used ?? 0) : ($war->def_nukes_used ?? 0) }}</p>
                                 </div>
                                 <div class="p-3 rounded-xl bg-base-200/70 border border-base-300">
-                                    <p class="text-xs uppercase text-base-content/60">Air/Ground</p>
+                                    <p class="text-xs uppercase nexus-text-muted">Air/Ground</p>
                                     <p class="font-semibold">
                                         {{ number_format($isAttacker ? ($war->def_aircraft_lost ?? 0) : ($war->att_aircraft_lost ?? 0)) }} air dmg
                                     </p>
@@ -377,7 +377,7 @@
                                     </div>
                                     <div class="flex flex-col items-end gap-1">
                                         <span class="badge {{ $statusClass }} badge-outline">{{ $status }}</span>
-                                        <span class="text-xs text-base-content/60">
+                                        <span class="text-xs nexus-text-muted">
                                             Loot: ${{ number_format($isAttacker ? ($war->att_money_looted ?? 0) : ($war->def_money_looted ?? 0), 0) }}
                                         </span>
                                     </div>

@@ -180,7 +180,7 @@
                                             <span class="badge badge-error badge-outline">{{ $incidentBlockers }} blockers</span>
                                         @endif
                                     </div>
-                                    <p class="mt-1 truncate text-xs text-base-content/55">
+                                    <p class="mt-1 truncate text-xs nexus-text-muted">
                                         <x-pw-nation-link
                                             :nation-id="data_get($aggressor, 'id', data_get($incident, 'aggressor_nation_id'))"
                                             :label="data_get($aggressor, 'leader_name', 'Unknown leader')"
@@ -196,7 +196,7 @@
                                 </div>
                                 <span class="nexus-status {{ $statusTone($status) }} shrink-0">{{ $statusLabel($status) }}</span>
                             </div>
-                            <div class="mt-3 flex items-center justify-between gap-3 text-xs text-base-content/60">
+                            <div class="mt-3 flex items-center justify-between gap-3 text-xs nexus-text-muted">
                                 <span>Detected {{ $relativeTime(data_get($incident, 'detected_at')) }}</span>
                                 <span class="font-semibold tabular-nums">{{ number_format((int) data_get($incident, 'recommended_depth', 0)) }}/3 assigned</span>
                             </div>
@@ -216,7 +216,7 @@
                 @if (is_object($incidents) && method_exists($incidents, 'hasPages') && $incidents->hasPages())
                     <div class="nexus-panel__footer">{{ $incidents->links() }}</div>
                 @else
-                    <div class="nexus-panel__footer flex items-center justify-between text-xs text-base-content/55">
+                    <div class="nexus-panel__footer flex items-center justify-between text-xs nexus-text-muted">
                         <span>{{ number_format($incidentRows->count()) }} wars on this page</span>
                         <span>Up to 50</span>
                     </div>
@@ -234,7 +234,7 @@
                 </div>
 
                 <div class="{{ $selectedIncident ? 'hidden' : '' }} nexus-empty-state min-h-96" data-milcom-inspector-empty>
-                    <x-icon name="o-bolt" class="size-9 text-base-content/35" aria-hidden="true" />
+                    <x-icon name="o-bolt" class="size-9 nexus-text-muted" aria-hidden="true" />
                     <div>
                         <h2 class="text-lg font-semibold">Select a war</h2>
                         <p class="mt-1 text-sm text-base-content/65">Select a war to see the team, checks, Discord room, and timeline.</p>
@@ -259,7 +259,7 @@
                                 </h2>
                                 <span class="badge badge-error badge-soft">Counter</span>
                             </div>
-                            <p class="mt-1 text-sm text-base-content/60">
+                            <p class="mt-1 text-sm nexus-text-muted">
                                 Attacked
                                 <x-pw-nation-link
                                     :nation-id="data_get($defender, 'id', data_get($selectedIncident, 'attacked_nation_id'))"
@@ -278,7 +278,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 id="counter-target-title" class="font-semibold">Target details</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">Detected <span data-milcom-field="detected_at">{{ $relativeTime(data_get($selectedIncident, 'detected_at')) }}</span></p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Detected <span data-milcom-field="detected_at">{{ $relativeTime(data_get($selectedIncident, 'detected_at')) }}</span></p>
                                 </div>
                                 <a href="{{ data_get($selectedIncident, 'war_url', 'https://politicsandwar.com/nation/war/timeline/war='.data_get($selectedIncident, 'war_id', '')) }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">
                                     War timeline
@@ -296,7 +296,7 @@
                             <div class="flex items-end justify-between gap-3">
                                 <div>
                                     <h3 id="recommended-counter-team-title" class="font-semibold">Recommended team</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">The team balances matchup quality and military coverage.</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">The team balances matchup quality and military coverage.</p>
                                 </div>
                                 <span class="text-sm font-semibold tabular-nums"><span data-milcom-field="team_depth">{{ $recommendedTeam->count() }}</span>/3</span>
                             </div>
@@ -320,16 +320,16 @@
                                                     <span class="badge badge-warning badge-soft">No Discord link</span>
                                                 @endif
                                             </div>
-                                            <p class="mt-1 text-xs text-base-content/55">{{ data_get($member, 'offensive_wars', 0) }} active + {{ data_get($member, 'reserved_slots', 0) }} reserved of {{ data_get($member, 'offensive_capacity', '?') }} slots</p>
+                                            <p class="mt-1 text-xs nexus-text-muted">{{ data_get($member, 'offensive_wars', 0) }} active + {{ data_get($member, 'reserved_slots', 0) }} reserved of {{ data_get($member, 'offensive_capacity', '?') }} slots</p>
                                             <x-milcom.military-summary :nation="$memberData" class="mt-2" label="Assigned nation military" />
                                         </div>
                                         <div class="text-right">
                                             <p class="font-semibold tabular-nums">{{ number_format((float) data_get($member, 'score', data_get($member, 'pair_score', 0)), 0) }}</p>
-                                            <p class="text-xs text-base-content/55">match score</p>
+                                            <p class="text-xs nexus-text-muted">match score</p>
                                         </div>
                                     </article>
                                 @empty
-                                    <p class="py-5 text-center text-sm text-base-content/60">Nexus is still building the team, or no eligible team was found.</p>
+                                    <p class="py-5 text-center text-sm nexus-text-muted">Nexus is still building the team, or no eligible team was found.</p>
                                 @endforelse
                             </div>
                         </section>
@@ -338,7 +338,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 id="counter-preflight-checks-title" class="font-semibold">Final checks</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">Nexus checks these again before creating the room.</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Nexus checks these again before creating the room.</p>
                                 </div>
                                 <span class="nexus-status {{ $hardBlockers->isEmpty() ? 'nexus-status--success' : 'nexus-status--error' }}">{{ $hardBlockers->isEmpty() ? 'Ready' : 'Blocked' }}</span>
                             </div>
@@ -353,7 +353,7 @@
                                         <x-icon :name="$isReady ? 'o-check-circle' : ($checkStatus === 'warning' ? 'o-exclamation-triangle' : 'o-x-circle')" class="mt-0.5 size-4 shrink-0 {{ $isReady ? 'text-success' : ($checkStatus === 'warning' ? 'text-warning' : 'text-error') }}" aria-hidden="true" />
                                         <div>
                                             <p class="text-sm font-semibold">{{ data_get($check, 'label', 'Check') }}</p>
-                                            <p class="mt-1 text-xs text-base-content/60">{{ data_get($check, 'detail', str($checkStatus)->headline()) }}</p>
+                                            <p class="mt-1 text-xs nexus-text-muted">{{ data_get($check, 'detail', str($checkStatus)->headline()) }}</p>
                                         </div>
                                     </div>
                                 @empty
@@ -364,8 +364,8 @@
                                         ['label' => 'Discord', 'detail' => 'Discord bot status is unavailable'],
                                     ] as $check)
                                         <div class="flex items-start gap-2 rounded-md border border-base-300 p-3">
-                                            <x-icon name="o-clock" class="mt-0.5 size-4 shrink-0 text-base-content/45" aria-hidden="true" />
-                                            <div><p class="text-sm font-semibold">{{ $check['label'] }}</p><p class="mt-1 text-xs text-base-content/60">{{ $check['detail'] }}</p></div>
+                                            <x-icon name="o-clock" class="mt-0.5 size-4 shrink-0 nexus-text-muted" aria-hidden="true" />
+                                            <div><p class="text-sm font-semibold">{{ $check['label'] }}</p><p class="mt-1 text-xs nexus-text-muted">{{ $check['detail'] }}</p></div>
                                         </div>
                                     @endforeach
                                 @endforelse
@@ -395,7 +395,7 @@
                                         @forelse ($warnings as $warning)
                                             <li class="flex items-start gap-2"><x-icon name="o-exclamation-triangle" class="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{{ is_string($warning) ? $warning : data_get($warning, 'message', data_get($warning, 'label', 'Warning')) }}</span></li>
                                         @empty
-                                            <li class="text-base-content/60">No warnings.</li>
+                                            <li class="nexus-text-muted">No warnings.</li>
                                         @endforelse
                                     </ul>
                                 </div>
@@ -426,12 +426,12 @@
                                                     <li class="font-semibold">Alternative team</li>
                                                 @endforelse
                                             </ul>
-                                            <p class="mt-1 text-xs text-base-content/55">Team score {{ number_format((float) data_get($alternative, 'team_score', data_get($alternative, 'score', 0)), 1) }}</p>
+                                            <p class="mt-1 text-xs nexus-text-muted">Team score {{ number_format((float) data_get($alternative, 'team_score', data_get($alternative, 'score', 0)), 1) }}</p>
                                         </div>
                                         <button type="button" class="btn btn-outline btn-sm" data-milcom-use-alternative data-alternative-index="{{ $loop->index }}">Use team</button>
                                     </article>
                                 @empty
-                                    <p class="rounded-md border border-dashed border-base-300 p-4 text-sm text-base-content/60">No other eligible team found.</p>
+                                    <p class="rounded-md border border-dashed border-base-300 p-4 text-sm nexus-text-muted">No other eligible team found.</p>
                                 @endforelse
                             </div>
                         </section>
@@ -447,7 +447,7 @@
                                     <p class="mt-3 text-sm leading-6 text-base-content/70">
                                         The room includes the target, assigned nations, war type, reason, priority, P&amp;W links, and forum tags.
                                     </p>
-                                    <p class="mt-3 text-xs text-base-content/55">One forum room · approved mentions only · no response buttons</p>
+                                    <p class="mt-3 text-xs nexus-text-muted">One forum room · approved mentions only · no response buttons</p>
                                 </div>
                             </div>
                             <div aria-labelledby="counter-timeline-title">
@@ -458,11 +458,11 @@
                                             <span class="mt-1.5 size-2 rounded-full {{ $loop->first ? 'bg-primary' : 'bg-base-content/25' }}" aria-hidden="true"></span>
                                             <div>
                                                 <p class="font-semibold">{{ data_get($event, 'title', str((string) data_get($event, 'type', 'event'))->headline()) }}</p>
-                                                <p class="mt-0.5 text-xs text-base-content/55">{{ $relativeTime(data_get($event, 'created_at', data_get($event, 'occurred_at'))) }}</p>
+                                                <p class="mt-0.5 text-xs nexus-text-muted">{{ $relativeTime(data_get($event, 'created_at', data_get($event, 'occurred_at'))) }}</p>
                                             </div>
                                         </li>
                                     @empty
-                                        <li class="text-sm text-base-content/60">Events appear here as they happen.</li>
+                                        <li class="text-sm nexus-text-muted">Events appear here as they happen.</li>
                                     @endforelse
                                 </ol>
                             </div>
@@ -479,7 +479,7 @@
                         >
                             @csrf
                             <input type="hidden" name="generation_version" value="{{ $generationVersion }}">
-                            <div><p class="text-sm font-semibold">Discord room failed</p><p class="mt-1 text-xs text-base-content/60" data-milcom-field="dispatch_error">{{ data_get($selectedObjective, 'dispatch.error', 'You can safely retry this room.') }}</p></div>
+                            <div><p class="text-sm font-semibold">Discord room failed</p><p class="mt-1 text-xs nexus-text-muted" data-milcom-field="dispatch_error">{{ data_get($selectedObjective, 'dispatch.error', 'You can safely retry this room.') }}</p></div>
                             <button type="submit" class="btn btn-error btn-outline btn-sm sm:shrink-0">Retry Discord room</button>
                         </form>
                         <form
@@ -495,7 +495,7 @@
                                     <textarea name="override_reason" class="textarea min-h-20 w-full" placeholder="Explain why this counter should be sent despite the warnings" @required($warnings->isNotEmpty())></textarea>
                             </label>
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <p class="text-xs text-base-content/60">Approving reserves the slots and starts the Discord room.</p>
+                                <p class="text-xs nexus-text-muted">Approving reserves the slots and starts the Discord room.</p>
                                 <button type="submit" class="btn btn-primary sm:shrink-0" @disabled($hardBlockers->isNotEmpty() || ! $selectedObjective)>
                                     <x-icon name="o-bolt" class="size-5" aria-hidden="true" />
                                     Approve and create room
@@ -503,7 +503,7 @@
                             </div>
                         </form>
                         <div class="{{ ! $canDispatch && ! $dispatchFailed && $selectedObjective ? 'flex' : 'hidden' }} items-center justify-between gap-3 rounded-md border border-success/25 bg-success/5 p-3" data-milcom-dispatch-state>
-                            <div><p class="text-sm font-semibold">Counter sent</p><p class="mt-1 text-xs text-base-content/60">Nexus reserved the slots and is tracking the Discord room.</p></div>
+                            <div><p class="text-sm font-semibold">Counter sent</p><p class="mt-1 text-xs nexus-text-muted">Nexus reserved the slots and is tracking the Discord room.</p></div>
                             <span class="nexus-status nexus-status--success" data-milcom-field="dispatch_status">{{ str($dispatchStatus ?: $objectiveStatus)->headline() }}</span>
                         </div>
                         <form method="POST" action="{{ $apiBase }}/objectives/{{ $objectiveId }}/cancel" class="hidden items-end gap-2 md:flex" data-milcom-command="cancel-objective" data-confirm="Ignore this war and cancel its counter?">

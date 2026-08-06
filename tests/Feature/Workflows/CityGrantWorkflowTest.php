@@ -9,12 +9,17 @@ use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\CityGrantNotification;
 use App\Services\AuthoritativeNationMembershipService;
+use App\Services\CityCostService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
@@ -81,7 +86,11 @@ class CityGrantWorkflowTest extends TestCase
             ])
             ->assertRedirect(route('grants.city'))
             ->assertSessionHas('alert-type', 'error')
-            ->assertSessionHas('alert-message', 'You are not eligible for this grant. You have a pending city grant.');
+            ->assertSessionHas(
+                'alert-message',
+                'You already have a city grant request awaiting review. Wait for a decision before submitting another request.',
+            )
+            ->assertSessionHasInput('account_id', $account->id);
 
         $this->assertSame(1, CityGrantRequest::query()->count());
     }
@@ -103,9 +112,228 @@ class CityGrantWorkflowTest extends TestCase
             ->assertSessionHas('alert-type', 'error')
             ->assertSessionHas(
                 'alert-message',
-                'You are not eligible for this grant. You must have all of these projects: Urban Planning.',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
             );
 
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_member_receives_an_actionable_cooldown_failure(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'turns_since_last_city',
+                    'operator' => 'gte',
+                    'value' => 120,
+                    'message' => '',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'Your city or project purchase cooldown is still active. Wait until the required turns have passed, refresh your nation data, and try again.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_passing_cooldown_rule_does_not_mask_an_eligibility_failure(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [
+                    [
+                        'field' => 'turns_since_last_city',
+                        'operator' => 'gte',
+                        'value' => 0,
+                        'message' => '',
+                    ],
+                    [
+                        'field' => 'projects',
+                        'operator' => 'contains_all',
+                        'value' => ['Urban Planning'],
+                        'message' => '',
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_member_receives_an_actionable_missing_audit_failure(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'mmr_score',
+                    'operator' => 'gte',
+                    'value' => 1,
+                    'message' => '',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'A current nation audit is required for this city grant. Complete or refresh your audit, then try again.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_member_receives_an_actionable_insufficient_data_failure(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => [
+                'group' => 'all',
+                'rules' => [[
+                    'field' => 'total_infrastructure',
+                    'operator' => 'gte',
+                    'value' => 1,
+                    'message' => '',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'There is not enough current nation data to verify this request. Refresh your nation data and try again; contact the economics team if the problem continues.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_member_receives_an_actionable_external_outage_failure(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $this->createCityGrant($nation->num_cities + 1);
+
+        $cityCostService = $this->createMock(CityCostService::class);
+        $cityCostService->expects($this->once())
+            ->method('calculateGrantAmount')
+            ->willReturn(null);
+        $this->app->instance(CityCostService::class, $cityCostService);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas(
+                'alert-message',
+                'City-cost data is temporarily unavailable, so no request was submitted. Please try again later.',
+            )
+            ->assertSessionHasInput('account_id', $account->id);
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_database_pending_guard_returns_the_pending_failure_when_a_race_is_detected(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $eventName = 'eloquent.creating: '.CityGrantRequest::class;
+        $insertedCompetingRequest = false;
+
+        Event::listen($eventName, function () use (&$insertedCompetingRequest, $grant, $nation, $account): void {
+            if ($insertedCompetingRequest) {
+                return;
+            }
+
+            $insertedCompetingRequest = true;
+
+            DB::table('city_grant_requests')->insert([
+                'city_number' => $grant->city_number,
+                'grant_amount' => 250000,
+                'nation_id' => $nation->id,
+                'account_id' => $account->id,
+                'status' => 'pending',
+                'pending_key' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        try {
+            $this->actingAs($user)
+                ->post(route('grants.city.request'), ['account_id' => $account->id])
+                ->assertRedirect(route('grants.city'))
+                ->assertSessionHas(
+                    'alert-message',
+                    'You already have a city grant request awaiting review. Wait for a decision before submitting another request.',
+                );
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertTrue($insertedCompetingRequest);
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_unknown_city_grant_failure_is_safe_and_includes_a_logged_reference(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $this->createCityGrant($nation->num_cities + 1);
+        Log::spy();
+
+        $cityCostService = $this->createMock(CityCostService::class);
+        $cityCostService->expects($this->once())
+            ->method('calculateGrantAmount')
+            ->willThrowException(new RuntimeException('Internal provider response contained staff-only details.'));
+        $this->app->instance(CityCostService::class, $cityCostService);
+
+        $referenceId = null;
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), ['account_id' => $account->id])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-message', function (string $message) use (&$referenceId): bool {
+                $matched = preg_match('/reference ([0-9a-f-]{36})\.$/', $message, $matches) === 1;
+                $referenceId = $matches[1] ?? null;
+
+                return $matched
+                    && ! str_contains($message, 'staff-only details');
+            })
+            ->assertSessionHasInput('account_id', $account->id);
+
+        Log::shouldHaveReceived('error')->once()->withArgs(
+            fn (string $message, array $context): bool => $message === 'City grant request failed unexpectedly.'
+                && $context['reference_id'] === $referenceId
+                && $context['nation_id'] === $nation->id
+                && $context['account_id'] === $account->id
+                && $context['exception_class'] === RuntimeException::class
+        );
+
+        $this->assertNotNull($referenceId);
         $this->assertDatabaseCount('city_grant_requests', 0);
     }
 
@@ -223,14 +451,15 @@ class CityGrantWorkflowTest extends TestCase
             ->post(route('grants.city.request'), ['account_id' => $account->id])
             ->assertRedirect(route('grants.city'))
             ->assertSessionHas('alert-type', 'error')
-            ->assertSessionHas('alert-message', function (string $message): bool {
-                return str_contains($message, 'At least one of the following must be true:');
-            });
+            ->assertSessionHas(
+                'alert-message',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
+            );
 
         $this->assertDatabaseCount('city_grant_requests', 0);
     }
 
-    public function test_city_grant_custom_failure_message_is_returned_to_the_member(): void
+    public function test_city_grant_custom_failure_message_is_not_exposed_during_submission(): void
     {
         [$user, $nation, $account] = $this->createMemberWithAccount();
         $grant = $this->createCityGrant($nation->num_cities + 1);
@@ -251,7 +480,7 @@ class CityGrantWorkflowTest extends TestCase
             ->assertRedirect(route('grants.city'))
             ->assertSessionHas(
                 'alert-message',
-                'You are not eligible for this grant. Reach city 10 before requesting this tier.',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
             );
     }
 
@@ -314,7 +543,7 @@ class CityGrantWorkflowTest extends TestCase
             ->assertRedirect(route('grants.city'))
             ->assertSessionHas(
                 'alert-message',
-                'You are not eligible for this grant. This grant has invalid eligibility requirements. Contact an administrator.',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
             );
 
         $this->assertDatabaseCount('city_grant_requests', 0);
@@ -471,7 +700,10 @@ class CityGrantWorkflowTest extends TestCase
             ])
             ->assertRedirect(route('grants.city'))
             ->assertSessionHas('alert-type', 'error')
-            ->assertSessionHas('alert-message', "You are not eligible for this grant. You've already gotten that city grant");
+            ->assertSessionHas(
+                'alert-message',
+                'This city grant is outside the currently available program limits or has already been used. Review the available grant tier shown on this page or contact the economics team.',
+            );
     }
 
     public function test_admin_cannot_approve_a_city_grant_while_global_approvals_are_disabled(): void

@@ -1,10 +1,10 @@
 @if ($requests->isEmpty())
-    <p class="text-base-content/50 text-sm">No recent grant requests.</p>
+    <p class="nexus-text-muted text-sm">No recent grant requests.</p>
 @else
     <div class="overflow-x-auto">
     <table class="table table-sm table-zebra" data-sortable="false">
         <thead>
-            <tr class="text-base-content/60">
+            <tr class="nexus-text-muted">
                 <th>Grant</th>
                 <th>Status</th>
                 <th>Requested</th>

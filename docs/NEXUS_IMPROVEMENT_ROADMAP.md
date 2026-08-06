@@ -191,6 +191,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S · **Type:** Error recovery, grants
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** City-grant failures currently collapse important causes into a generic error and leave an informal implementation TODO in `app/Http/Controllers/CityGrantController.php`.
 
 **How it should work:** Map known domain failures to specific, user-safe explanations: eligibility, cooldown, existing pending request, missing audit requirement, insufficient data, policy limit, or temporary external outage. Preserve the form and show the corrective action. Unknown failures should log structured diagnostics and show a support/reference ID.
@@ -204,6 +206,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P0-07 — Add programmatic labels and descriptions to form controls
 
 **Effort:** S–M · **Type:** Accessibility, form consistency
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** The audit found dozens of controls without a reliable programmatic label. Placeholder text and visual proximity are not sufficient for assistive technology.
 
@@ -219,6 +223,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S–M · **Type:** Accessibility, design system
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Meaningful text using low-opacity treatments such as `text-base-content/45` and `/50` can fall below the 4.5:1 contrast requirement. The audit found many candidate occurrences across Blade views.
 
 **How it should work:** Define semantic text tokens for primary, secondary, muted, disabled, and decorative text across supported themes. Secondary information must remain readable; only nonessential decorative text should use very low contrast. Update shared components before individual pages.
@@ -232,6 +238,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P0-09 — Increase icon-only touch targets without visual bloat
 
 **Effort:** S · **Type:** Accessibility, responsive UX
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** Several icon-only actions have accessible names but interactive boxes around 24–32 px, which are difficult on touch screens.
 

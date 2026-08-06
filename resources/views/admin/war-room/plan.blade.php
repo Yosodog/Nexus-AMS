@@ -10,7 +10,7 @@
     <x-header title="War Plan" separator use-h1>
         <x-slot:subtitle>
             {{ $plan->name }}
-            <span class="mx-2 text-base-content/40">•</span>
+            <span class="mx-2 nexus-text-muted">•</span>
             <span
                 class="badge badge-primary badge-sm uppercase tooltip tooltip-bottom cursor-help"
                 data-tip="Plan type drives the default war declaration when our members engage targets."
@@ -27,28 +27,28 @@
     <div class="space-y-6">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div class="text-sm text-base-content/60">Targets</div>
+                <div class="text-sm nexus-text-muted">Targets</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $enemyCount }}</span>
                     <span class="badge badge-ghost tooltip tooltip-left cursor-help" role="img" aria-label="Enemy nations tracked with Target Priority Scores" data-tip="Enemy nations tracked with Target Priority Scores" tabindex="0"><x-icon name="o-bolt" class="size-4" aria-hidden="true" /></span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div class="text-sm text-base-content/60">Assign coverage</div>
+                <div class="text-sm nexus-text-muted">Assign coverage</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $coverage !== null ? $coverage.'%' : 'n/a' }}</span>
                     <span class="badge badge-primary tooltip tooltip-left cursor-help" data-tip="Assignments / preferred slots" tabindex="0" aria-label="{{ $assignmentCount }} assignments out of {{ $preferredSlotsTotal }} preferred slots">{{ $assignmentCount }} / {{ $preferredSlotsTotal }}</span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div class="text-sm text-base-content/60">Locked slots</div>
+                <div class="text-sm nexus-text-muted">Locked slots</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $lockedCount }}</span>
                     <span class="badge badge-success tooltip tooltip-left cursor-help" data-tip="Locked or overridden assignments remain untouched" tabindex="0">Safe</span>
                 </div>
             </div>
             <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-                <div class="text-sm text-base-content/60">Preferred wars / nation</div>
+                <div class="text-sm nexus-text-muted">Preferred wars / nation</div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-2xl font-semibold">{{ $preferredTargetsPerNation }}</span>
                     <span class="badge badge-info tooltip tooltip-left cursor-help" data-tip="Activity window drives readiness weighting" tabindex="0" aria-label="{{ $plan->activity_window_hours }} hour activity window">{{ $plan->activity_window_hours }}h</span>
@@ -96,50 +96,90 @@
                         @csrf
                         @method('PUT')
 
-                        <label class="block space-y-2">
+                        <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-name">
                             <span class="text-sm font-medium">Name</span>
-                            <input type="text" name="name" class="input w-full" value="{{ old('name', $plan->name) }}" required>
+                            <input id="war-plan-{{ $plan->id }}-settings-name" type="text" name="name" class="input w-full" value="{{ old('name', $plan->name) }}" required
+                                   aria-invalid="{{ $errors->has('name') ? 'true' : 'false' }}"
+                                   @if($errors->has('name')) aria-describedby="war-plan-{{ $plan->id }}-settings-name-error" @endif>
+                            @error('name')
+                                <span id="war-plan-{{ $plan->id }}-settings-name-error" class="text-xs text-error">{{ $message }}</span>
+                            @enderror
                         </label>
 
                         <div class="grid gap-4 md:grid-cols-2">
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-plan-type">
                                 <span class="text-sm font-medium">Plan type</span>
-                                <select name="plan_type" class="select w-full" aria-describedby="plan-type-help">
+                                <select id="war-plan-{{ $plan->id }}-settings-plan-type" name="plan_type" class="select w-full"
+                                        aria-describedby="war-plan-{{ $plan->id }}-settings-plan-type-help{{ $errors->has('plan_type') ? ' war-plan-'.$plan->id.'-settings-plan-type-error' : '' }}"
+                                        aria-invalid="{{ $errors->has('plan_type') ? 'true' : 'false' }}">
                                     @foreach ($warTypes as $key => $label)
                                         <option value="{{ $key }}" @selected(old('plan_type', $plan->plan_type) === $key)>{{ $label }}</option>
                                     @endforeach
                                 </select>
-                                <span id="plan-type-help" class="text-xs text-base-content/60">Default declaration applied to new targets.</span>
+                                <span id="war-plan-{{ $plan->id }}-settings-plan-type-help" class="text-xs nexus-text-muted">Default declaration applied to new targets.</span>
+                                @error('plan_type')
+                                    <span id="war-plan-{{ $plan->id }}-settings-plan-type-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-preferred-targets">
                                 <span class="text-sm font-medium">Preferred targets / nation</span>
-                                <input type="number" name="preferred_targets_per_nation" class="input w-full" min="1" max="6" value="{{ old('preferred_targets_per_nation', $plan->preferred_targets_per_nation) }}">
+                                <input id="war-plan-{{ $plan->id }}-settings-preferred-targets" type="number" name="preferred_targets_per_nation" class="input w-full" min="1" max="6" value="{{ old('preferred_targets_per_nation', $plan->preferred_targets_per_nation) }}"
+                                       aria-invalid="{{ $errors->has('preferred_targets_per_nation') ? 'true' : 'false' }}"
+                                       @if($errors->has('preferred_targets_per_nation')) aria-describedby="war-plan-{{ $plan->id }}-settings-preferred-targets-error" @endif>
+                                @error('preferred_targets_per_nation')
+                                    <span id="war-plan-{{ $plan->id }}-settings-preferred-targets-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-max-squad-size">
                                 <span class="text-sm font-medium">Max squad size</span>
-                                <input type="number" name="max_squad_size" class="input w-full" min="1" max="10" value="{{ old('max_squad_size', $plan->max_squad_size) }}">
+                                <input id="war-plan-{{ $plan->id }}-settings-max-squad-size" type="number" name="max_squad_size" class="input w-full" min="1" max="10" value="{{ old('max_squad_size', $plan->max_squad_size) }}"
+                                       aria-invalid="{{ $errors->has('max_squad_size') ? 'true' : 'false' }}"
+                                       @if($errors->has('max_squad_size')) aria-describedby="war-plan-{{ $plan->id }}-settings-max-squad-size-error" @endif>
+                                @error('max_squad_size')
+                                    <span id="war-plan-{{ $plan->id }}-settings-max-squad-size-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-cohesion-tolerance">
                                 <span class="text-sm font-medium">Cohesion (±)</span>
-                                <input type="number" name="squad_cohesion_tolerance" class="input w-full" min="1" max="50" value="{{ old('squad_cohesion_tolerance', $plan->squad_cohesion_tolerance) }}">
+                                <input id="war-plan-{{ $plan->id }}-settings-cohesion-tolerance" type="number" name="squad_cohesion_tolerance" class="input w-full" min="1" max="50" value="{{ old('squad_cohesion_tolerance', $plan->squad_cohesion_tolerance) }}"
+                                       aria-invalid="{{ $errors->has('squad_cohesion_tolerance') ? 'true' : 'false' }}"
+                                       @if($errors->has('squad_cohesion_tolerance')) aria-describedby="war-plan-{{ $plan->id }}-settings-cohesion-tolerance-error" @endif>
+                                @error('squad_cohesion_tolerance')
+                                    <span id="war-plan-{{ $plan->id }}-settings-cohesion-tolerance-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-activity-window">
                                 <span class="text-sm font-medium">Activity window (h)</span>
-                                <input type="number" name="activity_window_hours" class="input w-full" min="12" max="240" value="{{ old('activity_window_hours', $plan->activity_window_hours) }}">
+                                <input id="war-plan-{{ $plan->id }}-settings-activity-window" type="number" name="activity_window_hours" class="input w-full" min="12" max="240" value="{{ old('activity_window_hours', $plan->activity_window_hours) }}"
+                                       aria-invalid="{{ $errors->has('activity_window_hours') ? 'true' : 'false' }}"
+                                       @if($errors->has('activity_window_hours')) aria-describedby="war-plan-{{ $plan->id }}-settings-activity-window-error" @endif>
+                                @error('activity_window_hours')
+                                    <span id="war-plan-{{ $plan->id }}-settings-activity-window-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-settings-discord-forum">
                                 <span class="text-sm font-medium">Discord forum override</span>
-                                <input type="text" name="discord_forum_channel_id" class="input w-full" placeholder="Use default from War Room settings" value="{{ old('discord_forum_channel_id', $plan->discord_forum_channel_id) }}">
+                                <input id="war-plan-{{ $plan->id }}-settings-discord-forum" type="text" name="discord_forum_channel_id" class="input w-full" placeholder="Use default from War Room settings" value="{{ old('discord_forum_channel_id', $plan->discord_forum_channel_id) }}"
+                                       aria-invalid="{{ $errors->has('discord_forum_channel_id') ? 'true' : 'false' }}"
+                                       @if($errors->has('discord_forum_channel_id')) aria-describedby="war-plan-{{ $plan->id }}-settings-discord-forum-error" @endif>
+                                @error('discord_forum_channel_id')
+                                    <span id="war-plan-{{ $plan->id }}-settings-discord-forum-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
                         </div>
 
-                        <label class="label cursor-pointer justify-start gap-3">
-                            <input class="toggle toggle-primary" type="checkbox" name="suppress_counters_when_active" value="1" {{ old('suppress_counters_when_active', $plan->suppress_counters_when_active) ? 'checked' : '' }}>
+                        <label class="label cursor-pointer justify-start gap-3" for="war-plan-{{ $plan->id }}-settings-suppress-counters">
+                            <input id="war-plan-{{ $plan->id }}-settings-suppress-counters" class="toggle toggle-primary" type="checkbox" name="suppress_counters_when_active" value="1" {{ old('suppress_counters_when_active', $plan->suppress_counters_when_active) ? 'checked' : '' }}
+                                   aria-invalid="{{ $errors->has('suppress_counters_when_active') ? 'true' : 'false' }}"
+                                   @if($errors->has('suppress_counters_when_active')) aria-describedby="war-plan-{{ $plan->id }}-settings-suppress-counters-error" @endif>
                             <span class="">Suppress counters</span>
                         </label>
+                        @error('suppress_counters_when_active')
+                            <span id="war-plan-{{ $plan->id }}-settings-suppress-counters-error" class="text-xs text-error">{{ $message }}</span>
+                        @enderror
 
                         <div>
-                            <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
+                            <button id="war-plan-{{ $plan->id }}-settings-submit" type="submit" class="btn btn-primary btn-sm">Save changes</button>
                         </div>
                     </form>
                 </div>
@@ -160,13 +200,13 @@
                                     <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" class="tooltip tooltip-left" data-tip="Remove friendly alliance" data-confirm="Remove this friendly alliance from the plan's assignment pool?" data-confirm-title="Remove friendly alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove friendly alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
+                                        <button id="war-plan-{{ $plan->id }}-friendly-alliance-{{ $alliance->id }}-remove" class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove friendly alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
                                             <x-icon name="o-x-circle" class="size-4" aria-hidden="true" />
                                         </button>
                                     </form>
                                 </li>
                             @empty
-                                <li class="text-base-content/50">Using alliance membership defaults.</li>
+                                <li class="nexus-text-muted">Using alliance membership defaults.</li>
                             @endforelse
                         </ul>
                     </div>
@@ -180,13 +220,13 @@
                                     <form method="post" action="{{ route('admin.war-plans.alliances.destroy', [$plan, $alliance]) }}" class="tooltip tooltip-left" data-tip="Remove enemy alliance" data-confirm="Remove this enemy alliance from the plan's target pool?" data-confirm-title="Remove enemy alliance?" data-confirm-label="Remove alliance" data-confirm-tone="error">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove enemy alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
+                                        <button id="war-plan-{{ $plan->id }}-enemy-alliance-{{ $alliance->id }}-remove" class="btn btn-ghost btn-sm text-error" type="submit" aria-label="Remove enemy alliance {{ $alliance->alliance->name ?? '#'.$alliance->alliance_id }}">
                                             <x-icon name="o-x-circle" class="size-4" aria-hidden="true" />
                                         </button>
                                     </form>
                                 </li>
                             @empty
-                                <li class="text-base-content/50">Add enemy alliances to drive target discovery.</li>
+                                <li class="nexus-text-muted">Add enemy alliances to drive target discovery.</li>
                             @endforelse
                         </ul>
                     </div>
@@ -196,20 +236,30 @@
                     <form method="post" action="{{ route('admin.war-plans.alliances.store', $plan) }}" class="space-y-4">
                         @csrf
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-alliance-add-id">
                                 <span class="text-sm font-medium">Alliance ID</span>
-                                <input type="number" min="1" class="input w-full" name="alliance_id" placeholder="1234" required>
+                                <input id="war-plan-{{ $plan->id }}-alliance-add-id" type="number" min="1" class="input w-full" name="alliance_id" placeholder="1234" required
+                                       aria-describedby="war-plan-{{ $plan->id }}-alliance-add-id-help{{ $errors->has('alliance_id') ? ' war-plan-'.$plan->id.'-alliance-add-id-error' : '' }}"
+                                       aria-invalid="{{ $errors->has('alliance_id') ? 'true' : 'false' }}">
+                                @error('alliance_id')
+                                    <span id="war-plan-{{ $plan->id }}-alliance-add-id-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
-                            <label class="block space-y-2">
+                            <label class="block space-y-2" for="war-plan-{{ $plan->id }}-alliance-add-role">
                                 <span class="text-sm font-medium">Role</span>
-                                <select name="role" class="select w-full">
+                                <select id="war-plan-{{ $plan->id }}-alliance-add-role" name="role" class="select w-full"
+                                        aria-invalid="{{ $errors->has('role') ? 'true' : 'false' }}"
+                                        @if($errors->has('role')) aria-describedby="war-plan-{{ $plan->id }}-alliance-add-role-error" @endif>
                                     <option value="friendly">Friendly</option>
                                     <option value="enemy">Enemy</option>
                                 </select>
+                                @error('role')
+                                    <span id="war-plan-{{ $plan->id }}-alliance-add-role-error" class="text-xs text-error">{{ $message }}</span>
+                                @enderror
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-outline btn-primary btn-sm w-full">Add alliance</button>
-                        <p class="mb-0 text-sm text-base-content/60">Alliance IDs appear in PW URLs (e.g. <code>.../alliance/id=1234</code>).</p>
+                        <button id="war-plan-{{ $plan->id }}-alliance-add-submit" type="submit" class="btn btn-outline btn-primary btn-sm w-full">Add alliance</button>
+                        <p id="war-plan-{{ $plan->id }}-alliance-add-id-help" class="mb-0 text-sm nexus-text-muted">Alliance IDs appear in PW URLs (e.g. <code>.../alliance/id=1234</code>).</p>
                     </form>
                 </div>
             </x-card>
@@ -218,37 +268,50 @@
                 <div class="space-y-2">
                     <form method="post" action="{{ route('admin.war-plans.recompute', $plan) }}" class="tooltip tooltip-left w-full" data-tip="Refresh Target Priority Scores using the latest intelligence.">
                         @csrf
-                        <button class="btn btn-outline btn-sm w-full" type="submit">Recompute priorities</button>
+                        <button id="war-plan-{{ $plan->id }}-recompute-priorities" class="btn btn-outline btn-sm w-full" type="submit">Recompute priorities</button>
                     </form>
                     <form method="post" action="{{ route('admin.war-plans.auto-assign', $plan) }}" class="tooltip tooltip-left w-full" data-tip="Regenerate assignments for unlocked slots.">
                         @csrf
-                        <button class="btn btn-outline btn-sm w-full" type="submit">Auto-generate assignments</button>
+                        <button id="war-plan-{{ $plan->id }}-auto-generate-assignments" class="btn btn-outline btn-sm w-full" type="submit">Auto-generate assignments</button>
                     </form>
                     <form method="post" action="{{ route('admin.war-plans.activate', $plan) }}" data-confirm="Activate this war plan and make it the current operational plan?" data-confirm-title="Activate war plan?" data-confirm-label="Activate plan">
                         @csrf
-                        <button class="btn btn-outline btn-success btn-sm w-full" type="submit">Activate plan</button>
+                        <button id="war-plan-{{ $plan->id }}-activate" class="btn btn-outline btn-success btn-sm w-full" type="submit">Activate plan</button>
                     </form>
                     <form method="post" action="{{ route('admin.war-plans.archive', $plan) }}" data-confirm="Archive this war plan? It will leave the active planning workspace." data-confirm-title="Archive war plan?" data-confirm-label="Archive plan" data-confirm-tone="error">
                         @csrf
-                        <button class="btn btn-outline btn-error btn-sm w-full" type="submit">Archive plan</button>
+                        <button id="war-plan-{{ $plan->id }}-archive" class="btn btn-outline btn-error btn-sm w-full" type="submit">Archive plan</button>
                     </form>
                 </div>
 
                 <div class="mt-6 border-t border-base-300 pt-4">
                     <form method="post" action="{{ route('admin.war-plans.publish', $plan) }}" class="space-y-3" data-confirm="Publish these assignments with the selected notification options? This can send in-game mail or create Discord rooms." data-confirm-title="Publish assignments?" data-confirm-label="Publish assignments">
                         @csrf
-                        <label class="label cursor-pointer justify-start gap-3">
-                            <input class="checkbox checkbox-sm" type="checkbox" name="notify_in_game" value="1" id="notifyInGame">
-                            <span class="">Send in-game mail</span>
-                        </label>
-                        <label class="label cursor-pointer justify-start gap-3">
-                            <input class="checkbox checkbox-sm" type="checkbox" name="notify_discord_room" value="1" id="notifyDiscordRoom">
-                            <span class="">Create Discord War Room</span>
-                        </label>
-                        <button class="btn btn-primary btn-sm w-full" type="submit">Publish assignments</button>
+                        <fieldset class="space-y-1">
+                            <legend class="sr-only">Notification options</legend>
+                            <label class="label cursor-pointer justify-start gap-3" for="war-plan-{{ $plan->id }}-publish-notify-in-game">
+                                <input id="war-plan-{{ $plan->id }}-publish-notify-in-game" class="checkbox checkbox-sm" type="checkbox" name="notify_in_game" value="1"
+                                       aria-invalid="{{ $errors->has('notify_in_game') ? 'true' : 'false' }}"
+                                       @if($errors->has('notify_in_game')) aria-describedby="war-plan-{{ $plan->id }}-publish-notify-in-game-error" @endif>
+                                <span class="">Send in-game mail</span>
+                            </label>
+                            @error('notify_in_game')
+                                <span id="war-plan-{{ $plan->id }}-publish-notify-in-game-error" class="text-xs text-error">{{ $message }}</span>
+                            @enderror
+                            <label class="label cursor-pointer justify-start gap-3" for="war-plan-{{ $plan->id }}-publish-notify-discord-room">
+                                <input id="war-plan-{{ $plan->id }}-publish-notify-discord-room" class="checkbox checkbox-sm" type="checkbox" name="notify_discord_room" value="1"
+                                       aria-invalid="{{ $errors->has('notify_discord_room') ? 'true' : 'false' }}"
+                                       @if($errors->has('notify_discord_room')) aria-describedby="war-plan-{{ $plan->id }}-publish-notify-discord-room-error" @endif>
+                                <span class="">Create Discord War Room</span>
+                            </label>
+                            @error('notify_discord_room')
+                                <span id="war-plan-{{ $plan->id }}-publish-notify-discord-room-error" class="text-xs text-error">{{ $message }}</span>
+                            @enderror
+                        </fieldset>
+                        <button id="war-plan-{{ $plan->id }}-publish-submit" class="btn btn-primary btn-sm w-full" type="submit">Publish assignments</button>
                         <div class="flex gap-2 pt-1">
                             <a href="{{ route('admin.war-plans.export', $plan) }}" class="btn btn-outline btn-primary flex-1">Export</a>
-                            <button class="btn btn-outline flex-1" type="button" onclick="document.getElementById('importPlanModal').showModal()">Import</button>
+                            <button id="war-plan-{{ $plan->id }}-import-open" class="btn btn-outline flex-1" type="button" onclick="document.getElementById('importPlanModal').showModal()">Import</button>
                         </div>
                     </form>
                 </div>
@@ -260,49 +323,64 @@
             <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-semibold">Quick assign</h3>
-                    <p class="text-sm text-base-content/60">Assign an unassigned friendly directly to an available target.</p>
+                    <p class="text-sm nexus-text-muted">Assign an unassigned friendly directly to an available target.</p>
                 </div>
                 <form method="dialog">
-                    <button class="btn btn-ghost btn-sm btn-circle" aria-label="Close">✕</button>
+                    <button id="war-plan-{{ $plan->id }}-quick-assign-close" class="btn btn-ghost btn-sm btn-circle" aria-label="Close quick assignment dialog">✕</button>
                 </form>
             </div>
 
             <form method="post" :action="$store.warPlan.routes.manualAssignment" class="space-y-4">
                 @csrf
 
-                <label class="block space-y-2">
+                <label class="block space-y-2" for="war-plan-{{ $plan->id }}-quick-assign-friendly">
                     <span class="text-sm font-medium">Friendly nation</span>
-                    <input type="text" class="input w-full" name="friendly_nation_id" id="quickAssignFriendly" :value="$store.warPlan.quickAssign?.id || ''" readonly>
-                    <span class="text-sm text-base-content/60" id="quickAssignFriendlyName" x-text="$store.warPlan.quickAssign ? `${$store.warPlan.quickAssign.leader_name} (${$store.warPlan.quickAssign.nation_name})` : 'Select a friendly to assign'"></span>
+                    <input id="war-plan-{{ $plan->id }}-quick-assign-friendly" type="text" class="input w-full" name="friendly_nation_id" :value="$store.warPlan.quickAssign?.id || ''" readonly
+                           aria-describedby="war-plan-{{ $plan->id }}-quick-assign-friendly-name{{ $errors->has('friendly_nation_id') ? ' war-plan-'.$plan->id.'-quick-assign-friendly-error' : '' }}"
+                           aria-invalid="{{ $errors->has('friendly_nation_id') ? 'true' : 'false' }}">
+                    <span class="text-sm nexus-text-muted" id="war-plan-{{ $plan->id }}-quick-assign-friendly-name" x-text="$store.warPlan.quickAssign ? `${$store.warPlan.quickAssign.leader_name} (${$store.warPlan.quickAssign.nation_name})` : 'Select a friendly to assign'"></span>
+                    @error('friendly_nation_id')
+                        <span id="war-plan-{{ $plan->id }}-quick-assign-friendly-error" class="text-xs text-error">{{ $message }}</span>
+                    @enderror
                     <a x-show="$store.warPlan.quickAssign?.id" :href="`https://politicsandwar.com/nation/id=${$store.warPlan.quickAssign?.id}`" target="_blank" rel="noopener noreferrer" class="link link-hover text-sm">
                         Open nation in-game
                     </a>
                 </label>
 
-                <label class="block space-y-2">
+                <label class="block space-y-2" for="war-plan-{{ $plan->id }}-quick-assign-target">
                     <span class="text-sm font-medium">Target</span>
-                    <select name="war_plan_target_id" class="select w-full" required>
+                    <select id="war-plan-{{ $plan->id }}-quick-assign-target" name="war_plan_target_id" class="select w-full" required
+                            aria-invalid="{{ $errors->has('war_plan_target_id') ? 'true' : 'false' }}"
+                            @if($errors->has('war_plan_target_id')) aria-describedby="war-plan-{{ $plan->id }}-quick-assign-target-error" @endif>
                         <template x-for="target in $store.warPlan.targets" :key="target.id">
                             <template x-if="$store.warPlan.targetAvailable(target)">
                                 <option :value="target.id" x-text="`${target.nation?.leader_name ?? 'Unknown'} (TPS ${formatNumber(target.target_priority_score, 1)}) • Slots ${(target.assignments_count ?? 0)} / ${$store.warPlan.preferredAssignmentsPerTarget || '-'}`"></option>
                             </template>
                         </template>
                     </select>
+                    @error('war_plan_target_id')
+                        <span id="war-plan-{{ $plan->id }}-quick-assign-target-error" class="text-xs text-error">{{ $message }}</span>
+                    @enderror
                 </label>
 
-                <label class="block space-y-2">
+                <label class="block space-y-2" for="war-plan-{{ $plan->id }}-quick-assign-match-score">
                     <span class="text-sm font-medium">Match score (optional)</span>
-                    <input type="number" name="match_score" class="input w-full" min="0" max="100" placeholder="50">
+                    <input id="war-plan-{{ $plan->id }}-quick-assign-match-score" type="number" name="match_score" class="input w-full" min="0" max="100" placeholder="50"
+                           aria-invalid="{{ $errors->has('match_score') ? 'true' : 'false' }}"
+                           @if($errors->has('match_score')) aria-describedby="war-plan-{{ $plan->id }}-quick-assign-match-score-error" @endif>
+                    @error('match_score')
+                        <span id="war-plan-{{ $plan->id }}-quick-assign-match-score-error" class="text-xs text-error">{{ $message }}</span>
+                    @enderror
                 </label>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('quickAssignModal').close()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Assign</button>
+                    <button id="war-plan-{{ $plan->id }}-quick-assign-cancel" type="button" class="btn btn-ghost" onclick="document.getElementById('quickAssignModal').close()">Cancel</button>
+                    <button id="war-plan-{{ $plan->id }}-quick-assign-submit" type="submit" class="btn btn-primary">Assign</button>
                 </div>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop">
-            <button>close</button>
+            <button id="war-plan-{{ $plan->id }}-quick-assign-backdrop-close" aria-label="Close quick assignment dialog">close</button>
         </form>
     </dialog>
 
@@ -312,44 +390,55 @@
                 <div class="nexus-panel__header flex-col lg:flex-row lg:items-center">
                     <div>
                         <h5 class="nexus-section-title">Targets</h5>
-                        <small class="text-base-content/50">TPS = Target Priority Score. Hover or focus the badge to inspect factor breakdowns.</small>
+                        <small class="nexus-text-muted">TPS = Target Priority Score. Hover or focus the badge to inspect factor breakdowns.</small>
                     </div>
                     <form class="ml-auto flex flex-wrap gap-2" method="post" action="{{ route('admin.war-plans.targets.store', $plan) }}">
                         @csrf
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Nation ID pulled from the Politics & War profile" tabindex="0">Nation ID</span>
-                            <input type="number" class="input w-full" name="nation_id" min="1" placeholder="e.g. 123456" required>
+                            <label for="war-plan-{{ $plan->id }}-target-add-nation" class="text-sm font-medium text-base-content/70 tooltip tooltip-bottom cursor-help" data-tip="Nation ID pulled from the Politics & War profile" tabindex="0">Nation ID</label>
+                            <input id="war-plan-{{ $plan->id }}-target-add-nation" type="number" class="input w-full" name="nation_id" min="1" placeholder="e.g. 123456" required
+                                   aria-invalid="{{ $errors->has('nation_id') ? 'true' : 'false' }}"
+                                   @if($errors->has('nation_id')) aria-describedby="war-plan-{{ $plan->id }}-target-add-nation-error" @endif>
                         </div>
-                        <select name="preferred_war_type" class="select select-sm">
+                        <label class="sr-only" for="war-plan-{{ $plan->id }}-target-add-war-type">Preferred war type</label>
+                        <select id="war-plan-{{ $plan->id }}-target-add-war-type" name="preferred_war_type" class="select select-sm"
+                                aria-invalid="{{ $errors->has('preferred_war_type') ? 'true' : 'false' }}"
+                                @if($errors->has('preferred_war_type')) aria-describedby="war-plan-{{ $plan->id }}-target-add-war-type-error" @endif>
                             <option value="">War type (default {{ strtoupper($plan->plan_type) }})</option>
                             @foreach ($warTypes as $value => $label)
                                 <option value="{{ $value }}">{{ $label }}</option>
                             @endforeach
                         </select>
-                        <button class="btn btn-outline btn-primary btn-sm" type="submit">Add target</button>
+                        <button id="war-plan-{{ $plan->id }}-target-add-submit" class="btn btn-outline btn-primary btn-sm" type="submit">Add target</button>
+                        @error('nation_id')
+                            <span id="war-plan-{{ $plan->id }}-target-add-nation-error" class="w-full text-xs text-error">{{ $message }}</span>
+                        @enderror
+                        @error('preferred_war_type')
+                            <span id="war-plan-{{ $plan->id }}-target-add-war-type-error" class="w-full text-xs text-error">{{ $message }}</span>
+                        @enderror
                     </form>
                 </div>
                 <div class="p-0">
                     <div class="p-3 flex flex-wrap gap-2 items-center">
                         <div class="flex w-full max-w-sm items-center gap-2">
-                            <span class="text-sm font-medium text-base-content/70">Search</span>
-                            <input type="search" class="input w-full" placeholder="Enemy, alliance, TPS, status" x-model.debounce.300ms="search">
+                            <label for="war-plan-{{ $plan->id }}-targets-search" class="text-sm font-medium text-base-content/70">Search</label>
+                            <input id="war-plan-{{ $plan->id }}-targets-search" type="search" class="input w-full" placeholder="Enemy, alliance, TPS, status" x-model.debounce.300ms="search">
                         </div>
                         <div class="ml-auto flex items-center gap-2">
                             <a href="{{ route('admin.war-plans.targets.export-csv', $plan) }}" class="btn btn-outline btn-success btn-sm">
                                 <x-icon name="o-arrow-down-tray" class="size-4" aria-hidden="true" /> Export CSV
                             </a>
-                            <button type="button" class="btn btn-outline btn-sm" @click="fetchTargets">
+                            <button id="war-plan-{{ $plan->id }}-targets-refresh" type="button" class="btn btn-outline btn-sm" @click="fetchTargets">
                                 <x-icon name="o-arrow-path" class="size-4" aria-hidden="true" /> Refresh
                             </button>
                             <div class="items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="loading loading-spinner loading-sm text-primary" role="status">
                                     
                                 </div>
-                                <span class="text-sm text-base-content/50">Loading targets…</span>
+                                <span class="text-sm nexus-text-muted">Loading targets…</span>
                             </div>
                             <span class="text-sm text-error" x-show="error" x-text="error"></span>
-                            <button class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchTargets">Retry</button>
+                            <button id="war-plan-{{ $plan->id }}-targets-retry" class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchTargets">Retry</button>
                         </div>
                     </div>
                     <div class="overflow-x-auto rounded-box border border-base-300" id="targets-table" x-show="!loading" x-cloak style="max-height: 560px; overflow-y: auto;">
@@ -369,7 +458,7 @@
                             <tbody>
                             <template x-if="!filteredTargets.length && !error">
                                 <tr>
-                                    <td colspan="8" class="text-center py-4 text-base-content/50">No targets yet. Add alliances or seed specific nation IDs above.</td>
+                                    <td colspan="8" class="text-center py-4 nexus-text-muted">No targets yet. Add alliances or seed specific nation IDs above.</td>
                                 </tr>
                             </template>
                             <template x-for="target in filteredTargets" :key="target.id">
@@ -380,34 +469,34 @@
                                                 <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`" target="_blank" class="font-semibold">
                                                     <span x-text="target.nation.leader_name"></span>
                                                 </a>
-                                                <div class="text-sm text-base-content/50" x-text="target.nation.nation_name"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="target.nation.nation_name"></div>
                                                 <div class="text-sm">
                                                     Score <span x-text="formatNumber(target.nation.score, 2)"></span>
                                                     • Cities <span x-text="target.nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Soldiers <span x-text="formatNumber(target.nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(target.nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Aircraft <span x-text="formatNumber(target.nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(target.nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation">
-                                            <span class="font-semibold text-base-content/50">Unknown</span>
+                                            <span class="font-semibold nexus-text-muted">Unknown</span>
                                         </template>
                                     </td>
                                     <td>
                                         <template x-if="target.nation?.alliance">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/alliance/id=${target.nation.alliance.id}`" target="_blank" x-text="target.nation.alliance.name"></a>
-                                                <div class="text-sm text-base-content/50" x-text="target.nation.alliance.acronym"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="target.nation.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation?.alliance">
-                                            <span class="text-base-content/50">No alliance</span>
+                                            <span class="nexus-text-muted">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
@@ -429,18 +518,20 @@
                                                 <span class="badge badge-info tooltip tooltip-left cursor-help" data-tip="Offensive / defensive active wars" tabindex="0"
                                                       x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) > 0"
                                                       x-text="`Wars ${target.nation.offensive_wars_count ?? 0} / ${target.nation.defensive_wars_count ?? 0}`"></span>
-                                                <span class="text-sm text-base-content/50" x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) === 0 && (target.nation.beige_turns ?? 0) === 0 && (target.nation.vacation_mode_turns ?? 0) === 0">No flags</span>
+                                                <span class="text-sm nexus-text-muted" x-show="(target.nation.offensive_wars_count ?? 0) + (target.nation.defensive_wars_count ?? 0) === 0 && (target.nation.beige_turns ?? 0) === 0 && (target.nation.vacation_mode_turns ?? 0) === 0">No flags</span>
                                             </div>
                                         </template>
                                         <template x-if="!target.nation">
-                                            <span class="text-base-content/50">Unknown</span>
+                                            <span class="nexus-text-muted">Unknown</span>
                                         </template>
                                     </td>
                                     <td x-text="lastActive(target)"></td>
                                     <td style="width: 180px;">
                                         <form method="post" :action="routes.updateTargetWarType(target.id)" class="tooltip tooltip-left" data-tip="Preferred declaration for this enemy">
                                             @csrf
+                                            <label class="sr-only" :for="`war-plan-{{ $plan->id }}-target-${target.id}-war-type`">Preferred declaration for this enemy</label>
                                             <select class="select select-sm"
+                                                    :id="`war-plan-{{ $plan->id }}-target-${target.id}-war-type`"
                                                     name="preferred_war_type"
                                                     aria-label="Preferred declaration for this enemy"
                                                     @change="$event.target.form.submit()">
@@ -452,10 +543,10 @@
                                     </td>
                                     <td class="text-right">
                                         <div class="flex flex-wrap justify-end gap-2">
-                                            <button class="btn btn-outline btn-sm" type="button" @click="toggleTargetMeta(target.id)">
+                                            <button :id="`war-plan-{{ $plan->id }}-target-${target.id}-meta-toggle`" class="btn btn-outline btn-sm" type="button" @click="toggleTargetMeta(target.id)">
                                                 Meta
                                             </button>
-                                            <button class="btn btn-outline btn-primary btn-sm" type="button" @click="setActiveTarget(target); $nextTick(() => document.getElementById('assignTargetModal').showModal())">
+                                            <button :id="`war-plan-{{ $plan->id }}-target-${target.id}-assign-open`" class="btn btn-outline btn-primary btn-sm" type="button" @click="setActiveTarget(target); $nextTick(() => document.getElementById('assignTargetModal').showModal())">
                                                 Assign
                                             </button>
                                             <form method="post"
@@ -466,11 +557,11 @@
                                                   data-confirm-tone="error">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button class="btn btn-outline btn-error btn-sm" type="submit" aria-label="Remove target"><x-icon name="o-trash" class="size-4" aria-hidden="true" /></button>
+                                                <button :id="`war-plan-{{ $plan->id }}-target-${target.id}-remove`" class="btn btn-outline btn-error btn-sm" type="submit" :aria-label="`Remove target ${target.nation?.leader_name ?? target.nation_id}`"><x-icon name="o-trash" class="size-4" aria-hidden="true" /></button>
                                             </form>
                                         </div>
                                         <div class="mt-2 text-left" x-show="isTargetMetaOpen(target.id)" x-transition>
-                                            <pre class="mb-0 text-sm text-base-content/60" x-text="prettyMeta(target.meta)"></pre>
+                                            <pre class="mb-0 text-sm nexus-text-muted" x-text="prettyMeta(target.meta)"></pre>
                                         </div>
                                     </td>
                                 </tr>
@@ -496,16 +587,16 @@
                                         <span x-text="`— Nation #${activeTarget?.nation_id ?? ''}`"></span>
                                     </template>
                                 </h3>
-                                <p class="text-sm text-base-content/60">Assign in-range friendlies or add one manually by nation ID.</p>
+                                <p class="text-sm nexus-text-muted">Assign in-range friendlies or add one manually by nation ID.</p>
                             </div>
                             <form method="dialog">
-                                <button class="btn btn-ghost btn-sm btn-circle" aria-label="Close">✕</button>
+                                <button id="war-plan-{{ $plan->id }}-assign-target-close" class="btn btn-ghost btn-sm btn-circle" aria-label="Close manual target assignments dialog">✕</button>
                             </form>
                         </div>
 
                         <div class="space-y-4">
                                 <h6 class="font-semibold">In-range friendlies</h6>
-                                <p class="text-sm text-base-content/60">All nations in war range, sorted with recommended options first.</p>
+                                <p class="text-sm nexus-text-muted">All nations in war range, sorted with recommended options first.</p>
                                 <div class="overflow-x-auto rounded-box border border-base-300">
                                     <table class="table table-zebra table-sm" data-sortable="false">
                                         <thead>
@@ -523,7 +614,7 @@
                                         <tbody>
                                         <template x-if="candidatesLoading">
                                             <tr>
-                                                <td colspan="8" class="text-center text-base-content/50 py-3">Loading candidates…</td>
+                                                <td colspan="8" class="text-center nexus-text-muted py-3">Loading candidates…</td>
                                             </tr>
                                         </template>
                                         <template x-if="!candidatesLoading && candidatesError">
@@ -533,24 +624,24 @@
                                         </template>
                                         <template x-if="!candidatesLoading && !candidatesError && !candidatesForActiveTarget().length">
                                             <tr>
-                                                <td colspan="8" class="text-center text-base-content/50 py-3">No friendlies are in war range right now.</td>
+                                                <td colspan="8" class="text-center nexus-text-muted py-3">No friendlies are in war range right now.</td>
                                             </tr>
                                         </template>
                                         <template x-for="candidate in (candidatesLoading ? [] : candidatesForActiveTarget())" :key="candidate.friendly.id">
                                             <tr>
                                                 <td>
                                                     <a :href="`https://politicsandwar.com/nation/id=${candidate.friendly.id}`" target="_blank" rel="noopener noreferrer" class="font-semibold" x-text="candidate.friendly.leader_name"></a>
-                                                    <div class="text-sm text-base-content/60" x-text="candidate.friendly.nation_name"></div>
+                                                    <div class="text-sm nexus-text-muted" x-text="candidate.friendly.nation_name"></div>
                                                 </td>
                                                 <td>
                                                     <template x-if="candidate.friendly.alliance">
                                                         <div>
                                                             <a :href="`https://politicsandwar.com/alliance/id=${candidate.friendly.alliance.id}`" target="_blank" x-text="candidate.friendly.alliance.name"></a>
-                                                            <div class="text-sm text-base-content/60" x-text="candidate.friendly.alliance.acronym"></div>
+                                                            <div class="text-sm nexus-text-muted" x-text="candidate.friendly.alliance.acronym"></div>
                                                         </div>
                                                     </template>
                                                     <template x-if="!candidate.friendly.alliance">
-                                                        <span class="text-base-content/50">No alliance</span>
+                                                        <span class="nexus-text-muted">No alliance</span>
                                                     </template>
                                                 </td>
                                                 <td>
@@ -558,11 +649,11 @@
                                                         Score <span x-text="formatNumber(candidate.friendly.score, 2)"></span>
                                                         • Cities <span x-text="candidate.friendly.num_cities ?? 0"></span>
                                                     </div>
-                                                    <div class="text-sm text-base-content/60">
+                                                    <div class="text-sm nexus-text-muted">
                                                         Soldiers <span x-text="formatNumber(candidate.friendly.military?.soldiers || 0)"></span>
                                                         • Tanks <span x-text="formatNumber(candidate.friendly.military?.tanks || 0)"></span>
                                                     </div>
-                                                    <div class="text-sm text-base-content/60">
+                                                    <div class="text-sm nexus-text-muted">
                                                         Aircraft <span x-text="formatNumber(candidate.friendly.military?.aircraft || 0)"></span>
                                                         • Ships <span x-text="formatNumber(candidate.friendly.military?.ships || 0)"></span>
                                                     </div>
@@ -590,7 +681,7 @@
                                                         <input type="hidden" name="war_plan_target_id" :value="activeTarget?.id">
                                                         <input type="hidden" name="friendly_nation_id" :value="candidate.friendly.id">
                                                         <input type="hidden" name="match_score" :value="candidate.score">
-                                                        <button type="submit" class="btn btn-outline btn-primary btn-sm">Assign</button>
+                                                        <button :id="`war-plan-{{ $plan->id }}-assign-target-${activeTarget?.id ?? 'none'}-candidate-${candidate.friendly.id}-submit`" type="submit" class="btn btn-outline btn-primary btn-sm">Assign</button>
                                                     </form>
                                                 </td>
                                             </tr>
@@ -603,24 +694,34 @@
                                 <form method="post" :action="routes.manualAssignment" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_10rem]">
                                     @csrf
                                     <input type="hidden" name="war_plan_target_id" :value="activeTarget?.id">
-                                    <label class="block space-y-2">
+                                    <label class="block space-y-2" for="war-plan-{{ $plan->id }}-assign-target-friendly">
                                         <span class="text-sm font-medium">Friendly nation ID</span>
-                                        <input type="number" name="friendly_nation_id" class="input w-full"
-                                               list="friendly-options-{{ $plan->id }}" placeholder="Type ID or select" required>
+                                        <input id="war-plan-{{ $plan->id }}-assign-target-friendly" type="number" name="friendly_nation_id" class="input w-full"
+                                               list="friendly-options-{{ $plan->id }}" placeholder="Type ID or select" required
+                                               aria-describedby="war-plan-{{ $plan->id }}-assign-target-friendly-help{{ $errors->has('friendly_nation_id') ? ' war-plan-'.$plan->id.'-assign-target-friendly-error' : '' }}"
+                                               aria-invalid="{{ $errors->has('friendly_nation_id') ? 'true' : 'false' }}">
+                                        @error('friendly_nation_id')
+                                            <span id="war-plan-{{ $plan->id }}-assign-target-friendly-error" class="text-xs text-error">{{ $message }}</span>
+                                        @enderror
                                     </label>
-                                    <label class="block space-y-2">
+                                    <label class="block space-y-2" for="war-plan-{{ $plan->id }}-assign-target-match-score">
                                         <span class="text-sm font-medium">Match score</span>
-                                        <input type="number" name="match_score" class="input w-full" min="0" max="100" placeholder="50">
+                                        <input id="war-plan-{{ $plan->id }}-assign-target-match-score" type="number" name="match_score" class="input w-full" min="0" max="100" placeholder="50"
+                                               aria-invalid="{{ $errors->has('match_score') ? 'true' : 'false' }}"
+                                               @if($errors->has('match_score')) aria-describedby="war-plan-{{ $plan->id }}-assign-target-match-score-error" @endif>
+                                        @error('match_score')
+                                            <span id="war-plan-{{ $plan->id }}-assign-target-match-score-error" class="text-xs text-error">{{ $message }}</span>
+                                        @enderror
                                     </label>
                                     <div class="flex items-end">
-                                        <button type="submit" class="btn btn-primary w-full">Assign</button>
+                                        <button id="war-plan-{{ $plan->id }}-assign-target-manual-submit" type="submit" class="btn btn-primary w-full">Assign</button>
                                     </div>
                                 </form>
-                                <p class="mb-0 text-sm text-base-content/60">Use the datalist to search by leader name if you already know the responder.</p>
+                                <p id="war-plan-{{ $plan->id }}-assign-target-friendly-help" class="mb-0 text-sm nexus-text-muted">Use the datalist to search by leader name if you already know the responder.</p>
                         </div>
                     </div>
                     <form method="dialog" class="modal-backdrop">
-                        <button>close</button>
+                        <button id="war-plan-{{ $plan->id }}-assign-target-backdrop-close" aria-label="Close manual target assignments dialog">close</button>
                     </form>
                 </dialog>
             </div>
@@ -632,31 +733,31 @@
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h5 class="nexus-section-title">Assignments &amp; squads</h5>
-                            <small class="text-base-content/50">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
+                            <small class="nexus-text-muted">Full overview of friendlies per target. Max six offensive slots, three defensive.</small>
                         </div>
                         <div class="flex items-center gap-2">
                             <a href="{{ route('admin.war-plans.assignments.export-csv', $plan) }}" class="btn btn-outline btn-success btn-sm">
                                 <x-icon name="o-arrow-down-tray" class="size-4" aria-hidden="true" /> Export CSV
                             </a>
-                            <button type="button" class="btn btn-outline btn-sm" @click="fetchAssignments">
+                            <button id="war-plan-{{ $plan->id }}-assignments-refresh" type="button" class="btn btn-outline btn-sm" @click="fetchAssignments">
                                 <x-icon name="o-arrow-path" class="size-4" aria-hidden="true" /> Refresh
                             </button>
                             <div class="items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                                 <div class="loading loading-spinner loading-sm text-primary" role="status">
                                     
                                 </div>
-                                <span class="text-sm text-base-content/50">Loading assignments…</span>
+                                <span class="text-sm nexus-text-muted">Loading assignments…</span>
                             </div>
                             <span class="text-sm text-error" x-show="error" x-text="error"></span>
-                            <button class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchAssignments">Retry</button>
+                            <button id="war-plan-{{ $plan->id }}-assignments-retry" class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchAssignments">Retry</button>
                         </div>
                     </div>
                 </div>
                 <div class="p-0">
                     <div class="p-3 flex flex-wrap gap-2 items-center">
                         <div class="flex w-full max-w-sm items-center gap-2">
-                            <span class="text-sm font-medium text-base-content/70">Search</span>
-                            <input type="search" class="input w-full" placeholder="Friendly, target, status" x-model.debounce.300ms="search">
+                            <label for="war-plan-{{ $plan->id }}-assignments-search" class="text-sm font-medium text-base-content/70">Search</label>
+                            <input id="war-plan-{{ $plan->id }}-assignments-search" type="search" class="input w-full" placeholder="Friendly, target, status" x-model.debounce.300ms="search">
                         </div>
                     </div>
                     <div class="overflow-x-auto rounded-box border border-base-300" x-show="!loading" x-cloak style="max-height: 560px; overflow-y: auto;">
@@ -677,7 +778,7 @@
                             <tbody>
                             <template x-if="!filteredAssignments.length && !error">
                                 <tr>
-                                    <td colspan="9" class="text-center py-4 text-base-content/50">No assignments yet. Auto-generate or use the Assign buttons to attach friendlies.</td>
+                                    <td colspan="9" class="text-center py-4 nexus-text-muted">No assignments yet. Auto-generate or use the Assign buttons to attach friendlies.</td>
                                 </tr>
                             </template>
                             <template x-for="assignment in filteredAssignments" :key="assignment.id">
@@ -686,23 +787,23 @@
                                         <template x-if="assignment.target?.nation">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/nation/id=${assignment.target.nation.id}`" target="_blank" class="font-semibold" x-text="assignment.target.nation.leader_name"></a>
-                                                <div class="text-sm text-base-content/50" x-text="assignment.target.nation.nation_name"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="assignment.target.nation.nation_name"></div>
                                                 <div class="text-sm">
                                                     Score <span x-text="formatNumber(assignment.target.nation.score, 2)"></span>
                                                     • Cities <span x-text="assignment.target.nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Soldiers <span x-text="formatNumber(assignment.target.nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(assignment.target.nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Aircraft <span x-text="formatNumber(assignment.target.nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(assignment.target.nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.target?.nation">
-                                            <span class="text-base-content/50">Unknown</span>
+                                            <span class="nexus-text-muted">Unknown</span>
                                         </template>
                                     </td>
                                     <td x-text="assignment.squad?.label ?? 'Unassigned'"></td>
@@ -710,34 +811,34 @@
                                         <template x-if="assignment.friendly_nation">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/nation/id=${assignment.friendly_nation.id}`" target="_blank" class="font-semibold" x-text="assignment.friendly_nation.leader_name"></a>
-                                                <div class="text-sm text-base-content/50" x-text="assignment.friendly_nation.nation_name"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="assignment.friendly_nation.nation_name"></div>
                                                 <div class="text-sm">
                                                     Score <span x-text="formatNumber(assignment.friendly_nation.score, 2)"></span>
                                                     • Cities <span x-text="assignment.friendly_nation.num_cities ?? 0"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Soldiers <span x-text="formatNumber(assignment.friendly_nation.military?.soldiers || 0)"></span>
                                                     • Tanks <span x-text="formatNumber(assignment.friendly_nation.military?.tanks || 0)"></span>
                                                 </div>
-                                                <div class="text-sm text-base-content/50">
+                                                <div class="text-sm nexus-text-muted">
                                                     Aircraft <span x-text="formatNumber(assignment.friendly_nation.military?.aircraft || 0)"></span>
                                                     • Ships <span x-text="formatNumber(assignment.friendly_nation.military?.ships || 0)"></span>
                                                 </div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.friendly_nation">
-                                            <span class="text-base-content/50">Unknown</span>
+                                            <span class="nexus-text-muted">Unknown</span>
                                         </template>
                                     </td>
                                     <td>
                                         <template x-if="assignment.friendly_nation?.alliance">
                                             <div>
                                                 <a :href="`https://politicsandwar.com/alliance/id=${assignment.friendly_nation.alliance.id}`" target="_blank" x-text="assignment.friendly_nation.alliance.name"></a>
-                                                <div class="text-sm text-base-content/50" x-text="assignment.friendly_nation.alliance.acronym"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="assignment.friendly_nation.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!assignment.friendly_nation?.alliance">
-                                            <span class="text-base-content/50">No alliance</span>
+                                            <span class="nexus-text-muted">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
@@ -761,14 +862,14 @@
                                             <span class="badge badge-info" x-text="formatNumber(assignment.match_score, 1)"></span>
                                         </div>
                                         <div class="flex flex-wrap gap-1">
-                                            <button class="btn btn-outline btn-sm" type="button" @click="toggleAssignmentMeta(assignment.id)">
+                                            <button :id="`war-plan-{{ $plan->id }}-assignment-${assignment.id}-details-toggle`" class="btn btn-outline btn-sm" type="button" @click="toggleAssignmentMeta(assignment.id)">
                                                 Details
                                             </button>
                                             <span class="badge badge-ghost tooltip tooltip-left cursor-help" data-tip="Manual override" tabindex="0" x-show="assignment.is_overridden">Manual</span>
                                             <span class="badge badge-success tooltip tooltip-left cursor-help" data-tip="Locked assignment" tabindex="0" x-show="assignment.is_locked">Locked</span>
                                         </div>
                                         <div class="mt-2" x-show="isAssignmentMetaOpen(assignment.id)" x-transition>
-                                            <pre class="mb-0 text-sm text-base-content/50" x-text="prettyMeta(assignment.meta)"></pre>
+                                            <pre class="mb-0 text-sm nexus-text-muted" x-text="prettyMeta(assignment.meta)"></pre>
                                         </div>
                                     </td>
                                     <td>
@@ -785,7 +886,7 @@
                                               data-confirm-tone="error">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="btn btn-outline btn-error btn-sm" type="submit" aria-label="Remove assignment"><x-icon name="o-trash" class="size-4" aria-hidden="true" /></button>
+                                            <button :id="`war-plan-{{ $plan->id }}-assignment-${assignment.id}-remove`" class="btn btn-outline btn-error btn-sm" type="submit" :aria-label="`Remove assignment for ${assignment.friendly_nation?.leader_name ?? assignment.friendly_nation_id}`"><x-icon name="o-trash" class="size-4" aria-hidden="true" /></button>
                                         </form>
                                     </td>
                                 </tr>
@@ -801,31 +902,31 @@
             <div class="nexus-panel overflow-hidden">
                 <div class="nexus-panel__header items-center justify-between">
                     <h5 class="nexus-section-title">Live attacks</h5>
-                    <small class="text-base-content/50">Filter window, scope, or attack type to focus the feed.</small>
+                    <small class="nexus-text-muted">Filter window, scope, or attack type to focus the feed.</small>
                 </div>
                 <div class="p-6">
                     <form class="mb-3 grid gap-3 md:grid-cols-12" method="get">
                         <div class="md:col-span-3">
-                            <label class="mb-1 block text-sm font-medium">Minutes</label>
-                            <input type="number" class="input w-full" name="minutes" value="{{ request('minutes') }}"
+                            <label for="war-plan-{{ $plan->id }}-live-feed-minutes" class="mb-1 block text-sm font-medium">Minutes</label>
+                            <input id="war-plan-{{ $plan->id }}-live-feed-minutes" type="number" class="input w-full" name="minutes" value="{{ request('minutes') }}"
                                    placeholder="{{ config('war.live_feed.default_window_minutes') }}">
                         </div>
                         <div class="md:col-span-3">
-                            <label class="mb-1 block text-sm font-medium">Scope</label>
-                            <select name="scope" class="select w-full">
+                            <label for="war-plan-{{ $plan->id }}-live-feed-scope" class="mb-1 block text-sm font-medium">Scope</label>
+                            <select id="war-plan-{{ $plan->id }}-live-feed-scope" name="scope" class="select w-full">
                                 <option value="both" @selected(request('scope') === 'both')>All</option>
                                 <option value="ours" @selected(request('scope') === 'ours')>Friendlies</option>
                                 <option value="theirs" @selected(request('scope') === 'theirs')>Enemies</option>
                             </select>
                         </div>
                         <div class="md:col-span-4">
-                            <label class="mb-1 block text-sm font-medium">Attack types (CSV)</label>
-                            <input type="text" class="input w-full" name="attack_types"
+                            <label for="war-plan-{{ $plan->id }}-live-feed-attack-types" class="mb-1 block text-sm font-medium">Attack types (CSV)</label>
+                            <input id="war-plan-{{ $plan->id }}-live-feed-attack-types" type="text" class="input w-full" name="attack_types"
                                    value="{{ is_array(request('attack_types')) ? implode(',', request('attack_types')) : request('attack_types') }}"
                                    placeholder="ground,air">
                         </div>
                         <div class="flex items-end md:col-span-2">
-                            <button class="btn btn-outline btn-primary w-full" type="submit">Apply</button>
+                            <button id="war-plan-{{ $plan->id }}-live-feed-apply" class="btn btn-outline btn-primary w-full" type="submit">Apply</button>
                         </div>
                     </form>
 
@@ -863,7 +964,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-base-content/50">No attacks within the selected window.</td>
+                                    <td colspan="5" class="text-center py-4 nexus-text-muted">No attacks within the selected window.</td>
                                 </tr>
                             @endforelse
                             </tbody>
@@ -880,7 +981,7 @@
                 <div class="nexus-panel__header flex-col lg:flex-row lg:items-center">
                     <div>
                         <h5 class="nexus-section-title">Comparative Stats</h5>
-                        <small class="text-base-content/50">Quick glance at friendly vs enemy scale and militarization.</small>
+                        <small class="nexus-text-muted">Quick glance at friendly vs enemy scale and militarization.</small>
                     </div>
                 </div>
                 <div class="p-6">
@@ -888,7 +989,7 @@
                         <div>
                             <h6 class="flex justify-between font-semibold">
                                 <span>Cities</span>
-                                <span class="text-sm text-base-content/50">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
+                                <span class="text-sm nexus-text-muted">Friendly {{ number_format($friendlyCityTotal) }} / Enemy {{ number_format($enemyCityTotal) }}</span>
                             </h6>
                             <div
                                 class="tooltip tooltip-bottom cursor-help w-full"
@@ -908,7 +1009,7 @@
                         <div>
                             <h6 class="flex justify-between font-semibold">
                                 <span>Force Readiness</span>
-                                <span class="text-sm text-base-content/50">By unit type</span>
+                                <span class="text-sm nexus-text-muted">By unit type</span>
                             </h6>
                             @foreach (['soldiers' => 'Soldiers', 'tanks' => 'Tanks', 'aircraft' => 'Aircraft', 'ships' => 'Ships'] as $unitKey => $label)
                                 @php
@@ -926,7 +1027,7 @@
                                 <div class="mb-2">
                                     <div class="flex justify-between text-sm">
                                         <span>{{ $label }}</span>
-                                        <span class="text-base-content/50">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
+                                        <span class="nexus-text-muted">Friendly {{ number_format($friendlyVal) }} • Enemy {{ number_format($enemyVal) }}</span>
                                     </div>
                                     <div
                                         class="tooltip tooltip-bottom cursor-help w-full"
@@ -959,7 +1060,7 @@
                                     <div class="h-full bg-success" style="width: {{ $coverage ?? 0 }}%"></div>
                                 </div>
                             </div>
-                            <small class="text-base-content/50">
+                            <small class="nexus-text-muted">
                                 Remaining gap: {{ $preferredSlotsTotal > 0 ? max(0, $preferredSlotsTotal - $assignmentCount).' slots' : 'n/a' }}.
                             </small>
                         </div>
@@ -975,27 +1076,27 @@
                 <div class="nexus-panel__header items-center justify-between">
                     <div>
                         <h5 class="nexus-section-title">Unassigned friendlies</h5>
-                        <small class="text-base-content/50">No current target — fill gaps manually if needed.</small>
+                        <small class="nexus-text-muted">No current target — fill gaps manually if needed.</small>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" class="btn btn-outline btn-sm" @click="fetchFriendlies">
+                        <button id="war-plan-{{ $plan->id }}-friendlies-refresh" type="button" class="btn btn-outline btn-sm" @click="fetchFriendlies">
                             <x-icon name="o-arrow-path" class="size-4" aria-hidden="true" /> Refresh
                         </button>
                         <div class="items-center gap-2" style="display: flex;" x-show="loading && !error" x-cloak>
                             <div class="loading loading-spinner loading-sm text-primary" role="status">
                                 
                             </div>
-                            <span class="text-sm text-base-content/50">Loading friendlies…</span>
+                            <span class="text-sm nexus-text-muted">Loading friendlies…</span>
                         </div>
                         <span class="text-sm text-error" x-show="error" x-text="error"></span>
-                        <button class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchFriendlies">Retry</button>
+                        <button id="war-plan-{{ $plan->id }}-friendlies-retry" class="btn btn-outline btn-sm" type="button" x-show="error" @click="fetchFriendlies">Retry</button>
                     </div>
                 </div>
                 <div class="p-0">
                     <div class="p-3 flex flex-wrap gap-2 items-center">
                         <div class="flex w-full max-w-sm items-center gap-2">
-                            <span class="text-sm font-medium text-base-content/70">Search</span>
-                            <input type="search" class="input w-full" placeholder="Friendly, alliance" x-model.debounce.300ms="search">
+                            <label for="war-plan-{{ $plan->id }}-friendlies-search" class="text-sm font-medium text-base-content/70">Search</label>
+                            <input id="war-plan-{{ $plan->id }}-friendlies-search" type="search" class="input w-full" placeholder="Friendly, alliance" x-model.debounce.300ms="search">
                         </div>
                     </div>
                     <div class="overflow-x-auto rounded-box border border-base-300" id="assignments-table" x-show="!loading" x-cloak style="max-height: 520px; overflow-y: auto;">
@@ -1012,14 +1113,14 @@
                             <tbody>
                             <template x-if="!filteredUnassigned.length && !error">
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-base-content/50">Everyone is assigned.</td>
+                                    <td colspan="5" class="text-center py-4 nexus-text-muted">Everyone is assigned.</td>
                                 </tr>
                             </template>
                             <template x-for="friendly in filteredUnassigned" :key="friendly.id">
                                 <tr>
                                     <td>
                                         <a :href="`https://politicsandwar.com/nation/id=${friendly.id}`" target="_blank" class="font-semibold" x-text="friendly.leader_name"></a>
-                                        <div class="text-sm text-base-content/50" x-text="friendly.nation_name"></div>
+                                        <div class="text-sm nexus-text-muted" x-text="friendly.nation_name"></div>
                                         <div class="text-sm">
                                             Cities <span x-text="friendly.num_cities ?? 0"></span>
                                             • Score <span x-text="formatNumber(friendly.score, 2)"></span>
@@ -1029,14 +1130,14 @@
                                         <template x-if="friendly.alliance">
                                             <div>
                                                 <span class="inline-flex items-center gap-1">
-                                                    <x-icon name="o-users" class="size-4 text-base-content/50" aria-hidden="true" />
+                                                    <x-icon name="o-users" class="size-4 nexus-text-muted" aria-hidden="true" />
                                                     <a :href="`https://politicsandwar.com/alliance/id=${friendly.alliance.id}`" target="_blank" x-text="friendly.alliance.name"></a>
                                                 </span>
-                                                <div class="text-sm text-base-content/50" x-text="friendly.alliance.acronym"></div>
+                                                <div class="text-sm nexus-text-muted" x-text="friendly.alliance.acronym"></div>
                                             </div>
                                         </template>
                                         <template x-if="!friendly.alliance">
-                                            <span class="text-base-content/50">No alliance</span>
+                                            <span class="nexus-text-muted">No alliance</span>
                                         </template>
                                     </td>
                                     <td>
@@ -1048,7 +1149,7 @@
                                     </td>
                                     <td x-text="relativeTime(friendly.account_profile?.last_active)"></td>
                                     <td class="text-right">
-                                        <button class="btn btn-outline btn-primary btn-sm"
+                                        <button :id="`war-plan-{{ $plan->id }}-friendly-${friendly.id}-quick-assign-open`" class="btn btn-outline btn-primary btn-sm"
                                                 @click="$store.warPlan.setQuickAssign(friendly); $nextTick(() => document.getElementById('quickAssignModal').showModal())">
                                             Assign
                                         </button>
@@ -1071,36 +1172,46 @@
             <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-semibold">Import plan JSON</h3>
-                    <p class="text-sm text-base-content/60">Paste an exported payload to merge or replace current plan data.</p>
+                    <p class="text-sm nexus-text-muted">Paste an exported payload to merge or replace current plan data.</p>
                 </div>
                 <form method="dialog">
-                    <button class="btn btn-ghost btn-sm btn-circle" aria-label="Close">✕</button>
+                    <button id="war-plan-{{ $plan->id }}-import-close" class="btn btn-ghost btn-sm btn-circle" aria-label="Close import war plan dialog">✕</button>
                 </form>
             </div>
 
             <form method="post" action="{{ route('admin.war-plans.import', $plan) }}" class="space-y-4">
                 @csrf
 
-                <label class="block space-y-2">
+                <label class="block space-y-2" for="war-plan-{{ $plan->id }}-import-payload">
                     <span class="text-sm font-medium">Payload</span>
-                    <textarea class="textarea min-h-56 w-full" name="payload" rows="10" placeholder="Paste exported JSON here" required></textarea>
+                    <textarea id="war-plan-{{ $plan->id }}-import-payload" class="textarea min-h-56 w-full" name="payload" rows="10" placeholder="Paste exported JSON here" required
+                              aria-describedby="war-plan-{{ $plan->id }}-import-payload-help{{ $errors->has('payload') ? ' war-plan-'.$plan->id.'-import-payload-error' : '' }}"
+                              aria-invalid="{{ $errors->has('payload') ? 'true' : 'false' }}"></textarea>
+                    @error('payload')
+                        <span id="war-plan-{{ $plan->id }}-import-payload-error" class="text-xs text-error">{{ $message }}</span>
+                    @enderror
                 </label>
 
-                <label class="label cursor-pointer justify-start gap-3">
-                    <input class="checkbox checkbox-sm" type="checkbox" name="dry_run" value="1" id="dryRun">
+                <label class="label cursor-pointer justify-start gap-3" for="war-plan-{{ $plan->id }}-import-dry-run">
+                    <input id="war-plan-{{ $plan->id }}-import-dry-run" class="checkbox checkbox-sm" type="checkbox" name="dry_run" value="1"
+                           aria-invalid="{{ $errors->has('dry_run') ? 'true' : 'false' }}"
+                           @if($errors->has('dry_run')) aria-describedby="war-plan-{{ $plan->id }}-import-dry-run-error" @endif>
                     <span class="">Dry run (preview diff only)</span>
                 </label>
+                @error('dry_run')
+                    <span id="war-plan-{{ $plan->id }}-import-dry-run-error" class="text-xs text-error">{{ $message }}</span>
+                @enderror
 
-                <p class="mb-0 text-sm text-base-content/60">Imports honor the latest schema and override conflicting targets or assignments.</p>
+                <p id="war-plan-{{ $plan->id }}-import-payload-help" class="mb-0 text-sm nexus-text-muted">Imports honor the latest schema and override conflicting targets or assignments.</p>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('importPlanModal').close()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Process import</button>
+                    <button id="war-plan-{{ $plan->id }}-import-cancel" type="button" class="btn btn-ghost" onclick="document.getElementById('importPlanModal').close()">Cancel</button>
+                    <button id="war-plan-{{ $plan->id }}-import-submit" type="submit" class="btn btn-primary">Process import</button>
                 </div>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop">
-            <button>close</button>
+            <button id="war-plan-{{ $plan->id }}-import-backdrop-close" aria-label="Close import war plan dialog">close</button>
         </form>
     </dialog>
 

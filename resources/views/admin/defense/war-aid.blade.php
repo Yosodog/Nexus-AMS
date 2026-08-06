@@ -48,9 +48,9 @@
                                                 @endif
                                             </h3>
                                             @if ($nation)
-                                                <div class="text-sm text-base-content/60">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
+                                                <div class="text-sm nexus-text-muted">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
                                             @endif
-                                            <div class="mt-1 text-sm text-base-content/60">
+                                            <div class="mt-1 text-sm nexus-text-muted">
                                                 Account:
                                                 @if ($account)
                                                     <a href="{{ route('admin.accounts.view', $req->account_id) }}" class="link link-hover">{{ $account->name }}</a>
@@ -58,7 +58,7 @@
                                                     Unknown Account
                                                 @endif
                                             </div>
-                                            <div class="mt-1 text-sm text-base-content/60">Note: {{ $req->note }}</div>
+                                            <div class="mt-1 text-sm nexus-text-muted">Note: {{ $req->note }}</div>
                                         </div>
                                     </div>
 
@@ -78,7 +78,7 @@
                                                 min="0"
                                                 value="{{ $req->$resource }}"
                                             >
-                                            <span class="text-xs text-base-content/60">
+                                            <span class="text-xs nexus-text-muted">
                                                 Has: {{ number_format(($nation?->resources->$resource ?? 0) + ($nation?->accounts?->sum($resource) ?? 0)) }}
                                             </span>
                                         </label>
@@ -100,7 +100,7 @@
         @can('manage-war-aid')
             @can('manage-manual-disbursements')
             <x-card title="Manual War Aid Disbursement">
-                <p class="mb-4 text-sm text-base-content/60">
+                <p class="mb-4 text-sm nexus-text-muted">
                     Issues war aid immediately and bypasses pending-request checks. Provide at least one resource amount.
                 </p>
 
@@ -116,7 +116,7 @@
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Account ID</span>
                             <input type="number" name="account_id" class="input w-full" required min="1" value="{{ old('account_id') }}">
-                            <span class="text-xs text-base-content/60">Must belong to the nation above.</span>
+                            <span class="text-xs nexus-text-muted">Must belong to the nation above.</span>
                         </label>
                     </div>
 
@@ -175,9 +175,9 @@
                                     <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-hover">
                                         {{ $nation->leader_name ?? ('Nation #'.$nation->id) }}
                                     </a>
-                                    <div class="text-sm text-base-content/60">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
+                                    <div class="text-sm nexus-text-muted">{{ $nation->nation_name ?? 'Unknown Nation' }}</div>
                                 @else
-                                    <span class="text-base-content/60">Unknown Nation</span>
+                                    <span class="nexus-text-muted">Unknown Nation</span>
                                 @endif
                             </td>
                             <td>
@@ -186,7 +186,7 @@
                                         {{ $account->name }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/60">Unknown Account</span>
+                                    <span class="nexus-text-muted">Unknown Account</span>
                                 @endif
                             </td>
                             <td>{{ $req->note }}</td>
@@ -209,7 +209,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-base-content/60">No previous requests.</td>
+                            <td colspan="7" class="py-6 text-center nexus-text-muted">No previous requests.</td>
                         </tr>
                     @endforelse
                     </tbody>

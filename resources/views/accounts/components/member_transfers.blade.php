@@ -3,7 +3,7 @@
     <p class="text-sm text-base-content/70 mb-4">Approve incoming transfers from alliance members or cancel ones you sent.</p>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="space-y-4">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Incoming</h3>
+            <h3 class="text-sm font-semibold uppercase tracking-wide nexus-text-muted">Incoming</h3>
             @forelse ($incomingMemberTransfers as $transfer)
                 <div class="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -15,7 +15,7 @@
                                 From {{ $transfer->fromAccount?->name ?? 'Unknown Account' }}
                             </p>
                         </div>
-                        <span class="text-xs text-base-content/60">{{ $transfer->created_at?->diffForHumans() }}</span>
+                        <span class="text-xs nexus-text-muted">{{ $transfer->created_at?->diffForHumans() }}</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @foreach (PWHelperService::resources() as $resource)
@@ -38,13 +38,13 @@
                     </div>
                 </div>
             @empty
-                <div class="rounded-xl border border-dashed border-base-300 p-4 text-sm text-base-content/60">
+                <div class="rounded-xl border border-dashed border-base-300 p-4 text-sm nexus-text-muted">
                     No incoming transfers awaiting approval.
                 </div>
             @endforelse
         </div>
         <div class="space-y-4">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Outgoing</h3>
+            <h3 class="text-sm font-semibold uppercase tracking-wide nexus-text-muted">Outgoing</h3>
             @forelse ($outgoingMemberTransfers as $transfer)
                 <div class="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -56,7 +56,7 @@
                                 To {{ $transfer->toAccount?->name ?? 'Unknown Account' }}
                             </p>
                         </div>
-                        <span class="text-xs text-base-content/60">{{ $transfer->created_at?->diffForHumans() }}</span>
+                        <span class="text-xs nexus-text-muted">{{ $transfer->created_at?->diffForHumans() }}</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @foreach (PWHelperService::resources() as $resource)
@@ -75,7 +75,7 @@
                     </div>
                 </div>
             @empty
-                <div class="rounded-xl border border-dashed border-base-300 p-4 text-sm text-base-content/60">
+                <div class="rounded-xl border border-dashed border-base-300 p-4 text-sm nexus-text-muted">
                     No outgoing transfers awaiting approval.
                 </div>
             @endforelse

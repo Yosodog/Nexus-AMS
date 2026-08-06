@@ -33,13 +33,13 @@
                                 placeholder="Coalition Dawn"
                                 autofocus
                             >
-                            <span class="mt-1 block text-xs text-base-content/60">Use a name your officers will recognize.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">Use a name your officers will recognize.</span>
                         </label>
 
                         <label class="block">
                             <span class="label px-0">Declaration deadline</span>
                             <input name="deadline_at" type="datetime-local" class="input w-full">
-                            <span class="mt-1 block text-xs text-base-content/60">You can change the deadline for individual targets later.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">You can change the deadline for individual targets later.</span>
                         </label>
 
                         <label class="block">
@@ -75,7 +75,7 @@
                                 pattern="\d{17,20}"
                                 class="input w-full"
                             >
-                            <span class="mt-1 block text-xs text-base-content/60">Leave this blank to use the default forum from Milcom settings.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">Leave this blank to use the default forum from Milcom settings.</span>
                         </label>
                     </div>
 

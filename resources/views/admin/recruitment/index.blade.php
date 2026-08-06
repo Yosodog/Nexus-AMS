@@ -83,7 +83,7 @@
         <div class="space-y-6">
             <x-card title="Send Test Message">
                 @if($userNationId)
-                    <p class="text-sm text-base-content/60">
+                    <p class="text-sm nexus-text-muted">
                         Test messages are sent to your nation (ID {{ $userNationId }}).
                     </p>
 

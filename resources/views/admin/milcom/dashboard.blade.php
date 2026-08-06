@@ -155,7 +155,7 @@
                                             @endforeach
                                         </ul>
                                     @endif
-                                    <p class="mt-1 text-xs text-base-content/55">Found {{ $relativeTime(data_get($exception, 'detected_at')) }}</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Found {{ $relativeTime(data_get($exception, 'detected_at')) }}</p>
                                 </div>
                             </div>
                             @if ($type === 'raid_policy')
@@ -211,7 +211,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <h3 class="truncate font-semibold">{{ data_get($operation, 'name', $operationType === 'counter' ? 'Counter response' : 'Untitled plan') }}</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">Updated {{ $relativeTime(data_get($operation, 'updated_at')) }}</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Updated {{ $relativeTime(data_get($operation, 'updated_at')) }}</p>
                                 </div>
                                 <span class="nexus-status {{ $statusTone($operationStatus) }}">{{ $statusLabel($operationStatus) }}</span>
                             </div>
@@ -223,7 +223,7 @@
                         </a>
                     @empty
                         <div class="nexus-empty-state min-h-48">
-                            <x-icon name="o-map" class="size-8 text-base-content/35" aria-hidden="true" />
+                            <x-icon name="o-map" class="size-8 nexus-text-muted" aria-hidden="true" />
                             <div>
                                 <h3 class="font-semibold">No active plans or counters</h3>
                                 <p class="mt-1 text-sm text-base-content/65">Create a plan or approve a counter to start.</p>

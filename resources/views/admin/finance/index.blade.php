@@ -173,18 +173,18 @@
                     >
                         <span>
                             <span class="block font-semibold text-base-content">{{ \Carbon\Carbon::parse($date)->toFormattedDateString() }}</span>
-                            <span class="mt-1 block text-xs text-base-content/55">{{ number_format((int) $summary['entry_count']) }} recorded {{ \Illuminate\Support\Str::plural('entry', (int) $summary['entry_count']) }}</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">{{ number_format((int) $summary['entry_count']) }} recorded {{ \Illuminate\Support\Str::plural('entry', (int) $summary['entry_count']) }}</span>
                         </span>
                         <span class="grid grid-cols-2 gap-x-5 gap-y-1 text-sm sm:grid-cols-4 sm:text-right">
-                            <span><span class="block text-xs text-base-content/50">Income</span><span class="font-semibold text-success">{{ $formatCurrency($summary['income']) }}</span></span>
-                            <span><span class="block text-xs text-base-content/50">Expense</span><span class="font-semibold text-error">{{ $formatCurrency($summary['expense']) }}</span></span>
-                            <span><span class="block text-xs text-base-content/50">Net</span><span class="font-semibold {{ $summary['net'] >= 0 ? 'text-success' : 'text-error' }}">{{ $formatCurrency($summary['net']) }}</span></span>
+                            <span><span class="block text-xs nexus-text-muted">Income</span><span class="font-semibold text-success">{{ $formatCurrency($summary['income']) }}</span></span>
+                            <span><span class="block text-xs nexus-text-muted">Expense</span><span class="font-semibold text-error">{{ $formatCurrency($summary['expense']) }}</span></span>
+                            <span><span class="block text-xs nexus-text-muted">Net</span><span class="font-semibold {{ $summary['net'] >= 0 ? 'text-success' : 'text-error' }}">{{ $formatCurrency($summary['net']) }}</span></span>
                             <span class="self-end text-primary" aria-hidden="true"><x-icon name="o-chevron-down" class="size-4 transition-transform" x-bind:class="open && 'rotate-180'" /></span>
                         </span>
                     </button>
 
                     <div id="{{ $panelId }}" x-show="open" x-cloak x-transition.opacity.duration.150ms class="border-t border-base-300 px-5 py-4">
-                        <div x-show="loading" class="flex items-center gap-2 text-sm text-base-content/60" role="status">
+                        <div x-show="loading" class="flex items-center gap-2 text-sm nexus-text-muted" role="status">
                             <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
                             <span>Loading entries…</span>
                         </div>
@@ -194,10 +194,10 @@
                 </article>
             @empty
                 <div class="nexus-empty-state">
-                    <x-icon name="o-document-magnifying-glass" class="size-8 text-base-content/35" aria-hidden="true" />
+                    <x-icon name="o-document-magnifying-glass" class="size-8 nexus-text-muted" aria-hidden="true" />
                     <div>
                         <h2 class="text-lg font-semibold">No ledger activity in this scope</h2>
-                        <p class="mt-1 text-sm text-base-content/60">Change the dates, direction, or category filters to review another period.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Change the dates, direction, or category filters to review another period.</p>
                     </div>
                 </div>
             @endforelse
@@ -234,14 +234,14 @@
 
             const renderEmpty = (container, message) => {
                 const empty = document.createElement('p');
-                empty.className = 'grid min-h-56 place-items-center text-center text-sm text-base-content/60';
+                empty.className = 'grid min-h-56 place-items-center text-center text-sm nexus-text-muted';
                 empty.textContent = message;
                 container.replaceChildren(empty);
             };
 
             const appendLegend = (container, series) => {
                 const legend = document.createElement('div');
-                legend.className = 'mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-base-content/60';
+                legend.className = 'mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm nexus-text-muted';
 
                 series.forEach((item) => {
                     const entry = document.createElement('span');

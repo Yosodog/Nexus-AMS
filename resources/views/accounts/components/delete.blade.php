@@ -5,7 +5,7 @@
         <div class="grid gap-2">
             <label class="label" for="account_name_delete">
                 <span class="font-semibold">Account</span>
-                <span class="text-base-content/60">Balance shown for safety</span>
+                <span class="nexus-text-muted">Balance shown for safety</span>
             </label>
             <select class="select w-full" id="account_name_delete" name="account_id">
                 @foreach ($accounts as $account)

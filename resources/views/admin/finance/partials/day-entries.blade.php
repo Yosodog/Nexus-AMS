@@ -3,7 +3,7 @@
 @endphp
 
 @if ($entries->isEmpty())
-    <p class="text-base-content/50 mb-0">No ledger entries for this day.</p>
+    <p class="nexus-text-muted mb-0">No ledger entries for this day.</p>
 @else
     <div class="overflow-x-auto rounded-box border border-base-300">
         <table class="table table-zebra table-sm" data-sortable="false">
@@ -74,7 +74,7 @@
                                 {{ $entry->nation?->nation_name ?? 'Nation #'.$entry->nation_id }}
                             </a>
                         @else
-                            <span class="text-base-content/50">-</span>
+                            <span class="nexus-text-muted">-</span>
                         @endif
                     </td>
                     <td>{{ $entry->account?->name ?? '-' }}</td>
@@ -88,7 +88,7 @@
                                 <span class="badge badge-outline badge-neutral">{{ $sourceLabel }}</span>
                             @endif
                         @else
-                            <span class="text-base-content/50">-</span>
+                            <span class="nexus-text-muted">-</span>
                         @endif
                     </td>
                 </tr>

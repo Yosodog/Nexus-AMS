@@ -41,19 +41,19 @@
                     @endif
                     <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
                         <div class="rounded-xl bg-base-100/80 p-3">
-                            <p class="text-xs text-base-content/60">Tickets sold</p>
+                            <p class="text-xs nexus-text-muted">Tickets sold</p>
                             <p class="text-xl font-bold">{{ number_format($drawing->ticket_count) }}</p>
                         </div>
                         <div class="rounded-xl bg-base-100/80 p-3">
-                            <p class="text-xs text-base-content/60">Remaining</p>
+                            <p class="text-xs nexus-text-muted">Remaining</p>
                             <p class="text-xl font-bold">{{ number_format($remainingTicketCount) }}</p>
                         </div>
                         <div class="rounded-xl bg-base-100/80 p-3">
-                            <p class="text-xs text-base-content/60">Your tickets</p>
+                            <p class="text-xs nexus-text-muted">Your tickets</p>
                             <p class="text-xl font-bold">{{ number_format($myTickets->total()) }}</p>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-base-content/60">
+                    <p class="mt-3 text-xs nexus-text-muted">
                         Chance any sold ticket wins:
                         {{ number_format(($drawing->ticket_count / \App\Services\LotteryRandomizer::CODE_SPACE_SIZE) * 100, 5) }}%
                     </p>
@@ -64,7 +64,7 @@
         <div class="grid gap-6 lg:grid-cols-[1fr_1.25fr]">
             <section class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
                 <div class="mb-5">
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Enter this week's draw</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Enter this week's draw</p>
                     <h2 class="text-xl font-bold">Buy tickets</h2>
                 </div>
 
@@ -110,7 +110,7 @@
                                 value="{{ old('quantity', 1) }}"
                                 required
                             >
-                            <span class="text-xs text-base-content/60">
+                            <span class="text-xs nexus-text-muted">
                                 ${{ number_format($drawing->ticket_price, 0) }} each · up to
                                 {{ min($drawing->max_tickets_per_purchase, $remainingTicketCount, $remainingNationTicketCount) }} per purchase ·
                                 {{ number_format($remainingNationTicketCount) }} remaining for your nation
@@ -125,7 +125,7 @@
                         </button>
 
                         @if ($accounts->isEmpty())
-                            <p class="text-center text-sm text-base-content/60">
+                            <p class="text-center text-sm nexus-text-muted">
                                 Create an account before purchasing a ticket.
                             </p>
                         @endif
@@ -146,7 +146,7 @@
             <section class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
                 <div class="mb-5 flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs uppercase tracking-wide text-base-content/60">Current drawing</p>
+                        <p class="text-xs uppercase tracking-wide nexus-text-muted">Current drawing</p>
                         <h2 class="text-xl font-bold">Your ticket codes</h2>
                     </div>
                     @if ($myTickets->total() > 0)
@@ -161,7 +161,7 @@
                         @foreach ($myTickets as $ticket)
                             <div class="rounded-xl border border-base-300 bg-base-200/50 p-4 text-center">
                                 <p class="font-mono text-2xl font-black tracking-[0.18em] text-primary">{{ $ticket->code }}</p>
-                                <p class="mt-2 truncate text-xs text-base-content/60">{{ $ticket->account->name }}</p>
+                                <p class="mt-2 truncate text-xs nexus-text-muted">{{ $ticket->account->name }}</p>
                             </div>
                         @endforeach
                     </div>
@@ -173,7 +173,7 @@
                 @else
                     <div class="rounded-xl border border-dashed border-base-300 px-6 py-12 text-center">
                         <p class="font-semibold">You do not have a ticket in this drawing yet.</p>
-                        <p class="mt-1 text-sm text-base-content/60">Purchased codes will appear here immediately.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Purchased codes will appear here immediately.</p>
                     </div>
                 @endif
             </section>
@@ -181,7 +181,7 @@
 
         <section class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-sm">
             <div class="mb-5">
-                <p class="text-xs uppercase tracking-wide text-base-content/60">Completed drawings</p>
+                <p class="text-xs uppercase tracking-wide nexus-text-muted">Completed drawings</p>
                 <h2 class="text-xl font-bold">Recent draws</h2>
             </div>
 
@@ -206,7 +206,7 @@
                                             {{ $pastDrawing->winning_code }}
                                         </span>
                                     @else
-                                        <span class="text-base-content/50">—</span>
+                                        <span class="nexus-text-muted">—</span>
                                     @endif
                                 </td>
                                 <td>
@@ -217,7 +217,7 @@
                                     @elseif ((float) $pastDrawing->jackpot_amount > 0)
                                         <span class="text-warning">No match — rolled over</span>
                                     @else
-                                        <span class="text-base-content/50">No match</span>
+                                        <span class="nexus-text-muted">No match</span>
                                     @endif
                                 </td>
                                 <td class="text-right">{{ number_format($pastDrawing->ticket_count) }}</td>
@@ -225,7 +225,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-10 text-center text-base-content/60">
+                                <td colspan="5" class="py-10 text-center nexus-text-muted">
                                     No weekly drawings have been completed yet.
                                 </td>
                             </tr>

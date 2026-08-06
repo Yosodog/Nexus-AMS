@@ -117,7 +117,7 @@
                                                 {{ $recordLabel }}
                                             @endif
                                         </div>
-                                        <p class="mt-1 text-xs text-base-content/55">Legacy #{{ number_format($recordId) }}</p>
+                                        <p class="mt-1 text-xs nexus-text-muted">Legacy #{{ number_format($recordId) }}</p>
                                     </td>
                                     <td><span class="badge badge-ghost">{{ str((string) data_get($record, 'status', 'archived'))->headline() }}</span></td>
                                     <td class="whitespace-nowrap tabular-nums">
@@ -141,7 +141,7 @@
                                     <td colspan="5" class="bg-base-200/60 p-4" data-milcom-legacy-detail></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5"><div class="nexus-empty-state"><x-icon name="o-archive-box" class="size-9 text-base-content/35" aria-hidden="true" /><div><h3 class="font-semibold">No legacy {{ $legacyType }} are archived</h3><p class="mt-1 text-sm text-base-content/65">Legacy records stay available here after they are archived.</p></div></div></td></tr>
+                                <tr><td colspan="5"><div class="nexus-empty-state"><x-icon name="o-archive-box" class="size-9 nexus-text-muted" aria-hidden="true" /><div><h3 class="font-semibold">No legacy {{ $legacyType }} are archived</h3><p class="mt-1 text-sm text-base-content/65">Legacy records stay available here after they are archived.</p></div></div></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -177,7 +177,7 @@
                                     $operationType = (string) data_get($operation, 'type.value', data_get($operation, 'type', 'plan'));
                                 @endphp
                                 <tr>
-                                    <td class="max-w-md whitespace-normal"><div class="font-semibold">{{ data_get($operation, 'name', str($operationType)->headline()) }}</div><p class="mt-1 text-xs text-base-content/55">{{ number_format((int) data_get($operation, 'objective_count', 0)) }} targets · {{ number_format((int) data_get($operation, 'assignment_count', 0)) }} assigned nations</p></td>
+                                    <td class="max-w-md whitespace-normal"><div class="font-semibold">{{ data_get($operation, 'name', str($operationType)->headline()) }}</div><p class="mt-1 text-xs nexus-text-muted">{{ number_format((int) data_get($operation, 'objective_count', 0)) }} targets · {{ number_format((int) data_get($operation, 'assignment_count', 0)) }} assigned nations</p></td>
                                     <td><span class="badge badge-outline">{{ str($operationType)->headline() }}</span></td>
                                     <td><span class="badge badge-success badge-soft">{{ str((string) data_get($operation, 'status.value', data_get($operation, 'status', 'completed')))->headline() }}</span></td>
                                     <td class="tabular-nums">{{ number_format((float) data_get($operation, 'final_coverage_percent', 0), 0) }}%</td>
@@ -185,7 +185,7 @@
                                     <td class="text-right"><a href="{{ url('/admin/milcom/archive/'.$operationId) }}" class="btn btn-outline btn-sm">View history</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6"><div class="nexus-empty-state"><x-icon name="o-archive-box" class="size-9 text-base-content/35" aria-hidden="true" /><div><h3 class="font-semibold">No Milcom v2 records yet</h3><p class="mt-1 text-sm text-base-content/65">Completed plans and counters appear here after their final check.</p></div></div></td></tr>
+                                <tr><td colspan="6"><div class="nexus-empty-state"><x-icon name="o-archive-box" class="size-9 nexus-text-muted" aria-hidden="true" /><div><h3 class="font-semibold">No Milcom v2 records yet</h3><p class="mt-1 text-sm text-base-content/65">Completed plans and counters appear here after their final check.</p></div></div></td></tr>
                             @endforelse
                         </tbody>
                     </table>

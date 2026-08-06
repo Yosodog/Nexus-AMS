@@ -532,7 +532,7 @@ if (app) {
                     body.append(createElement('p', 'mt-1 text-xs font-semibold text-error', `Also added to the ${picker.side === 'friendly' ? 'enemy' : 'friendly'} side`));
                 }
 
-                const remove = createElement('button', 'btn btn-ghost btn-sm btn-square shrink-0', '×');
+                const remove = createElement('button', 'nexus-icon-button nexus-icon-button--compact btn btn-ghost btn-circle shrink-0', '×');
                 remove.type = 'button';
                 remove.dataset.allianceRemove = String(alliance.id);
                 remove.setAttribute('aria-label', `Remove ${alliance.name || `alliance ${alliance.id}`} from the ${picker.side} side`);

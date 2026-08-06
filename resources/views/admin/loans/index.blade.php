@@ -71,21 +71,21 @@
                         @endif
                         <span class="nexus-status nexus-status--warning">Pending</span>
                     </div>
-                    <p class="mt-1 text-sm text-base-content/60">
+                    <p class="mt-1 text-sm nexus-text-muted">
                         {{ $loan->nation?->nation_name ?? 'Unknown nation name' }} · Nation #{{ $loan->nation_id }} · Account #{{ $loan->account_id }}
                     </p>
-                    <p class="mt-1 text-xs text-base-content/55">
+                    <p class="mt-1 text-xs nexus-text-muted">
                         Requested <time datetime="{{ $loan->created_at->toIso8601String() }}" class="tooltip tooltip-bottom cursor-help" data-tip="{{ $loan->created_at->toDayDateTimeString() }}" tabindex="0" aria-label="Requested {{ $loan->created_at->diffForHumans() }}, {{ $loan->created_at->toDayDateTimeString() }}">{{ $loan->created_at->diffForHumans() }}</time>
                     </p>
                 </div>
 
                 <dl class="grid grid-cols-2 gap-x-5 gap-y-1 text-sm">
                     <div>
-                        <dt class="text-xs text-base-content/55">Requested amount</dt>
+                        <dt class="text-xs nexus-text-muted">Requested amount</dt>
                         <dd class="text-lg font-bold tabular-nums">${{ number_format((float) $loan->amount, 2) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs text-base-content/55">Requested term</dt>
+                        <dt class="text-xs nexus-text-muted">Requested term</dt>
                         <dd class="text-lg font-bold tabular-nums">{{ number_format((int) $loan->term_weeks) }} weeks</dd>
                     </div>
                 </dl>
@@ -107,7 +107,7 @@
                     @elseif($isOwnRequest)
                         <span class="text-sm">
                             <span class="nexus-status nexus-status--error">Self-decision blocked</span>
-                            <span class="mt-1 block text-base-content/60">Another reviewer must decide.</span>
+                            <span class="mt-1 block nexus-text-muted">Another reviewer must decide.</span>
                         </span>
                     @else
                         <span class="nexus-status nexus-status--neutral">Decision unavailable</span>
@@ -119,7 +119,7 @@
                 <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
                 <div>
                     <h3 class="font-semibold">Loan queue is clear</h3>
-                    <p class="mt-1 text-sm text-base-content/60">There are no pending loan requests.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">There are no pending loan requests.</p>
                 </div>
             </div>
         @endforelse
@@ -170,7 +170,7 @@
 
         @if($activeLoans->isEmpty())
             <div class="nexus-empty-state">
-                <p class="text-sm text-base-content/60">No active loans are being serviced.</p>
+                <p class="text-sm nexus-text-muted">No active loans are being serviced.</p>
             </div>
         @else
             <div class="nexus-table-shell rounded-none border-0">
@@ -196,31 +196,31 @@
                                         <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}" target="_blank" rel="noopener" class="mt-2 block font-semibold text-primary hover:underline">
                                             {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}
                                         </a>
-                                        <span class="block text-xs text-base-content/55">{{ $loan->nation->nation_name ?? '' }}</span>
+                                        <span class="block text-xs nexus-text-muted">{{ $loan->nation->nation_name ?? '' }}</span>
                                     @else
-                                        <span class="mt-2 block text-base-content/60">Unknown nation</span>
+                                        <span class="mt-2 block nexus-text-muted">Unknown nation</span>
                                     @endif
                                 </td>
                                 <td class="whitespace-nowrap" data-order="{{ (float) $loan->amount }}">
                                     <span class="block font-medium">${{ number_format((float) $loan->amount, 2) }} principal</span>
-                                    <span class="block text-xs text-base-content/55">{{ number_format((float) $loan->interest_rate, 2) }}% weekly · {{ (int) $loan->term_weeks }} weeks</span>
-                                    <span class="block text-xs text-base-content/55">${{ number_format((float) $loan->scheduled_weekly_payment, 2) }} scheduled weekly</span>
+                                    <span class="block text-xs nexus-text-muted">{{ number_format((float) $loan->interest_rate, 2) }}% weekly · {{ (int) $loan->term_weeks }} weeks</span>
+                                    <span class="block text-xs nexus-text-muted">${{ number_format((float) $loan->scheduled_weekly_payment, 2) }} scheduled weekly</span>
                                 </td>
                                 <td class="whitespace-nowrap" data-order="{{ (float) $loan->total_owed_now }}">
                                     <span class="block font-medium">${{ number_format((float) $loan->total_owed_now, 2) }} payoff</span>
-                                    <span class="block text-xs text-base-content/55">${{ number_format((float) $loan->remaining_balance, 2) }} principal</span>
-                                    <span class="block text-xs text-base-content/55">${{ number_format((float) $loan->effective_interest_due_now, 2) }} interest due</span>
+                                    <span class="block text-xs nexus-text-muted">${{ number_format((float) $loan->remaining_balance, 2) }} principal</span>
+                                    <span class="block text-xs nexus-text-muted">${{ number_format((float) $loan->effective_interest_due_now, 2) }} interest due</span>
                                 </td>
                                 <td class="whitespace-nowrap" data-order="{{ (float) $loan->current_amount_due }}">
                                     <span class="block font-semibold {{ $loan->past_due_amount > 0 ? 'text-error' : '' }}">${{ number_format((float) $loan->current_amount_due, 2) }}</span>
-                                    <span class="block text-xs text-base-content/55">${{ number_format((float) $loan->cycle_paid, 2) }} paid this cycle</span>
-                                    <span class="block text-xs text-base-content/55">${{ number_format((float) $loan->cycle_remaining, 2) }} cycle remaining</span>
-                                    <span class="block text-xs {{ $loan->past_due_amount > 0 ? 'text-error' : 'text-base-content/55' }}">${{ number_format((float) $loan->past_due_amount, 2) }} past due</span>
+                                    <span class="block text-xs nexus-text-muted">${{ number_format((float) $loan->cycle_paid, 2) }} paid this cycle</span>
+                                    <span class="block text-xs nexus-text-muted">${{ number_format((float) $loan->cycle_remaining, 2) }} cycle remaining</span>
+                                    <span class="block text-xs {{ $loan->past_due_amount > 0 ? 'text-error' : 'nexus-text-muted' }}">${{ number_format((float) $loan->past_due_amount, 2) }} past due</span>
                                 </td>
                                 <td class="whitespace-nowrap" data-order="{{ $loan->next_due_date?->timestamp ?? PHP_INT_MAX }}">
                                     {{ optional($loan->next_due_date)->format('M d, Y') ?? 'Not scheduled' }}
                                     @if (!is_null($loan->days_to_due))
-                                        <span class="block text-xs {{ $loan->days_to_due < 0 ? 'font-semibold text-error' : 'text-base-content/55' }}">
+                                        <span class="block text-xs {{ $loan->days_to_due < 0 ? 'font-semibold text-error' : 'nexus-text-muted' }}">
                                             @if ($loan->days_to_due > 0)
                                                 In {{ $loan->days_to_due }} days
                                             @elseif ($loan->days_to_due === 0)
@@ -246,9 +246,9 @@
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
             <span>
                 <span class="block font-semibold">Servicing rules</span>
-                <span class="mt-0.5 block text-sm text-base-content/60">Weekly accrual, payment allocation, cycle shortfall, and early repayment behavior.</span>
+                <span class="mt-0.5 block text-sm nexus-text-muted">Weekly accrual, payment allocation, cycle shortfall, and early repayment behavior.</span>
             </span>
-            <span class="flex items-center gap-2 text-sm font-semibold text-base-content/60">Open <x-icon name="o-chevron-down" class="size-4" aria-hidden="true" /></span>
+            <span class="flex items-center gap-2 text-sm font-semibold nexus-text-muted">Open <x-icon name="o-chevron-down" class="size-4" aria-hidden="true" /></span>
         </summary>
         <div class="grid gap-5 border-t border-base-300 p-5 md:grid-cols-2">
             <div>
@@ -278,11 +278,11 @@
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
                     <span class="block font-semibold">Manual loan disbursement</span>
-                    <span class="mt-0.5 block text-sm text-base-content/60">Creates, approves, and deposits a loan immediately while bypassing eligibility and duplicate checks.</span>
+                    <span class="mt-0.5 block text-sm nexus-text-muted">Creates, approves, and deposits a loan immediately while bypassing eligibility and duplicate checks.</span>
                 </span>
                 <span class="flex items-center gap-2">
                     <span class="nexus-status nexus-status--warning">Elevated action</span>
-                    <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                    <x-icon name="o-chevron-down" class="size-4 nexus-text-muted" aria-hidden="true" />
                 </span>
             </summary>
             <form method="POST" action="{{ route('admin.manual-disbursements.loans') }}" class="border-t border-base-300 p-5" data-confirm="Create and deposit this loan immediately? This bypasses borrower eligibility and duplicate checks." data-confirm-title="Create manual loan?" data-confirm-label="Create and deposit" data-confirm-tone="error">
@@ -313,7 +313,7 @@
                 <form method="POST" action="{{ route('admin.loans.default-interest-rate') }}" class="p-5">
                     @csrf
                     <h3 class="font-semibold">Default interest rate</h3>
-                    <p class="mt-1 text-sm text-base-content/60">Prefills the approval dialog; each pending loan can still be adjusted.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">Prefills the approval dialog; each pending loan can still be adjusted.</p>
                     <div class="mt-4 flex items-end gap-2">
                         <x-input type="number" name="default_interest_rate" step="0.01" min="0" max="100" required
                                  :value="old('default_interest_rate', number_format($defaultLoanInterestRate, 2, '.', ''))"
@@ -328,7 +328,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h3 class="font-semibold">Member applications</h3>
-                            <p class="mt-1 text-sm text-base-content/60">Control whether members can submit new loan requests.</p>
+                            <p class="mt-1 text-sm nexus-text-muted">Control whether members can submit new loan requests.</p>
                         </div>
                         <span class="nexus-status {{ $loanApplicationsEnabled ? 'nexus-status--success' : 'nexus-status--warning' }}">
                             {{ $loanApplicationsEnabled ? 'Open' : 'Closed' }}
@@ -350,13 +350,13 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 id="approve-loan-title" class="text-lg font-bold">Approve loan request</h2>
-                        <p class="mt-1 text-sm text-base-content/60">Confirm the final contract. Submission deposits the amount and starts weekly servicing.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Confirm the final contract. Submission deposits the amount and starts weekly servicing.</p>
                     </div>
                     <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('approveLoanModal').close()">Close</button>
                 </div>
                 <div class="mt-4 rounded-md border border-base-300 bg-base-200/50 px-4 py-3 text-sm">
                     <span class="font-semibold" x-text="loanData.nation?.leader_name || `Nation #${loanData.nation_id || ''}`"></span>
-                    <span class="block text-base-content/60" x-text="`Account #${loanData.account_id || ''}`"></span>
+                    <span class="block nexus-text-muted" x-text="`Account #${loanData.account_id || ''}`"></span>
                 </div>
                 <form id="approveLoanForm" method="POST" class="mt-5">
                     @csrf

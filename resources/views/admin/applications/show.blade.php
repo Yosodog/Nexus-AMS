@@ -52,11 +52,11 @@
                 </div>
                 <dl class="divide-y divide-base-300 text-sm">
                     <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 px-5 py-3">
-                        <dt class="text-base-content/60">Leader</dt>
+                        <dt class="nexus-text-muted">Leader</dt>
                         <dd class="font-semibold">{{ $application->leader_name_snapshot }}</dd>
                     </div>
                     <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 px-5 py-3">
-                        <dt class="text-base-content/60">Nation</dt>
+                        <dt class="nexus-text-muted">Nation</dt>
                         <dd>
                             <a href="https://politicsandwar.com/nation/id={{ $application->nation_id }}" target="_blank" rel="noopener" class="font-semibold text-primary hover:underline">
                                 Nation #{{ $application->nation_id }}
@@ -64,14 +64,14 @@
                         </dd>
                     </div>
                     <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 px-5 py-3">
-                        <dt class="text-base-content/60">Discord</dt>
+                        <dt class="nexus-text-muted">Discord</dt>
                         <dd class="min-w-0">
                             <span class="block truncate font-semibold">{{ $application->discord_username }}</span>
-                            <span class="block truncate text-base-content/60">{{ $application->discord_user_id }}</span>
+                            <span class="block truncate nexus-text-muted">{{ $application->discord_user_id }}</span>
                         </dd>
                     </div>
                     <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 px-5 py-3">
-                        <dt class="text-base-content/60">Channel</dt>
+                        <dt class="nexus-text-muted">Channel</dt>
                         <dd class="break-all font-mono text-xs">{{ $application->discord_channel_id ?? 'Not recorded' }}</dd>
                     </div>
                 </dl>
@@ -84,39 +84,39 @@
                 <ol class="divide-y divide-base-300 text-sm">
                     <li class="px-5 py-3">
                         <span class="block font-semibold">Submitted</span>
-                        <time class="text-base-content/60" datetime="{{ $application->created_at?->toIso8601String() }}">
+                        <time class="nexus-text-muted" datetime="{{ $application->created_at?->toIso8601String() }}">
                             {{ $application->created_at?->toDayDateTimeString() ?? 'Unknown' }}
                         </time>
                     </li>
                     @if($application->approved_at)
                         <li class="px-5 py-3">
                             <span class="block font-semibold text-success">Approved</span>
-                            <time class="text-base-content/60" datetime="{{ $application->approved_at->toIso8601String() }}">{{ $application->approved_at->toDayDateTimeString() }}</time>
+                            <time class="nexus-text-muted" datetime="{{ $application->approved_at->toIso8601String() }}">{{ $application->approved_at->toDayDateTimeString() }}</time>
                             @if($application->approved_by_discord_id)
-                                <span class="block text-base-content/60">Actor Discord ID {{ $application->approved_by_discord_id }}</span>
+                                <span class="block nexus-text-muted">Actor Discord ID {{ $application->approved_by_discord_id }}</span>
                             @endif
                         </li>
                     @endif
                     @if($application->denied_at)
                         <li class="px-5 py-3">
                             <span class="block font-semibold text-error">Denied</span>
-                            <time class="text-base-content/60" datetime="{{ $application->denied_at->toIso8601String() }}">{{ $application->denied_at->toDayDateTimeString() }}</time>
+                            <time class="nexus-text-muted" datetime="{{ $application->denied_at->toIso8601String() }}">{{ $application->denied_at->toDayDateTimeString() }}</time>
                             @if($application->denied_by_discord_id)
-                                <span class="block text-base-content/60">Actor Discord ID {{ $application->denied_by_discord_id }}</span>
+                                <span class="block nexus-text-muted">Actor Discord ID {{ $application->denied_by_discord_id }}</span>
                             @endif
                         </li>
                     @endif
                     @if($application->cancelled_at)
                         <li class="px-5 py-3">
                             <span class="block font-semibold">Cancelled</span>
-                            <time class="text-base-content/60" datetime="{{ $application->cancelled_at->toIso8601String() }}">{{ $application->cancelled_at->toDayDateTimeString() }}</time>
+                            <time class="nexus-text-muted" datetime="{{ $application->cancelled_at->toIso8601String() }}">{{ $application->cancelled_at->toDayDateTimeString() }}</time>
                             @if($application->cancelled_by_discord_id)
-                                <span class="block text-base-content/60">Actor Discord ID {{ $application->cancelled_by_discord_id }}</span>
+                                <span class="block nexus-text-muted">Actor Discord ID {{ $application->cancelled_by_discord_id }}</span>
                             @endif
                         </li>
                     @endif
                     @if(! $application->approved_at && ! $application->denied_at && ! $application->cancelled_at)
-                        <li class="px-5 py-3 text-base-content/60">Awaiting a decision through the configured application workflow.</li>
+                        <li class="px-5 py-3 nexus-text-muted">Awaiting a decision through the configured application workflow.</li>
                     @endif
                 </ol>
             </section>
@@ -140,10 +140,10 @@
                                     <span class="nexus-status nexus-status--info">Staff</span>
                                 @endif
                             </div>
-                            <p class="truncate text-xs text-base-content/55">Discord {{ $message->discord_user_id }}</p>
+                            <p class="truncate text-xs nexus-text-muted">Discord {{ $message->discord_user_id }}</p>
                         </div>
                         <time
-                            class="tooltip tooltip-bottom cursor-help text-xs text-base-content/60"
+                            class="tooltip tooltip-bottom cursor-help text-xs nexus-text-muted"
                             datetime="{{ $message->sent_at?->toIso8601String() }}"
                             data-tip="{{ $message->sent_at?->toDayDateTimeString() }}"
                             tabindex="0"
@@ -156,10 +156,10 @@
                 </article>
             @empty
                 <div class="nexus-empty-state">
-                    <x-icon name="o-chat-bubble-left-right" class="size-8 text-base-content/40" aria-hidden="true" />
+                    <x-icon name="o-chat-bubble-left-right" class="size-8 nexus-text-muted" aria-hidden="true" />
                     <div>
                         <h3 class="font-semibold">No transcript recorded</h3>
-                        <p class="mt-1 text-sm text-base-content/60">No interview messages have been logged for this application.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">No interview messages have been logged for this application.</p>
                     </div>
                 </div>
             @endforelse

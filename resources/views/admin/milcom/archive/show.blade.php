@@ -85,7 +85,7 @@
                                     <div class="font-semibold">
                                         <x-pw-nation-link :nation-id="$objective->target_nation_id" :label="$objective->target?->nation_name ?? 'Unknown target'" />
                                     </div>
-                                    <div class="text-xs text-base-content/55">{{ $objective->target?->alliance?->name ?? 'No alliance' }}</div>
+                                    <div class="text-xs nexus-text-muted">{{ $objective->target?->alliance?->name ?? 'No alliance' }}</div>
                                 </td>
                                 <td>{{ str($objective->priority_tier->value)->headline() }}</td>
                                 <td>
@@ -99,7 +99,7 @@
                                                 <span class="badge badge-ghost badge-xs">{{ str($assignment->status->value)->headline() }}</span>
                                             </span>
                                         @empty
-                                            <span class="text-base-content/55">No assigned nations</span>
+                                            <span class="nexus-text-muted">No assigned nations</span>
                                         @endforelse
                                     </div>
                                 </td>
@@ -119,9 +119,9 @@
             <div class="nexus-panel__header"><div><h2 class="nexus-section-title">Timeline</h2><p class="mt-1 text-sm text-base-content/65">Latest 50 updates.</p></div></div>
             <ol class="divide-y divide-base-300">
                 @forelse ($events->take(50) as $event)
-                    <li class="p-4"><div class="font-semibold">{{ $eventLabel($event->event_type) }}</div><div class="mt-1 text-xs text-base-content/55">{{ $event->occurred_at?->diffForHumans() }} · {{ str($event->source)->headline() }}</div></li>
+                    <li class="p-4"><div class="font-semibold">{{ $eventLabel($event->event_type) }}</div><div class="mt-1 text-xs nexus-text-muted">{{ $event->occurred_at?->diffForHumans() }} · {{ str($event->source)->headline() }}</div></li>
                 @empty
-                    <li class="p-4 text-sm text-base-content/60">No updates recorded.</li>
+                    <li class="p-4 text-sm nexus-text-muted">No updates recorded.</li>
                 @endforelse
             </ol>
         </aside>

@@ -23,7 +23,7 @@
         </div>
 
         @if($canViewTaxes)
-            <p class="mt-2 text-xs text-base-content/60">
+            <p class="mt-2 text-xs nexus-text-muted">
                 UTC window: {{ $taxSummary['window_starts_at']->format('M j, Y H:i') }} through {{ $taxSummary['window_ends_at']->format('M j, Y H:i') }}.
                 Uses synchronized post-Direct Deposit money-tax amounts, matching the finance ledger.
                 Latest included record: {{ $taxSummary['latest_recorded_at'] ? $taxSummary['latest_recorded_at']->format('M j, Y H:i').' UTC' : 'none in this window' }}.
@@ -89,7 +89,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Account</th>
                         <th>Status</th>
                         @foreach(\App\Services\PWHelperService::resources() as $resource)
@@ -105,7 +105,7 @@
                                 <a href="{{ route('admin.accounts.view', $account['id']) }}" class="link link-primary font-semibold">
                                     {{ $account['name'] ?: 'Account #' . $account['id'] }}
                                 </a>
-                                <div class="text-xs text-base-content/50">#{{ $account['id'] }}</div>
+                                <div class="text-xs nexus-text-muted">#{{ $account['id'] }}</div>
                             </td>
                             <td>
                                 <x-badge :value="$account['frozen'] ? 'Frozen' : 'Active'"
@@ -120,7 +120,7 @@
                     @empty
                         <tr>
                             <td colspan="{{ count(\App\Services\PWHelperService::resources()) + 3 }}"
-                                class="text-center text-base-content/50 py-6">
+                                class="text-center nexus-text-muted py-6">
                                 No accounts found for this nation.
                             </td>
                         </tr>

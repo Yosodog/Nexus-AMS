@@ -102,7 +102,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-6 text-center text-sm text-base-content/60">No payroll grades configured.</td>
+                            <td colspan="6" class="py-6 text-center text-sm nexus-text-muted">No payroll grades configured.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -135,7 +135,7 @@
                         <tr>
                             <td>
                                 <div class="font-semibold">{{ $member->nation?->leader_name ?? 'Nation #'.$member->nation_id }}</div>
-                                <div class="text-sm text-base-content/60">{{ $member->nation?->nation_name ?? 'Unknown nation' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $member->nation?->nation_name ?? 'Unknown nation' }}</div>
                             </td>
                             <td>{{ $allianceName ?? ($allianceId ? 'Alliance #'.$allianceId : '—') }}</td>
                             <td>{{ $grade?->name ?? '—' }}</td>
@@ -174,7 +174,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-sm text-base-content/60">No payroll members configured.</td>
+                            <td colspan="7" class="py-6 text-center text-sm nexus-text-muted">No payroll members configured.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -193,7 +193,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold">Add Payroll Grade</h3>
-                            <p class="text-sm text-base-content/60">Create a reusable weekly amount for payroll members.</p>
+                            <p class="text-sm nexus-text-muted">Create a reusable weekly amount for payroll members.</p>
                         </div>
                         <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createGradeModal').close()" aria-label="Close grade creation dialog">✕</button>
                     </div>
@@ -231,7 +231,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold">Add Payroll Member</h3>
-                            <p class="text-sm text-base-content/60">Attach a nation to one of the configured payroll grades.</p>
+                            <p class="text-sm nexus-text-muted">Attach a nation to one of the configured payroll grades.</p>
                         </div>
                         <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createMemberModal').close()" aria-label="Close payroll member dialog">✕</button>
                     </div>
@@ -278,7 +278,7 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h3 class="text-lg font-semibold">Edit {{ $grade->name }}</h3>
-                                <p class="text-sm text-base-content/60">Update the weekly amount or disable this grade.</p>
+                                <p class="text-sm nexus-text-muted">Update the weekly amount or disable this grade.</p>
                             </div>
                             <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editGradeModal-{{ $grade->id }}').close()" aria-label="Close grade editing dialog">✕</button>
                         </div>
@@ -343,7 +343,7 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h3 class="text-lg font-semibold">Edit Nation #{{ $member->nation_id }}</h3>
-                                <p class="text-sm text-base-content/60">Change the assigned grade or disable this payroll member.</p>
+                                <p class="text-sm nexus-text-muted">Change the assigned grade or disable this payroll member.</p>
                             </div>
                             <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('editMemberModal-{{ $member->id }}').close()" aria-label="Close payroll member editing dialog">✕</button>
                         </div>

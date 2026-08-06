@@ -57,7 +57,7 @@
                         <a href="{{ $topNation['nation_url'] }}" target="_blank" rel="noopener noreferrer" class="mt-2 block truncate text-xl font-bold text-primary hover:underline">
                             {{ $topNation['nation_name'] }}
                         </a>
-                        <p class="mt-1 text-sm text-base-content/60">{{ $topNation['leader_name'] }} · {{ number_format($topNation['cities']) }} cities</p>
+                        <p class="mt-1 text-sm nexus-text-muted">{{ $topNation['leader_name'] }} · {{ number_format($topNation['cities']) }} cities</p>
                     </div>
                     <div class="sm:text-right">
                         <p class="nexus-stat-label">Net per day</p>
@@ -111,10 +111,10 @@
 
         @if(empty($rows))
             <div class="nexus-empty-state">
-                <x-icon name="o-chart-bar" class="size-7 text-base-content/40" aria-hidden="true" />
+                <x-icon name="o-chart-bar" class="size-7 nexus-text-muted" aria-hidden="true" />
                 <div>
                     <p class="font-semibold">No profitability snapshots available</p>
-                    <p class="mt-1 text-sm text-base-content/60">The ranking will appear after profitability data is refreshed.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">The ranking will appear after profitability data is refreshed.</p>
                 </div>
             </div>
         @else
@@ -145,7 +145,7 @@
                                 <td><span class="nexus-status nexus-status--neutral">#{{ $row['rank'] }}</span></td>
                                 <td>
                                     <span class="block font-semibold">{{ $row['leader_name'] }}</span>
-                                    <span class="block text-xs text-base-content/55">Nation owner</span>
+                                    <span class="block text-xs nexus-text-muted">Nation owner</span>
                                 </td>
                                 <td>
                                     <a href="{{ $row['nation_url'] }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline">{{ $row['nation_name'] }}</a>

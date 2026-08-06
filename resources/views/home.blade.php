@@ -113,7 +113,7 @@
                                 decoding="async"
                             >
                         @else
-                            <span class="font-bold text-base-content/55" aria-hidden="true">
+                            <span class="font-bold nexus-text-muted" aria-hidden="true">
                                 {{ \Illuminate\Support\Str::of($name)->substr(0, 2)->upper() }}
                             </span>
                         @endif
@@ -151,7 +151,7 @@
 
                 @if($discordLink || $forumLink || $wikiLink)
                     <nav class="mt-7 border-t border-base-300 pt-5" aria-label="Alliance links">
-                        <p class="text-xs font-bold text-base-content/55">Alliance links</p>
+                        <p class="text-xs font-bold nexus-text-muted">Alliance links</p>
                         <div class="mt-3 flex flex-wrap gap-x-5 gap-y-3">
                             @if($discordLink)
                                 <a

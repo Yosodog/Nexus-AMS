@@ -75,7 +75,7 @@
                             </option>
                         @endforeach
                     </select>
-                    <p class="text-sm text-base-content/60">Changing the target clears conditions that do not apply to the new target.</p>
+                    <p class="text-sm nexus-text-muted">Changing the target clears conditions that do not apply to the new target.</p>
                     @error('target_type')<p class="text-sm text-error">{{ $message }}</p>@enderror
                 </div>
 
@@ -104,7 +104,7 @@
                         >
                         <span>
                             <span class="block font-semibold">Enable scheduled evaluation</span>
-                            <span class="mt-1 block text-sm text-base-content/60">Activation always shows the current impact before it is confirmed.</span>
+                            <span class="mt-1 block text-sm nexus-text-muted">Activation always shows the current impact before it is confirmed.</span>
                         </span>
                     </label>
                 </div>
@@ -122,7 +122,7 @@
                         >{{ old('admin_notes', $rule->admin_notes) }}</textarea>
                         @error('admin_notes')<span class="text-sm text-error">{{ $message }}</span>@enderror
                     </label>
-                    <p class="mt-1 text-sm text-base-content/60">Only admins can see these notes.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">Only admins can see these notes.</p>
                 </div>
             </div>
         </section>
@@ -211,7 +211,7 @@
             <div>
                 <p class="nexus-kicker">Review</p>
                 <h2 id="audit-review-heading" class="audit-rule-section__title">Rule impact</h2>
-                <p class="mt-2 text-sm text-base-content/60">The summary updates as you build. Test against current members whenever you want.</p>
+                <p class="mt-2 text-sm nexus-text-muted">The summary updates as you build. Test against current members whenever you want.</p>
             </div>
 
             <div class="audit-rule-review__block">
@@ -223,7 +223,7 @@
                 <div class="flex items-end justify-between gap-3">
                     <div>
                         <p class="text-sm font-semibold">Estimated findings</p>
-                        <p class="mt-1 text-sm text-base-content/60" data-audit-preview-status>Not tested yet</p>
+                        <p class="mt-1 text-sm nexus-text-muted" data-audit-preview-status>Not tested yet</p>
                     </div>
                     <strong class="text-2xl tabular-nums" data-audit-match-count>—</strong>
                 </div>
@@ -256,7 +256,7 @@
 <dialog class="modal" data-audit-impact-dialog aria-labelledby="audit-impact-title">
     <div class="modal-box max-w-2xl">
         <h2 id="audit-impact-title" class="text-2xl font-semibold">Confirm rule impact</h2>
-        <p class="mt-2 text-base text-base-content/60" data-audit-dialog-copy>
+        <p class="mt-2 text-base nexus-text-muted" data-audit-dialog-copy>
             Review the current impact before this rule is activated.
         </p>
 
@@ -265,7 +265,7 @@
                 <span class="font-semibold">Findings that will open now</span>
                     <strong class="text-2xl tabular-nums" data-audit-impact-count>—</strong>
                 </div>
-            <div data-audit-impact-reset-notice class="text-sm text-base-content/60"></div>
+            <div data-audit-impact-reset-notice class="text-sm nexus-text-muted"></div>
             <div data-audit-impact-warnings hidden></div>
             <div data-audit-impact-samples hidden></div>
         </div>

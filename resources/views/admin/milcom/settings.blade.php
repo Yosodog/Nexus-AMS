@@ -44,17 +44,17 @@
                         <label class="block">
                             <span class="label px-0">Default war room forum ID</span>
                             <input type="text" inputmode="numeric" name="forum_id" value="{{ old('forum_id', data_get($settings, 'forum_id')) }}" class="input w-full" placeholder="123456789012345678" autocomplete="off">
-                            <span class="mt-1 block text-xs text-base-content/60">Used when a plan or counter does not have its own forum.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">Used when a plan or counter does not have its own forum.</span>
                         </label>
                         <label class="block">
                             <span class="label px-0">Defense role ID</span>
                             <input type="text" inputmode="numeric" name="defense_role_id" value="{{ old('defense_role_id', data_get($settings, 'defense_role_id')) }}" class="input w-full" placeholder="123456789012345678" autocomplete="off">
-                            <span class="mt-1 block text-xs text-base-content/60">The bot can mention this role only when it is on the allowlist.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">The bot can mention this role only when it is on the allowlist.</span>
                         </label>
                         <label class="block md:col-span-2">
                             <span class="label px-0">Forum tag IDs (optional)</span>
                             <input type="text" name="forum_tag_ids" value="{{ $forumTags }}" class="input w-full" placeholder="123456789012345678, 234567890123456789" autocomplete="off">
-                            <span class="mt-1 block text-xs text-base-content/60">Separate IDs with commas. Milcom uses only tags that exist in the selected forum.</span>
+                            <span class="mt-1 block text-xs nexus-text-muted">Separate IDs with commas. Milcom uses only tags that exist in the selected forum.</span>
                         </label>
                     </div>
                 </section>
@@ -106,7 +106,7 @@
                 </section>
 
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <p class="mr-auto text-sm text-base-content/60">These changes apply only to future Discord rooms.</p>
+                    <p class="mr-auto text-sm nexus-text-muted">These changes apply only to future Discord rooms.</p>
                     <a href="{{ url('/admin/milcom') }}" class="btn btn-ghost">Cancel</a>
                     <button type="submit" class="btn btn-primary">
                         <x-icon name="o-check" class="size-5" aria-hidden="true" />
@@ -129,7 +129,7 @@
                                 $integrationStatus = (string) data_get($health, $integration['key'].'.status', 'unknown');
                             @endphp
                             <div class="flex items-center justify-between gap-3 p-4">
-                                <div><dt class="font-semibold">{{ $integration['label'] }}</dt><dd class="mt-1 text-xs text-base-content/55">{{ data_get($health, $integration['key'].'.detail', 'No status reported') }}</dd></div>
+                                <div><dt class="font-semibold">{{ $integration['label'] }}</dt><dd class="mt-1 text-xs nexus-text-muted">{{ data_get($health, $integration['key'].'.detail', 'No status reported') }}</dd></div>
                                 <span class="nexus-status {{ $healthTone($integrationStatus) }} shrink-0">{{ str($integrationStatus)->headline() }}</span>
                             </div>
                         @endforeach

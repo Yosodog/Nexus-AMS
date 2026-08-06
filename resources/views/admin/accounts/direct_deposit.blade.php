@@ -14,7 +14,7 @@
                         @cannot('manage-dd') disabled @endcannot
                         required
                     >
-                    <span class="block text-xs text-base-content/60">
+                    <span class="block text-xs nexus-text-muted">
                         The in-game tax bracket ID members must be assigned to. Must be 100% money and 100% resource taxes.
                     </span>
                 </label>
@@ -29,7 +29,7 @@
                         @cannot('manage-dd') disabled @endcannot
                         required
                     >
-                    <span class="block text-xs text-base-content/60">
+                    <span class="block text-xs nexus-text-muted">
                         Used when a member unenrolls and their original bracket cannot be restored.
                     </span>
                 </label>
@@ -83,7 +83,7 @@
             <div class="overflow-x-auto">
                 <table class="table table-sm table-zebra" data-sortable="false">
                     <thead>
-                        <tr class="text-base-content/60">
+                        <tr class="nexus-text-muted">
                             @can('manage-dd')
                                 <th class="w-8">
                                     <input type="checkbox" id="check-all" class="checkbox checkbox-sm checkbox-primary">
@@ -133,7 +133,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Nation ID</th>
                         <th>Account</th>
                         <th>User</th>

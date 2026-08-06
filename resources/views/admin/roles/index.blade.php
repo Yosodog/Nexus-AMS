@@ -25,7 +25,7 @@
         <x-slot:title>
             <div>
                 Role Directory
-                <div class="text-sm font-normal text-base-content/60">All role definitions with permission coverage and member counts.</div>
+                <div class="text-sm font-normal nexus-text-muted">All role definitions with permission coverage and member counts.</div>
             </div>
         </x-slot:title>
 
@@ -45,14 +45,14 @@
                         <tr>
                             <td>
                                 <div class="font-semibold text-base-content">{{ Str::headline($role->name) }}</div>
-                                <div class="text-sm text-base-content/60">{{ $role->permissions->count() }} permission{{ $role->permissions->count() === 1 ? '' : 's' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $role->permissions->count() }} permission{{ $role->permissions->count() === 1 ? '' : 's' }}</div>
                             </td>
                             <td>
                                 <div class="flex flex-wrap gap-2">
                                     @forelse($role->permissions as $permission)
                                         <x-badge :value="Str::headline($permission->permission)" class="badge-primary badge-outline badge-sm" />
                                     @empty
-                                        <span class="text-sm text-base-content/50">No permissions assigned</span>
+                                        <span class="text-sm nexus-text-muted">No permissions assigned</span>
                                     @endforelse
                                 </div>
                             </td>
@@ -83,7 +83,7 @@
                                         </form>
                                     </div>
                                 @else
-                                    <span class="text-sm text-base-content/50">Locked</span>
+                                    <span class="text-sm nexus-text-muted">Locked</span>
                                 @endif
                             </td>
                         </tr>

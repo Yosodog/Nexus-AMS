@@ -107,7 +107,7 @@
                             ])>
                                 {{ $formatNumber($loanStats['pending']) }} pending
                             </span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -133,7 +133,7 @@
                             ])>
                                 {{ $formatNumber($grantStats['pending']) }} pending
                             </span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -151,7 +151,7 @@
                         </span>
                         <span class="flex items-center justify-between gap-3 sm:justify-end">
                             <span class="nexus-status nexus-status--neutral">Open queue</span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -180,7 +180,7 @@
                             ])>
                                 {{ $formatNumber($activeWars) }} active
                             </span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -206,7 +206,7 @@
                             ])>
                                 {{ $formatNumber($mmrReviewCount) }} to review
                             </span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -232,7 +232,7 @@
                             ])>
                                 {{ $formatNumber($powerGapCount) }} gaps
                             </span>
-                            <x-icon name="o-chevron-right" class="size-4 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                            <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
                 @endif
@@ -240,28 +240,28 @@
                 @if ($canViewWarAid)
                     <a href="{{ route('admin.war-aid') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">War aid</span><span class="ml-2 text-sm text-base-content/65">Review support requests.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </a>
                 @endif
 
                 @if ($canViewRebuilding)
                     <a href="{{ route('admin.rebuilding.index') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">Rebuilding</span><span class="ml-2 text-sm text-base-content/65">Review rebuilding requests.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </a>
                 @endif
 
                 @if ($canViewRaids)
                     <a href="{{ route('admin.raids.index') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">Raid operations</span><span class="ml-2 text-sm text-base-content/65">Open raid administration.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </a>
                 @endif
 
                 @if ($canViewSpies)
                     <a href="{{ route('admin.spy-campaigns.index') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">Spy campaigns</span><span class="ml-2 text-sm text-base-content/65">Open campaign coordination.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 text-base-content/40 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </a>
                 @endif
             </div>
@@ -323,7 +323,7 @@
                     <div class="min-w-0">
                         <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3">
                             <h3 class="font-semibold">Resource exposure</h3>
-                            <span class="text-xs text-base-content/60">Latest nation sign-ins</span>
+                            <span class="text-xs nexus-text-muted">Latest nation sign-ins</span>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="nexus-table" data-sortable="false">
@@ -450,9 +450,9 @@
                                                     {{ $war->attacker?->leader_name ?? 'Unknown attacker' }}
                                                 </a>
                                                 @if ($attIsMember)
-                                                    <span class="text-xs text-base-content/55">· alliance</span>
+                                                    <span class="text-xs nexus-text-muted">· alliance</span>
                                                 @endif
-                                                <span class="block text-xs text-base-content/55">
+                                                <span class="block text-xs nexus-text-muted">
                                                     vs
                                                     <a href="https://politicsandwar.com/nation/id={{ $war->def_id }}" target="_blank" rel="noopener" class="hover:text-primary hover:underline">
                                                         {{ $war->defender?->leader_name ?? 'Unknown defender' }}
@@ -464,14 +464,14 @@
                                             </td>
                                             <td>
                                                 <span class="font-medium">{{ \Illuminate\Support\Str::headline($war->war_type) }}</span>
-                                                <span class="block text-xs text-base-content/55">{{ $formatNumber($war->turns_left) }} turns left</span>
+                                                <span class="block text-xs nexus-text-muted">{{ $formatNumber($war->turns_left) }} turns left</span>
                                             </td>
                                             <td class="text-right tabular-nums">
                                                 {{ $formatNumber($war->att_resistance) }} / {{ $formatNumber($war->def_resistance) }}
                                             </td>
                                             <td class="text-right">
                                                 <span class="block font-medium">{{ $formatNumber($infraDestroyed) }} infra</span>
-                                                <span class="block text-xs text-base-content/55">{{ $formatMoney($moneyLooted) }} loot</span>
+                                                <span class="block text-xs nexus-text-muted">{{ $formatMoney($moneyLooted) }} loot</span>
                                             </td>
                                             <td class="text-right">
                                                 <a href="https://politicsandwar.com/nation/war/timeline/war={{ $war->id }}" target="_blank" rel="noopener" class="link link-primary whitespace-nowrap text-sm font-semibold">
@@ -481,7 +481,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="py-8 text-center text-base-content/60">No active alliance wars in this snapshot.</td>
+                                            <td colspan="5" class="py-8 text-center nexus-text-muted">No active alliance wars in this snapshot.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -513,7 +513,7 @@
 
                     <div class="{{ $canViewMmr ? 'pt-5' : '' }}">
                         <h3 class="font-semibold">Force capacity</h3>
-                        <p class="mt-1 text-sm text-base-content/60">Current totals against theoretical alliance capacity.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Current totals against theoretical alliance capacity.</p>
                         <dl class="mt-4 divide-y divide-base-300">
                             @foreach ($militaryTotals as $unit => $total)
                                 @php
@@ -529,7 +529,7 @@
                                     </div>
                                     <div class="mt-2 flex items-center gap-3">
                                         <progress class="progress progress-info h-1.5 flex-1" value="{{ min(100, max(0, $readiness)) }}" max="100" aria-label="{{ ucfirst($unit) }} readiness {{ $formatNumber($readiness, 1) }} percent"></progress>
-                                        <span class="w-12 text-right text-xs tabular-nums text-base-content/60">{{ $formatNumber($readiness, 1) }}%</span>
+                                        <span class="w-12 text-right text-xs tabular-nums nexus-text-muted">{{ $formatNumber($readiness, 1) }}%</span>
                                     </div>
                                 </div>
                             @endforeach
@@ -543,7 +543,7 @@
     @unless ($hasOperationalOverview)
         <section class="nexus-panel" aria-labelledby="restricted-overview-title">
             <div class="nexus-empty-state">
-                <x-icon name="o-shield-check" class="size-8 text-base-content/40" aria-hidden="true" />
+                <x-icon name="o-shield-check" class="size-8 nexus-text-muted" aria-hidden="true" />
                 <div>
                     <h2 id="restricted-overview-title" class="text-lg font-semibold">No operational summary available</h2>
                     <p class="mt-1 text-sm text-base-content/65">

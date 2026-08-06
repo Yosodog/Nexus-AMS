@@ -5,7 +5,7 @@
         <div class="rounded-lg border border-primary/30 bg-base-100 p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="space-y-3">
-                    <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
+                    <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide nexus-text-muted">
                         <span class="badge badge-outline">API</span>
                         <span class="badge badge-outline">User access</span>
                         <span class="badge badge-outline">v1</span>
@@ -42,7 +42,7 @@
                     <div class="rounded-box bg-base-200 p-3 font-mono text-xs text-base-content/80">
                         Authorization: Bearer &lt;token&gt;
                     </div>
-                    <p class="text-xs text-base-content/60">Requests without a valid token return 401.</p>
+                    <p class="text-xs nexus-text-muted">Requests without a valid token return 401.</p>
                 </div>
             </x-utils.card>
 
@@ -52,7 +52,7 @@
                     <div class="rounded-box bg-base-200 p-3 font-mono text-xs text-base-content/80 break-all">
                         {{ url('/api/v1') }}
                     </div>
-                    <p class="text-xs text-base-content/60">Set Accept: application/json for consistent responses.</p>
+                    <p class="text-xs nexus-text-muted">Set Accept: application/json for consistent responses.</p>
                 </div>
             </x-utils.card>
         </div>
@@ -177,7 +177,7 @@
      -H "Accept: application/json" \
      {{ url('/api/v1/accounts') }}</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">Replace YOUR_TOKEN with the token created in Settings.</p>
+                    <p class="text-xs nexus-text-muted">Replace YOUR_TOKEN with the token created in Settings.</p>
                 </div>
             </x-utils.card>
 
@@ -190,7 +190,7 @@
     "deposit_code": "ABC123"
 }</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">The deposit code stays the same while a request is pending.</p>
+                    <p class="text-xs nexus-text-muted">The deposit code stays the same while a request is pending.</p>
                 </div>
             </x-utils.card>
         </div>
@@ -251,7 +251,7 @@ Accept: application/json
   }
 }</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">The simulator is rate-limited; reduce iterations if you hit throttles.</p>
+                    <p class="text-xs nexus-text-muted">The simulator is rate-limited; reduce iterations if you hit throttles.</p>
                 </div>
             </x-utils.card>
 
@@ -294,7 +294,7 @@ Accept: application/json
   ]
 }</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">Response values are per simulated battle, not per war.</p>
+                    <p class="text-xs nexus-text-muted">Response values are per simulated battle, not per war.</p>
                 </div>
             </x-utils.card>
         </div>
@@ -314,7 +314,7 @@ Accept: application/json
 Authorization: Bearer YOUR_TOKEN
 Accept: application/json</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">
+                    <p class="text-xs nexus-text-muted">
                         Standard personal access token authentication is supported, so user tools and the Discord bot can both call this endpoint with a bearer token.
                     </p>
                 </div>
@@ -369,10 +369,10 @@ Accept: application/json</code></pre>
   "game_date": "2126-09-23"
 }</code></pre>
                     </div>
-                    <p class="text-xs text-base-content/60">
+                    <p class="text-xs nexus-text-muted">
                         The endpoint does not read from the stored profitability snapshot table for its calculation. It calculates fresh, then optionally persists the result for eligible alliance members.
                     </p>
-                    <p class="text-xs text-base-content/60">
+                    <p class="text-xs nexus-text-muted">
                         If market prices are unavailable, the endpoint returns HTTP 503 with <code>PROFITABILITY_PRICING_UNAVAILABLE</code>. If the game-date, radiation, color, or treasure inputs are unavailable or stale, it returns HTTP 503 with <code>PROFITABILITY_CONTEXT_UNAVAILABLE</code>.
                     </p>
                 </div>

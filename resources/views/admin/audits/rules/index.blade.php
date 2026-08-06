@@ -35,7 +35,7 @@
         <div class="nexus-panel__header">
             <div>
                 <h2 id="rule-library-heading" class="nexus-section-title">Rule library</h2>
-                <p class="mt-1 text-sm text-base-content/60">{{ number_format($rules->count()) }} matching {{ \Illuminate\Support\Str::plural('rule', $rules->count()) }}</p>
+                <p class="mt-1 text-sm nexus-text-muted">{{ number_format($rules->count()) }} matching {{ \Illuminate\Support\Str::plural('rule', $rules->count()) }}</p>
             </div>
         </div>
 
@@ -119,7 +119,7 @@
                     <tr>
                         <td class="max-w-prose whitespace-normal">
                             <div class="font-semibold">{{ $rule->name }}</div>
-                            <p class="mt-1 line-clamp-2 text-sm text-base-content/60">{{ $rule->plain_language_summary }}</p>
+                            <p class="mt-1 line-clamp-2 text-sm nexus-text-muted">{{ $rule->plain_language_summary }}</p>
                         </td>
                         <td>
                             <div class="flex flex-wrap gap-2">
@@ -130,7 +130,7 @@
                         </td>
                         <td>
                             <span class="badge {{ $healthBadge }} badge-soft">{{ $rule->last_evaluation_status?->label() ?? 'Never run' }}</span>
-                            <div class="mt-2 text-sm text-base-content/60">
+                            <div class="mt-2 text-sm nexus-text-muted">
                                 {{ $rule->last_evaluated_at?->diffForHumans() ?? 'No evaluation yet' }}
                             </div>
                         </td>
@@ -161,7 +161,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="py-8 text-center text-base-content/60">No rules match these filters.</td>
+                        <td colspan="5" class="py-8 text-center nexus-text-muted">No rules match these filters.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -173,7 +173,7 @@
                 <article class="grid gap-4 p-4">
                     <div>
                         <h3 class="text-xl font-semibold">{{ $rule->name }}</h3>
-                        <p class="mt-2 text-sm leading-5 text-base-content/60">{{ $rule->plain_language_summary }}</p>
+                        <p class="mt-2 text-sm leading-5 nexus-text-muted">{{ $rule->plain_language_summary }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <span class="badge badge-outline">{{ ucfirst($rule->target_type->value) }}</span>
@@ -181,8 +181,8 @@
                         <span class="badge {{ $rule->enabled ? 'badge-success badge-soft' : 'badge-ghost' }}">{{ $rule->enabled ? 'Enabled' : 'Disabled' }}</span>
                     </div>
                     <dl class="grid grid-cols-2 gap-3 text-sm">
-                        <div><dt class="text-base-content/60">Health</dt><dd class="mt-1 font-semibold">{{ $rule->last_evaluation_status?->label() ?? 'Never run' }}</dd></div>
-                        <div><dt class="text-base-content/60">Open findings</dt><dd class="mt-1 font-semibold tabular-nums">{{ number_format($rule->results_count) }}</dd></div>
+                        <div><dt class="nexus-text-muted">Health</dt><dd class="mt-1 font-semibold">{{ $rule->last_evaluation_status?->label() ?? 'Never run' }}</dd></div>
+                        <div><dt class="nexus-text-muted">Open findings</dt><dd class="mt-1 font-semibold tabular-nums">{{ number_format($rule->results_count) }}</dd></div>
                     </dl>
                     <div class="grid grid-cols-2 gap-2">
                         <a href="{{ route('admin.audits.rules.violations', $rule) }}" class="btn btn-outline">Findings</a>
@@ -192,7 +192,7 @@
                     </div>
                 </article>
             @empty
-                <p class="p-6 text-center text-base-content/60">No rules match these filters.</p>
+                <p class="p-6 text-center nexus-text-muted">No rules match these filters.</p>
             @endforelse
         </div>
     </section>

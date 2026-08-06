@@ -50,13 +50,13 @@
                 </div>
 
                 @hasSection('support')
-                    <p class="mt-7 text-sm leading-6 text-base-content/60">@yield('support')</p>
+                    <p class="mt-7 text-sm leading-6 nexus-text-muted">@yield('support')</p>
                 @endif
             </section>
         </div>
     </main>
 
-    <footer class="border-t border-base-300 px-4 py-5 text-center text-xs text-base-content/55">
+    <footer class="border-t border-base-300 px-4 py-5 text-center text-xs nexus-text-muted">
         {{ config('app.name') }} · Safe, permission-aware alliance operations
     </footer>
 </body>

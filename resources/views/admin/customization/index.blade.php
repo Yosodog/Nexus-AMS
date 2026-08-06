@@ -44,10 +44,10 @@
                             </span>
                         </td>
                         <td data-order="{{ $page->updated_at?->timestamp ?? 0 }}">
-                            <div class="text-sm text-base-content/60">
+                            <div class="text-sm nexus-text-muted">
                                 Updated {{ $page->updated_at?->diffForHumans() ?? 'recently' }}
                             </div>
-                            <div class="text-sm {{ $publishedAt ? 'text-base-content' : 'text-base-content/60' }}">
+                            <div class="text-sm {{ $publishedAt ? 'text-base-content' : 'nexus-text-muted' }}">
                                 {{ $publishedAt ? 'Published ' . $publishedAt->diffForHumans() : 'Never published' }}
                             </div>
                         </td>
@@ -60,7 +60,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="py-6 text-center text-sm text-base-content/60">No custom pages have been configured yet.</td>
+                        <td colspan="4" class="py-6 text-center text-sm nexus-text-muted">No custom pages have been configured yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

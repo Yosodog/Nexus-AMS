@@ -34,7 +34,7 @@
                 <div class="overflow-x-auto max-h-64 overflow-y-auto">
                     <table class="table table-sm table-zebra" data-sortable="false">
                         <thead>
-                            <tr class="text-base-content/60">
+                            <tr class="nexus-text-muted">
                                 <th>Date</th>
                                 <th>Total</th>
                             </tr>

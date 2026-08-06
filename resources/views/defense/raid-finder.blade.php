@@ -5,7 +5,7 @@
         <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Offense prep</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Offense prep</p>
                     <h1 class="text-3xl font-bold">Raid Finder</h1>
                     <p class="text-sm text-base-content/70">Fetch fresh raid targets by nation ID and sort on the fly.</p>
                 </div>

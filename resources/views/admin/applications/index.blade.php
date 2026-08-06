@@ -24,7 +24,7 @@
                 <h2 id="open-applications-title" class="nexus-section-title">Review queue</h2>
                 <p class="nexus-body-muted mt-1">Pending applications are ordered oldest first.</p>
             </div>
-            <span class="text-sm tabular-nums text-base-content/60">{{ number_format($openApplications->count()) }} open</span>
+            <span class="text-sm tabular-nums nexus-text-muted">{{ number_format($openApplications->count()) }} open</span>
         </div>
 
         @forelse($openApplications as $application)
@@ -44,8 +44,8 @@
 
                 <div class="min-w-0 text-sm">
                     <p class="truncate font-medium text-base-content">{{ $application->discord_username }}</p>
-                    <p class="truncate text-base-content/60">Discord {{ $application->discord_user_id }}</p>
-                    <p class="mt-1 text-xs text-base-content/55">
+                    <p class="truncate nexus-text-muted">Discord {{ $application->discord_user_id }}</p>
+                    <p class="mt-1 text-xs nexus-text-muted">
                         Submitted
                         <time
                             datetime="{{ $application->created_at?->toIso8601String() }}"
@@ -68,7 +68,7 @@
                 <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
                 <div>
                     <h3 class="font-semibold">Application queue is clear</h3>
-                    <p class="mt-1 text-sm text-base-content/60">There are no pending applications to review.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">There are no pending applications to review.</p>
                 </div>
             </div>
         @endforelse
@@ -84,7 +84,7 @@
 
         @if($recentApplications->isEmpty())
             <div class="nexus-empty-state">
-                <p class="text-sm text-base-content/60">No application history is available yet.</p>
+                <p class="text-sm nexus-text-muted">No application history is available yet.</p>
             </div>
         @else
             <div class="nexus-table-shell rounded-none border-0">
@@ -118,7 +118,7 @@
                                 </td>
                                 <td>
                                     <span class="block">{{ $application->discord_username }}</span>
-                                    <span class="block text-xs text-base-content/55">{{ $application->discord_user_id }}</span>
+                                    <span class="block text-xs nexus-text-muted">{{ $application->discord_user_id }}</span>
                                 </td>
                                 <td><span class="nexus-status {{ $statusClass }}">{{ ucfirst(strtolower($status)) }}</span></td>
                                 <td>
@@ -147,11 +147,11 @@
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
             <span>
                 <span class="block font-semibold">Discord and alliance settings</span>
-                <span class="mt-0.5 block text-sm text-base-content/60">Roles, interview routing, alliance position, and approval announcements.</span>
+                <span class="mt-0.5 block text-sm nexus-text-muted">Roles, interview routing, alliance position, and approval announcements.</span>
             </span>
             <span class="flex items-center gap-2">
                 <span class="nexus-status {{ $canManage ? 'nexus-status--neutral' : 'nexus-status--warning' }}">{{ $canManage ? 'Configurable' : 'View only' }}</span>
-                <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                <x-icon name="o-chevron-down" class="size-4 nexus-text-muted" aria-hidden="true" />
             </span>
         </summary>
 

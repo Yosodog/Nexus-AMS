@@ -24,7 +24,7 @@
                 @endforeach
             </p>
         @else
-            <p class="text-sm text-base-content/60">No distributions yet.</p>
+            <p class="text-sm nexus-text-muted">No distributions yet.</p>
         @endif
 
         @if ($gcRecentDistributions->isNotEmpty())
@@ -55,8 +55,8 @@
             </details>
         @endif
 
-        <p class="text-xs text-base-content/60">Next distribution: tomorrow ~03:00 UTC.</p>
-        <p class="text-xs text-base-content/60">Contact an admin if you need to leave the program.</p>
+        <p class="text-xs nexus-text-muted">Next distribution: tomorrow ~03:00 UTC.</p>
+        <p class="text-xs nexus-text-muted">Contact an admin if you need to leave the program.</p>
 
     @elseif ($isPaused)
         <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
@@ -106,7 +106,7 @@
             </details>
         @endif
 
-        <p class="text-xs text-base-content/60">Contact an admin if you need to leave the program.</p>
+        <p class="text-xs nexus-text-muted">Contact an admin if you need to leave the program.</p>
 
     @else
         <div class="rounded-xl bg-info/10 border border-info/30 p-4">

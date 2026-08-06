@@ -91,25 +91,25 @@
                         <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener" class="mt-1 block w-fit font-medium text-primary hover:underline">
                             {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
                         </a>
-                        <p class="text-sm text-base-content/60">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
+                        <p class="text-sm nexus-text-muted">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
                     @else
-                        <p class="mt-1 text-sm text-base-content/60">Unknown nation · Nation #{{ $request->nation_id }}</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Unknown nation · Nation #{{ $request->nation_id }}</p>
                     @endif
-                    <p class="mt-1 text-xs text-base-content/55">
+                    <p class="mt-1 text-xs nexus-text-muted">
                         Requested <time datetime="{{ $request->created_at->toIso8601String() }}" class="tooltip tooltip-bottom cursor-help" data-tip="{{ $request->created_at->toDayDateTimeString() }}" tabindex="0" aria-label="Requested {{ $request->created_at->diffForHumans() }}, {{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
                         · Account {{ $request->account?->name ?? '#'.$request->account_id }}
                     </p>
                 </div>
 
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Payout on approval</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">Payout on approval</p>
                     <div class="mt-2 flex flex-wrap gap-2">
                         @forelse($payoutResources as $resource => $amount)
                             <span class="nexus-status nexus-status--neutral">
                                 {{ Str::headline($resource) }} {{ $resource === 'money' ? '$'.number_format($amount, 0) : number_format($amount, 0) }}
                             </span>
                         @empty
-                            <span class="text-sm text-base-content/60">No payout configured</span>
+                            <span class="text-sm nexus-text-muted">No payout configured</span>
                         @endforelse
                     </div>
                 </div>
@@ -131,7 +131,7 @@
                     @elseif($isOwnRequest)
                         <span class="text-sm">
                             <span class="nexus-status nexus-status--error">Self-decision blocked</span>
-                            <span class="mt-1 block text-base-content/60">Another reviewer must decide.</span>
+                            <span class="mt-1 block nexus-text-muted">Another reviewer must decide.</span>
                         </span>
                     @else
                         <span class="nexus-status nexus-status--neutral">Decision unavailable</span>
@@ -143,7 +143,7 @@
                 <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
                 <div>
                     <h3 class="font-semibold">Grant queue is clear</h3>
-                    <p class="mt-1 text-sm text-base-content/60">There are no pending custom grant requests.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">There are no pending custom grant requests.</p>
                 </div>
             </div>
         @endforelse
@@ -178,13 +178,13 @@
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
                     <span class="block font-semibold">Manual grant disbursement</span>
-                    <span class="mt-0.5 block text-sm text-base-content/60">Immediately sends a grant and bypasses one-time and pending-request checks.</span>
+                    <span class="mt-0.5 block text-sm nexus-text-muted">Immediately sends a grant and bypasses one-time and pending-request checks.</span>
                 </span>
                 <span class="flex items-center gap-2">
                     <span class="nexus-status {{ $grantApprovalsEnabled ? 'nexus-status--warning' : 'nexus-status--neutral' }}">
                         {{ $grantApprovalsEnabled ? 'Elevated action' : 'Paused' }}
                     </span>
-                    <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                    <x-icon name="o-chevron-down" class="size-4 nexus-text-muted" aria-hidden="true" />
                 </span>
             </summary>
             @if($grantApprovalsEnabled)
@@ -225,7 +225,7 @@
                 <h2 id="grant-programs-title" class="nexus-section-title">Grant definitions</h2>
                 <p class="nexus-body-muted mt-1">Payouts and eligibility rules used by member applications.</p>
             </div>
-            <span class="text-sm tabular-nums text-base-content/60">{{ number_format($grants->count()) }} programs</span>
+            <span class="text-sm tabular-nums nexus-text-muted">{{ number_format($grants->count()) }} programs</span>
         </div>
         <div class="overflow-x-auto">
             <table class="nexus-table" data-sortable="false">
@@ -244,7 +244,7 @@
                         <tr>
                             <td>
                                 <div class="font-semibold">{{ $grant->name }}</div>
-                                <div class="text-sm text-base-content/50">{{ Str::limit($grant->description, 72) }}</div>
+                                <div class="text-sm nexus-text-muted">{{ Str::limit($grant->description, 72) }}</div>
                             </td>
                             <td>
                                 <span class="nexus-status {{ $grant->is_enabled ? 'nexus-status--success' : 'nexus-status--neutral' }}">
@@ -263,7 +263,7 @@
                                         @endif
                                     </div>
                                 @else
-                                    <span class="text-base-content/50 text-sm">No custom requirements</span>
+                                    <span class="nexus-text-muted text-sm">No custom requirements</span>
                                 @endif
                             </td>
                             <td>
@@ -306,7 +306,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-8 text-center text-base-content/60">No grant definitions have been created.</td>
+                            <td colspan="6" class="py-8 text-center nexus-text-muted">No grant definitions have been created.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -320,7 +320,7 @@
             <div class="flex items-start justify-between mb-4">
                 <div>
                     <h3 id="grant-modal-title" class="font-bold text-lg">Manage grant program</h3>
-                    <p class="text-base-content/50 text-sm">Create flexible grant requirements with nested logic, live summaries, and safe server-side enforcement.</p>
+                    <p class="nexus-text-muted text-sm">Create flexible grant requirements with nested logic, live summaries, and safe server-side enforcement.</p>
                 </div>
                 <button type="button" onclick="document.getElementById('grantModal').close()" class="btn btn-sm btn-ghost">Close</button>
             </div>

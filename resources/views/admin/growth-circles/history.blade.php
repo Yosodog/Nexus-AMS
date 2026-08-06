@@ -32,7 +32,7 @@
                 </form>
 
                 @if ($rows->isEmpty())
-                    <p class="text-base-content/60 text-sm">No distributions match the current filter.</p>
+                    <p class="nexus-text-muted text-sm">No distributions match the current filter.</p>
                 @else
                     <div class="overflow-x-auto">
                         <table class="table table-sm w-full" data-sortable="false">

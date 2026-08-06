@@ -49,7 +49,7 @@
                     <tr>
                         <td>
                             <div class="font-semibold">{{ $campaign->name }}</div>
-                            <div class="text-sm text-base-content/60">{{ \Illuminate\Support\Str::limit($campaign->description, 80) }}</div>
+                            <div class="text-sm nexus-text-muted">{{ \Illuminate\Support\Str::limit($campaign->description, 80) }}</div>
                         </td>
                         <td>
                             <span class="badge {{ $statusClass }}">{{ ucfirst($statusValue) }}</span>
@@ -67,7 +67,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="py-6 text-center text-sm text-base-content/60">No spy campaigns configured yet.</td>
+                        <td colspan="8" class="py-6 text-center text-sm nexus-text-muted">No spy campaigns configured yet.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -83,7 +83,7 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold">New Spy Campaign</h3>
-                        <p class="text-sm text-base-content/60">Create the campaign shell before adding allied and enemy alliances.</p>
+                        <p class="text-sm nexus-text-muted">Create the campaign shell before adding allied and enemy alliances.</p>
                     </div>
                     <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('createSpyCampaignModal').close()" aria-label="Close campaign creation dialog">✕</button>
                 </div>
@@ -102,7 +102,7 @@
                     <span class="flex items-center gap-2 text-sm font-medium">
                         Min success target (%)
                         <span class="tooltip" data-tip="Lowest success chance acceptable for this campaign. Assignment generation will pick the lowest safety level that meets it, otherwise it flags low-odds targets.">
-                            <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
+                            <x-icon name="o-question-mark-circle" class="size-4 nexus-text-muted" />
                         </span>
                     </span>
                     <input type="number" name="settings[min_success_chance]" class="input w-full" min="0" max="100" step="1" value="65" placeholder="e.g. 65">

@@ -162,7 +162,7 @@
                                             <span class="text-sm font-semibold">{{ $nation->match_score }}</span>
                                         </div>
                                     @else
-                                        <span class="text-sm italic text-base-content/55">Out of range</span>
+                                        <span class="text-sm italic nexus-text-muted">Out of range</span>
                                     @endif
                                 </td>
                             @endif

@@ -9,7 +9,7 @@
         <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Defense desk</p>
                     <h1 class="text-3xl font-bold leading-tight">War aid dashboard</h1>
                     <p class="text-sm text-base-content/70">Request support, review active wars, and track past aid.</p>
                 </div>
@@ -36,7 +36,7 @@
             </div>
 
             @if($wars->isEmpty())
-                <p class="text-base-content/55">You have no active wars.</p>
+                <p class="nexus-text-muted">You have no active wars.</p>
             @else
                 <div class="overflow-x-auto">
                     <table class="table w-full" data-sortable="true">
@@ -95,7 +95,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-base-content/55">No previous requests.</td>
+                            <td colspan="5" class="text-center nexus-text-muted">No previous requests.</td>
                         </tr>
                     @endforelse
                     </tbody>

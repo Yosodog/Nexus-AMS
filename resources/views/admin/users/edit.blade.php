@@ -30,14 +30,14 @@
                 <div class="space-y-3">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">Nation</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] nexus-text-muted">Nation</p>
                             @if($nation)
                                 <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener" class="mt-2 block text-lg font-semibold link link-primary">
                                     {{ $nation->leader_name ?? 'Unknown Leader' }}
                                 </a>
-                                <p class="text-sm text-base-content/60">{{ $nation->nation_name ?? '—' }}</p>
+                                <p class="text-sm nexus-text-muted">{{ $nation->nation_name ?? '—' }}</p>
                             @else
-                                <p class="mt-2 text-sm text-base-content/60">No nation linked.</p>
+                                <p class="mt-2 text-sm nexus-text-muted">No nation linked.</p>
                             @endif
                         </div>
                         @if($nation)
@@ -49,10 +49,10 @@
 
             <x-card>
                 <div class="space-y-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">Score & Cities</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] nexus-text-muted">Score & Cities</p>
                     <div class="flex items-end gap-2">
                         <span class="text-2xl font-bold">{{ $nation ? number_format((float) ($nation->score ?? 0), 2) : '—' }}</span>
-                        <span class="pb-1 text-sm text-base-content/60">score</span>
+                        <span class="pb-1 text-sm nexus-text-muted">score</span>
                     </div>
                     <div class="space-y-1 text-sm text-base-content/70">
                         <p>Cities: {{ $nation ? number_format((int) ($nation->num_cities ?? 0)) : '—' }}</p>
@@ -63,7 +63,7 @@
 
             <x-card>
                 <div class="space-y-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">Alliance</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] nexus-text-muted">Alliance</p>
                     @if($allianceName)
                         <p class="text-lg font-semibold">{{ $allianceName }}</p>
                         <div class="space-y-1 text-sm text-base-content/70">
@@ -71,14 +71,14 @@
                             <p>Seniority: {{ number_format((int) ($nation->alliance_seniority ?? 0)) }} days</p>
                         </div>
                     @else
-                        <p class="text-sm text-base-content/60">No current alliance.</p>
+                        <p class="text-sm nexus-text-muted">No current alliance.</p>
                     @endif
                 </div>
             </x-card>
 
             <x-card>
                 <div class="space-y-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/55">{{ $canViewAccounts ? 'Account Overview' : 'Roles' }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] nexus-text-muted">{{ $canViewAccounts ? 'Account Overview' : 'Roles' }}</p>
                     @if($canViewAccounts)
                         <p class="text-2xl font-bold">{{ $accounts->count() }}</p>
                         <div class="space-y-1 text-sm text-base-content/70">
@@ -154,7 +154,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="text-sm text-base-content/60">Hold Ctrl or Cmd to select multiple roles.</p>
+                            <p class="text-sm nexus-text-muted">Hold Ctrl or Cmd to select multiple roles.</p>
                         </div>
                     @endif
                 </div>
@@ -196,11 +196,11 @@
                         @if($discordAccount)
                             <div class="space-y-1 text-sm">
                                 <p class="font-semibold">{{ $discordAccount->discord_username }}</p>
-                                <p class="text-base-content/60">ID: {{ $discordAccount->discord_id }}</p>
-                                <p class="text-base-content/60">Linked {{ optional($discordAccount->linked_at)->diffForHumans() ?? 'recently' }}</p>
+                                <p class="nexus-text-muted">ID: {{ $discordAccount->discord_id }}</p>
+                                <p class="nexus-text-muted">Linked {{ optional($discordAccount->linked_at)->diffForHumans() ?? 'recently' }}</p>
                             </div>
                         @else
-                            <p class="text-sm text-base-content/60">No Discord account is currently linked.</p>
+                            <p class="text-sm nexus-text-muted">No Discord account is currently linked.</p>
                         @endif
                     </div>
 
@@ -216,7 +216,7 @@
             @if($canViewAccounts)
                 <x-card title="Associated Accounts" :subtitle="$accounts->count().' linked'">
                 @if($accounts->isEmpty())
-                    <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
+                    <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center nexus-text-muted">
                         No accounts are currently associated with this user.
                     </div>
                 @else
@@ -240,7 +240,7 @@
                                             <a href="{{ route('admin.accounts.view', $account->id) }}" class="font-semibold link link-primary">
                                                 {{ $account->name }}
                                             </a>
-                                            <div class="text-sm text-base-content/60">Nation #{{ $account->nation_id }}</div>
+                                            <div class="text-sm nexus-text-muted">Nation #{{ $account->nation_id }}</div>
                                         </td>
                                         <td class="text-right">${{ number_format((float) $account->money, 2) }}</td>
                                         <td class="text-right">{{ number_format((float) $account->steel, 2) }}</td>
@@ -251,7 +251,7 @@
                                                 {{ $account->frozen ? 'Frozen' : 'Active' }}
                                             </span>
                                         </td>
-                                        <td class="text-right text-sm text-base-content/60" data-order="{{ optional($account->updated_at)->timestamp ?? 0 }}">{{ optional($account->updated_at)->diffForHumans() ?? '—' }}</td>
+                                        <td class="text-right text-sm nexus-text-muted" data-order="{{ optional($account->updated_at)->timestamp ?? 0 }}">{{ optional($account->updated_at)->diffForHumans() ?? '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -265,7 +265,7 @@
         @if($canViewAccounts)
             <x-card title="Recent Transactions" :subtitle="$recentTransactions->count().' records'">
             @if($recentTransactions->isEmpty())
-                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
+                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center nexus-text-muted">
                     No recent transactions were found for this user.
                 </div>
             @else
@@ -308,7 +308,7 @@
                                     <td>
                                         <div class="font-semibold">{{ optional($transaction->created_at)->format('M j, Y g:i A') ?? '—' }}</div>
                                         @if($transaction->nation)
-                                            <a href="https://politicsandwar.com/nation/id={{ $transaction->nation->id }}" target="_blank" rel="noopener" class="text-sm text-base-content/60 link link-hover">
+                                            <a href="https://politicsandwar.com/nation/id={{ $transaction->nation->id }}" target="_blank" rel="noopener" class="text-sm nexus-text-muted link link-hover">
                                                 Nation #{{ $transaction->nation->id }}
                                             </a>
                                         @endif
@@ -317,9 +317,9 @@
                                         <x-badge :value="\Illuminate\Support\Str::title(str_replace('_', ' ', $transaction->transaction_type))" class="badge-primary badge-outline badge-sm" />
                                     </td>
                                     <td>
-                                        <div class="text-sm text-base-content/60">From</div>
+                                        <div class="text-sm nexus-text-muted">From</div>
                                         <div class="font-semibold">{{ optional($transaction->fromAccount)->name ?? '—' }}</div>
-                                        <div class="mt-2 text-sm text-base-content/60">To</div>
+                                        <div class="mt-2 text-sm nexus-text-muted">To</div>
                                         <div class="font-semibold">{{ optional($transaction->toAccount)->name ?? '—' }}</div>
                                     </td>
                                     <td>
@@ -351,71 +351,71 @@
         @if($canViewMmr)
             <x-card title="Latest Nation Sign-In Snapshot" :subtitle="$latestSignIn ? ($latestSignIn->created_at?->diffForHumans() ?? 'Recorded recently') : 'No snapshot available'">
             @if(! $nation)
-                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
+                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center nexus-text-muted">
                     This user is not linked to a nation, so no sign-in data is available.
                 </div>
             @elseif(! $latestSignIn)
-                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center text-base-content/60">
+                <div class="rounded-box border border-dashed border-base-300 px-6 py-8 text-center nexus-text-muted">
                     No sign-in data has been recorded for this nation yet.
                 </div>
             @else
                 <div class="grid gap-4 xl:grid-cols-[minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,1fr)]">
                     <div class="rounded-box border border-base-300 bg-base-200/60 p-4">
-                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-base-content/55">Nation Overview</h3>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] nexus-text-muted">Nation Overview</h3>
                         <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                            <dt class="text-base-content/60">Score</dt>
+                            <dt class="nexus-text-muted">Score</dt>
                             <dd>{{ number_format((float) $latestSignIn->score, 2) }}</dd>
-                            <dt class="text-base-content/60">Cities</dt>
+                            <dt class="nexus-text-muted">Cities</dt>
                             <dd>{{ number_format((int) $latestSignIn->num_cities) }}</dd>
-                            <dt class="text-base-content/60">Wars Won</dt>
+                            <dt class="nexus-text-muted">Wars Won</dt>
                             <dd>{{ number_format((int) $latestSignIn->wars_won) }}</dd>
-                            <dt class="text-base-content/60">Wars Lost</dt>
+                            <dt class="nexus-text-muted">Wars Lost</dt>
                             <dd>{{ number_format((int) $latestSignIn->wars_lost) }}</dd>
-                            <dt class="text-base-content/60">Recorded</dt>
+                            <dt class="nexus-text-muted">Recorded</dt>
                             <dd>{{ $latestSignIn->created_at?->format('M j, Y g:i A') ?? '—' }}</dd>
                         </dl>
                     </div>
 
                     <div class="rounded-box border border-base-300 bg-base-200/60 p-4">
-                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-base-content/55">Military Forces</h3>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] nexus-text-muted">Military Forces</h3>
                         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Soldiers</div>
+                                <div class="nexus-text-muted">Soldiers</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->soldiers) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Tanks</div>
+                                <div class="nexus-text-muted">Tanks</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->tanks) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Aircraft</div>
+                                <div class="nexus-text-muted">Aircraft</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->aircraft) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Ships</div>
+                                <div class="nexus-text-muted">Ships</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->ships) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Missiles</div>
+                                <div class="nexus-text-muted">Missiles</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->missiles) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2">
-                                <div class="text-base-content/60">Nukes</div>
+                                <div class="nexus-text-muted">Nukes</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->nukes) }}</div>
                             </div>
                             <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2 col-span-2">
-                                <div class="text-base-content/60">Spies</div>
+                                <div class="nexus-text-muted">Spies</div>
                                 <div class="font-semibold">{{ number_format((int) $latestSignIn->spies) }}</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="rounded-box border border-base-300 bg-base-200/60 p-4">
-                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-base-content/55">Resource Holdings</h3>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.18em] nexus-text-muted">Resource Holdings</h3>
                         <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                             @foreach($resourceKeys as $resource)
                                 <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2 text-sm">
-                                    <div class="text-base-content/60">{{ ucfirst($resource) }}</div>
+                                    <div class="nexus-text-muted">{{ ucfirst($resource) }}</div>
                                     <div class="font-semibold">
                                         {{ $resource === 'money' ? '$' : '' }}{{ number_format((float) $latestSignIn->$resource, $resource === 'money' ? 2 : 0) }}
                                     </div>

@@ -28,7 +28,7 @@
         <x-slot:title>
             <div>
                 Filters
-                <div class="text-sm font-normal text-base-content/60">Tighten the result set by event type, actor, request metadata, or free-text search.</div>
+                <div class="text-sm font-normal nexus-text-muted">Tighten the result set by event type, actor, request metadata, or free-text search.</div>
             </div>
         </x-slot:title>
 
@@ -96,7 +96,7 @@
         <x-slot:title>
             <div>
                 Event Stream
-                <div class="text-sm font-normal text-base-content/60">Sorted chronologically. Click table headers to sort locally.</div>
+                <div class="text-sm font-normal nexus-text-muted">Sorted chronologically. Click table headers to sort locally.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
@@ -138,7 +138,7 @@
                         <tr>
                             <td class="text-nowrap">
                                 <div class="font-medium">{{ $log->occurred_at?->format('Y-m-d H:i:s') ?? '—' }}</div>
-                                <div class="text-xs text-base-content/50">{{ $log->occurred_at?->diffForHumans() ?? 'Unknown' }}</div>
+                                <div class="text-xs nexus-text-muted">{{ $log->occurred_at?->diffForHumans() ?? 'Unknown' }}</div>
                             </td>
                             <td>
                                 <x-badge :value="$log->category" class="badge-ghost badge-sm" />
@@ -153,17 +153,17 @@
                                 <x-badge :value="$log->severity" class="{{ $severityClass }} badge-sm" />
                             </td>
                             <td>
-                                <div class="text-xs uppercase tracking-wide text-base-content/50">{{ $log->actor_type ?? 'Unknown' }}</div>
+                                <div class="text-xs uppercase tracking-wide nexus-text-muted">{{ $log->actor_type ?? 'Unknown' }}</div>
                                 <div class="font-medium text-base-content">{{ $log->actor_name ?? '—' }}</div>
-                                <div class="text-xs text-base-content/50">ID: {{ $log->actor_id ?? '—' }}</div>
+                                <div class="text-xs nexus-text-muted">ID: {{ $log->actor_id ?? '—' }}</div>
                             </td>
                             <td>
-                                <div class="text-xs uppercase tracking-wide text-base-content/50">{{ $log->subject_type ?? '—' }}</div>
-                                <div class="text-xs text-base-content/50">ID: {{ $log->subject_id ?? '—' }}</div>
+                                <div class="text-xs uppercase tracking-wide nexus-text-muted">{{ $log->subject_type ?? '—' }}</div>
+                                <div class="text-xs nexus-text-muted">ID: {{ $log->subject_id ?? '—' }}</div>
                             </td>
                             <td>
-                                <div class="text-xs text-base-content/50">Req: {{ $log->request_id ?? '—' }}</div>
-                                <div class="text-xs text-base-content/50">IP: {{ $log->ip ?? '—' }}</div>
+                                <div class="text-xs nexus-text-muted">Req: {{ $log->request_id ?? '—' }}</div>
+                                <div class="text-xs nexus-text-muted">IP: {{ $log->ip ?? '—' }}</div>
                             </td>
                             <td class="min-w-[18rem]">
                                 <div class="text-sm text-base-content">{{ $log->message ?? '—' }}</div>
@@ -175,13 +175,13 @@
                                         <pre class="mt-3 overflow-x-auto rounded-xl bg-base-300/50 p-3 text-xs text-base-content">{{ json_encode($log->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                                     </details>
                                 @else
-                                    <span class="text-sm text-base-content/50">No context</span>
+                                    <span class="text-sm nexus-text-muted">No context</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="py-8 text-center text-base-content/50">No audit logs found.</td>
+                            <td colspan="10" class="py-8 text-center nexus-text-muted">No audit logs found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -189,7 +189,7 @@
         </div>
 
         <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <span class="text-sm text-base-content/60">Page {{ $logs->currentPage() }} of {{ $logs->lastPage() }}</span>
+            <span class="text-sm nexus-text-muted">Page {{ $logs->currentPage() }} of {{ $logs->lastPage() }}</span>
             {{ $logs->onEachSide(1)->links() }}
         </div>
     </x-card>

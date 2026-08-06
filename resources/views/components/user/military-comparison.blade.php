@@ -33,15 +33,15 @@
                     </div>
                     <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
                         <div class="rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Current</p>
+                            <p class="nexus-text-muted">Current</p>
                             <p class="font-semibold text-sm">{{ number_format($current) }}</p>
                         </div>
                         <div class="rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Required</p>
+                            <p class="nexus-text-muted">Required</p>
                             <p class="font-semibold text-sm">{{ number_format($required) }}</p>
                         </div>
                         <div class="col-span-2 rounded-lg bg-base-200/60 px-2 py-1">
-                            <p class="text-base-content/60">Progress</p>
+                            <p class="nexus-text-muted">Progress</p>
                             <p class="font-semibold text-sm">{{ $percent }}%</p>
                         </div>
                     </div>

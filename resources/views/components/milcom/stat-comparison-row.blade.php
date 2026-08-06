@@ -21,14 +21,14 @@
     <dd class="min-w-0 text-right">
         <div class="truncate font-semibold tabular-nums text-success" @if ($friendlyTitle) title="{{ $friendlyTitle }}" @endif>{{ $friendlyValue }}</div>
         @if ($friendlyDetail)
-            <div class="truncate text-xs tabular-nums text-base-content/55">{{ $friendlyDetail }}</div>
+            <div class="truncate text-xs tabular-nums nexus-text-muted">{{ $friendlyDetail }}</div>
         @endif
     </dd>
     <dt class="text-center text-xs font-semibold text-base-content/65 sm:text-sm">{{ $label }}</dt>
     <dd class="min-w-0">
         <div class="truncate font-semibold tabular-nums text-error" @if ($enemyTitle) title="{{ $enemyTitle }}" @endif>{{ $enemyValue }}</div>
         @if ($enemyDetail)
-            <div class="truncate text-xs tabular-nums text-base-content/55">{{ $enemyDetail }}</div>
+            <div class="truncate text-xs tabular-nums nexus-text-muted">{{ $enemyDetail }}</div>
         @endif
     </dd>
     @if ($showBars)

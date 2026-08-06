@@ -4,7 +4,7 @@
 @endphp
 
 @if(empty($factors))
-    <p class="mb-0 text-sm text-base-content/50">No factor breakdown captured for this match.</p>
+    <p class="mb-0 text-sm nexus-text-muted">No factor breakdown captured for this match.</p>
 @else
     <div class="overflow-x-auto rounded-box border border-base-300">
         <table class="table table-sm table-zebra mb-2" data-sortable="false">
@@ -39,7 +39,7 @@
                             <div>{{ $reason }}</div>
                         @endif
                         @if(!empty($extras))
-                            <div class="text-sm text-base-content/50">
+                            <div class="text-sm nexus-text-muted">
                                 @foreach($extras as $extraKey => $extraValue)
                                     <span class="mr-2 inline-block">
                                         {{ str_replace('_', ' ', $extraKey) }}:
@@ -62,20 +62,20 @@
     </div>
 
     <dl class="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,10rem)_1fr]">
-        <dt class="font-medium text-base-content/60">Mode</dt>
+        <dt class="font-medium nexus-text-muted">Mode</dt>
         <dd class="uppercase">{{ $meta['mode'] ?? 'auto' }}</dd>
-        <dt class="font-medium text-base-content/60">Raw score</dt>
+        <dt class="font-medium nexus-text-muted">Raw score</dt>
         <dd>{{ number_format((float) ($meta['raw_score'] ?? 0), 2) }}</dd>
-        <dt class="font-medium text-base-content/60">After cap</dt>
+        <dt class="font-medium nexus-text-muted">After cap</dt>
         <dd>{{ number_format((float) ($meta['bounded'] ?? 0), 2) }}</dd>
         @if(!empty($meta['caps']['relative_power'] ?? null))
-            <dt class="font-medium text-base-content/60">Relative cap</dt>
+            <dt class="font-medium nexus-text-muted">Relative cap</dt>
             <dd>{{ number_format((float) $meta['caps']['relative_power'], 2) }}</dd>
         @endif
     </dl>
 
     @if(!empty($meta['relative_power_details'] ?? []))
-        <div class="text-sm text-base-content/50">
+        <div class="text-sm nexus-text-muted">
             Relative power details:
             {{ json_encode($meta['relative_power_details'], JSON_UNESCAPED_SLASHES) }}
         </div>

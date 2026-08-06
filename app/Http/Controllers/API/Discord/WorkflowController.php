@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Discord;
 
+use App\Exceptions\CityGrantRequestException;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
@@ -196,12 +197,21 @@ class WorkflowController extends Controller
     {
         $data = $request->validate(['intent_id' => ['required', 'string', 'size:64']]);
         $actor = $this->actor($request);
-        $cityRequest = $intents->consume($actor, $this->guildId($request), $data['intent_id'], 'city_grant.request', function (array $payload) use ($actor) {
-            $grant = CityGrant::query()->findOrFail($payload['city_grant_id']);
-            abort_unless((int) $grant->city_number === (int) $actor->nation->num_cities + 1, 409, 'The next city changed after preview.');
 
-            return CityGrantService::createRequest($grant, $actor->nation, (int) $payload['account_id']);
-        });
+        try {
+            $cityRequest = $intents->consume($actor, $this->guildId($request), $data['intent_id'], 'city_grant.request', function (array $payload) use ($actor) {
+                $grant = CityGrant::query()->findOrFail($payload['city_grant_id']);
+                abort_unless((int) $grant->city_number === (int) $actor->nation->num_cities + 1, 409, 'The next city changed after preview.');
+
+                return CityGrantService::createRequest($grant, $actor->nation, (int) $payload['account_id']);
+            });
+        } catch (CityGrantRequestException $exception) {
+            return $this->discordError(
+                'city_grant_'.$exception->reason->value,
+                'This city grant request could not be submitted. Review the grant page for the corrective action.',
+                422
+            );
+        }
 
         return $this->discordData($this->requestSummary('city_grant', $cityRequest), 201);
     }

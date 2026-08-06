@@ -23,14 +23,14 @@
                     <span>Status:</span>
                     <span class="badge {{ $statusClass }} uppercase">{{ $statusValue }}</span>
                     @if (filled($campaign->description))
-                        <span class="text-base-content/60">{{ $campaign->description }}</span>
+                        <span class="nexus-text-muted">{{ $campaign->description }}</span>
                     @endif
                 </span>
             </x-slot:subtitle>
             <x-slot:actions>
                 <div class="flex items-center gap-2">
                     <span class="tooltip tooltip-left" data-tip="Each round runs a single op type. Assignments respect spy range, slots, policy synergy, and your min success target.">
-                        <x-icon name="o-question-mark-circle" class="size-5 text-base-content/50" />
+                        <x-icon name="o-question-mark-circle" class="size-5 nexus-text-muted" />
                     </span>
                     <a href="{{ route('admin.spy-campaigns.index') }}" class="btn btn-ghost btn-sm">Back</a>
                 </div>
@@ -111,7 +111,7 @@
                                 <span class="badge badge-primary">{{ number_format($target['impact'], 1) }} impact</span>
                             </div>
                         @empty
-                            <div class="text-sm text-base-content/60">No assignments yet.</div>
+                            <div class="text-sm nexus-text-muted">No assignments yet.</div>
                         @endforelse
                     </div>
                 </x-card>
@@ -175,7 +175,7 @@
                                         <div class="flex items-start justify-between gap-4">
                                             <div>
                                                 <h3 class="text-lg font-semibold">Send messages for Round {{ $round->round_number }}</h3>
-                                                <p class="text-sm text-base-content/60">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
+                                                <p class="text-sm nexus-text-muted">Assignments auto-append target names, op type, safety, odds, and PW espionage links.</p>
                                             </div>
                                             <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('messageModal-{{ $round->id }}').close()" aria-label="Close round message dialog">✕</button>
                                         </div>
@@ -217,7 +217,7 @@
                                 </form>
                             </div>
                         @empty
-                            <div class="text-sm text-base-content/60">No allied alliances added yet.</div>
+                            <div class="text-sm nexus-text-muted">No allied alliances added yet.</div>
                         @endforelse
                     </div>
 
@@ -252,7 +252,7 @@
                                 </form>
                             </div>
                         @empty
-                            <div class="text-sm text-base-content/60">No enemy alliances added yet.</div>
+                            <div class="text-sm nexus-text-muted">No enemy alliances added yet.</div>
                         @endforelse
                     </div>
 
@@ -300,7 +300,7 @@
                             <span class="flex items-center gap-2 text-sm font-medium">
                                 Min success %
                                 <span class="tooltip" data-tip="Assignments test safety 1→3 and stop at the first level meeting this threshold; otherwise they’re flagged low-odds.">
-                                    <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
+                                    <x-icon name="o-question-mark-circle" class="size-4 nexus-text-muted" />
                                 </span>
                             </span>
                             <input type="number" name="settings[min_success_chance]" class="input w-full" min="0" max="100" step="1" value="{{ old('settings.min_success_chance', $campaign->settings['min_success_chance'] ?? 65) }}">
@@ -329,7 +329,7 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold">Add Round</h3>
-                        <p class="text-sm text-base-content/60">Each round generates assignments for one operation type.</p>
+                        <p class="text-sm nexus-text-muted">Each round generates assignments for one operation type.</p>
                     </div>
                     <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('addRoundModal').close()" aria-label="Close round creation dialog">✕</button>
                 </div>
@@ -352,7 +352,7 @@
                     <span class="flex items-center gap-2 text-sm font-medium">
                         Min success target (%)
                         <span class="tooltip" data-tip="Assignments pick the lowest safety level that meets this chance; lower odds are still assigned but flagged.">
-                            <x-icon name="o-question-mark-circle" class="size-4 text-base-content/50" />
+                            <x-icon name="o-question-mark-circle" class="size-4 nexus-text-muted" />
                         </span>
                     </span>
                     <input type="number" name="min_success_chance" class="input w-full" min="0" max="100" step="1" value="{{ $campaign->settings['min_success_chance'] ?? 65 }}">

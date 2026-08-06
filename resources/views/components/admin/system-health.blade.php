@@ -25,7 +25,7 @@
             'badge' => 'badge-ghost',
             'surface' => 'bg-base-200',
             'icon' => 'o-question-mark-circle',
-            'iconColor' => 'text-base-content/60',
+            'iconColor' => 'nexus-text-muted',
             'label' => 'Unknown',
         ],
     ];
@@ -36,7 +36,7 @@
     <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
             <h2 id="system-health-title" class="text-lg font-semibold">System Health</h2>
-            <p class="max-w-3xl text-sm text-base-content/60">
+            <p class="max-w-3xl text-sm nexus-text-muted">
                 Freshness checks for the scheduler, external API, imports, and data pipelines that keep {{ config('app.name') }} current.
             </p>
         </div>

@@ -43,7 +43,7 @@
 
     <x-card title="Market Resources" id="market-resources" class="mb-6">
         <x-slot:menu>
-            <span class="text-sm text-base-content/60">Base prices from 24h averages.</span>
+            <span class="text-sm nexus-text-muted">Base prices from 24h averages.</span>
         </x-slot:menu>
         <div class="overflow-x-auto rounded-box border border-base-300">
                 <table class="table table-zebra" id="marketResourcesTable" data-sortable="true">

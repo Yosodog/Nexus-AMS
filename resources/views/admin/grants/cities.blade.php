@@ -75,18 +75,18 @@
                         <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener noreferrer" class="mt-1 block w-fit font-medium text-primary hover:underline">
                             {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
                         </a>
-                        <p class="text-sm text-base-content/60">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
+                        <p class="text-sm nexus-text-muted">{{ $request->nation->nation_name ?? 'Unknown nation name' }} · Nation #{{ $request->nation_id }}</p>
                     @else
-                        <p class="mt-1 text-sm text-base-content/60">Unknown nation · Nation #{{ $request->nation_id }}</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Unknown nation · Nation #{{ $request->nation_id }}</p>
                     @endif
-                    <p class="mt-1 text-xs text-base-content/55">
+                    <p class="mt-1 text-xs nexus-text-muted">
                         Requested <time datetime="{{ $request->created_at->toIso8601String() }}" class="tooltip tooltip-bottom cursor-help" data-tip="{{ $request->created_at->toDayDateTimeString() }}" tabindex="0" aria-label="Requested {{ $request->created_at->diffForHumans() }}, {{ $request->created_at->toDayDateTimeString() }}">{{ $request->created_at->diffForHumans() }}</time>
                         · Account #{{ $request->account_id }}
                     </p>
                 </div>
 
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Deposit on approval</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">Deposit on approval</p>
                     <p class="mt-1 text-2xl font-bold tabular-nums">${{ number_format($request->grant_amount) }}</p>
                 </div>
 
@@ -107,7 +107,7 @@
                     @elseif($isOwnRequest)
                         <span class="text-sm">
                             <span class="nexus-status nexus-status--error">Self-decision blocked</span>
-                            <span class="mt-1 block text-base-content/60">Another reviewer must decide.</span>
+                            <span class="mt-1 block nexus-text-muted">Another reviewer must decide.</span>
                         </span>
                     @else
                         <span class="nexus-status nexus-status--neutral">Decision unavailable</span>
@@ -119,7 +119,7 @@
                 <x-icon name="o-check-circle" class="size-8 text-success" aria-hidden="true" />
                 <div>
                     <h3 class="font-semibold">City grant queue is clear</h3>
-                    <p class="mt-1 text-sm text-base-content/60">There are no pending city grant requests.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">There are no pending city grant requests.</p>
                 </div>
             </div>
         @endforelse
@@ -154,13 +154,13 @@
             <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
                 <span>
                     <span class="block font-semibold">Manual city grant disbursement</span>
-                    <span class="mt-0.5 block text-sm text-base-content/60">Immediately pays a grant while bypassing pending and prior-award checks.</span>
+                    <span class="mt-0.5 block text-sm nexus-text-muted">Immediately pays a grant while bypassing pending and prior-award checks.</span>
                 </span>
                 <span class="flex items-center gap-2">
                     <span class="nexus-status {{ $grantApprovalsEnabled ? 'nexus-status--warning' : 'nexus-status--neutral' }}">
                         {{ $grantApprovalsEnabled ? 'Elevated action' : 'Paused' }}
                     </span>
-                    <x-icon name="o-chevron-down" class="size-4 text-base-content/50" aria-hidden="true" />
+                    <x-icon name="o-chevron-down" class="size-4 nexus-text-muted" aria-hidden="true" />
                 </span>
             </summary>
             @if($grantApprovalsEnabled)
@@ -197,7 +197,7 @@
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Account ID</span>
                             <input type="number" name="account_id" class="input w-full" required min="1" value="{{ old('account_id') }}">
-                            <span class="text-xs text-base-content/60">Must belong to the nation above.</span>
+                            <span class="text-xs nexus-text-muted">Must belong to the nation above.</span>
                         </label>
                     </div>
 
@@ -261,7 +261,7 @@
                             @else
                                 Unavailable
                             @endif
-                            <span class="text-base-content/60">({{ number_format($grant->grant_amount) }}%)</span>
+                            <span class="nexus-text-muted">({{ number_format($grant->grant_amount) }}%)</span>
                         </td>
                         <td data-order="{{ $grant->enabled ? 1 : 0 }}">
                             <span class="nexus-status {{ $grant->enabled ? 'nexus-status--success' : 'nexus-status--neutral' }}">
@@ -280,20 +280,20 @@
                                     @endif
                                 </div>
                             @else
-                                <span class="text-sm text-base-content/50">No custom requirements</span>
+                                <span class="text-sm nexus-text-muted">No custom requirements</span>
                             @endif
                         </td>
                         <td>
                             @can('manage-city-grants')
                                 <button class="btn btn-primary btn-outline btn-sm" type="button" data-city-grant-edit="{{ $grant->id }}">Edit</button>
                             @else
-                                <span class="text-base-content/50">—</span>
+                                <span class="nexus-text-muted">—</span>
                             @endcan
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-base-content/60">No city grant tiers have been configured.</td>
+                        <td colspan="6" class="py-8 text-center nexus-text-muted">No city grant tiers have been configured.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -311,7 +311,7 @@
                 <div class="mb-4 flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold" id="city-grant-modal-title" data-city-grant-modal-title>Manage City Grant</h3>
-                        <p class="text-sm text-base-content/60">Configure city funding and the complete eligibility rule tree.</p>
+                        <p class="text-sm nexus-text-muted">Configure city funding and the complete eligibility rule tree.</p>
                     </div>
                     <button type="button" class="btn btn-sm btn-ghost" data-city-grant-close>Close</button>
                 </div>
@@ -378,7 +378,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold">Send City Grant Reminders</h3>
-                            <p class="text-sm text-base-content/60">Select grant tiers and queue reminder mails for eligible applicants.</p>
+                            <p class="text-sm nexus-text-muted">Select grant tiers and queue reminder mails for eligible applicants.</p>
                         </div>
                         <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('grantReminderModal').close()">Close</button>
                     </div>
@@ -405,7 +405,7 @@
                                     <span class="text-sm">
                                         City #{{ $grant->city_number }}
                                         @if (! $grant->enabled)
-                                            <span class="text-base-content/60">(Disabled)</span>
+                                            <span class="nexus-text-muted">(Disabled)</span>
                                         @endif
                                     </span>
                                 </label>
@@ -416,13 +416,13 @@
                     <div class="space-y-3">
                         <label class="block space-y-2">
                             <span class="text-sm font-medium">Admin Message</span>
-                            <div class="rounded-box border border-base-300 bg-base-200/60 p-3 text-sm text-base-content/60">
+                            <div class="rounded-box border border-base-300 bg-base-200/60 p-3 text-sm nexus-text-muted">
                                 <div>Hi {leader_name},</div>
                                 <div class="mt-2">[Your message below]</div>
                                 <div class="mt-2">Please click [link={link to apply for city grants}]here[/link] to apply for a city grant</div>
                             </div>
                             <textarea class="textarea min-h-40 w-full" rows="6" id="grantReminderMessage" name="message" required>{{ old('message', $defaultReminderMessage) }}</textarea>
-                            <span class="text-xs text-base-content/60">We automatically add a greeting and the application link after this message.</span>
+                            <span class="text-xs nexus-text-muted">We automatically add a greeting and the application link after this message.</span>
                         </label>
                     </div>
 

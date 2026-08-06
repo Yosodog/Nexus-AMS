@@ -7,21 +7,21 @@
         <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Funding Desk</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Funding Desk</p>
                     <h1 class="text-3xl font-bold leading-tight">Loans</h1>
                     <p class="text-sm text-base-content/70">Weekly amortized loans with clear payment math.</p>
                 </div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Active loans</p>
+                        <p class="text-xs uppercase nexus-text-muted">Active loans</p>
                         <p class="text-xl font-bold">{{ $activeLoans->count() }}</p>
                     </div>
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Outstanding principal</p>
+                        <p class="text-xs uppercase nexus-text-muted">Outstanding principal</p>
                         <p class="text-xl font-bold">${{ number_format((float) $activeLoans->sum('remaining_balance'), 2) }}</p>
                     </div>
                     <div class="rounded-xl border border-base-300 bg-base-200 px-4 py-3">
-                        <p class="text-xs uppercase text-base-content/60">Total currently due</p>
+                        <p class="text-xs uppercase nexus-text-muted">Total currently due</p>
                         <p class="text-xl font-bold">${{ number_format((float) $activeLoans->sum('next_payment_due'), 2) }}</p>
                     </div>
                 </div>
@@ -155,7 +155,7 @@
                                 <button type="button" id="use_min_due" class="btn btn-outline btn-sm">
                                     Use minimum due
                                 </button>
-                                <span id="use_min_due_hint" class="text-xs text-base-content/60">Current due: $0.00</span>
+                                <span id="use_min_due_hint" class="text-xs nexus-text-muted">Current due: $0.00</span>
                             </div>
                         </div>
 
@@ -164,7 +164,7 @@
                                 <span class="font-semibold">What happens if I pay this amount?</span>
                             </label>
                             <input type="range" id="repayment_slider" min="0" max="100" value="0" class="range range-primary">
-                            <div class="mt-1 flex justify-between text-xs text-base-content/60">
+                            <div class="mt-1 flex justify-between text-xs nexus-text-muted">
                                 <span>$0</span>
                                 <span id="slider_max_label">$0</span>
                             </div>
@@ -302,19 +302,19 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                                     <div>
-                                        <p class="text-base-content/60">Remaining Principal</p>
+                                        <p class="nexus-text-muted">Remaining Principal</p>
                                         <p class="font-semibold">${{ number_format((float) $loan->remaining_balance, 2) }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-base-content/60">Scheduled Weekly</p>
+                                        <p class="nexus-text-muted">Scheduled Weekly</p>
                                         <p class="font-semibold">${{ number_format((float) $loan->scheduled_weekly_payment, 2) }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-base-content/60">Past Due</p>
+                                        <p class="nexus-text-muted">Past Due</p>
                                         <p class="font-semibold text-error">${{ number_format((float) $loan->past_due_amount, 2) }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-base-content/60">Accrued Interest Due</p>
+                                        <p class="nexus-text-muted">Accrued Interest Due</p>
                                         <p class="font-semibold text-warning">${{ number_format((float) $loan->effective_interest_due_now, 2) }}</p>
                                     </div>
                                 </div>
@@ -322,19 +322,19 @@
 
                             <div class="mt-4 grid gap-3 md:grid-cols-4 text-sm">
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">Approved On</p>
+                                    <p class="nexus-text-muted">Approved On</p>
                                     <p class="font-semibold">{{ $approvedAt ? $approvedAt->format('M d, Y') : 'N/A' }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">First Due</p>
+                                    <p class="nexus-text-muted">First Due</p>
                                     <p class="font-semibold">{{ $firstDue ? $firstDue->format('M d, Y') : 'N/A' }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">Term Progress</p>
+                                    <p class="nexus-text-muted">Term Progress</p>
                                     <p class="font-semibold">{{ min($elapsedWeeks, (int) $loan->term_weeks) }} / {{ (int) $loan->term_weeks }} weeks</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">Weekly Interest Rate</p>
+                                    <p class="nexus-text-muted">Weekly Interest Rate</p>
                                     <p class="font-semibold">{{ number_format((float) $loan->interest_rate, 2) }}%</p>
                                 </div>
                             </div>
@@ -385,15 +385,15 @@
 
                             <div class="mt-4 grid gap-3 text-sm md:grid-cols-3">
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">Total Contract Interest (On Schedule)</p>
+                                    <p class="nexus-text-muted">Total Contract Interest (On Schedule)</p>
                                     <p class="font-semibold">${{ number_format($contractInterest, 2) }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">Estimated Remaining Contract Interest</p>
+                                    <p class="nexus-text-muted">Estimated Remaining Contract Interest</p>
                                     <p class="font-semibold">${{ number_format($remainingContractInterest, 2) }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300 bg-base-200 p-3">
-                                    <p class="text-base-content/60">If Unpaid 4 More Weeks (Estimate)</p>
+                                    <p class="nexus-text-muted">If Unpaid 4 More Weeks (Estimate)</p>
                                     <p class="font-semibold">+${{ number_format($projectedExtraInterest4Weeks, 2) }} interest</p>
                                 </div>
                             </div>

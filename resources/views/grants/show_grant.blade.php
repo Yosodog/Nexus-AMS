@@ -6,7 +6,7 @@
     <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow mb-6">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-                <p class="text-xs uppercase tracking-wide text-base-content/60">Grant program</p>
+                <p class="text-xs uppercase tracking-wide nexus-text-muted">Grant program</p>
                 <h1 class="inline-flex items-center gap-2 text-3xl font-bold text-primary sm:text-4xl">
                     {{ ucwords($grant->name) }}
                 </h1>
@@ -28,7 +28,7 @@
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 @if ($grant->money > 0)
                     <div class="rounded-xl bg-base-200 p-4">
-                        <div class="text-xs uppercase tracking-wide text-base-content/55">Money</div>
+                        <div class="text-xs uppercase tracking-wide nexus-text-muted">Money</div>
                         <div class="mt-2 text-xl font-semibold text-success">${{ number_format($grant->money) }}</div>
                     </div>
                 @endif
@@ -36,7 +36,7 @@
                 @foreach (['coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'] as $resource)
                     @if ((int) $grant->$resource > 0)
                         <div class="rounded-xl bg-base-200 p-4">
-                            <div class="text-xs uppercase tracking-wide text-base-content/55">{{ ucfirst($resource) }}</div>
+                            <div class="text-xs uppercase tracking-wide nexus-text-muted">{{ ucfirst($resource) }}</div>
                             <div class="mt-2 text-xl font-semibold text-success">{{ number_format($grant->$resource) }}</div>
                         </div>
                     @endif

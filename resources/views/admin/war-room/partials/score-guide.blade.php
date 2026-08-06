@@ -6,7 +6,7 @@
 <x-card title="Match Score Guide" subtitle="Quick reference for planners reviewing assignments." class="h-full">
     <dl class="mb-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,10rem)_1fr]">
             @foreach($guide as $key => $description)
-            <dt class="text-xs font-semibold uppercase tracking-wide text-base-content/55">{{ str_replace('_', ' ', $key) }}</dt>
+            <dt class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">{{ str_replace('_', ' ', $key) }}</dt>
             <dd>{{ $description }}</dd>
             @endforeach
     </dl>
@@ -20,6 +20,6 @@
             <li>Auto minimum cap: {{ number_format((float) ($relative['auto_min_cap'] ?? 24), 0) }}</li>
             <li>Manual minimum cap: {{ number_format((float) ($relative['manual_min_cap'] ?? 40), 0) }}</li>
         </ul>
-        <p class="mt-3 text-base-content/60">Relative power blends city count, nation score, and estimated military strength; low parity caps the total match regardless of other bonuses.</p>
+        <p class="mt-3 nexus-text-muted">Relative power blends city count, nation score, and estimated military strength; low parity caps the total match regardless of other bonuses.</p>
     </div>
 </x-card>

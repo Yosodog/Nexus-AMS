@@ -22,7 +22,7 @@
                                 @cannot('manage-growth-circles') disabled @endcannot
                                 required
                             >
-                            <span class="block text-xs text-base-content/60">
+                            <span class="block text-xs nexus-text-muted">
                                 The in-game tax bracket ID with 100% retention across all resources. Members enrolled in Growth Circles will be assigned this bracket.
                             </span>
                         </label>
@@ -37,7 +37,7 @@
                                 @cannot('manage-growth-circles') disabled @endcannot
                                 required
                             >
-                            <span class="block text-xs text-base-content/60">
+                            <span class="block text-xs nexus-text-muted">
                                 Used when a member disenrolls and their original bracket cannot be restored. Both brackets must already exist in the P&W tax bracket list.
                             </span>
                         </label>
@@ -51,7 +51,7 @@
             {{-- Enrollments table --}}
             <x-card title="Enrollments">
                 @if ($rows->isEmpty())
-                    <p class="text-base-content/60 text-sm">No nations are currently enrolled in Growth Circles.</p>
+                    <p class="nexus-text-muted text-sm">No nations are currently enrolled in Growth Circles.</p>
                 @else
                     <div class="overflow-x-auto">
                         <table class="table table-sm w-full" data-sortable="true">
@@ -86,13 +86,13 @@
                                     <td data-order="{{ $row['last']?->cycle_date?->timestamp ?? 0 }}">
                                         @if ($row['last'])
                                             {{ $row['last']->cycle_date->toDateString() }}
-                                            <span class="mt-1 flex flex-wrap gap-1 text-xs text-base-content/60">
+                                            <span class="mt-1 flex flex-wrap gap-1 text-xs nexus-text-muted">
                                                 @foreach ($resourceLabels as $resource => $label)
                                                     <span>{{ $label }} {{ number_format($row['last']->{$resource}, 2) }}</span>
                                                 @endforeach
                                             </span>
                                         @else
-                                            <span class="text-base-content/50">—</span>
+                                            <span class="nexus-text-muted">—</span>
                                         @endif
                                     </td>
                                     @foreach ($resourceLabels as $resource => $label)
@@ -108,7 +108,7 @@
                                                 tabindex="0"
                                                 aria-label="Paused: {{ $eligibility['reason'] }}"
                                             >Paused</span>
-                                            <span class="block text-xs text-base-content/60">{{ $eligibility['reason'] }}</span>
+                                            <span class="block text-xs nexus-text-muted">{{ $eligibility['reason'] }}</span>
                                         @endif
                                     </td>
                                     @can('manage-growth-circles')

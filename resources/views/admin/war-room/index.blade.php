@@ -37,7 +37,7 @@
                 </form>
             </x-slot:menu>
 
-            <div class="mb-4 text-sm text-base-content/60">Live and planning counters sharing assignment pools.</div>
+            <div class="mb-4 text-sm nexus-text-muted">Live and planning counters sharing assignment pools.</div>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
                 <table class="table table-zebra" data-sortable="false">
@@ -63,7 +63,7 @@
                                 @else
                                     <span class="font-semibold">{{ $counter->aggressor->leader_name ?? 'Unknown' }}</span>
                                 @endif
-                                <div class="text-sm text-base-content/60">{{ $counter->aggressor->nation_name ?? '—' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $counter->aggressor->nation_name ?? '—' }}</div>
                             </td>
                             <td>{{ $counter->aggressor->alliance->name ?? 'No Alliance' }}</td>
                             <td>
@@ -79,7 +79,7 @@
                             <td><span class="badge badge-primary">{{ $counter->team_size }}</span></td>
                             <td>
                                 <div>{{ optional($counter->updated_at)->diffForHumans() ?? '—' }}</div>
-                                <div class="text-sm text-base-content/60">{{ optional($counter->updated_at)->toDayDateTimeString() ?? '' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ optional($counter->updated_at)->toDayDateTimeString() ?? '' }}</div>
                             </td>
                             <td class="text-right">
                                 <a href="{{ route('admin.war-counters.show', $counter) }}" class="btn btn-outline btn-primary btn-sm">
@@ -89,7 +89,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-base-content/60">No counters match the current filters.</td>
+                            <td colspan="7" class="py-6 text-center nexus-text-muted">No counters match the current filters.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -126,7 +126,7 @@
                 </form>
             </x-slot:menu>
 
-            <div class="mb-4 text-sm text-base-content/60">Planning and active campaigns with assignment state.</div>
+            <div class="mb-4 text-sm nexus-text-muted">Planning and active campaigns with assignment state.</div>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
                 <table class="table table-zebra" data-sortable="false">
@@ -159,7 +159,7 @@
                             <td>{{ $plan->assignments_count }}</td>
                             <td>
                                 <div>{{ optional($plan->updated_at)->diffForHumans() ?? '—' }}</div>
-                                <div class="text-sm text-base-content/60">{{ optional($plan->updated_at)->toDayDateTimeString() ?? '' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ optional($plan->updated_at)->toDayDateTimeString() ?? '' }}</div>
                             </td>
                             <td class="text-right">
                                 <a href="{{ route('admin.war-plans.show', $plan) }}" class="btn btn-outline btn-primary btn-sm">
@@ -169,7 +169,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-base-content/60">No war plans match the current filters.</td>
+                            <td colspan="7" class="py-6 text-center nexus-text-muted">No war plans match the current filters.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -196,7 +196,7 @@
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('channel_id', $discordWarChannelId) }}"
                         >
-                        <span class="text-xs text-base-content/60">Leave blank to disable Discord war alerts.</span>
+                        <span class="text-xs nexus-text-muted">Leave blank to disable Discord war alerts.</span>
                     </label>
 
                     <label class="label cursor-pointer justify-start gap-3">
@@ -224,7 +224,7 @@
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('default_forum_channel_id', $defaultWarRoomForumId) }}"
                         >
-                        <span class="text-xs text-base-content/60">Used for room creation when no override is set.</span>
+                        <span class="text-xs nexus-text-muted">Used for room creation when no override is set.</span>
                     </label>
 
                     <div>
@@ -242,7 +242,7 @@
                         <span class="">Enable automatic {{ config('app.name') }} counter room creation</span>
                     </label>
 
-                    <div class="text-sm text-base-content/60">
+                    <div class="text-sm nexus-text-muted">
                         War alerts still dispatch normally when this is disabled. Existing counter rooms can still create Discord rooms manually.
                     </div>
 
@@ -266,7 +266,7 @@
                             placeholder="e.g. 123456789012345678"
                             value="{{ old('defense_role_id', $warRoomDefenseRoleId) }}"
                         >
-                        <span class="text-xs text-base-content/60">Leave blank to skip role ping on counter room creation.</span>
+                        <span class="text-xs nexus-text-muted">Leave blank to skip role ping on counter room creation.</span>
                     </label>
 
                     <div>
@@ -285,7 +285,7 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold">Create War Plan</h3>
-                        <p class="text-sm text-base-content/60">Create a plan and tune the default targeting behavior.</p>
+                        <p class="text-sm nexus-text-muted">Create a plan and tune the default targeting behavior.</p>
                     </div>
                     <button type="button" class="btn btn-circle btn-ghost btn-sm" onclick="document.getElementById('createWarPlanModal').close()" aria-label="Close war plan creation dialog">✕</button>
                 </div>
@@ -341,7 +341,7 @@
                     </label>
                 </div>
 
-                <p class="text-sm text-base-content/60">
+                <p class="text-sm nexus-text-muted">
                     You can adjust alliance membership, targets, and assignments inside the plan room after creation.
                 </p>
 

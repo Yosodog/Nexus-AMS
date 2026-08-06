@@ -5,7 +5,7 @@
         <div class="grid gap-2">
             <label class="label" for="account_name">
                 <span class="font-semibold">Account name</span>
-                <span class="text-base-content/60">Keep it short and clear</span>
+                <span class="nexus-text-muted">Keep it short and clear</span>
             </label>
             <input type="text" id="account_name" name="name" class="input w-full"
                    placeholder="e.g. War Chest" required>

@@ -45,7 +45,7 @@
                     {{ $turns }} turn{{ (int) $turns === 1 ? '' : 's' }}: {{ number_format((int) $count) }}
                 </span>
             @empty
-                <span class="text-base-content/50 text-sm">No tracked beige nations.</span>
+                <span class="nexus-text-muted text-sm">No tracked beige nations.</span>
             @endforelse
         </div>
     </x-card>
@@ -55,6 +55,7 @@
             <form method="POST" action="{{ route('admin.beige-alerts.alliances.store') }}" class="flex flex-wrap items-end gap-2">
                 @csrf
                 <x-input
+                    aria-label="Alliance ID to track"
                     name="alliance_id"
                     type="number"
                     min="1"
@@ -90,7 +91,7 @@
                                     {{ $alliance->name }}
                                 </a>
                             @else
-                                <span class="text-base-content/50">Unknown Alliance</span>
+                                <span class="nexus-text-muted">Unknown Alliance</span>
                             @endif
                         </td>
                         <td>{{ number_format((int) ($beigeCounts[$trackedAlliance->alliance_id] ?? 0)) }}</td>
@@ -105,7 +106,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center text-base-content/50 py-3">
+                        <td colspan="5" class="text-center nexus-text-muted py-3">
                             No tracked alliances configured.
                         </td>
                     </tr>
@@ -150,7 +151,7 @@
                                     {{ $alliance->name }}
                                 </a>
                             @else
-                                <span class="text-base-content/50">No Alliance</span>
+                                <span class="nexus-text-muted">No Alliance</span>
                             @endif
                         </td>
                         <td>{{ number_format((int) $nation->num_cities) }}</td>
@@ -168,13 +169,13 @@
                                 A: {{ number_format((int) $military->aircraft) }},
                                 N: {{ number_format((int) $military->ships) }}
                             @else
-                                <span class="text-base-content/50">No data</span>
+                                <span class="nexus-text-muted">No data</span>
                             @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center text-base-content/50 py-3">
+                        <td colspan="8" class="text-center nexus-text-muted py-3">
                             No tracked beige nations found.
                         </td>
                     </tr>

@@ -236,7 +236,7 @@ const enableSortableTables = (root = document) => {
 
             const content = document.createElement('button');
             content.type = 'button';
-            content.className = 'inline-flex min-h-10 w-full items-center gap-1.5 text-left font-inherit';
+            content.className = 'inline-flex min-h-11 w-full items-center gap-1.5 text-left font-inherit';
             content.setAttribute('aria-label', `Sort by ${label}`);
             content.innerHTML = `<span>${cell.innerHTML}</span><span data-sort-indicator aria-hidden="true" class="text-xs opacity-30">↕</span>`;
             cell.innerHTML = '';

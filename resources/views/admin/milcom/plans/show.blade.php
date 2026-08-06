@@ -279,7 +279,7 @@
                             <x-icon name="o-chat-bubble-left-right" class="size-5" aria-hidden="true" />
                             Create remaining rooms
                         </button>
-                        <p class="mt-2 text-xs leading-5 text-base-content/60">{{ number_format((int) data_get($summary, 'approved', 0)) }} approved {{ \Illuminate\Support\Str::plural('target', (int) data_get($summary, 'approved', 0)) }} waiting.</p>
+                        <p class="mt-2 text-xs leading-5 nexus-text-muted">{{ number_format((int) data_get($summary, 'approved', 0)) }} approved {{ \Illuminate\Support\Str::plural('target', (int) data_get($summary, 'approved', 0)) }} waiting.</p>
                     </form>
 
                     <form
@@ -294,7 +294,7 @@
                             <x-icon name="o-paper-airplane" class="size-5" aria-hidden="true" />
                             Send targets in-game
                         </button>
-                        <p class="mt-2 text-xs leading-5 text-base-content/60">{{ number_format((int) data_get($summary, 'in_game_sent', 0)) }} sent · {{ number_format((int) data_get($summary, 'in_game_pending', 0)) }} queued.</p>
+                        <p class="mt-2 text-xs leading-5 nexus-text-muted">{{ number_format((int) data_get($summary, 'in_game_sent', 0)) }} sent · {{ number_format((int) data_get($summary, 'in_game_pending', 0)) }} queued.</p>
                     </form>
 
                     <div>
@@ -302,7 +302,7 @@
                             <x-icon name="o-arrow-down-tray" class="size-5" aria-hidden="true" />
                             Export target list
                         </a>
-                        <p class="mt-2 text-xs leading-5 text-base-content/60">CSV includes targets, assigned nations, statuses, match scores, and declarations.</p>
+                        <p class="mt-2 text-xs leading-5 nexus-text-muted">CSV includes targets, assigned nations, statuses, match scores, and declarations.</p>
                     </div>
                 </div>
             </section>
@@ -348,7 +348,7 @@
                     <li class="flex items-center">
                         <a
                             href="{{ url('/admin/milcom/plans/'.$operationId.'?stage='.$stageKey) }}"
-                            class="flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {{ $isCurrentStage ? 'bg-primary text-primary-content' : ($isCompleteStage ? 'text-success hover:bg-success/10' : 'text-base-content/60 hover:bg-base-200') }}"
+                            class="flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary {{ $isCurrentStage ? 'bg-primary text-primary-content' : ($isCompleteStage ? 'text-success hover:bg-success/10' : 'nexus-text-muted hover:bg-base-200') }}"
                             @if ($isCurrentStage) aria-current="step" @endif
                         >
                             <span class="inline-grid size-5 place-items-center rounded-full border {{ $isCurrentStage ? 'border-primary-content/50' : ($isCompleteStage ? 'border-success/40 bg-success/10' : 'border-base-content/25') }} text-[0.6875rem] tabular-nums">
@@ -413,7 +413,7 @@
                                         </span>
                                         <div>
                                             <h3 id="friendly-alliance-picker-title" class="font-semibold">Your side</h3>
-                                            <p class="text-xs text-base-content/60">Nations available for teams</p>
+                                            <p class="text-xs nexus-text-muted">Nations available for teams</p>
                                         </div>
                                     </div>
                                 </div>
@@ -421,12 +421,12 @@
                             </div>
 
                             <div class="mt-4 grid gap-2" data-alliance-selected aria-live="polite"></div>
-                            <p class="mt-4 hidden rounded-md border border-dashed border-base-300 px-3 py-4 text-center text-sm text-base-content/55" data-alliance-empty>No friendly alliances added yet.</p>
+                            <p class="mt-4 hidden rounded-md border border-dashed border-base-300 px-3 py-4 text-center text-sm nexus-text-muted" data-alliance-empty>No friendly alliances added yet.</p>
 
                             <div class="relative mt-4">
                                 <label for="friendly-alliance-search" class="mb-1.5 block text-sm font-semibold">Add an alliance</label>
                                 <div class="input flex w-full items-center gap-2 focus-within:outline-2 focus-within:outline-primary">
-                                    <x-icon name="o-magnifying-glass" class="size-4 shrink-0 text-base-content/45" aria-hidden="true" />
+                                    <x-icon name="o-magnifying-glass" class="size-4 shrink-0 nexus-text-muted" aria-hidden="true" />
                                     <input
                                         id="friendly-alliance-search"
                                         type="search"
@@ -465,19 +465,19 @@
                                     </span>
                                     <div>
                                         <h3 id="enemy-alliance-picker-title" class="font-semibold">Enemy side</h3>
-                                        <p class="text-xs text-base-content/60">Nations that become targets</p>
+                                        <p class="text-xs nexus-text-muted">Nations that become targets</p>
                                     </div>
                                 </div>
                                 <span class="badge badge-error badge-soft tabular-nums" data-alliance-count>0</span>
                             </div>
 
                             <div class="mt-4 grid gap-2" data-alliance-selected aria-live="polite"></div>
-                            <p class="mt-4 hidden rounded-md border border-dashed border-base-300 px-3 py-4 text-center text-sm text-base-content/55" data-alliance-empty>No enemy alliances added yet.</p>
+                            <p class="mt-4 hidden rounded-md border border-dashed border-base-300 px-3 py-4 text-center text-sm nexus-text-muted" data-alliance-empty>No enemy alliances added yet.</p>
 
                             <div class="relative mt-4">
                                 <label for="enemy-alliance-search" class="mb-1.5 block text-sm font-semibold">Add an alliance</label>
                                 <div class="input flex w-full items-center gap-2 focus-within:outline-2 focus-within:outline-primary">
-                                    <x-icon name="o-magnifying-glass" class="size-4 shrink-0 text-base-content/45" aria-hidden="true" />
+                                    <x-icon name="o-magnifying-glass" class="size-4 shrink-0 nexus-text-muted" aria-hidden="true" />
                                     <input
                                         id="enemy-alliance-search"
                                         type="search"
@@ -508,13 +508,13 @@
                             <label class="block">
                                 <span class="label px-0">Friendly alliance IDs</span>
                                 <textarea name="friendly_alliance_ids_csv" rows="3" class="textarea w-full" placeholder="1234, 5678" data-alliance-manual="friendly">{{ $friendlyAllianceCsv }}</textarea>
-                                <span class="mt-1 block text-xs text-base-content/60">Separate IDs with commas or spaces. Applicants are skipped.</span>
+                                <span class="mt-1 block text-xs nexus-text-muted">Separate IDs with commas or spaces. Applicants are skipped.</span>
                             </label>
 
                             <label class="block">
                                 <span class="label px-0">Enemy alliance IDs</span>
                                 <textarea name="enemy_alliance_ids_csv" rows="3" class="textarea w-full" placeholder="9876, 5432" data-alliance-manual="enemy">{{ $enemyAllianceCsv }}</textarea>
-                                <span class="mt-1 block text-xs text-base-content/60">Each eligible nation becomes a target.</span>
+                                <span class="mt-1 block text-xs nexus-text-muted">Each eligible nation becomes a target.</span>
                             </label>
                         </div>
                     </details>
@@ -778,7 +778,7 @@
                                                     <span class="badge badge-warning badge-soft">{{ $warningCount }} {{ \Illuminate\Support\Str::plural('warning', $warningCount) }}</span>
                                                 @endif
                                             </div>
-                                            <p class="mt-1 truncate text-xs text-base-content/55">
+                                            <p class="mt-1 truncate text-xs nexus-text-muted">
                                                 <x-pw-nation-link
                                                     :nation-id="data_get($objective, 'target.id', data_get($objective, 'target_nation_id'))"
                                                     :label="data_get($objective, 'target.leader_name', data_get($objective, 'leader_name', 'Unknown leader'))"
@@ -819,7 +819,7 @@
                                                         @endif
                                                     </span>
                                                 @empty
-                                                    <span class="text-base-content/50">No team yet</span>
+                                                    <span class="nexus-text-muted">No team yet</span>
                                                 @endforelse
                                             </p>
                                         </div>
@@ -842,7 +842,7 @@
                             </article>
                         @empty
                             <div class="nexus-empty-state" data-milcom-objective-empty>
-                                <x-icon name="o-funnel" class="size-9 text-base-content/35" aria-hidden="true" />
+                                <x-icon name="o-funnel" class="size-9 nexus-text-muted" aria-hidden="true" />
                                 <div>
                                     <h3 class="text-lg font-semibold">No targets need attention</h3>
                                     <p class="mt-1 text-sm text-base-content/65">Try another filter, or regenerate teams after changing the plan setup.</p>
@@ -854,7 +854,7 @@
                     @if (is_object($objectives) && method_exists($objectives, 'hasPages') && $objectives->hasPages())
                         <div class="nexus-panel__footer">{{ $objectives->links() }}</div>
                     @else
-                        <div class="nexus-panel__footer flex items-center justify-between gap-3 text-xs text-base-content/55">
+                        <div class="nexus-panel__footer flex items-center justify-between gap-3 text-xs nexus-text-muted">
                             <span>Showing {{ number_format($objectiveRows->count()) }} of {{ number_format((int) data_get($summary, 'objective_count', $objectiveRows->count())) }}</span>
                             <span>Up to 50 per page</span>
                         </div>
@@ -882,7 +882,7 @@
                 </div>
 
                 <div class="{{ $selectedObjective ? 'hidden' : '' }} nexus-empty-state min-h-96" data-milcom-inspector-empty>
-                    <x-icon name="o-cursor-arrow-rays" class="size-9 text-base-content/35" aria-hidden="true" />
+                    <x-icon name="o-cursor-arrow-rays" class="size-9 nexus-text-muted" aria-hidden="true" />
                     <div>
                         <h2 class="text-lg font-semibold">Select a target</h2>
                         <p class="mt-1 text-sm text-base-content/65">Select a target to see its military, proposed team, blockers, match reasons, and alternatives.</p>
@@ -910,7 +910,7 @@
                                 </h2>
                                 <span class="badge {{ $selectedPriority === 'critical' ? 'badge-error badge-soft' : ($selectedPriority === 'high' ? 'badge-warning badge-soft' : 'badge-ghost') }}" data-milcom-field="priority">{{ str($selectedPriority)->headline() }}</span>
                             </div>
-                            <p class="mt-1 text-sm text-base-content/60">
+                            <p class="mt-1 text-sm nexus-text-muted">
                                 <x-pw-nation-link
                                     :nation-id="data_get($targetData, 'id', data_get($selectedObjective, 'target_nation_id'))"
                                     :label="data_get($targetData, 'leader_name', 'Unknown leader')"
@@ -937,7 +937,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 id="target-readiness-title" class="font-semibold">Target details</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">Data from <span data-milcom-field="freshness">{{ $relativeTime(data_get($selectedRecommendation, 'snapshot_at', data_get($selectedObjective, 'snapshot_at'))) }}</span></p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Data from <span data-milcom-field="freshness">{{ $relativeTime(data_get($selectedRecommendation, 'snapshot_at', data_get($selectedObjective, 'snapshot_at'))) }}</span></p>
                                 </div>
                                 <a href="{{ data_get($selectedObjective, 'target_url', 'https://politicsandwar.com/nation/id='.data_get($targetData, 'id', '')) }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">
                                     P&amp;W
@@ -961,7 +961,7 @@
                             <div class="flex items-end justify-between gap-3">
                                 <div>
                                     <h3 id="proposed-team-title" class="font-semibold">Proposed team</h3>
-                                    <p class="mt-1 text-xs text-base-content/55">Match score and free offensive slots.</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">Match score and free offensive slots.</p>
                                 </div>
                                 <span class="text-sm font-semibold tabular-nums"><span data-milcom-field="staffed_depth">{{ $selectedTeam->count() }}</span>/<span data-milcom-field="desired_depth">{{ (int) data_get($selectedObjective, 'desired_team_depth', 3) }}</span></span>
                             </div>
@@ -980,16 +980,16 @@
                                                     data-milcom-nation-name="{{ data_get($memberData, 'nation_name', data_get($member, 'nation_name', 'Unknown nation')) }}"
                                                 />
                                             </h4>
-                                            <p class="mt-1 text-xs text-base-content/55">{{ number_format((int) data_get($memberData, 'num_cities', data_get($memberData, 'cities', 0))) }} cities · {{ data_get($member, 'offensive_slots_available', data_get($memberData, 'offensive_slots_available', '?')) }} slots free</p>
+                                            <p class="mt-1 text-xs nexus-text-muted">{{ number_format((int) data_get($memberData, 'num_cities', data_get($memberData, 'cities', 0))) }} cities · {{ data_get($member, 'offensive_slots_available', data_get($memberData, 'offensive_slots_available', '?')) }} slots free</p>
                                             <x-milcom.military-summary :nation="$memberData" class="mt-2" label="Assigned nation military" />
                                         </div>
                                         <div class="text-right">
                                             <p class="font-semibold tabular-nums">{{ number_format((float) data_get($member, 'score', data_get($member, 'pair_score', 0)), 0) }}</p>
-                                            <p class="text-xs text-base-content/55">{{ number_format((float) data_get($member, 'confidence', 0), 0) }}% confidence</p>
+                                            <p class="text-xs nexus-text-muted">{{ number_format((float) data_get($member, 'confidence', 0), 0) }}% confidence</p>
                                         </div>
                                     </article>
                                 @empty
-                                    <p class="py-5 text-center text-sm text-base-content/60">No eligible team found.</p>
+                                    <p class="py-5 text-center text-sm nexus-text-muted">No eligible team found.</p>
                                 @endforelse
                             </div>
                         </section>
@@ -1037,7 +1037,7 @@
                                             </span>
                                         </li>
                                     @empty
-                                        <li class="text-sm text-base-content/60">No warnings.</li>
+                                        <li class="text-sm nexus-text-muted">No warnings.</li>
                                     @endforelse
                                 </ul>
 
@@ -1078,7 +1078,7 @@
                         <section class="p-4 md:p-5" aria-labelledby="alternatives-title">
                             <div>
                                 <h3 id="alternatives-title" class="font-semibold">Alternatives</h3>
-                                <p class="mt-1 text-xs text-base-content/55">Each team changes at least one nation.</p>
+                                <p class="mt-1 text-xs nexus-text-muted">Each team changes at least one nation.</p>
                             </div>
                             <div class="mt-4 grid gap-3" data-milcom-list="alternatives">
                                 @forelse ($selectedAlternatives as $alternative)
@@ -1102,14 +1102,14 @@
                                                     <li class="font-semibold">Alternative team</li>
                                                 @endforelse
                                             </ul>
-                                            <p class="mt-1 text-xs text-base-content/55">Team score {{ number_format((float) data_get($alternative, 'team_score', data_get($alternative, 'score', 0)), 1) }}</p>
+                                            <p class="mt-1 text-xs nexus-text-muted">Team score {{ number_format((float) data_get($alternative, 'team_score', data_get($alternative, 'score', 0)), 1) }}</p>
                                         </div>
                                         @unless ($isActive)
                                             <button type="button" class="btn btn-outline btn-sm hidden md:inline-flex" data-milcom-use-alternative data-alternative-index="{{ $loop->index }}">Use team</button>
                                         @endunless
                                     </article>
                                 @empty
-                                    <p class="rounded-md border border-dashed border-base-300 p-4 text-sm text-base-content/60">No other eligible team found.</p>
+                                    <p class="rounded-md border border-dashed border-base-300 p-4 text-sm nexus-text-muted">No other eligible team found.</p>
                                 @endforelse
                             </div>
                         </section>
@@ -1118,7 +1118,7 @@
                         <section class="hidden p-4 md:block md:p-5" aria-labelledby="staffing-controls-title">
                             <div>
                                 <h3 id="staffing-controls-title" class="font-semibold">Edit target</h3>
-                                <p class="mt-1 text-xs text-base-content/55">Nexus checks the plan version and available slots when you approve.</p>
+                                <p class="mt-1 text-xs nexus-text-muted">Nexus checks the plan version and available slots when you approve.</p>
                             </div>
 
                             <form
@@ -1178,7 +1178,7 @@
                     </div>
 
                     <div class="nexus-panel__footer milcom-plan-inspector__actions hidden items-center justify-between gap-3 md:flex">
-                        <p class="text-xs text-base-content/55">{{ $isActive ? 'Delivery actions are safe to retry.' : 'You cannot override hard game blockers.' }}</p>
+                        <p class="text-xs nexus-text-muted">{{ $isActive ? 'Delivery actions are safe to retry.' : 'You cannot override hard game blockers.' }}</p>
                         <div class="flex gap-2">
                             <form
                                 method="POST"

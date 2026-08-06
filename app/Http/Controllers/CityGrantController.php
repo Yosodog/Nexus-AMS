@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CityGrantFailureReason;
+use App\Exceptions\CityGrantRequestException;
 use App\Http\Requests\StoreCityGrantRequest;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
-use App\Services\AccountService;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
 use App\Services\GrantRequirementService;
 use App\Services\SettingService;
-use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use Throwable;
 
 class CityGrantController
 {
@@ -89,49 +90,32 @@ class CityGrantController
         ));
     }
 
-    /**
-     * @return mixed
-     */
     public function request(StoreCityGrantRequest $request): RedirectResponse
     {
         try {
-            // First, ensure they own the account they're requesting for
             $accountId = (int) $request->validated('account_id');
-            $account = AccountService::getAccountById($accountId);
-
-            if ($account->nation_id != Auth::user()->nation_id) {
-                abort(403, "You don't own that account");
-            }
-
-            // Get the city grant that they are getting
             $nation = Auth::user()->nation;
+            $account = $nation->accounts()->findOrFail($accountId);
             $cityGrant = CityGrantService::findGrantWithCityNum($nation->num_cities + 1);
 
-            // If no exceptions were thrown, they are eligible, so create the request
             CityGrantService::createRequest($cityGrant, $nation, $account->id);
-        } catch (ValidationException $exception) {
-            $details = collect($exception->errors())->flatten()->implode(' ');
+        } catch (CityGrantRequestException $exception) {
+            return $this->failureResponse($request, $this->failureMessage($exception->reason));
+        } catch (Throwable $exception) {
+            $referenceId = (string) Str::uuid();
 
-            return redirect()
-                ->route('grants.city')
-                ->with([
-                    'alert-message' => trim('You are not eligible for this grant. '.$details),
-                    // TODO be more specific lol
-                    'alert-type' => 'error',
-                ]);
-        } catch (Exception $exception) {
-            Log::error('City grant request failed.', [
+            Log::error('City grant request failed unexpectedly.', [
+                'reference_id' => $referenceId,
                 'nation_id' => Auth::user()?->nation_id,
                 'account_id' => $request->input('account_id'),
+                'exception_class' => $exception::class,
                 'exception' => $exception,
             ]);
 
-            return redirect()
-                ->route('grants.city')
-                ->with([
-                    'alert-message' => 'There was some kind of error when requesting your city grant. Please contact someone from the economics team.',
-                    'alert-type' => 'error',
-                ]);
+            return $this->failureResponse(
+                $request,
+                "We couldn't submit your city grant because of an unexpected error. Try again, or contact the economics team with reference {$referenceId}."
+            );
         }
 
         return redirect()
@@ -139,6 +123,31 @@ class CityGrantController
             ->with([
                 'alert-message' => 'City grant requested! Please give us up to 24 hours to review your request.',
                 'alert-type' => 'success',
+            ]);
+    }
+
+    private function failureMessage(CityGrantFailureReason $reason): string
+    {
+        return match ($reason) {
+            CityGrantFailureReason::Eligibility => 'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
+            CityGrantFailureReason::Cooldown => 'Your city or project purchase cooldown is still active. Wait until the required turns have passed, refresh your nation data, and try again.',
+            CityGrantFailureReason::PendingRequest => 'You already have a city grant request awaiting review. Wait for a decision before submitting another request.',
+            CityGrantFailureReason::MissingAudit => 'A current nation audit is required for this city grant. Complete or refresh your audit, then try again.',
+            CityGrantFailureReason::InsufficientData => 'There is not enough current nation data to verify this request. Refresh your nation data and try again; contact the economics team if the problem continues.',
+            CityGrantFailureReason::PolicyLimit => 'This city grant is outside the currently available program limits or has already been used. Review the available grant tier shown on this page or contact the economics team.',
+            CityGrantFailureReason::ExternalOutage => 'City-cost data is temporarily unavailable, so no request was submitted. Please try again later.',
+        };
+    }
+
+    private function failureResponse(StoreCityGrantRequest $request, string $message): RedirectResponse
+    {
+        return redirect()
+            ->route('grants.city')
+            ->withInput($request->safe()->only('account_id'))
+            ->withErrors(['city_grant' => $message])
+            ->with([
+                'alert-message' => $message,
+                'alert-type' => 'error',
             ]);
     }
 }

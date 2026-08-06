@@ -41,7 +41,7 @@
                     <span class="badge {{ $priorityBadge }}">{{ ucfirst($rule->priority->value) }}</span>
                     <span class="badge badge-outline">{{ ucfirst($rule->target_type->value) }}</span>
                 </div>
-                <p class="mt-1 text-sm text-base-content/60">{{ number_format($violations->count()) }} matching {{ \Illuminate\Support\Str::plural('target', $violations->count()) }}</p>
+                <p class="mt-1 text-sm nexus-text-muted">{{ number_format($violations->count()) }} matching {{ \Illuminate\Support\Str::plural('target', $violations->count()) }}</p>
             </div>
         </div>
 
@@ -106,12 +106,12 @@
                                 rel="noopener"
                                 class="link link-primary font-semibold"
                             >{{ $targetName($finding) }}</a>
-                            <p class="mt-1 text-sm text-base-content/60">{{ $finding->nation?->leader_name }} · {{ $finding->nation?->nation_name }}</p>
+                            <p class="mt-1 text-sm nexus-text-muted">{{ $finding->nation?->leader_name }} · {{ $finding->nation?->nation_name }}</p>
                         </td>
                         <td class="max-w-prose whitespace-normal">
                             <p class="font-medium">{{ $primaryEvidence['condition'] ?? data_get($finding->details, 'summary', 'Evidence will be populated on the next evaluation.') }}</p>
                             @if(is_array($primaryEvidence))
-                                <p class="mt-2 text-sm text-base-content/60">
+                                <p class="mt-2 text-sm nexus-text-muted">
                                     Observed <strong>{{ $primaryEvidence['observed_display'] ?? 'Unavailable' }}</strong>
                                     · Expected <strong>{{ $primaryEvidence['expected_display'] ?? '—' }}</strong>
                                 </p>
@@ -125,7 +125,7 @@
                                             @foreach($evidence as $item)
                                                 <div class="grid gap-2 py-3">
                                                     <p class="font-medium">{{ $item['condition'] ?? 'Audit condition' }}</p>
-                                                    <p class="text-sm text-base-content/60">Observed {{ $item['observed_display'] ?? 'Unavailable' }} · Expected {{ $item['expected_display'] ?? '—' }} · {{ ($item['matched'] ?? false) ? 'Matched' : 'Did not match' }}</p>
+                                                    <p class="text-sm nexus-text-muted">Observed {{ $item['observed_display'] ?? 'Unavailable' }} · Expected {{ $item['expected_display'] ?? '—' }} · {{ ($item['matched'] ?? false) ? 'Matched' : 'Did not match' }}</p>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -167,15 +167,15 @@
                                 @if($finding->isSnoozed())<span class="badge badge-info">Snoozed</span>@endif
                                 @if(!$overdue && !$finding->acknowledged_at && !$finding->isWaived())<span class="badge badge-ghost">Open</span>@endif
                             </div>
-                            @if($finding->due_at)<p class="mt-2 text-sm text-base-content/60">Due {{ $finding->due_at->toFormattedDateString() }}</p>@endif
+                            @if($finding->due_at)<p class="mt-2 text-sm nexus-text-muted">Due {{ $finding->due_at->toFormattedDateString() }}</p>@endif
                         </td>
                         <td data-order="{{ $finding->last_evaluated_at?->timestamp ?? 0 }}">
                             <div class="font-semibold">{{ $finding->last_evaluated_at?->diffForHumans() ?? 'Not checked' }}</div>
-                            <p class="mt-1 text-sm text-base-content/60">Revision {{ $finding->rule_revision }}</p>
+                            <p class="mt-1 text-sm nexus-text-muted">Revision {{ $finding->rule_revision }}</p>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="py-8 text-center text-base-content/60">No current findings match these filters.</td></tr>
+                    <tr><td colspan="4" class="py-8 text-center nexus-text-muted">No current findings match these filters.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -196,14 +196,14 @@
                             @if($finding->isWaived())<span class="badge badge-warning">Waived</span>@endif
                         </div>
                         <h3 class="mt-3 text-xl font-semibold">{{ $targetName($finding) }}</h3>
-                        <p class="mt-1 text-sm text-base-content/60">{{ $finding->nation?->leader_name }} · {{ $finding->nation?->nation_name }}</p>
+                        <p class="mt-1 text-sm nexus-text-muted">{{ $finding->nation?->leader_name }} · {{ $finding->nation?->nation_name }}</p>
                     </div>
                     <div>
                         <p class="font-medium">{{ $primaryEvidence['condition'] ?? data_get($finding->details, 'summary', 'Evidence will be populated on the next evaluation.') }}</p>
                         @if(is_array($primaryEvidence))
                             <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                                <div><dt class="text-base-content/60">Observed</dt><dd class="mt-1 font-semibold">{{ $primaryEvidence['observed_display'] ?? 'Unavailable' }}</dd></div>
-                                <div><dt class="text-base-content/60">Expected</dt><dd class="mt-1 font-semibold">{{ $primaryEvidence['expected_display'] ?? '—' }}</dd></div>
+                                <div><dt class="nexus-text-muted">Observed</dt><dd class="mt-1 font-semibold">{{ $primaryEvidence['observed_display'] ?? 'Unavailable' }}</dd></div>
+                                <div><dt class="nexus-text-muted">Expected</dt><dd class="mt-1 font-semibold">{{ $primaryEvidence['expected_display'] ?? '—' }}</dd></div>
                             </dl>
                         @endif
                     </div>
@@ -213,7 +213,7 @@
                             @foreach($evidence as $item)
                                 <div class="border-t border-base-300 pt-3">
                                     <p>{{ $item['condition'] ?? 'Audit condition' }}</p>
-                                    <p class="mt-1 text-sm text-base-content/60">{{ $item['observed_display'] ?? 'Unavailable' }} → {{ $item['expected_display'] ?? '—' }}</p>
+                                    <p class="mt-1 text-sm nexus-text-muted">{{ $item['observed_display'] ?? 'Unavailable' }} → {{ $item['expected_display'] ?? '—' }}</p>
                                 </div>
                             @endforeach
                             <form method="POST" action="{{ route('admin.audits.results.remediation', $finding) }}" class="grid gap-3 border-t border-base-300 pt-4">
@@ -227,10 +227,10 @@
                             </form>
                         </div>
                     </details>
-                    <p class="text-sm text-base-content/60">Last checked {{ $finding->last_evaluated_at?->diffForHumans() ?? 'not yet' }} · Revision {{ $finding->rule_revision }}</p>
+                    <p class="text-sm nexus-text-muted">Last checked {{ $finding->last_evaluated_at?->diffForHumans() ?? 'not yet' }} · Revision {{ $finding->rule_revision }}</p>
                 </article>
             @empty
-                <p class="p-6 text-center text-base-content/60">No current findings match these filters.</p>
+                <p class="p-6 text-center nexus-text-muted">No current findings match these filters.</p>
             @endforelse
         </div>
     </section>

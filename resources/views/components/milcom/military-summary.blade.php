@@ -19,7 +19,7 @@
     aria-label="{{ $label }}"
     {{ $attributes->class($isTiles
         ? 'grid grid-cols-2 gap-px overflow-hidden rounded-md border border-base-300 bg-base-300 sm:grid-cols-4'
-        : 'flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/60') }}
+        : 'flex flex-wrap gap-x-4 gap-y-1 text-xs nexus-text-muted') }}
 >
     @foreach ($military as $key => $statLabel)
         <div class="{{ $isTiles ? 'bg-base-100 p-3' : 'flex items-baseline gap-1' }}">

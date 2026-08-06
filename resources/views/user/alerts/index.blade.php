@@ -4,7 +4,7 @@
     <div class="space-y-6">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div class="space-y-2">
-                <div class="flex flex-wrap gap-2 text-xs uppercase tracking-wide text-base-content/60">
+                <div class="flex flex-wrap gap-2 text-xs uppercase tracking-wide nexus-text-muted">
                     <span class="badge badge-outline">Discord</span>
                     <span class="badge badge-outline">Alliance only</span>
                     <span class="badge badge-outline">{{ $subscriptions->filter(fn ($subscription) => $subscription->is_active && ! $subscription->expires_at?->isPast())->count() }}/{{ $maxActiveAlerts }} active</span>
@@ -29,23 +29,39 @@
                 <form method="POST" action="{{ route('user.alerts.store') }}" class="grid gap-4 border-t border-base-300 p-5">
                     @csrf
                     <input type="hidden" name="type" value="nation">
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Label <span class="text-base-content/50">(optional)</span></span>
-                        <input name="name" value="{{ old('type') === 'nation' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Priority target">
-                    </label>
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Nation ID</span>
-                        <input type="number" name="target_id" value="{{ old('type') === 'nation' ? old('target_id') : '' }}" min="1" class="input w-full" required>
-                    </label>
-                    <fieldset class="grid gap-2">
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="nation-name">Label <span class="nexus-text-muted">(optional)</span></label>
+                        <input id="nation-name" name="name" value="{{ old('type') === 'nation' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Priority target"
+                            @if(old('type') === 'nation' && $errors->has('name')) aria-describedby="nation-name-error" aria-invalid="true" @endif>
+                        @if(old('type') === 'nation')
+                            @error('name')
+                                <p id="nation-name-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="nation-target-id">Nation ID</label>
+                        <input id="nation-target-id" type="number" name="target_id" value="{{ old('type') === 'nation' ? old('target_id') : '' }}" min="1" class="input w-full" required
+                            @if(old('type') === 'nation' && $errors->has('target_id')) aria-describedby="nation-target-id-error" aria-invalid="true" @endif>
+                        @if(old('type') === 'nation')
+                            @error('target_id')
+                                <p id="nation-target-id-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
+                    <fieldset class="grid gap-2"
+                        @if(old('type') === 'nation' && ($errors->has('events') || $errors->has('events.*'))) aria-describedby="nation-events-error" aria-invalid="true" @endif>
                         <legend class="mb-1 text-sm font-medium">Events</legend>
                         @foreach($nationEvents as $event => $label)
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" name="events[]" value="{{ $event }}" class="checkbox checkbox-sm"
+                            <label class="flex items-center gap-2 text-sm" for="nation-event-{{ $event }}">
+                                <input id="nation-event-{{ $event }}" type="checkbox" name="events[]" value="{{ $event }}" class="checkbox checkbox-sm"
                                     @checked(old('type') === 'nation' && in_array($event, old('events', []), true))>
                                 <span>{{ $label }}</span>
                             </label>
                         @endforeach
+                        @if(old('type') === 'nation' && ($errors->has('events') || $errors->has('events.*')))
+                            <p id="nation-events-error" class="text-sm text-error">{{ $errors->first('events') ?: $errors->first('events.*') }}</p>
+                        @endif
                     </fieldset>
                     @include('user.alerts.partials.delivery-fields', ['formType' => 'nation'])
                     <button class="btn btn-primary">Create nation watch</button>
@@ -57,23 +73,39 @@
                 <form method="POST" action="{{ route('user.alerts.store') }}" class="grid gap-4 border-t border-base-300 p-5">
                     @csrf
                     <input type="hidden" name="type" value="alliance">
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Label <span class="text-base-content/50">(optional)</span></span>
-                        <input name="name" value="{{ old('type') === 'alliance' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Coalition partner">
-                    </label>
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Alliance ID</span>
-                        <input type="number" name="target_id" value="{{ old('type') === 'alliance' ? old('target_id') : '' }}" min="1" class="input w-full" required>
-                    </label>
-                    <fieldset class="grid gap-2">
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="alliance-name">Label <span class="nexus-text-muted">(optional)</span></label>
+                        <input id="alliance-name" name="name" value="{{ old('type') === 'alliance' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Coalition partner"
+                            @if(old('type') === 'alliance' && $errors->has('name')) aria-describedby="alliance-name-error" aria-invalid="true" @endif>
+                        @if(old('type') === 'alliance')
+                            @error('name')
+                                <p id="alliance-name-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="alliance-target-id">Alliance ID</label>
+                        <input id="alliance-target-id" type="number" name="target_id" value="{{ old('type') === 'alliance' ? old('target_id') : '' }}" min="1" class="input w-full" required
+                            @if(old('type') === 'alliance' && $errors->has('target_id')) aria-describedby="alliance-target-id-error" aria-invalid="true" @endif>
+                        @if(old('type') === 'alliance')
+                            @error('target_id')
+                                <p id="alliance-target-id-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
+                    <fieldset class="grid gap-2"
+                        @if(old('type') === 'alliance' && ($errors->has('events') || $errors->has('events.*'))) aria-describedby="alliance-events-error" aria-invalid="true" @endif>
                         <legend class="mb-1 text-sm font-medium">Events</legend>
                         @foreach($allianceEvents as $event => $label)
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" name="events[]" value="{{ $event }}" class="checkbox checkbox-sm"
+                            <label class="flex items-center gap-2 text-sm" for="alliance-event-{{ $event }}">
+                                <input id="alliance-event-{{ $event }}" type="checkbox" name="events[]" value="{{ $event }}" class="checkbox checkbox-sm"
                                     @checked(old('type') === 'alliance' && in_array($event, old('events', []), true))>
                                 <span>{{ $label }}</span>
                             </label>
                         @endforeach
+                        @if(old('type') === 'alliance' && ($errors->has('events') || $errors->has('events.*')))
+                            <p id="alliance-events-error" class="text-sm text-error">{{ $errors->first('events') ?: $errors->first('events.*') }}</p>
+                        @endif
                     </fieldset>
                     @include('user.alerts.partials.delivery-fields', ['formType' => 'alliance'])
                     <button class="btn btn-primary">Create alliance watch</button>
@@ -85,30 +117,54 @@
                 <form method="POST" action="{{ route('user.alerts.store') }}" class="grid gap-4 border-t border-base-300 p-5">
                     @csrf
                     <input type="hidden" name="type" value="market">
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Label <span class="text-base-content/50">(optional)</span></span>
-                        <input name="name" value="{{ old('type') === 'market' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Cheap steel">
-                    </label>
-                    <label class="grid gap-2">
-                        <span class="text-sm font-medium">Resource</span>
-                        <select name="resource" class="select w-full" required>
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="market-name">Label <span class="nexus-text-muted">(optional)</span></label>
+                        <input id="market-name" name="name" value="{{ old('type') === 'market' ? old('name') : '' }}" maxlength="100" class="input w-full" placeholder="Cheap steel"
+                            @if(old('type') === 'market' && $errors->has('name')) aria-describedby="market-name-error" aria-invalid="true" @endif>
+                        @if(old('type') === 'market')
+                            @error('name')
+                                <p id="market-name-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium" for="market-resource">Resource</label>
+                        <select id="market-resource" name="resource" class="select w-full" required
+                            @if(old('type') === 'market' && $errors->has('resource')) aria-describedby="market-resource-error" aria-invalid="true" @endif>
                             @foreach($resources as $resource => $label)
                                 <option value="{{ $resource }}" @selected(old('type') === 'market' && old('resource') === $resource)>{{ $label }}</option>
                             @endforeach
                         </select>
-                    </label>
+                        @if(old('type') === 'market')
+                            @error('resource')
+                                <p id="market-resource-error" class="text-sm text-error">{{ $message }}</p>
+                            @enderror
+                        @endif
+                    </div>
                     <div class="grid grid-cols-[1fr_1.4fr] gap-3">
-                        <label class="grid gap-2">
-                            <span class="text-sm font-medium">Direction</span>
-                            <select name="direction" class="select w-full" required>
+                        <div class="grid gap-2">
+                            <label class="text-sm font-medium" for="market-direction">Direction</label>
+                            <select id="market-direction" name="direction" class="select w-full" required
+                                @if(old('type') === 'market' && $errors->has('direction')) aria-describedby="market-direction-error" aria-invalid="true" @endif>
                                 <option value="above" @selected(old('direction') === 'above')>At or above</option>
                                 <option value="below" @selected(old('direction') === 'below')>At or below</option>
                             </select>
-                        </label>
-                        <label class="grid gap-2">
-                            <span class="text-sm font-medium">Price</span>
-                            <input type="number" name="threshold" value="{{ old('type') === 'market' ? old('threshold') : '' }}" min="0.01" max="1000000000" step="0.01" class="input w-full" required>
-                        </label>
+                            @if(old('type') === 'market')
+                                @error('direction')
+                                    <p id="market-direction-error" class="text-sm text-error">{{ $message }}</p>
+                                @enderror
+                            @endif
+                        </div>
+                        <div class="grid gap-2">
+                            <label class="text-sm font-medium" for="market-threshold">Price</label>
+                            <input id="market-threshold" type="number" name="threshold" value="{{ old('type') === 'market' ? old('threshold') : '' }}" min="0.01" max="1000000000" step="0.01" class="input w-full" required
+                                @if(old('type') === 'market' && $errors->has('threshold')) aria-describedby="market-threshold-error" aria-invalid="true" @endif>
+                            @if(old('type') === 'market')
+                                @error('threshold')
+                                    <p id="market-threshold-error" class="text-sm text-error">{{ $message }}</p>
+                                @enderror
+                            @endif
+                        </div>
                     </div>
                     @include('user.alerts.partials.delivery-fields', ['formType' => 'market'])
                     <button class="btn btn-primary">Create price alert</button>
@@ -130,13 +186,13 @@
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-5 py-4">
                 <div>
                     <h2 class="text-xl font-semibold">Your alerts</h2>
-                    <p class="text-sm text-base-content/60">Paused and expired alerts remain visible until you delete them.</p>
+                    <p class="text-sm nexus-text-muted">Paused and expired alerts remain visible until you delete them.</p>
                 </div>
                 <span class="badge badge-outline">{{ $subscriptions->count() }} total</span>
             </div>
 
             @if($subscriptions->isEmpty())
-                <div class="p-8 text-center text-sm text-base-content/60">No alerts yet. Create one above to establish its baseline.</div>
+                <div class="p-8 text-center text-sm nexus-text-muted">No alerts yet. Create one above to establish its baseline.</div>
             @else
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -162,11 +218,11 @@
                                 <tr>
                                     <td>
                                         <div class="font-medium">{{ $subscription->displayName() }}</div>
-                                        <div class="text-xs text-base-content/60">{{ $subscription->type->label() }} · #{{ $subscription->id }}</div>
+                                        <div class="text-xs nexus-text-muted">{{ $subscription->type->label() }} · #{{ $subscription->id }}</div>
                                     </td>
                                     <td>
                                         <div class="max-w-sm text-sm">{{ $condition }}</div>
-                                        <div class="mt-1 text-xs text-base-content/60">{{ $subscription->cooldown_minutes }} minute cooldown</div>
+                                        <div class="mt-1 text-xs nexus-text-muted">{{ $subscription->cooldown_minutes }} minute cooldown</div>
                                     </td>
                                     <td>
                                         @if($expired)
@@ -179,7 +235,7 @@
                                     </td>
                                     <td class="text-sm">
                                         <div>Checked {{ $subscription->last_evaluated_at?->diffForHumans() ?? 'not yet' }}</div>
-                                        <div class="text-xs text-base-content/60">Triggered {{ $subscription->last_triggered_at?->diffForHumans() ?? 'never' }}</div>
+                                        <div class="text-xs nexus-text-muted">Triggered {{ $subscription->last_triggered_at?->diffForHumans() ?? 'never' }}</div>
                                     </td>
                                     <td>
                                         <div class="flex flex-wrap justify-end gap-2">

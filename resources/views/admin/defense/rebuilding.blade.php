@@ -40,7 +40,7 @@
         <x-card title="Request Pipeline">
             <div class="space-y-2 text-sm">
                 <div class="font-semibold">{{ number_format($pendingCount) }} pending</div>
-                <div class="text-base-content/60">{{ number_format($approvedCount) }} approved · {{ number_format($deniedCount) }} denied</div>
+                <div class="nexus-text-muted">{{ number_format($approvedCount) }} approved · {{ number_format($deniedCount) }} denied</div>
                 <div class="flex flex-wrap gap-2">
                     <span class="badge badge-ghost">Cycle {{ number_format($cycleId) }}</span>
                     <span class="badge badge-ghost">{{ number_format($estimateCount) }} with estimates</span>
@@ -51,7 +51,7 @@
         <x-card title="Payout Quality">
             <div class="space-y-2 text-sm">
                 <div class="font-semibold">{{ number_format($approvalRate, 1) }}%</div>
-                <div class="text-base-content/60">Approval rate of decided requests</div>
+                <div class="nexus-text-muted">Approval rate of decided requests</div>
                 <div class="flex flex-wrap gap-2">
                     <span class="badge badge-ghost">Avg payout ${{ number_format($averageApprovedPayout, 0) }}</span>
                     <span class="badge badge-ghost">Remaining est. ${{ number_format($estimatedButUnsent, 0) }}</span>
@@ -62,7 +62,7 @@
         <x-card title="Eligibility Snapshot">
             <div class="space-y-2 text-sm">
                 <div class="font-semibold">{{ number_format($applicantCount + $vacationCount + $ineligibleCount) }} excluded</div>
-                <div class="text-base-content/60">Current cycle exclusion footprint</div>
+                <div class="nexus-text-muted">Current cycle exclusion footprint</div>
                 <div class="flex flex-wrap gap-2">
                     <span class="badge badge-ghost">{{ number_format($applicantCount) }} applicants</span>
                     <span class="badge badge-ghost">{{ number_format($vacationCount) }} in VM</span>
@@ -128,14 +128,14 @@
                                     <span class="badge badge-warning">Ineligible</span>
                                 @endif
                                 @if(! $row['is_applicant'] && ! $row['is_vacation_mode'] && ! $row['is_ineligible'])
-                                    <span class="text-base-content/60">-</span>
+                                    <span class="nexus-text-muted">-</span>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="py-6 text-center text-sm text-base-content/60">No nations available in alliance scope.</td>
+                        <td colspan="6" class="py-6 text-center text-sm nexus-text-muted">No nations available in alliance scope.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -210,7 +210,7 @@
                                 @forelse(($tier->requirements ?? []) as $requirement)
                                     <span class="badge badge-ghost">{{ str_replace('_', ' ', $requirement) }}</span>
                                 @empty
-                                    <span class="text-base-content/60">None</span>
+                                    <span class="nexus-text-muted">None</span>
                                 @endforelse
                             </div>
                         </td>
@@ -288,9 +288,9 @@
                                 <a href="https://politicsandwar.com/nation/id={{ $entry->nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-primary">
                                     {{ $entry->nation->leader_name ?? ('Nation #'.$entry->nation->id) }}
                                 </a>
-                                <div class="text-sm text-base-content/60">{{ $entry->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $entry->nation->nation_name ?? 'Unknown Nation' }}</div>
                             @else
-                                <span class="text-base-content/60">{{ 'Nation #'.$entry->nation_id }}</span>
+                                <span class="nexus-text-muted">{{ 'Nation #'.$entry->nation_id }}</span>
                             @endif
                         </td>
                         <td>{{ $entry->reason ?: '-' }}</td>
@@ -304,7 +304,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="py-6 text-center text-sm text-base-content/60">No ineligible nations this cycle.</td>
+                        <td colspan="3" class="py-6 text-center text-sm nexus-text-muted">No ineligible nations this cycle.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -322,16 +322,16 @@
                                 <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-primary font-semibold">
                                     {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
                                 </a>
-                                <div class="text-sm text-base-content/60">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
                             @else
                                 <div class="font-semibold">{{ 'Nation #'.$req->nation_id }}</div>
                             @endif
-                            <div class="mt-2 text-sm text-base-content/60">
+                            <div class="mt-2 text-sm nexus-text-muted">
                                 Account: {{ $req->account?->name ?? 'Unknown' }} · Cities: {{ $req->city_count_snapshot }} · Target: {{ number_format((float) $req->target_infrastructure_snapshot, 2) }}
                             </div>
-                            <div class="text-sm text-base-content/60">Estimated: ${{ number_format((float) $req->estimated_amount) }}</div>
+                            <div class="text-sm nexus-text-muted">Estimated: ${{ number_format((float) $req->estimated_amount) }}</div>
                             @if($req->note)
-                                <div class="text-sm text-base-content/60">Note: {{ $req->note }}</div>
+                                <div class="text-sm nexus-text-muted">Note: {{ $req->note }}</div>
                             @endif
                         </div>
 
@@ -390,9 +390,9 @@
                                 <a href="https://politicsandwar.com/nation/id={{ $req->nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-primary">
                                     {{ $req->nation->leader_name ?? ('Nation #'.$req->nation->id) }}
                                 </a>
-                                <div class="text-sm text-base-content/60">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
+                                <div class="text-sm nexus-text-muted">{{ $req->nation->nation_name ?? 'Unknown Nation' }}</div>
                             @else
-                                <span class="text-base-content/60">{{ 'Nation #'.$req->nation_id }}</span>
+                                <span class="nexus-text-muted">{{ 'Nation #'.$req->nation_id }}</span>
                             @endif
                         </td>
                         <td>
@@ -406,7 +406,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="py-6 text-center text-sm text-base-content/60">No history records this cycle.</td>
+                        <td colspan="5" class="py-6 text-center text-sm nexus-text-muted">No history records this cycle.</td>
                     </tr>
                 @endforelse
                 </tbody>

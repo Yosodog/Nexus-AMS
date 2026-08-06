@@ -22,7 +22,7 @@
 
         <div class="grid gap-6 xl:grid-cols-[minmax(320px,1fr)_minmax(0,2fr)]">
             <x-card title="Role details">
-                <p class="mb-4 text-sm text-base-content/60">A concise name makes it easy to spot in member management and audit logs.</p>
+                <p class="mb-4 text-sm nexus-text-muted">A concise name makes it easy to spot in member management and audit logs.</p>
 
                 <x-input
                     id="role-name"
@@ -89,13 +89,13 @@
                                     <span class="font-semibold">{{ Str::headline($perm) }}</span>
                                     <span class="badge {{ $typeClass }}">{{ $typeLabel }}</span>
                                 </div>
-                                <span class="mt-1 block text-sm text-base-content/60">{{ $description }}</span>
+                                <span class="mt-1 block text-sm nexus-text-muted">{{ $description }}</span>
                             </div>
                         </label>
                     @endforeach
                 </div>
 
-                <div class="mt-4 text-sm text-base-content/60">
+                <div class="mt-4 text-sm nexus-text-muted">
                     <x-icon name="o-information-circle" class="mr-1 inline size-4 align-text-bottom" />
                     Permissions update immediately after saving.
                 </div>

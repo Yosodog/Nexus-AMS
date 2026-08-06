@@ -5,7 +5,7 @@
         <div class="rounded-lg bg-base-100 border border-base-300 p-6 shadow-md">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Alliance market</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Alliance market</p>
                     <h1 class="text-2xl font-bold">Sell resources at alliance buy prices</h1>
                     <p class="text-sm text-base-content/70">Prices refresh hourly from the 24h average with admin adjustments.</p>
                 </div>
@@ -24,7 +24,7 @@
                 <div class="rounded-lg bg-base-100 border border-base-300 p-5 shadow-sm flex flex-col gap-4 {{ $isSoldOut ? 'opacity-60' : '' }}">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs uppercase text-base-content/60">{{ str_replace('_', ' ', $resource['resource']) }}</p>
+                            <p class="text-xs uppercase nexus-text-muted">{{ str_replace('_', ' ', $resource['resource']) }}</p>
                             <div class="flex items-center gap-2">
                                 <span class="text-2xl font-bold text-primary">
                                     ${{ number_format($resource['final_price'], 4) }}
@@ -131,7 +131,7 @@
                                 required
                             />
                             <div class="label">
-                                <span class="text-base-content/60">Minimum sale: 1 unit</span>
+                                <span class="nexus-text-muted">Minimum sale: 1 unit</span>
                             </div>
                             @error('amount')
                                 <p class="text-xs text-error mt-2">{{ $message }}</p>
@@ -139,9 +139,9 @@
                         </label>
 
                         <div class="rounded-xl border border-base-300 bg-base-200/60 p-4">
-                            <p class="text-xs uppercase text-base-content/60">Estimated payout</p>
+                            <p class="text-xs uppercase nexus-text-muted">Estimated payout</p>
                             <p class="text-2xl font-bold text-primary" x-text="formatCurrency(payout)">$0.00</p>
-                            <p class="text-xs text-base-content/60 mt-1">
+                            <p class="text-xs nexus-text-muted mt-1">
                                 Rate: <span x-text="`$${finalPrice.toFixed(4)}`">$0.0000</span>
                             </p>
                         </div>
@@ -149,13 +149,13 @@
 
                     <div class="rounded-xl border border-base-300 bg-base-200/40 p-4">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs uppercase text-base-content/60">Account balances</p>
-                            <p class="text-xs text-base-content/50" x-show="!accountId">Select an account to view balances.</p>
+                            <p class="text-xs uppercase nexus-text-muted">Account balances</p>
+                            <p class="text-xs nexus-text-muted" x-show="!accountId">Select an account to view balances.</p>
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" x-show="accountId">
                             <template x-for="(label, key) in resourceLabels" :key="key">
                                 <div class="flex items-center justify-between rounded-lg bg-base-100 border border-base-300 px-3 py-2">
-                                    <span class="text-xs uppercase text-base-content/60" x-text="label"></span>
+                                    <span class="text-xs uppercase nexus-text-muted" x-text="label"></span>
                                     <span class="text-sm font-semibold text-base-content"
                                           x-text="formatAmount(accountBalances[accountId]?.[key])"></span>
                                 </div>
@@ -179,15 +179,15 @@
                                 <p class="text-sm font-semibold text-base-content">
                                     {{ str_replace('_', ' ', $transaction->resource) }} · {{ number_format($transaction->amount, 2) }}
                                 </p>
-                                <p class="text-xs text-base-content/60">{{ $transaction->created_at->format('M d, Y H:i') }}</p>
+                                <p class="text-xs nexus-text-muted">{{ $transaction->created_at->format('M d, Y H:i') }}</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-sm font-semibold text-primary">${{ number_format($transaction->money_paid, 2) }}</p>
-                                <p class="text-xs text-base-content/60">${{ number_format($transaction->final_price, 4) }} / unit</p>
+                                <p class="text-xs nexus-text-muted">${{ number_format($transaction->final_price, 4) }} / unit</p>
                             </div>
                         </div>
                     @empty
-                        <p class="text-sm text-base-content/60">No market sales yet.</p>
+                        <p class="text-sm nexus-text-muted">No market sales yet.</p>
                     @endforelse
                 </div>
             </div>

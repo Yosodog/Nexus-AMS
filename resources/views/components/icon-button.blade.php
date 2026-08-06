@@ -20,12 +20,12 @@
     $isLink = filled($href);
     $isLoading = (bool) $loading;
     $isDisabled = (bool) $disabled || $isLoading;
-    $tooltipText = filled($tooltip) ? (string) $tooltip : null;
+    $tooltipText = filled($tooltip) ? (string) $tooltip : (string) $label;
     $classes = [
         'btn nexus-icon-button',
         'btn-sm nexus-icon-button--compact' => $variant === 'compact',
         'nexus-icon-button--default' => $variant === 'default',
-        'tooltip' => $tooltipText !== null,
+        'tooltip',
         'btn-disabled' => $isDisabled,
     ];
     $forwardedAttributes = $attributes->except([
@@ -45,7 +45,7 @@
         aria-label="{{ $label }}"
         @if ($isDisabled) aria-disabled="true" tabindex="-1" @endif
         @if ($isLoading) aria-busy="true" @endif
-        @if ($tooltipText !== null) data-tip="{{ $tooltipText }}" @endif
+        data-tip="{{ $tooltipText }}"
         {{ $forwardedAttributes->except($isDisabled ? ['tabindex'] : [])->class($classes) }}
     >
         <span class="nexus-icon-button__icon inline-flex size-5 shrink-0 items-center justify-center" aria-hidden="true">
@@ -62,7 +62,7 @@
         @disabled($isDisabled)
         @if ($isDisabled) aria-disabled="true" @endif
         @if ($isLoading) aria-busy="true" @endif
-        @if ($tooltipText !== null) data-tip="{{ $tooltipText }}" @endif
+        data-tip="{{ $tooltipText }}"
         {{ $forwardedAttributes->class($classes) }}
     >
         <span class="nexus-icon-button__icon inline-flex size-5 shrink-0 items-center justify-center" aria-hidden="true">

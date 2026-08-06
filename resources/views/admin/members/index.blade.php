@@ -32,12 +32,12 @@
     {{-- Member Table --}}
     <x-card title="Alliance Members" class="mb-6" x-data="{ search: '' }">
         <x-slot:menu>
-            <x-input placeholder="Search members..." x-model="search" icon="o-magnifying-glass" class="input-sm w-64" clearable />
+            <x-input aria-label="Search alliance members" placeholder="Search members..." x-model="search" icon="o-magnifying-glass" class="input-sm w-64" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Leader</th>
                         <th>Status</th>
                         <th>Score</th>
@@ -126,16 +126,16 @@
         <x-slot:title>
             <div>
                 Build Profitability
-                <div class="text-sm font-normal text-base-content/50">Current daily economic output converted with 24-hour average trade prices.</div>
+                <div class="text-sm font-normal nexus-text-muted">Current daily economic output converted with 24-hour average trade prices.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
-            <span class="text-sm text-base-content/50">Radiation snapshot: {{ $profitabilityRadiationSnapshotAt }}</span>
+            <span class="text-sm nexus-text-muted">Radiation snapshot: {{ $profitabilityRadiationSnapshotAt }}</span>
         </x-slot:menu>
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Rank</th>
                         <th>Leader</th>
                         <th>Nation</th>
@@ -166,7 +166,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-base-content/50 py-6">No profitability data available yet.</td>
+                            <td colspan="10" class="text-center nexus-text-muted py-6">No profitability data available yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -180,7 +180,7 @@
         <x-slot:title>
             <div>
                 Inactivity Mode
-                <div class="text-sm font-normal text-base-content/50">Automated inactivity detection and notifications.</div>
+                <div class="text-sm font-normal nexus-text-muted">Automated inactivity detection and notifications.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
@@ -203,7 +203,7 @@
                                class="toggle toggle-primary"
                                {{ $inactivitySettings['enabled'] ? 'checked' : '' }}>
                         <label for="inactivity_enabled" class="font-semibold cursor-pointer">Enabled</label>
-                        <span class="text-sm text-base-content/50">When disabled, no new inactivity episodes are created.</span>
+                        <span class="text-sm nexus-text-muted">When disabled, no new inactivity episodes are created.</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -250,7 +250,7 @@
         <div class="flex items-center justify-between mb-3">
             <div>
                 <div class="font-semibold">Inactive Nations</div>
-                <div class="text-sm text-base-content/50">Nations currently in an open inactivity episode.</div>
+                <div class="text-sm nexus-text-muted">Nations currently in an open inactivity episode.</div>
             </div>
             <x-badge  value="{{ $members->where('is_inactive', true)->count() }} inactive" class="badge-error" />
         </div>
@@ -258,7 +258,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Leader</th>
                         <th>Nation</th>
                         <th>Inactive Since</th>
@@ -283,7 +283,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-base-content/50 py-4">No inactive nations.</td>
+                            <td colspan="5" class="text-center nexus-text-muted py-4">No inactive nations.</td>
                         </tr>
                     @endforelse
                 </tbody>

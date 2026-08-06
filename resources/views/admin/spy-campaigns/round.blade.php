@@ -6,7 +6,7 @@
         <x-slot:actions>
             <div class="flex items-center gap-2">
                 <span class="tooltip tooltip-left" data-tip="This view lists every assignment for the round with odds, safety, and policy synergy.">
-                    <x-icon name="o-question-mark-circle" class="size-5 text-base-content/50" />
+                    <x-icon name="o-question-mark-circle" class="size-5 nexus-text-muted" />
                 </span>
                 <a href="{{ route('admin.spy-campaigns.show', $campaign) }}" class="btn btn-ghost btn-sm">Back to campaign</a>
             </div>
@@ -51,7 +51,7 @@
                                     {{ $assignment->attacker?->leader_name }}
                                 </a>
                             </div>
-                            <div class="text-sm text-base-content/60">{{ $assignment->attacker?->nation_name }}</div>
+                            <div class="text-sm nexus-text-muted">{{ $assignment->attacker?->nation_name }}</div>
                             <div class="mt-2 flex flex-wrap gap-2 text-xs">
                                 <span class="badge badge-ghost">Score {{ number_format($assignment->attacker?->score ?? 0, 2) }}</span>
                                 <span class="badge badge-ghost">Cities {{ $assignment->attacker?->num_cities ?? 0 }}</span>
@@ -65,7 +65,7 @@
                                     {{ $assignment->defender?->leader_name }}
                                 </a>
                             </div>
-                            <div class="text-sm text-base-content/60">{{ $assignment->defender?->nation_name }}</div>
+                            <div class="text-sm nexus-text-muted">{{ $assignment->defender?->nation_name }}</div>
                             <div class="mt-2 flex flex-wrap gap-2 text-xs">
                                 <span class="badge badge-ghost">Score {{ number_format($assignment->defender?->score ?? 0, 2) }}</span>
                                 <span class="badge badge-ghost">Cities {{ $assignment->defender?->num_cities ?? 0 }}</span>
@@ -89,7 +89,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="py-6 text-center text-sm text-base-content/60">No assignments yet.</td>
+                        <td colspan="7" class="py-6 text-center text-sm nexus-text-muted">No assignments yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

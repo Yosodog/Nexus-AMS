@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\DataTransferObjects\AllianceFinanceData;
+use App\Enums\CityGrantFailureReason;
 use App\Events\AllianceExpenseOccurred;
+use App\Exceptions\CityGrantRequestException;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
 use App\Models\Nation;
 use App\Notifications\CityGrantNotification;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,61 +24,80 @@ class CityGrantService
 {
     public static function findGrantWithCityNum(int $cityNum): CityGrant
     {
-        return CityGrant::where('city_number', $cityNum)
+        $grant = CityGrant::where('city_number', $cityNum)
             ->where('enabled', true)
-            ->firstOrFail();
+            ->first();
+
+        if ($grant === null) {
+            throw new CityGrantRequestException(
+                CityGrantFailureReason::PolicyLimit,
+                ['city_number' => $cityNum]
+            );
+        }
+
+        return $grant;
     }
 
     public static function createRequest(CityGrant $grant, Nation $nation, int $accountId): CityGrantRequest
     {
-        return DB::transaction(function () use ($grant, $nation, $accountId) {
-            $nation = Nation::query()
-                ->lockForUpdate()
-                ->findOrFail($nation->id);
+        try {
+            return DB::transaction(function () use ($grant, $nation, $accountId) {
+                $nation = Nation::query()
+                    ->lockForUpdate()
+                    ->findOrFail($nation->id);
 
-            self::validateEligibility($grant, $nation);
+                self::validateEligibility($grant, $nation);
 
-            $cityCostService = app(CityCostService::class);
-            $grantAmount = $cityCostService->calculateGrantAmount($grant);
+                $cityCostService = app(CityCostService::class);
+                $grantAmount = $cityCostService->calculateGrantAmount($grant);
 
-            if ($grantAmount === null) {
-                throw ValidationException::withMessages([
-                    'Unable to calculate the city grant amount right now. Please try again later.',
+                if ($grantAmount === null) {
+                    throw new CityGrantRequestException(CityGrantFailureReason::ExternalOutage);
+                }
+
+                $request = CityGrantRequest::create([
+                    'city_number' => $grant->city_number,
+                    'grant_amount' => (int) round($grantAmount),
+                    'nation_id' => $nation->id,
+                    'account_id' => $accountId,
+                    'status' => 'pending',
+                    'pending_key' => 1,
                 ]);
-            }
 
-            $request = CityGrantRequest::create([
-                'city_number' => $grant->city_number,
-                'grant_amount' => (int) round($grantAmount),
-                'nation_id' => $nation->id,
-                'account_id' => $accountId,
-                'status' => 'pending',
-                'pending_key' => 1,
-            ]);
+                app(PendingRequestsService::class)->flushCache();
 
-            app(PendingRequestsService::class)->flushCache();
-
-            app(AuditLogger::class)->recordAfterCommit(
-                category: 'grants',
-                action: 'city_grant_request_submitted',
-                outcome: 'success',
-                severity: 'info',
-                subject: $request,
-                context: [
-                    'related' => [
-                        ['type' => 'Account', 'id' => (string) $accountId, 'role' => 'account'],
+                app(AuditLogger::class)->recordAfterCommit(
+                    category: 'grants',
+                    action: 'city_grant_request_submitted',
+                    outcome: 'success',
+                    severity: 'info',
+                    subject: $request,
+                    context: [
+                        'related' => [
+                            ['type' => 'Account', 'id' => (string) $accountId, 'role' => 'account'],
+                        ],
+                        'data' => [
+                            'nation_id' => $nation->id,
+                            'city_number' => $request->city_number,
+                            'grant_amount' => $request->grant_amount,
+                        ],
                     ],
-                    'data' => [
-                        'nation_id' => $nation->id,
-                        'city_number' => $request->city_number,
-                        'grant_amount' => $request->grant_amount,
-                    ],
-                ],
-                message: 'City grant request submitted.'
+                    message: 'City grant request submitted.'
+                );
+
+                return $request;
+            }, attempts: 3);
+        } catch (CityGrantRequestException $exception) {
+            throw $exception;
+        } catch (UniqueConstraintViolationException $exception) {
+            throw new CityGrantRequestException(
+                CityGrantFailureReason::PendingRequest,
+                ['nation_id' => $nation->id],
+                $exception
             );
-
-            return $request;
-        }, attempts: 3);
+        } catch (ValidationException $exception) {
+            throw self::mapRequestFailure($exception, $grant, $nation);
+        }
     }
 
     /**
@@ -85,7 +107,7 @@ class CityGrantService
     {
         if (! $grant->enabled) {
             throw ValidationException::withMessages([
-                'This city grant is currently disabled.',
+                'policy' => 'This city grant is currently disabled.',
             ]);
         }
 
@@ -95,7 +117,9 @@ class CityGrantService
             ->exists();
 
         if ($hasPending) {
-            throw ValidationException::withMessages(['You have a pending city grant.']);
+            throw ValidationException::withMessages([
+                'pending_request' => 'You have a pending city grant.',
+            ]);
         }
 
         // Check to see if they've gotten this city tier before
@@ -105,7 +129,9 @@ class CityGrantService
             ->exists();
 
         if ($alreadyApprovedForCity) {
-            throw ValidationException::withMessages(["You've already gotten that city grant"]);
+            throw ValidationException::withMessages([
+                'policy' => "You've already gotten that city grant",
+            ]);
         }
 
         $validator = app(NationEligibilityValidator::class, ['nation' => $nation]);
@@ -409,5 +435,144 @@ class CityGrantService
         }
 
         $requirementService->assertEligible($grant->requirements, $nation);
+    }
+
+    private static function mapRequestFailure(
+        ValidationException $exception,
+        CityGrant $grant,
+        Nation $nation
+    ): CityGrantRequestException {
+        $keys = array_keys($exception->errors());
+
+        $reason = match (true) {
+            in_array('pending_request', $keys, true) => CityGrantFailureReason::PendingRequest,
+            in_array('policy', $keys, true) => CityGrantFailureReason::PolicyLimit,
+            in_array('cooldown', $keys, true) => CityGrantFailureReason::Cooldown,
+            in_array('audit', $keys, true) => CityGrantFailureReason::MissingAudit,
+            in_array('data', $keys, true) => CityGrantFailureReason::InsufficientData,
+            in_array('outage', $keys, true) => CityGrantFailureReason::ExternalOutage,
+            in_array('grant', $keys, true) => self::classifyRequirementFailure($grant, $nation),
+            default => CityGrantFailureReason::Eligibility,
+        };
+
+        return new CityGrantRequestException(
+            $reason,
+            ['validation_keys' => $keys],
+            $exception
+        );
+    }
+
+    private static function classifyRequirementFailure(
+        CityGrant $grant,
+        Nation $nation
+    ): CityGrantFailureReason {
+        $fields = self::failedRequirementFields($grant, $nation);
+
+        if (array_intersect($fields, ['turns_since_last_city', 'turns_since_last_project']) !== []) {
+            return CityGrantFailureReason::Cooldown;
+        }
+
+        if (in_array('mmr_score', $fields, true) && ! $nation->latestSignIn()->exists()) {
+            return CityGrantFailureReason::MissingAudit;
+        }
+
+        $cityDataFields = ['total_infrastructure', 'avg_infrastructure_per_city'];
+        $militaryDataFields = [
+            'soldiers',
+            'tanks',
+            'aircraft',
+            'ships',
+            'missiles',
+            'nukes',
+            'spies',
+            'soldiers_per_city',
+            'tanks_per_city',
+            'aircraft_per_city',
+            'ships_per_city',
+            'missiles_per_city',
+            'nukes_per_city',
+        ];
+        $resourceDataFields = PWHelperService::resources(true, true);
+
+        $isMissingCityData = array_intersect($fields, $cityDataFields) !== []
+            && ! $nation->cities()->exists();
+        $isMissingMilitaryData = array_intersect($fields, $militaryDataFields) !== []
+            && ! $nation->latestSignIn()->exists()
+            && ! $nation->military()->exists();
+        $isMissingResourceData = array_intersect($fields, $resourceDataFields) !== []
+            && ! $nation->latestSignIn()->exists()
+            && ! $nation->resources()->exists();
+
+        if ($isMissingCityData || $isMissingMilitaryData || $isMissingResourceData) {
+            return CityGrantFailureReason::InsufficientData;
+        }
+
+        return CityGrantFailureReason::Eligibility;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function failedRequirementFields(CityGrant $grant, Nation $nation): array
+    {
+        $service = app(GrantRequirementService::class);
+        $inspection = $service->inspect($grant->requirements);
+
+        if (! is_array($inspection['normalized'])) {
+            return [];
+        }
+
+        return array_values(array_unique(
+            self::failedFieldsForRequirementNode($inspection['normalized'], $service, $nation)
+        ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array<int, string>
+     */
+    private static function failedFieldsForRequirementNode(
+        array $node,
+        GrantRequirementService $service,
+        Nation $nation
+    ): array {
+        if ($service->evaluate($node, $nation)['passes']) {
+            return [];
+        }
+
+        if (isset($node['field']) && is_string($node['field'])) {
+            return [$node['field']];
+        }
+
+        $children = is_array($node['rules'] ?? null) ? $node['rules'] : [];
+
+        if (($node['group'] ?? null) === 'not') {
+            return collect($children)
+                ->filter(fn (array $child): bool => $service->evaluate($child, $nation)['passes'])
+                ->flatMap(fn (array $child): array => self::requirementNodeFields($child))
+                ->values()
+                ->all();
+        }
+
+        return collect($children)
+            ->flatMap(fn (array $child): array => self::failedFieldsForRequirementNode($child, $service, $nation))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array<int, string>
+     */
+    private static function requirementNodeFields(array $node): array
+    {
+        if (isset($node['field']) && is_string($node['field'])) {
+            return [$node['field']];
+        }
+
+        return collect($node['rules'] ?? [])
+            ->flatMap(fn (array $child): array => self::requirementNodeFields($child))
+            ->values()
+            ->all();
     }
 }

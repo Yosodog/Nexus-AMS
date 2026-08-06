@@ -20,7 +20,7 @@
         <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow-md">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Account</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Account</p>
                     <div class="flex items-center gap-2">
                         <h1 class="text-3xl font-bold">{{ $account->name }}</h1>
                         <a href="https://politicsandwar.com/nation/id={{ $account->nation_id }}" target="_blank" class="btn btn-xs btn-ghost">
@@ -111,7 +111,7 @@
                                 @elseif($transaction->transaction_type === 'payroll')
                                     <div class="text-base-content/70">Payroll</div>
                                     @if($transaction->payrollGrade)
-                                        <div class="text-xs text-base-content/60">{{ $transaction->payrollGrade->name }}</div>
+                                        <div class="text-xs nexus-text-muted">{{ $transaction->payrollGrade->name }}</div>
                                     @endif
                                 @elseif($transaction->fromAccount)
                                     <a href="{{ route('accounts.view', $transaction->fromAccount->id) }}"

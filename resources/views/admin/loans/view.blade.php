@@ -83,34 +83,34 @@
             <div class="p-5">
                 <h3 class="font-semibold">Contract</h3>
                 <dl class="mt-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Approved</dt><dd class="text-right font-medium">{{ $loan->approved_at ? Carbon::parse($loan->approved_at)->format('M d, Y') : 'Not approved' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Weekly rate</dt><dd class="font-medium">{{ number_format((float) $loan->interest_rate, 2) }}%</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Term progress</dt><dd class="font-medium">{{ min($weeksElapsed, (int) $loan->term_weeks) }} / {{ (int) $loan->term_weeks }} weeks</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Next due</dt><dd class="text-right font-medium">{{ $loan->next_due_date ? Carbon::parse($loan->next_due_date)->format('M d, Y') : 'Not scheduled' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Approved</dt><dd class="text-right font-medium">{{ $loan->approved_at ? Carbon::parse($loan->approved_at)->format('M d, Y') : 'Not approved' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Weekly rate</dt><dd class="font-medium">{{ number_format((float) $loan->interest_rate, 2) }}%</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Term progress</dt><dd class="font-medium">{{ min($weeksElapsed, (int) $loan->term_weeks) }} / {{ (int) $loan->term_weeks }} weeks</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Next due</dt><dd class="text-right font-medium">{{ $loan->next_due_date ? Carbon::parse($loan->next_due_date)->format('M d, Y') : 'Not scheduled' }}</dd></div>
                 </dl>
             </div>
             <div class="p-5">
                 <h3 class="font-semibold">Current cycle</h3>
                 <dl class="mt-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Window</dt><dd class="text-right font-medium">{{ $cycleProgress['cycle_start'] ? Carbon::parse($cycleProgress['cycle_start'])->format('M d') : 'N/A' }} – {{ $cycleProgress['cycle_end'] ? Carbon::parse($cycleProgress['cycle_end'])->format('M d') : 'N/A' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Paid</dt><dd class="font-medium">${{ number_format((float) $cycleProgress['paid_this_cycle'], 2) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">To target</dt><dd class="font-medium">${{ number_format((float) $cycleProgress['remaining_to_scheduled'], 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Window</dt><dd class="text-right font-medium">{{ $cycleProgress['cycle_start'] ? Carbon::parse($cycleProgress['cycle_start'])->format('M d') : 'N/A' }} – {{ $cycleProgress['cycle_end'] ? Carbon::parse($cycleProgress['cycle_end'])->format('M d') : 'N/A' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Paid</dt><dd class="font-medium">${{ number_format((float) $cycleProgress['paid_this_cycle'], 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">To target</dt><dd class="font-medium">${{ number_format((float) $cycleProgress['remaining_to_scheduled'], 2) }}</dd></div>
                 </dl>
             </div>
             <div class="p-5">
                 <h3 class="font-semibold">Next payment</h3>
                 <dl class="mt-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Required now</dt><dd class="font-medium">${{ number_format((float) $nextMinimumPayment, 2) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Interest</dt><dd class="font-medium">${{ number_format((float) ($nextPaymentPreview['interest'] ?? 0), 2) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Principal</dt><dd class="font-medium">${{ number_format((float) ($nextPaymentPreview['principal'] ?? 0), 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Required now</dt><dd class="font-medium">${{ number_format((float) $nextMinimumPayment, 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Interest</dt><dd class="font-medium">${{ number_format((float) ($nextPaymentPreview['interest'] ?? 0), 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Principal</dt><dd class="font-medium">${{ number_format((float) ($nextPaymentPreview['principal'] ?? 0), 2) }}</dd></div>
                 </dl>
             </div>
             <div class="p-5">
                 <h3 class="font-semibold">Payment history</h3>
                 <dl class="mt-3 space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Total paid</dt><dd class="font-medium">${{ number_format((float) $totals['paid_total'], 2) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Principal</dt><dd class="font-medium">${{ number_format((float) $totals['paid_principal'], 2) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-base-content/60">Interest</dt><dd class="font-medium">${{ number_format((float) $totals['paid_interest'], 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Total paid</dt><dd class="font-medium">${{ number_format((float) $totals['paid_total'], 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Principal</dt><dd class="font-medium">${{ number_format((float) $totals['paid_principal'], 2) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="nexus-text-muted">Interest</dt><dd class="font-medium">${{ number_format((float) $totals['paid_interest'], 2) }}</dd></div>
                 </dl>
             </div>
         </div>
@@ -120,9 +120,9 @@
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
             <span>
                 <span class="block font-semibold">Accounting rules in effect</span>
-                <span class="mt-0.5 block text-sm text-base-content/60">How weekly interest, payments, shortfalls, and missed cycles are calculated.</span>
+                <span class="mt-0.5 block text-sm nexus-text-muted">How weekly interest, payments, shortfalls, and missed cycles are calculated.</span>
             </span>
-            <span class="flex items-center gap-2 text-sm font-semibold text-base-content/60">Open <x-icon name="o-chevron-down" class="size-4" aria-hidden="true" /></span>
+            <span class="flex items-center gap-2 text-sm font-semibold nexus-text-muted">Open <x-icon name="o-chevron-down" class="size-4" aria-hidden="true" /></span>
         </summary>
         <ul class="list-disc space-y-1 border-t border-base-300 px-10 py-5 text-sm text-base-content/70">
             <li>Interest accrues weekly at cycle close, not daily.</li>
@@ -177,7 +177,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="font-semibold text-error">Close contract as paid</h3>
-                        <p class="mt-1 text-sm text-base-content/60">Marks the loan fully paid. This cannot be undone and does not create a replacement contract.</p>
+                        <p class="mt-1 text-sm nexus-text-muted">Marks the loan fully paid. This cannot be undone and does not create a replacement contract.</p>
                     </div>
                     <form method="POST" action="{{ route('admin.loans.markPaid', $loan) }}" data-confirm="Mark loan #{{ $loan->id }} as fully paid? This action cannot be undone." data-confirm-title="Mark loan fully paid?" data-confirm-label="Mark as paid" data-confirm-tone="error">
                         @csrf
@@ -196,7 +196,7 @@
             </div>
         </div>
         @if (empty($amortizationSchedule))
-            <div class="nexus-empty-state"><p class="text-sm text-base-content/60">No amortization schedule is available for this loan.</p></div>
+            <div class="nexus-empty-state"><p class="text-sm nexus-text-muted">No amortization schedule is available for this loan.</p></div>
         @else
             <div class="nexus-table-shell rounded-none border-0">
                 <table class="nexus-table" data-sortable="false">
@@ -235,10 +235,10 @@
                 <h2 id="payment-history-title" class="nexus-section-title">Payment history</h2>
                 <p class="nexus-body-muted mt-1">Posted payments and their interest/principal allocation.</p>
             </div>
-            <span class="text-sm tabular-nums text-base-content/60">{{ number_format($loan->payments->count()) }} payments</span>
+            <span class="text-sm tabular-nums nexus-text-muted">{{ number_format($loan->payments->count()) }} payments</span>
         </div>
         @if ($loan->payments->isEmpty())
-            <div class="nexus-empty-state"><p class="text-sm text-base-content/60">No payments have been posted for this loan.</p></div>
+            <div class="nexus-empty-state"><p class="text-sm nexus-text-muted">No payments have been posted for this loan.</p></div>
         @else
             <div class="nexus-table-shell rounded-none border-0">
                 <table class="nexus-table" data-sortable="false">

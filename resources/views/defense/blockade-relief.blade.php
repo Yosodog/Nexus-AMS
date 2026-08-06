@@ -5,7 +5,7 @@
         <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-base-content/60">Defense desk</p>
+                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Defense desk</p>
                     <h1 class="text-3xl font-bold leading-tight">Blockade relief</h1>
                     <p class="text-sm text-base-content/70">Request naval help or claim a request you are currently eligible to support.</p>
                 </div>
@@ -47,7 +47,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-base-content/55">No relief requests currently match your nation.</td></tr>
+                        <tr><td colspan="5" class="text-center nexus-text-muted">No relief requests currently match your nation.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -86,7 +86,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-base-content/55">You have not requested blockade relief.</td></tr>
+                        <tr><td colspan="6" class="text-center nexus-text-muted">You have not requested blockade relief.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -124,7 +124,7 @@
                     <textarea id="relief-note" class="textarea w-full" name="note" maxlength="255" placeholder="Timing or coordination details"></textarea>
                 </div>
 
-                <p class="text-sm text-base-content/60">Claiming is a coordination signal only. Nexus will never declare a war or make an assignment automatically.</p>
+                <p class="text-sm nexus-text-muted">Claiming is a coordination signal only. Nexus will never declare a war or make an assignment automatically.</p>
 
                 <div class="modal-action">
                     <button type="submit" class="btn btn-primary">Open request</button>

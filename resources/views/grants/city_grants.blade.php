@@ -78,7 +78,7 @@
                     @if ($cityAverage !== null)
                         <p class="mt-2 text-xl font-extrabold text-base-content">{{ number_format($cityAverage, 2) }}</p>
                         @if ($cityAverageUpdatedAt)
-                            <p class="text-xs text-base-content/60">Updated {{ $cityAverageUpdatedAt->diffForHumans() }}</p>
+                            <p class="text-xs nexus-text-muted">Updated {{ $cityAverageUpdatedAt->diffForHumans() }}</p>
                         @endif
                     @else
                         <p class="mt-2 text-sm font-medium text-warning">Temporarily unavailable</p>
@@ -117,15 +117,15 @@
                         @if ($nextGrant)
                             <div class="grid gap-3 rounded-xl border border-base-300 bg-base-200/60 p-4 sm:grid-cols-3">
                                 <div>
-                                    <p class="text-xs uppercase tracking-wide text-base-content/60">Grant step</p>
+                                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Grant step</p>
                                     <p class="text-base font-bold text-base-content">City #{{ $nextGrant->city_number }}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs uppercase tracking-wide text-base-content/60">Coverage</p>
+                                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Coverage</p>
                                     <p class="text-base font-bold text-base-content">{{ number_format($nextGrant->grant_amount) }}%</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs uppercase tracking-wide text-base-content/60">Estimated amount</p>
+                                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Estimated amount</p>
                                     <p @class([
                                         'text-base font-bold',
                                         'text-base-content' => $nextGrantAmount !== null,
@@ -188,18 +188,25 @@
                             @csrf
                             <input type="hidden" name="city_number" value="{{ $nextCity }}">
 
-                            <div class="grid gap-2 sm:col-span-3">
-                                <label class="label" for="city-grant-account">
-                                    <span class="text-base-content">Bank account</span>
-                                    <span class="text-base-content/60">Funds are deposited here</span>
-                                </label>
-                                <select id="city-grant-account" name="account_id" class="select w-full" required>
+                            <div class="sm:col-span-3">
+                                <x-form.select
+                                    id="city-grant-account"
+                                    name="account_id"
+                                    label="Bank account"
+                                    hint="City-grant funds will be deposited into this account."
+                                    :aria-describedby="$errors->has('city_grant') ? 'city-grant-request-error' : null"
+                                    :aria-invalid="$errors->has('city_grant') ? 'true' : null"
+                                    required
+                                >
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
                                             {{ $account->name }}
                                         </option>
                                     @endforeach
-                                </select>
+                                </x-form.select>
+                                @if ($errors->has('city_grant'))
+                                    <p id="city-grant-request-error" class="text-sm font-medium text-error" role="alert">{{ $errors->first('city_grant') }}</p>
+                                @endif
                             </div>
 
                             <button
@@ -252,15 +259,15 @@
                         <div class="divider my-1"></div>
                         <div class="grid grid-cols-3 gap-2 text-center">
                             <div class="rounded-lg bg-base-200 px-3 py-2">
-                                <p class="text-xs text-base-content/60">Approved</p>
+                                <p class="text-xs nexus-text-muted">Approved</p>
                                 <p class="font-bold text-success">{{ $approvedCount }}</p>
                             </div>
                             <div class="rounded-lg bg-base-200 px-3 py-2">
-                                <p class="text-xs text-base-content/60">Pending</p>
+                                <p class="text-xs nexus-text-muted">Pending</p>
                                 <p class="font-bold text-warning">{{ $pendingCount }}</p>
                             </div>
                             <div class="rounded-lg bg-base-200 px-3 py-2">
-                                <p class="text-xs text-base-content/60">Denied</p>
+                                <p class="text-xs nexus-text-muted">Denied</p>
                                 <p class="font-bold text-error">{{ $deniedCount }}</p>
                             </div>
                         </div>
@@ -272,20 +279,20 @@
         <section class="space-y-4">
             <div class="flex items-center justify-between gap-2">
                 <h2 class="text-xl font-semibold text-base-content">Request history</h2>
-                <span class="text-xs text-base-content/60">Sorted by city then latest activity</span>
+                <span class="text-xs nexus-text-muted">Sorted by city then latest activity</span>
             </div>
 
             <x-card class="border border-base-300/70 bg-base-100/95">
                 <x-slot:title>
                     <div>
                         Previous city grant requests
-                        <div class="text-sm font-normal text-base-content/60">Every submission with its final review status.</div>
+                        <div class="text-sm font-normal nexus-text-muted">Every submission with its final review status.</div>
                     </div>
                 </x-slot:title>
                 @if ($grantRequests->isEmpty())
                     <div class="flex items-center justify-center py-8 text-center text-base-content/70 text-sm">
                         <div>
-                            <svg class="mx-auto mb-3 h-8 w-8 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="mx-auto mb-3 h-8 w-8 nexus-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                       d="M13 16h-1v-4h-1m0-4h.01M12 6.25v.008m-.293 12.77a9 9 0 1112.586-12.586 9 9 0 01-12.586 12.586z" />
                             </svg>
@@ -354,7 +361,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 class="text-lg font-bold text-base-content">City #{{ $grant->city_number }}</h3>
-                                    <p class="text-xs uppercase tracking-wide text-base-content/60">Grant Step {{ $grant->city_number }}</p>
+                                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Grant Step {{ $grant->city_number }}</p>
                                 </div>
                                 @if ($isCurrent)
                                     @if (! $requirementsNotMet)
@@ -372,7 +379,7 @@
                             <p class="text-sm text-base-content/80">{{ $grant->description }}</p>
 
                             <div class="rounded-lg border border-base-300 bg-base-200/60 px-3 py-2">
-                                <p class="text-[11px] uppercase tracking-wide text-base-content/60">Estimated grant amount</p>
+                                <p class="text-[11px] uppercase tracking-wide nexus-text-muted">Estimated grant amount</p>
                                 <p class="text-xl font-extrabold text-base-content">
                                     {{ $computedAmount !== null ? '$' . number_format($computedAmount) : 'Unavailable' }}
                                 </p>

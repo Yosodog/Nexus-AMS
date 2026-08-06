@@ -1,11 +1,11 @@
 @php use Carbon\Carbon; @endphp
 @if ($taxes->isEmpty())
-    <p class="text-base-content/50 text-sm">No recent taxes paid.</p>
+    <p class="nexus-text-muted text-sm">No recent taxes paid.</p>
 @else
     <div class="overflow-x-auto">
     <table class="table table-sm table-zebra" data-sortable="false">
         <thead>
-            <tr class="text-base-content/60">
+            <tr class="nexus-text-muted">
                 <th>Date</th>
                 <th>Money</th>
                 <th>Steel</th>

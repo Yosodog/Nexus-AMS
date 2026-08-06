@@ -36,7 +36,7 @@
             <form method="GET" action="{{ route('defense.intel') }}" class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body space-y-4">
                     <div>
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Search</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Search</p>
                         <h2 class="card-title">Filter by nation ID</h2>
                         <p class="text-sm text-base-content/70">Jump to intel tied to a specific nation. We match reports by nation name automatically.</p>
                     </div>
@@ -69,7 +69,7 @@
                 <div class="card-body space-y-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Submit</p>
+                            <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Submit</p>
                             <h2 class="card-title">Drop a new intel report</h2>
                         </div>
                         <div class="badge badge-outline">{{ data_get(Auth::user(), 'nation.leader_name', 'You') }}</div>
@@ -97,7 +97,7 @@
             <div class="card-body">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs uppercase tracking-[0.2em] text-base-content/60">Reports</p>
+                        <p class="text-xs uppercase tracking-[0.2em] nexus-text-muted">Reports</p>
                         <h2 class="card-title">Latest intel drops</h2>
                     </div>
                     <div class="text-sm text-base-content/70">{{ $reports->firstItem() ?? 0 }}-{{ $reports->lastItem() ?? 0 }} of {{ $reports->total() }}</div>
@@ -150,7 +150,7 @@
                                     'food' => 'Food',
                                 ] as $field => $label)
                                     <div class="p-3 rounded-xl bg-base-100 border border-base-300">
-                                        <p class="text-xs uppercase text-base-content/60">{{ $label }}</p>
+                                        <p class="text-xs uppercase nexus-text-muted">{{ $label }}</p>
                                         <p class="font-semibold">
                                             @if($field === 'money')
                                                 ${{ number_format($report->$field, 2) }}

@@ -19,7 +19,7 @@
 
         const colors = () => ({
             text: cssColor('--color-base-content', '#191c28'),
-            muted: `color-mix(in oklch, ${cssColor('--color-base-content', '#191c28')} 62%, transparent)`,
+            muted: cssColor('--nexus-text-muted', `color-mix(in oklch, ${cssColor('--color-base-content', '#191c28')} 68%, transparent)`),
             grid: `color-mix(in oklch, ${cssColor('--color-base-content', '#191c28')} 13%, transparent)`,
             surface: cssColor('--color-base-100', '#ffffff'),
             primary: cssColor('--color-primary', '#475194'),

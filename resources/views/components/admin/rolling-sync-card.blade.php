@@ -16,7 +16,7 @@
         @endif
     </x-slot:menu>
 
-    <p class="mb-4 text-sm text-base-content/60">
+    <p class="mb-4 text-sm nexus-text-muted">
         Scheduled command that staggers nation syncs over roughly 23 hours so the alliance roster refreshes without hammering queue capacity.
     </p>
 
@@ -38,28 +38,28 @@
             <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <div class="font-semibold text-base-content">Progress</div>
-                    <div class="text-sm text-base-content/60">{{ round($progressPercent) }}% complete with {{ number_format($batch->failedJobs) }} failed jobs.</div>
+                    <div class="text-sm nexus-text-muted">{{ round($progressPercent) }}% complete with {{ number_format($batch->failedJobs) }} failed jobs.</div>
                 </div>
                 <x-badge :value="$statusValue" class="{{ $statusClass }} badge-sm" />
             </div>
             <x-progress :value="$progressPercent" class="progress-primary h-3" />
             <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                <dt class="font-medium text-base-content/60">Started</dt>
+                <dt class="font-medium nexus-text-muted">Started</dt>
                 <dd>{{ $batch->createdAt->toDayDateTimeString() }} ({{ $batch->createdAt->diffForHumans() }})</dd>
 
                 @if($batch->finishedAt)
-                    <dt class="font-medium text-base-content/60">Finished</dt>
+                    <dt class="font-medium nexus-text-muted">Finished</dt>
                     <dd>{{ $batch->finishedAt->toDayDateTimeString() }} ({{ $batch->finishedAt->diffForHumans() }})</dd>
                 @endif
 
                 @if($batch->cancelledAt)
-                    <dt class="font-medium text-base-content/60">Cancelled</dt>
+                    <dt class="font-medium nexus-text-muted">Cancelled</dt>
                     <dd class="text-error">{{ $batch->cancelledAt->toDayDateTimeString() }} ({{ $batch->cancelledAt->diffForHumans() }})</dd>
                 @endif
             </dl>
         </div>
     @else
-        <div class="rounded-lg border border-dashed border-base-300 px-4 py-6 text-sm text-base-content/60">
+        <div class="rounded-lg border border-dashed border-base-300 px-4 py-6 text-sm nexus-text-muted">
             No rolling nation sync is currently active. The scheduler will queue the next run automatically.
         </div>
     @endif

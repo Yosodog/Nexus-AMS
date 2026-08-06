@@ -21,7 +21,7 @@
         <x-slot:title>
             <div>
                 Alliance Cities
-                <div class="text-sm font-normal text-base-content/60">Sort the full roster by any column without loading every row at once.</div>
+                <div class="text-sm font-normal nexus-text-muted">Sort the full roster by any column without loading every row at once.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
@@ -95,7 +95,7 @@
                                     {{ $nation->leader_name }}
                                 </a>
                             @else
-                                <span class="text-base-content/50">Unknown</span>
+                                <span class="nexus-text-muted">Unknown</span>
                             @endif
                         </td>
                         <td>
@@ -106,7 +106,7 @@
                             @elseif($nation && $nation->alliance_id)
                                 <span class="badge badge-ghost">#{{ $nation->alliance_id }}</span>
                             @else
-                                <span class="text-base-content/50">&mdash;</span>
+                                <span class="nexus-text-muted">&mdash;</span>
                             @endif
                         </td>
                         <td data-order="{{ optional($city->date)->format('Y-m-d') }}">{{ optional($city->date)->format('M j, Y') ?? '—' }}</td>
@@ -163,7 +163,7 @@
             </table>
         </div>
         <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-sm text-base-content/60">
+            <p class="text-sm nexus-text-muted">
                 Showing {{ number_format($cities->firstItem() ?? 0) }}–{{ number_format($cities->lastItem() ?? 0) }} of {{ number_format($summary['total_cities']) }} cities.
             </p>
             {{ $cities->onEachSide(1)->links() }}

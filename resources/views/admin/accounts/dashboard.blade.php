@@ -158,11 +158,11 @@
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300/60 bg-base-100 px-4 py-3 shadow-sm">
             <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
                 <span class="font-medium text-base-content">Alliance Liquidity</span>
-                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span class="hidden nexus-text-muted sm:inline">•</span>
                 <span>Main bank {{ $mainBankCachedDisplay }}</span>
-                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span class="hidden nexus-text-muted sm:inline">•</span>
                 <span>{{ $offshoreCount }} offshores · {{ $offshoreCachedDisplay }}</span>
-                <span class="hidden text-base-content/30 sm:inline">•</span>
+                <span class="hidden nexus-text-muted sm:inline">•</span>
                 <span>{{ $resourcesWithLimitsCount }} resource limits configured</span>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -176,9 +176,9 @@
             <div class="rounded-lg border border-base-300/60 bg-base-100 p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Member Accounts</p>
+                        <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Member Accounts</p>
                         <p class="mt-2 text-2xl font-extrabold">${{ number_format($accountsCash, 2) }}</p>
-                        <p class="mt-1 text-sm text-base-content/55">
+                        <p class="mt-1 text-sm nexus-text-muted">
                             {{ number_format($accounts->count()) }} tracked · Avg ${{ number_format($accounts->avg('money'), 2) }}
                         </p>
                     </div>
@@ -191,9 +191,9 @@
             <div class="rounded-lg border border-base-300/60 bg-base-100 p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Alliance Holdings</p>
+                        <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Alliance Holdings</p>
                         <p class="mt-2 text-2xl font-extrabold">${{ number_format($allianceCash, 2) }}</p>
-                        <p class="mt-1 text-sm text-base-content/55">
+                        <p class="mt-1 text-sm nexus-text-muted">
                             Bank ${{ number_format($bankCash, 2) }} · Offshores ${{ number_format($offshoreCash, 2) }}
                         </p>
                     </div>
@@ -207,13 +207,13 @@
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <div class="flex items-center gap-2">
-                            <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Liquidity Cushion</p>
+                            <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Liquidity Cushion</p>
                             <span class="badge {{ $coverageBadgeClass }} badge-sm">{{ $coverageStatus }}</span>
                         </div>
                         <p class="mt-2 text-2xl font-extrabold {{ $netCashPosition >= 0 ? 'text-success' : 'text-warning' }}">
                             {{ $netCashPosition >= 0 ? '+' : '' }}${{ number_format($netCashPosition, 2) }}
                         </p>
-                        <p class="mt-1 text-sm text-base-content/55">
+                        <p class="mt-1 text-sm nexus-text-muted">
                             Alliance reserves cover {{ number_format($coveragePercent, 0) }}% of member cash balances.
                         </p>
                     </div>
@@ -247,7 +247,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-lg font-bold">Alliance Position</h3>
-                        <p class="text-sm text-base-content/50">Visualize cash mix, top balances, and resource cushion without leaving the dashboard.</p>
+                        <p class="text-sm nexus-text-muted">Visualize cash mix, top balances, and resource cushion without leaving the dashboard.</p>
                     </div>
                     <x-badge :value="'Coverage ' . number_format($coveragePercent, 0) . '%'" :class="$coverageBadgeClass . ' badge-sm'" />
                 </div>
@@ -258,7 +258,7 @@
                             @click="activeChart = '{{ $key }}'; $nextTick(() => window.dispatchEvent(new Event('resize')))"
                             :class="activeChart === '{{ $key }}'
                                 ? 'border-primary text-primary font-semibold'
-                                : 'border-transparent text-base-content/50 hover:text-base-content/80'"
+                                : 'border-transparent nexus-text-muted hover:text-base-content/80'"
                             class="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors"
                             type="button"
                         >
@@ -276,20 +276,20 @@
                         </div>
                         <div class="space-y-3">
                             <div class="rounded-lg border border-base-300/60 bg-base-200/30 p-4">
-                                <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Reserve mix</p>
-                                <p class="mt-1 text-sm text-base-content/60">Separate bank and offshore balances so funding risk is easier to see at a glance.</p>
+                                <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Reserve mix</p>
+                                <p class="mt-1 text-sm nexus-text-muted">Separate bank and offshore balances so funding risk is easier to see at a glance.</p>
                             </div>
                             <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                                 <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
-                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Members</p>
+                                    <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Members</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($accountsCash, 2) }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
-                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Main bank</p>
+                                    <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Main bank</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($bankCash, 2) }}</p>
                                 </div>
                                 <div class="rounded-lg border border-base-300/60 bg-base-100 p-4">
-                                    <p class="text-xs font-semibold uppercase tracking-widest text-base-content/45">Offshores</p>
+                                    <p class="text-xs font-semibold uppercase tracking-widest nexus-text-muted">Offshores</p>
                                     <p class="mt-2 text-xl font-bold">${{ number_format($offshoreCash, 2) }}</p>
                                 </div>
                             </div>
@@ -303,7 +303,7 @@
                             <canvas id="topBalancesChart" class="w-full" style="height: 320px"></canvas>
                         </div>
                     @else
-                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/50">
+                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm nexus-text-muted">
                             No account balance data is available yet.
                         </div>
                     @endif
@@ -315,7 +315,7 @@
                             <canvas id="resourceCushionChart" class="w-full" style="height: 320px"></canvas>
                         </div>
                     @else
-                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/50">
+                        <div class="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-base-300 text-sm nexus-text-muted">
                             No resource position data is available yet.
                         </div>
                     @endif
@@ -331,7 +331,7 @@
         <x-slot:title>
             <div>
                 Resource Ownership
-                <div class="text-sm font-normal text-base-content/50">Comparing member-held balances to alliance bank + offshores (cached).</div>
+                <div class="text-sm font-normal nexus-text-muted">Comparing member-held balances to alliance bank + offshores (cached).</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
@@ -340,7 +340,7 @@
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                         <th>Resource</th>
                         <th class="text-right">Member Accounts</th>
                         <th class="text-right">Alliance Holdings</th>
@@ -375,17 +375,17 @@
         <x-slot:title>
             <div>
                 All Accounts
-                <div class="text-sm font-normal text-base-content/50">Search, sort, and drill down into every managed bank account.</div>
+                <div class="text-sm font-normal nexus-text-muted">Search, sort, and drill down into every managed bank account.</div>
             </div>
         </x-slot:title>
         <x-slot:menu>
             <x-badge value="{{ number_format($accounts->count()) }} accounts" class="badge-ghost badge-sm" />
-            <x-input placeholder="Search accounts..." x-model="search" icon="o-magnifying-glass" class="input-sm w-56" clearable />
+            <x-input aria-label="Search managed accounts" placeholder="Search accounts..." x-model="search" icon="o-magnifying-glass" class="input-sm w-56" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra" data-sortable="true">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                         <th>Owner</th>
                         <th>Nation ID</th>
                         <th>Name</th>
@@ -404,7 +404,7 @@
                                     <a href="https://politicsandwar.com/nation/id={{ $acc->nation_id }}" target="_blank"
                                        class="link link-primary font-semibold">{{ $acc->user->name }}</a>
                                 @else
-                                    <span class="text-base-content/40 flex items-center gap-1">
+                                    <span class="nexus-text-muted flex items-center gap-1">
                                         <x-icon name="o-user-minus" class="w-4 h-4" /> Deleted
                                     </span>
                                 @endif
@@ -439,7 +439,7 @@
                     <x-slot:title>
                         <div>
                             Automatic Withdrawal Limits
-                            <div class="text-sm font-normal text-base-content/50">Fine-tune automatic approvals across money and resource types.</div>
+                            <div class="text-sm font-normal nexus-text-muted">Fine-tune automatic approvals across money and resource types.</div>
                         </div>
                     </x-slot:title>
                     <x-slot:menu>
@@ -454,13 +454,13 @@
                                      hint="Set to 0 for unlimited." required />
 
                             <div class="rounded-lg border border-base-300/60 bg-base-200/40 p-4">
-                                <div class="text-xs uppercase text-base-content/50 mb-3">At-a-glance</div>
+                                <div class="text-xs uppercase nexus-text-muted mb-3">At-a-glance</div>
                                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                                    <dt class="text-base-content/60">Pending withdrawals</dt>
+                                    <dt class="nexus-text-muted">Pending withdrawals</dt>
                                     <dd class="font-semibold">{{ number_format($pendingWithdrawals->count()) }}</dd>
-                                    <dt class="text-base-content/60">Daily auto limit</dt>
+                                    <dt class="nexus-text-muted">Daily auto limit</dt>
                                     <dd class="font-semibold">{{ $maxDailyWithdrawals > 0 ? number_format($maxDailyWithdrawals) : 'Unlimited' }}</dd>
-                                    <dt class="text-base-content/60">Resources with limits</dt>
+                                    <dt class="nexus-text-muted">Resources with limits</dt>
                                     <dd class="font-semibold">{{ number_format($resourcesWithLimitsCount) }}</dd>
                                 </dl>
                             </div>
@@ -469,7 +469,7 @@
                         <div class="overflow-x-auto rounded-lg border border-base-300/60 mb-4">
                             <table class="table table-sm" data-sortable="false">
                                 <thead>
-                                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                                         <th>Resource</th>
                                         <th>Daily Auto-Approval Limit</th>
                                     </tr>
@@ -481,7 +481,7 @@
                                             <td class="capitalize">{{ $resource }}</td>
                                             <td>
                                                 <label class="input input-sm flex items-center gap-1">
-                                                    @if($resource === 'money')<span class="text-base-content/50">$</span>@endif
+                                                    @if($resource === 'money')<span class="nexus-text-muted">$</span>@endif
                                                     <input type="number" step="0.01" min="0"
                                                            name="limits[{{ $resource }}]"
                                                            value="{{ old('limits.' . $resource, $limit) }}"
@@ -508,7 +508,7 @@
 
             <div class="space-y-5">
                 <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Top Balances</div>
+                    <div class="text-xs uppercase nexus-text-muted font-semibold mb-2">Top Balances</div>
                     <div class="divide-y divide-base-300">
                         @forelse($topAccounts as $account)
                             <div class="flex items-center justify-between py-2">
@@ -516,29 +516,29 @@
                                     <a href="{{ route('admin.accounts.view', $account->id) }}" class="link link-primary font-semibold text-sm">
                                         {{ $account->name }}
                                     </a>
-                                    <div class="text-xs text-base-content/50">Nation #{{ $account->nation_id }}</div>
+                                    <div class="text-xs nexus-text-muted">Nation #{{ $account->nation_id }}</div>
                                 </div>
                                 <span class="font-semibold text-sm">${{ number_format($account->money, 2) }}</span>
                             </div>
                         @empty
-                            <p class="text-base-content/50 text-sm py-2">No accounts available.</p>
+                            <p class="nexus-text-muted text-sm py-2">No accounts available.</p>
                         @endforelse
                     </div>
                 </div>
 
                 <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Resource Stockpile</div>
+                    <div class="text-xs uppercase nexus-text-muted font-semibold mb-2">Resource Stockpile</div>
                     <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                         @foreach($resourceTotals as $resource => $total)
-                            <dt class="text-base-content/60 capitalize">{{ $resource }}</dt>
+                            <dt class="nexus-text-muted capitalize">{{ $resource }}</dt>
                             <dd class="text-right font-semibold">{{ number_format($total, 2) }}</dd>
                         @endforeach
                     </dl>
                 </div>
 
                 <div>
-                    <div class="text-xs uppercase text-base-content/50 font-semibold mb-2">Engagement</div>
-                    <p class="text-sm text-base-content/60">
+                    <div class="text-xs uppercase nexus-text-muted font-semibold mb-2">Engagement</div>
+                    <p class="text-sm nexus-text-muted">
                         {{ number_format($activeAccounts) }} accounts assigned, {{ number_format($inactiveAccounts) }} unassigned.
                         Average of {{ number_format($averageTransactionsPerDay, 1) }} transactions/day.
                     </p>
@@ -565,7 +565,7 @@
                 <x-slot:title>
                     <div>
                         Withdrawal Reconciliation Required
-                        <div class="text-sm font-normal text-base-content/60">
+                        <div class="text-sm font-normal nexus-text-muted">
                             These sends may have reached Politics & War. Match the correlation ID against alliance bank records before resolving them.
                         </div>
                     </div>
@@ -592,11 +592,11 @@
                                         <code class="rounded bg-base-300 px-2 py-1 text-xs font-semibold">{{ $transaction->bank_correlation_id }}</code>
                                     </div>
                                     <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                                        <dt class="text-base-content/60">Attempted</dt>
+                                        <dt class="nexus-text-muted">Attempted</dt>
                                         <dd>{{ $transaction->bank_attempted_at?->format('M d, Y H:i:s') ?? 'Unknown' }}</dd>
-                                        <dt class="text-base-content/60">Member</dt>
+                                        <dt class="nexus-text-muted">Member</dt>
                                         <dd>{{ $transaction->fromAccount?->user?->name ?? 'Unknown user' }}</dd>
-                                        <dt class="text-base-content/60">Nation</dt>
+                                        <dt class="nexus-text-muted">Nation</dt>
                                         <dd>
                                             @if($transaction->nation)
                                                 <a href="https://politicsandwar.com/nation/id={{ $transaction->nation_id }}" target="_blank" class="link link-primary">
@@ -606,7 +606,7 @@
                                                 Nation #{{ $transaction->nation_id }}
                                             @endif
                                         </dd>
-                                        <dt class="text-base-content/60">Attempts</dt>
+                                        <dt class="nexus-text-muted">Attempts</dt>
                                         <dd>{{ number_format($transaction->bank_attempt_count) }}</dd>
                                     </dl>
                                     <div class="flex flex-wrap gap-1">
@@ -630,7 +630,7 @@
                                             @csrf
                                             <input type="hidden" name="resolution" value="confirmed_sent">
                                             <div class="font-semibold text-sm">Confirmed sent</div>
-                                            <p class="text-xs text-base-content/60">Use the matching Politics & War bank record as evidence.</p>
+                                            <p class="text-xs nexus-text-muted">Use the matching Politics & War bank record as evidence.</p>
                                             @if($isLegacyPendingGuardAutoRefund)
                                                 <x-select label="Legacy local credit" name="legacy_refund_credit_status" required
                                                           :options="[
@@ -648,7 +648,7 @@
                                             @csrf
                                             <input type="hidden" name="resolution" value="confirmed_not_sent">
                                             <div class="font-semibold text-sm">Confirmed not sent</div>
-                                            <p class="text-xs text-base-content/60">Document how the bank history proves no matching transfer exists.</p>
+                                            <p class="text-xs nexus-text-muted">Document how the bank history proves no matching transfer exists.</p>
                                             @if($isLegacyPendingGuardAutoRefund)
                                                 <x-select label="Legacy local credit" name="legacy_refund_credit_status" required
                                                           :options="[
@@ -679,7 +679,7 @@
                 <x-slot:title>
                     <div>
                         Pending Withdrawal Approvals
-                        <div class="text-sm font-normal text-base-content/50">Review and action outstanding requests submitted by members.</div>
+                        <div class="text-sm font-normal nexus-text-muted">Review and action outstanding requests submitted by members.</div>
                     </div>
                 </x-slot:title>
                 <x-slot:menu>
@@ -688,7 +688,7 @@
                 <div class="overflow-x-auto rounded-lg border border-base-300/60">
                     <table class="table table-sm table-zebra" data-sortable="false">
                         <thead>
-                            <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                            <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                                 <th>Requested</th>
                                 <th>Member</th>
                                 <th>From Account</th>
@@ -710,9 +710,9 @@
                                                target="_blank" class="link link-primary">
                                                 {{ $transaction->nation->leader_name ?? ('Nation #'.$transaction->nation->id) }}
                                             </a>
-                                            <div class="text-xs text-base-content/50">{{ $transaction->nation->nation_name ?? '' }}</div>
+                                            <div class="text-xs nexus-text-muted">{{ $transaction->nation->nation_name ?? '' }}</div>
                                         @else
-                                            <span class="text-base-content/50">Unknown</span>
+                                            <span class="nexus-text-muted">Unknown</span>
                                         @endif
                                     </td>
                                     <td>
@@ -768,7 +768,7 @@
                 <x-badge value="DD" class="badge-primary badge-sm" />
                 Direct Deposit Logs
             </div>
-            <div class="text-sm font-normal text-base-content/50">After-tax payouts with quick links to nations and deposit accounts.</div>
+            <div class="text-sm font-normal nexus-text-muted">After-tax payouts with quick links to nations and deposit accounts.</div>
         </x-slot:title>
         <x-slot:menu>
             @if($canViewMmr)
@@ -778,7 +778,7 @@
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                         <th>Date</th>
                         <th>Nation</th>
                         <th>Deposit Account</th>
@@ -806,10 +806,10 @@
                                         {{ $log->account->name }}
                                     </a>
                                     @if($log->account->user)
-                                        <div class="text-xs text-base-content/50">{{ $log->account->user->name }}</div>
+                                        <div class="text-xs nexus-text-muted">{{ $log->account->user->name }}</div>
                                     @endif
                                 @else
-                                    <span class="text-base-content/50">Account removed</span>
+                                    <span class="nexus-text-muted">Account removed</span>
                                 @endif
                             </td>
                             <td class="text-right">${{ number_format((float) $log->money, 2) }}</td>
@@ -821,13 +821,13 @@
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-base-content/50">Money only</span>
+                                    <span class="nexus-text-muted">Money only</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-base-content/50 py-6">No direct deposit activity recorded yet.</td>
+                            <td colspan="5" class="text-center nexus-text-muted py-6">No direct deposit activity recorded yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -835,7 +835,7 @@
         </div>
         <x-slot:footer>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <span class="text-sm text-base-content/50">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</span>
+                <span class="text-sm nexus-text-muted">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</span>
                 <div class="sm:ml-auto">{{ $directDepositLogs->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>
@@ -850,7 +850,7 @@
                 <x-badge value="MMR" class="badge-neutral badge-sm" />
                 MMR Assistant Purchases
             </div>
-            <div class="text-sm font-normal text-base-content/50">Withheld cash reinvested into resources based on player configs.</div>
+            <div class="text-sm font-normal nexus-text-muted">Withheld cash reinvested into resources based on player configs.</div>
         </x-slot:title>
         <x-slot:menu>
             @if($canViewDirectDeposit)
@@ -860,7 +860,7 @@
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                         <th>Date</th>
                         <th>Account</th>
                         <th>Nation</th>
@@ -886,7 +886,7 @@
                                         {{ $purchase->account->name }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/50">Account removed</span>
+                                    <span class="nexus-text-muted">Account removed</span>
                                 @endif
                             </td>
                             <td>
@@ -895,7 +895,7 @@
                                         Nation #{{ $purchase->account->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/50">—</span>
+                                    <span class="nexus-text-muted">—</span>
                                 @endif
                             </td>
                             <td class="text-right">${{ number_format((float) $purchase->total_spent, 2) }}</td>
@@ -906,19 +906,19 @@
                                             <x-badge class="badge-ghost badge-sm">
                                                 {{ ucfirst($resource) }}: {{ number_format((float) $data['qty'], 2) }}
                                                 @if($data['ppu'])
-                                                    <span class="text-base-content/50"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
+                                                    <span class="nexus-text-muted"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
                                                 @endif
                                             </x-badge>
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-base-content/50">No resources purchased</span>
+                                    <span class="nexus-text-muted">No resources purchased</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-base-content/50 py-6">No MMR Assistant purchases yet.</td>
+                            <td colspan="5" class="text-center nexus-text-muted py-6">No MMR Assistant purchases yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -926,7 +926,7 @@
         </div>
         <x-slot:footer>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <span class="text-sm text-base-content/50">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</span>
+                <span class="text-sm nexus-text-muted">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</span>
                 <div class="sm:ml-auto">{{ $mmrPurchases->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>
@@ -937,12 +937,12 @@
     <x-card id="recent-transactions" class="{{ $surfaceCardClass }} mb-6">
         <x-slot:title>
             Recent Transactions
-            <div class="text-sm font-normal text-base-content/50">Paginated, newest-first view of alliance banking activity.</div>
+            <div class="text-sm font-normal nexus-text-muted">Paginated, newest-first view of alliance banking activity.</div>
         </x-slot:title>
         <div class="overflow-x-auto rounded-lg border border-base-300/60">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-xs uppercase tracking-wider text-base-content/45">
+                    <tr class="text-xs uppercase tracking-wider nexus-text-muted">
                         <th>Date</th>
                         <th>From</th>
                         <th>To</th>
@@ -968,7 +968,7 @@
                                         Nation #{{ $transaction->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/50">N/A</span>
+                                    <span class="nexus-text-muted">N/A</span>
                                 @endif
                             </td>
                             <td>
@@ -981,7 +981,7 @@
                                         Nation #{{ $transaction->nation_id }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/50">N/A</span>
+                                    <span class="nexus-text-muted">N/A</span>
                                 @endif
                             </td>
                             <td>{{ ucfirst($transaction->transaction_type) }}</td>
@@ -1009,7 +1009,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ 6 + count(PWHelperService::resources(false)) }}" class="text-center text-base-content/50 py-6">
+                            <td colspan="{{ 6 + count(PWHelperService::resources(false)) }}" class="text-center nexus-text-muted py-6">
                                 No transactions found.
                             </td>
                         </tr>
@@ -1019,7 +1019,7 @@
         </div>
         <x-slot:footer>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <span class="text-sm text-base-content/50">Showing {{ $recentTransactions->count() }} of {{ $recentTransactions->total() }} transactions</span>
+                <span class="text-sm nexus-text-muted">Showing {{ $recentTransactions->count() }} of {{ $recentTransactions->total() }} transactions</span>
                 <div class="sm:ml-auto">{{ $recentTransactions->links() }}</div>
             </div>
         </x-slot:footer>

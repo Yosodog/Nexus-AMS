@@ -4,7 +4,7 @@
     <div class="mx-auto w-full min-w-0">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-base-content/60">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-wide nexus-text-muted">
                     <span class="badge badge-outline">Account</span>
                     <span class="badge badge-outline">Security</span>
                     <span class="badge badge-outline">Integrations</span>
@@ -39,7 +39,7 @@
                             <div class="grid gap-2">
                                 <label class="label" for="name">
                                     <span class="font-medium">Name</span>
-                                    <span class="text-base-content/60">Visible to your team</span>
+                                    <span class="nexus-text-muted">Visible to your team</span>
                                 </label>
                                 <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}"
                                        class="input w-full" required>
@@ -49,7 +49,7 @@
                             <div class="grid gap-2">
                                 <label class="label" for="email">
                                     <span class="font-medium">Email</span>
-                                    <span class="text-base-content/60">Used for alerts</span>
+                                    <span class="nexus-text-muted">Used for alerts</span>
                                 </label>
                                 <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}"
                                        class="input w-full" required>
@@ -61,7 +61,7 @@
                             <div class="grid gap-2">
                                 <label class="label" for="current_password">
                                     <span class="font-medium">Current password</span>
-                                    <span class="text-base-content/60">Required to change password</span>
+                                    <span class="nexus-text-muted">Required to change password</span>
                                 </label>
                                 <input type="password" id="current_password" name="current_password" class="input w-full">
                                 @error('current_password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
@@ -70,7 +70,7 @@
                             <div class="grid gap-2">
                                 <label class="label" for="password">
                                     <span class="font-medium">New password</span>
-                                    <span class="text-base-content/60">Leave blank to keep current</span>
+                                    <span class="nexus-text-muted">Leave blank to keep current</span>
                                 </label>
                                 <input type="password" id="password" name="password" class="input w-full">
                                 @error('password') <p class="mt-1 text-sm text-error">{{ $message }}</p> @enderror
@@ -189,7 +189,7 @@
                                 <div class="grid gap-2">
                                     <label class="label" for="token_expires_at">
                                         <span class="font-medium">Expires on</span>
-                                        <span class="text-base-content/60">Optional</span>
+                                        <span class="nexus-text-muted">Optional</span>
                                     </label>
                                     <input type="date" id="token_expires_at" name="expires_at"
                                            value="{{ old('expires_at') }}" class="input w-full">
@@ -199,7 +199,7 @@
                                 <div class="grid gap-2">
                                     <label class="label" for="token_current_password">
                                         <span class="font-medium">Current password</span>
-                                        <span class="text-base-content/60">Required</span>
+                                        <span class="nexus-text-muted">Required</span>
                                     </label>
                                     <input type="password" id="token_current_password" name="current_password"
                                            class="input w-full" required>

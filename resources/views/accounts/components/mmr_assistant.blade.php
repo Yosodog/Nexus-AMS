@@ -160,15 +160,15 @@
                 @else
                     <div class="flex flex-wrap gap-x-8 gap-y-3">
                         <div>
-                            <span class="block text-xs font-medium text-base-content/60">Estimated spend</span>
+                            <span class="block text-xs font-medium nexus-text-muted">Estimated spend</span>
                             <span class="font-semibold">${{ number_format((float) ($autoPlan['total_spend'] ?? 0), 2) }}</span>
                         </div>
                         <div>
-                            <span class="block text-xs font-medium text-base-content/60">Purchasable deficit cost</span>
+                            <span class="block text-xs font-medium nexus-text-muted">Purchasable deficit cost</span>
                             <span class="font-semibold">${{ number_format((float) ($autoPlan['target_spend'] ?? 0), 2) }}</span>
                         </div>
                         <div>
-                            <span class="block text-xs font-medium text-base-content/60">Purchasable coverage</span>
+                            <span class="block text-xs font-medium nexus-text-muted">Purchasable coverage</span>
                             <span class="font-semibold">{{ number_format((float) ($autoPlan['coverage_pct'] ?? 0), 2) }}%</span>
                         </div>
                     </div>
@@ -176,7 +176,7 @@
                     <div class="mt-4 border-t border-base-300 pt-4">
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
                             <h3 class="text-sm font-semibold">Estimated purchases this turn</h3>
-                            <span class="text-xs text-base-content/60">Based on the preview income below</span>
+                            <span class="text-xs nexus-text-muted">Based on the preview income below</span>
                         </div>
 
                         @if($autoEstimatedPurchases->isEmpty())
@@ -186,7 +186,7 @@
                                 <table class="table table-sm w-full" data-sortable="false">
                                     <caption class="sr-only">Estimated automatic resource purchases for one turn</caption>
                                     <thead>
-                                    <tr class="text-xs text-base-content/60">
+                                    <tr class="text-xs nexus-text-muted">
                                         <th>Resource</th>
                                         <th class="text-right">Estimated quantity</th>
                                         <th class="text-right">Estimated cost</th>
@@ -198,11 +198,11 @@
                                             <td class="capitalize font-medium">{{ $purchase['resource'] }}</td>
                                             <td class="text-right">
                                                 <span class="font-semibold">{{ number_format($purchase['quantity'], 2) }}</span>
-                                                <span class="block text-xs text-base-content/60">of {{ number_format($purchase['target_quantity'], 2) }} needed</span>
+                                                <span class="block text-xs nexus-text-muted">of {{ number_format($purchase['target_quantity'], 2) }} needed</span>
                                             </td>
                                             <td class="text-right">
                                                 <span class="font-semibold">${{ number_format($purchase['spend'], 2) }}</span>
-                                                <span class="block text-xs text-base-content/60">at ${{ number_format($purchase['ppu'], 2) }} each</span>
+                                                <span class="block text-xs nexus-text-muted">at ${{ number_format($purchase['ppu'], 2) }} each</span>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -289,9 +289,9 @@
                             <span class="auto-estimate {{ $autoCoverResourceDeficits ? '' : 'hidden' }}">
                                 @if($autoTargetQuantity > 0)
                                     <span class="font-medium">{{ number_format($autoQuantity, 2) }}</span>
-                                    <span class="ml-1 text-xs text-base-content/60">of {{ number_format($autoTargetQuantity, 2) }}</span>
+                                    <span class="ml-1 text-xs nexus-text-muted">of {{ number_format($autoTargetQuantity, 2) }}</span>
                                 @else
-                                    <span class="text-base-content/50">—</span>
+                                    <span class="nexus-text-muted">—</span>
                                 @endif
                             </span>
                         </td>
@@ -359,7 +359,7 @@
                             <td class="align-top text-sm text-base-content/80">{{ $log->created_at->format('M d, H:i') }}</td>
                             <td class="align-top">
                                 <div class="font-medium">{{ optional($log->account)->name ?? 'Deleted Account' }}</div>
-                                <div class="text-xs text-base-content/60">#{{ $log->account_id }}</div>
+                                <div class="text-xs nexus-text-muted">#{{ $log->account_id }}</div>
                                 @if($log->allocation_mode === \App\Models\MMRAssistantPurchase::ALLOCATION_MODE_AUTOMATIC)
                                     <span class="badge badge-sm badge-outline mt-1">Auto coverage</span>
                                 @endif
@@ -389,7 +389,7 @@
                                                     <span class="capitalize font-medium text-base-content/90">{{ $item['resource'] }}</span>
                                                     <div class="text-right">
                                                         <div>{{ number_format($item['amount'], 2) }} @ ${{ number_format($item['ppu'], 2) }}</div>
-                                                        <div class="text-xs text-base-content/60">=${{ number_format($item['total'], 2) }}</div>
+                                                        <div class="text-xs nexus-text-muted">=${{ number_format($item['total'], 2) }}</div>
                                                     </div>
                                                 </div>
                                             @endforeach

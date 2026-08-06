@@ -18,7 +18,7 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <div class="font-semibold">Eligibility Builder</div>
-            <div class="text-sm text-base-content/50">Combine fields, comparisons, project checks, and nested logic.</div>
+            <div class="text-sm nexus-text-muted">Combine fields, comparisons, project checks, and nested logic.</div>
         </div>
         <div class="flex shrink-0 flex-wrap gap-2">
             <button type="button" data-grant-requirement-action="add-condition" class="btn btn-outline btn-primary btn-sm">Add Condition</button>
@@ -40,7 +40,7 @@
     <div class="rounded-box border border-base-300 bg-base-200 p-3" aria-live="polite">
         <div class="mb-1 text-sm font-semibold text-base-content/70">Live summary</div>
         <div class="font-semibold" data-grant-requirement-rule-count>{{ $emptySummaryTitle }}</div>
-        <div class="mt-1 text-sm text-base-content/50" data-grant-requirement-summary-hint>{{ $emptySummaryHint }}</div>
+        <div class="mt-1 text-sm nexus-text-muted" data-grant-requirement-summary-hint>{{ $emptySummaryHint }}</div>
     </div>
 
     <label class="rounded-box block border border-base-300 bg-base-200 p-3">
@@ -55,7 +55,7 @@
 
     <div class="rounded-box bg-base-200 p-3">
         <div class="mb-2 text-sm font-semibold text-base-content/70">Builder tips</div>
-        <ul class="list-inside list-disc space-y-1 text-sm text-base-content/60">
+        <ul class="list-inside list-disc space-y-1 text-sm nexus-text-muted">
             <li>Use <strong>Any condition may match</strong> when several different paths should qualify.</li>
             <li>Use nested groups to combine project checks with city, score, or MMR ranges.</li>
             <li>Add a custom message on any condition to show a specific denial reason to the applicant.</li>

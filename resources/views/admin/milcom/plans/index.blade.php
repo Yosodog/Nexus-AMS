@@ -123,16 +123,16 @@
                             <tr>
                                 <td class="max-w-md whitespace-normal">
                                     <a href="{{ url('/admin/milcom/plans/'.$planId) }}" class="font-semibold link link-hover">{{ data_get($plan, 'name', 'Untitled plan') }}</a>
-                                    <p class="mt-1 line-clamp-2 text-sm text-base-content/60">{{ data_get($plan, 'scope_summary', 'Alliances and targets are not set yet.') }}</p>
+                                    <p class="mt-1 line-clamp-2 text-sm nexus-text-muted">{{ data_get($plan, 'scope_summary', 'Alliances and targets are not set yet.') }}</p>
                                 </td>
                                 <td>
                                     <span class="nexus-status {{ $statusTone($status) }}">{{ $statusLabel($status) }}</span>
-                                    <p class="mt-2 text-xs text-base-content/55">{{ $stageLabel($stage) }}</p>
+                                    <p class="mt-2 text-xs nexus-text-muted">{{ $stageLabel($stage) }}</p>
                                 </td>
                                 <td class="min-w-44">
                                     <div class="flex items-center justify-between gap-3 text-sm">
                                         <span>{{ number_format($coverage, 0) }}% critical</span>
-                                        <span class="tabular-nums text-base-content/55">{{ number_format((int) data_get($plan, 'staffed_objectives', 0)) }}/{{ number_format((int) data_get($plan, 'objective_count', 0)) }}</span>
+                                        <span class="tabular-nums nexus-text-muted">{{ number_format((int) data_get($plan, 'staffed_objectives', 0)) }}/{{ number_format((int) data_get($plan, 'objective_count', 0)) }}</span>
                                     </div>
                                     <progress class="progress progress-primary mt-2 h-1.5 w-full" value="{{ min(100, max(0, $coverage)) }}" max="100" aria-label="Critical coverage {{ number_format($coverage, 0) }} percent"></progress>
                                 </td>
@@ -144,7 +144,7 @@
                                 </td>
                                 <td class="whitespace-nowrap">
                                     <span>{{ $relativeTime(data_get($plan, 'updated_at')) }}</span>
-                                    <span class="block text-xs text-base-content/55">v{{ number_format((int) data_get($plan, 'generation_version', 1)) }}</span>
+                                    <span class="block text-xs nexus-text-muted">v{{ number_format((int) data_get($plan, 'generation_version', 1)) }}</span>
                                 </td>
                                 <td class="text-right">
                                     <a href="{{ url('/admin/milcom/plans/'.$planId) }}" class="btn btn-outline btn-sm">Open</a>
@@ -154,7 +154,7 @@
                             <tr>
                                 <td colspan="6">
                                     <div class="nexus-empty-state">
-                                        <x-icon name="o-map" class="size-9 text-base-content/35" aria-hidden="true" />
+                                        <x-icon name="o-map" class="size-9 nexus-text-muted" aria-hidden="true" />
                                         <div>
                                             <h3 class="text-lg font-semibold">No plans match these filters</h3>
                                             <p class="mt-1 text-sm text-base-content/65">Create a plan or clear the filters.</p>
@@ -179,7 +179,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h3 class="truncate font-semibold">{{ data_get($plan, 'name', 'Untitled plan') }}</h3>
-                                <p class="mt-1 text-xs text-base-content/55">Updated {{ $relativeTime(data_get($plan, 'updated_at')) }}</p>
+                                <p class="mt-1 text-xs nexus-text-muted">Updated {{ $relativeTime(data_get($plan, 'updated_at')) }}</p>
                             </div>
                             <span class="nexus-status {{ $statusTone($status) }}">{{ $statusLabel($status) }}</span>
                         </div>
@@ -191,7 +191,7 @@
                     </a>
                 @empty
                     <div class="nexus-empty-state">
-                        <x-icon name="o-map" class="size-9 text-base-content/35" aria-hidden="true" />
+                        <x-icon name="o-map" class="size-9 nexus-text-muted" aria-hidden="true" />
                         <div>
                             <h3 class="font-semibold">No plans found</h3>
                             <p class="mt-1 text-sm text-base-content/65">Create a plan when you are ready to choose targets.</p>

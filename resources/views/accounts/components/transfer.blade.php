@@ -29,7 +29,7 @@
             <div class="grid gap-2">
                 <label for="tran_from" class="label font-semibold">
                     <span class="">From</span>
-                    <span class="text-base-content/60" id="fromSummary">Available balance</span>
+                    <span class="nexus-text-muted" id="fromSummary">Available balance</span>
                 </label>
                 <select class="select w-full" name="from" id="tran_from" required>
                     <optgroup label="Accounts">
@@ -48,7 +48,7 @@
             <div class="grid gap-2">
                 <label for="tran_to" class="label font-semibold">
                     <span class="">To</span>
-                    <span class="text-base-content/60">Select loan to pay only money</span>
+                    <span class="nexus-text-muted">Select loan to pay only money</span>
                 </label>
                 <div class="space-y-3">
                     <select class="select w-full h-12"
@@ -81,7 +81,7 @@
                          x-show="destinationMode === 'alliance'" x-cloak>
                         <label class="label font-semibold">
                             <span class="">Send to alliance member</span>
-                            <span class="text-base-content/60">Search by nation or leader</span>
+                            <span class="nexus-text-muted">Search by nation or leader</span>
                         </label>
                         <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
                             <input
@@ -97,7 +97,7 @@
                                 <span x-show="isLoading">Searching...</span>
                             </button>
                         </div>
-                        <p class="mt-2 text-xs text-base-content/60">We only show alliance members and their account names. Balances stay private.</p>
+                        <p class="mt-2 text-xs nexus-text-muted">We only show alliance members and their account names. Balances stay private.</p>
 
                         <div class="mt-3 space-y-2" x-show="results.length > 0">
                             <template x-for="result in results" :key="result.nation_id">
@@ -105,7 +105,7 @@
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div>
                                             <p class="text-sm font-semibold" x-text="result.nation_name"></p>
-                                            <p class="text-xs text-base-content/60" x-text="`Leader: ${result.leader_name}`"></p>
+                                            <p class="text-xs nexus-text-muted" x-text="`Leader: ${result.leader_name}`"></p>
                                         </div>
                                         <span class="badge badge-outline">Accounts</span>
                                     </div>
@@ -127,7 +127,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                     <p class="font-semibold">Selected alliance recipient</p>
-                                    <p class="text-xs text-base-content/60" x-text="selectedLabel"></p>
+                                    <p class="text-xs nexus-text-muted" x-text="selectedLabel"></p>
                                 </div>
                                 <button type="button" class="btn btn-xs btn-outline" @click="clearSelection">Clear</button>
                             </div>

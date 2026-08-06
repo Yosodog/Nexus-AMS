@@ -16,40 +16,40 @@
 
                 <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
                     <div>
-                        <dt class="text-base-content/60">Drawing window</dt>
+                        <dt class="nexus-text-muted">Drawing window</dt>
                         <dd class="mt-1 font-semibold">
                             {{ $currentDrawing->starts_at->format('M j, H:i') }}–{{ $currentDrawing->ends_at->format('M j, Y H:i') }} UTC
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Current jackpot</dt>
+                        <dt class="nexus-text-muted">Current jackpot</dt>
                         <dd class="mt-1 font-semibold">${{ number_format($currentDrawing->jackpot_amount, 2) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Tickets sold</dt>
+                        <dt class="nexus-text-muted">Tickets sold</dt>
                         <dd class="mt-1 font-semibold">{{ number_format($currentDrawing->ticket_count) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Rollover included</dt>
+                        <dt class="nexus-text-muted">Rollover included</dt>
                         <dd class="mt-1 font-semibold">${{ number_format($currentDrawing->rollover_amount, 2) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Ticket price</dt>
+                        <dt class="nexus-text-muted">Ticket price</dt>
                         <dd class="mt-1 font-semibold">${{ number_format($currentDrawing->ticket_price, 2) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Jackpot contribution</dt>
+                        <dt class="nexus-text-muted">Jackpot contribution</dt>
                         <dd class="mt-1 font-semibold">
                             {{ number_format($currentDrawing->jackpot_basis_points / 100, 2) }}%
                             · ${{ number_format($currentDrawing->jackpot_contribution_per_ticket, 2) }} per ticket
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Per purchase</dt>
+                        <dt class="nexus-text-muted">Per purchase</dt>
                         <dd class="mt-1 font-semibold">{{ number_format($currentDrawing->max_tickets_per_purchase) }} tickets</dd>
                     </div>
                     <div>
-                        <dt class="text-base-content/60">Per nation</dt>
+                        <dt class="nexus-text-muted">Per nation</dt>
                         <dd class="mt-1 font-semibold">
                             {{ number_format($currentDrawing->max_tickets_per_nation) }} tickets
                             · ${{ number_format((float) $currentDrawing->ticket_price * $currentDrawing->max_tickets_per_nation, 0) }} maximum spend
@@ -59,7 +59,7 @@
             @else
                 <div class="rounded-box border border-dashed border-base-300 px-6 py-10 text-center">
                     <p class="font-semibold">No drawing has been created for the current week.</p>
-                    <p class="mt-1 text-sm text-base-content/60">The saved configuration will be snapshotted when the first member opens the lottery.</p>
+                    <p class="mt-1 text-sm nexus-text-muted">The saved configuration will be snapshotted when the first member opens the lottery.</p>
                 </div>
             @endif
         </x-card>
@@ -84,7 +84,7 @@
                         >
                         <span>
                             <span class="block font-semibold">Enable ticket sales</span>
-                            <span class="block text-xs text-base-content/60">Pausing sales never cancels tickets or the scheduled draw.</span>
+                            <span class="block text-xs nexus-text-muted">Pausing sales never cancels tickets or the scheduled draw.</span>
                         </span>
                     </label>
 
@@ -104,7 +104,7 @@
                                     required
                                 >
                             </div>
-                            <span class="text-xs text-base-content/60">Effective with the next drawing.</span>
+                            <span class="text-xs nexus-text-muted">Effective with the next drawing.</span>
                             @error('ticket_price')<span class="text-xs text-error">{{ $message }}</span>@enderror
                         </label>
 
@@ -123,7 +123,7 @@
                                 >
                                 <span class="join-item flex items-center border border-base-300 bg-base-200 px-3" aria-hidden="true">%</span>
                             </div>
-                            <span class="text-xs text-base-content/60">
+                            <span class="text-xs nexus-text-muted">
                                 Currently previews ${{ number_format($nextJackpotContribution, 2) }} per ticket for the next drawing.
                             </span>
                             @error('jackpot_percentage')<span class="text-xs text-error">{{ $message }}</span>@enderror
@@ -141,7 +141,7 @@
                                 value="{{ old('max_tickets_per_purchase', $settings['max_tickets_per_purchase']) }}"
                                 required
                             >
-                            <span class="text-xs text-base-content/60">Applies to the active drawing immediately; hard ceiling 500.</span>
+                            <span class="text-xs nexus-text-muted">Applies to the active drawing immediately; hard ceiling 500.</span>
                             @error('max_tickets_per_purchase')<span class="text-xs text-error">{{ $message }}</span>@enderror
                         </label>
 
@@ -157,7 +157,7 @@
                                 value="{{ old('max_tickets_per_nation', $settings['max_tickets_per_nation']) }}"
                                 required
                             >
-                            <span class="text-xs text-base-content/60">
+                            <span class="text-xs nexus-text-muted">
                                 Applies immediately. At the next ticket price, the configured maximum spend is ${{ number_format($nextNationSpendLimit, 0) }}.
                             </span>
                             @error('max_tickets_per_nation')<span class="text-xs text-error">{{ $message }}</span>@enderror
@@ -174,14 +174,14 @@
                 </form>
             @else
                 <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
-                    <div><dt class="text-base-content/60">Sales default</dt><dd class="mt-1 font-semibold">{{ $settings['sales_enabled'] ? 'Enabled' : 'Paused' }}</dd></div>
-                    <div><dt class="text-base-content/60">Next ticket price</dt><dd class="mt-1 font-semibold">${{ number_format($nextTicketPrice, 2) }}</dd></div>
-                    <div><dt class="text-base-content/60">Next jackpot share</dt><dd class="mt-1 font-semibold">{{ number_format($nextJackpotPercentage, 2) }}%</dd></div>
-                    <div><dt class="text-base-content/60">Next contribution</dt><dd class="mt-1 font-semibold">${{ number_format($nextJackpotContribution, 2) }}</dd></div>
-                    <div><dt class="text-base-content/60">Per purchase</dt><dd class="mt-1 font-semibold">{{ number_format($settings['max_tickets_per_purchase']) }}</dd></div>
-                    <div><dt class="text-base-content/60">Per nation</dt><dd class="mt-1 font-semibold">{{ number_format($settings['max_tickets_per_nation']) }}</dd></div>
+                    <div><dt class="nexus-text-muted">Sales default</dt><dd class="mt-1 font-semibold">{{ $settings['sales_enabled'] ? 'Enabled' : 'Paused' }}</dd></div>
+                    <div><dt class="nexus-text-muted">Next ticket price</dt><dd class="mt-1 font-semibold">${{ number_format($nextTicketPrice, 2) }}</dd></div>
+                    <div><dt class="nexus-text-muted">Next jackpot share</dt><dd class="mt-1 font-semibold">{{ number_format($nextJackpotPercentage, 2) }}%</dd></div>
+                    <div><dt class="nexus-text-muted">Next contribution</dt><dd class="mt-1 font-semibold">${{ number_format($nextJackpotContribution, 2) }}</dd></div>
+                    <div><dt class="nexus-text-muted">Per purchase</dt><dd class="mt-1 font-semibold">{{ number_format($settings['max_tickets_per_purchase']) }}</dd></div>
+                    <div><dt class="nexus-text-muted">Per nation</dt><dd class="mt-1 font-semibold">{{ number_format($settings['max_tickets_per_nation']) }}</dd></div>
                 </dl>
-                <p class="mt-5 text-sm text-base-content/60">The Manage Lottery permission is required to change these values.</p>
+                <p class="mt-5 text-sm nexus-text-muted">The Manage Lottery permission is required to change these values.</p>
             @endif
         </x-card>
     </div>

@@ -27,7 +27,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         @foreach(PWHelperService::resources() as $resource)
                             <th>{{ ucfirst($resource) }}</th>
                         @endforeach
@@ -65,12 +65,12 @@
     <x-card class="mb-4" x-data="{ search: '' }">
         <x-slot:title>Last 500 Transactions</x-slot:title>
         <x-slot:menu>
-            <x-input placeholder="Search..." x-model="search" icon="o-magnifying-glass" class="input-sm w-48" clearable />
+            <x-input aria-label="Search recent transactions" placeholder="Search..." x-model="search" icon="o-magnifying-glass" class="input-sm w-48" clearable />
         </x-slot:menu>
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Date</th>
                         <th>From Account</th>
                         <th>To Account</th>
@@ -96,16 +96,16 @@
                                         Nation #{{ $transaction->nation_id }}
                                     @endif
                                 @elseif($transaction->transaction_type === 'payroll')
-                                    <span class="text-base-content/50">Payroll</span>
+                                    <span class="nexus-text-muted">Payroll</span>
                                     @if($transaction->payrollGrade)
-                                        <div class="text-xs text-base-content/40">{{ $transaction->payrollGrade->name }}</div>
+                                        <div class="text-xs nexus-text-muted">{{ $transaction->payrollGrade->name }}</div>
                                     @endif
                                 @elseif($transaction->fromAccount)
                                     <a href="{{ route('admin.accounts.view', $transaction->fromAccount->id) }}" class="link link-primary">
                                         {{ $transaction->fromAccount->name }}
                                     </a>
                                 @else
-                                    <span class="text-base-content/50">N/A</span>
+                                    <span class="nexus-text-muted">N/A</span>
                                 @endif
                             </td>
                             <td>
@@ -122,7 +122,7 @@
                                         Nation #{{ $transaction->nation_id }}
                                     @endif
                                 @else
-                                    <span class="text-base-content/50">N/A</span>
+                                    <span class="nexus-text-muted">N/A</span>
                                 @endif
                             </td>
                             <td>{{ ucfirst($transaction->transaction_type) }}</td>
@@ -166,7 +166,7 @@
             <div class="overflow-x-auto">
                 <table class="table table-sm table-zebra" data-sortable="false">
                     <thead>
-                        <tr class="text-base-content/60">
+                        <tr class="nexus-text-muted">
                             <th>Date</th>
                             <th>Amount</th>
                             <th>Nation</th>
@@ -187,7 +187,7 @@
                                     @elseif($transaction->nation_id)
                                         Nation #{{ $transaction->nation_id }}
                                     @else
-                                        <span class="text-base-content/50">N/A</span>
+                                        <span class="nexus-text-muted">N/A</span>
                                     @endif
                                 </td>
                                 <td>{{ $transaction->pending_reason ?? 'Unspecified' }}</td>
@@ -222,7 +222,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Date</th>
                         <th>Admin</th>
                         <th class="text-right">Money</th>
@@ -268,7 +268,7 @@
             <div class="flex items-center gap-2">
                 <x-badge  value="DD" class="badge-primary" /> Direct Deposit Logs
             </div>
-            <div class="text-sm font-normal text-base-content/50">After-tax payouts tagged to this account.</div>
+            <div class="text-sm font-normal nexus-text-muted">After-tax payouts tagged to this account.</div>
         </x-slot:title>
         <x-slot:menu>
             <a href="#mmr-assistant" class="link link-primary text-sm">Jump to MMR Assistant</a>
@@ -276,7 +276,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Date</th>
                         <th>Nation</th>
                         <th class="text-right">Cash Paid</th>
@@ -306,13 +306,13 @@
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-base-content/50">Money only</span>
+                                    <span class="nexus-text-muted">Money only</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center text-base-content/50 py-4">No direct deposit activity for this account.</td>
+                            <td colspan="4" class="text-center nexus-text-muted py-4">No direct deposit activity for this account.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -320,7 +320,7 @@
         </div>
         <x-slot:footer>
             <div class="flex items-center gap-2">
-                <span class="text-sm text-base-content/50">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</span>
+                <span class="text-sm nexus-text-muted">Showing {{ $directDepositLogs->count() }} of {{ $directDepositLogs->total() }} entries</span>
                 <div class="ml-auto">{{ $directDepositLogs->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>
@@ -332,7 +332,7 @@
             <div class="flex items-center gap-2">
                 <x-badge  value="MMR" class="badge-neutral" /> MMR Assistant Purchases
             </div>
-            <div class="text-sm font-normal text-base-content/50">Withheld cash converted into resources via MMR Assistant.</div>
+            <div class="text-sm font-normal nexus-text-muted">Withheld cash converted into resources via MMR Assistant.</div>
         </x-slot:title>
         <x-slot:menu>
             <a href="#direct-deposit-logs" class="link link-primary text-sm">Back to DD Logs</a>
@@ -340,7 +340,7 @@
         <div class="overflow-x-auto">
             <table class="table table-sm table-zebra text-nowrap" data-sortable="false">
                 <thead>
-                    <tr class="text-base-content/60">
+                    <tr class="nexus-text-muted">
                         <th>Date</th>
                         <th class="text-right">Total Spent</th>
                         <th>Resources Purchased</th>
@@ -366,19 +366,19 @@
                                             <x-badge class="badge-ghost badge-sm">
                                                 {{ ucfirst($resource) }}: {{ number_format((float) $data['qty'], 2) }}
                                                 @if($data['ppu'])
-                                                    <span class="text-base-content/50"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
+                                                    <span class="nexus-text-muted"> @ ${{ number_format((float) $data['ppu'], 2) }}</span>
                                                 @endif
                                             </x-badge>
                                         @endforeach
                                     </div>
                                 @else
-                                    <span class="text-base-content/50">No resources purchased</span>
+                                    <span class="nexus-text-muted">No resources purchased</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="text-center text-base-content/50 py-4">No MMR Assistant purchases for this account.</td>
+                            <td colspan="3" class="text-center nexus-text-muted py-4">No MMR Assistant purchases for this account.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -386,7 +386,7 @@
         </div>
         <x-slot:footer>
             <div class="flex items-center gap-2">
-                <span class="text-sm text-base-content/50">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</span>
+                <span class="text-sm nexus-text-muted">Showing {{ $mmrPurchases->count() }} of {{ $mmrPurchases->total() }} purchases</span>
                 <div class="ml-auto">{{ $mmrPurchases->withQueryString()->links() }}</div>
             </div>
         </x-slot:footer>

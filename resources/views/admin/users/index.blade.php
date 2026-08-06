@@ -36,7 +36,7 @@
             <x-slot:title>
                 <div>
                     User Directory
-                    <div class="text-sm font-normal text-base-content/60">Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} users.</div>
+                    <div class="text-sm font-normal nexus-text-muted">Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} users.</div>
                 </div>
             </x-slot:title>
 
@@ -101,7 +101,7 @@
                                 <td>
                                     <div class="font-semibold text-base-content">{{ $user->name }}</div>
                                     @if($canViewEmails)
-                                        <div class="text-sm text-base-content/60">{{ $user->email }}</div>
+                                        <div class="text-sm nexus-text-muted">{{ $user->email }}</div>
                                     @endif
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         @if($user->is_admin)
@@ -125,7 +125,7 @@
                                             {{ $user->nation_id }}
                                         </a>
                                     @else
-                                        <span class="text-base-content/50">—</span>
+                                        <span class="nexus-text-muted">—</span>
                                     @endif
                                 </td>
                                 <td>
@@ -141,7 +141,7 @@
                                             @forelse($user->roles as $role)
                                                 <x-badge :value="\Illuminate\Support\Str::title($role->name)" class="badge-primary badge-outline badge-sm" />
                                             @empty
-                                                <span class="text-sm text-base-content/50">No roles assigned</span>
+                                                <span class="text-sm nexus-text-muted">No roles assigned</span>
                                             @endforelse
                                         </div>
                                     </td>
@@ -160,7 +160,7 @@
             </div>
 
             <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <span class="text-sm text-base-content/60">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
+                <span class="text-sm nexus-text-muted">Page {{ $users->currentPage() }} of {{ $users->lastPage() }}</span>
                 {{ $users->onEachSide(1)->links() }}
             </div>
         </x-card>
@@ -171,7 +171,7 @@
             <x-slot:title>
                 <div>
                     MFA Requirements
-                    <div class="text-sm font-normal text-base-content/60">Control Fortify enrollment requirements without leaving this screen.</div>
+                    <div class="text-sm font-normal nexus-text-muted">Control Fortify enrollment requirements without leaving this screen.</div>
                 </div>
             </x-slot:title>
 
@@ -182,7 +182,7 @@
                     <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-all-users" name="require_mfa_all_users" value="1" @checked($mfaRequirements['all_users'])>
                     <span>
                         <span class="block font-semibold text-base-content">Require MFA for all users</span>
-                        <span class="mt-1 block text-sm text-base-content/60">Force every authenticated user to enroll before using the app.</span>
+                        <span class="mt-1 block text-sm nexus-text-muted">Force every authenticated user to enroll before using the app.</span>
                     </span>
                 </label>
 
@@ -190,7 +190,7 @@
                     <input class="toggle toggle-primary mt-1" type="checkbox" id="require-mfa-admins" name="require_mfa_admins" value="1" @checked($mfaRequirements['admins'])>
                     <span>
                         <span class="block font-semibold text-base-content">Require MFA for admins</span>
-                        <span class="mt-1 block text-sm text-base-content/60">Protect privileged accounts even when the global requirement stays off.</span>
+                        <span class="mt-1 block text-sm nexus-text-muted">Protect privileged accounts even when the global requirement stays off.</span>
                     </span>
                 </label>
 
