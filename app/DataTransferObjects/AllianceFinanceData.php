@@ -38,6 +38,7 @@ final class AllianceFinanceData
         public float $aluminum = 0.0,
         public float $food = 0.0,
         public array $meta = [],
+        public ?CarbonInterface $occurredAt = null,
     ) {
         if ($this->source && ! $this->sourceType) {
             $this->sourceType = $this->source::class;
@@ -53,7 +54,7 @@ final class AllianceFinanceData
      */
     public function toArray(): array
     {
-        return [
+        $payload = [
             'direction' => $this->direction,
             'category' => $this->category,
             'description' => $this->description,
@@ -76,6 +77,12 @@ final class AllianceFinanceData
             'food' => $this->food,
             'meta' => $this->meta,
         ];
+
+        if ($this->occurredAt !== null) {
+            $payload['occurred_at'] = $this->occurredAt->toISOString();
+        }
+
+        return $payload;
     }
 
     /**
@@ -106,6 +113,9 @@ final class AllianceFinanceData
             aluminum: (float) ($payload['aluminum'] ?? 0.0),
             food: (float) ($payload['food'] ?? 0.0),
             meta: $payload['meta'] ?? [],
+            occurredAt: ! empty($payload['occurred_at'])
+                ? Carbon::parse($payload['occurred_at'])
+                : null,
         );
     }
 

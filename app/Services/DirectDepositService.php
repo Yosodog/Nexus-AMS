@@ -131,7 +131,10 @@ class DirectDepositService
                     'bank_record_id' => $record->id,
                     ...$originalDeposit,
                 ]);
-                $log->forceFill(['created_at' => $recordedAt]);
+                $log->forceFill([
+                    'created_at' => $recordedAt,
+                    'updated_at' => $recordedAt,
+                ]);
                 $log->save();
 
                 if ($mmrTotalSpend > 0.0) {
@@ -143,8 +146,16 @@ class DirectDepositService
                         throw new RuntimeException("MMR account not found for nation {$nation->id}");
                     }
 
-                    $mmrAssistant->applyPlan($lockedMmrAccount, $plan);
-                    $this->dispatchMmrContributionEvent($nation, $lockedMmrAccount, $mmrTotalSpend, $record, $log, $plan);
+                    $mmrAssistant->applyPlan($lockedMmrAccount, $plan, $recordedAt);
+                    $this->dispatchMmrContributionEvent(
+                        $nation,
+                        $lockedMmrAccount,
+                        $mmrTotalSpend,
+                        $record,
+                        $log,
+                        $plan,
+                        $recordedAt,
+                    );
                 }
             });
         } catch (UniqueConstraintViolationException $exception) {
@@ -232,7 +243,8 @@ class DirectDepositService
         float $mmrSpend,
         BankRecord $record,
         DirectDepositLog $log,
-        array $plan
+        array $plan,
+        Carbon $recordedAt,
     ): void {
         if ($mmrSpend <= 0.0) {
             return;
@@ -242,7 +254,7 @@ class DirectDepositService
             direction: AllianceFinanceEntry::DIRECTION_INCOME,
             category: 'mmr_income',
             description: "MMR Assistant withholding for {$nation->nation_name}",
-            date: Carbon::parse($record->date),
+            date: $recordedAt,
             nationId: $nation->id,
             accountId: $mmrAccount?->id,
             source: $log,
@@ -250,7 +262,8 @@ class DirectDepositService
             meta: [
                 'bank_record_id' => $record->id,
                 'plan' => $plan['lines'] ?? [],
-            ]
+            ],
+            occurredAt: $recordedAt,
         );
 
         event(new AllianceIncomeOccurred($financeData->toArray()));

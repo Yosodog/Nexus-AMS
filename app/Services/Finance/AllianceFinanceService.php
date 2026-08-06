@@ -241,13 +241,19 @@ final class AllianceFinanceService
             }
         }
 
-        $normalizedDate = Carbon::parse($data->date)->startOfDay();
+        $normalizedDate = Carbon::instance($data->date)->copy()->startOfDay();
         $data->direction = $direction;
         $data->date = $normalizedDate;
 
-        return AllianceFinanceEntry::create(
-            $this->buildAttributes($data, $direction, $meta, $normalizedDate)
-        );
+        $attributes = $this->buildAttributes($data, $direction, $meta, $normalizedDate);
+
+        if ($data->occurredAt !== null) {
+            $occurredAt = Carbon::instance($data->occurredAt)->copy()->utc();
+            $attributes['created_at'] = $occurredAt;
+            $attributes['updated_at'] = $occurredAt;
+        }
+
+        return AllianceFinanceEntry::create($attributes);
     }
 
     /**

@@ -126,6 +126,7 @@ class TaxImportCheckpointTest extends TestCase
 
     public function test_tax_import_rewinds_an_invalid_checkpoint_to_the_last_durable_tax_id(): void
     {
+        $apiTimestamp = '2026-08-02T05:06:07+00:00';
         Taxes::query()->create($this->taxRow([
             'id' => 100,
             'receiver_id' => 777,
@@ -142,7 +143,7 @@ class TaxImportCheckpointTest extends TestCase
                 return str_contains($builder->build(), 'min_id: 101');
             })
             ->andReturn($this->allianceTaxResponse([
-                $this->bankRecordPayload(101, receiverId: 777),
+                $this->bankRecordPayload(101, receiverId: 777, date: $apiTimestamp),
             ]));
 
         $this->assertSame(101, TaxService::updateAllianceTaxes(777, $client));
@@ -154,6 +155,12 @@ class TaxImportCheckpointTest extends TestCase
             'alliance_id' => 777,
             'last_scanned_id' => 101,
         ]);
+
+        $tax = Taxes::query()->findOrFail(101);
+
+        $this->assertSame($apiTimestamp, $tax->date->toAtomString());
+        $this->assertSame($apiTimestamp, $tax->created_at->toAtomString());
+        $this->assertSame($apiTimestamp, $tax->updated_at->toAtomString());
     }
 
     /**

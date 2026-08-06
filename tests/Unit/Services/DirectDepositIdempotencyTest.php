@@ -60,6 +60,7 @@ class DirectDepositIdempotencyTest extends TestCase
 
     public function test_mmr_failure_rolls_back_and_retry_applies_purchase_exactly_once(): void
     {
+        $apiTimestamp = '2026-08-02T05:06:07+00:00';
         SettingService::setDirectDepositId(555);
         SettingService::setMMRAssistantEnabled(true);
         $this->createTenPercentBracket();
@@ -96,7 +97,7 @@ class DirectDepositIdempotencyTest extends TestCase
         });
 
         try {
-            app(DirectDepositService::class)->process($this->bankRecord($nation, 54321));
+            app(DirectDepositService::class)->process($this->bankRecord($nation, 54321, $apiTimestamp));
             $this->fail('The injected MMR failure was not propagated.');
         } catch (RuntimeException $exception) {
             $this->assertSame('Injected MMR expense failure.', $exception->getMessage());
@@ -107,7 +108,7 @@ class DirectDepositIdempotencyTest extends TestCase
         $this->assertSame(0, DirectDepositLog::query()->where('bank_record_id', 54321)->count());
         $this->assertSame(0, MMRAssistantPurchase::query()->count());
 
-        $retry = app(DirectDepositService::class)->process($this->bankRecord($nation, 54321));
+        $retry = app(DirectDepositService::class)->process($this->bankRecord($nation, 54321, $apiTimestamp));
 
         $this->assertSame(100.0, (float) $retry->money);
         $this->assertSame(10.0, (float) $retry->coal);
@@ -125,8 +126,24 @@ class DirectDepositIdempotencyTest extends TestCase
             'coal' => 10,
             'coal_ppu' => 18,
         ]);
+        $this->assertSame(
+            $apiTimestamp,
+            DirectDepositLog::query()->where('bank_record_id', 54321)->firstOrFail()->created_at->toAtomString(),
+        );
+        $this->assertSame(
+            $apiTimestamp,
+            DirectDepositLog::query()->where('bank_record_id', 54321)->firstOrFail()->updated_at->toAtomString(),
+        );
+        $this->assertSame(
+            $apiTimestamp,
+            MMRAssistantPurchase::query()->firstOrFail()->created_at->toAtomString(),
+        );
+        $this->assertSame(
+            $apiTimestamp,
+            MMRAssistantPurchase::query()->firstOrFail()->updated_at->toAtomString(),
+        );
 
-        app(DirectDepositService::class)->process($this->bankRecord($nation, 54321));
+        app(DirectDepositService::class)->process($this->bankRecord($nation, 54321, $apiTimestamp));
 
         $this->assertSame('720.00', number_format((float) $account->fresh()->money, 2, '.', ''));
         $this->assertSame('100.00', number_format((float) $account->fresh()->coal, 2, '.', ''));
@@ -141,12 +158,12 @@ class DirectDepositIdempotencyTest extends TestCase
         ]);
     }
 
-    private function bankRecord(Nation $nation, int $id): BankRecord
+    private function bankRecord(Nation $nation, int $id, ?string $date = null): BankRecord
     {
         $record = new BankRecord;
         $record->buildWithJSON((object) [
             'id' => $id,
-            'date' => now()->toISOString(),
+            'date' => $date ?? now()->toISOString(),
             'sender_id' => $nation->id,
             'sender_type' => 1,
             'receiver_id' => 777,

@@ -10,7 +10,9 @@ use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
 use App\Models\Nation;
+use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager as DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final readonly class MMRAssistantService
@@ -92,8 +94,11 @@ final readonly class MMRAssistantService
      * Apply a previously computed plan: credit resources and write a log.
      * IMPORTANT: This does NOT subtract money; caller must have withheld cash from the DD deposit.
      */
-    public function applyPlan(Account $mmrAccount, array $plan): ?MMRAssistantPurchase
-    {
+    public function applyPlan(
+        Account $mmrAccount,
+        array $plan,
+        ?CarbonInterface $occurredAt = null,
+    ): ?MMRAssistantPurchase {
         $totalSpend = (float) ($plan['total_spend'] ?? 0.0);
         $lines = $plan['lines'] ?? [];
 
@@ -101,7 +106,7 @@ final readonly class MMRAssistantService
             return null;
         }
 
-        $log = $this->db->transaction(function () use ($mmrAccount, $totalSpend, $lines) {
+        $log = $this->db->transaction(function () use ($mmrAccount, $totalSpend, $lines, $occurredAt) {
             // Credit resources
             foreach ($lines as $res => $line) {
                 $qty = (float) $line['qty'];
@@ -120,13 +125,20 @@ final readonly class MMRAssistantService
                 $log->setAttribute("{$res}_ppu", (float) $line['ppu'] ?: null);
             }
 
+            if ($occurredAt !== null) {
+                $log->forceFill([
+                    'created_at' => $occurredAt,
+                    'updated_at' => $occurredAt,
+                ]);
+            }
+
             $log->save();
 
             return $log;
         });
 
         if ($log) {
-            $this->dispatchMmrExpenseEvent($mmrAccount, $totalSpend, $lines, $log);
+            $this->dispatchMmrExpenseEvent($mmrAccount, $totalSpend, $lines, $log, $occurredAt);
         }
 
         return $log;
@@ -139,7 +151,8 @@ final readonly class MMRAssistantService
         Account $account,
         float $totalSpend,
         array $lines,
-        MMRAssistantPurchase $log
+        MMRAssistantPurchase $log,
+        ?CarbonInterface $occurredAt,
     ): void {
         if ($totalSpend <= 0.0) {
             return;
@@ -150,11 +163,15 @@ final readonly class MMRAssistantService
             $resourceQuantities[$resource] = (float) ($lines[$resource]['qty'] ?? 0.0);
         }
 
+        $eventTimestamp = $occurredAt !== null
+            ? Carbon::instance($occurredAt)->copy()->utc()
+            : ($log->created_at ?? now());
+
         $financeData = new AllianceFinanceData(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
             category: 'mmr_expense',
             description: "MMR Assistant purchase for account {$account->name}",
-            date: now(),
+            date: $eventTimestamp,
             nationId: $account->nation_id,
             accountId: $account->id,
             source: $log,
@@ -172,7 +189,8 @@ final readonly class MMRAssistantService
             food: $resourceQuantities['food'] ?? 0.0,
             meta: [
                 'plan' => $lines,
-            ]
+            ],
+            occurredAt: $eventTimestamp,
         );
 
         event(new AllianceExpenseOccurred($financeData->toArray()));

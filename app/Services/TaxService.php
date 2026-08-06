@@ -105,7 +105,7 @@ class TaxService
                 $record = $ddService->process($record);
 
                 $taxModel = DB::transaction(function () use ($record, $recordedAt) {
-                    return Taxes::create([
+                    $taxModel = new Taxes([
                         'id' => $record->id, // Use PW tax record ID as our primary key
                         'date' => $recordedAt,
                         'sender_id' => $record->sender_id,
@@ -127,6 +127,13 @@ class TaxService
 
                         'tax_id' => $record->tax_id, // Tax bracket ID
                     ]);
+                    $taxModel->forceFill([
+                        'created_at' => $recordedAt,
+                        'updated_at' => $recordedAt,
+                    ]);
+                    $taxModel->save();
+
+                    return $taxModel;
                 });
 
                 if ($taxModel) {
