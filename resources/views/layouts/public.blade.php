@@ -69,7 +69,7 @@
                     <a href="{{ route('user.dashboard') }}" class="btn btn-primary btn-sm">Open member app</a>
                 @else
                     <a href="{{ route('login') }}" class="btn btn-ghost btn-sm public-nav__desktop-action">Sign in</a>
-                    <a href="{{ route('register') }}" class="btn btn-primary btn-sm public-nav__desktop-action">Create account</a>
+                    <a href="{{ route('apply.show') }}" class="btn btn-primary btn-sm public-nav__desktop-action">Apply to join</a>
                 @endauth
 
                 <details class="public-nav__mobile">
@@ -83,7 +83,7 @@
                             <a href="{{ route('user.dashboard') }}">Open member app</a>
                         @else
                             <a href="{{ route('login') }}">Sign in</a>
-                            <a href="{{ route('register') }}">Create account</a>
+                            <a href="{{ route('apply.member-registration') }}">Existing member registration</a>
                         @endauth
                     </nav>
                 </details>

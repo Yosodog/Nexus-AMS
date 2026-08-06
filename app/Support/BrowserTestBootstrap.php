@@ -71,6 +71,7 @@ class BrowserTestBootstrap
                 ['key' => 'require_mfa_all_users', 'value' => '0'],
                 ['key' => 'require_mfa_admins', 'value' => '0'],
                 ['key' => 'grant_approvals_enabled', 'value' => '1'],
+                ['key' => 'applications_enabled', 'value' => '1'],
                 ['key' => 'loan_applications_enabled', 'value' => '1'],
                 ['key' => 'loan_payments_enabled', 'value' => '1'],
                 ['key' => 'discord_war_room_forum_id', 'value' => '444444444444444444'],
@@ -87,6 +88,7 @@ class BrowserTestBootstrap
                 'average_score' => 2100,
                 'accept_members' => true,
                 'flag' => 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+                'discord_link' => 'https://discord.gg/browser-test-alliance',
                 'rank' => 42,
             ]);
 

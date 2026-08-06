@@ -173,6 +173,7 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** XS–S · **Type:** Recruitment, UX copy
 
+**Status:** Complete
 
 **What should change:** The apply page directs applicants toward member registration even though registration is intended for eligible existing alliance members. This creates a dead end at the highest-intent point in the recruitment funnel.
 

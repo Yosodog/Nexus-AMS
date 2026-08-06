@@ -6,12 +6,12 @@
     <x-auth.shell
         badge="Account setup · Step 1"
         title="Create your member account"
-        description="Connect your sign-in credentials to the Politics & War nation you manage. We verify nation ownership before member tools become available."
+        description="For current alliance members: connect your sign-in credentials to the Politics & War nation you manage. We verify nation ownership before member tools become available."
     >
         <x-slot:context>
             <h2 class="font-display text-2xl font-bold tracking-[-0.02em]">Your access path</h2>
             <p class="mt-3 text-sm leading-6 text-neutral-content/70">
-                Setup begins here and continues in the services used by your alliance.
+                Setup begins here only after your nation has been accepted into the alliance.
             </p>
 
             <ol class="mt-7 space-y-5">
@@ -35,6 +35,14 @@
         </x-slot:context>
 
         <div class="space-y-6">
+            <div class="alert alert-info items-start" role="note">
+                <x-icon name="o-information-circle" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                <p class="text-sm leading-6">
+                    <span class="font-semibold">Applying to join?</span>
+                    Applicant nations cannot register here. <a href="{{ route('apply.show') }}" class="link link-primary font-semibold">Follow the alliance application path instead.</a>
+                </p>
+            </div>
+
             <x-auth.error-summary title="Some account details need your attention." />
 
             <form method="POST" action="{{ route('register') }}" class="space-y-7">

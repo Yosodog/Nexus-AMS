@@ -25,7 +25,7 @@
 
         if (! empty($discordLink)) {
             $primaryLink = $discordLink;
-            $primaryLinkLabel = 'Join our Discord';
+            $primaryLinkLabel = 'Visit our Discord';
         } elseif (! empty($forumLink)) {
             $primaryLink = $forumLink;
             $primaryLinkLabel = 'Visit our forum';

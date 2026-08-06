@@ -113,7 +113,11 @@ class SeoMetadataTest extends TestCase
             ->assertOk()
             ->assertHeaderMissing('X-Robots-Tag')
             ->assertSee('<title>Apply to Black Knights (BK) | BK Net</title>', false)
-            ->assertSee('<meta name="robots" content="index, follow">', false);
+            ->assertSee('<meta name="robots" content="index, follow">', false)
+            ->assertSee(
+                '<meta name="description" content="Learn who can apply to Black Knights (BK), then start in Politics &amp; War and complete the Discord application through BK Net.">',
+                false,
+            );
 
         $this->get(route('seo.robots'))
             ->assertOk()

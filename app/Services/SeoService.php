@@ -413,13 +413,13 @@ class SeoService
     {
         if ($this->normalizeComparable($siteName) === $this->normalizeComparable($allianceName)) {
             return sprintf(
-                'Review membership requirements and apply to %s in Politics & War.',
+                'Learn who can apply to %s, then start in Politics & War and complete the application in Discord.',
                 $allianceLabel,
             );
         }
 
         return sprintf(
-            'Review membership requirements and apply to %s in Politics & War through %s.',
+            'Learn who can apply to %s, then start in Politics & War and complete the Discord application through %s.',
             $allianceLabel,
             $siteName,
         );

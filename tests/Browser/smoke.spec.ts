@@ -8,7 +8,15 @@ test('home page renders', async ({ page }) => {
   await page.getByRole('link', { name: 'Apply' }).first().click();
 
   await expect(page).toHaveURL(/\/apply$/);
-  await expect(page.getByRole('heading', { name: /Your path into/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Apply to Browser Test Alliance' })).toBeVisible();
+  await expect(page.getByText('You do not need a Nexus account to apply')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Start in Politics & War' })).toHaveAttribute('href', /\/apply\/start$/);
+  await expect(page.getByRole('link', { name: 'Join Browser Test Alliance on Discord' })).toHaveAttribute(
+    'href',
+    'https://discord.gg/browser-test-alliance',
+  );
+  await expect(page.getByText('/apply nationid:<your nation ID>', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Register as a member' })).toBeVisible();
 });
 
 test('public login route and form actions are interactive', async ({ page }) => {

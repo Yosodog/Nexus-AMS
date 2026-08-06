@@ -218,7 +218,7 @@ class ApplicationService
         $this->assertApplicantEligible($nation);
 
         try {
-            return Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
+            $application = Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
                 ->block(10, function () use ($nationId, $discordUserId, $discordUsername, $nation): Application {
                     $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
 
@@ -237,6 +237,15 @@ class ApplicationService
                         'pending_key' => 1,
                     ]);
                 });
+
+            if ($application->wasRecentlyCreated) {
+                Log::info('Recruitment funnel event.', [
+                    'event' => 'application_submitted',
+                    'channel' => 'discord',
+                ]);
+            }
+
+            return $application;
         } catch (LockTimeoutException) {
             $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
 

@@ -15,6 +15,7 @@ use App\Services\ApplicationService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\Concerns\SignsDiscordInteractions;
@@ -54,6 +55,8 @@ class DiscordApplicationApiTest extends TestCase
 
     public function test_store_returns_a_success_payload_for_an_eligible_applicant(): void
     {
+        Log::spy();
+
         $service = $this->makeApplicationService([
             877001 => $this->makeApplicantNation(877001),
         ]);
@@ -82,6 +85,14 @@ class DiscordApplicationApiTest extends TestCase
             'status' => ApplicationStatus::Pending->value,
             'pending_key' => 1,
         ]);
+
+        Log::shouldHaveReceived('info')->withArgs(
+            fn (string $message, array $context): bool => $message === 'Recruitment funnel event.'
+                && $context === [
+                    'event' => 'application_submitted',
+                    'channel' => 'discord',
+                ]
+        )->once();
     }
 
     public function test_store_returns_a_structured_failure_payload_when_applications_are_disabled(): void
