@@ -1506,8 +1506,14 @@ html[data-theme] .ck.ck-editor__editable_inline {
         height: 2.75rem;
         cursor: pointer;
         place-items: center;
-        border: 1px solid var(--nexus-rule-strong);
+        border: 1px solid transparent;
         border-radius: 999px;
+        background: transparent;
+        transition: background-color 140ms var(--ease-nexus);
+    }
+
+    .account-control__trigger:hover,
+    .account-control[open] > .account-control__trigger {
         background: var(--nexus-surface-sunken);
     }
 
@@ -1517,11 +1523,13 @@ html[data-theme] .ck.ck-editor__editable_inline {
         width: 2rem;
         height: 2rem;
         place-items: center;
+        border: 1px solid var(--nexus-rule-strong);
         border-radius: 999px;
         object-fit: cover;
     }
 
     .account-control__fallback {
+        background: var(--nexus-surface-sunken);
         color: var(--color-base-content);
         font-family: var(--font-display);
         font-weight: 700;
@@ -1529,8 +1537,8 @@ html[data-theme] .ck.ck-editor__editable_inline {
 
     .account-control__pending {
         position: absolute;
-        right: -0.125rem;
-        bottom: -0.125rem;
+        right: 0.25rem;
+        bottom: 0.25rem;
         width: 0.625rem;
         height: 0.625rem;
         border: 2px solid var(--color-base-100);
@@ -2460,6 +2468,18 @@ html[data-theme] .ck.ck-editor__editable_inline {
 
     .admin-nav-link.tooltip {
         display: flex;
+    }
+
+    .theme-control > summary.tooltip,
+    .account-control__trigger.tooltip {
+        display: grid;
+    }
+
+    .theme-control[open] > summary[data-tip]::before,
+    .theme-control[open] > summary::after,
+    .account-control[open] > .account-control__trigger[data-tip]::before,
+    .account-control[open] > .account-control__trigger::after {
+        display: none;
     }
 
     main .badge {

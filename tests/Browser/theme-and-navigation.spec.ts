@@ -171,3 +171,67 @@ test('member header keeps only one dropdown open at a time', async ({ page }) =>
   await expect(accountDropdown).toHaveAttribute('open', '');
   await expect(themeDropdown).not.toHaveAttribute('open', '');
 });
+
+test('theme selector keeps its tooltip below the header', async ({ page }) => {
+  await page.goto('/');
+
+  const themeTrigger = page.locator('summary[aria-label="Choose appearance"]');
+  await expect(themeTrigger).toHaveClass(/\btooltip-bottom\b/);
+  await expect(themeTrigger).toHaveClass(/\btooltip-end\b/);
+  await themeTrigger.hover();
+  await expect.poll(() => themeTrigger.evaluate((trigger) => getComputedStyle(trigger, '::before').opacity)).toBe('1');
+
+  const geometry = await themeTrigger.evaluate((trigger) => {
+    const triggerBounds = trigger.getBoundingClientRect();
+    const tooltipStyles = getComputedStyle(trigger, '::before');
+
+    return {
+      display: getComputedStyle(trigger).display,
+      triggerHeight: triggerBounds.height,
+      tooltipTop: Number.parseFloat(tooltipStyles.top),
+    };
+  });
+
+  expect(geometry.display).toBe('grid');
+  expect(geometry.tooltipTop).toBeGreaterThan(geometry.triggerHeight);
+
+  await themeTrigger.click();
+  await expect.poll(() => themeTrigger.evaluate((trigger) => getComputedStyle(trigger, '::before').display)).toBe('none');
+});
+
+test('account control centers its avatar and keeps its tooltip below the header', async ({ page }) => {
+  await page.goto('/_browser/login/member?redirect=/user/dashboard');
+
+  const accountTrigger = page.locator('summary[aria-label="Open account menu"]');
+  await expect(accountTrigger).toHaveClass(/\btooltip-bottom\b/);
+  await expect(accountTrigger).toHaveClass(/\btooltip-end\b/);
+  await accountTrigger.hover();
+  await expect.poll(() => accountTrigger.evaluate((trigger) => getComputedStyle(trigger, '::before').opacity)).toBe('1');
+
+  const geometry = await accountTrigger.evaluate((trigger) => {
+    const avatar = trigger.querySelector<HTMLElement>('.account-control__avatar, .account-control__fallback');
+    if (!avatar) {
+      throw new Error('Account avatar was not rendered.');
+    }
+
+    const triggerBounds = trigger.getBoundingClientRect();
+    const avatarBounds = avatar.getBoundingClientRect();
+    const tooltipStyles = getComputedStyle(trigger, '::before');
+
+    return {
+      display: getComputedStyle(trigger).display,
+      horizontalOffset: Math.abs((triggerBounds.left + triggerBounds.width / 2) - (avatarBounds.left + avatarBounds.width / 2)),
+      verticalOffset: Math.abs((triggerBounds.top + triggerBounds.height / 2) - (avatarBounds.top + avatarBounds.height / 2)),
+      triggerHeight: triggerBounds.height,
+      tooltipTop: Number.parseFloat(tooltipStyles.top),
+    };
+  });
+
+  expect(geometry.display).toBe('grid');
+  expect(geometry.horizontalOffset).toBeLessThanOrEqual(0.5);
+  expect(geometry.verticalOffset).toBeLessThanOrEqual(0.5);
+  expect(geometry.tooltipTop).toBeGreaterThan(geometry.triggerHeight);
+
+  await accountTrigger.click();
+  await expect.poll(() => accountTrigger.evaluate((trigger) => getComputedStyle(trigger, '::before').display)).toBe('none');
+});

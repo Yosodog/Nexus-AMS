@@ -1,5 +1,5 @@
 <details class="theme-control">
-    <summary class="btn btn-ghost btn-circle btn-sm nexus-icon-button tooltip" aria-label="Choose appearance" data-tip="Choose appearance">
+    <summary class="btn btn-ghost btn-circle btn-sm nexus-icon-button tooltip tooltip-bottom tooltip-end" aria-label="Choose appearance" data-tip="Choose appearance">
         <x-icon name="o-swatch" class="size-5" />
     </summary>
 

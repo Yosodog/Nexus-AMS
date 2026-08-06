@@ -52,7 +52,7 @@
 
                     @if($user)
                         <details class="account-control">
-                            <summary class="account-control__trigger nexus-icon-button tooltip" aria-label="Open account menu" data-tip="Open account menu">
+                            <summary class="account-control__trigger nexus-icon-button tooltip tooltip-bottom tooltip-end" aria-label="Open account menu" data-tip="Open account menu">
                                 @if(data_get($user, 'nation.flag'))
                                     <img
                                         src="{{ data_get($user, 'nation.flag') }}"

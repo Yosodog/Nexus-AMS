@@ -26,7 +26,7 @@
 
             @if($user)
                 <details class="account-control">
-                    <summary class="account-control__trigger nexus-icon-button tooltip" aria-label="Open staff account menu" data-tip="Open staff account menu">
+                    <summary class="account-control__trigger nexus-icon-button tooltip tooltip-bottom tooltip-end" aria-label="Open staff account menu" data-tip="Open staff account menu">
                         @if($nation?->flag)
                             <img src="{{ $nation->flag }}" alt="" class="account-control__avatar">
                         @else
