@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 class ProfitabilityContextAvailabilityTest extends TestCase
@@ -275,7 +276,7 @@ class ProfitabilityContextAvailabilityTest extends TestCase
     }
 
     #[Test]
-    public function queued_context_failure_is_rethrown_for_normal_retry_handling(): void
+    public function queued_context_failure_is_skipped_without_retrying_invalid_inputs(): void
     {
         $service = Mockery::mock(NationProfitabilityService::class);
         $service->shouldReceive('refreshStoredSnapshotForNationId')
@@ -284,7 +285,22 @@ class ProfitabilityContextAvailabilityTest extends TestCase
             ->andThrow(new ProfitabilityContextUnavailable);
         $job = new RefreshNationProfitabilitySnapshotJob(123, 45, 67);
 
-        $this->expectException(ProfitabilityContextUnavailable::class);
+        $job->handle($service);
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
+    public function queued_unexpected_failure_is_rethrown_for_normal_retry_handling(): void
+    {
+        $service = Mockery::mock(NationProfitabilityService::class);
+        $service->shouldReceive('refreshStoredSnapshotForNationId')
+            ->once()
+            ->with(123, 45, 67)
+            ->andThrow(new RuntimeException('Unexpected failure'));
+        $job = new RefreshNationProfitabilitySnapshotJob(123, 45, 67);
+
+        $this->expectException(RuntimeException::class);
 
         $job->handle($service);
     }

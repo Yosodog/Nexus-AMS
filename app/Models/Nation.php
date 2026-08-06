@@ -287,7 +287,13 @@ class Nation extends Model
             ->toArray();
 
         if (! empty($militaryData)) {
-            $nation->military()->updateOrCreate(['nation_id' => $nation->id], $militaryData);
+            $military = $nation->military()->firstOrNew();
+
+            if (! $military->exists) {
+                $military->forceFill(NationMilitary::DEFAULT_COUNTERS);
+            }
+
+            $military->fill($militaryData)->save();
         }
 
         if (! is_null($graphQLNationModel->cities)) {

@@ -5,8 +5,11 @@ namespace Tests\Feature\Finance;
 use App\DataTransferObjects\AllianceFinanceData;
 use App\Models\AllianceFinanceEntry;
 use App\Services\Finance\AllianceFinanceService;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Tests\FeatureTestCase;
 
 class AllianceFinanceServiceTest extends FeatureTestCase
@@ -88,5 +91,89 @@ class AllianceFinanceServiceTest extends FeatureTestCase
 
         $this->assertSame($first->id, $second->id);
         $this->assertDatabaseCount('alliance_finance_entries', 1);
+    }
+
+    public function test_aggregate_caches_store_plain_arrays_and_rehydrate_rows(): void
+    {
+        $this->useLaravel13SerializedArrayCache();
+
+        AllianceFinanceEntry::query()->create([
+            'date' => '2026-08-01',
+            'direction' => AllianceFinanceEntry::DIRECTION_INCOME,
+            'category' => 'tax',
+            'description' => 'Cached tax income',
+            'money' => 125,
+        ]);
+
+        $from = Carbon::parse('2026-08-01')->startOfDay();
+        $to = Carbon::parse('2026-08-01')->endOfDay();
+        $service = app(AllianceFinanceService::class);
+
+        $dailySummary = $service->getDailySummary($from, $to);
+        $categoryBreakdown = $service->getDailyCategoryBreakdown($from, $to);
+
+        $this->assertContainsOnlyInstancesOf(AllianceFinanceEntry::class, $dailySummary);
+        $this->assertContainsOnlyInstancesOf(AllianceFinanceEntry::class, $categoryBreakdown);
+        $this->assertArrayRowPayload(Cache::get($this->financeCacheKey('daily_summary', $from, $to)));
+        $this->assertArrayRowPayload(Cache::get($this->financeCacheKey('daily_category_breakdown', $from, $to)));
+
+        AllianceFinanceEntry::query()->delete();
+
+        $this->assertCount(1, $service->getDailySummary($from, $to));
+        $this->assertCount(1, $service->getDailyCategoryBreakdown($from, $to));
+    }
+
+    public function test_daily_summary_recovers_from_a_legacy_poisoned_collection(): void
+    {
+        $this->useLaravel13SerializedArrayCache();
+
+        AllianceFinanceEntry::query()->create([
+            'date' => '2026-08-01',
+            'direction' => AllianceFinanceEntry::DIRECTION_INCOME,
+            'category' => 'tax',
+            'description' => 'Legacy cached tax income',
+            'money' => 125,
+        ]);
+
+        $from = Carbon::parse('2026-08-01')->startOfDay();
+        $to = Carbon::parse('2026-08-01')->endOfDay();
+        $cacheKey = $this->financeCacheKey('daily_summary', $from, $to);
+
+        Cache::put($cacheKey, AllianceFinanceEntry::query()->get(), now()->addMinutes(10));
+
+        $this->assertInstanceOf(\__PHP_Incomplete_Class::class, Cache::get($cacheKey));
+
+        $summary = app(AllianceFinanceService::class)->getDailySummary($from, $to);
+
+        $this->assertCount(1, $summary);
+        $this->assertContainsOnlyInstancesOf(AllianceFinanceEntry::class, $summary);
+        $this->assertSame(125.0, (float) $summary->first()->money);
+        $this->assertArrayRowPayload(Cache::get($cacheKey));
+    }
+
+    private function useLaravel13SerializedArrayCache(): void
+    {
+        Cache::swap(new Repository(new ArrayStore(true, config('cache.serializable_classes'))));
+    }
+
+    private function financeCacheKey(string $prefix, Carbon $from, Carbon $to): string
+    {
+        return sprintf(
+            'finance:%s:%s:%s:%s',
+            $prefix,
+            $from->toDateString(),
+            $to->toDateString(),
+            md5(json_encode([]))
+        );
+    }
+
+    private function assertArrayRowPayload(mixed $payload): void
+    {
+        $this->assertIsArray($payload);
+        $this->assertNotEmpty($payload);
+
+        foreach ($payload as $row) {
+            $this->assertIsArray($row);
+        }
     }
 }

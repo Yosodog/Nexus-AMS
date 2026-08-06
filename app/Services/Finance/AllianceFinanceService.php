@@ -5,6 +5,7 @@ namespace App\Services\Finance;
 use App\DataTransferObjects\AllianceFinanceData;
 use App\Models\AllianceFinanceEntry;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
@@ -44,10 +45,9 @@ final class AllianceFinanceService
     {
         $cacheKey = $this->cacheKey('daily_summary', $from, $to, $filters);
 
-        return Cache::remember(
+        return $this->rememberAggregateRows(
             $cacheKey,
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            function () use ($from, $to, $filters) {
+            function () use ($from, $to, $filters): array {
                 return $this->rangeQuery($from, $to, $filters)
                     ->selectRaw(
                         'date, direction, COUNT(*) as `entry_count`, SUM(`money`) as `money`, SUM(`coal`) as `coal`, SUM(`oil`) as `oil`, '.
@@ -57,7 +57,9 @@ final class AllianceFinanceService
                     )
                     ->groupBy('date', 'direction')
                     ->orderBy('date')
-                    ->get();
+                    ->get()
+                    ->map(static fn (AllianceFinanceEntry $entry): array => $entry->getAttributes())
+                    ->all();
             }
         );
     }
@@ -72,15 +74,16 @@ final class AllianceFinanceService
     ): Collection {
         $cacheKey = $this->cacheKey('daily_category_breakdown', $from, $to, $filters);
 
-        return Cache::remember(
+        return $this->rememberAggregateRows(
             $cacheKey,
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            function () use ($from, $to, $filters) {
+            function () use ($from, $to, $filters): array {
                 return $this->rangeQuery($from, $to, $filters)
                     ->selectRaw('date, category, SUM(`money`) as `money`')
                     ->groupBy('date', 'category')
                     ->orderBy('date')
-                    ->get();
+                    ->get()
+                    ->map(static fn (AllianceFinanceEntry $entry): array => $entry->getAttributes())
+                    ->all();
             }
         );
     }
@@ -349,6 +352,43 @@ final class AllianceFinanceService
         }
 
         return $query;
+    }
+
+    /**
+     * @param  Closure(): array<int, array<string, mixed>>  $resolveRows
+     * @return Collection<int, AllianceFinanceEntry>
+     */
+    private function rememberAggregateRows(string $cacheKey, Closure $resolveRows): Collection
+    {
+        $rows = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(self::CACHE_TTL_MINUTES),
+            $resolveRows
+        );
+
+        if (! $this->isArrayRowPayload($rows)) {
+            Cache::forget($cacheKey);
+            $rows = $resolveRows();
+            Cache::put($cacheKey, $rows, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        }
+
+        /** @var array<int, array<string, mixed>> $rows */
+        return AllianceFinanceEntry::hydrate($rows);
+    }
+
+    private function isArrayRowPayload(mixed $rows): bool
+    {
+        if (! is_array($rows) || ! array_is_list($rows)) {
+            return false;
+        }
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

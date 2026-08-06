@@ -9,6 +9,7 @@ use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Mockery;
 use Tests\TestCase;
@@ -118,5 +119,38 @@ class NationSubscriptionNullTransitionTest extends TestCase
 
         $this->assertSame(9, $nation->ground_capacity_research);
         $this->assertSame(12, $nation->ground_cost_research);
+    }
+
+    public function test_partial_military_payload_creates_missing_snapshot_with_zero_defaults(): void
+    {
+        $nation = Nation::factory()->create();
+        $payload = new GraphQLNation;
+        $payload->buildWithJSON((object) [
+            'id' => $nation->id,
+            'soldiers' => 1234,
+        ]);
+
+        Nation::updateFromAPI($payload);
+
+        $military = $nation->military()->firstOrFail();
+        $this->assertSame(1234, $military->soldiers);
+        $this->assertSame(0, $military->soldiers_today);
+        $this->assertSame(0, $military->spy_attacks);
+    }
+
+    public function test_database_defaults_allow_partial_military_inserts(): void
+    {
+        $nation = Nation::factory()->create();
+
+        DB::table('nation_military')->insert([
+            'nation_id' => $nation->id,
+        ]);
+
+        $this->assertDatabaseHas('nation_military', [
+            'nation_id' => $nation->id,
+            'soldiers' => 0,
+            'soldiers_today' => 0,
+            'spy_attacks' => 0,
+        ]);
     }
 }

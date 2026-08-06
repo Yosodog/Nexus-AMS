@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\ProfitabilityContextUnavailable;
 use App\Services\NationProfitabilityService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -31,10 +32,14 @@ class RefreshNationProfitabilitySnapshotJob implements ShouldBeUnique, ShouldQue
 
     public function handle(NationProfitabilityService $profitabilityService): void
     {
-        $profitabilityService->refreshStoredSnapshotForNationId(
-            $this->nationId,
-            $this->marketPriceSnapshotId,
-            $this->radiationSnapshotId
-        );
+        try {
+            $profitabilityService->refreshStoredSnapshotForNationId(
+                $this->nationId,
+                $this->marketPriceSnapshotId,
+                $this->radiationSnapshotId
+            );
+        } catch (ProfitabilityContextUnavailable) {
+            return;
+        }
     }
 }
