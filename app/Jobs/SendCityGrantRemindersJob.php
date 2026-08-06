@@ -54,7 +54,7 @@ class SendCityGrantRemindersJob implements ShouldQueue
 
         $nations = Nation::query()
             ->whereIn('alliance_id', $allianceIds)
-            ->with(['latestSignIn', 'military', 'resources', 'cities'])
+            ->with(['latestSignIn', 'military', 'resources', 'cities', 'growthCircleEnrollment'])
             ->get();
 
         foreach ($nations as $nation) {

@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\Account;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use App\Services\GrantRequirementService;
 use App\Services\PWHelperService;
@@ -134,6 +136,66 @@ class GrantRequirementServiceTest extends FeatureTestCase
         $this->assertSame([], $evaluation['failures']);
     }
 
+    public function test_builder_config_includes_growth_circle_enrollment(): void
+    {
+        $fields = collect(app(GrantRequirementService::class)->getBuilderConfig()['fields'])
+            ->keyBy('key');
+
+        $this->assertSame([
+            'key' => 'growth_circle_enrollment',
+            'label' => 'Growth Circles enrollment',
+            'category' => 'Programs',
+            'type' => 'enum',
+            'operators' => ['eq', 'neq'],
+            'options' => [
+                ['value' => 'ENROLLED', 'label' => 'Enrolled'],
+                ['value' => 'NOT_ENROLLED', 'label' => 'Not Enrolled'],
+            ],
+        ], $fields->get('growth_circle_enrollment'));
+    }
+
+    public function test_growth_circle_enrollment_requirement_rejects_an_unenrolled_nation(): void
+    {
+        $evaluation = app(GrantRequirementService::class)->evaluate(
+            $this->growthCircleEnrollmentRequirement(),
+            $this->makeNation(),
+        );
+
+        $this->assertFalse($evaluation['passes']);
+        $this->assertSame(
+            ['Growth Circles enrollment must be Enrolled.'],
+            $evaluation['failures'],
+        );
+        $this->assertSame(
+            ['Growth Circles enrollment is Enrolled'],
+            $evaluation['summary'],
+        );
+    }
+
+    public function test_growth_circle_enrollment_requirement_accepts_an_enrolled_nation(): void
+    {
+        $nation = $this->makeNation();
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Growth Circles';
+        $account->save();
+
+        GrowthCircleEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => null,
+            'enrolled_at' => now(),
+        ]);
+
+        $evaluation = app(GrantRequirementService::class)->evaluate(
+            $this->growthCircleEnrollmentRequirement(),
+            $nation,
+        );
+
+        $this->assertTrue($evaluation['passes']);
+        $this->assertSame([], $evaluation['failures']);
+    }
+
     public function test_assert_eligible_uses_custom_failure_messages(): void
     {
         $service = app(GrantRequirementService::class);
@@ -246,5 +308,21 @@ class GrantRequirementServiceTest extends FeatureTestCase
             'color' => 'BLUE',
             'project_bits' => (string) PWHelperService::PROJECTS['Urban Planning'],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function growthCircleEnrollmentRequirement(): array
+    {
+        return [
+            'group' => 'all',
+            'rules' => [[
+                'field' => 'growth_circle_enrollment',
+                'operator' => 'eq',
+                'value' => 'ENROLLED',
+                'message' => '',
+            ]],
+        ];
     }
 }

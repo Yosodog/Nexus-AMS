@@ -5,6 +5,7 @@ namespace Tests\Feature\Workflows;
 use App\Models\Account;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
+use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\CityGrantNotification;
@@ -335,6 +336,60 @@ class CityGrantWorkflowTest extends TestCase
 
         $this->assertNotNull($referenceId);
         $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_member_cannot_request_a_city_grant_that_requires_growth_circle_enrollment(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => $this->growthCircleEnrollmentRequirement(),
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('grants.city'))
+            ->post(route('grants.city.request'), [
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'error')
+            ->assertSessionHas(
+                'alert-message',
+                'You are not currently eligible for this city grant. Review the eligibility requirements shown on this page, correct any unmet items, and try again.',
+            );
+
+        $this->assertDatabaseCount('city_grant_requests', 0);
+    }
+
+    public function test_growth_circle_member_can_request_a_city_grant_that_requires_enrollment(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update([
+            'requirements' => $this->growthCircleEnrollmentRequirement(),
+        ]);
+
+        GrowthCircleEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => null,
+            'enrolled_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('grants.city.request'), [
+                'account_id' => $account->id,
+            ])
+            ->assertRedirect(route('grants.city'))
+            ->assertSessionHas('alert-type', 'success');
+
+        $this->assertDatabaseHas('city_grant_requests', [
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'city_number' => $grant->city_number,
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
     }
 
     public function test_admin_can_approve_a_pending_city_grant_request(): void
@@ -879,6 +934,22 @@ class CityGrantWorkflowTest extends TestCase
             'city_number' => $cityNumber,
             'requirements' => [],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function growthCircleEnrollmentRequirement(): array
+    {
+        return [
+            'group' => 'all',
+            'rules' => [[
+                'field' => 'growth_circle_enrollment',
+                'operator' => 'eq',
+                'value' => 'ENROLLED',
+                'message' => '',
+            ]],
+        ];
     }
 
     private function createAdminWithPermission(string $permission): User
