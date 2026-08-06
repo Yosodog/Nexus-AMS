@@ -127,7 +127,30 @@ class GrowthCircleService
 
     public function disenroll(Nation $nation, bool $logAudit = true): void
     {
-        $enrollment = GrowthCircleEnrollment::query()->where('nation_id', $nation->id)->first();
+        $enrollment = DB::transaction(function () use ($nation): ?GrowthCircleEnrollment {
+            $lockedNation = Nation::query()
+                ->whereKey($nation->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($lockedNation === null) {
+                return null;
+            }
+
+            $enrollment = GrowthCircleEnrollment::query()
+                ->where('nation_id', $lockedNation->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($enrollment === null) {
+                return null;
+            }
+
+            $enrollment->delete();
+
+            return $enrollment;
+        }, attempts: 3);
+
         if (! $enrollment) {
             return;
         }
@@ -152,13 +175,11 @@ class GrowthCircleService
                 $fallbackMutation->send();
             } catch (Throwable $fallbackException) {
                 Log::error(
-                    "GrowthCircles: fallback tax-id assign also failed for nation {$nation->id}; deleting enrollment row anyway.",
+                    "GrowthCircles: fallback tax-id assign also failed for nation {$nation->id}; enrollment has still been removed.",
                     ['exception' => $fallbackException->getMessage()],
                 );
             }
         }
-
-        $enrollment->delete();
 
         if ($logAudit) {
             app(AuditLogger::class)->recordAfterCommit(
