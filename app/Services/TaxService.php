@@ -34,7 +34,7 @@ class TaxService
         Cache::forget('tax_daily_totals');
 
         $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
-        $bankRecords = self::getAllianceBankRecords($alliance_id, $lastTaxId + 1, $client);
+        $bankRecords = self::getAllianceTaxRecords($alliance_id, $lastTaxId + 1, $client);
         $newLastId = $lastTaxId;
 
         $ddService = app(DirectDepositService::class);
@@ -57,10 +57,12 @@ class TaxService
             }
 
             if ($record->tax_id <= 0) {
-                self::advanceCheckpoint($alliance_id, $record->id);
-                $newLastId = $record->id;
+                Log::error('Tax import received a record without a tax bracket ID.', [
+                    'alliance_id' => $alliance_id,
+                    'record_id' => $record->id,
+                ]);
 
-                continue;
+                break;
             }
 
             $existingTax = Taxes::query()->find($record->id);
@@ -162,27 +164,21 @@ class TaxService
      */
     public static function getAllianceTaxes(int $alliance_id, ?QueryService $client = null): Collection
     {
-        return self::getAllianceBankRecords($alliance_id, 1, $client)
-            ->filter(fn (object $record): bool => $record->tax_id > 0)
-            ->values();
+        return self::getAllianceTaxRecords($alliance_id, 1, $client);
     }
 
     /**
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    protected static function getAllianceBankRecords(
+    protected static function getAllianceTaxRecords(
         int $allianceId,
         int $minimumId,
         ?QueryService $client = null
     ): Collection {
-        return collect(app(BankRecordQueryService::class)->getAllianceDeposits(
+        return collect(app(TaxRecordQueryService::class)->getAllianceTaxes(
             $allianceId,
-            options: [
-                'minId' => max(1, $minimumId),
-                'orderByColumn' => 'ID',
-                'orderByDirection' => 'ASC',
-            ],
+            minimumId: max(1, $minimumId),
             client: $client,
         ));
     }
@@ -193,9 +189,48 @@ class TaxService
             return (int) (Taxes::query()->max('id') ?? 0);
         }
 
-        return (int) (TaxImportCheckpoint::query()
+        $durableTaxRecordId = max(
+            (int) (Taxes::query()
+                ->where('receiver_id', $allianceId)
+                ->max('id') ?? 0),
+            (int) (TaxImportRejection::query()
+                ->where('alliance_id', $allianceId)
+                ->max('tax_record_id') ?? 0),
+        );
+
+        $checkpointId = TaxImportCheckpoint::query()
             ->where('alliance_id', $allianceId)
-            ->value('last_scanned_id') ?? 0);
+            ->value('last_scanned_id');
+
+        if ($checkpointId === null) {
+            self::setCheckpoint($allianceId, $durableTaxRecordId);
+
+            return $durableTaxRecordId;
+        }
+
+        $checkpointId = (int) $checkpointId;
+
+        if ($checkpointId > $durableTaxRecordId) {
+            Log::warning('Rewinding tax import checkpoint to the last durable tax record.', [
+                'alliance_id' => $allianceId,
+                'checkpoint_id' => $checkpointId,
+                'durable_tax_record_id' => $durableTaxRecordId,
+            ]);
+
+            self::setCheckpoint($allianceId, $durableTaxRecordId);
+
+            return $durableTaxRecordId;
+        }
+
+        return $checkpointId;
+    }
+
+    protected static function setCheckpoint(int $allianceId, int $recordId): void
+    {
+        TaxImportCheckpoint::query()->updateOrCreate(
+            ['alliance_id' => $allianceId],
+            ['last_scanned_id' => $recordId],
+        );
     }
 
     protected static function advanceCheckpoint(int $allianceId, int $recordId): void

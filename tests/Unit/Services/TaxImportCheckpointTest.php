@@ -28,10 +28,10 @@ class TaxImportCheckpointTest extends TestCase
         $client = Mockery::mock(QueryService::class);
         $client->shouldReceive('sendQuery')
             ->once()
-            ->andReturn((object) [
+            ->andReturn($this->allianceTaxResponse([
                 $this->bankRecordPayload(101, receiverId: 777),
                 $this->bankRecordPayload(102, receiverId: 777),
-            ]);
+            ]));
 
         $lastScanned = TaxService::updateAllianceTaxes(777, $client);
 
@@ -47,10 +47,10 @@ class TaxImportCheckpointTest extends TestCase
         $client = Mockery::mock(QueryService::class);
         $client->shouldReceive('sendQuery')
             ->once()
-            ->andReturn((object) [
+            ->andReturn($this->allianceTaxResponse([
                 $this->bankRecordPayload(101, receiverId: 777, date: 'not-a-timestamp'),
                 $this->bankRecordPayload(102, receiverId: 777),
-            ]);
+            ]));
 
         $lastScanned = TaxService::updateAllianceTaxes(777, $client);
 
@@ -82,11 +82,11 @@ class TaxImportCheckpointTest extends TestCase
         $client = Mockery::mock(QueryService::class);
         $client->shouldReceive('sendQuery')
             ->once()
-            ->andReturn((object) [
+            ->andReturn($this->allianceTaxResponse([
                 $this->bankRecordPayload(103, receiverId: 777),
                 $this->bankRecordPayload(102, receiverId: 777),
                 $this->bankRecordPayload(101, receiverId: 777),
-            ]);
+            ]));
 
         $lastScanned = TaxService::updateAllianceTaxes(777, $client);
 
@@ -105,42 +105,66 @@ class TaxImportCheckpointTest extends TestCase
         ]);
     }
 
-    public function test_tax_import_uses_a_paginated_ordered_feed_and_resumes_after_non_tax_records(): void
+    public function test_tax_import_does_not_advance_past_a_non_tax_record(): void
     {
         $client = Mockery::mock(QueryService::class);
         $client->shouldReceive('sendQuery')
             ->once()
-            ->withArgs(function (GraphQLQueryBuilder $builder): bool {
-                $query = $builder->build();
-
-                return str_contains($query, 'bankrecs(')
-                    && str_contains($query, 'min_id: 1')
-                    && str_contains($query, 'column: ID')
-                    && str_contains($query, 'order: ASC')
-                    && str_contains($query, 'paginatorInfo');
-            })
-            ->andReturn((object) [
+            ->andReturn($this->allianceTaxResponse([
                 $this->bankRecordPayload(101, receiverId: 777, taxId: 0),
                 $this->bankRecordPayload(102, receiverId: 777),
-            ]);
+            ]));
 
-        $this->assertSame(102, TaxService::updateAllianceTaxes(777, $client));
+        $this->assertSame(0, TaxService::updateAllianceTaxes(777, $client));
         $this->assertDatabaseMissing('taxes', ['id' => 101]);
-        $this->assertDatabaseHas('taxes', ['id' => 102]);
+        $this->assertDatabaseMissing('taxes', ['id' => 102]);
+        $this->assertDatabaseHas('tax_import_checkpoints', [
+            'alliance_id' => 777,
+            'last_scanned_id' => 0,
+        ]);
+    }
 
-        $resumeClient = Mockery::mock(QueryService::class);
-        $resumeClient->shouldReceive('sendQuery')
+    public function test_tax_import_rewinds_an_invalid_checkpoint_to_the_last_durable_tax_id(): void
+    {
+        Taxes::query()->create($this->taxRow([
+            'id' => 100,
+            'receiver_id' => 777,
+        ]));
+        TaxImportCheckpoint::query()->create([
+            'alliance_id' => 777,
+            'last_scanned_id' => 999,
+        ]);
+
+        $client = Mockery::mock(QueryService::class);
+        $client->shouldReceive('sendQuery')
             ->once()
             ->withArgs(function (GraphQLQueryBuilder $builder): bool {
-                return str_contains($builder->build(), 'min_id: 103');
+                return str_contains($builder->build(), 'min_id: 101');
             })
-            ->andReturn((object) []);
+            ->andReturn($this->allianceTaxResponse([
+                $this->bankRecordPayload(101, receiverId: 777),
+            ]));
 
-        $this->assertSame(102, TaxService::updateAllianceTaxes(777, $resumeClient));
-        $this->assertSame(
-            102,
-            TaxImportCheckpoint::query()->where('alliance_id', 777)->value('last_scanned_id'),
-        );
+        $this->assertSame(101, TaxService::updateAllianceTaxes(777, $client));
+        $this->assertDatabaseHas('taxes', [
+            'id' => 101,
+            'receiver_id' => 777,
+        ]);
+        $this->assertDatabaseHas('tax_import_checkpoints', [
+            'alliance_id' => 777,
+            'last_scanned_id' => 101,
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $records
+     */
+    private function allianceTaxResponse(array $records, int $allianceId = 777): object
+    {
+        return (object) [[
+            'id' => (string) $allianceId,
+            'taxrecs' => $records,
+        ]];
     }
 
     /**
