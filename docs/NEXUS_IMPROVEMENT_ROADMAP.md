@@ -113,6 +113,7 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S · **Type:** Correctness, member dashboard
 
+**Status:** Complete
 
 **What should change:** The member dashboard currently presents grant and loan totals that are initialized as zero in `app/Http/Controllers/UserController.php`. These should be calculated from the authoritative grant and loan records, or removed until they can be calculated honestly.
 

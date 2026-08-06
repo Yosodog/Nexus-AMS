@@ -8,6 +8,7 @@ use App\Rules\UniqueCanonicalUsername;
 use App\Services\AuditLogger;
 use App\Services\Discord\PrivateNotificationService;
 use App\Services\DiscordAccountService;
+use App\Services\MemberFinanceSummaryService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
 use App\Services\TrustedDeviceService;
@@ -325,17 +326,16 @@ class UserController extends Controller
             ->with('alert-type', 'success');
     }
 
-    public function dashboard(NationDashboardService $dashboardService): View
-    {
+    public function dashboard(
+        NationDashboardService $dashboardService,
+        MemberFinanceSummaryService $financeSummaryService
+    ): View {
         $nation = Auth::user()->nation;
 
         return view('user.dashboard', array_merge(
             ['nation' => $nation],
             $dashboardService->getDashboardData($nation),
-            [
-                'grantTotal' => 0,
-                'loanTotal' => 0,
-            ]
+            $financeSummaryService->forNation($nation)
         ));
     }
 

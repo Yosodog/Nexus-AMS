@@ -211,14 +211,24 @@
                     <p class="nexus-stat-helper">Cash tax in the last 30 days</p>
                 </div>
                 <div class="bg-base-100 p-4 sm:p-5">
-                    <dt class="nexus-stat-label">Grants received</dt>
-                    <dd class="nexus-stat-value mt-2 break-words">${{ number_format($grantTotal ?? 0) }}</dd>
-                    <p class="nexus-stat-helper">Approved total recorded</p>
+                    <dt class="nexus-stat-label">Lifetime cash grants received</dt>
+                    @if($grantTotal === null)
+                        <dd class="nexus-stat-value mt-2 break-words text-base-content/60">Unavailable</dd>
+                        <p class="nexus-stat-helper">Grant records could not be loaded</p>
+                    @else
+                        <dd class="nexus-stat-value mt-2 break-words">${{ number_format((float) $grantTotal, 2) }}</dd>
+                        <p class="nexus-stat-helper">Approved custom and city cash grants; pending and denied requests excluded</p>
+                    @endif
                 </div>
                 <div class="bg-base-100 p-4 sm:p-5">
-                    <dt class="nexus-stat-label">Outstanding loans</dt>
-                    <dd class="nexus-stat-value mt-2 break-words">${{ number_format($loanTotal ?? 0) }}</dd>
-                    <p class="nexus-stat-helper">Current recorded balance</p>
+                    <dt class="nexus-stat-label">Outstanding loan principal</dt>
+                    @if($loanTotal === null)
+                        <dd class="nexus-stat-value mt-2 break-words text-base-content/60">Unavailable</dd>
+                        <p class="nexus-stat-helper">Loan records could not be loaded</p>
+                    @else
+                        <dd class="nexus-stat-value mt-2 break-words">${{ number_format((float) $loanTotal, 2) }}</dd>
+                        <p class="nexus-stat-helper">Remaining principal on approved and missed loans; pending, denied, and paid records excluded</p>
+                    @endif
                 </div>
                 <div class="bg-base-100 p-4 sm:p-5">
                     <dt class="nexus-stat-label">City count</dt>
