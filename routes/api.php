@@ -11,6 +11,7 @@ use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
 use App\Http\Controllers\API\IntelReportController as ApiIntelReportController;
 use App\Http\Controllers\API\MembersController;
+use App\Http\Controllers\API\Milcom\EventController as MilcomEventController;
 use App\Http\Controllers\API\Milcom\ObjectiveController as MilcomObjectiveController;
 use App\Http\Controllers\API\Milcom\OperationController as MilcomOperationController;
 use App\Http\Controllers\API\Milcom\ReadController as MilcomReadController;
@@ -178,6 +179,8 @@ Route::middleware([
     Route::get('/recommendation-runs/{run}', [MilcomReadController::class, 'recommendationRun'])
         ->name('api.milcom.recommendation-runs.show');
     Route::get('/events', [MilcomReadController::class, 'events']);
+    Route::post('/events/{event}/dismiss', [MilcomEventController::class, 'dismiss'])
+        ->name('api.milcom.events.dismiss');
     Route::get('/archive/legacy/{type}/{id}', [MilcomReadController::class, 'legacy']);
 
     Route::post('/operations', [MilcomOperationController::class, 'store']);

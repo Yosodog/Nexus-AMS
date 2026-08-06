@@ -18,8 +18,9 @@ class MilcomEventRecorder
         ?int $assignmentId = null,
         ?int $actorUserId = null,
         array $payload = [],
+        ?string $deduplicationKey = null,
     ): MilcomEvent {
-        return MilcomEvent::query()->create([
+        $attributes = [
             'operation_id' => $operationId,
             'objective_id' => $objectiveId,
             'incident_id' => $incidentId,
@@ -29,6 +30,15 @@ class MilcomEventRecorder
             'event_type' => $eventType,
             'payload' => $payload !== [] ? $payload : null,
             'occurred_at' => now(),
-        ]);
+        ];
+
+        if ($deduplicationKey === null) {
+            return MilcomEvent::query()->create($attributes);
+        }
+
+        return MilcomEvent::query()->firstOrCreate(
+            ['deduplication_key' => $deduplicationKey],
+            $attributes,
+        );
     }
 }

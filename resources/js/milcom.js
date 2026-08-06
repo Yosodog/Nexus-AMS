@@ -1531,6 +1531,14 @@ if (app) {
             const message = payload.message ?? 'Action complete.';
             const recommendationRun = payloadData(payload).recommendation_run;
 
+            if (form.dataset.milcomCommand === 'dismiss-raid-alert') {
+                form.closest('[data-milcom-exception-row]')?.remove();
+                const hasRemainingExceptions = query('[data-milcom-exception-row]') !== null;
+                query('[data-milcom-exception-empty]')?.classList.toggle('hidden', hasRemainingExceptions);
+                announce(message);
+                return;
+            }
+
             if (recommendationRun?.id) {
                 recommendationQueued = true;
                 state.progressButton = submitter;
@@ -1651,7 +1659,7 @@ if (app) {
                 element.textContent = formatNumber(value);
             }
         });
-        announce('Milcom refreshed.');
+        window.location.reload();
     }
 
     async function refreshCurrentPage(button) {

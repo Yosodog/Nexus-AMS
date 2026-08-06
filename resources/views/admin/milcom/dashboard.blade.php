@@ -108,13 +108,13 @@
                 </div>
 
                 <div class="divide-y divide-base-300" data-milcom-exception-list aria-live="polite" aria-busy="false">
-                    @forelse ($exceptionRows as $exception)
+                    @foreach ($exceptionRows as $exception)
                         @php
                             $type = (string) data_get($exception, 'type', 'exception');
                             $severity = (string) data_get($exception, 'severity', 'warning');
                             $href = data_get($exception, 'url') ?: ($type === 'counter' ? url('/admin/milcom/counters') : url('/admin/milcom/plans'));
                         @endphp
-                        <article class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5">
+                        <article class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5" data-milcom-exception-row>
                             <div class="flex min-w-0 items-start gap-3">
                                 <span class="mt-0.5 inline-grid size-9 shrink-0 place-items-center rounded-md {{ $severity === 'error' ? 'bg-error/10 text-error' : ($severity === 'info' ? 'bg-info/10 text-info' : 'bg-warning/10 text-warning') }}">
                                     <x-icon :name="$type === 'counter' ? 'o-bolt' : ($type === 'discord' ? 'o-chat-bubble-left-right' : 'o-exclamation-triangle')" class="size-5" aria-hidden="true" />
@@ -122,7 +122,9 @@
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <h3 class="font-semibold">
-                                            @if (data_get($exception, 'nation_id'))
+                                            @if ($type === 'raid_policy')
+                                                {{ data_get($exception, 'title', 'Raid policy violation') }}
+                                            @elseif (data_get($exception, 'nation_id'))
                                                 {{ data_get($exception, 'title_prefix') }}
                                                 <x-pw-nation-link :nation-id="data_get($exception, 'nation_id')" :label="data_get($exception, 'nation_name', 'Unknown nation')" />
                                             @else
@@ -132,27 +134,59 @@
                                         <span class="badge badge-outline">{{ str($type)->headline() }}</span>
                                     </div>
                                     <p class="mt-1 text-sm leading-6 text-base-content/65">
-                                        @if (data_get($exception, 'description_nation_id'))
+                                        @if ($type === 'raid_policy')
+                                            <x-pw-nation-link :nation-id="data_get($exception, 'attacker_nation_id')" :label="data_get($exception, 'attacker_nation_name', 'Unknown nation')" />
+                                            declared war on
+                                            <x-pw-nation-link :nation-id="data_get($exception, 'defender_nation_id')" :label="data_get($exception, 'defender_nation_name', 'Unknown nation')" />.
+                                        @elseif (data_get($exception, 'description_nation_id'))
                                             <x-pw-nation-link :nation-id="data_get($exception, 'description_nation_id')" :label="data_get($exception, 'description_nation_name', 'Unknown nation')" />
                                             {{ data_get($exception, 'description_suffix') }}
                                         @else
                                             {{ data_get($exception, 'description', 'Check the latest Milcom data before continuing.') }}
                                         @endif
                                     </p>
+                                    @if ($type === 'raid_policy')
+                                        <ul class="mt-2 grid gap-1 text-sm text-error/85">
+                                            @foreach (data_get($exception, 'reasons', []) as $reason)
+                                                <li class="flex items-start gap-2">
+                                                    <span aria-hidden="true">•</span>
+                                                    <span>{{ data_get($reason, 'message') }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
                                     <p class="mt-1 text-xs text-base-content/55">Found {{ $relativeTime(data_get($exception, 'detected_at')) }}</p>
                                 </div>
                             </div>
-                            <a href="{{ $href }}" class="btn btn-outline btn-sm shrink-0">Review</a>
+                            @if ($type === 'raid_policy')
+                                <div class="flex shrink-0 flex-wrap gap-2">
+                                    <a href="{{ $href }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                                        War timeline
+                                    </a>
+                                    <form
+                                        method="POST"
+                                        action="{{ data_get($exception, 'dismiss_url') }}"
+                                        data-milcom-command="dismiss-raid-alert"
+                                        data-confirm="Dismiss this raid-policy alert for all Milcom officers? The event will remain in history."
+                                        data-confirm-title="Dismiss raid alert?"
+                                        data-confirm-label="Dismiss alert"
+                                    >
+                                        @csrf
+                                        <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
+                                    </form>
+                                </div>
+                            @else
+                                <a href="{{ $href }}" class="btn btn-outline btn-sm shrink-0">Review</a>
+                            @endif
                         </article>
-                    @empty
-                        <div class="nexus-empty-state">
-                            <x-icon name="o-shield-check" class="size-9 text-success" aria-hidden="true" />
-                            <div>
-                                <h3 class="text-lg font-semibold">Nothing needs attention</h3>
-                                <p class="mt-1 text-sm text-base-content/65">New counters, staffing gaps, and Discord errors will appear here.</p>
-                            </div>
+                    @endforeach
+                    <div class="nexus-empty-state {{ $exceptionRows->isEmpty() ? '' : 'hidden' }}" data-milcom-exception-empty>
+                        <x-icon name="o-shield-check" class="size-9 text-success" aria-hidden="true" />
+                        <div>
+                            <h3 class="text-lg font-semibold">Nothing needs attention</h3>
+                            <p class="mt-1 text-sm text-base-content/65">New counters, raid-policy violations, staffing gaps, and Discord errors will appear here.</p>
                         </div>
-                    @endforelse
+                    </div>
                 </div>
             </section>
 

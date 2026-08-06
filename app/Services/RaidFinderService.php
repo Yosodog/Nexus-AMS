@@ -2,10 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Alliance;
 use App\Models\Nation;
-use App\Models\NoRaidList;
-use App\Models\Treaty;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -15,6 +12,7 @@ class RaidFinderService
         protected TradePriceService $priceService,
         protected LootCalculatorService $lootCalculator,
         protected AllianceMembershipService $membershipService,
+        protected RaidPolicyService $raidPolicy,
     ) {}
 
     /**
@@ -28,7 +26,6 @@ class RaidFinderService
             abort(403, 'Nation does not belong to our alliance.');
         }
 
-        $noRaidAlliances = NoRaidList::pluck('alliance_id')->toArray();
         $priceSnapshot = $this->priceService->get24hAverage();
 
         $minScore = $ownNation->score * 0.75;
@@ -41,10 +38,6 @@ class RaidFinderService
 
         foreach ($nations as $nation) {
             // Filter out invalid targets
-            if (in_array($nation->alliance_id, $noRaidAlliances, true)) {
-                continue;
-            }
-
             $defensiveWars = 0;
             $lootTotal = 0;
             $validWarCount = 0;
@@ -104,7 +97,7 @@ class RaidFinderService
      */
     private function queryRaidableNations(float $minScore, float $maxScore): Collection
     {
-        $raidableAlliances = $this->getRaidableAllianceIDs();
+        $raidableAlliances = $this->raidPolicy->raidableAllianceIds();
 
         $query = (new GraphQLQueryBuilder)
             ->setRootField('nations')
@@ -201,40 +194,5 @@ class RaidFinderService
         }
 
         return $nationModels;
-    }
-
-    /**
-     * @return array<int|string, mixed>
-     */
-    private function getRaidableAllianceIDs(): array
-    {
-        $topN = SettingService::getTopRaidable(); // Admin configurable
-        $topAlliances = Alliance::orderByDesc('score')->take($topN)->pluck('id')->toArray();
-        $eligibleAlliances = Alliance::whereNotIn('id', $topAlliances)
-            ->whereNotIn('id', $this->membershipService->getAllianceIds()->all())
-            ->pluck('id')
-            ->toArray();
-        $noRaidList = NoRaidList::pluck('alliance_id')->toArray();
-        $treaties = Treaty::all();
-
-        $raidable = [];
-
-        foreach ($eligibleAlliances as $aid) {
-            if (in_array($aid, $noRaidList)) {
-                continue;
-            }
-
-            $hasTreatyWithTop = $treaties->contains(function ($treaty) use ($aid, $topAlliances) {
-                return
-                    ($treaty->alliance1_id === $aid && in_array($treaty->alliance2_id, $topAlliances)) ||
-                    ($treaty->alliance2_id === $aid && in_array($treaty->alliance1_id, $topAlliances));
-            });
-
-            if (! $hasTreatyWithTop) {
-                $raidable[] = $aid;
-            }
-        }
-
-        return array_unique($raidable);
     }
 }

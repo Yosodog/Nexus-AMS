@@ -7,11 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MilcomEvent extends Model
 {
+    public const RAID_POLICY_VIOLATION_PREFIX = 'war.raid_policy_violation.';
+
     protected $guarded = [];
 
     protected function casts(): array
     {
-        return ['payload' => 'array', 'occurred_at' => 'datetime'];
+        return [
+            'payload' => 'array',
+            'occurred_at' => 'datetime',
+            'dismissed_at' => 'datetime',
+        ];
     }
 
     public function operation(): BelongsTo
@@ -37,5 +43,18 @@ class MilcomEvent extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_user_id');
+    }
+
+    public function dismissedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dismissed_by_user_id');
+    }
+
+    public function isRaidPolicyViolation(): bool
+    {
+        $warId = str($this->event_type)->after(self::RAID_POLICY_VIOLATION_PREFIX)->toString();
+
+        return str_starts_with($this->event_type, self::RAID_POLICY_VIOLATION_PREFIX)
+            && ctype_digit($warId);
     }
 }

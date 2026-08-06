@@ -202,27 +202,27 @@ class MilcomQueryService
                 ]))
             ->concat(MilcomEvent::query()
                 ->with('operation:id,type')
-                ->where(function (Builder $query): void {
-                    $query->where('event_type', 'like', 'capacity.conflict.%')
-                        ->orWhere('event_type', 'like', 'war.unplanned_declaration.%');
-                })
+                ->where('event_type', 'like', 'capacity.conflict.%')
                 ->latest('id')
                 ->limit(20)
                 ->get()
                 ->map(fn (MilcomEvent $event): array => [
                     'type' => 'conflict',
                     'severity' => 'error',
-                    'title' => str_starts_with($event->event_type, 'war.unplanned')
-                        ? 'Unplanned friendly declaration'
-                        : 'Offensive capacity conflict',
-                    'description' => str_starts_with($event->event_type, 'war.unplanned')
-                        ? 'A friendly nation declared a war that was not in an approved Milcom team.'
-                        : "A nation's active wars and reserved team spots now exceed its offensive slots.",
+                    'title' => 'Offensive capacity conflict',
+                    'description' => "A nation's active wars and reserved team spots now exceed its offensive slots.",
                     'detected_at' => $event->occurred_at,
                     'url' => $event->operation?->type === OperationType::Plan
                         ? route('admin.milcom.plans.show', $event->operation_id, false)
                         : route('admin.wars', [], false),
                 ]))
+            ->concat(MilcomEvent::query()
+                ->where('event_type', 'like', MilcomEvent::RAID_POLICY_VIOLATION_PREFIX.'%')
+                ->whereNull('dismissed_at')
+                ->latest('id')
+                ->limit(20)
+                ->get()
+                ->map(fn (MilcomEvent $event): array => $this->raidPolicyExceptionRow($event)))
             ->sortBy('detected_at')
             ->take(50)
             ->values()
@@ -1346,6 +1346,44 @@ SQL
     /**
      * @return array<string, mixed>
      */
+    private function raidPolicyExceptionRow(MilcomEvent $event): array
+    {
+        $payload = $event->payload ?? [];
+        $warId = (int) data_get($payload, 'war_id', 0);
+        $attackerId = (int) data_get($payload, 'friendly_nation_id', 0);
+        $defenderId = (int) data_get($payload, 'target_nation_id', 0);
+        $attackerName = data_get($payload, 'friendly_nation_name') ?: "Nation #{$attackerId}";
+        $defenderName = data_get($payload, 'target_nation_name') ?: "Nation #{$defenderId}";
+        $reasons = collect(data_get($payload, 'raid_policy.reasons', []))
+            ->filter(fn ($reason): bool => is_array($reason) && filled($reason['message'] ?? null))
+            ->map(fn (array $reason): array => [
+                'code' => (string) ($reason['code'] ?? 'raid_policy'),
+                'message' => (string) $reason['message'],
+                'context' => is_array($reason['context'] ?? null) ? $reason['context'] : [],
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'type' => 'raid_policy',
+            'severity' => 'error',
+            'event_id' => $event->id,
+            'title' => 'Raid policy violation',
+            'description' => "{$attackerName} declared war on {$defenderName}.",
+            'attacker_nation_id' => $attackerId,
+            'attacker_nation_name' => $attackerName,
+            'defender_nation_id' => $defenderId,
+            'defender_nation_name' => $defenderName,
+            'reasons' => $reasons,
+            'detected_at' => $event->occurred_at,
+            'url' => "https://politicsandwar.com/nation/war/timeline/war={$warId}",
+            'dismiss_url' => route('api.milcom.events.dismiss', ['event' => $event->id], false),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function eventRow(MilcomEvent $event): array
     {
         $labels = [
@@ -1381,6 +1419,7 @@ SQL
         ];
         $title = match (true) {
             str_starts_with($event->event_type, 'war.attack.') => 'War attack recorded',
+            str_starts_with($event->event_type, MilcomEvent::RAID_POLICY_VIOLATION_PREFIX) => 'Raid policy violation detected',
             str_starts_with($event->event_type, 'war.unplanned_declaration.') => 'Unplanned war declared',
             str_starts_with($event->event_type, 'capacity.conflict.') => 'Offensive slot conflict found',
             default => $labels[$event->event_type]
@@ -1395,6 +1434,8 @@ SQL
             'payload' => $event->payload,
             'occurred_at' => $event->occurred_at,
             'relative_time' => $event->occurred_at?->diffForHumans(),
+            'dismissed_at' => $event->dismissed_at,
+            'dismissed_by_user_id' => $event->dismissed_by_user_id,
         ];
     }
 }

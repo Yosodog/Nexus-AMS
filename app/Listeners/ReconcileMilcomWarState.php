@@ -28,6 +28,12 @@ class ReconcileMilcomWarState
             return;
         }
 
+        if ($event instanceof WarDeclared) {
+            $this->lifecycle->reconcileDeclaration($event->warId);
+
+            return;
+        }
+
         $this->lifecycle->reconcileWar($event->warId);
     }
 }

@@ -19,6 +19,7 @@ use App\Models\Nation;
 use App\Models\War;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
+use App\Services\RaidPolicyService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -29,9 +30,20 @@ class LifecycleReconciler
         private readonly IncidentService $incidents,
         private readonly DiscordDispatchService $discord,
         private readonly MilcomEventRecorder $events,
+        private readonly RaidPolicyService $raidPolicy,
     ) {}
 
+    public function reconcileDeclaration(int $warId): void
+    {
+        $this->reconcileWarState($warId, true);
+    }
+
     public function reconcileWar(int $warId): void
+    {
+        $this->reconcileWarState($warId, false);
+    }
+
+    private function reconcileWarState(int $warId, bool $evaluateRaidPolicy): void
     {
         $war = War::query()->find($warId);
 
@@ -39,7 +51,7 @@ class LifecycleReconciler
             return;
         }
 
-        DB::transaction(function () use ($war): void {
+        DB::transaction(function () use ($evaluateRaidPolicy, $war): void {
             $assignment = MilcomAssignment::query()
                 ->where('declared_war_id', $war->id)
                 ->lockForUpdate()
@@ -60,20 +72,8 @@ class LifecycleReconciler
             }
 
             if ($assignment === null) {
-                if ($this->membership->contains($war->att_alliance_id)) {
-                    $eventType = "war.unplanned_declaration.{$war->id}";
-
-                    if (! MilcomEvent::query()->where('event_type', $eventType)->exists()) {
-                        $this->events->record(
-                            eventType: $eventType,
-                            source: 'game',
-                            payload: [
-                                'war_id' => $war->id,
-                                'friendly_nation_id' => $war->att_id,
-                                'target_nation_id' => $war->def_id,
-                            ],
-                        );
-                    }
+                if ($evaluateRaidPolicy && $this->membership->contains($war->att_alliance_id)) {
+                    $this->recordRaidPolicyViolation($war);
                 }
 
                 return;
@@ -136,6 +136,35 @@ class LifecycleReconciler
 
             $this->completeObjectiveIfReconciled($objective, $operation);
         }, attempts: 5);
+    }
+
+    private function recordRaidPolicyViolation(War $war): void
+    {
+        $evaluation = $this->raidPolicy->evaluateAlliance((int) $war->def_alliance_id);
+
+        if ($evaluation->allowed) {
+            return;
+        }
+
+        $eventType = MilcomEvent::RAID_POLICY_VIOLATION_PREFIX.$war->id;
+
+        $war->loadMissing(['attacker:id,nation_name', 'defender:id,nation_name']);
+        $this->events->record(
+            eventType: $eventType,
+            source: 'game',
+            payload: [
+                'war_id' => (int) $war->id,
+                'friendly_nation_id' => (int) $war->att_id,
+                'friendly_nation_name' => $war->attacker?->nation_name,
+                'friendly_alliance_id' => (int) $war->att_alliance_id,
+                'target_nation_id' => (int) $war->def_id,
+                'target_nation_name' => $war->defender?->nation_name,
+                'target_alliance_id' => (int) $war->def_alliance_id,
+                'raid_policy' => $evaluation->toArray(),
+                'evaluated_at' => now()->toIso8601String(),
+            ],
+            deduplicationKey: $eventType,
+        );
     }
 
     public function recordAttack(int $attackId, int $warId): void
