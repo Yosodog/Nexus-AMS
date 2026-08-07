@@ -1,34 +1,44 @@
 @props([
+    'errorBag' => 'default',
+    'errorKey' => null,
+    'errorKeys' => null,
     'hint' => null,
     'id' => null,
     'label',
     'name',
     'optional' => false,
+    'required' => null,
 ])
 
 @php
-    $fieldId = $id ?? $name;
-    $error = $errors->first($name);
+    $fieldId = $id ?? (Illuminate\Support\Str::slug($name) ?: 'auth-field').'-'.substr(hash('sha256', $name.'|'.$label), 0, 8);
+    $validationKeys = collect($errorKeys ?? [$errorKey ?? $name])->filter()->values();
+    $messageBag = isset($errors) && method_exists($errors, 'getBag')
+        ? $errors->getBag($errorBag)
+        : ($errors ?? null);
+    $error = $messageBag
+        ? $validationKeys->map(static fn ($key) => $messageBag->first((string) $key))->first(
+            static fn ($message) => filled($message)
+        )
+        : null;
+    $isRequired = $required ?? ! $optional;
 @endphp
 
-<div class="grid gap-2">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <label for="{{ $fieldId }}" class="text-sm font-semibold text-base-content">{{ $label }}</label>
-        @if($optional)
-            <span class="text-xs text-base-content/70">Optional</span>
-        @endif
-    </div>
-
-    @if($hint)
-        <p id="{{ $fieldId }}-help" class="text-xs leading-5 text-base-content/70">{{ $hint }}</p>
-    @endif
-
+<x-form.field
+    :id="$fieldId"
+    :label="$label"
+    :hint="$hint"
+    :error="$error"
+    :optional="$optional"
+    :required="$isRequired"
+    label-class="text-sm font-semibold text-base-content"
+    help-class="text-xs leading-5 text-base-content/70"
+>
+    @isset($help)
+        <x-slot:help>{{ $help }}</x-slot:help>
+    @endisset
+    @isset($status)
+        <x-slot:status>{{ $status }}</x-slot:status>
+    @endisset
     {{ $slot }}
-
-    @if($error)
-        <p id="{{ $fieldId }}-error" class="flex items-start gap-1.5 text-sm text-error">
-            <x-icon name="o-exclamation-circle" class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <span>{{ $error }}</span>
-        </p>
-    @endif
-</div>
+</x-form.field>

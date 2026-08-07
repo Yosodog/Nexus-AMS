@@ -1,11 +1,43 @@
 @php
     use Carbon\Carbon;
 
-    $statusClass = match($loan->status) {
-        'approved' => 'nexus-status--success',
-        'missed', 'pending' => 'nexus-status--warning',
-        'denied' => 'nexus-status--error',
-        default => 'nexus-status--neutral',
+    $statusPresentation = match($loan->status) {
+        'pending' => [
+            'label' => 'Pending',
+            'intent' => 'pending',
+            'icon' => 'clock',
+            'explanation' => 'Awaiting staff review.',
+        ],
+        'approved' => [
+            'label' => 'Approved',
+            'intent' => 'active',
+            'icon' => 'bolt',
+            'explanation' => 'The loan is in active servicing.',
+        ],
+        'missed' => [
+            'label' => 'Missed',
+            'intent' => 'warning',
+            'icon' => 'exclamation-triangle',
+            'explanation' => 'A scheduled payment is past due.',
+        ],
+        'paid' => [
+            'label' => 'Paid',
+            'intent' => 'success',
+            'icon' => 'check-circle',
+            'explanation' => 'The loan has been repaid.',
+        ],
+        'denied' => [
+            'label' => 'Denied',
+            'intent' => 'failure',
+            'icon' => 'x-circle',
+            'explanation' => 'The loan request was not approved.',
+        ],
+        default => [
+            'label' => filled($loan->status) ? str($loan->status)->headline()->toString() : 'Unknown',
+            'intent' => 'neutral',
+            'icon' => 'minus-circle',
+            'explanation' => 'This loan has an unrecognized legacy status.',
+        ],
     };
     $loanIsImmutable = $loan->payments->isNotEmpty();
     $interestDueNow = (float) ($fullPayoffPreview['interest'] ?? 0);
@@ -32,9 +64,14 @@
             </p>
         </div>
         <div class="nexus-page-header__actions">
-            <span class="nexus-status {{ $statusClass }}">{{ ucfirst($loan->status) }}</span>
+            <x-nexus-status
+                :label="$statusPresentation['label']"
+                :intent="$statusPresentation['intent']"
+                :icon="$statusPresentation['icon']"
+                :explanation="$statusPresentation['explanation']"
+            />
             @if($loanIsImmutable)
-                <span class="nexus-status nexus-status--neutral">Terms locked</span>
+                <x-nexus-status label="Terms locked" intent="neutral" icon="lock-closed" />
             @endif
         </div>
     </header>

@@ -17,6 +17,19 @@
         </div>
 
         <div class="admin-topbar__actions">
+            <button
+                type="button"
+                class="btn btn-ghost btn-sm hidden sm:inline-flex"
+                data-command-palette-open
+                hidden
+                aria-haspopup="dialog"
+                aria-controls="admin-command-palette"
+            >
+                <x-icon name="o-magnifying-glass" class="size-4" />
+                Search
+                <kbd class="kbd kbd-xs" aria-label="Control or Command K">⌘K</kbd>
+            </button>
+
             <a href="{{ route('user.dashboard') }}" class="btn btn-ghost btn-sm hidden sm:inline-flex">
                 <x-icon name="o-arrow-left" class="size-4" />
                 Member app
@@ -28,7 +41,14 @@
                 <details class="account-control">
                     <summary class="account-control__trigger nexus-icon-button tooltip tooltip-bottom tooltip-end" aria-label="Open staff account menu" data-tip="Open staff account menu">
                         @if($nation?->flag)
-                            <img src="{{ $nation->flag }}" alt="" class="account-control__avatar">
+                            <x-media.lazy-image
+                                :src="$nation->flag"
+                                alt=""
+                                width="36"
+                                height="36"
+                                loading="eager"
+                                class="account-control__avatar"
+                            />
                         @else
                             <span class="account-control__fallback" aria-hidden="true">
                                 {{ str($user->name)->substr(0, 1)->upper() }}
@@ -74,4 +94,6 @@
             @endif
         </div>
     </div>
+
+    <x-admin.command-palette :$commands :entity-search-url="$entitySearchUrl" />
 </header>

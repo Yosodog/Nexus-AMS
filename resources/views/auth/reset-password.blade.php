@@ -36,7 +36,14 @@
         </x-slot:context>
 
         <div class="space-y-6">
-            <x-auth.error-summary title="We could not update your password. Check the details below." />
+            <x-auth.error-summary
+                id="reset-password-errors"
+                title="We could not update your password. Check the details below."
+                :field-ids="[
+                    'password' => 'reset-password',
+                    'password_confirmation' => 'reset-password-confirmation',
+                ]"
+            />
 
             <form method="POST" action="{{ route('password.update') }}" class="space-y-5">
                 @csrf

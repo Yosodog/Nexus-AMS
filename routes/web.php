@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AuditRuleController;
 use App\Http\Controllers\Admin\BeigeAlertController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CityGrantController;
+use App\Http\Controllers\Admin\CommandPaletteController;
 use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -278,6 +279,9 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     ->group(function () {
         // Base routes
         Route::get('/', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/command-palette/search', [CommandPaletteController::class, 'search'])
+            ->middleware('throttle:60,1')
+            ->name('admin.command-palette.search');
 
         // Users
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');

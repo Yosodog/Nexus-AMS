@@ -105,13 +105,16 @@
                 <div class="flex items-center gap-4 border-b border-base-300 pb-6">
                     <div class="grid aspect-[3/2] w-24 shrink-0 place-items-center overflow-hidden border border-base-300 bg-base-100 sm:w-28">
                         @if(! empty($stats['flag']))
-                            <img
-                                src="{{ $stats['flag'] }}"
+                            <x-media.lazy-image
+                                :src="$stats['flag']"
                                 alt="{{ $name }} alliance flag"
-                                class="h-full w-full object-contain"
+                                width="112"
+                                height="75"
                                 loading="eager"
-                                decoding="async"
-                            >
+                                :fallback="str($name)->substr(0, 2)->upper()"
+                                fit="contain"
+                                class="h-full w-full object-contain"
+                            />
                         @else
                             <span class="font-bold nexus-text-muted" aria-hidden="true">
                                 {{ \Illuminate\Support\Str::of($name)->substr(0, 2)->upper() }}

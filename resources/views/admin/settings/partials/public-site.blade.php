@@ -239,7 +239,15 @@
 
                         <div class="grid min-h-40 place-items-center overflow-hidden rounded-box border border-base-300 bg-base-200/50 p-3">
                             @if ($seoSettings['home_metadata']->imageUrl)
-                                <img src="{{ $seoSettings['home_metadata']->imageUrl }}" alt="Current social preview" class="max-h-48 w-full object-contain">
+                                <x-media.lazy-image
+                                    :src="$seoSettings['home_metadata']->imageUrl"
+                                    alt="Current social preview"
+                                    :width="1200"
+                                    :height="630"
+                                    fallback="Preview unavailable"
+                                    fit="contain"
+                                    class="aspect-[1200/630] max-h-48 w-full"
+                                />
                             @else
                                 <p class="text-center text-sm text-base-content/60">No social preview image is currently available.</p>
                             @endif
@@ -263,7 +271,15 @@
     >
         <div class="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-start">
             <div class="flex h-16 w-16 items-center justify-center rounded-box border border-base-300 bg-base-100">
-                <img src="{{ $faviconUrl }}" alt="Current favicon" class="max-h-9 max-w-9">
+                <x-media.lazy-image
+                    :src="$faviconUrl"
+                    alt="Current favicon"
+                    :width="36"
+                    :height="36"
+                    fallback="N"
+                    fit="contain"
+                    class="h-9 w-9"
+                />
             </div>
 
             <form method="POST" action="{{ route('admin.settings.favicon') }}" enctype="multipart/form-data" class="max-w-2xl space-y-4">

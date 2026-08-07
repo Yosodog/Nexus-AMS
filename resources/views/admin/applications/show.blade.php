@@ -4,13 +4,7 @@
 
 @section('content')
     @php
-        $statusValue = $application->status->value ?? (string) $application->status;
-        $statusClass = match($statusValue) {
-            \App\Enums\ApplicationStatus::Approved->value => 'nexus-status--success',
-            \App\Enums\ApplicationStatus::Denied->value => 'nexus-status--error',
-            \App\Enums\ApplicationStatus::Cancelled->value => 'nexus-status--neutral',
-            default => 'nexus-status--warning'
-        };
+        $statusPresentation = $application->status->presentation();
     @endphp
 
     <header class="nexus-page-header">
@@ -25,7 +19,12 @@
             </p>
         </div>
         <div class="nexus-page-header__actions">
-            <span class="nexus-status {{ $statusClass }}">{{ ucfirst(strtolower($statusValue)) }}</span>
+            <x-nexus-status
+                :label="$statusPresentation['label']"
+                :intent="$statusPresentation['intent']"
+                :icon="$statusPresentation['icon']"
+                :explanation="$statusPresentation['explanation']"
+            />
             @can('manage-applications')
                 @if($application->status === \App\Enums\ApplicationStatus::Pending)
                     <form

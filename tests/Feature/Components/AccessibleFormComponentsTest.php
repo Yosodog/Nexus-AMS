@@ -83,4 +83,46 @@ class AccessibleFormComponentsTest extends TestCase
         $this->assertStringContainsString('disabled', $html);
         $this->assertStringContainsString('nexus-icon-button__loading', $html);
     }
+
+    public function test_async_state_uses_a_polite_live_region_and_exposes_retry(): void
+    {
+        $html = Blade::render(
+            '<x-async.state state="temporary_failure" title="Could not refresh" message="Try again safely." retry />',
+            ['errors' => new ViewErrorBag]
+        );
+
+        $this->assertStringContainsString('data-async-state="temporary_failure"', $html);
+        $this->assertStringContainsString('role="status"', $html);
+        $this->assertStringContainsString('aria-live="polite"', $html);
+        $this->assertStringContainsString('data-async-retry', $html);
+        $this->assertStringContainsString('Try again safely.', $html);
+    }
+
+    public function test_async_button_has_distinct_label_and_spinner_hooks(): void
+    {
+        $html = Blade::render(
+            '<x-async.button type="submit" busy-label="Saving…">Save changes</x-async.button>',
+            ['errors' => new ViewErrorBag]
+        );
+
+        $this->assertStringContainsString('type="submit"', $html);
+        $this->assertStringContainsString('data-async-busy-label="Saving…"', $html);
+        $this->assertStringContainsString('data-async-button-spinner', $html);
+        $this->assertStringContainsString('data-async-button-label', $html);
+        $this->assertStringContainsString('Save changes', $html);
+    }
+
+    public function test_global_async_status_supports_offline_and_session_expiry_without_focus_changes(): void
+    {
+        $html = Blade::render(
+            '<x-async.global-status />',
+            ['errors' => new ViewErrorBag]
+        );
+
+        $this->assertStringContainsString('data-async-global-state="offline"', $html);
+        $this->assertStringContainsString('data-async-global-state="session_expired"', $html);
+        $this->assertStringContainsString('data-async-live-region', $html);
+        $this->assertStringContainsString('aria-live="polite"', $html);
+        $this->assertStringNotContainsString('autofocus', $html);
+    }
 }

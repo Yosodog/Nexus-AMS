@@ -29,7 +29,14 @@
         </x-slot:context>
 
         <div class="space-y-6">
-            <x-auth.error-summary title="We could not verify those multi-factor credentials." />
+            <x-auth.error-summary
+                id="two-factor-errors"
+                title="We could not verify those multi-factor credentials."
+                :field-ids="[
+                    'code' => 'two-factor-code',
+                    'recovery_code' => 'two-factor-recovery-code',
+                ]"
+            />
 
             <form method="POST" action="{{ url('/two-factor-challenge') }}" class="space-y-5">
                 @csrf

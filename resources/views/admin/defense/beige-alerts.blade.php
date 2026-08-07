@@ -31,6 +31,21 @@
         </form>
     </x-card>
 
+    <x-card title="P&W Turn Clock" class="mb-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <x-time.countdown
+                :target="$nextTurnChangeAt"
+                :server-now="$serverNow"
+                mode="pw-turn"
+                :stale-after="1800"
+            />
+            <p class="text-xs nexus-text-muted">
+                Page synchronized
+                <x-time.display :value="$serverNow" :server-now="$serverNow" label="Page synchronized" />.
+            </p>
+        </div>
+    </x-card>
+
     <div class="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <x-stat title="Tracked Alliances" :value="number_format($trackedAlliances->count())" icon="o-building-library" color="text-primary" description="Enemy groups monitored for beige windows" class="border-t-2 border-primary" />
         <x-stat title="Beige Nations" :value="number_format($totalBeigeNations)" icon="o-eye" color="text-info" description="Current targets in beige" class="border-t-2 border-info" />
@@ -161,7 +176,14 @@
                                 {{ (int) $nation->beige_turns }}
                             </span>
                         </td>
-                        <td>{{ $estimatedExit->format('M d, H:i') }}</td>
+                        <td>
+                            <x-time.display
+                                :value="$estimatedExit"
+                                :server-now="$serverNow"
+                                label="Estimated beige exit"
+                                show-exact
+                            />
+                        </td>
                         <td class="text-sm">
                             @if($military)
                                 S: {{ number_format((int) $military->soldiers) }},

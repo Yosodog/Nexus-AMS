@@ -196,7 +196,7 @@
                         @if($discordAccount)
                             <div class="space-y-1 text-sm">
                                 <p class="font-semibold">{{ $discordAccount->discord_username }}</p>
-                                <p class="nexus-text-muted">ID: {{ $discordAccount->discord_id }}</p>
+                                <x-copy-action :value="$discordAccount->discord_id" label="Discord ID" />
                                 <p class="nexus-text-muted">Linked {{ optional($discordAccount->linked_at)->diffForHumans() ?? 'recently' }}</p>
                             </div>
                         @else

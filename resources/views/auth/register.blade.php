@@ -43,7 +43,17 @@
                 </p>
             </div>
 
-            <x-auth.error-summary title="Some account details need your attention." />
+            <x-auth.error-summary
+                id="registration-errors"
+                title="Some account details need your attention."
+                :field-ids="[
+                    'name' => 'register-name',
+                    'email' => 'register-email',
+                    'nation_id' => 'register-nation-id',
+                    'password' => 'register-password',
+                    'password_confirmation' => 'register-password-confirmation',
+                ]"
+            />
 
             <form method="POST" action="{{ route('register') }}" class="space-y-7">
                 @csrf

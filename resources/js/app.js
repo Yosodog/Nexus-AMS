@@ -1,7 +1,12 @@
 import './bootstrap';
+import { initCommandPalettes } from './command-palette';
+import { initializeCopyActions } from './copy-action';
+import { initializeFormRecovery } from './form-recovery';
 import './milcom';
 import { initAuditRuleBuilders } from './audit-rule-builder';
+import { initAsyncUi } from './async-ui';
 import { initGrantRequirementBuilders } from './grant-requirement-builder';
+import { initRaidFinders } from './raid-finder';
 
 const SORT_ASC = 'asc';
 const SORT_DESC = 'desc';
@@ -662,6 +667,10 @@ themeApi.systemDarkQuery.addEventListener('change', () => {
 enablePageLoadingIndicator();
 
 const initAppUi = (root = document) => {
+    initAsyncUi(root);
+    initCommandPalettes(root);
+    initializeCopyActions(root);
+    initializeFormRecovery(root);
     enableSortableTables(root);
     enableThemePicker(root);
     enableExclusiveMemberDropdowns(root);
@@ -669,6 +678,7 @@ const initAppUi = (root = document) => {
     enableConfirmations();
     initAuditRuleBuilders(root);
     initGrantRequirementBuilders(root);
+    initRaidFinders(root);
 };
 
 if (document.readyState === 'loading') {

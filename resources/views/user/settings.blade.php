@@ -86,7 +86,7 @@
                         </div>
 
                         <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-200 pt-4">
-                            <p class="text-sm text-base-content/70">Changes save instantly. More profile options will land here soon.</p>
+                            <p class="text-sm text-base-content/70">Review your profile details, then save any changes.</p>
                             <div class="flex items-center gap-3">
                                 <button type="reset" class="btn btn-ghost">Reset</button>
                                 <button type="submit" class="btn btn-primary">Save changes</button>
@@ -517,14 +517,13 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h3 class="text-lg font-semibold">Shortcuts</h3>
-                            <p class="text-sm text-base-content/70">Quick actions and new settings will appear here as we roll them out.</p>
+                            <p class="text-sm text-base-content/70">Use these shortcuts to return to your dashboard or manage Discord verification.</p>
                         </div>
                         <div class="badge badge-outline">Helper</div>
                     </div>
                     <div class="mt-4 grid gap-3">
                         <a href="{{ route('user.dashboard') }}" class="btn btn-outline btn-sm justify-start">Back to dashboard</a>
                         <a href="{{ route('discord.verify.show') }}" class="btn btn-outline btn-sm justify-start">Open Discord verification</a>
-                        <button class="btn btn-ghost btn-sm justify-start" disabled>More settings coming soon</button>
                     </div>
                 </x-utils.card>
             </div>

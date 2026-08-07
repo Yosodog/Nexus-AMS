@@ -589,7 +589,7 @@
                                 <div class="space-y-3">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <x-badge value="Transaction #{{ $transaction->id }}" class="badge-error badge-sm" />
-                                        <code class="rounded bg-base-300 px-2 py-1 text-xs font-semibold">{{ $transaction->bank_correlation_id }}</code>
+                                        <x-copy-action :value="$transaction->bank_correlation_id" label="bank correlation ID" />
                                     </div>
                                     <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                                         <dt class="nexus-text-muted">Attempted</dt>
@@ -616,6 +616,10 @@
                                             @endif
                                         @endforeach
                                     </div>
+                                    <x-copy-resource-vector
+                                        :resources="collect(PWHelperService::resources())->mapWithKeys(fn ($resource) => [$resource => (float) $transaction->{$resource}])->all()"
+                                        class="mt-2"
+                                    />
                                     @if($isLegacyPendingGuardAutoRefund)
                                         <div class="alert alert-warning text-sm">
                                             <x-icon name="o-exclamation-triangle" class="w-5 h-5" />

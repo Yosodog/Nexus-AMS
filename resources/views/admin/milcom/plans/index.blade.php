@@ -15,18 +15,15 @@
 
         return filled($value) ? (string) $value : 'Not yet';
     };
-    $statusTone = static fn (string $status): string => match ($status) {
-        'active', 'completed' => 'nexus-status--success',
-        'failed' => 'nexus-status--error',
-        'generating', 'dispatching' => 'nexus-status--info',
-        'review' => 'nexus-status--warning',
-        default => 'nexus-status--neutral',
-    };
-    $statusLabel = static fn (string $status): string => match ($status) {
-        'dispatching' => 'Creating Discord rooms',
-        'generating' => 'Building teams',
-        'review' => 'Ready for review',
-        default => str($status)->headline()->toString(),
+    $statusPresentation = static function (string $status): array {
+        $knownStatus = \App\Domain\Milcom\Enums\OperationStatus::tryFrom($status);
+
+        return $knownStatus?->presentation() ?? [
+            'label' => filled($status) ? str($status)->headline()->toString() : 'Unknown',
+            'intent' => 'neutral',
+            'icon' => 'minus-circle',
+            'explanation' => 'This operation has an unrecognized legacy status.',
+        ];
     };
     $stageLabel = static fn (string $stage): string => match ($stage) {
         'scope' => 'Setup',
@@ -93,7 +90,7 @@
                     <select name="status" class="select select-sm min-w-40" aria-label="Filter by status">
                         <option value="">All statuses</option>
                         @foreach (['draft', 'generating', 'review', 'dispatching', 'active', 'failed'] as $status)
-                            <option value="{{ $status }}" @selected(data_get($filters, 'status') === $status)>{{ $statusLabel($status) }}</option>
+                            <option value="{{ $status }}" @selected(data_get($filters, 'status') === $status)>{{ $statusPresentation($status)['label'] }}</option>
                         @endforeach
                     </select>
                     <button type="submit" class="btn btn-outline btn-sm">Apply</button>
@@ -117,6 +114,7 @@
                             @php
                                 $planId = (int) data_get($plan, 'id', 0);
                                 $status = (string) data_get($plan, 'status.value', data_get($plan, 'status', 'draft'));
+                                $planStatusPresentation = $statusPresentation($status);
                                 $stage = (string) data_get($plan, 'current_stage', 'scope');
                                 $coverage = (float) data_get($plan, 'critical_coverage_percent', data_get($plan, 'coverage_percent', 0));
                             @endphp
@@ -126,7 +124,11 @@
                                     <p class="mt-1 line-clamp-2 text-sm nexus-text-muted">{{ data_get($plan, 'scope_summary', 'Alliances and targets are not set yet.') }}</p>
                                 </td>
                                 <td>
-                                    <span class="nexus-status {{ $statusTone($status) }}">{{ $statusLabel($status) }}</span>
+                                    <x-nexus-status
+                                        :label="$planStatusPresentation['label']"
+                                        :intent="$planStatusPresentation['intent']"
+                                        :icon="$planStatusPresentation['icon']"
+                                    />
                                     <p class="mt-2 text-xs nexus-text-muted">{{ $stageLabel($stage) }}</p>
                                 </td>
                                 <td class="min-w-44">
@@ -173,6 +175,7 @@
                     @php
                         $planId = (int) data_get($plan, 'id', 0);
                         $status = (string) data_get($plan, 'status.value', data_get($plan, 'status', 'draft'));
+                        $planStatusPresentation = $statusPresentation($status);
                         $coverage = (float) data_get($plan, 'critical_coverage_percent', data_get($plan, 'coverage_percent', 0));
                     @endphp
                     <a href="{{ url('/admin/milcom/plans/'.$planId) }}" class="block p-4 transition-colors hover:bg-base-200/60 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
@@ -181,7 +184,11 @@
                                 <h3 class="truncate font-semibold">{{ data_get($plan, 'name', 'Untitled plan') }}</h3>
                                 <p class="mt-1 text-xs nexus-text-muted">Updated {{ $relativeTime(data_get($plan, 'updated_at')) }}</p>
                             </div>
-                            <span class="nexus-status {{ $statusTone($status) }}">{{ $statusLabel($status) }}</span>
+                            <x-nexus-status
+                                :label="$planStatusPresentation['label']"
+                                :intent="$planStatusPresentation['intent']"
+                                :icon="$planStatusPresentation['icon']"
+                            />
                         </div>
                         <div class="mt-4 flex items-center justify-between gap-3 text-sm">
                             <span>{{ number_format($coverage, 0) }}% critical coverage</span>

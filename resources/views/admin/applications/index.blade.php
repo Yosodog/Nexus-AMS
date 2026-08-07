@@ -9,12 +9,16 @@
             <p class="nexus-page-summary">Review the oldest pending applicants first, inspect interview context, and maintain the Discord handoff settings.</p>
         </div>
         <div class="nexus-page-header__actions">
-            <span class="nexus-status {{ $settings['enabled'] ? 'nexus-status--success' : 'nexus-status--warning' }}">
-                Intake {{ $settings['enabled'] ? 'open' : 'paused' }}
-            </span>
-            <span class="nexus-status {{ $openApplications->isEmpty() ? 'nexus-status--success' : 'nexus-status--warning' }}">
-                {{ number_format($openApplications->count()) }} pending
-            </span>
+            <x-nexus-status
+                :label="$settings['enabled'] ? 'Intake open' : 'Intake paused'"
+                :intent="$settings['enabled'] ? 'active' : 'warning'"
+                :icon="$settings['enabled'] ? 'bolt' : 'exclamation-triangle'"
+            />
+            <x-nexus-status
+                :label="number_format($openApplications->count()).' pending'"
+                :intent="$openApplications->isEmpty() ? 'success' : 'pending'"
+                :icon="$openApplications->isEmpty() ? 'check-circle' : 'clock'"
+            />
         </div>
     </header>
 
@@ -28,11 +32,18 @@
         </div>
 
         @forelse($openApplications as $application)
+            @php
+                $pendingPresentation = $application->status->presentation();
+            @endphp
             <article class="grid gap-4 border-b border-base-300 px-5 py-4 last:border-b-0 lg:grid-cols-[minmax(0,1.2fr)_minmax(12rem,0.8fr)_auto] lg:items-center">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                         <h3 class="font-semibold text-base-content">{{ $application->leader_name_snapshot }}</h3>
-                        <span class="nexus-status nexus-status--warning">Pending</span>
+                        <x-nexus-status
+                            :label="$pendingPresentation['label']"
+                            :intent="$pendingPresentation['intent']"
+                            :icon="$pendingPresentation['icon']"
+                        />
                     </div>
                     <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-base-content/65">
                         <a href="https://politicsandwar.com/nation/id={{ $application->nation_id }}" target="_blank" rel="noopener" class="font-medium text-primary hover:underline">
@@ -101,13 +112,7 @@
                     <tbody>
                         @foreach($recentApplications as $application)
                             @php
-                                $status = $application->status->value ?? (string) $application->status;
-                                $statusClass = match($status) {
-                                    \App\Enums\ApplicationStatus::Approved->value => 'nexus-status--success',
-                                    \App\Enums\ApplicationStatus::Denied->value => 'nexus-status--error',
-                                    \App\Enums\ApplicationStatus::Cancelled->value => 'nexus-status--neutral',
-                                    default => 'nexus-status--warning'
-                                };
+                                $statusPresentation = $application->status->presentation();
                             @endphp
                             <tr>
                                 <td>
@@ -120,7 +125,13 @@
                                     <span class="block">{{ $application->discord_username }}</span>
                                     <span class="block text-xs nexus-text-muted">{{ $application->discord_user_id }}</span>
                                 </td>
-                                <td><span class="nexus-status {{ $statusClass }}">{{ ucfirst(strtolower($status)) }}</span></td>
+                                <td>
+                                    <x-nexus-status
+                                        :label="$statusPresentation['label']"
+                                        :intent="$statusPresentation['intent']"
+                                        :icon="$statusPresentation['icon']"
+                                    />
+                                </td>
                                 <td>
                                     <time
                                         datetime="{{ $application->updated_at?->toIso8601String() }}"

@@ -42,7 +42,11 @@
                 </div>
             @endif
 
-            <x-auth.error-summary title="We could not process that nation ID." />
+            <x-auth.error-summary
+                id="password-recovery-errors"
+                title="We could not process that nation ID."
+                :field-ids="['nation_id' => 'recovery-nation-id']"
+            />
 
             <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
                 @csrf

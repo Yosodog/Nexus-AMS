@@ -1,113 +1,204 @@
 @extends('layouts.main')
 
 @section('content')
-    <div class="mx-auto w-full min-w-0 space-y-6" x-data="raidFinder()" x-init="loadRaids()">
-        <div class="rounded-lg border border-base-300 bg-base-100 p-6 shadow">
-            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p class="text-xs uppercase tracking-wide nexus-text-muted">Offense prep</p>
-                    <h1 class="text-3xl font-bold">Raid Finder</h1>
-                    <p class="text-sm text-base-content/70">Fetch fresh raid targets by nation ID and sort on the fly.</p>
+    <div
+        class="mx-auto w-full min-w-0 space-y-6"
+        data-raid-finder
+        data-raid-finder-endpoint="{{ route('api.raid-finder.show') }}"
+        aria-busy="true"
+    >
+        <header class="nexus-page-header">
+            <div class="nexus-page-header__copy">
+                <p class="nexus-kicker">Offense prep</p>
+                <h1 class="nexus-page-title">Raid Finder</h1>
+                <p class="nexus-page-summary">
+                    Find eligible targets, narrow the list without another API request, and verify when the data was refreshed.
+                </p>
+            </div>
+        </header>
+
+        <form class="nexus-form-section" data-raid-finder-form>
+            <div class="nexus-form-section-header">
+                <h2 class="nexus-section-title">Search and filters</h2>
+                <p class="nexus-body-muted mt-1">Filters stay in the URL and survive refresh or retry.</p>
+            </div>
+
+            <div class="nexus-form-grid">
+                <x-form.input
+                    id="raid-nation-id"
+                    name="nation_id"
+                    type="number"
+                    label="Nation ID"
+                    hint="Targets are calculated for this alliance nation."
+                    :value="$nationId"
+                    min="1"
+                    inputmode="numeric"
+                    required
+                />
+                <x-form.input
+                    id="raid-target-search"
+                    name="q"
+                    type="search"
+                    label="Leader or alliance"
+                    hint="Filters the loaded target list."
+                    autocomplete="off"
+                />
+                <x-form.input id="raid-min-cities" name="min_cities" type="number" label="Minimum cities" min="0" inputmode="numeric" optional />
+                <x-form.input id="raid-max-cities" name="max_cities" type="number" label="Maximum cities" min="0" inputmode="numeric" optional />
+                <x-form.select id="raid-max-wars" name="max_wars" label="Maximum defensive wars" optional>
+                    <option value="">Any eligible count</option>
+                    <option value="0">0 wars</option>
+                    <option value="1">1 war</option>
+                    <option value="2">2 wars</option>
+                </x-form.select>
+                <x-form.input
+                    id="raid-min-loot"
+                    name="min_loot"
+                    type="number"
+                    label="Minimum estimated loot"
+                    min="0"
+                    step="1000000"
+                    inputmode="numeric"
+                    optional
+                />
+            </div>
+
+            <div class="nexus-form-actions">
+                <button type="button" class="btn btn-ghost" data-raid-clear-filters>Clear filters</button>
+                <x-async.button type="submit" class="btn-primary" busy-label="Refreshing…" data-raid-refresh>
+                    Refresh targets
+                </x-async.button>
+            </div>
+        </form>
+
+        <section aria-labelledby="raid-targets-heading">
+            <div class="space-y-4">
+                <x-async.state
+                    state="loading"
+                    title="Finding eligible targets"
+                    message="Checking Politics & War and the latest saved target data."
+                    data-raid-state-panel="loading"
+                />
+                <x-async.state
+                    state="success"
+                    title="Targets ready"
+                    data-raid-state-panel="success"
+                    hidden
+                />
+                <x-async.state
+                    state="empty"
+                    title="No eligible targets"
+                    data-raid-state-panel="empty"
+                    hidden
+                >
+                    Last checked <time data-raid-updated>not yet</time>.
+                </x-async.state>
+                <x-async.state
+                    state="filtered_empty"
+                    title="No targets match these filters"
+                    data-raid-state-panel="filtered_empty"
+                    hidden
+                >
+                    Target data last updated <time data-raid-updated>not yet</time>.
+                </x-async.state>
+                <x-async.state
+                    state="stale"
+                    title="Showing saved targets"
+                    retry
+                    retry-label="Refresh now"
+                    data-raid-state-panel="stale"
+                    hidden
+                />
+                <x-async.state
+                    state="rate_limited"
+                    title="Refresh paused by Politics & War"
+                    retry
+                    data-raid-state-panel="rate_limited"
+                    hidden
+                />
+                <x-async.state
+                    state="temporary_failure"
+                    title="Raid targets are temporarily unavailable"
+                    retry
+                    data-raid-state-panel="temporary_failure"
+                    hidden
+                />
+                <x-async.state
+                    state="offline"
+                    title="Reconnect to refresh targets"
+                    retry
+                    data-raid-state-panel="offline"
+                    hidden
+                />
+                <x-async.state
+                    state="session_expired"
+                    title="Your session expired"
+                    message="Reload this page and sign in again. Your filters remain in the URL."
+                    data-raid-state-panel="session_expired"
+                    hidden
+                />
+                <x-async.state
+                    state="error"
+                    retry
+                    data-raid-state-panel="error"
+                    hidden
+                />
+
+                <div data-raid-skeleton>
+                    <x-async.skeleton label="Loading raid targets" :rows="5" />
                 </div>
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full sm:w-auto">
-                    <input id="nationId" type="number" class="input w-full sm:w-40" x-model="nationId" placeholder="Nation ID" aria-label="Nation ID for raid search"/>
-                    <button class="btn btn-primary w-full sm:w-auto" @click="loadRaids()">Refresh</button>
+
+                <div class="nexus-panel" data-raid-results hidden>
+                    <div class="nexus-panel__header">
+                        <div>
+                            <h2 id="raid-targets-heading" class="nexus-section-title">Eligible targets</h2>
+                            <p class="nexus-body-muted mt-1">
+                                Last updated <time data-raid-updated>not yet</time>
+                            </p>
+                        </div>
+                        <span class="nexus-status nexus-status--neutral" data-raid-result-count>0 results</span>
+                    </div>
+
+                    <div class="nexus-table-shell border-0 rounded-none">
+                        <table class="nexus-table" data-sortable="true">
+                            <thead>
+                                <tr>
+                                    <th>Leader</th>
+                                    <th>Alliance</th>
+                                    <th>Cities</th>
+                                    <th>Last active</th>
+                                    <th>Score</th>
+                                    <th>Wars</th>
+                                    <th>Est. loot</th>
+                                    <th>Last beige</th>
+                                </tr>
+                            </thead>
+                            <tbody data-raid-results-body></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Loading spinner -->
-        <div x-show="loading" class="flex justify-center items-center py-10">
-            <span class="loading loading-spinner loading-lg text-primary"></span>
-        </div>
+        <template data-raid-row-template>
+            <tr>
+                <td><a class="link link-hover font-semibold text-primary" data-raid-nation-link target="_blank" rel="noopener noreferrer"></a></td>
+                <td data-raid-alliance></td>
+                <td data-raid-cities></td>
+                <td><time data-raid-last-active></time></td>
+                <td data-raid-score></td>
+                <td data-raid-wars></td>
+                <td data-raid-loot></td>
+                <td data-raid-last-beige></td>
+            </tr>
+        </template>
 
-        <!-- Table -->
-        <div x-show="!loading" x-cloak class="card bg-base-100 shadow border border-base-300">
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="card-title">Targets</h2>
-                    <span class="badge badge-outline" x-text="`${targets.length} results`"></span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full text-sm" data-sortable="false">
-                        <thead>
-                        <tr>
-                            <th>Leader</th>
-                            <th>Alliance</th>
-                            <th>Cities</th>
-                            <th>Last Active</th>
-                            <th>Score</th>
-                            <th>Wars</th>
-                            <th>Est. Loot</th>
-                            <th>Last Beige</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <template x-for="target in targets" :key="target.nation.id">
-                            <tr>
-                                <td>
-                                    <a :href="`https://politicsandwar.com/nation/id=${target.nation.id}`"
-                                       class="link link-hover text-primary font-semibold"
-                                       x-text="target.nation.leader_name"></a>
-                                </td>
-                                <td x-text="target.nation.alliance?.name ?? 'None'"></td>
-                                <td x-text="target.nation.num_cities"></td>
-                                <td x-text="target.nation.last_active"></td>
-                                <td x-text="target.nation.score.toFixed(2)"></td>
-                                <td x-text="target.defensive_wars"></td>
-                                <td x-text="formatMoney(target.value)"></td>
-                                <td x-text="formatMoney(target.last_beige ?? 0)"></td>
-                            </tr>
-                        </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <noscript>
+            <x-async.state
+                state="error"
+                title="JavaScript is required for Raid Finder"
+                message="Enable JavaScript to load and filter live targets."
+            />
+        </noscript>
     </div>
-
-    <script>
-        function raidFinder() {
-            return {
-                nationId: Number('{{ $nationId }}'),
-                loading: true,
-                targets: [],
-
-                loadRaids() {
-                    this.loading = true;
-
-                    // Step 1: CSRF for Sanctum
-                    fetch('/sanctum/csrf-cookie', {
-                        method: 'GET',
-                        credentials: 'include'
-                    }).then(() => {
-                        // Step 2: fetch raid targets
-                        return fetch(`/api/v1/defense/raid-finder/${this.nationId}`, {
-                            method: 'GET',
-                            credentials: 'include',
-                            headers: {
-                                'Accept': 'application/json'
-                            }
-                        });
-                    })
-                        .then(res => {
-                            if (!res.ok) throw new Error('Failed to load raid targets');
-                            return res.json();
-                        })
-                        .then(data => {
-                            this.targets = data;
-                        })
-                        .catch(err => {
-                            alert('Failed to fetch raid targets');
-                            console.error(err);
-                        })
-                        .finally(() => this.loading = false);
-                },
-
-                formatMoney(value) {
-                    return `$${Number(value).toLocaleString()}`;
-                }
-            }
-        }
-    </script>
 @endsection

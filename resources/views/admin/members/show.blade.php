@@ -3,9 +3,11 @@
 @section('content')
     <x-header :title="'Nation Overview: ' . $nation->leader_name" separator use-h1>
         <x-slot:subtitle>
-            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" class="link link-primary">
-                Nation #{{ $nation->id }}
+            <a href="https://politicsandwar.com/nation/id={{ $nation->id }}" target="_blank" rel="noopener noreferrer" class="link link-primary">
+                Open nation in Politics &amp; War
             </a>
+            &nbsp;&middot;&nbsp;
+            <x-copy-action :value="(string) $nation->id" label="nation ID" />
             &nbsp;&middot;&nbsp;
             Last updated: {{ $lastUpdatedAt ? $lastUpdatedAt->diffForHumans() : 'Unknown' }}
         </x-slot:subtitle>

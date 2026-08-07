@@ -92,21 +92,29 @@
                     </div>
                 @else
                     <x-utils.card title="Apply for this grant" extraClasses="shadow-sm border border-base-300">
-                        <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="apply-form" class="space-y-4">
+                        <form method="POST" action="{{ route('grants.apply', $grant->slug) }}" id="grant-application-form" class="space-y-4">
                             @csrf
 
-                            <div class="grid gap-2 w-full">
-                                <label class="label font-semibold text-base-content" for="account_id">Select bank account</label>
-                                <select name="account_id" id="account_id" class="select w-full">
-                                    <option value="">-- Choose an account --</option>
-                                    @foreach ($accounts as $account)
-                                        <option value="{{ $account->id }}">{{ $account->name }} (Balance: ${{ number_format($account->money) }})</option>
-                                    @endforeach
-                                </select>
-                                @error('account_id')
-                                    <span class="mt-1 text-sm text-error">{{ $message }}</span>
-                                @enderror
-                            </div>
+                            <x-form.error-summary
+                                id="grant-application-errors"
+                                title="We could not submit this grant application."
+                                :field-ids="['account_id' => 'grant-account']"
+                            />
+
+                            <x-form.select
+                                id="grant-account"
+                                name="account_id"
+                                label="Deposit account"
+                                required
+                            >
+                                <x-slot:help>Grant resources will be deposited into this account after approval.</x-slot:help>
+                                <option value="">-- Choose an account --</option>
+                                @foreach ($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
+                                        {{ $account->name }} (Balance: ${{ number_format($account->money) }})
+                                    </option>
+                                @endforeach
+                            </x-form.select>
 
                             <button type="submit" class="btn btn-primary w-full sm:w-auto" @disabled(! empty($eligibilityReport['failures']))>
                                 Apply for grant

@@ -22,6 +22,7 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <x-system-status-banner :down="$pwApiDown" :checked-at="$pwApiLastChecked" />
+    <x-async.global-status />
     <livewire:admin.app-navbar />
 
     <x-main full-width with-nav class="admin-shell">

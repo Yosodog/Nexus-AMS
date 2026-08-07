@@ -31,11 +31,14 @@
 
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div class="flex min-w-0 items-start gap-3">
-                                        @if ($nation)
-                                            <img src="{{ $nation->flag }}" alt="Flag" class="h-8 w-12 rounded object-cover">
-                                        @else
-                                            <div class="h-8 w-12 rounded bg-base-300"></div>
-                                        @endif
+                                        <x-media.lazy-image
+                                            :src="$nation?->flag"
+                                            :alt="$nation ? 'Flag of '.($nation->nation_name ?? 'nation #'.$nation->id) : 'Nation flag unavailable'"
+                                            :width="48"
+                                            :height="32"
+                                            fallback="?"
+                                            class="h-8 w-12 rounded"
+                                        />
 
                                         <div class="min-w-0">
                                             <h3 class="font-semibold">

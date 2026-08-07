@@ -184,29 +184,36 @@
                             </section>
                         @endif
 
-                        <form method="POST" action="{{ route('grants.city.request') }}" class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
+                        <form method="POST" action="{{ route('grants.city.request') }}" id="city-grant-request-form" class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
                             @csrf
                             <input type="hidden" name="city_number" value="{{ $nextCity }}">
+
+                            <x-form.error-summary
+                                id="city-grant-request-errors"
+                                class="sm:col-span-4"
+                                title="We could not submit this city grant request."
+                                :field-ids="[
+                                    'account_id' => 'city-grant-account',
+                                    'city_grant' => 'city-grant-account',
+                                ]"
+                                :only="['account_id', 'city_grant']"
+                            />
 
                             <div class="sm:col-span-3">
                                 <x-form.select
                                     id="city-grant-account"
                                     name="account_id"
                                     label="Bank account"
-                                    hint="City-grant funds will be deposited into this account."
-                                    :aria-describedby="$errors->has('city_grant') ? 'city-grant-request-error' : null"
-                                    :aria-invalid="$errors->has('city_grant') ? 'true' : null"
+                                    :error-keys="['account_id', 'city_grant']"
                                     required
                                 >
+                                    <x-slot:help>City-grant funds will be deposited into this account after approval.</x-slot:help>
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
                                             {{ $account->name }}
                                         </option>
                                     @endforeach
                                 </x-form.select>
-                                @if ($errors->has('city_grant'))
-                                    <p id="city-grant-request-error" class="text-sm font-medium text-error" role="alert">{{ $errors->first('city_grant') }}</p>
-                                @endif
                             </div>
 
                             <button

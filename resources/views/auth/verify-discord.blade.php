@@ -59,7 +59,7 @@
         </x-slot:context>
 
         <div class="space-y-6">
-            <x-auth.error-summary title="We could not update your Discord connection." />
+            <x-auth.error-summary id="discord-connection-errors" title="We could not update your Discord connection." />
 
             @if($discordAccount)
                 <div class="alert alert-success items-start" role="status">

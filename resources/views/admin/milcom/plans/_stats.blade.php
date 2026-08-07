@@ -453,7 +453,14 @@
                                 <td>
                                     <div class="flex items-center gap-2">
                                         @if (data_get($alliance, 'flag'))
-                                            <img src="{{ data_get($alliance, 'flag') }}" alt="" class="h-6 w-9 rounded-sm object-cover ring-1 ring-base-300" loading="lazy">
+                                            <x-media.lazy-image
+                                                :src="data_get($alliance, 'flag')"
+                                                alt=""
+                                                :width="36"
+                                                :height="24"
+                                                :fallback="str(data_get($alliance, 'name', '?'))->substr(0, 1)->upper()"
+                                                class="h-6 w-9 rounded-sm ring-1 ring-base-300"
+                                            />
                                         @endif
                                         @if (data_get($alliance, 'url'))
                                             <a href="{{ data_get($alliance, 'url') }}" target="_blank" rel="noopener noreferrer" class="link font-semibold">{{ data_get($alliance, 'name', 'Unknown alliance') }}</a>

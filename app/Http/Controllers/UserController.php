@@ -8,6 +8,7 @@ use App\Rules\UniqueCanonicalUsername;
 use App\Services\AuditLogger;
 use App\Services\Discord\PrivateNotificationService;
 use App\Services\DiscordAccountService;
+use App\Services\MemberDashboardAttentionService;
 use App\Services\MemberFinanceSummaryService;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
@@ -328,14 +329,17 @@ class UserController extends Controller
 
     public function dashboard(
         NationDashboardService $dashboardService,
-        MemberFinanceSummaryService $financeSummaryService
+        MemberFinanceSummaryService $financeSummaryService,
+        MemberDashboardAttentionService $attentionService,
     ): View {
         $nation = Auth::user()->nation;
+        $dashboardData = $dashboardService->getDashboardData($nation);
 
         return view('user.dashboard', array_merge(
             ['nation' => $nation],
-            $dashboardService->getDashboardData($nation),
-            $financeSummaryService->forNation($nation)
+            $dashboardData,
+            $financeSummaryService->forNation($nation),
+            $attentionService->forNation($nation, $dashboardData),
         ));
     }
 

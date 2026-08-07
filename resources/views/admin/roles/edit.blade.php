@@ -79,11 +79,14 @@
                                             ->implode('');
                                     @endphp
                                     <a href="{{ route('admin.users.edit', $user) }}" class="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition hover:border-primary/30 hover:bg-primary/5">
-                                        @if($flag)
-                                            <img src="{{ $flag }}" alt="{{ $user->name }} flag" class="h-10 w-10 rounded-full border border-base-300 object-cover">
-                                        @else
-                                            <div class="grid h-10 w-10 place-items-center rounded-full bg-primary/15 font-semibold text-primary">{{ $initials ?: '?' }}</div>
-                                        @endif
+                                        <x-media.lazy-image
+                                            :src="$flag"
+                                            :alt="$user->name.' flag'"
+                                            :width="40"
+                                            :height="40"
+                                            :fallback="$initials ?: '?'"
+                                            class="h-10 w-10 rounded-full border border-base-300"
+                                        />
                                         <div class="min-w-0">
                                             <div class="truncate font-semibold text-base-content">{{ $user->name }}</div>
                                             <div class="truncate text-sm nexus-text-muted">{{ $nationName ?: 'No nation linked' }}</div>

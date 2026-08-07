@@ -312,7 +312,10 @@ class QueryService
                                     'retryCount' => $retryCount,
                                     'resetAfter' => $resetAfter,
                                 ]);
-                                throw new PWQueryFailedException('Rate limit retry limit reached.');
+                                throw new PWQueryFailedException(
+                                    'Rate limit retry limit reached.',
+                                    retryAfterSeconds: $resetAfter,
+                                );
                             }
 
                             Log::warning('Rate limit hit, retrying in '.$resetAfter.' seconds.');

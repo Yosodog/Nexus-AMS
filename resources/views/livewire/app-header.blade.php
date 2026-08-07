@@ -54,11 +54,14 @@
                         <details class="account-control">
                             <summary class="account-control__trigger nexus-icon-button tooltip tooltip-bottom tooltip-end" aria-label="Open account menu" data-tip="Open account menu">
                                 @if(data_get($user, 'nation.flag'))
-                                    <img
-                                        src="{{ data_get($user, 'nation.flag') }}"
+                                    <x-media.lazy-image
+                                        :src="data_get($user, 'nation.flag')"
                                         alt=""
+                                        width="36"
+                                        height="36"
+                                        loading="eager"
                                         class="account-control__avatar"
-                                    >
+                                    />
                                 @else
                                     <span class="account-control__fallback" aria-hidden="true">
                                         {{ str($user->name)->substr(0, 1)->upper() }}

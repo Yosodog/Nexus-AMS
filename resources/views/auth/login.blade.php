@@ -42,7 +42,14 @@
                 </div>
             @endif
 
-            <x-auth.error-summary title="We could not sign you in. Check the details below and try again." />
+            <x-auth.error-summary
+                id="login-errors"
+                title="We could not sign you in. Check the details below and try again."
+                :field-ids="[
+                    'name' => 'login-name',
+                    'password' => 'login-password',
+                ]"
+            />
 
             <form method="POST" action="{{ route('login') }}" class="space-y-5">
                 @csrf

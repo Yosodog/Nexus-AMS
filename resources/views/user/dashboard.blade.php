@@ -31,13 +31,15 @@
         <header class="nexus-page-header sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div class="flex min-w-0 items-start gap-4 sm:gap-5">
                 <div class="aspect-[3/2] w-20 shrink-0 overflow-hidden rounded-md border border-base-300 bg-base-100 sm:w-24">
-                    <img
-                        src="{{ $nation->flag ?? 'https://politicsandwar.com/img/flags/default.png' }}"
+                    <x-media.lazy-image
+                        :src="$nation->flag ?? 'https://politicsandwar.com/img/flags/default.png'"
                         alt="{{ $nation->nation_name }} nation flag"
-                        class="h-full w-full object-cover"
+                        width="96"
+                        height="64"
                         loading="eager"
-                        decoding="async"
-                    >
+                        :fallback="str($nation->nation_name)->substr(0, 2)->upper()"
+                        class="h-full w-full object-cover"
+                    />
                 </div>
 
                 <div class="nexus-page-header__copy">
@@ -83,6 +85,69 @@
                 </a>
             </div>
         </header>
+
+        <section class="nexus-panel" aria-labelledby="attention-heading">
+            <div class="nexus-panel__header">
+                <div>
+                    <h2 id="attention-heading" class="nexus-section-title">What needs my attention?</h2>
+                    <p class="nexus-body-muted mt-1">Decisions, blockers, and stale information that may need your next action.</p>
+                </div>
+                <span class="nexus-status {{ $attentionCount > 0 ? 'nexus-status--warning' : 'nexus-status--success' }}">
+                    {{ $attentionCount > 0 ? $attentionCount.' open' : 'Caught up' }}
+                </span>
+            </div>
+
+            @if($attentionItems !== [])
+                <ul class="divide-y divide-base-300" aria-label="Items needing attention">
+                    @foreach($attentionItems as $item)
+                        @php
+                            $attentionStatusClass = match ($item['intent']) {
+                                'failure' => 'nexus-status--error',
+                                'warning' => 'nexus-status--warning',
+                                'pending' => 'nexus-status--info',
+                                default => 'nexus-status--neutral',
+                            };
+                        @endphp
+                        <li class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                            <div class="flex min-w-0 items-start gap-3">
+                                <span class="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-base-200 text-base-content" aria-hidden="true">
+                                    <x-icon :name="$item['icon']" class="size-5" />
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3 class="font-semibold text-base-content">{{ $item['title'] }}</h3>
+                                        <span class="nexus-status {{ $attentionStatusClass }}">{{ $item['label'] }}</span>
+                                    </div>
+                                    <p class="mt-1 max-w-3xl text-sm leading-6 text-base-content/70">{{ $item['description'] }}</p>
+                                </div>
+                            </div>
+                            <a
+                                href="{{ $item['url'] }}"
+                                class="btn btn-sm btn-outline shrink-0 sm:self-center"
+                                @if($item['external'] ?? false) target="_blank" rel="noopener noreferrer" @endif
+                            >
+                                {{ $item['action'] }}
+                                @if($item['external'] ?? false)
+                                    <x-icon name="o-arrow-top-right-on-square" class="size-4" aria-hidden="true" />
+                                @else
+                                    <x-icon name="o-arrow-right" class="size-4" aria-hidden="true" />
+                                @endif
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @else
+                <div class="flex items-start gap-3 p-5">
+                    <x-icon name="o-check-circle" class="mt-0.5 size-6 shrink-0 text-success" aria-hidden="true" />
+                    <div>
+                        <p class="font-semibold">No urgent actions right now</p>
+                        <p class="mt-1 text-sm leading-6 text-base-content/70">
+                            Your latest readiness snapshot is current, no active audit findings are due, and no payment is overdue.
+                        </p>
+                    </div>
+                </div>
+            @endif
+        </section>
 
         <section
             class="grid overflow-hidden rounded-lg border border-base-300 bg-base-100 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]"

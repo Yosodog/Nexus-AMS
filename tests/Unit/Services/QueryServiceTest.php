@@ -210,6 +210,28 @@ class QueryServiceTest extends FeatureTestCase
         $this->assertSame(30, $service->rateLimitResetAfter(Http::get('https://example.test/future-reset')));
     }
 
+    public function test_rate_limit_failure_exposes_server_retry_timing(): void
+    {
+        Http::fake([
+            '*' => Http::response('', 429, [
+                'X-RateLimit-Reset-After' => '23',
+            ]),
+        ]);
+
+        $service = new QueryService;
+        $service->maxRetries = 0;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('wars')
+            ->addFields(['id']);
+
+        try {
+            $service->sendQuery($builder);
+            $this->fail('Expected the rate-limited query to fail.');
+        } catch (PWQueryFailedException $exception) {
+            $this->assertSame(23, $exception->retryAfterSeconds);
+        }
+    }
+
     public function test_paginated_queries_fetch_every_page_across_batches(): void
     {
         $requestedPages = [];

@@ -47,7 +47,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, Di
 
     Route::get('/accounts', [AccountController::class, 'getUserAccounts']);
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
-    Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show']);
+    Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show'])
+        ->middleware('throttle:raid-finder')
+        ->name('api.raid-finder.show');
     Route::get('/members', [MembersController::class, 'index'])->middleware([AdminMiddleware::class, 'can:view-members']);
     Route::get('/trade-prices/average-24h', [TradePriceController::class, 'average24h']);
 

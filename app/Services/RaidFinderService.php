@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Models\Nation;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
 class RaidFinderService
@@ -181,9 +185,31 @@ class RaidFinderService
             ->withPaginationInfo();
 
         try {
-            $results = (new QueryService)->sendQuery($query);
-        } catch (Throwable $e) {
-            abort(503, 'PW API error while querying nations: '.$e->getMessage());
+            $results = app(QueryService::class)->sendQuery($query);
+        } catch (PWQueryFailedException $exception) {
+            if ($exception->retryAfterSeconds !== null) {
+                throw new TooManyRequestsHttpException(
+                    $exception->retryAfterSeconds,
+                    'Politics & War is rate limiting raid data requests.',
+                    $exception,
+                );
+            }
+
+            throw new ServiceUnavailableHttpException(
+                null,
+                'Raid data is temporarily unavailable.',
+                $exception,
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Raid Finder could not query Politics & War.', [
+                'exception' => $exception::class,
+            ]);
+
+            throw new ServiceUnavailableHttpException(
+                null,
+                'Raid data is temporarily unavailable.',
+                $exception,
+            );
         }
 
         $nationModels = collect();

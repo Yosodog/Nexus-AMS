@@ -357,6 +357,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S · **Type:** Async UX
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Raid Finder should not resolve failures or no-results conditions as a blank area or generic alert.
 
 **How it should work:** Render inline states for initial load, no eligible targets, filters excluding all targets, stale data, rate limiting, temporary failure, and successful results. Preserve filters, expose last-updated time, and provide a retry action. Announce state changes through a live region without stealing focus.
@@ -370,6 +372,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P1-08 — Standardize asynchronous UI states
 
 **Effort:** M · **Type:** Design system, reliability UX
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** Loading, saving, success, empty, offline, and error behavior varies by feature.
 
@@ -483,6 +487,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** S–M · **Type:** Design system, temporal clarity
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Relative times are useful for scanning, while absolute times are required for coordination and audit. Politics & War turn timing also matters throughout Nexus.
 
 **How it should work:** A shared component should show concise relative time with an exact localized timestamp available without pointer-only interaction. Add a reusable local/P&W turn countdown where decisions depend on turns, including the target time and behavior when client clock skew is detected.
@@ -496,6 +502,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P1-17 — Add consistent copy actions for operational identifiers
 
 **Effort:** S · **Type:** Staff efficiency
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** Frequently shared identifiers should not require precise text selection.
 
@@ -553,6 +561,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** XS–S · **Type:** Frontend performance
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Repeated flags and noncritical images should not compete with primary content during initial load.
 
 **How it should work:** Add native lazy loading and explicit dimensions, use appropriately sized assets, and provide stable placeholders/fallbacks. Above-the-fold identity imagery can remain eager when it contributes to perceived speed.
@@ -580,6 +590,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P1-23 — Remove or replace disabled “coming soon” navigation
 
 **Effort:** XS · **Type:** Information architecture
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** Disabled navigation advertises unavailable capability and creates uncertainty about whether the page is broken or permission-restricted.
 
@@ -693,6 +705,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** M · **Type:** Forms, accessibility
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Forms should share one predictable anatomy and recovery behavior.
 
 **How it should work:** Build or converge on shared field wrappers containing label, optional/required indicator, help, input, error, and status. On failed submission, preserve values, render a focusable error summary linked to fields, focus the summary, and mark invalid controls. For asynchronous validation, announce changes without excessive interruption.
@@ -706,6 +720,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P1-32 — Consolidate status rendering around one semantic component
 
 **Effort:** M · **Type:** Design system, domain clarity
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** Status color, wording, iconography, and capitalization vary across domains and components.
 
@@ -734,6 +750,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 ### P1-34 — Redesign the member dashboard around required actions
 
 **Effort:** M · **Type:** Core member UX
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** The dashboard should prioritize decisions and blockers rather than presenting an undifferentiated collection of metrics.
 
@@ -767,6 +785,8 @@ Each page should have a focused save boundary, permission check, validation requ
 ### P1-36 — Add a global command palette for staff power users
 
 **Effort:** M · **Type:** Navigation, power-user efficiency
+
+**Status:** Complete — August 6, 2026
 
 **What should change:** The current breadth makes sidebar navigation slow for frequent staff operations.
 

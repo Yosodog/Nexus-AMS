@@ -158,6 +158,13 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('raid-finder', function (Request $request) {
+            return [
+                Limit::perMinute(6)->by('raid-finder:user:'.$request->user()->getAuthIdentifier()),
+                Limit::perMinute(20)->by('raid-finder:ip:'.$request->ip()),
+            ];
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });

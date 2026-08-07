@@ -48,6 +48,7 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <x-system-status-banner :down="$pwApiDown ?? false" :checked-at="$pwApiLastChecked ?? null" />
+    <x-async.global-status />
 
     <header class="public-nav">
         <div class="public-nav__inner">

@@ -68,7 +68,8 @@ class BeigeAlertController extends Controller
         $avgScore = $totalBeigeNations > 0
             ? round((float) $beigeNations->avg('score'), 2)
             : 0.0;
-        $nextTurnChangeAt = $beigeAlertService->nextTurnChangeAt(CarbonImmutable::now());
+        $serverNow = CarbonImmutable::now();
+        $nextTurnChangeAt = $beigeAlertService->nextTurnChangeAt($serverNow);
 
         return view('admin.defense.beige-alerts', [
             'enabled' => SettingService::isBeigeAlertsEnabled(),
@@ -80,6 +81,7 @@ class BeigeAlertController extends Controller
             'totalBeigeNations' => $totalBeigeNations,
             'nextTurnLeavers' => $nextTurnLeavers,
             'avgScore' => $avgScore,
+            'serverNow' => $serverNow,
             'nextTurnChangeAt' => $nextTurnChangeAt,
             'beigeTurnsBreakdown' => $beigeTurnsBreakdown,
         ]);

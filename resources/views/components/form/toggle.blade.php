@@ -1,42 +1,70 @@
 @props([
+    'checked' => false,
+    'errorBag' => 'default',
     'errorKey' => null,
+    'errorKeys' => null,
     'hint' => null,
     'id' => null,
     'label',
     'name',
+    'optional' => false,
+    'required' => false,
     'value' => '1',
 ])
 
 @php
-    $fieldId = $id ?? Str::slug($name);
-    $validationKey = $errorKey ?? $name;
-    $error = isset($errors) ? $errors->first($validationKey) : null;
+    $baseFieldId = Illuminate\Support\Str::slug($name) ?: 'field';
+    $fieldId = $id ?? $baseFieldId.'-'.substr(hash('sha256', $name.'|'.$label), 0, 8);
+    $validationKeys = collect($errorKeys ?? [$errorKey ?? $name])->filter()->values();
+    $messageBag = isset($errors) && method_exists($errors, 'getBag')
+        ? $errors->getBag($errorBag)
+        : ($errors ?? null);
+    $error = $messageBag
+        ? $validationKeys->map(static fn ($key) => $messageBag->first((string) $key))->first(
+            static fn ($message) => filled($message)
+        )
+        : null;
+    $hasHelp = (isset($help) && $help->hasActualContent()) || filled($hint);
+    $hasStatus = isset($status) && $status->hasActualContent();
     $describedBy = collect([
-        $hint ? $fieldId.'-help' : null,
+        $hasHelp ? $fieldId.'-help' : null,
+        $hasStatus ? $fieldId.'-status' : null,
         $error ? $fieldId.'-error' : null,
         $attributes->get('aria-describedby'),
-    ])->filter()->implode(' ');
+    ])->filter()->unique()->implode(' ');
+    $isInvalid = $error || $attributes->get('aria-invalid') === 'true';
+    $errorMessageId = $error ? $fieldId.'-error' : $attributes->get('aria-errormessage');
+    $oldValue = old($name, $checked);
+    $isChecked = is_array($oldValue)
+        ? in_array($value, $oldValue, true)
+        : in_array($oldValue, [true, 1, '1', 'on', $value], true);
 @endphp
 
-<div class="grid gap-2">
-    <label for="{{ $fieldId }}" class="flex min-h-11 cursor-pointer items-center justify-between gap-4">
-        <span class="label text-base-content">{{ $label }}</span>
-        <input
-            id="{{ $fieldId }}"
-            name="{{ $name }}"
-            type="checkbox"
-            value="{{ $value }}"
-            @if ($describedBy !== '') aria-describedby="{{ $describedBy }}" @endif
-            @if ($error || $attributes->get('aria-invalid') === 'true') aria-invalid="true" @endif
-            {{ $attributes->except(['aria-describedby', 'aria-invalid'])->class(['toggle']) }}
-        >
-    </label>
-
-    @if ($hint)
-        <p id="{{ $fieldId }}-help" class="nexus-text-muted text-sm">{{ $hint }}</p>
-    @endif
-
-    @if ($error)
-        <p id="{{ $fieldId }}-error" class="text-sm font-medium text-error" role="alert">{{ $error }}</p>
-    @endif
-</div>
+<x-form.field
+    :id="$fieldId"
+    :label="$label"
+    :hint="$hint"
+    :error="$error"
+    :optional="$optional"
+    :required="$required"
+    layout="toggle"
+>
+    @isset($help)
+        <x-slot:help>{{ $help }}</x-slot:help>
+    @endisset
+    @isset($status)
+        <x-slot:status>{{ $status }}</x-slot:status>
+    @endisset
+    <input
+        id="{{ $fieldId }}"
+        name="{{ $name }}"
+        type="checkbox"
+        value="{{ $value }}"
+        @checked($isChecked)
+        @if ($required) required @endif
+        @if ($describedBy !== '') aria-describedby="{{ $describedBy }}" @endif
+        @if ($errorMessageId) aria-errormessage="{{ $errorMessageId }}" @endif
+        @if ($isInvalid) aria-invalid="true" @endif
+        {{ $attributes->except(['aria-describedby', 'aria-errormessage', 'aria-invalid'])->class(['toggle', 'toggle-error' => $isInvalid]) }}
+    >
+</x-form.field>

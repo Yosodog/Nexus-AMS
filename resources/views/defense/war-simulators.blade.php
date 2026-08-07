@@ -47,7 +47,15 @@
                 <div class="rounded-xl bg-base-200/60 p-3 flex items-center gap-3">
                     <div class="avatar">
                         <div class="w-12 rounded-full ring ring-primary/30 ring-offset-base-100 ring-offset-2">
-                            <img :src="attacker.flag || 'https://placehold.co/80x80?text=?'" alt="Attacker flag"/>
+                            <img
+                                :src="attacker.flag || 'https://placehold.co/80x80?text=?'"
+                                alt="Attacker flag"
+                                width="80"
+                                height="80"
+                                loading="lazy"
+                                decoding="async"
+                                x-on:error="$el.hidden = true"
+                            >
                         </div>
                     </div>
                     <div class="flex-1">
@@ -113,7 +121,15 @@
                 <div class="rounded-xl bg-base-200/60 p-3 flex items-center gap-3">
                     <div class="avatar">
                         <div class="w-12 rounded-full ring ring-error/30 ring-offset-base-100 ring-offset-2">
-                            <img :src="defender.flag || 'https://placehold.co/80x80?text=?'" alt="Defender flag"/>
+                            <img
+                                :src="defender.flag || 'https://placehold.co/80x80?text=?'"
+                                alt="Defender flag"
+                                width="80"
+                                height="80"
+                                loading="lazy"
+                                decoding="async"
+                                x-on:error="$el.hidden = true"
+                            >
                         </div>
                     </div>
                     <div class="flex-1">

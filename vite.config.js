@@ -58,6 +58,7 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/js/time-display.js',
                 'resources/js/customization/editor.js',
                 'resources/js/ckeditor.js',
             ],

@@ -22,7 +22,11 @@
         </x-slot:context>
 
         <div class="space-y-6">
-            <x-auth.error-summary title="Your password could not be confirmed." />
+            <x-auth.error-summary
+                id="confirm-password-errors"
+                title="Your password could not be confirmed."
+                :field-ids="['password' => 'confirm-current-password']"
+            />
 
             <form method="POST" action="{{ url('/user/confirm-password') }}" class="space-y-5">
                 @csrf

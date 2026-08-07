@@ -137,8 +137,12 @@
                         @endphp
                         <tr>
                             <td class="text-nowrap">
-                                <div class="font-medium">{{ $log->occurred_at?->format('Y-m-d H:i:s') ?? '—' }}</div>
-                                <div class="text-xs nexus-text-muted">{{ $log->occurred_at?->diffForHumans() ?? 'Unknown' }}</div>
+                                <x-time.display
+                                    :value="$log->occurred_at"
+                                    label="Occurred"
+                                    fallback="Unknown"
+                                    show-exact
+                                />
                             </td>
                             <td>
                                 <x-badge :value="$log->category" class="badge-ghost badge-sm" />
@@ -162,7 +166,11 @@
                                 <div class="text-xs nexus-text-muted">ID: {{ $log->subject_id ?? '—' }}</div>
                             </td>
                             <td>
-                                <div class="text-xs nexus-text-muted">Req: {{ $log->request_id ?? '—' }}</div>
+                                @if($log->request_id)
+                                    <x-copy-action :value="$log->request_id" label="request ID" />
+                                @else
+                                    <div class="text-xs nexus-text-muted">Request ID: —</div>
+                                @endif
                                 <div class="text-xs nexus-text-muted">IP: {{ $log->ip ?? '—' }}</div>
                             </td>
                             <td class="min-w-[18rem]">

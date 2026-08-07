@@ -50,8 +50,14 @@
             <div class="card bg-base-100 shadow-md border border-base-300">
                 <div class="card-body">
                     <h2 class="card-title items-center gap-3">
-                        <img src="{{ $target->flag }}" alt="Flag of {{ $target->leader_name }}"
-                             class="w-8 h-5 rounded border border-base-300"/>
+                        <x-media.lazy-image
+                            :src="$target->flag"
+                            alt="Flag of {{ $target->leader_name }}"
+                            width="32"
+                            height="20"
+                            :fallback="str($target->nation_name)->substr(0, 2)->upper()"
+                            class="h-5 w-8 rounded border border-base-300"
+                        />
                         <div>
                             <a href="https://politicsandwar.com/nation/id={{ $target->id }}" target="_blank"
                                class="link link-hover text-info font-semibold">

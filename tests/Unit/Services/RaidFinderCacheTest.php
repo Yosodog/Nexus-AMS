@@ -31,4 +31,18 @@ class RaidFinderCacheTest extends TestCase
 
         $this->assertSame('raid-finder:v3:4242', $cache->key(4242));
     }
+
+    public function test_snapshot_tracks_freshness_without_discarding_stale_data_immediately(): void
+    {
+        $cache = app(RaidFinderCache::class);
+        $snapshot = $cache->store(4242, [['value' => 123]]);
+
+        $this->assertTrue($cache->isFresh($snapshot));
+        $this->assertSame($snapshot, $cache->snapshot(4242));
+
+        $this->travel(31)->minutes();
+
+        $this->assertFalse($cache->isFresh($snapshot));
+        $this->assertSame($snapshot, $cache->snapshot(4242));
+    }
 }
