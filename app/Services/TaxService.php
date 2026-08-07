@@ -180,11 +180,6 @@ class TaxService
             foreach (array_keys($updatedDates) as $date) {
                 self::recordDailyTaxIncome($date);
             }
-
-            // Pre-warm cache so users don't wait on page load
-            self::getSummaryStats();
-            self::getResourceChartData();
-            self::getDailyTotals();
         } catch (Throwable $exception) {
             TaxImportCheckpoint::recordFailure($alliance_id, $exception->getMessage());
 

@@ -806,6 +806,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M · **Type:** Finance information architecture
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** The tax dashboard should communicate a few decisions clearly rather than duplicate the full ledger with more cards.
 
 **How it should work:** Keep high-value tax metrics—current period, trend, exceptions, stale/missing data—and provide a prominent **View tax transactions** link that opens the finance ledger with tax/date filters pre-applied. Remove duplicate tables or metrics that do not change decisions.

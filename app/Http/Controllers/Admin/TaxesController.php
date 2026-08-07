@@ -2,21 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Services\TaxService;
+use App\Services\TaxDashboardService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class TaxesController
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index(Request $request, TaxDashboardService $dashboardService): View
     {
         $this->authorize('view-taxes');
 
-        $stats = TaxService::getSummaryStats();
-        $charts = TaxService::getResourceChartData();
-        $totals = TaxService::getDailyTotals();
+        $dashboard = $dashboardService->getDashboard();
+        $ledgerUrl = $request->user()?->can('view-financial-reports')
+            ? route('admin.finance.index', $dashboard['ledger_filters'])
+            : null;
 
-        return view('admin.taxes.index', compact('stats', 'charts', 'totals'));
+        return view('admin.taxes.index', compact('dashboard', 'ledgerUrl'));
     }
 }
