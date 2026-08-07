@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\InactivitySettingsRequest;
+use App\Http\Requests\Admin\MemberTimelineRequest;
 use App\Models\Nation;
 use App\Models\User;
+use App\Services\Admin\MemberTimeline\MemberTimelineService;
 use App\Services\AuditLogger;
 use App\Services\MemberStatsService;
 use App\Services\SettingService;
@@ -36,12 +38,17 @@ class MembersController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function show(Request $request, Nation $nation, MemberStatsService $service): View
-    {
+    public function show(
+        MemberTimelineRequest $request,
+        Nation $nation,
+        MemberStatsService $service,
+        MemberTimelineService $timelineService,
+    ): View {
         $this->authorize('view-members');
 
         /** @var User $viewer */
         $viewer = $request->user();
+        $viewData = $service->getNationStats($nation, $viewer);
         $canManageMemberExceptions = $viewer->can('manage-member-exceptions');
         $memberInactivityExceptions = $canManageMemberExceptions
             ? $nation->memberInactivityExceptions()
@@ -49,14 +56,15 @@ class MembersController extends Controller
                 ->orderByDesc('starts_at')
                 ->get()
             : collect();
+        $viewData['canManageMemberExceptions'] = $canManageMemberExceptions;
+        $viewData['memberInactivityExceptions'] = $memberInactivityExceptions;
+        $viewData['memberTimeline'] = $timelineService->forNation(
+            $nation,
+            $viewer,
+            $request->timelineCategories(),
+        );
 
-        return view('admin.members.show', array_merge(
-            $service->getNationStats($nation, $viewer),
-            [
-                'canManageMemberExceptions' => $canManageMemberExceptions,
-                'memberInactivityExceptions' => $memberInactivityExceptions,
-            ],
-        ));
+        return view('admin.members.show', $viewData);
     }
 
     public function updateInactivitySettings(

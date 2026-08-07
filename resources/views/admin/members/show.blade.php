@@ -37,6 +37,8 @@
         @include('admin.members.partials.inactivity-exceptions')
     @endif
 
+    @include('admin.members.partials.timeline', ['timeline' => $memberTimeline])
+
     {{-- Charts --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         @if($canViewTaxes)
