@@ -51,6 +51,7 @@ class OffshoreRequestTest extends TestCase
         return [
             'nineteen characters' => [str_repeat('a', 19)],
             'twenty-one characters' => [str_repeat('a', 21)],
+            'twenty non-ASCII characters' => [str_repeat('é', 20)],
         ];
     }
 }
