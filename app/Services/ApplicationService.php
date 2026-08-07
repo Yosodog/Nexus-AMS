@@ -2,16 +2,16 @@
 
 namespace App\Services;
 
-use App\Enums\AlliancePositionEnum;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\ApplicationException;
-use App\Exceptions\PWEntityDoesNotExist;
 use App\GraphQL\Models\Nation;
 use App\Models\Application;
 use App\Models\ApplicationMessage;
 use App\Models\DiscordAccount;
 use App\Models\Nation as NationRecord;
 use App\Models\User;
+use App\Services\Applications\ApplicationApplicantValidator;
+use App\Services\Applications\ApplicationNationLookup;
 use App\Services\Discord\PrivateNotificationService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
@@ -25,10 +25,19 @@ use Throwable;
 
 class ApplicationService
 {
+    private readonly ApplicationNationLookup $nationLookup;
+
+    private readonly ApplicationApplicantValidator $applicantValidator;
+
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly AlliancePositionService $alliancePositionService,
-    ) {}
+        ?ApplicationNationLookup $nationLookup = null,
+        ?ApplicationApplicantValidator $applicantValidator = null,
+    ) {
+        $this->nationLookup = $nationLookup ?? new ApplicationNationLookup;
+        $this->applicantValidator = $applicantValidator ?? new ApplicationApplicantValidator($membershipService);
+    }
 
     public function approveById(Application $application, User $moderator, string $moderatorDiscordId, ?string $requestId = null): Application
     {
@@ -650,29 +659,13 @@ class ApplicationService
         return $this->fetchLiveNation($nationId);
     }
 
-    /**
-     * @throws ApplicationException
-     */
     protected function fetchLiveNation(int $nationId): Nation
     {
-        try {
-            return $this->queryNationFromApi($nationId);
-        } catch (PWEntityDoesNotExist $e) {
-            throw new ApplicationException('nation_not_found', 'Nation not found.', 404, context: [
-                'join_url' => $this->joinUrl(),
-            ]);
-        } catch (Throwable $e) {
-            Log::error('Failed to fetch nation for application', [
-                'nation_id' => $nationId,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw new ApplicationException(
-                'nation_lookup_failed',
-                'Unable to validate the nation at this time.',
-                503
-            );
-        }
+        return $this->nationLookup->fetchLive(
+            $nationId,
+            fn (): Nation => $this->queryNationFromApi($nationId),
+            $this->joinUrl(),
+        );
     }
 
     /**
@@ -691,52 +684,19 @@ class ApplicationService
         return $this->fetchLiveNation($nationId);
     }
 
-    /**
-     * @throws ApplicationException
-     */
     protected function assertApplicantEligible(Nation $nation): void
     {
-        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
-
-        if ((int) ($nation->alliance_id ?? 0) !== $primaryAllianceId) {
-            throw new ApplicationException(
-                'nation_not_in_our_alliance',
-                'The nation must join our alliance before applying.',
-                422,
-                ['join_url' => $this->joinUrl()]
-            );
-        }
-
-        if ($nation->alliance_position !== AlliancePositionEnum::APPLICANT->value) {
-            throw new ApplicationException(
-                'nation_not_applicant',
-                'The nation must be marked as an applicant in the alliance.',
-                422,
-                ['join_url' => $this->joinUrl()]
-            );
-        }
+        $this->applicantValidator->assertApplicantEligible($nation, $this->joinUrl());
     }
 
-    /**
-     * @throws ApplicationException
-     */
     protected function assertNationInAlliance(Nation $nation): void
     {
-        if (! $this->isNationInAlliance($nation)) {
-            throw new ApplicationException(
-                'nation_not_in_our_alliance',
-                'The nation is no longer in our alliance.',
-                422,
-                ['join_url' => $this->joinUrl()]
-            );
-        }
+        $this->applicantValidator->assertNationInAlliance($nation, $this->joinUrl());
     }
 
     protected function isNationInAlliance(Nation $nation): bool
     {
-        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
-
-        return (int) ($nation->alliance_id ?? 0) === $primaryAllianceId;
+        return $this->applicantValidator->isNationInAlliance($nation);
     }
 
     /**
@@ -782,7 +742,7 @@ class ApplicationService
 
     protected function queryNationFromApi(int $nationId): Nation
     {
-        return NationQueryService::getNationById($nationId);
+        return $this->nationLookup->queryNationFromApi($nationId);
     }
 
     private function applicationCreationLockKey(int $nationId, string $discordUserId): string
@@ -792,23 +752,12 @@ class ApplicationService
 
     protected function findLocalNationSnapshot(int $nationId): ?NationRecord
     {
-        return NationRecord::query()
-            ->select(['id', 'alliance_id', 'alliance_position', 'alliance_position_id', 'leader_name'])
-            ->find($nationId);
+        return $this->nationLookup->findLocalNationSnapshot($nationId);
     }
 
     protected function mapLocalNationToGraphQl(NationRecord $nation): Nation
     {
-        $graphQlNation = new Nation;
-        $graphQlNation->id = (int) $nation->id;
-        $graphQlNation->leader_name = $nation->leader_name;
-        $graphQlNation->alliance_id = $nation->alliance_id !== null ? (int) $nation->alliance_id : null;
-        $graphQlNation->alliance_position = $nation->alliance_position;
-        $graphQlNation->alliance_position_id = $nation->alliance_position_id !== null
-            ? (int) $nation->alliance_position_id
-            : null;
-
-        return $graphQlNation;
+        return $this->nationLookup->mapLocalNation($nation);
     }
 
     /**
