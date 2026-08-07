@@ -12,6 +12,14 @@ return new class extends Migration
             return;
         }
 
+        $grants = DB::table('city_grants')
+            ->where('grant_amount', '>', 300)
+            ->get();
+
+        if ($grants->isEmpty()) {
+            return;
+        }
+
         $average = DB::table('settings')
             ->where('key', 'pw_city_average')
             ->value('value');
@@ -28,10 +36,6 @@ return new class extends Migration
         }
 
         $top20Average = (float) $average;
-
-        $grants = DB::table('city_grants')
-            ->where('grant_amount', '>', 300)
-            ->get();
 
         foreach ($grants as $grant) {
             if (! $grant->city_number) {
