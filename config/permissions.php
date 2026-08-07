@@ -21,6 +21,7 @@ return [
     'view-taxes',
     'view-financial-reports',
     'view-members',
+    'manage-member-exceptions',
     'view-wars',
     'manage-war-room',
     'view-raids',

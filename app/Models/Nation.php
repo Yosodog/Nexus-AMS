@@ -380,6 +380,11 @@ class Nation extends Model
         return $this->hasOne(User::class, 'nation_id', 'id');
     }
 
+    public function memberInactivityExceptions(): HasMany
+    {
+        return $this->hasMany(MemberInactivityException::class);
+    }
+
     public function buildRecommendation(): HasOne
     {
         return $this->hasOne(NationBuildRecommendation::class, 'nation_id');

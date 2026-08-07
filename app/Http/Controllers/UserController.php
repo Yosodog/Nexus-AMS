@@ -10,6 +10,7 @@ use App\Services\Discord\PrivateNotificationService;
 use App\Services\DiscordAccountService;
 use App\Services\MemberDashboardAttentionService;
 use App\Services\MemberFinanceSummaryService;
+use App\Services\MemberInactivityExceptionEvaluator;
 use App\Services\NationDashboardService;
 use App\Services\SettingService;
 use App\Services\TrustedDeviceService;
@@ -341,6 +342,7 @@ class UserController extends Controller
         NationDashboardService $dashboardService,
         MemberFinanceSummaryService $financeSummaryService,
         MemberDashboardAttentionService $attentionService,
+        MemberInactivityExceptionEvaluator $exceptionEvaluator,
     ): View {
         $nation = Auth::user()->nation;
         $dashboardData = $dashboardService->getDashboardData($nation);
@@ -350,6 +352,7 @@ class UserController extends Controller
             $dashboardData,
             $financeSummaryService->forNation($nation),
             $attentionService->forNation($nation, $dashboardData),
+            ['memberInactivityExceptionEffects' => $exceptionEvaluator->memberVisibleEffectsForNation($nation)],
         ));
     }
 

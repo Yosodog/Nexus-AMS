@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\MemberInactivityAutomation;
 use App\Models\User;
+use App\Services\MemberInactivityExceptionEvaluator;
 use App\Services\SettingService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +28,7 @@ class DisableInactiveUsers extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(MemberInactivityExceptionEvaluator $exceptionEvaluator): int
     {
         if (! SettingService::isUserInactivityAutoDisableEnabled()) {
             $this->info('Inactive user auto-disable is disabled.');
@@ -36,9 +38,18 @@ class DisableInactiveUsers extends Command
 
         $thresholdDays = SettingService::getUserInactivityAutoDisableDays();
         $cutoff = now()->subDays($thresholdDays);
+        $protectedNationIds = $exceptionEvaluator->nationIdsSuppressing(
+            MemberInactivityAutomation::DisableAccount,
+            now(),
+        );
 
         $disabledCount = User::query()
             ->where('disabled', false)
+            ->when($protectedNationIds !== [], function ($query) use ($protectedNationIds): void {
+                $query->where(function ($query) use ($protectedNationIds): void {
+                    $query->whereNull('nation_id')->orWhereNotIn('nation_id', $protectedNationIds);
+                });
+            })
             ->whereDoesntHave('roles', function ($query): void {
                 $query->where('protected', true);
             })
@@ -58,6 +69,7 @@ class DisableInactiveUsers extends Command
             'disabled_count' => $disabledCount,
             'threshold_days' => $thresholdDays,
             'cutoff' => $cutoff->toIso8601String(),
+            'exception_protected_nation_count' => count($protectedNationIds),
         ]);
 
         $this->info("Disabled {$disabledCount} inactive user(s).");

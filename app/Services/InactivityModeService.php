@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InactivityAction;
+use App\Enums\MemberInactivityAutomation;
 use App\GraphQL\Models\Nation as GraphQLNation;
 use App\Models\InactivityEvent;
 use App\Models\Nation;
@@ -31,9 +32,10 @@ class InactivityModeService
 
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
+        private readonly MemberInactivityExceptionEvaluator $exceptionEvaluator,
         AutoEnrollDirectDepositAction $autoEnrollDirectDepositAction,
         SendInGameMessageAction $sendInGameMessageAction,
-        SendDiscordNotificationAction $sendDiscordNotificationAction
+        SendDiscordNotificationAction $sendDiscordNotificationAction,
     ) {
         $this->handlers = [
             InactivityAction::AutoEnrollDirectDeposit->value => $autoEnrollDirectDepositAction,
@@ -97,6 +99,7 @@ class InactivityModeService
             ->whereIn('nation_id', $nationIds)
             ->get()
             ->keyBy('nation_id');
+        $exceptionSuppressions = $this->exceptionEvaluator->activeSuppressionMap($nationIds, $now);
 
         $processed = 0;
 
@@ -127,13 +130,22 @@ class InactivityModeService
             }
 
             $inactiveNow = $lastActiveAt->lt($now->copy()->subHours($thresholdHours));
+            $suppressedAutomations = $exceptionSuppressions->get((int) $localNation->id, []);
+            $effectiveActions = $this->filterSuppressedActions($actions, $suppressedAutomations);
 
             if (! $openEvents->has($localNation->id) && $inactiveNow) {
+                if ($actions !== [] && $effectiveActions === []) {
+                    $processed++;
+
+                    continue;
+                }
+
                 $event = $this->handleBecameInactive(
                     $localNation,
                     $lastActiveAt,
                     $now,
                     $actions,
+                    $suppressedAutomations,
                     $thresholdHours,
                     $cooldownHours
                 );
@@ -162,6 +174,7 @@ class InactivityModeService
                     $lastActiveAt,
                     $now,
                     $actions,
+                    $suppressedAutomations,
                     $thresholdHours,
                     $cooldownHours
                 );
@@ -192,10 +205,11 @@ class InactivityModeService
         CarbonInterface $lastActiveAt,
         CarbonInterface $now,
         array $actions,
+        array $suppressedAutomations,
         int $thresholdHours,
         int $cooldownHours
     ): ?InactivityEvent {
-        $event = DB::transaction(function () use ($nation, $lastActiveAt, $now, $actions, $thresholdHours, $cooldownHours) {
+        $event = DB::transaction(function () use ($nation, $lastActiveAt, $now, $actions, $suppressedAutomations, $thresholdHours, $cooldownHours) {
             $existing = InactivityEvent::query()
                 ->where('nation_id', $nation->id)
                 ->whereNull('episode_ended_at')
@@ -215,6 +229,7 @@ class InactivityModeService
                     'last_active' => $lastActiveAt->toIso8601String(),
                     'threshold_hours' => $thresholdHours,
                     'cooldown_hours' => $cooldownHours,
+                    'exception_suppressed_automations' => array_keys($suppressedAutomations),
                 ],
             ]);
 
@@ -222,7 +237,8 @@ class InactivityModeService
         });
 
         $context = $this->buildActionContext($nation, $lastActiveAt, $now, $thresholdHours);
-        $notificationSent = $this->executeActions($nation, $event, $context, $actions);
+        $effectiveActions = $this->filterSuppressedActions($actions, $suppressedAutomations);
+        $notificationSent = $this->executeActions($nation, $event, $context, $effectiveActions);
 
         if ($notificationSent) {
             $event->forceFill([
@@ -247,20 +263,49 @@ class InactivityModeService
         CarbonInterface $lastActiveAt,
         CarbonInterface $now,
         array $actions,
+        array $suppressedAutomations,
         int $thresholdHours,
         int $cooldownHours
     ): void {
-        if (! $event || ! $this->shouldRenotify($event, $now, $cooldownHours)) {
+        $meta = is_array($event->meta) ? $event->meta : [];
+        $previouslySuppressed = array_values(array_filter(
+            $meta['exception_suppressed_automations'] ?? [],
+            fn (mixed $value): bool => is_string($value),
+        ));
+        $currentlySuppressed = array_keys($suppressedAutomations);
+        sort($previouslySuppressed);
+        sort($currentlySuppressed);
+        $shouldRenotify = $this->shouldRenotify($event, $now, $cooldownHours);
+        $newlyAvailableActions = $this->newlyAvailableActions(
+            $actions,
+            $previouslySuppressed,
+            $currentlySuppressed,
+        );
+        $actionsToRun = $shouldRenotify
+            ? $this->filterSuppressedActions($actions, $suppressedAutomations)
+            : $newlyAvailableActions;
+
+        if ($previouslySuppressed !== $currentlySuppressed) {
+            $event->forceFill([
+                'meta' => [
+                    ...$meta,
+                    'exception_suppressed_automations' => $currentlySuppressed,
+                    'exception_suppression_reviewed_at' => $now->toIso8601String(),
+                ],
+            ])->save();
+        }
+
+        if ($actionsToRun === []) {
             return;
         }
 
         $context = $this->buildActionContext($nation, $lastActiveAt, $now, $thresholdHours);
-        $notificationSent = $this->executeActions($nation, $event, $context, $actions);
+        $notificationSent = $this->executeActions($nation, $event, $context, $actionsToRun);
 
         if ($notificationSent) {
             $event->forceFill([
                 'last_notified_at' => $now,
-                'last_notification_type' => 'repeat',
+                'last_notification_type' => $shouldRenotify ? 'repeat' : 'post_exception',
             ])->save();
         }
     }
@@ -319,6 +364,51 @@ class InactivityModeService
         }
 
         return $notificationSent;
+    }
+
+    /**
+     * @param  list<string>  $actions
+     * @param  array<string, true>  $suppressedAutomations
+     * @return list<string>
+     */
+    protected function filterSuppressedActions(array $actions, array $suppressedAutomations): array
+    {
+        return collect($actions)
+            ->reject(function (string $actionValue) use ($suppressedAutomations): bool {
+                $action = InactivityAction::tryFrom($actionValue);
+
+                if (! $action) {
+                    return false;
+                }
+
+                $automation = MemberInactivityAutomation::fromInactivityAction($action);
+
+                return isset($suppressedAutomations[$automation->value]);
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $configuredActions
+     * @param  list<string>  $previouslySuppressed
+     * @param  list<string>  $currentlySuppressed
+     * @return list<string>
+     */
+    protected function newlyAvailableActions(
+        array $configuredActions,
+        array $previouslySuppressed,
+        array $currentlySuppressed,
+    ): array {
+        $configured = collect($configuredActions)->flip();
+
+        return collect(array_diff($previouslySuppressed, $currentlySuppressed))
+            ->map(fn (string $value): ?MemberInactivityAutomation => MemberInactivityAutomation::tryFrom($value))
+            ->filter()
+            ->map(fn (MemberInactivityAutomation $automation): ?string => $automation->inactivityAction()?->value)
+            ->filter(fn (?string $value): bool => $value !== null && $configured->has($value))
+            ->values()
+            ->all();
     }
 
     /**

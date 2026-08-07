@@ -33,6 +33,10 @@
         @endif
     </div>
 
+    @if($canManageMemberExceptions)
+        @include('admin.members.partials.inactivity-exceptions')
+    @endif
+
     {{-- Charts --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         @if($canViewTaxes)

@@ -42,8 +42,21 @@ class MembersController extends Controller
 
         /** @var User $viewer */
         $viewer = $request->user();
+        $canManageMemberExceptions = $viewer->can('manage-member-exceptions');
+        $memberInactivityExceptions = $canManageMemberExceptions
+            ? $nation->memberInactivityExceptions()
+                ->with(['approver:id,name', 'lastReviewer:id,name', 'revokedBy:id,name'])
+                ->orderByDesc('starts_at')
+                ->get()
+            : collect();
 
-        return view('admin.members.show', $service->getNationStats($nation, $viewer));
+        return view('admin.members.show', array_merge(
+            $service->getNationStats($nation, $viewer),
+            [
+                'canManageMemberExceptions' => $canManageMemberExceptions,
+                'memberInactivityExceptions' => $memberInactivityExceptions,
+            ],
+        ));
     }
 
     public function updateInactivitySettings(

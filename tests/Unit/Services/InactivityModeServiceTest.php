@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\InactivityAction;
+use App\Enums\MemberInactivityAutomation;
 use App\Models\InactivityEvent;
 use App\Models\Nation;
 use App\Services\InactivityModeService;
@@ -60,5 +62,41 @@ class InactivityModeServiceTest extends TestCase
         $this->assertNotNull($parsed);
         $this->assertSame('UTC', $parsed->getTimezone()->getName());
         $this->assertSame('2026-08-01T12:00:00+00:00', $parsed->toIso8601String());
+    }
+
+    public function test_exception_suppression_filters_only_the_selected_inactivity_action(): void
+    {
+        $method = new ReflectionMethod(InactivityModeService::class, 'filterSuppressedActions');
+        $actions = [
+            InactivityAction::AutoEnrollDirectDeposit->value,
+            InactivityAction::SendInGameMessage->value,
+            InactivityAction::SendDiscordNotification->value,
+        ];
+
+        $filtered = $method->invoke(app(InactivityModeService::class), $actions, [
+            MemberInactivityAutomation::SendDiscordNotification->value => true,
+        ]);
+
+        $this->assertSame([
+            InactivityAction::AutoEnrollDirectDeposit->value,
+            InactivityAction::SendInGameMessage->value,
+        ], $filtered);
+    }
+
+    public function test_action_suppressed_by_an_ended_exception_becomes_available_on_the_next_evaluation(): void
+    {
+        $method = new ReflectionMethod(InactivityModeService::class, 'newlyAvailableActions');
+
+        $available = $method->invoke(
+            app(InactivityModeService::class),
+            [InactivityAction::SendInGameMessage->value],
+            [
+                MemberInactivityAutomation::SendInGameMessage->value,
+                MemberInactivityAutomation::DisableAccount->value,
+            ],
+            [MemberInactivityAutomation::DisableAccount->value],
+        );
+
+        $this->assertSame([InactivityAction::SendInGameMessage->value], $available);
     }
 }

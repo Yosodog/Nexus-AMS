@@ -86,6 +86,40 @@
             </div>
         </header>
 
+        @if($memberInactivityExceptionEffects !== [])
+            <section class="nexus-panel" aria-labelledby="inactivity-exception-heading">
+                <div class="nexus-panel__header">
+                    <div>
+                        <h2 id="inactivity-exception-heading" class="nexus-section-title">Approved leave or inactivity exception</h2>
+                        <p class="nexus-body-muted mt-1">Only the listed automations are paused. Other account and membership rules still apply.</p>
+                    </div>
+                    <x-nexus-status label="Active" intent="active" icon="bolt" />
+                </div>
+
+                <div class="divide-y divide-base-300">
+                    @foreach($memberInactivityExceptionEffects as $effect)
+                        <article class="space-y-3 p-4 sm:p-5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h3 class="font-semibold text-base-content">{{ $effect['category'] }}</h3>
+                                <p class="text-sm nexus-text-muted">
+                                    Ends <x-time.display :value="$effect['ends_at']" :server-now="now()" show-exact />
+                                </p>
+                            </div>
+                            <p class="text-sm leading-6 text-base-content/80">{{ $effect['reason'] }}</p>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">Temporarily paused</p>
+                                <ul class="mt-2 flex flex-wrap gap-2" aria-label="Paused automations">
+                                    @foreach($effect['effects'] as $automation)
+                                        <li class="badge badge-outline">{{ $automation }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section class="nexus-panel" aria-labelledby="attention-heading">
             <div class="nexus-panel__header">
                 <div>
