@@ -45,6 +45,7 @@ class Grants extends Model
         'validation_rules' => 'array',
         'is_enabled' => 'boolean',
         'is_one_time' => 'boolean',
+        'version' => 'integer',
     ];
 
     public function applications(): HasMany

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplyGrantRequest;
+use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Services\GrantRequirementService;
 use App\Services\GrantService;
@@ -16,6 +17,41 @@ use Throwable;
 
 class GrantController extends Controller
 {
+    public function history(): View
+    {
+        $nation = Auth::user()?->nation;
+
+        abort_if($nation === null, 403);
+
+        $columns = array_merge([
+            'id',
+            'grant_id',
+            'program_name_snapshot',
+            'program_version_snapshot',
+            'nation_id',
+            'account_id',
+            'status',
+            'decision_reason_code',
+            'decision_explanation',
+            'submitted_at',
+            'approved_at',
+            'denied_at',
+            'decided_at',
+            'disbursed_at',
+            'created_at',
+            'updated_at',
+        ], GrantApplication::PAYOUT_COLUMNS);
+
+        $applications = GrantApplication::query()
+            ->select($columns)
+            ->with('account:id,name')
+            ->where('nation_id', $nation->id)
+            ->latest('created_at')
+            ->paginate(25);
+
+        return view('grants.history', compact('applications'));
+    }
+
     /**
      * @return Factory|View|Application|object
      */

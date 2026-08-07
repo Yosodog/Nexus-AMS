@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\DataTransferObjects\AllianceFinanceData;
+use App\DataTransferObjects\GrantDecisionData;
+use App\Enums\GrantDecisionReason;
 use App\Events\AllianceExpenseOccurred;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class GrantService
 {
@@ -26,13 +29,17 @@ class GrantService
     public static function applyToGrant(Grants $grant, Nation $nation, int $accountId): GrantApplication
     {
         return DB::transaction(function () use ($grant, $nation, $accountId) {
+            $lockedGrant = Grants::query()
+                ->lockForUpdate()
+                ->findOrFail($grant->id);
+
             Nation::query()
                 ->lockForUpdate()
                 ->findOrFail($nation->id);
 
-            self::validateEligibility($grant, $nation);
+            self::validateEligibility($lockedGrant, $nation);
 
-            return self::createApplication($grant, $nation->id, $accountId);
+            return self::createApplication($lockedGrant, $nation->id, $accountId);
         }, attempts: 3);
     }
 
@@ -86,14 +93,22 @@ class GrantService
      */
     public static function createApplication(Grants $grant, int $nationId, int $accountId): GrantApplication
     {
+        $submittedAt = now();
+
         try {
-            $application = GrantApplication::create([
-                'grant_id' => $grant->id,
-                'nation_id' => $nationId,
-                'account_id' => $accountId,
-                'status' => 'pending',
-                'pending_key' => 1,
-            ]);
+            $application = GrantApplication::create(array_merge(
+                [
+                    'grant_id' => $grant->id,
+                    'program_name_snapshot' => $grant->name,
+                    'program_version_snapshot' => max(1, (int) ($grant->version ?? 1)),
+                    'nation_id' => $nationId,
+                    'account_id' => $accountId,
+                    'status' => 'pending',
+                    'pending_key' => 1,
+                    'submitted_at' => $submittedAt,
+                ],
+                self::resourceVector($grant),
+            ));
         } catch (QueryException $exception) {
             if ((string) ($exception->errorInfo[0] ?? '') === '23000') {
                 throw ValidationException::withMessages([
@@ -127,8 +142,18 @@ class GrantService
         return $application;
     }
 
-    public static function approveGrant(GrantApplication $application): void
-    {
+    public static function approveGrant(
+        GrantApplication $application,
+        ?GrantDecisionData $decision = null,
+    ): void {
+        $decision ??= new GrantDecisionData(GrantDecisionReason::Approved);
+
+        if ($decision->reason !== GrantDecisionReason::Approved) {
+            throw ValidationException::withMessages([
+                'reason_code' => 'An approval must use the approved decision reason.',
+            ]);
+        }
+
         $approvalSnapshot = GrantApplication::query()
             ->select(['id', 'grant_id', 'nation_id', 'account_id', 'status'])
             ->findOrFail($application->id);
@@ -175,7 +200,7 @@ class GrantService
         $approvedApplication = null;
         $deniedApplication = null;
 
-        DB::transaction(function () use ($approvalSnapshot, &$approvedApplication, &$deniedApplication) {
+        DB::transaction(function () use ($approvalSnapshot, $decision, &$approvedApplication, &$deniedApplication) {
             $lockedApplication = GrantApplication::query()
                 ->lockForUpdate()
                 ->findOrFail($approvalSnapshot->id);
@@ -257,15 +282,18 @@ class GrantService
                     'request_nation_id' => $lockedApplication->nation_id,
                 ]);
 
+                $decidedAt = now();
+
                 $lockedApplication->update([
                     'status' => 'denied',
-                    'denied_at' => now(),
+                    'decision_reason_code' => GrantDecisionReason::AccountUnavailable,
+                    'decision_explanation' => null,
+                    'decision_internal_note' => 'The selected account was no longer owned by the applicant nation at approval time.',
+                    'reviewed_by_user_id' => Auth::id(),
+                    'denied_at' => $decidedAt,
+                    'decided_at' => $decidedAt,
                     'pending_key' => null,
                 ]);
-
-                $nation->notify(
-                    new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'denied')
-                );
 
                 app(PendingRequestsService::class)->flushCache();
 
@@ -279,10 +307,12 @@ class GrantService
             $adminId = Auth::id();
             $ipAddress = Request::ip();
             $correlationId = (string) Str::uuid();
+            $decidedAt = now();
 
-            $resources = PWHelperService::resources();
-            $adjustment = array_combine($resources, array_map(fn ($r) => $grant->$r, $resources));
-            $adjustment['note'] = "Grant '{$grant->name}' approved";
+            $payout = self::payoutForDecision($lockedApplication, $grant);
+            $programName = $lockedApplication->program_name_snapshot ?? $grant->name;
+            $adjustment = $payout;
+            $adjustment['note'] = "Grant '{$programName}' approved";
 
             AccountService::adjustAccountBalance($account, $adjustment, $adminId, $ipAddress, [
                 'correlation_id' => $correlationId,
@@ -290,18 +320,23 @@ class GrantService
                 'grant_id' => $grant->id,
             ]);
 
-            $lockedApplication->update(
-                array_merge(
-                    [
-                        'status' => 'approved',
-                        'approved_at' => now(),
-                        'pending_key' => null,
-                    ],
-                    array_combine($resources, array_map(fn ($r) => $grant->$r, $resources))
-                )
-            );
+            $decisionUpdate = [
+                'status' => 'approved',
+                'decision_reason_code' => $decision->reason,
+                'decision_explanation' => $decision->memberExplanation,
+                'decision_internal_note' => $decision->internalNote,
+                'reviewed_by_user_id' => $adminId,
+                'approved_at' => $decidedAt,
+                'decided_at' => $decidedAt,
+                'disbursed_at' => $decidedAt,
+                'pending_key' => null,
+            ];
 
-            $nation->notify(new GrantNotification($lockedApplication->nation_id, $lockedApplication->fresh(), 'approved'));
+            if (! $lockedApplication->hasProgramSnapshot()) {
+                $decisionUpdate = array_merge($decisionUpdate, $payout);
+            }
+
+            $lockedApplication->update($decisionUpdate);
 
             self::dispatchGrantExpenseEvent($lockedApplication->fresh(), $grant, $account, $correlationId);
 
@@ -313,6 +348,8 @@ class GrantService
         }, attempts: 3);
 
         if ($approvedApplication) {
+            self::notifyDecision($approvedApplication, 'approved');
+
             app(AuditLogger::class)->recordAfterCommit(
                 category: 'grants',
                 action: 'grant_application_approved',
@@ -326,6 +363,7 @@ class GrantService
                     ],
                     'data' => [
                         'nation_id' => $approvedApplication->nation_id,
+                        'reason_code' => $approvedApplication->decision_reason_code?->value,
                     ],
                 ],
                 message: 'Grant application approved.'
@@ -333,6 +371,8 @@ class GrantService
         }
 
         if ($deniedApplication) {
+            self::notifyDecision($deniedApplication, 'denied');
+
             app(AuditLogger::class)->recordAfterCommit(
                 category: 'grants',
                 action: 'grant_application_denied',
@@ -346,7 +386,7 @@ class GrantService
                     ],
                     'data' => [
                         'nation_id' => $deniedApplication->nation_id,
-                        'reason' => 'account_mismatch',
+                        'reason_code' => $deniedApplication->decision_reason_code?->value,
                     ],
                 ],
                 message: 'Grant application denied.'
@@ -354,11 +394,13 @@ class GrantService
         }
     }
 
-    public static function denyGrant(GrantApplication $application): void
-    {
+    public static function denyGrant(
+        GrantApplication $application,
+        ?GrantDecisionData $decision = null,
+    ): void {
         $deniedApplication = null;
 
-        DB::transaction(function () use ($application, &$deniedApplication) {
+        DB::transaction(function () use ($application, $decision, &$deniedApplication) {
             $lockedApplication = GrantApplication::query()
                 ->with('nation')
                 ->lockForUpdate()
@@ -370,21 +412,34 @@ class GrantService
                 ]);
             }
 
+            if ($decision === null || ! $decision->reason->isDenial()) {
+                throw ValidationException::withMessages([
+                    'reason_code' => 'Select a member-safe decision reason before denying this request.',
+                ]);
+            }
+
             app(SelfApprovalGuard::class)->ensureNotSelf(
                 requestNationId: $lockedApplication->nation_id,
                 context: 'deny your own grant request'
             );
 
+            $decidedAt = now();
+
             $lockedApplication->update([
                 'status' => 'denied',
-                'denied_at' => now(),
+                'decision_reason_code' => $decision->reason,
+                'decision_explanation' => $decision->memberExplanation,
+                'decision_internal_note' => $decision->internalNote,
+                'reviewed_by_user_id' => Auth::id(),
+                'denied_at' => $decidedAt,
+                'decided_at' => $decidedAt,
                 'pending_key' => null,
             ]);
 
             $deniedApplication = $lockedApplication->fresh();
         }, attempts: 3);
 
-        $deniedApplication->nation->notify(new GrantNotification($deniedApplication->nation_id, $deniedApplication, 'denied'));
+        self::notifyDecision($deniedApplication, 'denied');
 
         app(PendingRequestsService::class)->flushCache();
 
@@ -401,6 +456,7 @@ class GrantService
                 ],
                 'data' => [
                     'nation_id' => $deniedApplication->nation_id,
+                    'reason_code' => $deniedApplication->decision_reason_code?->value,
                 ],
             ],
             message: 'Grant application denied.'
@@ -424,23 +480,23 @@ class GrantService
         $financeData = new AllianceFinanceData(
             direction: AllianceFinanceEntry::DIRECTION_EXPENSE,
             category: 'grant',
-            description: "Grant '{$grant->name}' approved for Nation #{$application->nation_id}",
-            date: now(),
+            description: "Grant '".($application->program_name_snapshot ?? $grant->name)."' approved for Nation #{$application->nation_id}",
+            date: $application->disbursed_at ?? now(),
             nationId: $application->nation_id,
             accountId: $account->id,
             source: $application,
-            money: (float) ($grant->money ?? 0.0),
-            coal: (float) ($grant->coal ?? 0.0),
-            oil: (float) ($grant->oil ?? 0.0),
-            uranium: (float) ($grant->uranium ?? 0.0),
-            iron: (float) ($grant->iron ?? 0.0),
-            bauxite: (float) ($grant->bauxite ?? 0.0),
-            lead: (float) ($grant->lead ?? 0.0),
-            gasoline: (float) ($grant->gasoline ?? 0.0),
-            munitions: (float) ($grant->munitions ?? 0.0),
-            steel: (float) ($grant->steel ?? 0.0),
-            aluminum: (float) ($grant->aluminum ?? 0.0),
-            food: (float) ($grant->food ?? 0.0),
+            money: (float) ($application->money ?? 0.0),
+            coal: (float) ($application->coal ?? 0.0),
+            oil: (float) ($application->oil ?? 0.0),
+            uranium: (float) ($application->uranium ?? 0.0),
+            iron: (float) ($application->iron ?? 0.0),
+            bauxite: (float) ($application->bauxite ?? 0.0),
+            lead: (float) ($application->lead ?? 0.0),
+            gasoline: (float) ($application->gasoline ?? 0.0),
+            munitions: (float) ($application->munitions ?? 0.0),
+            steel: (float) ($application->steel ?? 0.0),
+            aluminum: (float) ($application->aluminum ?? 0.0),
+            food: (float) ($application->food ?? 0.0),
             meta: [
                 'grant_id' => $grant->id,
                 'application_id' => $application->id,
@@ -469,11 +525,11 @@ class GrantService
 
         $moneyThreshold = (int) config('grants.alert_thresholds.money', 0);
 
-        if ($moneyThreshold > 0 && (float) ($grant->money ?? 0) >= $moneyThreshold) {
+        if ($moneyThreshold > 0 && (float) ($application->money ?? 0) >= $moneyThreshold) {
             Log::warning('Grant approval exceeds configured money alert threshold.', [
                 'application_id' => $application->id,
                 'grant_id' => $grant->id,
-                'money' => (float) ($grant->money ?? 0),
+                'money' => (float) ($application->money ?? 0),
                 'threshold' => $moneyThreshold,
             ]);
         }
@@ -482,7 +538,7 @@ class GrantService
 
         if ($resourceThreshold > 0) {
             $exceeded = collect(PWHelperService::resources(false))
-                ->filter(fn ($resource) => (int) ($grant->{$resource} ?? 0) >= $resourceThreshold)
+                ->filter(fn ($resource) => (int) ($application->{$resource} ?? 0) >= $resourceThreshold)
                 ->values();
 
             if ($exceeded->isNotEmpty()) {
@@ -493,6 +549,41 @@ class GrantService
                     'threshold' => $resourceThreshold,
                 ]);
             }
+        }
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private static function resourceVector(Grants|GrantApplication $source): array
+    {
+        return collect(GrantApplication::PAYOUT_COLUMNS)
+            ->mapWithKeys(fn (string $resource): array => [
+                $resource => (int) ($source->{$resource} ?? 0),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private static function payoutForDecision(GrantApplication $application, Grants $grant): array
+    {
+        return self::resourceVector($application->hasProgramSnapshot() ? $application : $grant);
+    }
+
+    private static function notifyDecision(GrantApplication $application, string $status): void
+    {
+        try {
+            $application->loadMissing(['grant', 'nation']);
+            $application->nation?->notify(new GrantNotification($application->nation_id, $application, $status));
+        } catch (Throwable $exception) {
+            Log::error('Grant decision notification failed after the decision was persisted.', [
+                'application_id' => $application->id,
+                'nation_id' => $application->nation_id,
+                'status' => $status,
+                'exception' => $exception::class,
+            ]);
         }
     }
 }

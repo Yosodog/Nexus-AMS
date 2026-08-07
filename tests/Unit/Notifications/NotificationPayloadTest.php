@@ -32,7 +32,10 @@ class NotificationPayloadTest extends FeatureTestCase
     {
         $grant = new Grants;
         $grant->name = 'Growth Grant';
-        $application = new GrantApplication(['status' => 'approved']);
+        $application = new GrantApplication([
+            'status' => 'approved',
+            'program_name_snapshot' => 'Growth Grant',
+        ]);
         $application->setRelation('grant', $grant);
 
         $payload = (new GrantNotification(1, $application, 'approved'))->toPNW(new \stdClass);

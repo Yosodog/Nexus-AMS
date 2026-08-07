@@ -1,4 +1,5 @@
 @php
+    use App\Enums\GrantDecisionReason;
     use App\Services\PWHelperService;
     use Illuminate\Support\Js;
     use Illuminate\Support\Str;
@@ -77,16 +78,28 @@
                 $isOwnRequest = ! $canBypassSelfRestrictions
                     && auth()->user()?->nation_id !== null
                     && (int) auth()->user()->nation_id === (int) $request->nation_id;
+                $isDecisionForm = (string) old('_application_id') === (string) $request->id;
+                $payoutSource = $request->hasProgramSnapshot() ? $request : $request->grant;
                 $payoutResources = collect(PWHelperService::resources())
-                    ->mapWithKeys(fn ($resource) => [$resource => (float) ($request->grant?->$resource ?? 0)])
+                    ->mapWithKeys(fn ($resource) => [$resource => (float) ($payoutSource?->$resource ?? 0)])
                     ->filter(fn ($amount) => $amount > 0);
             @endphp
             <article class="grid gap-4 border-b border-base-300 px-5 py-4 last:border-b-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(16rem,0.95fr)_auto] xl:items-center">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h3 class="font-semibold">{{ $request->grant?->name ?? 'Unknown grant' }}</h3>
-                        <span class="nexus-status nexus-status--warning">Pending</span>
+                        <h3 class="font-semibold">{{ $request->program_name_snapshot ?? 'Program name not recorded' }}</h3>
+                        <x-nexus-status intent="pending" icon="clock" label="Pending" />
                     </div>
+                    <p class="mt-1 text-xs nexus-text-muted">
+                        @if($request->hasProgramSnapshot())
+                            Program version {{ $request->program_version_snapshot }} · payout captured at submission
+                        @else
+                            Legacy request · original program version and payout were not recorded
+                            @if($request->grant)
+                                · current linked program: {{ $request->grant->name }}
+                            @endif
+                        @endif
+                    </p>
                     @if ($request->nation)
                         <a href="https://politicsandwar.com/nation/id={{ $request->nation->id }}" target="_blank" rel="noopener" class="mt-1 block w-fit font-medium text-primary hover:underline">
                             {{ $request->nation->leader_name ?? ('Nation #'.$request->nation->id) }}
@@ -102,7 +115,9 @@
                 </div>
 
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">Payout on approval</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">
+                        {{ $request->hasProgramSnapshot() ? 'Payout captured at submission' : 'Current payout for legacy approval' }}
+                    </p>
                     <div class="mt-2 flex flex-wrap gap-2">
                         @forelse($payoutResources as $resource => $amount)
                             <span class="nexus-status nexus-status--neutral">
@@ -122,15 +137,59 @@
                                 <button type="submit" class="btn btn-success btn-sm">Approve and deposit</button>
                             </form>
                         @else
-                            <span class="nexus-status nexus-status--warning">Approval paused</span>
+                            <x-nexus-status intent="warning" icon="exclamation-triangle" label="Approval paused" />
                         @endif
-                        <form action="{{ route('admin.grants.deny', $request) }}" method="POST" data-confirm="Deny this grant request? The applicant will be notified and no funds will be deposited." data-confirm-title="Deny grant request?" data-confirm-label="Deny request" data-confirm-tone="error">
-                            @csrf
-                            <button type="submit" class="btn btn-error btn-outline btn-sm">Deny request</button>
-                        </form>
+                        <details
+                            class="w-full rounded-lg border border-base-300 bg-base-100 p-3 xl:max-w-sm"
+                            @if($isDecisionForm && ($errors->has('reason_code') || $errors->has('decision_explanation') || $errors->has('decision_internal_note'))) open @endif
+                        >
+                            <summary class="cursor-pointer font-medium text-error">Deny with reason</summary>
+                            <form
+                                action="{{ route('admin.grants.deny', $request) }}"
+                                method="POST"
+                                class="mt-3 space-y-3"
+                                data-confirm="Deny this grant request? The applicant will receive the selected reason and member-visible explanation."
+                                data-confirm-title="Deny grant request?"
+                                data-confirm-label="Deny request"
+                                data-confirm-tone="error"
+                            >
+                                @csrf
+                                <input type="hidden" name="_application_id" value="{{ $request->id }}">
+                                <div>
+                                    <label class="label text-sm font-semibold" for="reason-code-{{ $request->id }}">Member-visible reason</label>
+                                    <select id="reason-code-{{ $request->id }}" name="reason_code" class="select select-sm w-full" required>
+                                        <option value="">Select a reason</option>
+                                        @foreach(GrantDecisionReason::cases() as $reason)
+                                            @if($reason->isDenial())
+                                                <option value="{{ $reason->value }}" @selected($isDecisionForm && old('reason_code') === $reason->value)>{{ $reason->label() }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                    @error('reason_code')
+                                        <p class="mt-1 text-xs text-error">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="label text-sm font-semibold" for="decision-explanation-{{ $request->id }}">Constructive explanation <span class="font-normal nexus-text-muted">(member can read)</span></label>
+                                    <textarea id="decision-explanation-{{ $request->id }}" name="decision_explanation" class="textarea textarea-bordered w-full" rows="3" maxlength="1000">{{ $isDecisionForm ? old('decision_explanation') : '' }}</textarea>
+                                    <p class="mt-1 text-xs nexus-text-muted">Explain the next action without internal risk, fraud, or security details.</p>
+                                    @error('decision_explanation')
+                                        <p class="mt-1 text-xs text-error">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="label text-sm font-semibold" for="decision-internal-note-{{ $request->id }}">Internal note <span class="font-normal nexus-text-muted">(managing staff only)</span></label>
+                                    <textarea id="decision-internal-note-{{ $request->id }}" name="decision_internal_note" class="textarea textarea-bordered w-full" rows="2" maxlength="2000">{{ $isDecisionForm ? old('decision_internal_note') : '' }}</textarea>
+                                    @error('decision_internal_note')
+                                        <p class="mt-1 text-xs text-error">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <button type="submit" class="btn btn-error btn-outline btn-sm">Deny request</button>
+                            </form>
+                        </details>
                     @elseif($isOwnRequest)
                         <span class="text-sm">
-                            <span class="nexus-status nexus-status--error">Self-decision blocked</span>
+                            <x-nexus-status intent="failure" icon="lock-closed" label="Self-decision blocked" />
                             <span class="mt-1 block nexus-text-muted">Another reviewer must decide.</span>
                         </span>
                     @else
@@ -171,6 +230,11 @@
             <p class="nexus-stat-helper">Approved money payouts</p>
         </div>
     </dl>
+
+    @include('admin.grants.partials.application-history', [
+        'recentApplications' => $recentApplications,
+        'canManageGrants' => $canManageGrants,
+    ])
 
     @can('manage-grants')
         @can('manage-manual-disbursements')
@@ -244,7 +308,7 @@
                         <tr>
                             <td>
                                 <div class="font-semibold">{{ $grant->name }}</div>
-                                <div class="text-sm nexus-text-muted">{{ Str::limit($grant->description, 72) }}</div>
+                                <div class="text-sm nexus-text-muted">Version {{ $grant->version }} · {{ Str::limit($grant->description, 72) }}</div>
                             </td>
                             <td>
                                 <span class="nexus-status {{ $grant->is_enabled ? 'nexus-status--success' : 'nexus-status--neutral' }}">

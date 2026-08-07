@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\ApproveGrantApplicationRequest;
+use App\Http\Requests\Admin\DenyGrantApplicationRequest;
 use App\Http\Requests\Admin\StoreGrantRequest;
 use App\Http\Requests\Admin\UpdateGrantRequest;
 use App\Models\GrantApplication;
@@ -58,6 +60,40 @@ class GrantController
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $canManageGrants = auth()->user()?->can('manage-grants') ?? false;
+        $historyColumns = array_merge([
+            'id',
+            'grant_id',
+            'program_name_snapshot',
+            'program_version_snapshot',
+            'nation_id',
+            'account_id',
+            'status',
+            'decision_reason_code',
+            'decision_explanation',
+            'reviewed_by_user_id',
+            'submitted_at',
+            'approved_at',
+            'denied_at',
+            'decided_at',
+            'disbursed_at',
+            'created_at',
+            'updated_at',
+        ], GrantApplication::PAYOUT_COLUMNS);
+
+        if ($canManageGrants) {
+            $historyColumns[] = 'decision_internal_note';
+        }
+
+        $recentApplications = GrantApplication::query()
+            ->with([
+                'nation:id,leader_name,nation_name',
+                'account:id,name',
+                'reviewer:id,name',
+            ])
+            ->latest('created_at')
+            ->paginate(50, $historyColumns, 'history_page');
+
         $totalApproved = GrantApplication::where('status', 'approved')->count();
         $totalDenied = GrantApplication::where('status', 'denied')->count();
         $pendingCount = $pendingRequests->count();
@@ -69,6 +105,7 @@ class GrantController
             compact(
                 'grants',
                 'pendingRequests',
+                'recentApplications',
                 'totalApproved',
                 'totalDenied',
                 'pendingCount',
@@ -125,7 +162,11 @@ class GrantController
     public function updateGrant(Grants $grant, UpdateGrantRequest $request)
     {
         $validated = $request->validated();
-        $before = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules']);
+        $versionedFields = array_merge(
+            ['name', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules'],
+            PWHelperService::resources(false),
+        );
+        $before = $grant->only(array_merge($versionedFields, ['version']));
 
         $grant->name = $validated['name'];
         $grant->slug = Str::slug($grant->name);
@@ -139,9 +180,14 @@ class GrantController
         $grant->validation_rules = $this->grantRequirementService->normalize($validated['validation_rules'] ?? null);
         $grant->is_one_time = filter_var($validated['is_one_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $grant->is_enabled = filter_var($validated['is_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if ($grant->isDirty($versionedFields)) {
+            $grant->version = max(1, (int) $grant->version) + 1;
+        }
+
         $grant->save();
 
-        $after = $grant->only(['name', 'description', 'money', 'is_one_time', 'is_enabled', 'validation_rules']);
+        $after = $grant->only(array_merge($versionedFields, ['version']));
         $changes = [];
 
         foreach ($after as $field => $value) {
@@ -207,14 +253,12 @@ class GrantController
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function approveApplication(GrantApplication $application)
-    {
-        $this->authorize('manage-grants');
-
+    public function approveApplication(
+        ApproveGrantApplicationRequest $request,
+        GrantApplication $application,
+    ): RedirectResponse {
         if ($application->status !== 'pending') {
             return redirect()->back()->with([
                 'alert-message' => 'Grant application is not pending.',
@@ -223,7 +267,7 @@ class GrantController
         }
 
         try {
-            GrantService::approveGrant($application);
+            GrantService::approveGrant($application, $request->decision());
         } catch (ValidationException $exception) {
             $details = collect($exception->errors())->flatten()->implode(' ');
 
@@ -239,14 +283,12 @@ class GrantController
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function denyApplication(GrantApplication $application)
-    {
-        $this->authorize('manage-grants');
-
+    public function denyApplication(
+        DenyGrantApplicationRequest $request,
+        GrantApplication $application,
+    ): RedirectResponse {
         if ($application->status !== 'pending') {
             return redirect()->back()->with([
                 'alert-message' => 'Grant application is not pending.',
@@ -255,7 +297,7 @@ class GrantController
         }
 
         try {
-            GrantService::denyGrant($application);
+            GrantService::denyGrant($application, $request->decision());
         } catch (ValidationException $exception) {
             $details = collect($exception->errors())->flatten()->implode(' ');
 

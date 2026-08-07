@@ -838,6 +838,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M · **Type:** Workflow transparency
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Members and staff need a clear record of prior standard-grant usage and application outcomes, including denial reasons when the viewer is authorized.
 
 **How it should work:** Add chronological history with program/version, amount/resources, status, submitted/decided/disbursed times, and safe decision reason. Member-facing reasons should be constructive and policy-safe; internal notes remain staff-only. Use explicit reason codes plus optional sanitized explanation so reporting remains possible.

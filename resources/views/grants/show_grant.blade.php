@@ -13,6 +13,7 @@
                 <p class="text-sm text-base-content/70">Review the payout, eligibility requirements, and apply with your preferred account.</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <a href="{{ route('grants.history') }}" class="btn btn-ghost btn-sm">My grant history</a>
                 <span class="badge badge-outline">{{ $grant->is_one_time ? 'One-time' : 'Reusable' }}</span>
                 @if (($eligibilityReport['passes'] ?? false) === true)
                     <span class="badge badge-success badge-outline">Eligible</span>

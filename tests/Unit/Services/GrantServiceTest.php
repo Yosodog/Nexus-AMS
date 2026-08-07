@@ -70,6 +70,7 @@ class GrantServiceTest extends FeatureTestCase
             'account_id' => $account->id,
             'status' => 'approved',
             'approved_at' => now(),
+            'money' => 2500,
         ]);
 
         $this->invokePrivate('logApprovalAnomalies', [$application, $grant]);

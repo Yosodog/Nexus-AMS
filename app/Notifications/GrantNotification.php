@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\GrantApplication;
 use App\Notifications\Concerns\SendsPrivateDiscordNotification;
+use App\Support\PWBBCode;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -40,12 +41,23 @@ class GrantNotification extends Notification
 
     public function toDiscordBot(object $notifiable): array
     {
+        $summary = ['status' => $this->status];
+
+        if ($this->status === 'denied') {
+            $summary['reason'] = $this->application->decision_reason_code?->label() ?? 'Not recorded';
+            $summary['explanation'] = $this->application->memberDecisionExplanation() ?? 'Not recorded';
+        }
+
         return $this->privateDiscordMessage(
             $notifiable,
             'grant_application_'.$this->status,
-            ['type' => 'grant_application', 'id' => $this->application->id, 'label' => $this->application->grant->name],
-            route('grants.show_grants', ['grant' => $this->application->grant->slug], absolute: false),
-            ['status' => $this->status],
+            [
+                'type' => 'grant_application',
+                'id' => $this->application->id,
+                'label' => $this->application->program_name_snapshot ?? 'Grant request',
+            ],
+            route('grants.history', absolute: false),
+            $summary,
         );
     }
 
@@ -54,16 +66,18 @@ class GrantNotification extends Notification
      */
     public function toPNW(object $notifiable): array
     {
-        $grantName = $this->application->grant->name;
+        $grantName = PWBBCode::escapeText($this->application->program_name_snapshot ?? 'the requested grant');
 
         if ($this->status === 'approved') {
             $subject = 'Grant approved';
             $message = "Your application for [b]{$grantName}[/b] has been approved.\n\n"
                 .'The grant resources have been deposited into your selected account.';
         } else {
+            $reason = PWBBCode::escapeText($this->application->decision_reason_code?->label() ?? 'Not recorded');
+            $explanation = PWBBCode::escapeText($this->application->memberDecisionExplanation() ?? 'No member-visible explanation was recorded.');
             $subject = 'Grant denied';
             $message = "Your application for [b]{$grantName}[/b] was denied.\n\n"
-                ."Contact leadership if you need the reason reviewed.\n\n"
+                ."Reason: [b]{$reason}[/b]\n{$explanation}\n\n"
                 .'You may apply again if you are still eligible.';
         }
 

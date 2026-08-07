@@ -215,6 +215,7 @@ class MemberStatsService
         $canViewAccounts = $viewer->can('view-accounts');
         $canViewCityGrants = $viewer->can('view-city-grants');
         $canViewGrants = $viewer->can('view-grants');
+        $canManageGrants = $viewer->can('manage-grants');
         $canViewLoans = $viewer->can('view-loans');
         $canViewMmr = $viewer->can('view-mmr');
         $canViewTaxes = $viewer->can('view-taxes');
@@ -260,9 +261,41 @@ class MemberStatsService
         $recentCityGrants = $canViewCityGrants
             ? CityGrantRequest::where('nation_id', $nationId)->latest()->take(5)->get()
             : collect();
-        $recentCustomGrants = $canViewGrants
-            ? GrantApplication::where('nation_id', $nationId)->latest()->take(5)->get()
-            : collect();
+        $recentCustomGrants = collect();
+
+        if ($canViewGrants) {
+            $grantHistoryColumns = array_merge([
+                'id',
+                'grant_id',
+                'program_name_snapshot',
+                'program_version_snapshot',
+                'nation_id',
+                'account_id',
+                'status',
+                'decision_reason_code',
+                'decision_explanation',
+                'reviewed_by_user_id',
+                'submitted_at',
+                'approved_at',
+                'denied_at',
+                'decided_at',
+                'disbursed_at',
+                'created_at',
+                'updated_at',
+            ], GrantApplication::PAYOUT_COLUMNS);
+
+            if ($canManageGrants) {
+                $grantHistoryColumns[] = 'decision_internal_note';
+            }
+
+            $recentCustomGrants = GrantApplication::query()
+                ->select($grantHistoryColumns)
+                ->with('reviewer:id,name')
+                ->where('nation_id', $nationId)
+                ->latest()
+                ->take(5)
+                ->get();
+        }
         $recentLoans = $canViewLoans
             ? Loan::where('nation_id', $nationId)->latest()->take(5)->get()
             : collect();
@@ -326,6 +359,7 @@ class MemberStatsService
             'canViewAccounts' => $canViewAccounts,
             'canViewCityGrants' => $canViewCityGrants,
             'canViewGrants' => $canViewGrants,
+            'canManageGrants' => $canManageGrants,
             'canViewLoans' => $canViewLoans,
             'canViewMmr' => $canViewMmr,
             'canViewTaxes' => $canViewTaxes,

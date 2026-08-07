@@ -69,13 +69,7 @@ class ManualDisbursementController extends Controller
                 (string) $data['idempotency_key'],
                 ManualDisbursement::TYPE_GRANT,
                 function () use ($account, $grant, $nation): GrantApplication {
-                    $application = GrantApplication::create([
-                        'grant_id' => $grant->id,
-                        'nation_id' => $nation->id,
-                        'account_id' => $account->id,
-                        'status' => 'pending',
-                        'pending_key' => 1,
-                    ]);
+                    $application = GrantService::createApplication($grant, $nation->id, $account->id);
 
                     GrantService::approveGrant($application);
 

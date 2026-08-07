@@ -281,6 +281,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         )
             ->middleware([BlockWhenPWDown::class, 'throttle:grant-requests']);
 
+        Route::get('/history', [UserGrantController::class, 'history'])->name('grants.history');
         Route::get('{grant:slug}', [UserGrantController::class, 'show'])->name('grants.show_grants');
         Route::post('{grant:slug}/apply', [UserGrantController::class, 'apply'])->name('grants.apply')
             ->middleware([BlockWhenPWDown::class, 'throttle:grant-requests']);

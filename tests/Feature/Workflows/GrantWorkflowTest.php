@@ -209,7 +209,9 @@ class GrantWorkflowTest extends TestCase
         $admin = $this->createAdminWithPermission('manage-grants');
 
         $this->actingAs($admin)
-            ->post(route('admin.grants.deny', ['application' => $application->id]))
+            ->post(route('admin.grants.deny', ['application' => $application->id]), [
+                'reason_code' => 'eligibility_not_met',
+            ])
             ->assertRedirect()
             ->assertSessionHas('alert-type', 'success');
 
