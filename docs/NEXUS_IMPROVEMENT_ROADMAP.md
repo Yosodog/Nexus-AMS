@@ -549,6 +549,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** M · **Type:** Accessibility, reporting
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Charts should augment data, not become the only way to access it.
 
 **How it should work:** Each chart needs a concise text summary, an accessible data table, and CSV export when the data is operationally useful. The table should share filters and date range with the chart. Color must not be the only series distinction.

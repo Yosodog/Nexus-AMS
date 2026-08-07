@@ -2544,6 +2544,94 @@ html[data-theme] .ck.ck-editor__editable_inline {
     }
 }
 
+@layer components {
+    .nexus-chart-equivalent {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.85rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--nexus-rule);
+        color: var(--nexus-text-primary);
+        font-size: 0.875rem;
+    }
+
+    .nexus-chart-equivalent__summary,
+    .nexus-chart-equivalent__note {
+        color: var(--nexus-text-muted);
+        line-height: 1.5;
+    }
+
+    .nexus-chart-equivalent__toggle {
+        display: inline-flex;
+        min-height: 2.75rem;
+        cursor: pointer;
+        align-items: center;
+        color: var(--color-primary);
+        font-weight: 650;
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+
+    .nexus-chart-equivalent__toggle:focus-visible {
+        border-radius: var(--radius-field);
+        outline: 2px solid var(--nexus-focus);
+        outline-offset: 2px;
+    }
+
+    .nexus-chart-equivalent__table-region {
+        max-height: 24rem;
+        overflow: auto;
+        border: 1px solid var(--nexus-rule-strong);
+        border-radius: var(--radius-box);
+        background: var(--color-base-100);
+    }
+
+    .nexus-chart-equivalent__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .nexus-chart-equivalent__table :where(th, td) {
+        padding: 0.55rem 0.7rem;
+        border-bottom: 1px solid var(--nexus-rule);
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .nexus-chart-equivalent__table :where(th, td):first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--color-base-100);
+        text-align: left;
+    }
+
+    .nexus-chart-equivalent__table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--nexus-surface-sunken);
+        color: var(--nexus-text-secondary);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .nexus-chart-equivalent__table thead th:first-child {
+        z-index: 3;
+        background: var(--nexus-surface-sunken);
+    }
+
+    .nexus-chart-equivalent__note {
+        padding: 0.65rem 0.75rem;
+    }
+
+    .nexus-chart-equivalent__download {
+        justify-self: start;
+    }
+}
+
 @layer utilities {
     .nexus-text-primary {
         color: var(--nexus-text-primary);
