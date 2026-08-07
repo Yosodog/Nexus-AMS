@@ -87,6 +87,10 @@ Schedule::command('account-statements:prune')
     ->dailyAt('01:25')
     ->withoutOverlapping(60)
     ->onOneServer();
+Schedule::command('scheduler-lifecycle:prune')
+    ->dailyAt('01:35')
+    ->withoutOverlapping(60)
+    ->onOneServer();
 Schedule::command('war-counters:archive-stale')
     ->hourly()
     ->withoutOverlapping(55)

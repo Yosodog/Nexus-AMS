@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Alliance;
+use App\Models\ScheduledTaskRun;
 use App\Models\TaxImportCheckpoint;
 use App\Services\AllianceMembershipService;
 use App\Services\PWHealthService;
@@ -88,6 +89,48 @@ class SystemHealthServiceTest extends TestCase
 
         $this->assertSame('warning', $allianceCheck['status']);
         $this->assertSame('Behind', $allianceCheck['status_label']);
+    }
+
+    public function test_critical_scheduler_contracts_surface_current_overdue_and_missing_states(): void
+    {
+        config()->set('scheduler_lifecycle.freshness_contracts', [
+            'artisan:taxes:collect' => [
+                'label' => 'Tax collection task',
+                'maximum_age_minutes' => 90,
+            ],
+            'artisan:audits:run' => [
+                'label' => 'Audit task',
+                'maximum_age_minutes' => 120,
+            ],
+            'artisan:sync:wars' => [
+                'label' => 'War synchronization task',
+                'maximum_age_minutes' => 90,
+            ],
+        ]);
+        ScheduledTaskRun::factory()->create([
+            'task_identifier' => 'artisan:taxes:collect',
+            'finished_at' => now()->subMinutes(20),
+        ]);
+        ScheduledTaskRun::factory()->create([
+            'task_identifier' => 'artisan:audits:run',
+            'finished_at' => now()->subMinutes(121),
+        ]);
+
+        $snapshot = $this->serviceForAlliances([])->snapshot();
+
+        $this->assertSame(
+            'healthy',
+            $this->check($snapshot, 'scheduler-artisan-taxes-collect')['status'],
+        );
+        $this->assertSame(
+            'critical',
+            $this->check($snapshot, 'scheduler-artisan-audits-run')['status'],
+        );
+        $this->assertSame(
+            'unknown',
+            $this->check($snapshot, 'scheduler-artisan-sync-wars')['status'],
+        );
+        $this->assertSame('critical', $snapshot['status']);
     }
 
     private function cacheHealthyHeartbeat(): void

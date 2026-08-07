@@ -1412,6 +1412,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M · **Type:** Observability, operations
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Dozens of scheduled entries currently lack one shared record of execution lifecycle and impact.
 
 **How it should work:** Use Laravel scheduler events/listeners to record task identifier, scheduled/start/end times, duration, success/failure/skipped/overlap state, host, and correlation ID. Map critical tasks to a freshness contract and alert when they have not succeeded within the expected window. Avoid logging command arguments that may contain secrets.

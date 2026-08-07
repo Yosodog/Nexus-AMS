@@ -16,17 +16,28 @@ use App\Listeners\IngestMilcomIncident;
 use App\Listeners\ReconcileMilcomWarState;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
+use App\Listeners\ScheduledTaskLifecycleSubscriber;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
+use App\Services\Scheduling\ScheduledTaskLifecycleRecorder;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
- * Registers event → listener mappings for war room features.
+ * Registers application event listeners and subscribers.
  */
 class EventServiceProvider extends ServiceProvider
 {
+    /**
+     * The subscribers to register.
+     *
+     * @var array<int, class-string>
+     */
+    protected $subscribe = [
+        ScheduledTaskLifecycleSubscriber::class,
+    ];
+
     /**
      * The event listener mappings for the application.
      *
@@ -63,6 +74,13 @@ class EventServiceProvider extends ServiceProvider
             RecordAllianceExpense::class,
         ],
     ];
+
+    public function register(): void
+    {
+        $this->app->singleton(ScheduledTaskLifecycleRecorder::class);
+
+        parent::register();
+    }
 
     /**
      * Determine if events and listeners should be automatically discovered.

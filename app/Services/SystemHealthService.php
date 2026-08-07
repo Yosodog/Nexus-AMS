@@ -10,6 +10,8 @@ use App\Models\NationProfitabilitySnapshot;
 use App\Models\Taxes;
 use App\Models\TaxImportCheckpoint;
 use App\Models\War;
+use App\Services\Scheduling\ScheduledTaskFreshness;
+use App\Services\Scheduling\ScheduledTaskFreshnessService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -23,10 +25,16 @@ final class SystemHealthService
 
     private const STATUS_UNKNOWN = 'unknown';
 
+    private readonly ScheduledTaskFreshnessService $scheduledTaskFreshnessService;
+
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly PWHealthService $pwHealthService,
-    ) {}
+        ?ScheduledTaskFreshnessService $scheduledTaskFreshnessService = null,
+    ) {
+        $this->scheduledTaskFreshnessService = $scheduledTaskFreshnessService
+            ?? app(ScheduledTaskFreshnessService::class);
+    }
 
     /**
      * @return array{
@@ -103,7 +111,7 @@ final class SystemHealthService
                 criticalAfterMinutes: 180,
                 staleGuidance: 'Verify market prices are current, then inspect the profitability refresh command.',
             ),
-        ]);
+        ])->concat($this->scheduledTaskChecks());
 
         $counts = [
             self::STATUS_HEALTHY => $checks->where('status', self::STATUS_HEALTHY)->count(),
@@ -126,6 +134,48 @@ final class SystemHealthService
             'counts' => $counts,
             'checks' => $checks->values()->all(),
         ];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function scheduledTaskChecks(): Collection
+    {
+        return $this->scheduledTaskFreshnessService
+            ->snapshot()
+            ->values()
+            ->map(function (ScheduledTaskFreshness $freshness): array {
+                $lastSucceededAt = $this->latestTimestamp($freshness->lastSucceededAt);
+                $expectedBy = $this->latestTimestamp($freshness->expectedBy);
+                $status = match (true) {
+                    $lastSucceededAt === null => self::STATUS_UNKNOWN,
+                    $freshness->isOverdue => self::STATUS_CRITICAL,
+                    default => self::STATUS_HEALTHY,
+                };
+
+                return $this->buildCheck(
+                    key: 'scheduler-'.str_replace(':', '-', $freshness->taskIdentifier),
+                    name: $freshness->label,
+                    description: 'Successful completion of a critical scheduled task.',
+                    status: $status,
+                    statusLabel: match ($status) {
+                        self::STATUS_CRITICAL => 'Overdue',
+                        self::STATUS_UNKNOWN => 'Never succeeded',
+                        default => 'Current',
+                    },
+                    lastActivityAt: $lastSucceededAt,
+                    lastActivityLabel: 'Last successful completion',
+                    cadence: "Must succeed within {$freshness->maximumAgeMinutes} minutes",
+                    detail: match ($status) {
+                        self::STATUS_CRITICAL => 'The task has missed its configured success window.',
+                        self::STATUS_UNKNOWN => 'No successful lifecycle record is available yet.',
+                        default => 'The latest successful run is within its configured window.',
+                    },
+                    guidance: 'Inspect the task lifecycle failures and scheduler host before running the task manually.',
+                    secondaryAt: $expectedBy,
+                    secondaryLabel: 'Expected by',
+                );
+            });
     }
 
     /**
