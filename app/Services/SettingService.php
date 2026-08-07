@@ -2,60 +2,49 @@
 
 namespace App\Services;
 
-use App\Models\RecruitmentMessage;
-use App\Models\Setting;
+use App\Services\Settings\ApplicationSettings;
+use App\Services\Settings\DataSyncSettings;
+use App\Services\Settings\DiscordSettings;
+use App\Services\Settings\FinancePolicySettings;
+use App\Services\Settings\InactivitySettings;
+use App\Services\Settings\MilitaryReadinessSettings;
+use App\Services\Settings\PublicSiteSettings;
+use App\Services\Settings\RecruitmentSettings;
+use App\Services\Settings\SecurityRetentionSettings;
+use App\Services\Settings\SettingValueStore;
 use Illuminate\Support\Carbon;
 
 class SettingService
 {
-    private const RECRUITMENT_SUBJECT_MAX_LENGTH = 50;
+    public const DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE = DiscordSettings::DEFAULT_CITY_TIER_BUCKET_SIZE;
 
-    private const LOTTERY_SETTINGS_KEY = 'lottery_configuration';
+    public const DEFAULT_LOTTERY_TICKET_PRICE_CENTS = FinancePolicySettings::DEFAULT_LOTTERY_TICKET_PRICE_CENTS;
 
-    public const DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE = 10;
+    public const DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS = FinancePolicySettings::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS;
 
-    public const DEFAULT_LOTTERY_TICKET_PRICE_CENTS = 5000000;
+    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE = FinancePolicySettings::DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE;
 
-    public const DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS = 9000;
+    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION = FinancePolicySettings::DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION;
 
-    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE = 100;
+    public const MAX_LOTTERY_TICKET_PRICE_CENTS = FinancePolicySettings::MAX_LOTTERY_TICKET_PRICE_CENTS;
 
-    public const DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION = 10000;
+    public const MAX_LOTTERY_TICKETS_PER_PURCHASE = FinancePolicySettings::MAX_LOTTERY_TICKETS_PER_PURCHASE;
 
-    public const MAX_LOTTERY_TICKET_PRICE_CENTS = 1000000000;
-
-    public const MAX_LOTTERY_TICKETS_PER_PURCHASE = 500;
-
-    public const MAX_LOTTERY_TICKETS_PER_NATION = 10000;
+    public const MAX_LOTTERY_TICKETS_PER_NATION = FinancePolicySettings::MAX_LOTTERY_TICKETS_PER_NATION;
 
     public static function getLastScannedBankRecordId(): int
     {
-        $id = self::getValue('last_bank_record_id');
-
-        if (is_null($id)) { // If the value does not exist, then we need to create it and just return 0
-            self::setValue('last_bank_record_id', 0);
-
-            return 0;
-        }
-
-        return $id;
+        return app(DataSyncSettings::class)->getLastScannedBankRecordId();
     }
 
     public static function getValue(string $key): mixed
     {
-        return Setting::where('key', $key)->value('value');
+        return app(SettingValueStore::class)->get($key);
     }
 
-    /**
-     * Use this to set values for settings. It can also create new setting
-     * values if necessary.
-     */
     public static function setValue(string $key, mixed $value): void
     {
-        Setting::updateOrCreate(
-            ['key' => $key],
-            ['value' => $value]
-        );
+        app(SettingValueStore::class)->set($key, $value);
     }
 
     /**
@@ -69,10 +58,7 @@ class SettingService
      */
     public static function getLotterySettings(): array
     {
-        $stored = self::getValue(self::LOTTERY_SETTINGS_KEY);
-        $decoded = is_string($stored) ? json_decode($stored, true) : null;
-
-        return self::normalizeLotterySettings(is_array($decoded) ? $decoded : []);
+        return app(FinancePolicySettings::class)->getLotterySettings();
     }
 
     /**
@@ -86,551 +72,307 @@ class SettingService
      */
     public static function setLotterySettings(array $settings): void
     {
-        self::setValue(
-            self::LOTTERY_SETTINGS_KEY,
-            json_encode(self::normalizeLotterySettings($settings), JSON_THROW_ON_ERROR),
-        );
-    }
-
-    /**
-     * @param  array<string, mixed>  $settings
-     * @return array{
-     *     sales_enabled: bool,
-     *     ticket_price_cents: int,
-     *     jackpot_basis_points: int,
-     *     max_tickets_per_purchase: int,
-     *     max_tickets_per_nation: int
-     * }
-     */
-    private static function normalizeLotterySettings(array $settings): array
-    {
-        $maxTicketsPerNation = min(
-            self::MAX_LOTTERY_TICKETS_PER_NATION,
-            max(1, (int) ($settings['max_tickets_per_nation'] ?? self::DEFAULT_LOTTERY_MAX_TICKETS_PER_NATION)),
-        );
-        $maxTicketsPerPurchase = min(
-            self::MAX_LOTTERY_TICKETS_PER_PURCHASE,
-            $maxTicketsPerNation,
-            max(1, (int) ($settings['max_tickets_per_purchase'] ?? self::DEFAULT_LOTTERY_MAX_TICKETS_PER_PURCHASE)),
-        );
-        $salesEnabled = filter_var(
-            $settings['sales_enabled'] ?? true,
-            FILTER_VALIDATE_BOOL,
-            FILTER_NULL_ON_FAILURE,
-        );
-
-        return [
-            'sales_enabled' => $salesEnabled ?? true,
-            'ticket_price_cents' => min(
-                self::MAX_LOTTERY_TICKET_PRICE_CENTS,
-                max(100, (int) ($settings['ticket_price_cents'] ?? self::DEFAULT_LOTTERY_TICKET_PRICE_CENTS)),
-            ),
-            'jackpot_basis_points' => min(
-                10000,
-                max(0, (int) ($settings['jackpot_basis_points'] ?? self::DEFAULT_LOTTERY_JACKPOT_BASIS_POINTS)),
-            ),
-            'max_tickets_per_purchase' => $maxTicketsPerPurchase,
-            'max_tickets_per_nation' => $maxTicketsPerNation,
-        ];
+        app(FinancePolicySettings::class)->setLotterySettings($settings);
     }
 
     public static function setLastScannedBankRecordId(int $id): void
     {
-        self::setValue('last_bank_record_id', $id);
+        app(DataSyncSettings::class)->setLastScannedBankRecordId($id);
     }
 
     public static function getCityAverage(): ?float
     {
-        $value = self::getValue('pw_city_average');
-
-        return $value === null ? null : (float) $value;
+        return app(DataSyncSettings::class)->getCityAverage();
     }
 
     public static function setCityAverage(float $average): void
     {
-        self::setValue('pw_city_average', $average);
+        app(DataSyncSettings::class)->setCityAverage($average);
     }
 
     public static function getCityAverageUpdatedAt(): ?Carbon
     {
-        $value = self::getValue('pw_city_average_updated_at');
-
-        return $value ? Carbon::parse($value) : null;
+        return app(DataSyncSettings::class)->getCityAverageUpdatedAt();
     }
 
     public static function setCityAverageUpdatedAt(Carbon $timestamp): void
     {
-        self::setValue('pw_city_average_updated_at', $timestamp->toIso8601String());
+        app(DataSyncSettings::class)->setCityAverageUpdatedAt($timestamp);
     }
 
     public static function isWarAidEnabled(): bool
     {
-        $value = self::getValue('war_aid_enabled');
-
-        if (is_null($value)) {
-            self::setValue('war_aid_enabled', 0); // Default to disabled
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isWarAidEnabled();
     }
 
     public static function setWarAidEnabled(bool $enabled): void
     {
-        self::setValue('war_aid_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setWarAidEnabled($enabled);
     }
 
     public static function isRebuildingEnabled(): bool
     {
-        $value = self::getValue('rebuilding_enabled');
-
-        if (is_null($value)) {
-            self::setRebuildingEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isRebuildingEnabled();
     }
 
     public static function setRebuildingEnabled(bool $enabled): void
     {
-        self::setValue('rebuilding_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setRebuildingEnabled($enabled);
     }
 
     public static function getRebuildingCycleId(): int
     {
-        $value = self::getValue('rebuilding_cycle_id');
-
-        if (is_null($value)) {
-            self::setValue('rebuilding_cycle_id', 1);
-
-            return 1;
-        }
-
-        return max(1, (int) $value);
+        return app(FinancePolicySettings::class)->getRebuildingCycleId();
     }
 
     public static function setRebuildingCycleId(int $cycleId): void
     {
-        self::setValue('rebuilding_cycle_id', max(1, $cycleId));
+        app(FinancePolicySettings::class)->setRebuildingCycleId($cycleId);
     }
 
     public static function incrementRebuildingCycleId(): int
     {
-        $next = self::getRebuildingCycleId() + 1;
-        self::setRebuildingCycleId($next);
-
-        return $next;
+        return app(FinancePolicySettings::class)->incrementRebuildingCycleId();
     }
 
     public static function getRebuildingLastEstimateRefreshAt(): ?Carbon
     {
-        $value = self::getValue('rebuilding_last_estimate_refresh_at');
-
-        if (! is_string($value) || $value === '') {
-            return null;
-        }
-
-        return Carbon::parse($value);
+        return app(FinancePolicySettings::class)->getRebuildingLastEstimateRefreshAt();
     }
 
     public static function setRebuildingLastEstimateRefreshAt(Carbon $timestamp): void
     {
-        self::setValue('rebuilding_last_estimate_refresh_at', $timestamp->toIso8601String());
+        app(FinancePolicySettings::class)->setRebuildingLastEstimateRefreshAt($timestamp);
     }
 
     public static function isDiscordVerificationRequired(): bool
     {
-        $value = self::getValue('require_discord_verification');
-
-        if (is_null($value)) {
-            self::setDiscordVerificationRequired(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(DiscordSettings::class)->isVerificationRequired();
     }
 
     public static function setDiscordVerificationRequired(bool $required): void
     {
-        self::setValue('require_discord_verification', $required ? 1 : 0);
+        app(DiscordSettings::class)->setVerificationRequired($required);
     }
 
     public static function areDiscordPrivateNotificationsEnabled(): bool
     {
-        return (bool) (self::getValue('discord_private_notifications_enabled') ?? false);
+        return app(DiscordSettings::class)->arePrivateNotificationsEnabled();
     }
 
     public static function setDiscordPrivateNotificationsEnabled(bool $enabled): void
     {
-        self::setValue('discord_private_notifications_enabled', $enabled ? 1 : 0);
+        app(DiscordSettings::class)->setPrivateNotificationsEnabled($enabled);
     }
 
     public static function isMfaRequiredForAllUsers(): bool
     {
-        $value = self::getValue('require_mfa_all_users');
-
-        if (is_null($value)) {
-            self::setMfaRequiredForAllUsers(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(SecurityRetentionSettings::class)->isMfaRequiredForAllUsers();
     }
 
     public static function setMfaRequiredForAllUsers(bool $required): void
     {
-        self::setValue('require_mfa_all_users', $required ? 1 : 0);
+        app(SecurityRetentionSettings::class)->setMfaRequiredForAllUsers($required);
     }
 
     public static function isMfaRequiredForAdmins(): bool
     {
-        $value = self::getValue('require_mfa_admins');
-
-        if (is_null($value)) {
-            self::setMfaRequiredForAdmins(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(SecurityRetentionSettings::class)->isMfaRequiredForAdmins();
     }
 
     public static function setMfaRequiredForAdmins(bool $required): void
     {
-        self::setValue('require_mfa_admins', $required ? 1 : 0);
+        app(SecurityRetentionSettings::class)->setMfaRequiredForAdmins($required);
     }
 
     public static function isAutoWithdrawEnabled(): bool
     {
-        $value = self::getValue('auto_withdraw_enabled');
-
-        if (is_null($value)) {
-            self::setAutoWithdrawEnabled(true);
-
-            return true;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isAutoWithdrawEnabled();
     }
 
     public static function isBackupsEnabled(): bool
     {
-        $value = self::getValue('backups_enabled');
-
-        if (is_null($value)) {
-            self::setBackupsEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(SecurityRetentionSettings::class)->isBackupsEnabled();
     }
 
     public static function setAutoWithdrawEnabled(bool $enabled): void
     {
-        self::setValue('auto_withdraw_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setAutoWithdrawEnabled($enabled);
     }
 
     public static function setBackupsEnabled(bool $enabled): void
     {
-        self::setValue('backups_enabled', $enabled ? 1 : 0);
+        app(SecurityRetentionSettings::class)->setBackupsEnabled($enabled);
     }
 
     public static function isLoanPaymentsEnabled(): bool
     {
-        $value = self::getValue('loan_payments_enabled');
-
-        if (is_null($value)) {
-            self::setLoanPaymentsEnabled(true);
-
-            return true;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isLoanPaymentsEnabled();
     }
 
     public static function isLoanApplicationsEnabled(): bool
     {
-        $value = self::getValue('loan_applications_enabled');
-
-        if (is_null($value)) {
-            self::setLoanApplicationsEnabled(true);
-
-            return true;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isLoanApplicationsEnabled();
     }
 
     public static function getDefaultLoanInterestRate(): float
     {
-        $value = self::getValue('loan_default_interest_rate');
-
-        if (is_null($value)) {
-            self::setDefaultLoanInterestRate(0.0);
-
-            return 0.0;
-        }
-
-        return max(0.0, (float) $value);
+        return app(FinancePolicySettings::class)->getDefaultLoanInterestRate();
     }
 
     public static function setDefaultLoanInterestRate(float $rate): void
     {
-        self::setValue('loan_default_interest_rate', max(0.0, $rate));
+        app(FinancePolicySettings::class)->setDefaultLoanInterestRate($rate);
     }
 
     public static function setLoanPaymentsEnabled(bool $enabled): void
     {
-        self::setValue('loan_payments_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setLoanPaymentsEnabled($enabled);
     }
 
     public static function setLoanApplicationsEnabled(bool $enabled): void
     {
-        self::setValue('loan_applications_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setLoanApplicationsEnabled($enabled);
     }
 
-    /**
-     * Emergency toggle for grant and city grant approvals.
-     */
     public static function isGrantApprovalsEnabled(): bool
     {
-        $value = self::getValue('grant_approvals_enabled');
-
-        if (is_null($value)) {
-            self::setGrantApprovalsEnabled(true);
-
-            return true;
-        }
-
-        return (bool) $value;
+        return app(FinancePolicySettings::class)->isGrantApprovalsEnabled();
     }
 
     public static function setGrantApprovalsEnabled(bool $enabled): void
     {
-        self::setValue('grant_approvals_enabled', $enabled ? 1 : 0);
+        app(FinancePolicySettings::class)->setGrantApprovalsEnabled($enabled);
     }
 
     public static function getAuditLogRetentionDays(): int
     {
-        $value = self::getValue('audit_log_retention_days');
-
-        if (is_null($value)) {
-            $default = (int) config('audit.retention_days_default', 180);
-            self::setAuditLogRetentionDays($default);
-
-            return $default;
-        }
-
-        return max(1, (int) $value);
+        return app(SecurityRetentionSettings::class)->getAuditLogRetentionDays();
     }
 
     public static function setAuditLogRetentionDays(int $days): void
     {
-        self::setValue('audit_log_retention_days', max(1, $days));
+        app(SecurityRetentionSettings::class)->setAuditLogRetentionDays($days);
     }
 
     public static function isUserInactivityAutoDisableEnabled(): bool
     {
-        $value = self::getValue('user_inactivity_auto_disable_enabled');
-
-        if (is_null($value)) {
-            return false;
-        }
-
-        return (bool) $value;
+        return app(SecurityRetentionSettings::class)->isUserInactivityAutoDisableEnabled();
     }
 
     public static function setUserInactivityAutoDisableEnabled(bool $enabled): void
     {
-        self::setValue('user_inactivity_auto_disable_enabled', $enabled ? 1 : 0);
+        app(SecurityRetentionSettings::class)->setUserInactivityAutoDisableEnabled($enabled);
     }
 
     public static function getUserInactivityAutoDisableDays(): int
     {
-        $value = self::getValue('user_inactivity_auto_disable_days');
-
-        if (is_null($value)) {
-            self::setUserInactivityAutoDisableDays(90);
-
-            return 90;
-        }
-
-        return max(1, (int) $value);
+        return app(SecurityRetentionSettings::class)->getUserInactivityAutoDisableDays();
     }
 
     public static function setUserInactivityAutoDisableDays(int $days): void
     {
-        self::setValue('user_inactivity_auto_disable_days', max(1, $days));
+        app(SecurityRetentionSettings::class)->setUserInactivityAutoDisableDays($days);
     }
 
     public static function getFaviconPath(): ?string
     {
-        $value = self::getValue('favicon_path');
-
-        return is_string($value) && $value !== '' ? $value : null;
+        return app(PublicSiteSettings::class)->getFaviconPath();
     }
 
     public static function setFaviconPath(?string $path): void
     {
-        self::setValue('favicon_path', $path ?? '');
+        app(PublicSiteSettings::class)->setFaviconPath($path);
     }
 
     public static function getLoanPaymentsPausedAt(): ?Carbon
     {
-        $value = self::getValue('loan_payments_paused_at');
-
-        if (! is_string($value) || $value === '') {
-            return null;
-        }
-
-        return Carbon::parse($value);
+        return app(FinancePolicySettings::class)->getLoanPaymentsPausedAt();
     }
 
     public static function setLoanPaymentsPausedAt(?Carbon $timestamp): void
     {
-        self::setValue('loan_payments_paused_at', $timestamp ? $timestamp->toIso8601String() : '');
+        app(FinancePolicySettings::class)->setLoanPaymentsPausedAt($timestamp);
     }
 
     public static function getTopRaidable(): int
     {
-        $value = self::getValue('raid_top_alliance_cap');
-
-        if (is_null($value)) {
-            self::setTopRaidable(40); // Default to 40
-
-            return 40;
-        }
-
-        return (int) $value;
+        return app(DataSyncSettings::class)->getTopRaidable();
     }
 
     public static function setTopRaidable(int $topN): void
     {
-        self::setValue('raid_top_alliance_cap', $topN);
+        app(DataSyncSettings::class)->setTopRaidable($topN);
     }
 
     public static function getDirectDepositId(): int
     {
-        $value = self::getValue('dd_tax_id');
-
-        if (is_null($value)) {
-            self::setDirectDepositId(0); // Default to 0
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(FinancePolicySettings::class)->getDirectDepositId();
     }
 
     public static function setDirectDepositId(int $DDTaxID): void
     {
-        self::setValue('dd_tax_id', $DDTaxID);
+        app(FinancePolicySettings::class)->setDirectDepositId($DDTaxID);
     }
 
     public static function getDirectDepositFallbackId(): int
     {
-        $value = self::getValue('dd_fallback_tax_id');
-
-        if (is_null($value)) {
-            self::setDirectDepositFallbackId(0); // Default to 0
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(FinancePolicySettings::class)->getDirectDepositFallbackId();
     }
 
     public static function setDirectDepositFallbackId(int $DDTaxID): void
     {
-        self::setValue('dd_fallback_tax_id', $DDTaxID);
+        app(FinancePolicySettings::class)->setDirectDepositFallbackId($DDTaxID);
     }
 
     public static function isDirectDepositEnabled(): bool
     {
-        return self::getDirectDepositId() > 0;
+        return app(FinancePolicySettings::class)->isDirectDepositEnabled();
     }
 
     public static function getGrowthCirclesTaxId(): int
     {
-        $value = self::getValue('growth_circles_tax_id');
-
-        if (is_null($value)) {
-            self::setGrowthCirclesTaxId(0);
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(FinancePolicySettings::class)->getGrowthCirclesTaxId();
     }
 
     public static function setGrowthCirclesTaxId(int $taxId): void
     {
-        self::setValue('growth_circles_tax_id', $taxId);
+        app(FinancePolicySettings::class)->setGrowthCirclesTaxId($taxId);
     }
 
     public static function getGrowthCirclesFallbackTaxId(): int
     {
-        $value = self::getValue('growth_circles_fallback_tax_id');
-
-        if (is_null($value)) {
-            self::setGrowthCirclesFallbackTaxId(0);
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(FinancePolicySettings::class)->getGrowthCirclesFallbackTaxId();
     }
 
     public static function setGrowthCirclesFallbackTaxId(int $taxId): void
     {
-        self::setValue('growth_circles_fallback_tax_id', $taxId);
+        app(FinancePolicySettings::class)->setGrowthCirclesFallbackTaxId($taxId);
     }
 
     public static function isGrowthCirclesEnabled(): bool
     {
-        return self::getGrowthCirclesTaxId() > 0;
+        return app(FinancePolicySettings::class)->isGrowthCirclesEnabled();
     }
 
     public static function isInactivityModeEnabled(): bool
     {
-        $value = self::getValue('inactivity_mode_enabled');
-
-        if (is_null($value)) {
-            self::setInactivityModeEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(InactivitySettings::class)->isEnabled();
     }
 
     public static function setInactivityModeEnabled(bool $enabled): void
     {
-        self::setValue('inactivity_mode_enabled', $enabled ? 1 : 0);
+        app(InactivitySettings::class)->setEnabled($enabled);
     }
 
     public static function getInactivityThresholdHours(): int
     {
-        $value = self::getValue('inactivity_threshold_hours');
-
-        if (is_null($value)) {
-            self::setInactivityThresholdHours(72);
-
-            return 72;
-        }
-
-        return max(1, (int) $value);
+        return app(InactivitySettings::class)->getThresholdHours();
     }
 
     public static function setInactivityThresholdHours(int $hours): void
     {
-        self::setValue('inactivity_threshold_hours', max(1, $hours));
+        app(InactivitySettings::class)->setThresholdHours($hours);
     }
 
     /**
@@ -638,27 +380,7 @@ class SettingService
      */
     public static function getInactivityActions(): array
     {
-        $value = self::getValue('inactivity_actions');
-
-        if (is_null($value)) {
-            self::setInactivityActions([]);
-
-            return [];
-        }
-
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
-
-            if (is_array($decoded)) {
-                return array_values(array_filter($decoded, 'is_string'));
-            }
-        }
-
-        if (is_array($value)) {
-            return array_values(array_filter($value, 'is_string'));
-        }
-
-        return [];
+        return app(InactivitySettings::class)->getActions();
     }
 
     /**
@@ -666,709 +388,456 @@ class SettingService
      */
     public static function setInactivityActions(array $actions): void
     {
-        $actions = array_values(array_filter($actions, 'is_string'));
-
-        self::setValue('inactivity_actions', json_encode($actions));
+        app(InactivitySettings::class)->setActions($actions);
     }
 
     public static function getInactivityCooldownHours(): int
     {
-        $value = self::getValue('inactivity_notification_cooldown_hours');
-
-        if (is_null($value)) {
-            self::setInactivityCooldownHours(24);
-
-            return 24;
-        }
-
-        return max(1, (int) $value);
+        return app(InactivitySettings::class)->getCooldownHours();
     }
 
     public static function setInactivityCooldownHours(int $hours): void
     {
-        self::setValue('inactivity_notification_cooldown_hours', max(1, $hours));
+        app(InactivitySettings::class)->setCooldownHours($hours);
     }
 
     public static function getInactivityDiscordChannelId(): string
     {
-        return (string) (self::getValue('inactivity_discord_channel_id') ?? '');
+        return app(InactivitySettings::class)->getDiscordChannelId();
     }
 
     public static function setInactivityDiscordChannelId(?string $channelId): void
     {
-        self::setValue('inactivity_discord_channel_id', $channelId ?? '');
+        app(InactivitySettings::class)->setDiscordChannelId($channelId);
     }
 
     public static function isInactivityRepeatNotificationsEnabled(): bool
     {
-        $value = self::getValue('inactivity_repeat_notifications_enabled');
-
-        if (is_null($value)) {
-            self::setInactivityRepeatNotificationsEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(InactivitySettings::class)->areRepeatNotificationsEnabled();
     }
 
     public static function setInactivityRepeatNotificationsEnabled(bool $enabled): void
     {
-        self::setValue('inactivity_repeat_notifications_enabled', $enabled ? 1 : 0);
+        app(InactivitySettings::class)->setRepeatNotificationsEnabled($enabled);
     }
 
     public static function getDiscordWarAlertChannelId(): string
     {
-        return (string) (self::getValue('discord_war_alert_channel_id') ?? '');
+        return app(DiscordSettings::class)->getWarAlertChannelId();
     }
 
     public static function setDiscordWarAlertChannelId(?string $channelId): void
     {
-        self::setValue('discord_war_alert_channel_id', $channelId ?? '');
+        app(DiscordSettings::class)->setWarAlertChannelId($channelId);
     }
 
     public static function getDiscordCityTierBucketSize(): int
     {
-        $value = self::getValue('discord_city_tier_bucket_size');
-
-        return max(1, min(100, (int) ($value ?? self::DEFAULT_DISCORD_CITY_TIER_BUCKET_SIZE)));
+        return app(DiscordSettings::class)->getCityTierBucketSize();
     }
 
     public static function setDiscordCityTierBucketSize(int $bucketSize): void
     {
-        self::setValue('discord_city_tier_bucket_size', max(1, min(100, $bucketSize)));
+        app(DiscordSettings::class)->setCityTierBucketSize($bucketSize);
     }
 
     public static function getDiscordWarRoomForumId(): string
     {
-        return (string) (self::getValue('discord_war_room_forum_id') ?? '');
+        return app(DiscordSettings::class)->getWarRoomForumId();
     }
 
     public static function setDiscordWarRoomForumId(?string $channelId): void
     {
-        self::setValue('discord_war_room_forum_id', $channelId ?? '');
+        app(DiscordSettings::class)->setWarRoomForumId($channelId);
     }
 
     public static function getDiscordWarRoomDefenseRoleId(): string
     {
-        return self::getStringSetting('discord_war_room_defense_role_id', '');
+        return app(DiscordSettings::class)->getWarRoomDefenseRoleId();
     }
 
     public static function setDiscordWarRoomDefenseRoleId(?string $roleId): void
     {
-        self::setValue('discord_war_room_defense_role_id', $roleId ?? '');
+        app(DiscordSettings::class)->setWarRoomDefenseRoleId($roleId);
     }
 
     public static function isWarCounterAutoCreationEnabled(): bool
     {
-        $value = self::getValue('war_counter_auto_creation_enabled');
-
-        if (is_null($value)) {
-            $value = self::getValue('discord_war_room_creation_enabled');
-        }
-
-        if (is_null($value)) {
-            self::setWarCounterAutoCreationEnabled(true);
-
-            return true;
-        }
-
-        return (bool) $value;
+        return app(DiscordSettings::class)->isWarCounterAutoCreationEnabled();
     }
 
     public static function setWarCounterAutoCreationEnabled(bool $enabled): void
     {
-        self::setValue('war_counter_auto_creation_enabled', $enabled ? 1 : 0);
+        app(DiscordSettings::class)->setWarCounterAutoCreationEnabled($enabled);
     }
 
     public static function getDiscordAllianceDepartureChannelId(): string
     {
-        $channelId = self::getValue('discord_alliance_departure_channel_id');
-
-        if (is_string($channelId) && $channelId !== '') {
-            return $channelId;
-        }
-
-        return self::getDiscordWarAlertChannelId();
+        return app(DiscordSettings::class)->getAllianceDepartureChannelId();
     }
 
     public static function setDiscordAllianceDepartureChannelId(?string $channelId): void
     {
-        self::setValue('discord_alliance_departure_channel_id', $channelId ?? '');
+        app(DiscordSettings::class)->setAllianceDepartureChannelId($channelId);
     }
 
     public static function isDiscordWarAlertEnabled(): bool
     {
-        return (bool) (self::getValue('discord_war_alert_enabled') ?? false);
+        return app(DiscordSettings::class)->isWarAlertEnabled();
     }
 
     public static function setDiscordWarAlertEnabled(bool $enabled): void
     {
-        self::setValue('discord_war_alert_enabled', $enabled ? 1 : 0);
+        app(DiscordSettings::class)->setWarAlertEnabled($enabled);
     }
 
     public static function isDiscordAllianceDepartureEnabled(): bool
     {
-        $value = self::getValue('discord_alliance_departure_enabled');
-
-        if (is_null($value)) {
-            return self::isDiscordWarAlertEnabled();
-        }
-
-        return (bool) $value;
+        return app(DiscordSettings::class)->isAllianceDepartureEnabled();
     }
 
     public static function setDiscordAllianceDepartureEnabled(bool $enabled): void
     {
-        self::setValue('discord_alliance_departure_enabled', $enabled ? 1 : 0);
+        app(DiscordSettings::class)->setAllianceDepartureEnabled($enabled);
     }
 
     public static function isBeigeAlertsEnabled(): bool
     {
-        $value = self::getValue('beige_alerts_enabled');
-
-        if (is_null($value)) {
-            self::setBeigeAlertsEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(DiscordSettings::class)->isBeigeAlertsEnabled();
     }
 
     public static function setBeigeAlertsEnabled(bool $enabled): void
     {
-        self::setValue('beige_alerts_enabled', $enabled ? 1 : 0);
+        app(DiscordSettings::class)->setBeigeAlertsEnabled($enabled);
     }
 
     public static function getBeigeAlertsDiscordChannelId(): string
     {
-        return (string) (self::getValue('beige_alerts_discord_channel_id') ?? '');
+        return app(DiscordSettings::class)->getBeigeAlertsChannelId();
     }
 
     public static function setBeigeAlertsDiscordChannelId(?string $channelId): void
     {
-        self::setValue('beige_alerts_discord_channel_id', $channelId ?? '');
+        app(DiscordSettings::class)->setBeigeAlertsChannelId($channelId);
     }
 
     public static function getLastNationSyncBatchId(): string
     {
-        return self::getLastManualNationSyncBatchId();
+        return app(DataSyncSettings::class)->getLastNationSyncBatchId();
     }
 
     public static function setLastNationSyncBatchId(string $batchId): void
     {
-        self::setLastManualNationSyncBatchId($batchId);
+        app(DataSyncSettings::class)->setLastNationSyncBatchId($batchId);
     }
 
     public static function getLastManualNationSyncBatchId(): string
     {
-        $value = self::getValue('last_nation_sync_batch_id');
-
-        if (is_null($value)) {
-            self::setLastManualNationSyncBatchId('');
-
-            return '';
-        }
-
-        return $value;
+        return app(DataSyncSettings::class)->getLastManualNationSyncBatchId();
     }
 
     public static function setLastManualNationSyncBatchId(string $batchId): void
     {
-        self::setValue('last_nation_sync_batch_id', $batchId);
+        app(DataSyncSettings::class)->setLastManualNationSyncBatchId($batchId);
     }
 
     public static function getLastRollingNationSyncBatchId(): string
     {
-        $value = self::getValue('last_rolling_nation_sync_batch_id');
-
-        if (is_null($value)) {
-            self::setLastRollingNationSyncBatchId('');
-
-            return '';
-        }
-
-        return $value;
+        return app(DataSyncSettings::class)->getLastRollingNationSyncBatchId();
     }
 
     public static function setLastRollingNationSyncBatchId(string $batchId): void
     {
-        self::setValue('last_rolling_nation_sync_batch_id', $batchId);
+        app(DataSyncSettings::class)->setLastRollingNationSyncBatchId($batchId);
     }
 
     public static function getLastAllianceSyncBatchId(): string
     {
-        $value = self::getValue('last_alliance_sync_batch_id');
-
-        if (is_null($value)) {
-            self::setLastAllianceSyncBatchId('');
-
-            return '';
-        }
-
-        return $value;
+        return app(DataSyncSettings::class)->getLastAllianceSyncBatchId();
     }
 
     public static function setLastAllianceSyncBatchId(string $batchId): void
     {
-        self::setValue('last_alliance_sync_batch_id', $batchId);
+        app(DataSyncSettings::class)->setLastAllianceSyncBatchId($batchId);
     }
 
     public static function getLastWarSyncBatchId(): string
     {
-        $value = self::getValue('last_war_sync_batch_id');
-
-        if (is_null($value)) {
-            self::setLastWarSyncBatchId('');
-
-            return '';
-        }
-
-        return $value;
+        return app(DataSyncSettings::class)->getLastWarSyncBatchId();
     }
 
     public static function setLastWarSyncBatchId(string $batchId): void
     {
-        self::setValue('last_war_sync_batch_id', $batchId);
+        app(DataSyncSettings::class)->setLastWarSyncBatchId($batchId);
     }
 
     public static function getMMRAssistantEnabled(): bool
     {
-        $value = self::getValue('mmr_assistant_enabled');
-
-        if (is_null($value)) {
-            self::setMMRAssistantEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(MilitaryReadinessSettings::class)->isAssistantEnabled();
     }
 
     public static function setMMRAssistantEnabled(bool $enabled): void
     {
-        self::setValue('mmr_assistant_enabled', (int) $enabled);
+        app(MilitaryReadinessSettings::class)->setAssistantEnabled($enabled);
     }
 
     public static function getMMRResourceWeights(): array
     {
-        $raw = self::getValue('mmr_resource_weights');
-
-        if (is_string($raw) && $raw !== '') {
-            $decoded = json_decode($raw, true);
-
-            if (is_array($decoded)) {
-                return collect($decoded)
-                    ->map(fn ($weight) => (float) $weight)
-                    ->toArray();
-            }
-        }
-
-        return [];
+        return app(MilitaryReadinessSettings::class)->getResourceWeights();
     }
 
     public static function setMMRResourceWeights(array $weights): void
     {
-        self::setValue('mmr_resource_weights', json_encode($weights));
+        app(MilitaryReadinessSettings::class)->setResourceWeights($weights);
     }
 
     public static function isApplicationsEnabled(): bool
     {
-        $value = self::getValue('applications_enabled');
-
-        if (is_null($value)) {
-            self::setApplicationsEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(ApplicationSettings::class)->isEnabled();
     }
 
     public static function setApplicationsEnabled(bool $enabled): void
     {
-        self::setValue('applications_enabled', $enabled ? 1 : 0);
+        app(ApplicationSettings::class)->setEnabled($enabled);
     }
 
     public static function getApplicationsApprovedPositionId(): int
     {
-        $value = self::getValue('applications_approved_position_id');
-
-        if (is_null($value) || ! is_numeric($value)) {
-            self::setApplicationsApprovedPositionId(0);
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(ApplicationSettings::class)->getApprovedPositionId();
     }
 
     public static function setApplicationsApprovedPositionId(int $positionId): void
     {
-        self::setValue('applications_approved_position_id', $positionId);
+        app(ApplicationSettings::class)->setApprovedPositionId($positionId);
     }
 
     public static function getApplicationsDiscordApplicantRoleId(): string
     {
-        return self::getStringSetting('applications_discord_applicant_role_id', '');
+        return app(ApplicationSettings::class)->getDiscordApplicantRoleId();
     }
 
     public static function setApplicationsDiscordApplicantRoleId(?string $roleId): void
     {
-        self::setValue('applications_discord_applicant_role_id', $roleId ?? '');
+        app(ApplicationSettings::class)->setDiscordApplicantRoleId($roleId);
     }
 
     public static function getApplicationsDiscordIaRoleId(): string
     {
-        return self::getStringSetting('applications_discord_ia_role_id', '');
+        return app(ApplicationSettings::class)->getDiscordIaRoleId();
     }
 
     public static function setApplicationsDiscordIaRoleId(?string $roleId): void
     {
-        self::setValue('applications_discord_ia_role_id', $roleId ?? '');
+        app(ApplicationSettings::class)->setDiscordIaRoleId($roleId);
     }
 
     public static function getApplicationsDiscordMemberRoleId(): string
     {
-        return self::getStringSetting('applications_discord_member_role_id', '');
+        return app(ApplicationSettings::class)->getDiscordMemberRoleId();
     }
 
     public static function setApplicationsDiscordMemberRoleId(?string $roleId): void
     {
-        self::setValue('applications_discord_member_role_id', $roleId ?? '');
+        app(ApplicationSettings::class)->setDiscordMemberRoleId($roleId);
     }
 
     public static function getApplicationsDiscordInterviewCategoryId(): string
     {
-        return self::getStringSetting('applications_discord_interview_category_id', '');
+        return app(ApplicationSettings::class)->getDiscordInterviewCategoryId();
     }
 
     public static function setApplicationsDiscordInterviewCategoryId(?string $categoryId): void
     {
-        self::setValue('applications_discord_interview_category_id', $categoryId ?? '');
+        app(ApplicationSettings::class)->setDiscordInterviewCategoryId($categoryId);
     }
 
     public static function getApplicationsApprovalAnnouncementChannelId(): string
     {
-        return self::getStringSetting('applications_approval_announcement_channel_id', '');
+        return app(ApplicationSettings::class)->getApprovalAnnouncementChannelId();
     }
 
     public static function setApplicationsApprovalAnnouncementChannelId(?string $channelId): void
     {
-        self::setValue('applications_approval_announcement_channel_id', $channelId ?? '');
+        app(ApplicationSettings::class)->setApprovalAnnouncementChannelId($channelId);
     }
 
     public static function getApplicationsApprovalMessageTemplate(): string
     {
-        $default = 'Welcome to the alliance! A new member has been approved.';
-
-        return self::getStringSetting('applications_approval_message_template', $default);
+        return app(ApplicationSettings::class)->getApprovalMessageTemplate();
     }
 
     public static function setApplicationsApprovalMessageTemplate(string $template): void
     {
-        self::setValue('applications_approval_message_template', $template);
+        app(ApplicationSettings::class)->setApprovalMessageTemplate($template);
     }
 
     public static function getWithdrawMaxDailyCount(): int
     {
-        $value = self::getValue('withdraw_max_daily_count');
-
-        if (is_null($value)) {
-            self::setWithdrawMaxDailyCount(0);
-
-            return 0;
-        }
-
-        return (int) $value;
+        return app(FinancePolicySettings::class)->getWithdrawMaxDailyCount();
     }
 
     public static function setWithdrawMaxDailyCount(int $count): void
     {
-        self::setValue('withdraw_max_daily_count', max(0, $count));
+        app(FinancePolicySettings::class)->setWithdrawMaxDailyCount($count);
     }
 
     public static function isRecruitmentEnabled(): bool
     {
-        $value = self::getValue('recruitment_enabled');
-
-        if (is_null($value)) {
-            self::setRecruitmentEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(RecruitmentSettings::class)->isEnabled();
     }
 
     public static function setRecruitmentEnabled(bool $enabled): void
     {
-        self::setValue('recruitment_enabled', $enabled ? 1 : 0);
+        app(RecruitmentSettings::class)->setEnabled($enabled);
     }
 
     public static function isRecruitmentFollowUpEnabled(): bool
     {
-        $value = self::getValue('recruitment_follow_up_enabled');
-
-        if (is_null($value)) {
-            self::setRecruitmentFollowUpEnabled(false);
-
-            return false;
-        }
-
-        return (bool) $value;
+        return app(RecruitmentSettings::class)->isFollowUpEnabled();
     }
 
     public static function setRecruitmentFollowUpEnabled(bool $enabled): void
     {
-        self::setValue('recruitment_follow_up_enabled', $enabled ? 1 : 0);
+        app(RecruitmentSettings::class)->setFollowUpEnabled($enabled);
     }
 
     public static function getRecruitmentPrimarySubject(): string
     {
-        $value = self::getValue('recruitment_primary_subject');
-
-        if (is_null($value) || $value === '') {
-            $appName = config('app.name');
-            $default = $appName.' Recruitment';
-            self::setRecruitmentPrimarySubject($default);
-
-            return self::normalizeRecruitmentSubject($default);
-        }
-
-        $subject = (string) $value;
-        $normalized = self::normalizeRecruitmentSubject($subject);
-
-        if ($normalized !== $subject) {
-            self::setValue('recruitment_primary_subject', $normalized);
-        }
-
-        return $normalized;
+        return app(RecruitmentSettings::class)->getPrimarySubject();
     }
 
     public static function setRecruitmentPrimarySubject(string $subject): void
     {
-        self::setValue('recruitment_primary_subject', self::normalizeRecruitmentSubject($subject));
+        app(RecruitmentSettings::class)->setPrimarySubject($subject);
     }
 
     public static function getRecruitmentPrimaryMessage(): string
     {
-        $appName = config('app.name');
-        $default = '<p>Welcome to Politics &amp; War!</p>'
-            ."<p>The team at {$appName} would love to help you get started. "
-            .'Join our Discord and we can walk you through your first steps.</p>';
-
-        return self::getRecruitmentMessage('primary', $default);
+        return app(RecruitmentSettings::class)->getPrimaryMessage();
     }
 
     public static function setRecruitmentPrimaryMessage(string $message): void
     {
-        self::setRecruitmentMessage('primary', $message);
+        app(RecruitmentSettings::class)->setPrimaryMessage($message);
     }
 
     public static function getRecruitmentFollowUpSubject(): string
     {
-        $value = self::getValue('recruitment_follow_up_subject');
-
-        if (is_null($value) || $value === '') {
-            $appName = config('app.name');
-            $default = 'Checking in from '.$appName;
-            self::setRecruitmentFollowUpSubject($default);
-
-            return self::normalizeRecruitmentSubject($default);
-        }
-
-        $subject = (string) $value;
-        $normalized = self::normalizeRecruitmentSubject($subject);
-
-        if ($normalized !== $subject) {
-            self::setValue('recruitment_follow_up_subject', $normalized);
-        }
-
-        return $normalized;
+        return app(RecruitmentSettings::class)->getFollowUpSubject();
     }
 
     public static function setRecruitmentFollowUpSubject(string $subject): void
     {
-        self::setValue('recruitment_follow_up_subject', self::normalizeRecruitmentSubject($subject));
+        app(RecruitmentSettings::class)->setFollowUpSubject($subject);
     }
 
     public static function getRecruitmentFollowUpMessage(): string
     {
-        $appName = config('app.name');
-        $default = '<p>Hey there! Just following up to see how your nation is progressing.</p>'
-            ."<p>If you are still looking for an alliance, we'd love to have you at {$appName}.</p>";
-
-        return self::getRecruitmentMessage('follow_up', $default);
+        return app(RecruitmentSettings::class)->getFollowUpMessage();
     }
 
     public static function setRecruitmentFollowUpMessage(string $message): void
     {
-        self::setRecruitmentMessage('follow_up', $message);
-    }
-
-    private static function normalizeRecruitmentSubject(string $subject): string
-    {
-        $trimmed = trim($subject);
-
-        return mb_substr($trimmed, 0, self::RECRUITMENT_SUBJECT_MAX_LENGTH);
+        app(RecruitmentSettings::class)->setFollowUpMessage($message);
     }
 
     public static function getHomepageHeadline(string $allianceName): string
     {
-        $default = "Build your next chapter with {$allianceName}";
-
-        return self::getStringSettingWithoutPersisting('home_headline', $default);
+        return app(PublicSiteSettings::class)->getHomepageHeadline($allianceName);
     }
 
     public static function setHomepageHeadline(string $headline): void
     {
-        self::setValue('home_headline', $headline);
+        app(PublicSiteSettings::class)->setHomepageHeadline($headline);
     }
 
     public static function getHomepageTagline(string $allianceName): string
     {
-        $default = "{$allianceName} is where ambitious nations find real support, sharp coordination, and a community worth staying for.";
-
-        return self::getStringSettingWithoutPersisting('home_tagline', $default);
+        return app(PublicSiteSettings::class)->getHomepageTagline($allianceName);
     }
 
     public static function setHomepageTagline(string $tagline): void
     {
-        self::setValue('home_tagline', $tagline);
+        app(PublicSiteSettings::class)->setHomepageTagline($tagline);
     }
 
     public static function getHomepageAbout(string $allianceName): string
     {
-        $default = "{$allianceName} is for members who want a steady alliance, active leadership, and a community that works well together.";
-
-        return self::getStringSettingWithoutPersisting('home_about', $default);
+        return app(PublicSiteSettings::class)->getHomepageAbout($allianceName);
     }
 
     public static function setHomepageAbout(string $about): void
     {
-        self::setValue('home_about', $about);
+        app(PublicSiteSettings::class)->setHomepageAbout($about);
     }
 
     public static function getHomepageHighlights(): array
     {
-        $raw = self::getValue('home_highlights');
-
-        if (is_string($raw) && $raw !== '') {
-            $decoded = json_decode($raw, true);
-
-            if (is_array($decoded)) {
-                return collect($decoded)
-                    ->map(fn ($item) => is_string($item) ? trim($item) : '')
-                    ->filter()
-                    ->values()
-                    ->all();
-            }
-        }
-
-        return [
-            'A short application and a clear next step after you apply.',
-            'Help with growth, coordination, and the day-to-day work of building a nation.',
-            'An active alliance that is easy to settle into.',
-        ];
+        return app(PublicSiteSettings::class)->getHomepageHighlights();
     }
 
     public static function setHomepageHighlights(array $highlights): void
     {
-        $cleaned = collect($highlights)
-            ->map(fn ($item) => is_string($item) ? trim($item) : '')
-            ->filter()
-            ->values()
-            ->all();
-
-        self::setValue('home_highlights', json_encode($cleaned));
+        app(PublicSiteSettings::class)->setHomepageHighlights($highlights);
     }
 
     public static function getHomepageStatsIntro(): string
     {
-        $default = 'A quick look at where the alliance stands today.';
-
-        return self::getStringSettingWithoutPersisting('home_stats_intro', $default);
+        return app(PublicSiteSettings::class)->getHomepageStatsIntro();
     }
 
     public static function setHomepageStatsIntro(string $intro): void
     {
-        self::setValue('home_stats_intro', $intro);
+        app(PublicSiteSettings::class)->setHomepageStatsIntro($intro);
     }
 
     public static function getHomepageClosingText(string $allianceName): string
     {
-        $default = "If {$allianceName} feels like the right fit, send in your application and come meet the team.";
-
-        return self::getStringSettingWithoutPersisting('home_closing_text', $default);
+        return app(PublicSiteSettings::class)->getHomepageClosingText($allianceName);
     }
 
     public static function setHomepageClosingText(string $text): void
     {
-        self::setValue('home_closing_text', $text);
+        app(PublicSiteSettings::class)->setHomepageClosingText($text);
     }
 
     public static function getHomepageHeroBadge(): string
     {
-        return self::getStringSettingWithoutPersisting('home_hero_badge', 'Recruiting now');
+        return app(PublicSiteSettings::class)->getHomepageHeroBadge();
     }
 
     public static function setHomepageHeroBadge(string $badge): void
     {
-        self::setValue('home_hero_badge', $badge);
+        app(PublicSiteSettings::class)->setHomepageHeroBadge($badge);
     }
 
     public static function getHomepageCtaLabel(): string
     {
-        return self::getStringSettingWithoutPersisting('home_cta_label', 'Start your application');
+        return app(PublicSiteSettings::class)->getHomepageCtaLabel();
     }
 
     public static function setHomepageCtaLabel(string $label): void
     {
-        self::setValue('home_cta_label', $label);
+        app(PublicSiteSettings::class)->setHomepageCtaLabel($label);
     }
 
     protected static function getRecruitmentMessage(string $type, string $default): string
     {
-        $message = RecruitmentMessage::query()
-            ->where('type', $type)
-            ->value('message');
-
-        if (is_null($message) || $message === '') {
-            self::setRecruitmentMessage($type, $default);
-
-            return $default;
-        }
-
-        return (string) $message;
+        return app(RecruitmentSettings::class)->getMessage($type, $default);
     }
 
     protected static function setRecruitmentMessage(string $type, string $message): void
     {
-        RecruitmentMessage::query()->updateOrCreate(
-            ['type' => $type],
-            ['message' => $message]
-        );
+        app(RecruitmentSettings::class)->setMessage($type, $message);
     }
 
     protected static function getStringSetting(string $key, string $default): string
     {
-        $value = self::getValue($key);
-
-        if (is_null($value) || $value === '') {
-            self::setValue($key, $default);
-
-            return $default;
-        }
-
-        return (string) $value;
+        return app(SettingValueStore::class)->getString($key, $default);
     }
 
     protected static function getStringSettingWithoutPersisting(string $key, string $default): string
     {
-        $value = self::getValue($key);
-
-        return is_null($value) || $value === '' ? $default : (string) $value;
+        return app(SettingValueStore::class)->getStringWithoutPersisting($key, $default);
     }
 }

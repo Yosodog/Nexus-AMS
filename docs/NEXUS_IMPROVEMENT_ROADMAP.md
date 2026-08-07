@@ -1352,6 +1352,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M–L, incremental · **Type:** Backend maintainability
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** `app/Services/SettingService.php` is a high-coupling hotspot with many unrelated public methods.
 
 **How it should work:** Introduce focused services such as data-sync, public-site, Discord, finance-policy, security/retention, and recovery settings. Preserve existing setting keys, serialization, defaults, and cache behavior. Initially delegate old static methods to new services or update one caller family at a time; remove compatibility methods only after reference checks.
