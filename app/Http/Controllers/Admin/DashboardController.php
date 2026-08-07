@@ -14,6 +14,7 @@ use App\Models\TradePrice;
 use App\Models\User;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
+use App\Services\PendingRequestsService;
 use App\Services\PWHelperService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -33,8 +34,11 @@ class DashboardController extends Controller
      */
     public function dashboard(Request $request): View
     {
+        $pendingRequestsService = app(PendingRequestsService::class);
+
         if ($request->boolean('refresh')) {
             Cache::forget(self::CACHE_KEY);
+            $pendingRequestsService->flushCache();
         }
 
         $payload = Cache::remember(
@@ -61,10 +65,24 @@ class DashboardController extends Controller
         $user = $request->user();
         $metrics = $this->filterMetricsForView($payload['metrics'] ?? $payload, $user);
         $metrics = $this->normalizeMetricsForView($metrics);
+        $workQueue = $pendingRequestsService->getCountsForUser($user);
+
+        if (array_key_exists('loans', $workQueue['counts'])) {
+            $metrics['loanStats']['pending'] = $workQueue['counts']['loans'];
+        }
+
+        if (array_key_exists('grants', $workQueue['counts'])) {
+            $metrics['grantStats']['pending'] = $workQueue['counts']['grants'];
+        }
 
         return view('admin.dashboard', array_merge($metrics, [
             'lastRefreshedAt' => $generatedAt,
             'cacheTtlMinutes' => self::CACHE_TTL_MINUTES,
+            'workQueueCounts' => $workQueue['counts'],
+            'workQueueTotal' => $workQueue['total'],
+            'workQueueComplete' => $workQueue['complete'],
+            'workQueueCanView' => $workQueue['can_view'],
+            'workQueueUnavailable' => $workQueue['unavailable'],
         ]));
     }
 

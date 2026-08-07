@@ -4,10 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Admin\AppSidebar;
 use App\Models\User;
-use App\Services\LoanService;
 use App\Services\PendingRequestsService;
-use App\Services\RebuildingService;
-use App\Services\WarAidService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Mockery;
@@ -50,12 +47,24 @@ class AdminPendingRequestCountAuthorizationTest extends TestCase
      */
     private function bindPendingRequestsService(array $counts): void
     {
-        $service = Mockery::mock(PendingRequestsService::class, [
-            $this->createMock(LoanService::class),
-            $this->createMock(WarAidService::class),
-            $this->createMock(RebuildingService::class),
-        ])->makePartial();
-        $service->shouldReceive('getRawCounts')->once()->andReturn($counts);
+        $service = Mockery::mock(PendingRequestsService::class);
+        $service->shouldReceive('getCountsForUser')->once()->andReturnUsing(function (User $user) use ($counts): array {
+            $filtered = collect($counts)
+                ->filter(fn (int $count, string $type): bool => $user->can(
+                    (string) config("pending_requests.permissions.{$type}")
+                ))
+                ->all();
+
+            return [
+                'counts' => $filtered,
+                'total' => array_sum($filtered),
+                'complete' => true,
+                'can_view' => collect((array) config('pending_requests.permissions'))
+                    ->contains(fn (string $ability): bool => $user->can($ability)),
+                'unavailable' => [],
+                'generated_at' => now()->toIso8601String(),
+            ];
+        });
 
         $this->app->instance(PendingRequestsService::class, $service);
     }

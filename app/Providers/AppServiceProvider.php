@@ -8,21 +8,40 @@ use App\Broadcasting\PWMessageChannel;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Logs\CronLog;
 use App\Logs\SubLog;
+use App\Models\Application;
+use App\Models\AuditResult;
+use App\Models\AuditResultEvent;
+use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
+use App\Models\GrantApplication;
 use App\Models\Loan;
+use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
 use App\Models\RebuildingRequest;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
+use App\Observers\StaffWorkQueueCacheObserver;
 use App\Services\AuditLogger;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use App\Services\SettingService;
+use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\AuditRemediationWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\BlockadeReliefWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\CityGrantWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\GrantWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\LoanWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\MemberTransferWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\RebuildingWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\WarAidWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\WithdrawalWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -49,6 +68,18 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
         $this->app->singleton(AuditLogger::class);
+        $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
+            $app->make(ApplicationWorkQueueSource::class),
+            $app->make(CityGrantWorkQueueSource::class),
+            $app->make(GrantWorkQueueSource::class),
+            $app->make(LoanWorkQueueSource::class),
+            $app->make(WithdrawalWorkQueueSource::class),
+            $app->make(MemberTransferWorkQueueSource::class),
+            $app->make(WarAidWorkQueueSource::class),
+            $app->make(RebuildingWorkQueueSource::class),
+            $app->make(BlockadeReliefWorkQueueSource::class),
+            $app->make(AuditRemediationWorkQueueSource::class),
+        ]));
 
         $this->app->scoped('pw.health.view-data', function () {
             $status = Cache::get(PWHealthService::CACHE_KEY_STATUS);
@@ -177,6 +208,22 @@ class AppServiceProvider extends ServiceProvider
 
         Offshore::observe(OffshoreObserver::class);
         OffshoreGuardrail::observe(OffshoreGuardrailObserver::class);
+
+        foreach ([
+            Application::class,
+            AuditResult::class,
+            AuditResultEvent::class,
+            BlockadeReliefRequest::class,
+            CityGrantRequest::class,
+            GrantApplication::class,
+            Loan::class,
+            MemberTransfer::class,
+            RebuildingRequest::class,
+            Transaction::class,
+            WarAidRequest::class,
+        ] as $workQueueModel) {
+            $workQueueModel::observe(StaffWorkQueueCacheObserver::class);
+        }
 
         Gate::define('viewPulse', function (User $user) {
             return Gate::allows('view-diagnostic-info');

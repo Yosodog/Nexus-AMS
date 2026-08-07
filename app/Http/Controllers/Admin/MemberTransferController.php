@@ -9,10 +9,26 @@ use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class MemberTransferController extends Controller
 {
     public function __construct(private readonly MemberTransferService $memberTransferService) {}
+
+    public function show(MemberTransfer $memberTransfer): View
+    {
+        $this->authorize('manage-accounts');
+
+        $memberTransfer->load([
+            'fromAccount:id,name,nation_id',
+            'toAccount:id,name,nation_id',
+            'fromNation:id,leader_name,nation_name',
+            'toNation:id,leader_name,nation_name',
+            'createdBy:id,name',
+        ]);
+
+        return view('admin.member-transfers.show', compact('memberTransfer'));
+    }
 
     public function cancel(MemberTransfer $memberTransfer): RedirectResponse
     {

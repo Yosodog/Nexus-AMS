@@ -23,6 +23,8 @@ class AppSidebar extends Component
         return view('livewire.admin.app-sidebar', [
             'navigation' => $user ? app(AdminNavigationCatalog::class)->groups($user, $pendingCounts) : [],
             'pendingTotal' => $pendingRequests['total'] ?? 0,
+            'pendingComplete' => $pendingRequests['complete'] ?? true,
+            'pendingUnavailable' => $pendingRequests['unavailable'] ?? [],
         ]);
     }
 }

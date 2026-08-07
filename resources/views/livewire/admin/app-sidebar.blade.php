@@ -7,11 +7,16 @@
         </div>
     </div>
 
-    @if($pendingTotal > 0)
-        <div class="admin-sidebar-nav__workload mary-hideable" role="status">
-            <span class="nexus-status nexus-status--warning">{{ $pendingTotal }} pending</span>
-            <p>Requests need staff review.</p>
-        </div>
+    @if($pendingTotal > 0 || ! $pendingComplete)
+        <a href="{{ route('admin.work-queue.index') }}" class="admin-sidebar-nav__workload mary-hideable" role="status">
+            @if($pendingComplete)
+                <x-nexus-status :label="$pendingTotal.' pending'" intent="warning" icon="exclamation-triangle" />
+                <p>Requests need staff review.</p>
+            @else
+                <x-nexus-status label="Queue data incomplete" intent="warning" icon="exclamation-triangle" />
+                <p>{{ count($pendingUnavailable) }} {{ \Illuminate\Support\Str::plural('source', count($pendingUnavailable)) }} unavailable.</p>
+            @endif
+        </a>
     @endif
 
     <div class="admin-sidebar-nav__groups">

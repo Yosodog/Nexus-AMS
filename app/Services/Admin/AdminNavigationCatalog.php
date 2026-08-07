@@ -3,11 +3,15 @@
 namespace App\Services\Admin;
 
 use App\Models\User;
+use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use Illuminate\Http\Request;
 
 final class AdminNavigationCatalog
 {
-    public function __construct(private readonly Request $request) {}
+    public function __construct(
+        private readonly Request $request,
+        private readonly StaffWorkQueueRegistry $workQueueRegistry,
+    ) {}
 
     /**
      * @param  array<string, int>  $pendingCounts
@@ -16,12 +20,18 @@ final class AdminNavigationCatalog
     public function groups(User $user, array $pendingCounts = []): array
     {
         $grantsPending = ($pendingCounts['city_grants'] ?? 0) + ($pendingCounts['grants'] ?? 0);
-        $warSupportPending = ($pendingCounts['war_aid'] ?? 0) + ($pendingCounts['rebuilding'] ?? 0);
+        $accountPending = ($pendingCounts['withdrawals'] ?? 0) + ($pendingCounts['member_transfers'] ?? 0);
+        $warSupportPending = ($pendingCounts['war_aid'] ?? 0)
+            + ($pendingCounts['rebuilding'] ?? 0)
+            + ($pendingCounts['blockade_relief'] ?? 0);
+        $workQueueTotal = array_sum($pendingCounts);
+        $canUseWorkQueue = $this->workQueueRegistry->canView($user);
 
         return array_values(array_filter([
             $this->group('Workspace', [
                 $this->item('overview', 'Overview', 'o-squares-2x2', route('admin.dashboard'), $this->request->routeIs('admin.dashboard'), keywords: 'home dashboard'),
-                $this->item('accounts', 'Accounts', 'o-building-library', route('admin.accounts.dashboard'), $this->request->routeIs('admin.accounts.*', 'admin.withdrawals.*'), $pendingCounts['withdrawals'] ?? 0, $user->can('view-accounts'), 'bank balances withdrawals'),
+                $this->item('work-queue', 'Work queue', 'o-clipboard-document-list', route('admin.work-queue.index'), $this->request->routeIs('admin.work-queue.*'), $workQueueTotal, $canUseWorkQueue, 'pending reviews staff tasks approvals'),
+                $this->item('accounts', 'Accounts', 'o-building-library', route('admin.accounts.dashboard'), $this->request->routeIs('admin.accounts.*', 'admin.withdrawals.*'), $accountPending, $user->can('view-accounts'), 'bank balances withdrawals transfers'),
                 $this->item('applications', 'Applications', 'o-document-text', route('admin.applications.index'), $this->request->routeIs('admin.applications.*'), $pendingCounts['applications'] ?? 0, $user->can('view-applications'), 'recruitment decisions'),
                 $this->item('grants-workspace', 'Grants', 'o-gift', route('admin.grants'), $this->request->routeIs('admin.grants', 'admin.grants.city'), $grantsPending, $user->can('view-grants') || $user->can('view-city-grants'), 'programs city funding'),
                 $this->item('loans', 'Loans', 'o-banknotes', route('admin.loans'), $this->request->routeIs('admin.loans*'), $pendingCounts['loans'] ?? 0, $user->can('view-loans'), 'applications repayment'),
@@ -32,7 +42,7 @@ final class AdminNavigationCatalog
                 $this->item('cities', 'Cities', 'o-building-office-2', route('admin.cities.index'), $this->request->routeIs('admin.cities.*'), visible: $user->can('view-members'), keywords: 'infrastructure land'),
                 $this->item('users', 'Users', 'o-user-group', route('admin.users.index'), $this->request->routeIs('admin.users.*'), visible: $user->can('view-users'), keywords: 'accounts login'),
                 $this->item('roles', 'Roles', 'o-identification', route('admin.roles.index'), $this->request->routeIs('admin.roles.*'), visible: $user->can('view-roles'), keywords: 'permissions access'),
-                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.*'), visible: $user->can('view-audits'), keywords: 'compliance findings'),
+                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation'),
                 $this->item('recruitment', 'Recruitment', 'o-envelope', route('admin.recruitment.index'), $this->request->routeIs('admin.recruitment.*'), visible: $user->can('view-recruitment'), keywords: 'prospects messages'),
             ]),
             $this->group('Finance', [

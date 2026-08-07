@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SpyCampaignController;
+use App\Http\Controllers\Admin\StaffWorkQueueController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
@@ -297,6 +298,13 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         Route::get('/command-palette/search', [CommandPaletteController::class, 'search'])
             ->middleware('throttle:60,1')
             ->name('admin.command-palette.search');
+        Route::get('/work-queue', [StaffWorkQueueController::class, 'index'])
+            ->name('admin.work-queue.index');
+        Route::post('/work-queue/saved-views', [StaffWorkQueueController::class, 'storeSavedView'])
+            ->name('admin.work-queue.saved-views.store');
+        Route::delete('/work-queue/saved-views/{savedView}', [StaffWorkQueueController::class, 'destroySavedView'])
+            ->whereUuid('savedView')
+            ->name('admin.work-queue.saved-views.destroy');
 
         // Users
         Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
@@ -307,6 +315,8 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
             'admin.users.discord.unlink'
         );
 
+        Route::get('/member-transfers/{memberTransfer}', [AdminMemberTransferController::class, 'show'])
+            ->name('admin.member-transfers.show');
         Route::post('/member-transfers/{memberTransfer}/cancel', [AdminMemberTransferController::class, 'cancel'])
             ->name('admin.member-transfers.cancel');
 

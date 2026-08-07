@@ -3,105 +3,87 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Gate;
 
 class PendingRequestsService
 {
     public const CACHE_KEY = 'pending_requests.counts';
 
-    public function __construct(
-        private readonly LoanService $loanService,
-        private readonly WarAidService $warAidService,
-        private readonly RebuildingService $rebuildingService,
-    ) {}
+    public function __construct(private readonly StaffWorkQueueRegistry $registry) {}
 
     /**
-     * Retrieve cached counts for all pending request types without filtering.
+     * Retrieve cached counts for every source that loaded successfully.
+     *
+     * @return array<string, int>
      */
     public function getRawCounts(): array
     {
-        $cacheKey = $this->cacheKey();
+        $counts = $this->registry->snapshot()['counts'];
+        $this->mirrorLegacyCounts($counts);
 
-        return Cache::remember(
-            $cacheKey,
-            now()->addSeconds($this->cacheTtl()),
-            fn () => $this->buildCounts()
-        );
+        return $counts;
     }
 
     /**
-     * Get pending counts the user is permitted to manage, including a total.
+     * Get pending counts the user is permitted to manage, including projection health.
+     *
+     * @return array{
+     *     counts: array<string, int>,
+     *     total: int,
+     *     complete: bool,
+     *     can_view: bool,
+     *     unavailable: array<string, array{label: string}>,
+     *     generated_at: string
+     * }
      */
     public function getCountsForUser(User $user): array
     {
-        $rawCounts = $this->getRawCounts();
-        $filteredCounts = $this->filterCountsForUser($user, $rawCounts);
+        $projection = $this->registry->forUser($user);
+
+        if ($projection['types'] !== []) {
+            $this->mirrorLegacyCounts($this->registry->snapshot()['counts']);
+        }
 
         return [
-            'counts' => $filteredCounts,
-            'total' => array_sum($filteredCounts),
+            'counts' => $projection['counts'],
+            'total' => $projection['total'],
+            'complete' => $projection['complete'],
+            'can_view' => $projection['types'] !== [],
+            'unavailable' => $projection['failures'],
+            'generated_at' => $projection['generated_at'],
         ];
     }
 
     public function flushCache(): void
     {
-        Cache::forget($this->cacheKey());
+        $this->registry->flushCache();
+        Cache::forget($this->legacyCacheKey());
     }
 
     /**
-     * @return array<int|string, mixed>
+     * Keep the long-standing count cache shape readable during rolling deployments.
+     *
+     * @param  array<string, int>  $counts
      */
-    private function buildCounts(): array
+    private function mirrorLegacyCounts(array $counts): void
     {
-        return [
-            'withdrawals' => TransactionService::countPendingWithdrawals(),
-            'city_grants' => CityGrantService::countPending(),
-            'grants' => GrantService::countPending(),
-            'loans' => $this->loanService->countPending(),
-            'war_aid' => $this->warAidService->countPending(),
-            'rebuilding' => $this->rebuildingService->countPending(),
-        ];
+        Cache::put(
+            $this->legacyCacheKey(),
+            $counts,
+            now()->addSeconds($this->cacheTtl()),
+        );
     }
 
-    /**
-     * @return array<int|string, mixed>
-     */
-    private function filterCountsForUser(User $user, array $rawCounts): array
+    private function legacyCacheKey(): string
     {
-        $permissions = $this->permissionsMap();
-        $gate = Gate::forUser($user);
-
-        return collect($rawCounts)
-            ->mapWithKeys(function ($count, $type) use ($permissions, $gate) {
-                $ability = $permissions[$type] ?? null;
-
-                if ($ability && $gate->allows($ability)) {
-                    return [$type => (int) $count];
-                }
-
-                return [];
-            })
-            ->all();
-    }
-
-    /**
-     * @return array<int|string, mixed>
-     */
-    private function permissionsMap(): array
-    {
-        return config('pending_requests.permissions', []);
-    }
-
-    private function cacheKey(): string
-    {
-        return config('pending_requests.cache_key', self::CACHE_KEY);
+        return (string) config('pending_requests.cache_key', self::CACHE_KEY);
     }
 
     private function cacheTtl(): int
     {
-        $configuredTtl = (int) config('pending_requests.cache_ttl_seconds', 900);
+        $configured = (int) config('pending_requests.cache_ttl_seconds', 900);
 
-        return min(max($configuredTtl, 600), 1800);
+        return min(max($configured, 600), 1800);
     }
 }

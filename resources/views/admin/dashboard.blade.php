@@ -21,10 +21,12 @@
         $canViewRebuilding = $can('view-rebuilding');
         $canViewRaids = $can('view-raids');
         $canViewSpies = $can('view-spies');
+        $canUseWorkQueue = $workQueueCanView;
 
         $canViewFinance = $canViewAccounts || $canViewFinancialReports;
         $canViewDefenseReadiness = $canViewWars || $canViewMmr;
-        $hasDecisionQueue = $canViewMembers
+        $hasDecisionQueue = $canUseWorkQueue
+            || $canViewMembers
             || $canViewLoans
             || $canViewGrants
             || $canViewCityGrants
@@ -82,8 +84,27 @@
                     <h2 id="decision-queue-title" class="nexus-section-title">Decision queue</h2>
                     <p class="nexus-body-muted mt-1">Authorized workspaces and readiness signals surfaced by the cached snapshot.</p>
                 </div>
-                <span class="nexus-status nexus-status--neutral">Permission scoped</span>
+                @if ($canUseWorkQueue)
+                    <a href="{{ route('admin.work-queue.index') }}" class="btn btn-primary btn-sm">
+                        View unified queue
+                        @if ($workQueueTotal > 0)
+                            <span class="badge badge-sm">{{ $formatNumber($workQueueTotal) }}</span>
+                        @endif
+                    </a>
+                @else
+                    <x-nexus-status label="Permission scoped" intent="neutral" icon="lock-closed" />
+                @endif
             </div>
+
+            @if ($canUseWorkQueue && ! $workQueueComplete)
+                <div class="alert alert-warning mx-5 mb-4" role="status">
+                    <x-icon name="o-exclamation-triangle" class="size-5" aria-hidden="true" />
+                    <span>
+                        Unified queue counts are incomplete because
+                        {{ collect($workQueueUnavailable)->pluck('label')->join(', ', ' and ') }} could not be loaded.
+                    </span>
+                </div>
+            @endif
 
             <div class="divide-y divide-base-300">
                 @if ($canViewLoans)
@@ -150,7 +171,15 @@
                             </span>
                         </span>
                         <span class="flex items-center justify-between gap-3 sm:justify-end">
-                            <span class="nexus-status nexus-status--neutral">Open queue</span>
+                            @if (array_key_exists('city_grants', $workQueueCounts))
+                                <x-nexus-status
+                                    :label="$workQueueCounts['city_grants'] > 0 ? $formatNumber($workQueueCounts['city_grants']).' pending' : 'No pending requests'"
+                                    :intent="$workQueueCounts['city_grants'] > 0 ? 'warning' : 'success'"
+                                    :icon="$workQueueCounts['city_grants'] > 0 ? 'exclamation-triangle' : 'check-circle'"
+                                />
+                            @else
+                                <x-nexus-status label="Open queue" intent="neutral" icon="eye" />
+                            @endif
                             <x-icon name="o-chevron-right" class="size-4 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                         </span>
                     </a>
@@ -240,14 +269,32 @@
                 @if ($canViewWarAid)
                     <a href="{{ route('admin.war-aid') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">War aid</span><span class="ml-2 text-sm text-base-content/65">Review support requests.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <span class="flex items-center gap-3">
+                            @if (array_key_exists('war_aid', $workQueueCounts))
+                                <x-nexus-status
+                                    :label="$workQueueCounts['war_aid'] > 0 ? $formatNumber($workQueueCounts['war_aid']).' pending' : 'No pending requests'"
+                                    :intent="$workQueueCounts['war_aid'] > 0 ? 'warning' : 'success'"
+                                    :icon="$workQueueCounts['war_aid'] > 0 ? 'exclamation-triangle' : 'check-circle'"
+                                />
+                            @endif
+                            <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        </span>
                     </a>
                 @endif
 
                 @if ($canViewRebuilding)
                     <a href="{{ route('admin.rebuilding.index') }}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary">
                         <span><span class="font-semibold group-hover:text-primary">Rebuilding</span><span class="ml-2 text-sm text-base-content/65">Review rebuilding requests.</span></span>
-                        <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        <span class="flex items-center gap-3">
+                            @if (array_key_exists('rebuilding', $workQueueCounts))
+                                <x-nexus-status
+                                    :label="$workQueueCounts['rebuilding'] > 0 ? $formatNumber($workQueueCounts['rebuilding']).' pending' : 'No pending requests'"
+                                    :intent="$workQueueCounts['rebuilding'] > 0 ? 'warning' : 'success'"
+                                    :icon="$workQueueCounts['rebuilding'] > 0 ? 'exclamation-triangle' : 'check-circle'"
+                                />
+                            @endif
+                            <x-icon name="o-chevron-right" class="size-4 shrink-0 nexus-text-muted transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        </span>
                     </a>
                 @endif
 
