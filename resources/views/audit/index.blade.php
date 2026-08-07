@@ -223,6 +223,21 @@
                                                 </p>
                                             </div>
 
+                                            <x-contextual-help title="Understanding this audit finding" owner="Audit policy">
+                                                <x-slot:why>
+                                                    This finding records the latest observed value that matched the rule shown above. It is a policy signal, not proof of intent or misconduct.
+                                                </x-slot:why>
+                                                <x-slot:next>
+                                                    Follow the remediation guidance, then acknowledge the finding with a concise note if requested. Do not waive or dismiss it merely to remove it from the list.
+                                                </x-slot:next>
+                                                <x-slot:timing>
+                                                    The finding is reevaluated on the next successful audit after the underlying Politics &amp; War or Nexus data refreshes.
+                                                </x-slot:timing>
+                                                <x-slot:support>
+                                                    Contact the audit policy owner with the rule name and observed value if the evidence remains incorrect after a fresh audit.
+                                                </x-slot:support>
+                                            </x-contextual-help>
+
                                             @if($additionalEvidence->isNotEmpty())
                                                 <details class="group border-t border-base-300 pt-4">
                                                     <summary class="cursor-pointer text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">

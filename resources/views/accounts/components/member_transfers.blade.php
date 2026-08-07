@@ -1,6 +1,20 @@
 @php use App\Services\PWHelperService; @endphp
 <x-utils.card title="Member transfer approvals" extraClasses="mb-2">
     <p class="text-sm text-base-content/70 mb-4">Approve incoming transfers from alliance members or cancel ones you sent.</p>
+    <x-contextual-help title="Before deciding a member transfer" owner="Finance operations" class="mb-5">
+        <x-slot:why>
+            Incoming resources remain held until you accept or decline. Accepting posts them to the destination account; declining returns them to the sender.
+        </x-slot:why>
+        <x-slot:next>
+            Verify the sender, destination account, and every resource amount before accepting. If anything is unexpected, decline it or ask the sender to confirm instead of accepting provisionally.
+        </x-slot:next>
+        <x-slot:timing>
+            The transfer updates after the server confirms your decision. A disabled button or persistent error means no confirmed decision was recorded.
+        </x-slot:timing>
+        <x-slot:support>
+            Contact finance staff with the visible transfer participants and amounts. Never share account credentials or authentication recovery data.
+        </x-slot:support>
+    </x-contextual-help>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="space-y-4">
             <h3 class="text-sm font-semibold uppercase tracking-wide nexus-text-muted">Incoming</h3>

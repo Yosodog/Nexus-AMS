@@ -115,7 +115,23 @@
                         </li>
                     @endif
                     @if(! $application->approved_at && ! $application->denied_at && ! $application->cancelled_at)
-                        <li class="px-5 py-3 nexus-text-muted">Awaiting a decision through the configured application workflow.</li>
+                        <li class="space-y-3 px-5 py-3 nexus-text-muted">
+                            <p>Awaiting a decision through the configured application workflow.</p>
+                            <x-contextual-help title="What the pending application stage means" owner="Recruitment policy">
+                                <x-slot:why>
+                                    The interview is complete enough to retain, but no authorized reviewer has recorded a final decision yet.
+                                </x-slot:why>
+                                <x-slot:next>
+                                    Review the transcript and current eligibility context, then use the domain's existing decision workflow. Do not treat a Discord message alone as the recorded decision.
+                                </x-slot:next>
+                                <x-slot:timing>
+                                    The timeline changes after the application service confirms an approved, denied, or cancelled transition.
+                                </x-slot:timing>
+                                <x-slot:support>
+                                    If the decision action is unavailable, verify your recruitment permission and the application's current status before escalating.
+                                </x-slot:support>
+                            </x-contextual-help>
+                        </li>
                     @endif
                 </ol>
             </section>

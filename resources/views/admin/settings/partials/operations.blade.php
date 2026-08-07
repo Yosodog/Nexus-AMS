@@ -135,9 +135,20 @@
         :open="$errors->hasAny(['type', 'older_than_hours'])"
     >
         <div class="space-y-5">
-            <div class="alert alert-warning">
-                <span class="text-sm">Recovery actions do not approve anything. Matching rows are moved to a terminal state such as denied, cancelled, or expired.</span>
-            </div>
+            <x-contextual-help title="Use pending-request recovery only for confirmed stuck rows" owner="Operations and security" open>
+                <x-slot:why>
+                    A request can remain pending when a worker, external delivery, or earlier deployment stopped after creating the row. Recovery closes matching stale rows; it never approves or completes their business action.
+                </x-slot:why>
+                <x-slot:next>
+                    First verify the domain queue and external system, choose the narrowest workflow, and use an age older than the normal processing window. Record the support context before releasing anything.
+                </x-slot:next>
+                <x-slot:timing>
+                    Matching rows move immediately to that workflow's recovery terminal state. Related external transfers or messages are not retried by this control.
+                </x-slot:timing>
+                <x-slot:support>
+                    If the external outcome is uncertain, do not release the row. Escalate with its request or correlation ID so the domain owner can reconcile it first.
+                </x-slot:support>
+            </x-contextual-help>
 
             <div class="overflow-x-auto rounded-box border border-base-300">
                 <table class="table table-zebra" data-sortable="false">

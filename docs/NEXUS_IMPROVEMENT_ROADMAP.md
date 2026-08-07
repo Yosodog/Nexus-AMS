@@ -1298,6 +1298,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M, delivered incrementally · **Type:** Support, UX writing
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Help is most useful where a user is blocked, uncertain, or about to make an irreversible decision.
 
 **How it should work:** Add concise, maintained guidance to eligibility failures, audit findings, transfer review, application stages, security settings, recovery tools, and unfamiliar domain terms. Explain why, next action, expected timing, and support path. Prefer inline disclosure over sending users to a large generic manual.

@@ -78,6 +78,20 @@
                             </ul>
                         </div>
                     </div>
+                    <x-contextual-help title="Why this grant is blocked" owner="Finance policy" class="mt-4">
+                        <x-slot:why>
+                            Eligibility is checked against the current grant rules and the latest synchronized nation and account data. A failed check prevents an application that staff could not approve safely.
+                        </x-slot:why>
+                        <x-slot:next>
+                            Correct the items listed above, then reload this page after the affected nation or account data has refreshed. Repeated submissions will not bypass a failed rule.
+                        </x-slot:next>
+                        <x-slot:timing>
+                            Local account changes appear immediately. Politics &amp; War changes appear after the next successful nation synchronization.
+                        </x-slot:timing>
+                        <x-slot:support>
+                            Contact alliance finance staff with the grant name and the failed requirement. Do not include passwords, API keys, or recovery codes.
+                        </x-slot:support>
+                    </x-contextual-help>
                 @elseif (! empty($eligibilityReport['summary']))
                     <div class="alert alert-success mt-4">
                         <span>You currently meet the custom eligibility requirements for this grant.</span>

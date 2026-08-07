@@ -283,6 +283,21 @@
                         </div>
                     @endif
 
+                    <x-contextual-help title="How MFA and recovery codes protect this account" owner="Security policy" class="mb-4">
+                        <x-slot:why>
+                            MFA adds a code from a separate device after your password. Recovery codes are single-use substitutes intended only for losing access to that authenticator.
+                        </x-slot:why>
+                        <x-slot:next>
+                            Store recovery codes somewhere private and separate from your password. Before disabling or replacing MFA, confirm that you can still sign in and that your recovery information is current.
+                        </x-slot:next>
+                        <x-slot:timing>
+                            Credential changes take effect only after the server confirms the request. Existing sign-in requirements remain in place until confirmation succeeds.
+                        </x-slot:timing>
+                        <x-slot:support>
+                            If all authenticators and recovery codes are lost, stop retrying and contact an administrator through the alliance's verified support path.
+                        </x-slot:support>
+                    </x-contextual-help>
+
                     @if (session('status') === 'two-factor-authentication-enabled')
                         <div class="alert alert-info mb-4">
                             <span>Finish MFA setup by scanning the QR code and confirming your authenticator code.</span>
