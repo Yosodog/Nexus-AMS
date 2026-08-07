@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'account_statements' => [
+        'sync_row_limit' => (int) env('ACCOUNT_STATEMENT_SYNC_ROW_LIMIT', 1000),
+        'print_row_limit' => (int) env('ACCOUNT_STATEMENT_PRINT_ROW_LIMIT', 2000),
+        'availability_hours' => (int) env('ACCOUNT_STATEMENT_AVAILABILITY_HOURS', 24),
+        'stale_processing_hours' => (int) env('ACCOUNT_STATEMENT_STALE_PROCESSING_HOURS', 6),
+        'history_retention_days' => (int) env('ACCOUNT_STATEMENT_HISTORY_RETENTION_DAYS', 30),
+    ],
+
     'categories' => [
         'tax' => [
             'label' => 'Taxes',

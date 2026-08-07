@@ -83,6 +83,10 @@ Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('23:30');
 Schedule::command('security:check-rapid-transactions')->everyMinute()->withoutOverlapping(1);
 Schedule::command('users:disable-inactive')->dailyAt('01:05')->withoutOverlapping(120);
 Schedule::command('audit:prune')->dailyAt('01:15');
+Schedule::command('account-statements:prune')
+    ->dailyAt('01:25')
+    ->withoutOverlapping(60)
+    ->onOneServer();
 Schedule::command('war-counters:archive-stale')
     ->hourly()
     ->withoutOverlapping(55)

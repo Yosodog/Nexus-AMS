@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\AccountStatementController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AllianceFinanceController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
@@ -184,6 +185,18 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
     Route::post('/accounts/delete', [AccountsController::class, 'delete'])->name('accounts.delete.post');
 
     Route::get('/accounts/{accounts}', [AccountsController::class, 'viewAccount'])->name('accounts.view');
+
+    Route::get('/account-statements', [AccountStatementController::class, 'index'])
+        ->name('accounts.statements.index');
+    Route::get('/account-statements/print', [AccountStatementController::class, 'print'])
+        ->name('accounts.statements.print');
+    Route::post('/account-statements/exports', [AccountStatementController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('accounts.statements.exports.store');
+    Route::get('/account-statements/exports/{statementExport}', [AccountStatementController::class, 'show'])
+        ->name('accounts.statements.exports.show');
+    Route::get('/account-statements/exports/{statementExport}/download', [AccountStatementController::class, 'download'])
+        ->name('accounts.statements.exports.download');
 
     // Alliance Market
     Route::get('/market', [MarketController::class, 'index'])->name('market.index');

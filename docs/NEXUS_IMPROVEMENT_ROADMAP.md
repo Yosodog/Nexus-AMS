@@ -519,6 +519,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** M · **Type:** Finance transparency
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Members should be able to reconcile their Nexus financial activity without requesting staff help.
 
 **How it should work:** Offer downloadable CSV and a printable statement for an authorized member's account, with date range, transaction type, status, resource columns, reference IDs, and opening/closing balances when the ledger supports them. Generate large exports asynchronously and provide an expiring download.

@@ -35,6 +35,9 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('accounts.statements.index', ['account_id' => $account->id]) }}" class="btn btn-outline">
+                        View statement
+                    </a>
                     <div class="tooltip" data-tip="{{ $account->frozen ? 'Account is frozen' : 'Create a fresh deposit code for this account' }}">
                         <button type="button"
                                 class="btn btn-primary deposit-request-btn"
