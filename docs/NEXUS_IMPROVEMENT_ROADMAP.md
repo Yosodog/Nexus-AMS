@@ -533,6 +533,8 @@ Unless an item explicitly says otherwise, implementation should satisfy these sh
 
 **Effort:** M · **Type:** Finance usability
 
+**Status:** Complete — August 6, 2026
+
 **What should change:** Finance history needs fast narrowing by date, type, status, counterparty, reference, and resource.
 
 **How it should work:** Implement server-side filters with URL persistence, clear active-filter chips, sortable date/amount columns, and a summary that reflects the filtered set. Resource-vector searches should support “contains any” versus “contains all” only if users genuinely need both; default to the simpler model.

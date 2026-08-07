@@ -5,7 +5,7 @@
 @section('content')
     @php
         $formatCurrency = static fn (mixed $value): string => '$'.number_format(is_numeric($value) ? (float) $value : 0, 2);
-        $entryCount = (int) $dailyTotals->sum('entry_count');
+        $entryCount = $transactions->total();
     @endphp
 
     <header class="nexus-page-header">
@@ -33,7 +33,7 @@
         <div class="nexus-panel__header">
             <div>
                 <h2 id="ledger-filter-title" class="nexus-section-title">Report scope</h2>
-                <p class="nexus-body-muted mt-1">Dates are inclusive. Select one or more categories to narrow the ledger.</p>
+                <p class="nexus-body-muted mt-1">Dates are inclusive. Search counterparties, descriptions, or reference IDs, then narrow by category or resource.</p>
             </div>
             <span class="nexus-status nexus-status--neutral">
                 {{ $from->toFormattedDateString() }} – {{ $to->toFormattedDateString() }}
@@ -41,6 +41,23 @@
         </div>
 
         <form method="GET" class="nexus-panel__body grid gap-5">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+            <input type="hidden" name="sort_direction" value="{{ $sortDirection }}">
+
+            @if ($errors->any())
+                <div class="alert alert-error" role="alert">
+                    <x-icon name="o-exclamation-triangle" class="size-5" aria-hidden="true" />
+                    <div>
+                        <p class="font-semibold">Check the finance filters.</p>
+                        <ul class="mt-1 list-disc pl-5 text-sm">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <x-input label="From" type="date" id="from" name="from" :value="$from->toDateString()" />
                 <x-input label="To" type="date" id="to" name="to" :value="$to->toDateString()" />
@@ -54,9 +71,31 @@
                     </select>
                 </label>
 
-                <fieldset class="grid content-start gap-2 md:col-span-2 xl:col-span-1">
+                <x-input
+                    label="Counterparty or reference"
+                    type="search"
+                    id="search"
+                    name="search"
+                    :value="$selectedSearch"
+                    placeholder="Nation, account, description, or #123"
+                />
+
+                <label class="grid content-start gap-2">
+                    <span class="text-sm font-semibold text-base-content">Resource present</span>
+                    <select id="resource" name="resource" class="select w-full">
+                        <option value="">Any resource</option>
+                        @foreach ($resources as $resource)
+                            <option value="{{ $resource }}" @selected($selectedResource === $resource)>
+                                {{ ucfirst($resource) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span class="text-xs nexus-text-muted">Matches entries where the selected amount is non-zero.</span>
+                </label>
+
+                <fieldset class="grid content-start gap-2 md:col-span-2 xl:col-span-3">
                     <legend class="text-sm font-semibold text-base-content">Categories</legend>
-                    <div class="grid max-h-40 gap-2 overflow-y-auto border border-base-300 bg-base-100 p-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div class="grid max-h-40 gap-2 overflow-y-auto border border-base-300 bg-base-100 p-3 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach ($categories as $key => $category)
                             <label class="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
                                 <input
@@ -78,6 +117,22 @@
                     <x-icon name="o-funnel" class="size-4" aria-hidden="true" />
                     Apply filters
                 </button>
+            </div>
+
+            <div class="border-t border-base-300 pt-4" aria-label="Active finance filters">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide nexus-text-muted">Active filters</p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($activeFilters as $activeFilter)
+                        <a
+                            href="{{ $activeFilter['url'] }}"
+                            class="badge badge-outline min-h-7 gap-1 no-underline"
+                            aria-label="Clear {{ $activeFilter['label'] }} filter"
+                        >
+                            {{ $activeFilter['label'] }}
+                            <x-icon name="o-x-mark" class="size-3.5" aria-hidden="true" />
+                        </a>
+                    @endforeach
+                </div>
             </div>
         </form>
     </section>
@@ -135,72 +190,44 @@
     <section class="nexus-panel" aria-labelledby="ledger-title">
         <div class="nexus-panel__header">
             <div>
-                <h2 id="ledger-title" class="nexus-section-title">Ledger by day</h2>
-                <p class="nexus-body-muted mt-1">Open a day to load its itemized entries.</p>
+                <h2 id="ledger-title" class="nexus-section-title">Matching transactions</h2>
+                <p class="nexus-body-muted mt-1">Results, summaries, charts, and CSV export all use the same server-side filters.</p>
             </div>
             <span class="nexus-status nexus-status--neutral">
-                {{ number_format($entryCount) }} {{ Illuminate\Support\Str::plural('entry', $entryCount) }} · {{ $ledgerDates->count() }} {{ Illuminate\Support\Str::plural('day', $ledgerDates->count()) }}
+                {{ number_format($entryCount) }} {{ Illuminate\Support\Str::plural('transaction', $entryCount) }}
             </span>
         </div>
 
-        <div class="divide-y divide-base-300" id="ledgerAccordion">
-            @forelse ($ledgerDates as $date)
-                @php
-                    $summary = $dailyTotals[$date] ?? ['entry_count' => 0, 'income' => 0, 'expense' => 0, 'net' => 0];
-                    $dayUrl = route('admin.finance.day', ['date' => $date] + request()->query());
-                    $panelId = 'ledger-day-'.preg_replace('/[^a-zA-Z0-9_-]/', '-', $date);
-                @endphp
-                <article
-                    x-data="{ open: false, loaded: false, loading: false, content: '', error: '' }"
-                    @open="if (!loaded && !loading) {
-                        loading = true;
-                        error = '';
-                        fetch('{{ $dayUrl }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                            .then(response => {
-                                if (!response.ok) throw new Error('Unable to load this day.');
-                                return response.text();
-                            })
-                            .then(html => { content = html; loaded = true; loading = false; })
-                            .catch(() => { error = 'Unable to load entries for this day. Close and reopen the day to retry.'; loading = false; });
-                    }"
-                >
-                    <button
-                        type="button"
-                        class="grid w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-base-200/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                        @click="open = !open; if (open) $dispatch('open')"
-                        :aria-expanded="open.toString()"
-                        aria-controls="{{ $panelId }}"
-                    >
-                        <span>
-                            <span class="block font-semibold text-base-content">{{ \Carbon\Carbon::parse($date)->toFormattedDateString() }}</span>
-                            <span class="mt-1 block text-xs nexus-text-muted">{{ number_format((int) $summary['entry_count']) }} recorded {{ \Illuminate\Support\Str::plural('entry', (int) $summary['entry_count']) }}</span>
-                        </span>
-                        <span class="grid grid-cols-2 gap-x-5 gap-y-1 text-sm sm:grid-cols-4 sm:text-right">
-                            <span><span class="block text-xs nexus-text-muted">Income</span><span class="font-semibold text-success">{{ $formatCurrency($summary['income']) }}</span></span>
-                            <span><span class="block text-xs nexus-text-muted">Expense</span><span class="font-semibold text-error">{{ $formatCurrency($summary['expense']) }}</span></span>
-                            <span><span class="block text-xs nexus-text-muted">Net</span><span class="font-semibold {{ $summary['net'] >= 0 ? 'text-success' : 'text-error' }}">{{ $formatCurrency($summary['net']) }}</span></span>
-                            <span class="self-end text-primary" aria-hidden="true"><x-icon name="o-chevron-down" class="size-4 transition-transform" x-bind:class="open && 'rotate-180'" /></span>
-                        </span>
-                    </button>
-
-                    <div id="{{ $panelId }}" x-show="open" x-cloak x-transition.opacity.duration.150ms class="border-t border-base-300 px-5 py-4">
-                        <div x-show="loading" class="flex items-center gap-2 text-sm nexus-text-muted" role="status">
-                            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
-                            <span>Loading entries…</span>
-                        </div>
-                        <p x-show="error" x-text="error" class="py-2 text-sm text-error" role="alert"></p>
-                        <div x-show="loaded" x-html="content"></div>
-                    </div>
-                </article>
-            @empty
+        <div class="nexus-panel__body grid gap-4">
+            @if ($transactions->isEmpty())
                 <div class="nexus-empty-state">
                     <x-icon name="o-document-magnifying-glass" class="size-8 nexus-text-muted" aria-hidden="true" />
                     <div>
-                        <h2 class="text-lg font-semibold">No ledger activity in this scope</h2>
-                        <p class="mt-1 text-sm nexus-text-muted">Change the dates, direction, or category filters to review another period.</p>
+                        <h2 class="text-lg font-semibold">
+                            {{ $transactions->total() > 0 ? 'No transactions on this page' : ($hasNarrowingFilters ? 'No transactions match these filters' : 'No ledger activity in this date range') }}
+                        </h2>
+                        <p class="mt-1 text-sm nexus-text-muted">
+                            {{ $transactions->total() > 0 ? 'Choose another results page.' : 'Clear a filter or select another date range to continue.' }}
+                        </p>
                     </div>
                 </div>
-            @endforelse
+            @else
+                @include('admin.finance.partials.entries-table', [
+                    'entries' => $transactions,
+                    'categories' => $categories,
+                    'showDate' => true,
+                    'sortable' => true,
+                    'sort' => $sort,
+                    'sortDirection' => $sortDirection,
+                    'sortUrls' => $sortUrls,
+                ])
+            @endif
+
+            @if ($transactions->hasPages())
+                <nav aria-label="Finance transaction pages">
+                    {{ $transactions->onEachSide(1)->links() }}
+                </nav>
+            @endif
         </div>
     </section>
 @endsection

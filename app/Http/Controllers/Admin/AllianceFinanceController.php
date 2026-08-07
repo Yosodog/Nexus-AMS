@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AllianceFinanceLedgerRequest;
 use App\Models\AllianceFinanceEntry;
 use App\Services\Finance\AllianceFinanceService;
 use App\Services\Finance\FinanceCategoryRegistry;
@@ -10,11 +11,8 @@ use App\Support\CsvExport;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View as ViewResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,12 +22,10 @@ final class AllianceFinanceController extends Controller
      * Display the ledger dashboard.
      */
     public function index(
-        Request $request,
+        AllianceFinanceLedgerRequest $request,
         AllianceFinanceService $financeService,
         FinanceCategoryRegistry $categoryRegistry
     ): View {
-        Gate::authorize('view-financial-reports');
-
         $filterBag = $this->resolveFilters($request, $categoryRegistry);
         $from = $filterBag['from'];
         $to = $filterBag['to'];
@@ -38,13 +34,19 @@ final class AllianceFinanceController extends Controller
         $dailySummary = $financeService->getDailySummary($from, $to, $filters);
         $categoryBreakdown = $financeService->getDailyCategoryBreakdown($from, $to, $filters);
         $totals = $financeService->getTotals($from, $to, $filters);
+        $transactions = $financeService->paginateEntries(
+            $from,
+            $to,
+            $filters,
+            $filterBag['sort'],
+            $filterBag['sort_direction'],
+        );
+        $transactions->appends($filterBag['query']);
 
         $dateLabels = $this->enumerateDates($from, $to);
         $dailyNet = $this->buildDailyNet($dailySummary, $dateLabels);
         $bestDay = $dailyNet->sortByDesc('net')->first();
         $worstDay = $dailyNet->sortBy('net')->first();
-
-        $dailyTotals = $this->buildDailyTotals($dailySummary);
 
         $netChart = [
             'labels' => $dateLabels,
@@ -59,27 +61,32 @@ final class AllianceFinanceController extends Controller
             'categories' => $categoryRegistry->all(),
             'selectedDirection' => $filterBag['direction'],
             'selectedCategories' => $filterBag['selected_categories'],
+            'selectedSearch' => $filterBag['search'],
+            'selectedResource' => $filterBag['resource'],
+            'resources' => AllianceFinanceService::FILTERABLE_RESOURCES,
             'from' => $from,
             'to' => $to,
-            'ledgerDates' => $dailyTotals->keys()->sortDesc()->values(),
-            'dailyTotals' => $dailyTotals,
             'totals' => $totals,
+            'transactions' => $transactions,
             'netChart' => $netChart,
             'categoryDatasets' => $categoryDatasets,
             'bestDay' => $bestDay,
             'worstDay' => $worstDay,
-            'exportUrl' => route('admin.finance.export', $request->query()),
+            'sort' => $filterBag['sort'],
+            'sortDirection' => $filterBag['sort_direction'],
+            'sortUrls' => $this->sortUrls($filterBag),
+            'activeFilters' => $this->activeFilters($filterBag, $categoryRegistry),
+            'hasNarrowingFilters' => $this->hasNarrowingFilters($filterBag),
+            'exportUrl' => route('admin.finance.export', $filterBag['query']),
         ]);
     }
 
     public function dayDetails(
-        Request $request,
+        AllianceFinanceLedgerRequest $request,
         string $date,
         AllianceFinanceService $financeService,
         FinanceCategoryRegistry $categoryRegistry
     ): ViewResponse {
-        Gate::authorize('view-financial-reports');
-
         $filterBag = $this->resolveFilters($request, $categoryRegistry);
         $selectedDate = Carbon::parse($date)->startOfDay();
         $entries = $financeService->getEntriesForDate($selectedDate, $filterBag['filters']);
@@ -94,12 +101,10 @@ final class AllianceFinanceController extends Controller
      * Export the filtered ledger to CSV.
      */
     public function exportCsv(
-        Request $request,
+        AllianceFinanceLedgerRequest $request,
         AllianceFinanceService $financeService,
         FinanceCategoryRegistry $categoryRegistry
     ): StreamedResponse {
-        Gate::authorize('view-financial-reports');
-
         $filterBag = $this->resolveFilters($request, $categoryRegistry);
 
         $filename = sprintf(
@@ -178,13 +183,21 @@ final class AllianceFinanceController extends Controller
      *     to: CarbonInterface,
      *     direction: string,
      *     selected_categories: array<int, string>,
-     *     filters: array<string, mixed>
+     *     search: string|null,
+     *     resource: string|null,
+     *     sort: string,
+     *     sort_direction: string,
+     *     filters: array<string, mixed>,
+     *     query: array<string, mixed>
      * }
      */
-    private function resolveFilters(Request $request, FinanceCategoryRegistry $registry): array
-    {
-        $fromInput = $request->input('from');
-        $toInput = $request->input('to');
+    private function resolveFilters(
+        AllianceFinanceLedgerRequest $request,
+        FinanceCategoryRegistry $registry,
+    ): array {
+        $validated = $request->validated();
+        $fromInput = $validated['from'] ?? null;
+        $toInput = $validated['to'] ?? null;
 
         $from = $fromInput ? Carbon::parse($fromInput) : now()->subDays(14);
         $to = $toInput ? Carbon::parse($toInput) : now();
@@ -193,14 +206,20 @@ final class AllianceFinanceController extends Controller
             [$from, $to] = [$to, $from];
         }
 
-        $direction = $request->string('direction')->lower()->value() ?: 'both';
+        $direction = (string) ($validated['direction'] ?? 'both');
         $normalizedDirection = in_array($direction, ['income', 'expense'], true) ? $direction : 'both';
 
         $availableCategories = array_keys($registry->all());
         $selectedCategories = array_values(array_intersect(
             $availableCategories,
-            Arr::wrap($request->input('categories', []))
+            $validated['categories'] ?? [],
         ));
+        sort($selectedCategories);
+
+        $search = $validated['search'] ?? null;
+        $resource = $validated['resource'] ?? null;
+        $sort = (string) ($validated['sort'] ?? 'date');
+        $sortDirection = (string) ($validated['sort_direction'] ?? 'desc');
 
         $filters = [
             'categories' => $selectedCategories,
@@ -210,13 +229,152 @@ final class AllianceFinanceController extends Controller
             $filters['direction'] = $normalizedDirection;
         }
 
+        if (is_string($search) && $search !== '') {
+            $filters['search'] = $search;
+        }
+
+        if (is_string($resource) && in_array($resource, AllianceFinanceService::FILTERABLE_RESOURCES, true)) {
+            $filters['resource'] = $resource;
+        } else {
+            $resource = null;
+        }
+
+        $from = $from->copy()->startOfDay();
+        $to = $to->copy()->endOfDay();
+
+        $query = [
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'direction' => $normalizedDirection,
+            'sort' => $sort,
+            'sort_direction' => $sortDirection,
+        ];
+
+        if ($selectedCategories !== []) {
+            $query['categories'] = $selectedCategories;
+        }
+
+        if (is_string($search) && $search !== '') {
+            $query['search'] = $search;
+        }
+
+        if ($resource !== null) {
+            $query['resource'] = $resource;
+        }
+
         return [
-            'from' => $from->copy()->startOfDay(),
-            'to' => $to->copy()->endOfDay(),
+            'from' => $from,
+            'to' => $to,
             'direction' => $normalizedDirection,
             'selected_categories' => $selectedCategories,
+            'search' => $search,
+            'resource' => $resource,
+            'sort' => $sort,
+            'sort_direction' => $sortDirection,
             'filters' => $filters,
+            'query' => $query,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filterBag
+     * @return array{date: string, amount: string}
+     */
+    private function sortUrls(array $filterBag): array
+    {
+        $urls = [];
+
+        foreach (['date', 'amount'] as $column) {
+            $query = $filterBag['query'];
+            $query['sort'] = $column;
+            $query['sort_direction'] = $filterBag['sort'] === $column && $filterBag['sort_direction'] === 'desc'
+                ? 'asc'
+                : 'desc';
+
+            $urls[$column] = route('admin.finance.index', $query);
+        }
+
+        return $urls;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filterBag
+     * @return array<int, array{label: string, url: string}>
+     */
+    private function activeFilters(array $filterBag, FinanceCategoryRegistry $registry): array
+    {
+        $activeFilters = [];
+        $query = $filterBag['query'];
+        $dateQuery = $query;
+        unset($dateQuery['from'], $dateQuery['to']);
+
+        $activeFilters[] = [
+            'label' => sprintf(
+                'Date: %s – %s',
+                $filterBag['from']->toFormattedDateString(),
+                $filterBag['to']->toFormattedDateString(),
+            ),
+            'url' => route('admin.finance.index', $dateQuery),
+        ];
+
+        if ($filterBag['direction'] !== 'both') {
+            $directionQuery = $query;
+            $directionQuery['direction'] = 'both';
+            $activeFilters[] = [
+                'label' => 'Direction: '.ucfirst($filterBag['direction']),
+                'url' => route('admin.finance.index', $directionQuery),
+            ];
+        }
+
+        foreach ($filterBag['selected_categories'] as $category) {
+            $categoryQuery = $query;
+            $remainingCategories = array_values(array_diff(
+                $filterBag['selected_categories'],
+                [$category],
+            ));
+
+            if ($remainingCategories === []) {
+                unset($categoryQuery['categories']);
+            } else {
+                $categoryQuery['categories'] = $remainingCategories;
+            }
+
+            $activeFilters[] = [
+                'label' => 'Category: '.$registry->label($category),
+                'url' => route('admin.finance.index', $categoryQuery),
+            ];
+        }
+
+        if ($filterBag['search'] !== null) {
+            $searchQuery = $query;
+            unset($searchQuery['search']);
+            $activeFilters[] = [
+                'label' => 'Search: '.$filterBag['search'],
+                'url' => route('admin.finance.index', $searchQuery),
+            ];
+        }
+
+        if ($filterBag['resource'] !== null) {
+            $resourceQuery = $query;
+            unset($resourceQuery['resource']);
+            $activeFilters[] = [
+                'label' => 'Resource: '.ucfirst($filterBag['resource']),
+                'url' => route('admin.finance.index', $resourceQuery),
+            ];
+        }
+
+        return $activeFilters;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filterBag
+     */
+    private function hasNarrowingFilters(array $filterBag): bool
+    {
+        return $filterBag['direction'] !== 'both'
+            || $filterBag['selected_categories'] !== []
+            || $filterBag['search'] !== null
+            || $filterBag['resource'] !== null;
     }
 
     /**
@@ -263,30 +421,6 @@ final class AllianceFinanceController extends Controller
                 ],
             ];
         });
-    }
-
-    /**
-     * @param  Collection<int, mixed>  $dailySummary
-     */
-    private function buildDailyTotals(Collection $dailySummary): Collection
-    {
-        return $dailySummary
-            ->groupBy(fn ($row): string => $this->dateKey($row->date))
-            ->map(function (Collection $rows) {
-                $incomeRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_INCOME);
-                $expenseRow = $rows->firstWhere('direction', AllianceFinanceEntry::DIRECTION_EXPENSE);
-
-                $income = $incomeRow ? (float) $incomeRow->money : 0.0;
-                $expense = $expenseRow ? (float) $expenseRow->money : 0.0;
-                $entryCount = (int) $rows->sum(fn ($row) => (int) ($row->entry_count ?? 0));
-
-                return [
-                    'entry_count' => $entryCount,
-                    'income' => $income,
-                    'expense' => $expense,
-                    'net' => $income - $expense,
-                ];
-            });
     }
 
     /**

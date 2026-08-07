@@ -7,7 +7,9 @@ use App\Models\AllianceFinanceEntry;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -16,6 +18,21 @@ use Illuminate\Support\LazyCollection;
 
 final class AllianceFinanceService
 {
+    public const FILTERABLE_RESOURCES = [
+        'money',
+        'coal',
+        'oil',
+        'uranium',
+        'iron',
+        'bauxite',
+        'lead',
+        'gasoline',
+        'munitions',
+        'steel',
+        'aluminum',
+        'food',
+    ];
+
     private const CACHE_TTL_MINUTES = 10;
 
     public function __construct(
@@ -132,48 +149,57 @@ final class AllianceFinanceService
 
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, AllianceFinanceEntry>
+     */
+    public function paginateEntries(
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $filters = [],
+        string $sort = 'date',
+        string $sortDirection = 'desc',
+        int $perPage = 50,
+    ): LengthAwarePaginator {
+        $sort = in_array($sort, ['date', 'amount'], true) ? $sort : 'date';
+        $sortDirection = in_array($sortDirection, ['asc', 'desc'], true) ? $sortDirection : 'desc';
+
+        $query = $this->baseEntryQuery($from, $to, $filters);
+
+        if ($sort === 'amount') {
+            $query->orderBy('money', $sortDirection)
+                ->orderBy('date', 'desc')
+                ->orderBy('created_at', 'desc');
+        } else {
+            $query->orderBy('date', $sortDirection)
+                ->orderBy('created_at', $sortDirection);
+        }
+
+        $entries = $query
+            ->orderBy('id', $sortDirection)
+            ->paginate($perPage);
+
+        $collection = $entries->getCollection();
+        if ($collection instanceof EloquentCollection) {
+            $this->loadSources($collection);
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
      */
     public function getEntriesForDate(CarbonInterface $date, array $filters = []): Collection
     {
-        $entries = $this->applyFilters(
-            AllianceFinanceEntry::query()->whereDate('date', $date->toDateString()),
-            $filters
+        $entries = $this->baseEntryQuery(
+            $date->copy()->startOfDay(),
+            $date->copy()->endOfDay(),
+            $filters,
         )
-            ->select([
-                'id',
-                'date',
-                'created_at',
-                'direction',
-                'category',
-                'description',
-                'nation_id',
-                'account_id',
-                'source_type',
-                'source_id',
-                'money',
-                'coal',
-                'oil',
-                'uranium',
-                'iron',
-                'bauxite',
-                'lead',
-                'gasoline',
-                'munitions',
-                'steel',
-                'aluminum',
-                'food',
-            ])
-            ->with([
-                'nation:id,nation_name,leader_name',
-                'account:id,name',
-            ])
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
             ->get();
 
-        $entries
-            ->filter(fn (AllianceFinanceEntry $entry) => $entry->sourceClass() !== null)
-            ->load('source');
+        $this->loadSources($entries);
 
         return $entries;
     }
@@ -351,7 +377,51 @@ final class AllianceFinanceService
             $query->where('account_id', $filters['account_id']);
         }
 
+        $search = trim((string) ($filters['search'] ?? ''));
+        if ($search !== '') {
+            $query->where(function (Builder $searchQuery) use ($search): void {
+                $escapedSearch = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
+                $contains = "%{$escapedSearch}%";
+
+                $searchQuery
+                    ->whereRaw("description LIKE ? ESCAPE '!'", [$contains])
+                    ->orWhereRaw("source_type LIKE ? ESCAPE '!'", [$contains])
+                    ->orWhereHas('nation', function (Builder $nationQuery) use ($contains): void {
+                        $nationQuery
+                            ->whereRaw("nation_name LIKE ? ESCAPE '!'", [$contains])
+                            ->orWhereRaw("leader_name LIKE ? ESCAPE '!'", [$contains]);
+                    })
+                    ->orWhereHas('account', function (Builder $accountQuery) use ($contains): void {
+                        $accountQuery->whereRaw("name LIKE ? ESCAPE '!'", [$contains]);
+                    });
+
+                if (preg_match('/(?:^|#|\s)(\d+)$/', $search, $matches) === 1) {
+                    $referenceId = (int) $matches[1];
+
+                    $searchQuery
+                        ->orWhere('source_id', $referenceId)
+                        ->orWhere('nation_id', $referenceId)
+                        ->orWhere('account_id', $referenceId);
+                }
+            });
+        }
+
+        $resource = $filters['resource'] ?? null;
+        if (is_string($resource) && in_array($resource, self::FILTERABLE_RESOURCES, true)) {
+            $query->where($resource, '<>', 0);
+        }
+
         return $query;
+    }
+
+    /**
+     * @param  EloquentCollection<int, AllianceFinanceEntry>  $entries
+     */
+    private function loadSources(EloquentCollection $entries): void
+    {
+        $entries
+            ->filter(fn (AllianceFinanceEntry $entry): bool => $entry->sourceClass() !== null)
+            ->load('source');
     }
 
     /**
