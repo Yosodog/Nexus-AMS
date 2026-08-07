@@ -360,10 +360,10 @@
                         </label>
                         <label class="block space-y-2" for="offshore-create-new-api-key">
                             <span class="text-sm font-medium">API Key</span>
-                            <input id="offshore-create-new-api-key" type="text" class="input w-full" name="api_key" value="{{ $modalContext === 'create' ? old('api_key') : '' }}" required
+                            <input id="offshore-create-new-api-key" type="text" class="input w-full" name="api_key" value="{{ $modalContext === 'create' ? old('api_key') : '' }}" minlength="20" maxlength="20" required
                                    aria-describedby="offshore-create-new-api-key-help{{ $modalContext === 'create' && $errors->has('api_key') ? ' offshore-create-new-api-key-error' : '' }}"
                                    aria-invalid="{{ $modalContext === 'create' && $errors->has('api_key') ? 'true' : 'false' }}">
-                            <span id="offshore-create-new-api-key-help" class="text-xs nexus-text-muted">Stored encrypted. Paste the offshore bot API key.</span>
+                            <span id="offshore-create-new-api-key-help" class="text-xs nexus-text-muted">Stored encrypted. Paste the 20-character offshore bot API key.</span>
                             @if($modalContext === 'create' && $errors->has('api_key'))
                                 <span id="offshore-create-new-api-key-error" class="text-xs text-error">{{ $errors->first('api_key') }}</span>
                             @endif
@@ -498,7 +498,7 @@
                             </label>
                             <label class="block space-y-2" for="offshore-edit-{{ $offshore->id }}-api-key">
                                 <span class="text-sm font-medium">API Key</span>
-                                <input id="offshore-edit-{{ $offshore->id }}-api-key" type="text" class="input w-full" name="api_key" placeholder="Leave blank to keep current key"
+                                <input id="offshore-edit-{{ $offshore->id }}-api-key" type="text" class="input w-full" name="api_key" minlength="20" maxlength="20" placeholder="Leave blank to keep current key"
                                        aria-describedby="offshore-edit-{{ $offshore->id }}-api-key-help{{ $editContext && $errors->has('api_key') ? ' offshore-edit-'.$offshore->id.'-api-key-error' : '' }}"
                                        aria-invalid="{{ $editContext && $errors->has('api_key') ? 'true' : 'false' }}">
                                 <span id="offshore-edit-{{ $offshore->id }}-api-key-help" class="sr-only">Leave blank to keep the current key.</span>

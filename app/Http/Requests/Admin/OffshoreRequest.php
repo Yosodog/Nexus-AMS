@@ -50,8 +50,8 @@ abstract class OffshoreRequest extends FormRequest
         $nameRule = $this->isUpdate() ? ['sometimes', 'string', 'max:255'] : ['required', 'string', 'max:255'];
         $allianceRule = $this->isUpdate() ? ['sometimes', 'integer', 'exists:alliances,id'] : ['required', 'integer', 'exists:alliances,id'];
         $apiKeyRule = $this->isUpdate()
-            ? ['sometimes', 'nullable', 'string', 'max:255']
-            : ['required', 'string', 'max:255'];
+            ? ['sometimes', 'nullable', 'string', 'size:20']
+            : ['required', 'string', 'size:20'];
         $mutationKeyRule = $this->isUpdate()
             ? ['sometimes', 'nullable', 'string', 'max:255']
             : ['required', 'string', 'max:255'];
