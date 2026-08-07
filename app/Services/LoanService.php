@@ -10,6 +10,7 @@ use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\Nation;
 use App\Notifications\LoanNotification;
+use App\Services\Loans\LoanPaymentCalculator;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,10 @@ use Illuminate\Validation\ValidationException;
 class LoanService
 {
     private const DAYS_PER_PAYMENT_CYCLE = 7;
+
+    public function __construct(
+        private readonly LoanPaymentCalculator $paymentCalculator,
+    ) {}
 
     /**
      * @throws ValidationException
@@ -161,7 +166,7 @@ class LoanService
             $approvedAmount = (float) $validated['amount'];
             $approvedInterestRate = (float) $validated['interest_rate'];
             $approvedTermWeeks = (int) $validated['term_weeks'];
-            $scheduledPayment = $this->calculateWeeklyPaymentFromInputs(
+            $scheduledPayment = $this->paymentCalculator->weeklyPayment(
                 $approvedAmount,
                 $approvedInterestRate,
                 $approvedTermWeeks
@@ -412,11 +417,7 @@ class LoanService
 
     public function calculateWeeklyPayment(Loan $loan): float
     {
-        return $this->calculateWeeklyPaymentFromInputs(
-            (float) $loan->amount,
-            (float) ($loan->interest_rate ?? 0),
-            (int) ($loan->term_weeks ?? 0)
-        );
+        return $this->paymentCalculator->scheduledPayment($loan);
     }
 
     public function calculateCurrentAmountDue(
@@ -483,51 +484,9 @@ class LoanService
         ];
     }
 
-    /**
-     * @return array<int, array{week: int, due_date: string|null, opening_balance: float, payment: float, interest: float, principal: float, closing_balance: float}>
-     */
     public function buildAmortizationSchedule(Loan $loan): array
     {
-        $principal = (float) $loan->amount;
-        $rate = ((float) ($loan->interest_rate ?? 0)) / 100;
-        $term = max(0, (int) ($loan->term_weeks ?? 0));
-        $scheduled = $this->calculateScheduledPayment($loan);
-
-        if ($principal <= 0 || $term <= 0) {
-            return [];
-        }
-
-        $rows = [];
-        $balance = $principal;
-        $firstDueDate = $loan->approved_at
-            ? Carbon::parse($loan->approved_at)->startOfDay()->addDays(self::DAYS_PER_PAYMENT_CYCLE)
-            : null;
-
-        for ($week = 1; $week <= $term; $week++) {
-            if ($balance <= 0) {
-                break;
-            }
-
-            $openingBalance = round($balance, 2);
-            $interest = round($rate > 0 ? $openingBalance * $rate : 0.0, 2);
-            $payment = round(min($scheduled, $openingBalance + $interest), 2);
-            $principalPaid = round(max(0.0, $payment - $interest), 2);
-            $closingBalance = round(max(0.0, $openingBalance - $principalPaid), 2);
-
-            $rows[] = [
-                'week' => $week,
-                'due_date' => $firstDueDate ? $firstDueDate->copy()->addDays(($week - 1) * self::DAYS_PER_PAYMENT_CYCLE)->toDateString() : null,
-                'opening_balance' => $openingBalance,
-                'payment' => $payment,
-                'interest' => $interest,
-                'principal' => $principalPaid,
-                'closing_balance' => $closingBalance,
-            ];
-
-            $balance = $closingBalance;
-        }
-
-        return $rows;
+        return $this->paymentCalculator->amortizationSchedule($loan, self::DAYS_PER_PAYMENT_CYCLE);
     }
 
     /**
@@ -608,7 +567,7 @@ class LoanService
                 'term_weeks' => $updatedTermWeeks,
                 'next_due_date' => $validated['next_due_date'],
                 'remaining_balance' => (float) $validated['remaining_balance'],
-                'scheduled_weekly_payment' => $this->calculateWeeklyPaymentFromInputs(
+                'scheduled_weekly_payment' => $this->paymentCalculator->weeklyPayment(
                     $updatedAmount,
                     $updatedInterestRate,
                     $updatedTermWeeks
@@ -903,41 +862,14 @@ class LoanService
         return $payment;
     }
 
-    private function calculateWeeklyPaymentFromInputs(float $amount, float $interestRate, int $termWeeks): float
-    {
-        if ($termWeeks <= 0 || $amount <= 0) {
-            return 0.0;
-        }
-
-        $rate = $interestRate / 100;
-
-        if ($rate == 0.0) {
-            return round($amount / $termWeeks, 2);
-        }
-
-        return round(($rate * $amount) / (1 - pow(1 + $rate, -$termWeeks)), 2);
-    }
-
     private function calculateScheduledPayment(Loan $loan): float
     {
-        $configured = (float) ($loan->scheduled_weekly_payment ?? 0);
-
-        if ($configured > 0) {
-            return round($configured, 2);
-        }
-
-        return $this->calculateWeeklyPayment($loan);
+        return $this->paymentCalculator->scheduledPayment($loan);
     }
 
     private function calculateWeeklyInterest(float $remainingBalance, float $interestRate): float
     {
-        $rate = $interestRate / 100;
-
-        if ($rate <= 0 || $remainingBalance <= 0) {
-            return 0.0;
-        }
-
-        return round($remainingBalance * $rate, 2);
+        return $this->paymentCalculator->weeklyInterest($remainingBalance, $interestRate);
     }
 
     /**
