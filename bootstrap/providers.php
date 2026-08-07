@@ -4,6 +4,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\DiscordWorkflowServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\FortifyServiceProvider;
+use App\Providers\NexusRuntimeServiceProvider;
 use App\Providers\TelescopeServiceProvider;
 
 return [
@@ -12,4 +13,5 @@ return [
     FortifyServiceProvider::class,
     TelescopeServiceProvider::class,
     DiscordWorkflowServiceProvider::class,
+    NexusRuntimeServiceProvider::class,
 ];

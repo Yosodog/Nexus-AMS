@@ -37,6 +37,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="MILCOM_V1_ENABLED" value="false"/>
         <env name="NEXUS_API_TOKEN" value="testing-nexus-token"/>
+        <env name="NEXUS_RUNTIME" value="standalone"/>
         <env name="PW_API_ENDPOINT" value="https://pw.test/graphql"/>
         <env name="PW_API_KEY" value="testing-pw-key"/>
         <env name="PW_API_MUTATION_KEY" value="testing-pw-mutation-key"/>

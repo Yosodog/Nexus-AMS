@@ -72,6 +72,8 @@ Before first sign-in, set the key environment values in `.env`:
 - `NEXUS_API_TOKEN`
 - `DISCORD_BOT_KEY` if you are using Discord-connected flows
 
+`NEXUS_RUNTIME` defaults to `standalone`, which preserves local public and private writes, schedules, backups, and interactive setup. The `hosted-tenant` and temporary `world-writer` values are managed deployment roles; selecting either value only changes the typed capability contract and does not connect a standalone installation to Nexus Cloud.
+
 ## Production Quick Start
 
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.
