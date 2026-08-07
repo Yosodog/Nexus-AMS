@@ -28,7 +28,7 @@
             <span class="badge {{ $statusClass }} hidden lg:inline-flex">{{ $status }}</span>
         @endif
         <span class="hidden text-xs font-semibold text-base-content/60 sm:inline">
-            {{ $external ? 'Open feature' : 'Edit here' }}
+            {{ $external ? 'Open feature' : 'Open settings' }}
         </span>
         <x-icon name="o-arrow-right" class="size-4 text-base-content/60 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
     </span>

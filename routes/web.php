@@ -15,6 +15,9 @@ use App\Http\Controllers\Admin\CommandPaletteController;
 use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\CustomizationImageController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DataSyncSettingsController;
+use App\Http\Controllers\Admin\DiscordSettingsController;
+use App\Http\Controllers\Admin\FinancePolicySettingsController;
 use App\Http\Controllers\Admin\GrantController as AdminGrantController;
 use App\Http\Controllers\Admin\GrowthCirclesController as AdminGrowthCirclesController;
 use App\Http\Controllers\Admin\LoansController;
@@ -28,13 +31,17 @@ use App\Http\Controllers\Admin\MilcomPageController;
 use App\Http\Controllers\Admin\MMRController;
 use App\Http\Controllers\Admin\OffshoreController;
 use App\Http\Controllers\Admin\PayrollController;
+use App\Http\Controllers\Admin\PendingRequestRecoveryController;
+use App\Http\Controllers\Admin\PublicSiteSettingsController;
 use App\Http\Controllers\Admin\RaidController;
 use App\Http\Controllers\Admin\RebuildingController as AdminRebuildingControllerAlias;
 use App\Http\Controllers\Admin\RecruitmentController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SecurityRetentionSettingsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SpyCampaignController;
 use App\Http\Controllers\Admin\StaffWorkQueueController;
+use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\TaxesController as AdminTaxesController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WarAidController as AdminWarAidControllerAlias;
@@ -736,57 +743,78 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         )->middleware(BlockWhenPWDown::class);
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
-        Route::post('/settings/sync/nations', [SettingsController::class, 'runSyncNation'])->name(
+        Route::get('/settings/public-site', [PublicSiteSettingsController::class, 'index'])->name(
+            'admin.settings.public-site'
+        );
+        Route::get('/settings/discord', [DiscordSettingsController::class, 'index'])->name(
+            'admin.settings.discord.index'
+        );
+        Route::get('/settings/finance-policy', [FinancePolicySettingsController::class, 'index'])->name(
+            'admin.settings.finance-policy'
+        );
+        Route::get('/settings/security-retention', [SecurityRetentionSettingsController::class, 'index'])->name(
+            'admin.settings.security-retention'
+        );
+        Route::get('/settings/data-sync', [DataSyncSettingsController::class, 'index'])->name(
+            'admin.settings.data-sync'
+        );
+        Route::get('/settings/recovery', [PendingRequestRecoveryController::class, 'index'])->name(
+            'admin.settings.recovery'
+        );
+        Route::get('/settings/system-health', SystemHealthController::class)->name(
+            'admin.settings.system-health'
+        );
+        Route::post('/settings/sync/nations', [DataSyncSettingsController::class, 'runNation'])->name(
             'admin.settings.sync.run'
         )->middleware(BlockWhenPWDown::class);
-        Route::post('/settings/sync/alliances', [SettingsController::class, 'runSyncAlliance'])->name(
+        Route::post('/settings/sync/alliances', [DataSyncSettingsController::class, 'runAlliance'])->name(
             'admin.settings.sync.alliances'
         )->middleware(BlockWhenPWDown::class);
 
-        Route::post('/settings/sync/wars', [SettingsController::class, 'runSyncWar'])->name(
+        Route::post('/settings/sync/wars', [DataSyncSettingsController::class, 'runWar'])->name(
             'admin.settings.sync.wars'
         )->middleware(BlockWhenPWDown::class);
-        Route::post('/settings/sync/cancel', [SettingsController::class, 'cancelSync'])->name(
+        Route::post('/settings/sync/cancel', [DataSyncSettingsController::class, 'cancel'])->name(
             'admin.settings.sync.cancel'
         );
-        Route::post('/settings/discord', [SettingsController::class, 'updateDiscordRequirement'])->name(
+        Route::post('/settings/discord', [DiscordSettingsController::class, 'updateVerification'])->name(
             'admin.settings.discord'
         );
-        Route::post('/settings/discord/departure', [SettingsController::class, 'updateDiscordDeparture'])->name(
+        Route::post('/settings/discord/departure', [DiscordSettingsController::class, 'updateDeparture'])->name(
             'admin.settings.discord.departure'
         );
-        Route::post('/settings/discord/private-notifications', [SettingsController::class, 'updateDiscordPrivateNotifications'])
+        Route::post('/settings/discord/private-notifications', [DiscordSettingsController::class, 'updatePrivateNotifications'])
             ->name('admin.settings.discord.private-notifications');
-        Route::post('/settings/discord/city-tiers', [SettingsController::class, 'updateDiscordCityTiers'])
+        Route::post('/settings/discord/city-tiers', [DiscordSettingsController::class, 'updateCityTiers'])
             ->name('admin.settings.discord.city-tiers');
-        Route::post('/settings/homepage', [SettingsController::class, 'updateHomepage'])->name(
+        Route::post('/settings/homepage', [PublicSiteSettingsController::class, 'updateHomepage'])->name(
             'admin.settings.homepage'
         );
-        Route::post('/settings/seo', [SettingsController::class, 'updateSeo'])->name(
+        Route::post('/settings/seo', [PublicSiteSettingsController::class, 'updateSeo'])->name(
             'admin.settings.seo'
         );
-        Route::post('/settings/favicon', [SettingsController::class, 'updateFavicon'])->name(
+        Route::post('/settings/favicon', [PublicSiteSettingsController::class, 'updateFavicon'])->name(
             'admin.settings.favicon'
         );
-        Route::post('/settings/auto-withdraw', [SettingsController::class, 'updateAutoWithdraw'])->name(
+        Route::post('/settings/auto-withdraw', [FinancePolicySettingsController::class, 'updateAutoWithdraw'])->name(
             'admin.settings.auto-withdraw'
         );
-        Route::post('/settings/backups', [SettingsController::class, 'updateBackups'])->name(
+        Route::post('/settings/backups', [SecurityRetentionSettingsController::class, 'updateBackups'])->name(
             'admin.settings.backups'
         );
-        Route::post('/settings/loan-payments', [SettingsController::class, 'updateLoanPayments'])->name(
+        Route::post('/settings/loan-payments', [FinancePolicySettingsController::class, 'updateLoanPayments'])->name(
             'admin.settings.loan-payments'
         );
-        Route::post('/settings/grants/approvals', [SettingsController::class, 'updateGrantApprovals'])->name(
+        Route::post('/settings/grants/approvals', [FinancePolicySettingsController::class, 'updateGrantApprovals'])->name(
             'admin.settings.grants.approvals'
         );
-        Route::post('/settings/audit-retention', [SettingsController::class, 'updateAuditRetention'])->name(
+        Route::post('/settings/audit-retention', [SecurityRetentionSettingsController::class, 'updateAuditRetention'])->name(
             'admin.settings.audit-retention'
         );
-        Route::post('/settings/account-inactivity-auto-disable', [SettingsController::class, 'updateUserInactivityAutoDisable'])->name(
+        Route::post('/settings/account-inactivity-auto-disable', [SecurityRetentionSettingsController::class, 'updateUserInactivity'])->name(
             'admin.settings.account-inactivity-auto-disable'
         );
-        Route::post('/settings/pending-requests/release-stale', [SettingsController::class, 'releaseStalePending'])->name(
+        Route::post('/settings/pending-requests/release-stale', [PendingRequestRecoveryController::class, 'store'])->name(
             'admin.settings.pending-requests.release-stale'
         );
 

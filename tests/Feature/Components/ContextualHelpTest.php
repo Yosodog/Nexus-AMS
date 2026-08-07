@@ -52,7 +52,7 @@ class ContextualHelpTest extends TestCase
             'resources/views/audit/index.blade.php',
             'resources/views/accounts/components/member_transfers.blade.php',
             'resources/views/user/settings.blade.php',
-            'resources/views/admin/settings/partials/operations.blade.php',
+            'resources/views/admin/settings/partials/recovery.blade.php',
             'resources/views/admin/applications/show.blade.php',
         ];
 

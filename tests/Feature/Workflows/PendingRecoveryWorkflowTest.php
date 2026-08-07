@@ -46,6 +46,7 @@ class PendingRecoveryWorkflowTest extends TestCase
             ->post(route('admin.settings.pending-requests.release-stale'), [
                 'type' => $type,
                 'older_than_hours' => 48,
+                'confirm_release' => '1',
             ])
             ->assertRedirect(route('admin.settings'))
             ->assertSessionHas('alert-type', 'success')
@@ -74,6 +75,34 @@ class PendingRecoveryWorkflowTest extends TestCase
                 'older_than_hours' => 48,
             ])
             ->assertForbidden();
+    }
+
+    public function test_recovery_requires_explicit_confirmation_without_mutating_pending_rows(): void
+    {
+        [$admin] = $this->createAdminWithPermission('view-diagnostic-info');
+        $applicationId = $this->createPendingRecord(
+            'applications',
+            ['status' => ApplicationStatus::Pending->value, 'pending_key' => 1],
+            now()->subHours(72),
+        );
+
+        $this->actingAs($admin)
+            ->from(route('admin.settings.recovery'))
+            ->post(route('admin.settings.pending-requests.release-stale'), [
+                'type' => 'applications',
+                'older_than_hours' => 48,
+            ])
+            ->assertRedirect(route('admin.settings.recovery'))
+            ->assertSessionHasErrors('confirm_release');
+
+        $this->assertDatabaseHas('applications', [
+            'id' => $applicationId,
+            'status' => ApplicationStatus::Pending->value,
+            'pending_key' => 1,
+        ]);
+        $this->assertDatabaseMissing('audit_logs', [
+            'action' => 'stale_pending_requests_released',
+        ]);
     }
 
     public static function stalePendingProvider(): array

@@ -34,7 +34,7 @@ class SeoSettingsTest extends TestCase
         $this->assertDatabaseMissing('settings', ['key' => 'seo_configuration']);
 
         $this->actingAs($admin)
-            ->get(route('admin.settings'))
+            ->get(route('admin.settings.public-site'))
             ->assertOk()
             ->assertSee('Search &amp; Sharing', false)
             ->assertSee('Leave a field blank to keep deriving it', false);

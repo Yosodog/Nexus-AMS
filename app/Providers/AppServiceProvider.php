@@ -254,7 +254,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('pendingRequests', $pendingRequests);
         });
 
-        View::composer(['layouts.main', 'layouts.public', 'layouts.admin', 'admin.settings'], function ($view) {
+        View::composer(['layouts.main', 'layouts.public', 'layouts.admin', 'admin.settings.public-site'], function ($view) {
             $faviconPath = SettingService::getFaviconPath();
             $faviconUrl = asset('favicon.ico');
 

@@ -37,7 +37,7 @@ class SystemHealthDashboardTest extends TestCase
         $admin = $this->createAdmin(['view-diagnostic-info']);
 
         $this->actingAs($admin)
-            ->get(route('admin.settings'))
+            ->get(route('admin.settings.system-health'))
             ->assertOk()
             ->assertSee('System Health')
             ->assertSee('Tax records')

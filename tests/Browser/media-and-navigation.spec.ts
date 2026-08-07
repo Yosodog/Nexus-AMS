@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 test('noncritical settings media reserves space and falls back after a load failure', async ({ page }) => {
-  await page.goto('/_browser/login/admin?redirect=/admin/settings');
+  await page.goto('/_browser/login/admin?redirect=/admin/settings/public-site');
 
-  await page.getByRole('tab', { name: 'Public site' }).click();
   const faviconSettings = page.locator('#favicon-settings');
   await faviconSettings.locator('summary').click();
 
