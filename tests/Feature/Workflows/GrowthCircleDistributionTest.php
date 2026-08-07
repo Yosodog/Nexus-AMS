@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflows;
 
+use App\Jobs\AssignTaxBracket;
 use App\Models\Account;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
@@ -13,6 +14,7 @@ use App\Services\NationProfitabilityService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
 
@@ -195,5 +197,28 @@ class GrowthCircleDistributionTest extends TestCase
         $this->assertNull(
             app(NationProfitabilityService::class)->getDailyGrowthCircleShortfalls($nation)
         );
+    }
+
+    public function test_disenrollment_removes_enrollment_and_queues_the_previous_tax_bracket(): void
+    {
+        Queue::fake();
+
+        $nation = Nation::factory()->create();
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Growth Circles';
+        $account->save();
+
+        $enrollment = GrowthCircleEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => 321,
+            'enrolled_at' => now(),
+        ]);
+
+        app(GrowthCircleService::class)->disenroll($nation, logAudit: false);
+
+        $this->assertDatabaseMissing('growth_circle_enrollments', ['id' => $enrollment->id]);
+        Queue::assertPushed(AssignTaxBracket::class, 1);
     }
 }

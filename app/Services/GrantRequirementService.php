@@ -805,7 +805,7 @@ class GrantRequirementService
      */
     private function buildContext(Nation $nation): array
     {
-        $nation->loadMissing(['latestSignIn', 'military', 'resources', 'cities']);
+        $nation->loadMissing(['latestSignIn', 'military', 'resources', 'cities', 'growthCircleEnrollment']);
 
         $latestSignIn = $nation->latestSignIn;
         $military = $nation->military;
@@ -839,6 +839,7 @@ class GrantRequirementService
             'color' => (string) ($nation->color ?? ''),
             'continent' => (string) ($nation->continent ?? ''),
             'alliance_position' => (string) ($nation->alliance_position ?? ''),
+            'growth_circle_enrollment' => $nation->growthCircleEnrollment === null ? 'NOT_ENROLLED' : 'ENROLLED',
             'projects' => $projects,
             'soldiers' => (int) ($latestSignIn?->soldiers ?? $military?->soldiers ?? 0),
             'tanks' => (int) ($latestSignIn?->tanks ?? $military?->tanks ?? 0),
@@ -1018,6 +1019,17 @@ class GrantRequirementService
                         'OFFICER',
                         'HEIR',
                         'LEADER',
+                    ]),
+                ],
+                'growth_circle_enrollment' => [
+                    'key' => 'growth_circle_enrollment',
+                    'label' => 'Growth Circles enrollment',
+                    'category' => 'Programs',
+                    'type' => 'enum',
+                    'operators' => ['eq', 'neq'],
+                    'options' => $enumOptions([
+                        'ENROLLED',
+                        'NOT_ENROLLED',
                     ]),
                 ],
                 'projects' => [

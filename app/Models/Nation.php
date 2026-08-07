@@ -360,6 +360,11 @@ class Nation extends Model
         return $this->hasOne(DirectDepositEnrollment::class, 'nation_id');
     }
 
+    public function growthCircleEnrollment(): HasOne
+    {
+        return $this->hasOne(GrowthCircleEnrollment::class, 'nation_id');
+    }
+
     public function autoWithdrawSettings(): HasMany
     {
         return $this->hasMany(AutoWithdrawSetting::class, 'nation_id');
