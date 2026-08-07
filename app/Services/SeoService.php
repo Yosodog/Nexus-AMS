@@ -113,8 +113,7 @@ class SeoService
         $configuration = $this->configuration();
         $alliance ??= $this->primaryAlliance();
 
-        $configuredAppName = trim((string) config('app.name', 'Nexus AMS'));
-        $appName = $configuredAppName !== '' ? $configuredAppName : 'Nexus AMS';
+        $appName = trim((string) config('app.name', 'Laravel')) ?: 'Laravel';
         $siteName = $configuration['site_name_override'] ?? $appName;
         $allianceName = $configuration['alliance_name_override']
             ?? $this->normalizeNullableString($alliance?->name)

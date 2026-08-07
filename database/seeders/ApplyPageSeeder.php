@@ -18,8 +18,9 @@ class ApplyPageSeeder extends Seeder
      */
     public function run(): void
     {
-        $content = <<<'HTML'
-<h2>Apply to Join Nexus</h2>
+        $appName = e((string) config('app.name', 'Laravel'));
+        $content = <<<HTML
+<h2>Apply to Join {$appName}</h2>
 <p>Tell applicants what kind of alliance they are joining and how to reach you.</p>
 <ul>
     <li>List the minimum requirements.</li>

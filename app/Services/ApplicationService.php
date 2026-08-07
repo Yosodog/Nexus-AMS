@@ -825,7 +825,7 @@ class ApplicationService
         if (! $account?->user) {
             throw new ApplicationException(
                 'moderator_not_found',
-                'Moderator account is not linked to Nexus.',
+                'Moderator account is not linked to '.config('app.name').'.',
                 403
             );
         }

@@ -31,7 +31,7 @@ class BlockadeReliefEligibilityService
     {
         if ($user->disabled || ! $user->isVerified()) {
             throw ValidationException::withMessages([
-                'membership' => 'An active, verified Nexus account is required for blockade relief.',
+                'membership' => 'An active, verified '.config('app.name').' account is required for blockade relief.',
             ]);
         }
 

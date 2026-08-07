@@ -211,7 +211,7 @@ class AssignmentDeliveryService
             'Your team:',
             $team,
             '',
-            '[link='.route('admin.milcom.plans.show', ['operation' => $operation->id, 'objective' => $assignment->objective_id]).']Open this wave in Nexus[/link]',
+            '[link='.route('admin.milcom.plans.show', ['operation' => $operation->id, 'objective' => $assignment->objective_id]).']Open this wave in '.config('app.name').'[/link]',
         ]);
 
         return [

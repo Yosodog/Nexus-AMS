@@ -61,6 +61,7 @@ return Application::configure(basePath: dirname(__DIR__))
             || $request->is('api/v1/discord/war-counters/*')
             || $request->is('api/v1/discord/milcom/*')
             || $request->is('api/v1/discord/offshores/sweep-primary');
+        $appName = trim((string) config('app.name', 'Laravel')) ?: 'Laravel';
 
         $exceptions->render(function (ValidationException $exception, Request $request) use ($isDiscordActorApi) {
             if (! $isDiscordActorApi($request)) {
@@ -105,7 +106,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json([
-                'error' => ['code' => 'not_found', 'message' => 'The requested Nexus record was not found.'],
+                'error' => ['code' => 'not_found', 'message' => "The requested {$appName} record was not found."],
                 'meta' => ['contract_version' => 1],
             ], 404);
         });

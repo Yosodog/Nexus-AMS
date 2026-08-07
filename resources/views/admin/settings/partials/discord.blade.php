@@ -44,7 +44,7 @@
                 <input class="toggle toggle-primary mt-0.5" type="checkbox" name="discord_private_notifications_enabled" value="1" @checked(old('discord_private_notifications_enabled', $discordPrivateNotificationsEnabled))>
                 <span>
                     <span class="block font-semibold">Enable private workflow notifications</span>
-                    <span class="mt-1 block text-sm leading-5 text-base-content/70">Messages contain only a status summary and a link back to Nexus. Balances, resources, verification codes, notes, and denial reasons are never included.</span>
+                    <span class="mt-1 block text-sm leading-5 text-base-content/70">Messages contain only a status summary and a link back to {{ config('app.name') }}. Balances, resources, verification codes, notes, and denial reasons are never included.</span>
                 </span>
             </label>
 

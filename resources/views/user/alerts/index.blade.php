@@ -11,7 +11,7 @@
                 </div>
                 <h1 class="text-3xl font-bold leading-tight sm:text-4xl">Custom alerts and watchlists</h1>
                 <p class="max-w-3xl text-sm text-base-content/70">
-                    Watch public nation, alliance, and market data. Nexus records the current value as a baseline, then sends a private Discord message when your selected condition changes.
+                    Watch public nation, alliance, and market data. {{ config('app.name') }} records the current value as a baseline, then sends a private Discord message when your selected condition changes.
                 </p>
             </div>
             <a href="{{ route('user.settings') }}" class="btn btn-outline btn-sm">Discord notification settings</a>

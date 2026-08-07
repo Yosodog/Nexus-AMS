@@ -329,7 +329,7 @@
                                         </div>
                                     </article>
                                 @empty
-                                    <p class="py-5 text-center text-sm nexus-text-muted">Nexus is still building the team, or no eligible team was found.</p>
+                                    <p class="py-5 text-center text-sm nexus-text-muted">{{ config('app.name') }} is still building the team, or no eligible team was found.</p>
                                 @endforelse
                             </div>
                         </section>
@@ -338,7 +338,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 id="counter-preflight-checks-title" class="font-semibold">Final checks</h3>
-                                    <p class="mt-1 text-xs nexus-text-muted">Nexus checks these again before creating the room.</p>
+                                    <p class="mt-1 text-xs nexus-text-muted">{{ config('app.name') }} checks these again before creating the room.</p>
                                 </div>
                                 <span class="nexus-status {{ $hardBlockers->isEmpty() ? 'nexus-status--success' : 'nexus-status--error' }}">{{ $hardBlockers->isEmpty() ? 'Ready' : 'Blocked' }}</span>
                             </div>
@@ -503,7 +503,7 @@
                             </div>
                         </form>
                         <div class="{{ ! $canDispatch && ! $dispatchFailed && $selectedObjective ? 'flex' : 'hidden' }} items-center justify-between gap-3 rounded-md border border-success/25 bg-success/5 p-3" data-milcom-dispatch-state>
-                            <div><p class="text-sm font-semibold">Counter sent</p><p class="mt-1 text-xs nexus-text-muted">Nexus reserved the slots and is tracking the Discord room.</p></div>
+                            <div><p class="text-sm font-semibold">Counter sent</p><p class="mt-1 text-xs nexus-text-muted">{{ config('app.name') }} reserved the slots and is tracking the Discord room.</p></div>
                             <span class="nexus-status nexus-status--success" data-milcom-field="dispatch_status">{{ str($dispatchStatus ?: $objectiveStatus)->headline() }}</span>
                         </div>
                         <form method="POST" action="{{ $apiBase }}/objectives/{{ $objectiveId }}/cancel" class="hidden items-end gap-2 md:flex" data-milcom-command="cancel-objective" data-confirm="Ignore this war and cancel its counter?">

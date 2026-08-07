@@ -1047,7 +1047,7 @@
                                         data-milcom-plan-warning-override
                                     >
                                         <span class="block text-sm font-semibold">Why approve despite these warnings?</span>
-                                        <span class="mt-1 block text-xs leading-5 text-base-content/65">Required to approve this target. Nexus saves the reason with the team.</span>
+                                        <span class="mt-1 block text-xs leading-5 text-base-content/65">Required to approve this target. {{ config('app.name') }} saves the reason with the team.</span>
                                         <textarea
                                             name="override_reason"
                                             form="milcom-approve-target-form"
@@ -1118,7 +1118,7 @@
                         <section class="hidden p-4 md:block md:p-5" aria-labelledby="staffing-controls-title">
                             <div>
                                 <h3 id="staffing-controls-title" class="font-semibold">Edit target</h3>
-                                <p class="mt-1 text-xs nexus-text-muted">Nexus checks the plan version and available slots when you approve.</p>
+                                <p class="mt-1 text-xs nexus-text-muted">{{ config('app.name') }} checks the plan version and available slots when you approve.</p>
                             </div>
 
                             <form

@@ -20,7 +20,7 @@ class ProcessDeposits extends Command
      *
      * @var string
      */
-    protected $description = 'Processes deposits from in-game to Nexus accounts';
+    protected $description = 'Processes deposits from in-game accounts';
 
     /**
      * Execute the console command.

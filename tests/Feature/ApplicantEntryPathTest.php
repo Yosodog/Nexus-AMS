@@ -49,7 +49,7 @@ class ApplicantEntryPathTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Applications start in Politics &amp; War and finish in Discord.', false)
-            ->assertSee('You do not need a Nexus account to apply')
+            ->assertSee('You do not need a '.config('app.name').' account to apply')
             ->assertSee(route('apply.start', ['utm_campaign' => 'summer-drive']), false)
             ->assertSee('https://discord.gg/nexus-test', false)
             ->assertSee('/apply nationid:&lt;your nation ID&gt;', false)

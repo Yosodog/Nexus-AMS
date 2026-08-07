@@ -147,7 +147,7 @@ class AlertSubscriptionService
 
         if (! $targetExists) {
             throw ValidationException::withMessages([
-                'target_id' => 'The selected '.strtolower($type->label()).' target does not exist in Nexus.',
+                'target_id' => 'The selected '.strtolower($type->label()).' target does not exist in '.config('app.name').'.',
             ]);
         }
 

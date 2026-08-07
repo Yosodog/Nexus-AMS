@@ -24,6 +24,7 @@ class ResolveDiscordActor
 
     public function handle(Request $request, Closure $next): Response
     {
+        $appName = trim((string) config('app.name', 'Laravel')) ?: 'Laravel';
         $configuredGuildId = trim((string) config('services.discord.guild_id'));
 
         if ($configuredGuildId === '') {
@@ -56,8 +57,8 @@ class ResolveDiscordActor
         if ($accounts->count() !== 1) {
             $error = $accounts->isEmpty() ? 'discord_actor_not_linked' : 'discord_actor_ambiguous';
             $message = $accounts->isEmpty()
-                ? 'The Discord account is not actively linked to Nexus.'
-                : 'The Discord account has multiple active Nexus links.';
+                ? "The Discord account is not actively linked to {$appName}."
+                : "The Discord account has multiple active {$appName} links.";
 
             return $this->error($error, $message, 403);
         }
@@ -66,7 +67,7 @@ class ResolveDiscordActor
         $actor = $discordAccount->user;
 
         if (! $actor->nation_id) {
-            return $this->error('discord_actor_has_no_nation', 'The linked Nexus user has no nation.', 403);
+            return $this->error('discord_actor_has_no_nation', "The linked {$appName} user has no nation.", 403);
         }
 
         $requiresMfa = SettingService::isMfaRequiredForAllUsers()
@@ -75,7 +76,7 @@ class ResolveDiscordActor
         if ($requiresMfa && ! $actor->hasEnabledTwoFactorAuthentication()) {
             return $this->error(
                 'mfa_required',
-                'Multi-factor authentication must be configured in Nexus before using Discord workflows.',
+                "Multi-factor authentication must be configured in {$appName} before using Discord workflows.",
                 403,
             );
         }
@@ -94,7 +95,7 @@ class ResolveDiscordActor
 
             return $this->error(
                 $status === 404 ? 'not_found' : ($status === 403 ? 'forbidden' : 'request_rejected'),
-                $exception->getMessage() ?: 'Nexus rejected the request.',
+                $exception->getMessage() ?: "{$appName} rejected the request.",
                 $status,
             );
         }

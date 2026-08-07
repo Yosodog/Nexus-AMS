@@ -237,7 +237,7 @@ class MilcomLifecycleTest extends TestCase
             'status' => IncidentStatus::Countering,
             'detected_at' => now(),
         ]);
-        $reason = 'Officer confirmed coalition coverage outside Nexus.';
+        $reason = 'Officer confirmed coalition coverage outside the application.';
 
         app(OperationService::class)->cancelObjective($objective, 1, $actor->id, $reason);
 

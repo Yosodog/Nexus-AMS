@@ -124,7 +124,7 @@
                     <textarea id="relief-note" class="textarea w-full" name="note" maxlength="255" placeholder="Timing or coordination details"></textarea>
                 </div>
 
-                <p class="text-sm nexus-text-muted">Claiming is a coordination signal only. Nexus will never declare a war or make an assignment automatically.</p>
+                <p class="text-sm nexus-text-muted">Claiming is a coordination signal only. {{ config('app.name') }} will never declare a war or make an assignment automatically.</p>
 
                 <div class="modal-action">
                     <button type="submit" class="btn btn-primary">Open request</button>

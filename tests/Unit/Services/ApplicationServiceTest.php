@@ -116,7 +116,7 @@ class ApplicationServiceTest extends FeatureTestCase
         $service = $this->makeInspectableService();
 
         $this->expectException(ApplicationException::class);
-        $this->expectExceptionMessage('Moderator account is not linked to Nexus.');
+        $this->expectExceptionMessage('Moderator account is not linked to '.config('app.name').'.');
 
         $service->publicResolveModerator('missing-discord');
     }

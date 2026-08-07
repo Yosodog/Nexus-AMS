@@ -1,7 +1,7 @@
 <div class="mb-5">
     <h2 class="nexus-section-title">People & access</h2>
     <p class="mt-1 max-w-3xl text-sm text-base-content/70">
-        Account lifecycle controls that affect access to Nexus. Member activity policy remains with the member roster and is linked from the directory.
+        Account lifecycle controls that affect access to {{ config('app.name') }}. Member activity policy remains with the member roster and is linked from the directory.
     </p>
 </div>
 
@@ -29,7 +29,7 @@
                 >
                 <span>
                     <span class="block font-semibold">Enable automatic account disabling</span>
-                    <span class="mt-1 block text-sm text-base-content/70">This affects Nexus user access; it does not change a nation's in-game alliance position.</span>
+                    <span class="mt-1 block text-sm text-base-content/70">This affects {{ config('app.name') }} user access; it does not change a nation's in-game alliance position.</span>
                 </span>
             </label>
 

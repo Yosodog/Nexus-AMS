@@ -9,7 +9,7 @@ test('home page renders', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/apply$/);
   await expect(page.getByRole('heading', { name: 'Apply to Browser Test Alliance' })).toBeVisible();
-  await expect(page.getByText('You do not need a Nexus account to apply')).toBeVisible();
+  await expect(page.getByText(/You do not need a .* account to apply/)).toBeVisible();
   await expect(page.getByRole('link', { name: 'Start in Politics & War' })).toHaveAttribute('href', /\/apply\/start$/);
   await expect(page.getByRole('link', { name: 'Join Browser Test Alliance on Discord' })).toHaveAttribute(
     'href',

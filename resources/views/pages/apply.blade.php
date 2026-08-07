@@ -11,7 +11,7 @@
                     Apply to {{ $allianceName }}
                 </h1>
                 <p class="mt-5 max-w-2xl text-pretty text-base leading-7 text-base-content/75">
-                    Applications start in Politics &amp; War and finish in Discord. You do not need a Nexus account to apply; the application bot connects your nation ID to your Discord identity.
+                    Applications start in Politics &amp; War and finish in Discord. You do not need a {{ config('app.name') }} account to apply; the application bot connects your nation ID to your Discord identity.
                 </p>
 
                 <div class="mt-7 flex flex-wrap items-center gap-3">

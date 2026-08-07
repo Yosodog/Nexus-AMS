@@ -142,7 +142,7 @@
                             <span class="inline-grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><x-icon name="o-lock-closed" class="size-5" aria-hidden="true" /></span>
                             <div>
                                 <h2 id="milcom-doctrine-title" class="font-semibold">Scoring rules</h2>
-                                <p class="mt-1 text-sm leading-6 text-base-content/65">Milcom uses one fixed set of rules for team scoring, war range, and offensive slots. These rules change only when Nexus is updated.</p>
+                                <p class="mt-1 text-sm leading-6 text-base-content/65">Milcom uses one fixed set of rules for team scoring, war range, and offensive slots. These rules change only when {{ config('app.name') }} is updated.</p>
                             </div>
                         </div>
                     </div>

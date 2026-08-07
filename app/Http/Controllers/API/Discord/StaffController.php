@@ -236,7 +236,7 @@ class StaffController extends Controller
         abort_unless($actor instanceof User, 401, 'Discord actor context is missing.');
 
         if (! $actor->is_admin) {
-            throw new AuthorizationException('Discord staff workflows require a Nexus administrator.');
+            throw new AuthorizationException('Discord staff workflows require a '.config('app.name').' administrator.');
         }
 
         return $actor;

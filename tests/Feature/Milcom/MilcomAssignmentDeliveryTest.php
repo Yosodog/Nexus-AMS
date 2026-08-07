@@ -82,7 +82,7 @@ class MilcomAssignmentDeliveryTest extends TestCase
                     );
                 }
 
-                $this->assertStringContainsString('Open this wave in Nexus[/link]', $message);
+                $this->assertStringContainsString('Open this wave in '.config('app.name').'[/link]', $message);
 
                 return true;
             })

@@ -154,7 +154,7 @@
                                 @endcan
 
                                 @can('edit-users')
-                                    <x-admin.settings-link href="#account-inactivity" panel="people" category="People & access" title="Account Inactivity Auto-Disable" description="Disable Nexus user accounts after a period without activity." :status="$userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled'" :status-class="$userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost'" keywords="users access security lifecycle" />
+                                    <x-admin.settings-link href="#account-inactivity" panel="people" category="People & access" title="Account Inactivity Auto-Disable" description="Disable {{ config('app.name') }} user accounts after a period without activity." :status="$userInactivityAutoDisableEnabled ? 'Enabled' : 'Disabled'" :status-class="$userInactivityAutoDisableEnabled ? 'badge-success' : 'badge-ghost'" keywords="users access security lifecycle" />
                                 @endcan
 
                                 @if ($canViewDiagnostics)
