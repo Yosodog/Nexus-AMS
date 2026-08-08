@@ -868,6 +868,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M–L · **Type:** Core staff operations
 
+**Status:** Complete — August 8, 2026
+
 **What should change:** Staff should not have to scan multiple modules to discover all pending work they are authorized to handle.
 
 **How it should work:** Create a permission-aware, read-only aggregation of pending applications, grants, loans, transfers, audits, assistance, and other review work. Normalize type, subject, age, urgency, owner, status, and next action while preserving domain-specific detail and mutation routes. Support search, filters, saved views, and direct links. Counts in navigation and dashboards should be generated from the same projection.
@@ -1039,6 +1041,8 @@ Each page should have a focused save boundary, permission check, validation requ
 ### P2-10 — Add explicit leave and inactivity exceptions
 
 **Effort:** M · **Type:** Membership policy, fairness
+
+**Status:** Complete — August 8, 2026
 
 **What should change:** Vacation, military leave, verified outages, and approved exceptions should not be handled through undocumented notes or accidental policy bypasses.
 
