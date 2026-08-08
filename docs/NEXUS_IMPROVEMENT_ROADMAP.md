@@ -1522,6 +1522,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** S–M · **Type:** Code navigation, modularity
 
+**Status:** Complete — August 8, 2026
+
 **What should change:** Large route files make ownership, middleware, prefixes, and authorization harder to review as route count grows.
 
 **How it should work:** Group web/admin/API route files by stable domains such as finance, applications, audits, Milcom, settings, and integrations, then load them from the existing Laravel bootstrap/routes structure. Preserve route names, URLs, middleware ordering, and rate limits during the move.
@@ -1535,6 +1537,8 @@ Each page should have a focused save boundary, permission check, validation requ
 ### P2E-14 — Replace raw status strings with backed enums where stable
 
 **Effort:** M–L, incremental · **Type:** Domain correctness
+
+**Status:** Complete — August 8, 2026
 
 **What should change:** Repeated string statuses invite typos, impossible transitions, and inconsistent labels.
 
@@ -1591,6 +1595,8 @@ Each page should have a focused save boundary, permission check, validation requ
 ### P2E-18 — Decompose oversized domain services by responsibility
 
 **Effort:** L, incremental · **Type:** Backend maintainability
+
+**Status:** Complete — August 8, 2026
 
 **What should change:** Large services such as loan, application, and grant-requirement orchestration will become harder to reason about as workflow features expand.
 
