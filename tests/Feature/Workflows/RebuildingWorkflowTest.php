@@ -10,6 +10,7 @@ use App\Models\RebuildingTier;
 use App\Models\User;
 use App\Notifications\RebuildingNotification;
 use App\Services\AllianceMembershipService;
+use App\Services\Calculators\GamePurchaseCostCalculator;
 use App\Services\PWHealthService;
 use App\Services\QueryService;
 use App\Services\RebuildingService;
@@ -360,7 +361,10 @@ class RebuildingWorkflowTest extends TestCase
             'requirements' => ['urban_planning', 'center_for_civil_engineering'],
         ]);
 
-        $healthService = new PWHealthService($this->createMock(QueryService::class));
+        $healthService = new PWHealthService(
+            $this->createMock(QueryService::class),
+            app(GamePurchaseCostCalculator::class),
+        );
         $service = new RebuildingService(app(AllianceMembershipService::class), $healthService);
 
         $expected = round(
@@ -453,7 +457,10 @@ class RebuildingWorkflowTest extends TestCase
     {
         return new RebuildingService(
             app(AllianceMembershipService::class),
-            new PWHealthService($this->createMock(QueryService::class))
+            new PWHealthService(
+                $this->createMock(QueryService::class),
+                app(GamePurchaseCostCalculator::class),
+            )
         );
     }
 }

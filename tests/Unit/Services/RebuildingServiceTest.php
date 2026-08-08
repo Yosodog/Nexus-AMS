@@ -8,6 +8,7 @@ use App\Models\RebuildingIneligibility;
 use App\Models\RebuildingRequest;
 use App\Models\RebuildingTier;
 use App\Services\AllianceMembershipService;
+use App\Services\Calculators\GamePurchaseCostCalculator;
 use App\Services\PWHealthService;
 use App\Services\QueryService;
 use App\Services\RebuildingService;
@@ -116,7 +117,10 @@ class RebuildingServiceTest extends FeatureTestCase
             $this->cityPayload(1002, 1500),
         ]);
 
-        $health = new PWHealthService($this->createMock(QueryService::class));
+        $health = new PWHealthService(
+            $this->createMock(QueryService::class),
+            app(GamePurchaseCostCalculator::class),
+        );
         $service = $this->makeService($health);
 
         $expected = round(
@@ -300,7 +304,10 @@ class RebuildingServiceTest extends FeatureTestCase
     {
         return new RebuildingService(
             app(AllianceMembershipService::class),
-            $healthService ?? new PWHealthService($this->createMock(QueryService::class))
+            $healthService ?? new PWHealthService(
+                $this->createMock(QueryService::class),
+                app(GamePurchaseCostCalculator::class),
+            )
         );
     }
 }

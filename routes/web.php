@@ -11,6 +11,7 @@ require __DIR__.'/web/authentication.php';
 
 Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddleware::class, EnsureMfaConfigured::class])->group(callback: function () {
     require __DIR__.'/web/member/settings.php';
+    require __DIR__.'/web/member/calculators.php';
     require __DIR__.'/web/member/finance.php';
     require __DIR__.'/web/member/audits.php';
     require __DIR__.'/web/member/defense.php';

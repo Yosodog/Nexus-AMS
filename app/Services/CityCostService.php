@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CityGrant;
+use App\Services\Calculators\GamePurchaseCostCalculator;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -11,6 +12,7 @@ class CityCostService
     public function __construct(
         private readonly QueryService $query,
         private readonly GrantRequirementService $grantRequirementService,
+        private readonly GamePurchaseCostCalculator $purchaseCostCalculator,
     ) {}
 
     public function getTop20Average(bool $refreshIfStale = true): ?float
@@ -72,21 +74,13 @@ class CityCostService
             return null;
         }
 
-        $adjusted = $cityNumber - ($top20Average / 4.0);
-        $poly = (100000.0 * ($adjusted ** 3)) + (150000.0 * $adjusted) + 75000.0;
-        $quad = ($cityNumber ** 2) * 100000.0;
-        $baseCost = max($poly, $quad);
-
-        $discount = 0.05;
-        if ($bureauOfDomesticAffairsRequired) {
-            $discount += 0.0125;
-        }
-        if ($governmentSupportAgencyRequired) {
-            $discount += 0.025;
-        }
-        $final = $baseCost * (1.0 - $discount);
-
-        return max(0.0, $final);
+        return $this->purchaseCostCalculator->city(
+            cityNumber: $cityNumber,
+            topTwentyAverage: $top20Average,
+            manifestDestiny: true,
+            governmentSupportAgency: $governmentSupportAgencyRequired,
+            bureauOfDomesticAffairs: $bureauOfDomesticAffairsRequired,
+        )->breakdowns['purchase']->money;
     }
 
     public function calculateGrantAmount(CityGrant $grant): ?float

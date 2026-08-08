@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Services\Calculators\GamePurchaseCostCalculator;
 use App\Services\PWHealthService;
 use App\Services\QueryService;
 use Illuminate\Support\Facades\Cache;
@@ -22,7 +23,7 @@ class PWHealthServiceTest extends FeatureTestCase
             'permission_bits' => 123,
         ]);
 
-        $service = new PWHealthService($query);
+        $service = new PWHealthService($query, app(GamePurchaseCostCalculator::class));
 
         $this->assertTrue($service->checkAndCache());
         $this->assertSame(5, $query->maxRetries);
@@ -35,7 +36,7 @@ class PWHealthServiceTest extends FeatureTestCase
         $query = $this->createMock(QueryService::class);
         $query->method('sendQuery')->willThrowException(new RuntimeException('PW unavailable'));
 
-        $service = new PWHealthService($query);
+        $service = new PWHealthService($query, app(GamePurchaseCostCalculator::class));
 
         $this->assertFalse($service->checkAndCache());
         $this->assertSame(5, $query->maxRetries);
@@ -59,8 +60,23 @@ class PWHealthServiceTest extends FeatureTestCase
                 ];
             });
 
-        $service = new PWHealthService($query);
+        $service = new PWHealthService($query, app(GamePurchaseCostCalculator::class));
 
         $this->assertTrue($service->checkAndCache());
+    }
+
+    public function test_infrastructure_cost_uses_shared_modifiers_and_preserves_sales(): void
+    {
+        $service = new PWHealthService(
+            $this->createMock(QueryService::class),
+            app(GamePurchaseCostCalculator::class),
+        );
+
+        $this->assertEqualsWithDelta(
+            74_020.334375,
+            $service->calcInfra(55, 300, true, true, true, true, true),
+            0.000001,
+        );
+        $this->assertSame(-7_500.0, $service->calcInfra(300, 250, true, true, true, true, true));
     }
 }

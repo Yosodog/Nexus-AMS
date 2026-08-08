@@ -7,11 +7,15 @@ use App\Exceptions\ProfitabilityContextUnavailable;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\RadiationSnapshot;
+use App\Services\Calculators\MilitaryCostCalculator;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 final class EconomyCalculator
 {
+    public function __construct(private readonly MilitaryCostCalculator $militaryCostCalculator) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -71,12 +75,24 @@ final class EconomyCalculator
         Nation $nation,
         City $city,
         ?RadiationSnapshot $radiationSnapshot,
-        MarketPriceSet $prices
+        MarketPriceSet $prices,
+        ?CarbonInterface $asOf = null,
     ): array {
-        $result = $this->calculateCity($nation, $city, $radiationSnapshot, $prices);
+        $result = $this->calculateCity($nation, $city, $radiationSnapshot, $prices, $asOf);
         $operatingCity = $result['operating_city'];
         $hasProject = $this->projectChecker($nation);
         $gameDate = $radiationSnapshot?->game_date;
+
+        $resourceOutput = collect($result['resource_output_per_day'])
+            ->mapWithKeys(fn (float $amount, string $resource): array => [$resource => round($amount, 2)])
+            ->all();
+        $resourceExpenses = collect($result['resource_expense_per_day'])
+            ->mapWithKeys(fn (float $amount, string $resource): array => [$resource => round($amount, 2)])
+            ->all();
+        $negativeExpenses = collect($result['resource_expense_per_day'])
+            ->mapWithKeys(fn (float $amount, string $resource): array => [$resource => -$amount])
+            ->all();
+        $farmCount = max(0, (int) ($operatingCity->farm ?? 0));
 
         return [
             'converted_profit_per_day' => round($prices->convert($result['resource_profit_per_day']), 2),
@@ -84,28 +100,60 @@ final class EconomyCalculator
             'resource_profit_per_day' => collect($result['resource_profit_per_day'])
                 ->mapWithKeys(fn (float $amount, string $resource): array => [$resource => round($amount, 2)])
                 ->all(),
+            'unrounded_resource_profit_per_day' => $result['resource_profit_per_day'],
             'city_income_per_day' => round($result['city_income_per_day'], 2),
             'power_cost_per_day' => round($result['power_cost_per_day'], 2),
             'food_cost_per_day' => round($result['food_cost_per_day'], 2),
+            'resource_output_per_day' => $resourceOutput,
+            'resource_expense_per_day' => $resourceExpenses,
+            'unrounded_resource_output_per_day' => $result['resource_output_per_day'],
+            'unrounded_resource_expense_per_day' => $result['resource_expense_per_day'],
+            'gross_income_market_value_per_day' => round($prices->convert($result['resource_output_per_day']), 2),
+            'gross_expense_market_value_per_day' => round(-$prices->convert($negativeExpenses), 2),
             'disease' => round($this->disease($operatingCity, $hasProject, $gameDate), 2),
             'pollution' => $this->pollution($operatingCity, $hasProject, $gameDate),
             'crime' => round($this->crime($operatingCity, $hasProject), 2),
             'commerce' => $this->commerce($operatingCity, $hasProject),
-            'population' => $this->population($operatingCity, $hasProject, $gameDate),
+            'population' => $this->population($operatingCity, $hasProject, $gameDate, $asOf),
             'powered' => $result['powered'],
+            'calculation_modifiers' => [
+                'new_player_income_factor' => $this->newPlayerBonus((int) $nation->num_cities),
+                'city_age_population_factor' => $this->cityAgeBonus($operatingCity, $asOf),
+                'farm_radiation_factor' => $farmCount > 0
+                    ? $this->farmRadiationModifier((string) $nation->continent, $radiationSnapshot, $hasProject)
+                    : 1.0,
+                'farm_season_factor' => $farmCount > 0
+                    ? $this->seasonModifier((string) $nation->continent, $radiationSnapshot)
+                    : 1.0,
+                'farm_continent_factor' => $farmCount > 0
+                    ? $this->continentProductionModifier((string) $nation->continent)
+                    : 1.0,
+            ],
         ];
     }
 
     /**
-     * @return array{resource_profit_per_day: array<string, float>, city_income_per_day: float, power_cost_per_day: float, food_cost_per_day: float, powered: bool, operating_city: City}
+     * @return array{
+     *     resource_profit_per_day: array<string, float>,
+     *     resource_output_per_day: array<string, float>,
+     *     resource_expense_per_day: array<string, float>,
+     *     city_income_per_day: float,
+     *     power_cost_per_day: float,
+     *     food_cost_per_day: float,
+     *     powered: bool,
+     *     operating_city: City
+     * }
      */
     public function calculateCity(
         Nation $nation,
         City $city,
         ?RadiationSnapshot $radiationSnapshot,
-        MarketPriceSet $prices
+        MarketPriceSet $prices,
+        ?CarbonInterface $asOf = null,
     ): array {
         $profit = EconomyRules::emptyResourceBuffer();
+        $output = EconomyRules::emptyResourceBuffer();
+        $expenses = EconomyRules::emptyResourceBuffer();
         $hasProject = $this->projectChecker($nation);
         $powered = (bool) $city->powered && $this->poweredInfrastructure($city) >= (float) $city->infrastructure;
 
@@ -116,8 +164,8 @@ final class EconomyCalculator
                 continue;
             }
 
-            $profit['money'] -= EconomyRules::buildingMoneyUpkeep($building, $hasProject) * $count;
-            $profit[$resource] += $this->resourceProduction(
+            $upkeep = EconomyRules::buildingMoneyUpkeep($building, $hasProject) * $count;
+            $production = $this->resourceProduction(
                 $resource,
                 (float) $city->land,
                 $count,
@@ -125,10 +173,19 @@ final class EconomyCalculator
                 $hasProject,
                 $radiationSnapshot
             );
+            $profit['money'] -= $upkeep;
+            $profit[$resource] += $production;
+            $expenses['money'] += $upkeep;
+            $output[$resource] += $production;
         }
 
         $powerVector = $this->powerOperatingVector($nation, $city, (int) ceil((float) $city->infrastructure));
         $profit = $this->sumResourceBuffers($profit, $powerVector);
+        foreach ($powerVector as $resource => $amount) {
+            if ($amount < 0) {
+                $expenses[$resource] += -$amount;
+            }
+        }
         $powerCost = $prices->convert($powerVector);
 
         if ($powered) {
@@ -139,8 +196,8 @@ final class EconomyCalculator
                     continue;
                 }
 
-                $profit['money'] -= EconomyRules::buildingMoneyUpkeep($building, $hasProject) * $count;
-                $profit[$resource] += $this->resourceProduction(
+                $upkeep = EconomyRules::buildingMoneyUpkeep($building, $hasProject) * $count;
+                $production = $this->resourceProduction(
                     $resource,
                     (float) $city->land,
                     $count,
@@ -148,15 +205,22 @@ final class EconomyCalculator
                     $hasProject,
                     $radiationSnapshot
                 );
+                $profit['money'] -= $upkeep;
+                $profit[$resource] += $production;
+                $expenses['money'] += $upkeep;
+                $output[$resource] += $production;
 
                 foreach ($this->manufacturedInputs($resource, $count, $hasProject) as $input => $amount) {
                     $profit[$input] -= $amount;
+                    $expenses[$input] += $amount;
                 }
             }
 
             foreach (EconomyRules::SUPPORT_FIELDS as $building) {
-                $profit['money'] -= EconomyRules::buildingMoneyUpkeep($building, $hasProject)
+                $upkeep = EconomyRules::buildingMoneyUpkeep($building, $hasProject)
                     * max(0, (int) ($city->{$building} ?? 0));
+                $profit['money'] -= $upkeep;
+                $expenses['money'] += $upkeep;
             }
         }
 
@@ -166,17 +230,21 @@ final class EconomyCalculator
         $income = max(
             0.0,
             ((((($this->commerce($operatingCity, $operatingHasProject) * 0.02) * 0.725) + 0.725)
-                * $this->population($operatingCity, $operatingHasProject, $gameDate))
+                * $this->population($operatingCity, $operatingHasProject, $gameDate, $asOf))
                 * $this->newPlayerBonus((int) $nation->num_cities))
                 * ($this->grossModifier($nation, false) + max(0.0, (float) ($nation->treasure_income_modifier ?? 0.0)))
         );
         $profit['money'] += $income;
+        $output['money'] += $income;
 
-        $foodConsumption = $this->foodConsumption($operatingCity);
+        $foodConsumption = $this->foodConsumption($operatingCity, $asOf);
         $profit['food'] -= $foodConsumption;
+        $expenses['food'] += $foodConsumption;
 
         return [
             'resource_profit_per_day' => $profit,
+            'resource_output_per_day' => $output,
+            'resource_expense_per_day' => $expenses,
             'city_income_per_day' => $income,
             'power_cost_per_day' => $powerCost,
             'food_cost_per_day' => -($foodConsumption * $prices->priceFor('food', -$foodConsumption)),
@@ -331,11 +399,14 @@ final class EconomyCalculator
         );
     }
 
-    public function population(City $city, callable $hasProject, ?CarbonImmutable $gameDate = null): int
-    {
+    public function population(
+        City $city,
+        callable $hasProject,
+        ?CarbonImmutable $gameDate = null,
+        ?CarbonInterface $asOf = null,
+    ): int {
         $infraCents = (float) $city->infrastructure * 100;
-        $ageDays = max(1, Carbon::parse($city->date)->diffInDays(now()));
-        $ageBonus = 1 + log($ageDays) * 0.06666666666666667;
+        $ageBonus = $this->cityAgeBonus($city, $asOf);
         $diseaseDeaths = ($this->disease($city, $hasProject, $gameDate) * 0.01) * $infraCents;
         $crimeDeaths = max(($this->crime($city, $hasProject) * 0.1) * $infraCents - 25, 0);
 
@@ -476,11 +547,7 @@ final class EconomyCalculator
         }
 
         if ($resource === 'food') {
-            $radiation = $this->radiationModifier($continent, $radiationSnapshot);
-
-            if ($hasProject('fallout_shelter')) {
-                $radiation = max(0.0, min(1.0, 0.15 + (0.85 * $radiation)));
-            }
+            $radiation = $this->farmRadiationModifier($continent, $radiationSnapshot, $hasProject);
 
             $base = max(
                 0.0,
@@ -544,48 +611,36 @@ final class EconomyCalculator
     {
         $profit = EconomyRules::emptyResourceBuffer();
         $atWar = ((int) ($nation->offensive_wars_count ?? 0) + (int) ($nation->defensive_wars_count ?? 0)) > 0;
-        $factor = $this->militaryUpkeepFactor($nation);
         $military = $nation->military;
-        $research = fn (string $field): int => max(0, min(20, (int) ($nation->{$field} ?? 0)));
+        $hasProject = $this->projectChecker($nation);
+        $result = $this->militaryCostCalculator->calculate(
+            quantities: collect(MilitaryCostCalculator::UNITS)
+                ->mapWithKeys(fn (string $unit): array => [$unit => max(0, (int) ($military?->{$unit} ?? 0))])
+                ->all(),
+            researchLevels: [
+                'ground_cost' => max(0, min(20, (int) ($nation->ground_cost_research ?? 0))),
+                'ground_capacity' => max(0, min(20, (int) ($nation->ground_capacity_research ?? 0))),
+                'air_cost' => max(0, min(20, (int) ($nation->air_cost_research ?? 0))),
+                'air_capacity' => max(0, min(20, (int) ($nation->air_capacity_research ?? 0))),
+                'naval_cost' => max(0, min(20, (int) ($nation->naval_cost_research ?? 0))),
+                'naval_capacity' => max(0, min(20, (int) ($nation->naval_capacity_research ?? 0))),
+            ],
+            wartime: $atWar,
+            imperialism: $nation->domestic_policy === 'IMPERIALISM',
+            governmentSupportAgency: $hasProject('government_support_agency'),
+            bureauOfDomesticAffairs: $hasProject('bureau_of_domestic_affairs'),
+            prices: $prices,
+        );
+        $upkeep = $result->breakdowns['daily_upkeep'];
+        $profit['money'] -= $upkeep->money;
 
-        $soldiers = max(0, (int) ($military?->soldiers ?? 0));
-        $soldierMoney = ($atWar ? 1.875 : 1.25)
-            - ($research('ground_cost_research') * ($atWar ? 0.03 : 0.02))
-            - ($research('ground_capacity_research') * ($atWar ? 0.06 : 0.04));
-        $soldierFoodDenominator = ($atWar ? 500 : 750)
-            + ($research('ground_cost_research') * ($atWar ? 30 : 20));
-        $profit['money'] -= $soldiers * max(0.0, $soldierMoney) * $factor;
-        $profit['food'] -= $soldiers * (1 / max(1, $soldierFoodDenominator)) * $factor;
-
-        $tanks = max(0, (int) ($military?->tanks ?? 0));
-        $tankMoney = ($atWar ? 75.0 : 50.0)
-            - ($research('ground_cost_research') * ($atWar ? 1.5 : 1.0))
-            - ($research('ground_capacity_research') * ($atWar ? 3.0 : 2.0));
-        $profit['money'] -= $tanks * max(0.0, $tankMoney) * $factor;
-
-        $aircraft = max(0, (int) ($military?->aircraft ?? 0));
-        $aircraftMoney = ($atWar ? 1000.0 : 750.0)
-            - ($research('air_cost_research') * ($atWar ? 10.0 : 15.0))
-            - ($research('air_capacity_research') * ($atWar ? 20.0 : 30.0));
-        $profit['money'] -= $aircraft * max(0.0, $aircraftMoney) * $factor;
-
-        $ships = max(0, (int) ($military?->ships ?? 0));
-        $shipMoney = ($atWar ? 5000.0 : 3300.0)
-            - ($research('naval_cost_research') * ($atWar ? 50.0 : 30.0))
-            - ($research('naval_capacity_research') * ($atWar ? 100.0 : 60.0));
-        $profit['money'] -= $ships * max(0.0, $shipMoney) * $factor;
-
-        foreach ([
-            'missiles' => [$atWar ? 31500.0 : 21000.0, 1.0],
-            'nukes' => [$atWar ? 52500.0 : 35000.0, 1.0],
-            'spies' => [2400.0, 1.0],
-        ] as $unit => [$money, $multiplier]) {
-            $profit['money'] -= max(0, (int) ($military?->{$unit} ?? 0)) * $money * $multiplier * $factor;
+        foreach ($upkeep->resources as $resource => $amount) {
+            $profit[$resource] -= $amount;
         }
 
         return [
             'resource_profit_per_day' => $profit,
-            'military_upkeep_per_day' => $prices->convert($profit),
+            'military_upkeep_per_day' => -($upkeep->marketValue ?? 0.0),
         ];
     }
 
@@ -633,7 +688,10 @@ final class EconomyCalculator
             $attributes[$field] = 0;
         }
 
-        return new City($attributes);
+        $unpoweredCity = new City;
+        $unpoweredCity->setRawAttributes($attributes);
+
+        return $unpoweredCity;
     }
 
     private function grossModifier(Nation $nation, bool $noFood): float
@@ -660,35 +718,22 @@ final class EconomyCalculator
         return $modifier;
     }
 
-    private function militaryUpkeepFactor(Nation $nation): float
-    {
-        $hasProject = $this->projectChecker($nation);
-        $factor = 1.0;
-
-        if ($nation->domestic_policy === 'IMPERIALISM') {
-            $factor -= 0.05;
-
-            if ($hasProject('government_support_agency')) {
-                $factor -= 0.025;
-            }
-
-            if ($hasProject('bureau_of_domestic_affairs')) {
-                $factor -= 0.0125;
-            }
-        }
-
-        return max(0.0, $factor);
-    }
-
     private function newPlayerBonus(int $cityCount): float
     {
         return 1 + max(1 - (($cityCount - 1) * 0.05), 0);
     }
 
-    private function foodConsumption(City $city): float
+    private function cityAgeBonus(City $city, ?CarbonInterface $asOf = null): float
+    {
+        $ageDays = max(1, Carbon::parse($city->date)->diffInDays($asOf ?? now()));
+
+        return 1 + log($ageDays) * 0.06666666666666667;
+    }
+
+    private function foodConsumption(City $city, ?CarbonInterface $asOf = null): float
     {
         $basePopulation = (float) $city->infrastructure * 100;
-        $ageDays = max(1, Carbon::parse($city->date)->diffInDays(now()));
+        $ageDays = max(1, Carbon::parse($city->date)->diffInDays($asOf ?? now()));
 
         return (($basePopulation ** 2) / 125_000_000)
             + (($basePopulation * (1 + (log($ageDays) / 15))) - $basePopulation) / 850;
@@ -754,6 +799,18 @@ final class EconomyCalculator
         $radiationIndex = min(1000.0, max(0.0, $local + $globalAverage));
 
         return 1 - ($radiationIndex / 1000);
+    }
+
+    private function farmRadiationModifier(
+        ?string $continent,
+        ?RadiationSnapshot $snapshot,
+        callable $hasProject,
+    ): float {
+        $radiation = $this->radiationModifier($continent, $snapshot);
+
+        return $hasProject('fallout_shelter')
+            ? max(0.0, min(1.0, 0.15 + (0.85 * $radiation)))
+            : $radiation;
     }
 
     private function seasonModifier(?string $continent, ?RadiationSnapshot $snapshot): float

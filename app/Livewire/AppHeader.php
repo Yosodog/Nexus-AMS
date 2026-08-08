@@ -80,6 +80,12 @@ class AppHeader extends Component
                 'active' => request()->routeIs('user.dashboard'),
             ],
             [
+                'label' => 'Calculators',
+                'icon' => 'o-calculator',
+                'route' => route('calculators.index'),
+                'active' => request()->routeIs('calculators.*'),
+            ],
+            [
                 'label' => 'Finance',
                 'icon' => 'o-banknotes',
                 'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'lottery.*', 'loans.*'),

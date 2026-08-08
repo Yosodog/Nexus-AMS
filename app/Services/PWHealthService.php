@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Calculators\GamePurchaseCostCalculator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -16,6 +17,7 @@ final class PWHealthService
 
     public function __construct(
         private readonly QueryService $query,
+        private readonly GamePurchaseCostCalculator $purchaseCostCalculator,
     ) {}
 
     /**
@@ -99,70 +101,36 @@ final class PWHealthService
         bool $urban = false,
         bool $cce = false,
         bool $aec = false,
-        bool $gsa = false
+        bool $gsa = false,
+        bool $bda = false,
     ): float {
         $value = $this->calcBaseInfra($start, $end);
 
         $startingAmount = round($start, 2);
         $endingAmount = round($end, 2);
-        $difference = $endingAmount - $startingAmount;
 
-        if ($difference <= 0) {
+        if ($endingAmount <= $startingAmount) {
             return $value;
         }
 
-        $percentage = 1.0;
-        if ($cce) {
-            $percentage -= 0.05;
-        }
-        if ($aec) {
-            $percentage -= 0.05;
-        }
-        if ($gsa && $urban) {
-            $percentage -= 0.075;
-        } elseif ($urban) {
-            $percentage -= 0.05;
-        }
-
-        return $value * $percentage;
+        return $this->purchaseCostCalculator->infrastructure(
+            current: $startingAmount,
+            target: $endingAmount,
+            urbanization: $urban,
+            centerForCivilEngineering: $cce,
+            advancedEngineeringCorps: $aec,
+            governmentSupportAgency: $gsa,
+            bureauOfDomesticAffairs: $bda,
+        )->breakdowns['purchase']->money;
     }
 
     public function calcBaseInfra(float $start, float $end): float
     {
-        $value = 0.0;
-
-        $startingAmount = round($start, 2);
-        $endingAmount = round($end, 2);
-        $difference = $endingAmount - $startingAmount;
-
-        if ($difference == 0.0) {
-            return $value;
-        }
-
-        if ($difference < 0) {
-            return 150 * $difference;
-        }
-
-        if ($difference > 100 && fmod($difference, 100) === 0.0) {
-            $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * 100;
-
-            return $value + $costOfChunk + $this->calcBaseInfra($startingAmount + 100, $endingAmount);
-        }
-
-        if ($difference > 100 && fmod($difference, 100) !== 0.0) {
-            $remainder = fmod($difference, 100);
-            $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * $remainder;
-
-            return $value + $costOfChunk + $this->calcBaseInfra($startingAmount + $remainder, $endingAmount);
-        }
-
-        $costOfChunk = round($this->calculateInfrastructurePrice($startingAmount), 2) * $difference;
-
-        return $value + $costOfChunk;
+        return $this->purchaseCostCalculator->infrastructureBaseCost($start, $end);
     }
 
     public function calculateInfrastructurePrice(float $amount): float
     {
-        return (pow(abs($amount - 10), 2.2) / 710) + 300;
+        return $this->purchaseCostCalculator->infrastructureUnitPrice($amount);
     }
 }

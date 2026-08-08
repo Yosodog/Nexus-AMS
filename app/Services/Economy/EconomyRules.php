@@ -106,6 +106,41 @@ final class EconomyRules
         ...self::MILITARY_BUILDING_FIELDS,
     ];
 
+    /**
+     * Improvement purchase costs from Locutus commit 41c9fd0 (2026-08-06).
+     *
+     * @var array<string, array<string, float>>
+     */
+    public const BUILDING_PURCHASE_COSTS = [
+        'coal_power' => ['money' => 5_000.0],
+        'oil_power' => ['money' => 7_000.0],
+        'nuclear_power' => ['money' => 500_000.0, 'steel' => 100.0],
+        'wind_power' => ['money' => 30_000.0, 'aluminum' => 25.0],
+        'coal_mine' => ['money' => 1_000.0],
+        'oil_well' => ['money' => 1_500.0],
+        'uranium_mine' => ['money' => 25_000.0],
+        'lead_mine' => ['money' => 7_500.0],
+        'iron_mine' => ['money' => 9_500.0],
+        'bauxite_mine' => ['money' => 9_500.0],
+        'farm' => ['money' => 1_000.0],
+        'oil_refinery' => ['money' => 45_000.0],
+        'steel_mill' => ['money' => 45_000.0],
+        'aluminum_refinery' => ['money' => 30_000.0],
+        'munitions_factory' => ['money' => 35_000.0],
+        'subway' => ['money' => 250_000.0, 'steel' => 50.0, 'aluminum' => 25.0],
+        'shopping_mall' => ['money' => 45_000.0, 'steel' => 20.0, 'aluminum' => 50.0],
+        'stadium' => ['money' => 100_000.0, 'steel' => 40.0, 'aluminum' => 50.0],
+        'bank' => ['money' => 15_000.0, 'steel' => 5.0, 'aluminum' => 10.0],
+        'supermarket' => ['money' => 5_000.0],
+        'police_station' => ['money' => 75_000.0, 'steel' => 20.0],
+        'hospital' => ['money' => 100_000.0, 'aluminum' => 25.0],
+        'recycling_center' => ['money' => 125_000.0],
+        'barracks' => ['money' => 3_000.0],
+        'factory' => ['money' => 15_000.0, 'aluminum' => 5.0],
+        'hangar' => ['money' => 100_000.0, 'steel' => 10.0],
+        'drydock' => ['money' => 250_000.0, 'aluminum' => 20.0],
+    ];
+
     private function __construct() {}
 
     public static function emptyResourceBuffer(): array
