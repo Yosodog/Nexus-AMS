@@ -316,6 +316,7 @@ class DiscordQueueApiTest extends TestCase
             'worker_id' => (string) Str::uuid(),
             'claim_request_id' => (string) Str::uuid(),
         ]);
+        $expiredToken = $expired->lease_token;
         $legacy = $this->createCommand(attributes: [
             'status' => DiscordQueueStatus::Processing,
             'attempts' => 1,
@@ -327,7 +328,20 @@ class DiscordQueueApiTest extends TestCase
 
         $this->assertSame(DiscordQueueStatus::Pending, $expired->fresh()->status);
         $this->assertSame('lease_expired', $expired->fresh()->last_error['code']);
+        $this->assertNull($expired->fresh()->lease_token);
         $this->assertSame(DiscordQueueStatus::Processing, $legacy->fresh()->status);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson("/api/v1/discord/queue/{$expired->id}/status", [
+                'lease_token' => $expiredToken,
+                'status' => DiscordQueueStatus::Failed->value,
+                'result' => [
+                    'delivery' => 'quarantined',
+                    'retryable' => false,
+                ],
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error', 'lease_conflict');
     }
 
     public function test_expired_lease_token_cannot_be_renewed_or_acknowledged(): void

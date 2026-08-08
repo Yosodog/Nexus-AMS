@@ -386,6 +386,7 @@ class DiscordQueueLeaseService
                         ? Carbon::now()->addMinutes(max(1, $command->attempts))
                         : $command->available_at,
                     'leased_until' => null,
+                    'lease_token' => null,
                     'worker_id' => null,
                     'last_error' => [
                         'code' => 'lease_expired',

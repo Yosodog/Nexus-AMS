@@ -61,10 +61,16 @@ class AlertDeliveryService
                     $scope->orWhere('alliance_id', $occurrence->alliance_id);
                 }
             })
-            ->with('destination')
+            ->with(['destination', 'createdBy.roles.permissions'])
             ->get();
 
         foreach ($routes as $route) {
+            if (! $this->routeIsAuthorized($route, $occurrence)) {
+                $deliveries->push($this->createUnauthorizedRouteDelivery($occurrence, $route));
+
+                continue;
+            }
+
             if (! $this->routeMatches($route, $occurrence)) {
                 continue;
             }
@@ -76,6 +82,38 @@ class AlertDeliveryService
         }
 
         return $deliveries;
+    }
+
+    private function routeIsAuthorized(AlertRoute $route, AlertOccurrence $occurrence): bool
+    {
+        $permission = $this->catalog->get($occurrence->event_key)->requiredPermission;
+        if ($permission === null) {
+            return true;
+        }
+
+        $creator = $route->createdBy;
+
+        return $creator !== null
+            && ! $creator->disabled
+            && $creator->hasPermission($permission);
+    }
+
+    private function createUnauthorizedRouteDelivery(
+        AlertOccurrence $occurrence,
+        AlertRoute $route,
+    ): AlertDelivery {
+        return AlertDelivery::query()->firstOrCreate(
+            ['match_key' => $this->matchKey($occurrence, null, $route->id, 'authorization:route:'.$route->id)],
+            [
+                'alert_occurrence_id' => $occurrence->id,
+                'alert_route_id' => $route->id,
+                'alert_destination_id' => $route->alert_destination_id,
+                'destination_kind' => $route->destination->kind,
+                'status' => AlertDeliveryStatus::Quarantined,
+                'reason_code' => 'route_permission_missing',
+                'failed_at' => now(),
+            ],
+        );
     }
 
     private function createWebDelivery(

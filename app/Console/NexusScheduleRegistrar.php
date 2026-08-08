@@ -6,13 +6,16 @@ use App\Console\Commands\DrawWeeklyLottery;
 use App\Console\Commands\ProcessDeposits;
 use App\Enums\ProcessHeartbeatRole;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
+use App\Jobs\DispatchScheduledAlertBatchesJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
 use App\Jobs\ExpireFederationResourcesJob;
+use App\Jobs\PruneAlertHistoryJob;
 use App\Jobs\PruneFederationMessagesJob;
 use App\Jobs\ReconcileBlockadeReliefRequests;
 use App\Jobs\ReconcileFederationLinksJob;
 use App\Jobs\ReconcileMilcomLifecycleJob;
 use App\Jobs\RecordQueueHeartbeat;
+use App\Jobs\RollupAlertMetricsJob;
 use App\Jobs\SendAuditRemindersJob;
 use App\Jobs\SweepFederationOutboxJob;
 use App\Services\ProcessHeartbeatRecorder;
@@ -213,6 +216,20 @@ final readonly class NexusScheduleRegistrar
         $schedule->job(new EvaluateAlertSubscriptionsJob, 'sync')
             ->hourlyAt(25)
             ->withoutOverlapping(55)
+            ->onOneServer();
+        $schedule->job(new DispatchScheduledAlertBatchesJob, 'default')
+            ->everyMinute()
+            ->withoutOverlapping(1)
+            ->onOneServer();
+        $schedule->job(new RollupAlertMetricsJob(now('UTC')->subDay()->toDateString()), 'default')
+            ->dailyAt('00:20')
+            ->timezone('UTC')
+            ->withoutOverlapping(60)
+            ->onOneServer();
+        $schedule->job(new PruneAlertHistoryJob, 'default')
+            ->dailyAt('01:20')
+            ->timezone('UTC')
+            ->withoutOverlapping(120)
             ->onOneServer();
         $schedule->job(new ReconcileBlockadeReliefRequests, 'sync')
             ->hourlyAt(35)

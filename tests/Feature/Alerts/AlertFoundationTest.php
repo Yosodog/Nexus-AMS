@@ -29,11 +29,12 @@ use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
 class AlertFoundationTest extends TestCase
 {
-    use RefreshDatabase;
+    use BuildsTestUsers, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -88,6 +89,7 @@ class AlertFoundationTest extends TestCase
 
     public function test_occurrence_deduplication_creates_web_activity_and_a_canonical_discord_intent(): void
     {
+        $routeOwner = $this->grantPermissions(User::factory()->create(), ['manage-war-room']);
         $destination = AlertDestination::factory()->create([
             'kind' => AlertDestinationKind::DiscordChannel,
             'guild_id' => '123456789012345678',
@@ -97,6 +99,7 @@ class AlertFoundationTest extends TestCase
         AlertRoute::factory()->create([
             'alert_destination_id' => $destination->id,
             'event_key' => 'milcom.incident.detected',
+            'created_by_user_id' => $routeOwner->id,
         ]);
 
         $arguments = [
@@ -234,6 +237,7 @@ class AlertFoundationTest extends TestCase
 
     public function test_delivery_receipt_records_provider_state_and_destination_health(): void
     {
+        $routeOwner = $this->grantPermissions(User::factory()->create(), ['manage-war-room']);
         $destination = AlertDestination::factory()->create([
             'kind' => AlertDestinationKind::DiscordChannel,
             'guild_id' => '123456789012345678',
@@ -242,6 +246,7 @@ class AlertFoundationTest extends TestCase
         AlertRoute::factory()->create([
             'alert_destination_id' => $destination->id,
             'event_key' => 'milcom.discord_dispatch.failed',
+            'created_by_user_id' => $routeOwner->id,
         ]);
         app(AlertOccurrenceRecorder::class)->record(
             eventKey: 'milcom.discord_dispatch.failed',

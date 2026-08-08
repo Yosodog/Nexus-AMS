@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Discord\AlertRendererManifestController as DiscordAlertRendererManifestController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
@@ -24,6 +25,11 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/queue/{command}/lease', [DiscordQueueController::class, 'lease']);
     Route::patch('/queue/{command}/checkpoint', [DiscordQueueController::class, 'checkpoint']);
     Route::post('/queue/{command}/status', [DiscordQueueController::class, 'update']);
+    Route::get('/alerts/manifest', DiscordAlertRendererManifestController::class)
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':alerts.manifest',
+        ]);
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
