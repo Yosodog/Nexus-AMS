@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\MMRConfig;
 use App\Services\PWHelperService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -16,6 +17,24 @@ class UpdateMMRAssistantPreferencesRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user() !== null;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $nationId = $this->user()?->nation_id;
+        $previous = $nationId === null
+            ? null
+            : MMRConfig::query()->where('nation_id', $nationId)->first();
+
+        $this->mergeIfMissing(
+            collect(PWHelperService::resources(false))
+                ->mapWithKeys(function (string $resource) use ($previous): array {
+                    $field = "{$resource}_pct";
+
+                    return [$field => $previous?->getAttribute($field) ?? 0];
+                })
+                ->all()
+        );
     }
 
     /**

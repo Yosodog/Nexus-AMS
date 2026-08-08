@@ -201,6 +201,52 @@ class MMRAssistantAutoCoverageTest extends TestCase
         $this->assertSame(25.0, $plan['lines']['coal']['qty']);
     }
 
+    public function test_manual_plan_never_spends_more_than_available_cash_after_rounding(): void
+    {
+        [$nation] = $this->createConfiguredNation([
+            'auto_cover_resource_deficits' => false,
+            'coal_pct' => 50,
+            'oil_pct' => 50,
+        ]);
+        $this->enableResource('coal');
+        $this->enableResource('oil');
+        $this->mockPrices(['coal' => 1, 'oil' => 1]);
+
+        $plan = app(MMRAssistantService::class)->plan($nation, 0.01);
+
+        $this->assertSame(0.01, $plan['total_spend']);
+        $this->assertSame(
+            0.01,
+            round(collect($plan['lines'])->sum('spend'), 2),
+        );
+    }
+
+    public function test_direct_deposit_refuses_stored_manual_allocations_over_one_hundred_percent(): void
+    {
+        Event::fake();
+        SettingService::setDirectDepositId(555);
+        DirectDepositTaxBracket::query()->create([
+            'city_number' => 0,
+            ...array_fill_keys(DirectDepositTaxBracket::rateFields(), 10),
+        ]);
+        [$nation, $account] = $this->createConfiguredNation([
+            'auto_cover_resource_deficits' => false,
+            'coal_pct' => 100,
+            'oil_pct' => 100,
+        ]);
+        $this->enableResource('coal');
+        $this->enableResource('oil');
+        $this->mockPrices(['coal' => 10, 'oil' => 20]);
+
+        $taxRecord = app(DirectDepositService::class)->process($this->bankRecord($nation));
+
+        $this->assertSame(100.0, (float) $taxRecord->money);
+        $this->assertSame(900.0, (float) $account->fresh()->money);
+        $this->assertSame(0.0, (float) $account->fresh()->coal);
+        $this->assertSame(0.0, (float) $account->fresh()->oil);
+        $this->assertDatabaseCount('mmr_assistant_purchases', 0);
+    }
+
     /**
      * @param  array<string, mixed>  $configOverrides
      * @return array{Nation, Account}

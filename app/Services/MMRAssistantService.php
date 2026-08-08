@@ -15,6 +15,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager as DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 final readonly class MMRAssistantService
 {
@@ -121,7 +122,26 @@ final readonly class MMRAssistantService
         array $pricesWithSurcharge,
         array $result,
     ): array {
+        $allocationTotal = collect($allResources)->sum(
+            fn (string $resource): float => max(
+                0.0,
+                (float) ($config->getAttribute("{$resource}_pct") ?? 0.0)
+            )
+        );
+
+        if ($allocationTotal > 100.0) {
+            Log::warning('MMR Assistant: refusing manual plan with allocation over 100%.', [
+                'nation_id' => $config->nation_id,
+                'allocation_total' => $allocationTotal,
+            ]);
+
+            $result['status'] = 'invalid-allocation';
+
+            return $result;
+        }
+
         $totalSpend = 0.0;
+        $remainingCash = round($afterTaxCash, 2);
         $lines = [];
 
         foreach ($allResources as $res) {
@@ -144,7 +164,10 @@ final readonly class MMRAssistantService
                 continue;
             }
 
-            $spend = round($afterTaxCash * ($pctWhole / 100.0), 2);
+            $spend = min(
+                round($afterTaxCash * ($pctWhole / 100.0), 2),
+                $remainingCash,
+            );
             $qty = $price > 0 ? round($spend / $price, 2) : 0.0;
 
             $lines[$res] = [
@@ -159,6 +182,7 @@ final readonly class MMRAssistantService
             ];
 
             $totalSpend += $spend;
+            $remainingCash = max(0.0, round($remainingCash - $spend, 2));
         }
 
         $result['total_spend'] = round($totalSpend, 2);

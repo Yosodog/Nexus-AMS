@@ -90,6 +90,32 @@ class MMRAssistantAutoCoverageSettingsTest extends TestCase
         ]);
     }
 
+    public function test_partial_update_cannot_push_preserved_manual_values_over_one_hundred_percent(): void
+    {
+        [$user, $nation, $account] = $this->createMemberWithAccount();
+        MMRConfig::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'enabled' => true,
+            'coal_pct' => 100,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('accounts'))
+            ->post(route('mmra.update'), [
+                'enabled' => '1',
+                'account_id' => $account->id,
+                'oil_pct' => '100',
+            ])
+            ->assertRedirect(route('accounts'))
+            ->assertSessionHasErrors('allocation_total');
+
+        $config = MMRConfig::query()->where('nation_id', $nation->id)->firstOrFail();
+
+        $this->assertSame(100.0, $config->coal_pct);
+        $this->assertSame(0.0, $config->oil_pct);
+    }
+
     public function test_member_cannot_select_another_nations_account(): void
     {
         [$user, $nation] = $this->createMemberWithAccount();

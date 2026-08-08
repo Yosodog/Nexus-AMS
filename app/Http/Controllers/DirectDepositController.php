@@ -86,14 +86,10 @@ class DirectDepositController extends Controller
             : ($previous?->auto_cover_resource_deficits ?? false);
 
         $resourcePercentages = collect(PWHelperService::resources(false))
-            ->mapWithKeys(function (string $resource) use ($data, $previous): array {
+            ->mapWithKeys(function (string $resource) use ($data): array {
                 $field = "{$resource}_pct";
 
-                return [
-                    $field => array_key_exists($field, $data)
-                        ? (float) $data[$field]
-                        : (float) ($previous?->getAttribute($field) ?? 0),
-                ];
+                return [$field => (float) $data[$field]];
             })
             ->all();
 
