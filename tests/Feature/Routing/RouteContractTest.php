@@ -16,12 +16,19 @@ class RouteContractTest extends TestCase
 
     public function createApplication(): Application
     {
-        $this->setTelescopeEnabledEnvironment('true');
+        $telescopeEnabled = $this->environmentValue('TELESCOPE_ENABLED');
+        $routesCache = $this->environmentValue('APP_ROUTES_CACHE');
+        $this->setEnvironmentValue('TELESCOPE_ENABLED', 'true');
+        $this->setEnvironmentValue(
+            'APP_ROUTES_CACHE',
+            'storage/framework/cache/route-contract-'.getmypid().'.php',
+        );
 
         try {
             return parent::createApplication();
         } finally {
-            $this->setTelescopeEnabledEnvironment('false');
+            $this->restoreEnvironmentValue('TELESCOPE_ENABLED', $telescopeEnabled);
+            $this->restoreEnvironmentValue('APP_ROUTES_CACHE', $routesCache);
         }
     }
 
@@ -99,10 +106,35 @@ class RouteContractTest extends TestCase
         return $uri;
     }
 
-    private function setTelescopeEnabledEnvironment(string $value): void
+    private function environmentValue(string $key): string|false
     {
-        putenv("TELESCOPE_ENABLED={$value}");
-        $_ENV['TELESCOPE_ENABLED'] = $value;
-        $_SERVER['TELESCOPE_ENABLED'] = $value;
+        if (array_key_exists($key, $_ENV)) {
+            return (string) $_ENV[$key];
+        }
+
+        if (array_key_exists($key, $_SERVER)) {
+            return (string) $_SERVER[$key];
+        }
+
+        return getenv($key);
+    }
+
+    private function setEnvironmentValue(string $key, string $value): void
+    {
+        putenv("{$key}={$value}");
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+
+    private function restoreEnvironmentValue(string $key, string|false $value): void
+    {
+        if ($value === false) {
+            putenv($key);
+            unset($_ENV[$key], $_SERVER[$key]);
+
+            return;
+        }
+
+        $this->setEnvironmentValue($key, $value);
     }
 }
