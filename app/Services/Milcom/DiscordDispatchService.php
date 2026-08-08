@@ -2,6 +2,7 @@
 
 namespace App\Services\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\DispatchStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
@@ -22,6 +23,7 @@ class DiscordDispatchService
     public function __construct(
         private readonly DiscordQueueService $discordQueue,
         private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     /**
@@ -41,6 +43,7 @@ class DiscordDispatchService
         ]);
 
         $operation = $objective->operation;
+        $this->federationGuard->assertMutable($operation, 'discord_dispatch');
         $forumId = trim((string) ($operation->discord_forum_id
             ?: config('milcom.discord.forum_id')
             ?: SettingService::getDiscordWarRoomForumId()));
@@ -117,6 +120,7 @@ class DiscordDispatchService
     public function queueArchiveLocked(MilcomObjective $objective): ?MilcomDispatch
     {
         $objective->loadMissing('operation');
+        $this->federationGuard->assertMutable($objective->operation, 'discord_archive');
 
         if (trim((string) $objective->discord_channel_id) === '') {
             return null;
@@ -180,6 +184,9 @@ class DiscordDispatchService
      */
     public function retryLocked(MilcomObjective $objective, int $actorUserId): MilcomDispatch
     {
+        $objective->loadMissing('operation');
+        $this->federationGuard->assertMutable($objective->operation, 'discord_retry');
+
         if (! $objective->status->isOpen()) {
             throw ValidationException::withMessages([
                 'dispatch' => 'You cannot retry a room for a finished target.',

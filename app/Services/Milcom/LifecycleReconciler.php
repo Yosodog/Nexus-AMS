@@ -81,6 +81,11 @@ class LifecycleReconciler
 
             $objective = MilcomObjective::query()->lockForUpdate()->findOrFail($assignment->objective_id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($objective->operation_id);
+
+            if ($operation->federation_action_required) {
+                return;
+            }
+
             $isEnded = $war->end_date !== null || (int) $war->turns_left <= 0;
 
             if (! $isEnded && $assignment->status !== AssignmentStatus::Engaged) {
@@ -177,7 +182,7 @@ class LifecycleReconciler
 
         $assignment = MilcomAssignment::query()
             ->where('declared_war_id', $warId)
-            ->with('objective')
+            ->with('objective.operation')
             ->first();
 
         if ($assignment === null) {
@@ -293,6 +298,11 @@ class LifecycleReconciler
         foreach ($objectives as $objective) {
             $reopenedIncidentIds = DB::transaction(function () use ($objective): array {
                 $locked = MilcomObjective::query()->lockForUpdate()->findOrFail($objective->id);
+                $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($locked->operation_id);
+
+                if ($operation->federation_action_required) {
+                    return [];
+                }
 
                 if (! $locked->status->isOpen() || $locked->engaged_at !== null) {
                     return [];
@@ -413,6 +423,10 @@ class LifecycleReconciler
 
     private function completeOperationIfReconciled(MilcomOperation $operation): void
     {
+        if ($operation->federation_action_required) {
+            return;
+        }
+
         $hasOpenObjectives = $operation->objectives()->open()->exists();
 
         if ($hasOpenObjectives) {
@@ -558,6 +572,10 @@ class LifecycleReconciler
             ->keyBy('id');
 
         foreach ($dispatches as $dispatch) {
+            if ($dispatch->objective?->operation?->federation_action_required) {
+                continue;
+            }
+
             $command = $commands[$dispatch->queue_id] ?? null;
 
             if ($command === null) {
@@ -629,6 +647,11 @@ class LifecycleReconciler
         foreach ($objectives as $objective) {
             DB::transaction(function () use ($objective): void {
                 $locked = MilcomObjective::query()->lockForUpdate()->findOrFail($objective->id);
+                $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($locked->operation_id);
+
+                if ($operation->federation_action_required) {
+                    return;
+                }
 
                 if (! in_array($locked->status, [
                     ObjectiveStatus::Completed,

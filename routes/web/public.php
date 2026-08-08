@@ -4,10 +4,13 @@ use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\Testing\BrowserTestController;
+use App\Http\Controllers\WellKnownFederationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/.well-known/nexus-federation', WellKnownFederationController::class)
+    ->name('federation.discovery');
 
 Route::get('/', HomeController::class)->name('home');
 

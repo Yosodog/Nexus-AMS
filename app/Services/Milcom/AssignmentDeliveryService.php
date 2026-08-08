@@ -2,6 +2,7 @@
 
 namespace App\Services\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
@@ -21,6 +22,7 @@ class AssignmentDeliveryService
     public function __construct(
         private readonly PWMessageService $messages,
         private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     /** @return array{queued:int, already_queued:int, already_sent:int} */
@@ -31,6 +33,7 @@ class AssignmentDeliveryService
     ): array {
         $result = DB::transaction(function () use ($operation, $generationVersion, $actorUserId): array {
             $locked = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($locked, 'in_game_delivery_queue');
 
             if ((int) $locked->generation_version !== $generationVersion) {
                 throw new StaleGenerationException($generationVersion, (int) $locked->generation_version);
@@ -154,6 +157,9 @@ class AssignmentDeliveryService
             'attempts' => (int) $delivery->attempts + 1,
             'last_error' => null,
         ])->save();
+
+        $operation = MilcomOperation::query()->findOrFail($delivery->operation_id);
+        $this->federationGuard->assertMutable($operation, 'in_game_delivery_send');
 
         if (! $this->messages->sendMessage(
             (int) $payload['nation_id'],

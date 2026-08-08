@@ -21,6 +21,9 @@ class MilcomOperation extends Model
             'status' => OperationStatus::class,
             'metadata' => 'array',
             'failure_details' => 'array',
+            'federation_action_required' => 'boolean',
+            'federation_held_at' => 'datetime',
+            'federation_detached_at' => 'datetime',
             'deadline_at' => 'datetime',
             'generated_at' => 'datetime',
             'approved_at' => 'datetime',
@@ -79,6 +82,11 @@ class MilcomOperation extends Model
     public function events(): HasMany
     {
         return $this->hasMany(MilcomEvent::class, 'operation_id');
+    }
+
+    public function federationReceivedVersions(): HasMany
+    {
+        return $this->hasMany(FederationReceivedVersion::class, 'imported_operation_id');
     }
 
     public function scopePlans(Builder $query): Builder

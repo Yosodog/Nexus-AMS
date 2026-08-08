@@ -2,6 +2,7 @@
 
 namespace App\Services\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\IncidentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
@@ -25,6 +26,7 @@ class OperationService
     public function __construct(
         private readonly MilcomEventRecorder $events,
         private readonly DiscordDispatchService $discord,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     /**
@@ -110,6 +112,7 @@ class OperationService
             $priorityOverrides,
         ): MilcomOperation {
             $locked = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($locked, 'scope_edit');
             $this->assertGeneration($locked, $generationVersion);
 
             if ($locked->type !== OperationType::Plan) {
@@ -282,6 +285,7 @@ class OperationService
         return DB::transaction(function () use ($objective, $generationVersion, $actorUserId, $changes): MilcomObjective {
             $lockedObjective = MilcomObjective::query()->lockForUpdate()->findOrFail($objective->id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($lockedObjective->operation_id);
+            $this->federationGuard->assertMutable($operation, 'objective_edit');
             $this->assertGeneration($operation, $generationVersion);
 
             if (in_array($lockedObjective->status, [
@@ -348,6 +352,7 @@ class OperationService
     {
         return DB::transaction(function () use ($operation, $actorUserId): MilcomOperation {
             $locked = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($locked, 'archive');
 
             if ($locked->status === OperationStatus::Archived) {
                 return $locked;
@@ -386,6 +391,7 @@ class OperationService
     {
         return DB::transaction(function () use ($operation, $actorUserId): MilcomOperation {
             $locked = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($locked, 'activate');
 
             if ($locked->status === OperationStatus::Active) {
                 return $locked;
@@ -494,6 +500,7 @@ class OperationService
     {
         return DB::transaction(function () use ($operation, $actorUserId): MilcomOperation {
             $locked = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($locked, 'complete');
 
             if (in_array($locked->status, [OperationStatus::Completed, OperationStatus::Archived], true)) {
                 return $locked;
@@ -566,6 +573,7 @@ class OperationService
         ): MilcomObjective {
             $locked = MilcomObjective::query()->lockForUpdate()->findOrFail($objective->id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($locked->operation_id);
+            $this->federationGuard->assertMutable($operation, 'objective_cancel');
             $this->assertGeneration($operation, $generationVersion);
 
             if (in_array($locked->status, [
@@ -646,7 +654,11 @@ class OperationService
     public function clone(MilcomOperation $operation, int $creatorUserId): MilcomOperation
     {
         return DB::transaction(function () use ($operation, $creatorUserId): MilcomOperation {
-            $source = $operation->load(['alliances', 'nations', 'objectives']);
+            $source = MilcomOperation::query()
+                ->with(['alliances', 'nations', 'objectives'])
+                ->lockForUpdate()
+                ->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($source, 'clone');
             $sourceMetadata = $source->metadata ?? [];
             $seriesRootId = (int) ($sourceMetadata['series_root_id'] ?? $source->id);
             $waveNumber = max(1, (int) ($sourceMetadata['wave'] ?? 1));

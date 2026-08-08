@@ -2,6 +2,7 @@
 
 namespace App\Services\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\EligibilityEvaluator;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
@@ -29,6 +30,7 @@ class ApprovalService
         private readonly FixedDoctrineScorer $scorer,
         private readonly DiscordDispatchService $discord,
         private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     /**
@@ -94,6 +96,7 @@ class ApprovalService
                 ->lockForUpdate()
                 ->findOrFail($objective->id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($lockedObjective->operation_id);
+            $this->federationGuard->assertMutable($operation, 'assignment_change');
 
             if ((int) $operation->generation_version !== $generationVersion) {
                 throw new StaleGenerationException($generationVersion, (int) $operation->generation_version);
@@ -265,6 +268,7 @@ class ApprovalService
             $locked = MilcomAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
             $objective = MilcomObjective::query()->lockForUpdate()->findOrFail($locked->objective_id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($objective->operation_id);
+            $this->federationGuard->assertMutable($operation, 'assignment_release');
 
             if ((int) $operation->generation_version !== $generationVersion) {
                 throw new StaleGenerationException($generationVersion, (int) $operation->generation_version);
@@ -361,6 +365,7 @@ class ApprovalService
                 ->lockForUpdate()
                 ->findOrFail($objective->id);
             $operation = MilcomOperation::query()->lockForUpdate()->findOrFail($lockedObjective->operation_id);
+            $this->federationGuard->assertMutable($operation, $dispatch ? 'dispatch' : 'approve');
 
             if ((int) $operation->generation_version !== $generationVersion) {
                 throw new StaleGenerationException($generationVersion, (int) $operation->generation_version);

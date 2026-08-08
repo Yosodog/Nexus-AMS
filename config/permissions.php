@@ -55,4 +55,11 @@ return [
     'coordinate-operations',
     'manage-operations',
     'view-milcom-operations',
+    'view-federation',
+    'manage-federation',
+    'manage-coalitions',
+    'publish-federated-war-plans',
+    'review-federated-war-plans',
+    'import-federated-war-plans',
+    'view-federation-diagnostics',
 ];

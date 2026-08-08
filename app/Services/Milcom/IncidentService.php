@@ -154,6 +154,7 @@ class IncidentService
             $objective = MilcomObjective::query()
                 ->where('target_nation_id', $aggressorNationId)
                 ->where('open_key', MilcomObjective::OPEN_KEY_VALUE)
+                ->whereHas('operation', fn ($query) => $query->where('federation_action_required', false))
                 ->lockForUpdate()
                 ->first();
             $created = false;
@@ -251,6 +252,7 @@ class IncidentService
             ->where('target_nation_id', $aggressorNationId)
             ->whereHas('operation', fn ($query) => $query
                 ->where('type', OperationType::Plan->value)
+                ->where('federation_action_required', false)
                 ->whereIn('status', [
                     OperationStatus::Dispatching->value,
                     OperationStatus::Active->value,

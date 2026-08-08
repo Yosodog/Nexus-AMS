@@ -2,6 +2,7 @@
 
 namespace App\Services\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Allocation\AllocationObjective;
 use App\Domain\Milcom\Allocation\CandidateEdge;
 use App\Domain\Milcom\Allocation\CandidatePool;
@@ -45,6 +46,7 @@ class RecommendationEngine
         private readonly ScarcityFirstAllocator $allocator,
         private readonly MilcomGameRules $rules,
         private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     public function queue(
@@ -55,6 +57,7 @@ class RecommendationEngine
     ): MilcomRecommendationRun {
         $run = DB::transaction(function () use ($operation, $objective, $trigger, $actorUserId): MilcomRecommendationRun {
             $lockedOperation = MilcomOperation::query()->lockForUpdate()->findOrFail($operation->id);
+            $this->federationGuard->assertMutable($lockedOperation, 'recommendation_queue');
 
             MilcomRecommendationRun::query()
                 ->where('operation_id', $lockedOperation->id)
@@ -141,6 +144,12 @@ class RecommendationEngine
             }
 
             $operation = $run->operation()->with(['alliances', 'nations'])->firstOrFail();
+
+            if ($operation->federation_action_required) {
+                $this->supersede($run);
+
+                return;
+            }
             $queueDelayMs = $run->created_at?->diffInMilliseconds(now()) ?? 0;
 
             if ($operation->type === OperationType::Counter && $queueDelayMs > 2_000) {
@@ -288,7 +297,8 @@ class RecommendationEngine
                     ->lockForUpdate()
                     ->findOrFail($run->id);
 
-                if ($freshRun->status === RecommendationRunStatus::Superseded
+                if ($lockedOperation->federation_action_required
+                    || $freshRun->status === RecommendationRunStatus::Superseded
                     || (int) $freshRun->generation_version !== (int) $lockedOperation->generation_version
                     || $lockedOperation->status->isTerminal()) {
                     if ($freshRun->status !== RecommendationRunStatus::Superseded) {
@@ -352,6 +362,18 @@ class RecommendationEngine
                 }
             }
         } catch (Throwable $exception) {
+            $heldOperation = MilcomOperation::query()->find($run->operation_id);
+
+            if ($heldOperation?->federation_action_required) {
+                MilcomRecommendationRun::query()->whereKey($run->id)->update([
+                    'status' => RecommendationRunStatus::Superseded->value,
+                    'finished_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return;
+            }
+
             if (MilcomRecommendationRun::query()->whereKey($run->id)->value('status')
                 === RecommendationRunStatus::Superseded->value) {
                 return;
@@ -1216,7 +1238,8 @@ class RecommendationEngine
 
         if ($freshRun->status === RecommendationRunStatus::Running
             && (int) $freshRun->generation_version === (int) $operation->generation_version
-            && ! $operation->status->isTerminal()) {
+            && ! $operation->status->isTerminal()
+            && ! $operation->federation_action_required) {
             return true;
         }
 

@@ -7,6 +7,11 @@ use App\Actions\Fortify\TwoFactorLoginResponse;
 use App\Broadcasting\PWMessageChannel;
 use App\Contracts\BootstrapTokenIntrospector;
 use App\Contracts\TenantCallbackTransport;
+use App\Domain\Federation\Contracts\DnsResolver;
+use App\Domain\Federation\Contracts\FederationTransport;
+use App\Domain\Federation\Services\FederationOperationGuard;
+use App\Domain\Federation\Transport\DirectHttpTransport;
+use App\Domain\Federation\Transport\NativeDnsResolver;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Logs\CronLog;
 use App\Logs\SubLog;
@@ -74,6 +79,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
         $this->app->bind(BootstrapTokenIntrospector::class, HttpBootstrapTokenIntrospector::class);
         $this->app->bind(TenantCallbackTransport::class, HttpTenantCallbackTransport::class);
+        $this->app->bind(DnsResolver::class, NativeDnsResolver::class);
+        $this->app->bind(FederationTransport::class, DirectHttpTransport::class);
+        $this->app->singleton(FederationOperationGuard::class);
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
             $app->make(ApplicationWorkQueueSource::class),
@@ -183,6 +191,24 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(10)->by('user:'.($request->user()?->id ?? $request->ip())),
                 Limit::perMinute(30)->by('ip:'.$request->ip()),
+            ];
+        });
+
+        RateLimiter::for('federation-handshakes', function (Request $request) {
+            return [
+                Limit::perMinute((int) config('federation.rate_limits.handshake_ip_per_minute', 10))
+                    ->by('federation:handshake:ip:'.$request->ip()),
+                Limit::perMinute((int) config('federation.rate_limits.global_per_minute', 120))
+                    ->by('federation:handshake:global'),
+            ];
+        });
+
+        RateLimiter::for('federation-ingress', function (Request $request) {
+            return [
+                Limit::perMinute((int) config('federation.rate_limits.ip_per_minute', 30))
+                    ->by('federation:ingress:ip:'.$request->ip()),
+                Limit::perMinute((int) config('federation.rate_limits.global_per_minute', 120))
+                    ->by('federation:ingress:global'),
             ];
         });
 

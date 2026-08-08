@@ -10,6 +10,7 @@ use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
+use App\Http\Middleware\RejectFederationHeldOperation;
 use App\Http\Middleware\RequireMilcomV2;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,7 @@ Route::middleware([
     AdminMiddleware::class,
     'can:manage-war-room',
     RequireMilcomV2::class,
+    RejectFederationHeldOperation::class,
 ])->prefix('v1/milcom')->group(function () {
     Route::get('/dashboard', [MilcomReadController::class, 'dashboard']);
     Route::get('/alliances', [MilcomReadController::class, 'alliances']);
