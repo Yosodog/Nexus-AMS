@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,6 +16,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedInteger('cycle_id');
             $table->foreignId('nation_id');
+            WorldReference::indexInHosted($table, 'nation_id');
             $table->unsignedInteger('city_count');
             $table->foreignId('tier_id');
             $table->decimal('target_infrastructure', 8, 2);

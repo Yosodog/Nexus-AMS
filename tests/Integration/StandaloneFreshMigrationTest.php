@@ -25,7 +25,7 @@ class StandaloneFreshMigrationTest extends TestCase
 
     public function test_fresh_standalone_migration_requires_no_provider_state(): void
     {
-        $this->artisan('migrate:fresh', ['--force' => true])->assertSuccessful();
+        $this->artisan('migrate:fresh', ['--drop-views' => true, '--force' => true])->assertSuccessful();
 
         $this->assertTrue(Schema::hasTable('nations'));
         $this->assertTrue(Schema::hasTable('cities'));

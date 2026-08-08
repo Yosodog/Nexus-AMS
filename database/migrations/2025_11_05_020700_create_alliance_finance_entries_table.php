@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,7 +19,7 @@ return new class extends Migration
             $table->string('category', 50);
             $table->string('description', 255)->nullable();
 
-            $table->foreignId('nation_id')->nullable()->constrained('nations')->nullOnDelete();
+            WorldReference::nation($table)->nullable()->nullOnDeleteInStandalone();
             $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
 
             $table->nullableMorphs('source');

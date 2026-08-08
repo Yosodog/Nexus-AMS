@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('inactivity_events', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('nation_id');
+            WorldReference::nation($table)->cascadeOnDeleteInStandalone();
             $table->timestamp('episode_started_at');
             $table->timestamp('episode_ended_at')->nullable();
             $table->timestamp('detected_inactive_at');
@@ -25,10 +26,6 @@ return new class extends Migration
             $table->json('meta')->nullable();
             $table->timestamps();
 
-            $table->foreign('nation_id')
-                ->references('id')
-                ->on('nations')
-                ->cascadeOnDelete();
             $table->index(['nation_id', 'episode_ended_at']);
         });
     }

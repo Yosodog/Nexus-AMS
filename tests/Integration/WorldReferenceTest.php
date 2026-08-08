@@ -111,6 +111,75 @@ class WorldReferenceTest extends TestCase
         $this->assertSame(3, DB::table($this->childTable)->count());
     }
 
+    public function test_unnamed_index_modifier_keeps_its_conventional_name_in_standalone(): void
+    {
+        $this->configureRuntime(NexusRuntime::Standalone);
+
+        Schema::create($this->childTable, function (Blueprint $table): void {
+            $table->id();
+            WorldReference::to($table, $this->parentTable, 'nation_id')->index();
+        });
+
+        $this->assertContains("{$this->childTable}_nation_id_index", $this->indexNames());
+    }
+
+    public function test_unnamed_unique_modifier_is_retained_in_hosted(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+
+        Schema::create($this->childTable, function (Blueprint $table): void {
+            $table->id();
+            WorldReference::to($table, $this->view, 'nation_id')->unique();
+        });
+
+        $this->assertContains("{$this->childTable}_nation_id_unique", $this->indexNames());
+    }
+
+    public function test_primary_world_reference_is_indexed_without_a_redundant_hosted_index(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+
+        Schema::create($this->childTable, function (Blueprint $table): void {
+            WorldReference::to(
+                table: $table,
+                referencedTable: $this->view,
+                column: 'nation_id',
+                indexInHosted: false,
+            )->primary();
+        });
+
+        $this->assertSame(['PRIMARY'], $this->indexNames());
+    }
+
+    public function test_logical_reference_adds_an_index_only_in_hosted(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+
+        Schema::create($this->childTable, function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('alliance_id');
+            WorldReference::indexInHosted($table, 'alliance_id');
+        });
+
+        $this->assertSame(
+            ['PRIMARY', "{$this->childTable}_alliance_id_index"],
+            $this->indexNames(),
+        );
+    }
+
+    public function test_logical_reference_preserves_standalone_index_shape(): void
+    {
+        $this->configureRuntime(NexusRuntime::Standalone);
+
+        Schema::create($this->childTable, function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('alliance_id');
+            WorldReference::indexInHosted($table, 'alliance_id');
+        });
+
+        $this->assertSame(['PRIMARY'], $this->indexNames());
+    }
+
     private function configureRuntime(NexusRuntime $runtime): void
     {
         config(['nexus.runtime' => $runtime->value]);
@@ -180,5 +249,25 @@ class WorldReferenceTest extends TestCase
         $this->assertSame('bigint unsigned', $column->column_type);
         $this->assertSame('YES', $column->is_nullable);
         $this->assertGreaterThanOrEqual(1, (int) $indexCount);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function indexNames(): array
+    {
+        return array_map(
+            static fn (object $index): string => $index->index_name,
+            DB::select(
+                <<<'SQL'
+                    SELECT DISTINCT INDEX_NAME AS index_name
+                    FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                        AND TABLE_NAME = ?
+                    ORDER BY INDEX_NAME
+                    SQL,
+                [$this->childTable],
+            ),
+        );
     }
 }

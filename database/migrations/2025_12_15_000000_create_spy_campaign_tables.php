@@ -5,10 +5,9 @@ use App\Enums\SpyCampaignAllianceRole;
 use App\Enums\SpyCampaignStatus;
 use App\Enums\SpyOperationType;
 use App\Enums\SpyRoundStatus;
-use App\Models\Alliance;
-use App\Models\Nation;
 use App\Models\SpyCampaign;
 use App\Models\SpyRound;
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -33,7 +32,7 @@ return new class extends Migration
         Schema::create('spy_campaign_alliances', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(SpyCampaign::class, 'spy_campaign_id')->constrained('spy_campaigns')->cascadeOnDelete();
-            $table->foreignIdFor(Alliance::class, 'alliance_id')->constrained('alliances')->cascadeOnDelete();
+            WorldReference::alliance($table)->cascadeOnDeleteInStandalone();
             $table->enum('role', SpyCampaignAllianceRole::values())->index();
             $table->json('meta')->nullable();
             $table->timestamps();
@@ -56,8 +55,8 @@ return new class extends Migration
         Schema::create('spy_assignments', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
-            $table->foreignIdFor(Nation::class, 'attacker_nation_id')->constrained('nations')->cascadeOnDelete();
-            $table->foreignIdFor(Nation::class, 'defender_nation_id')->constrained('nations')->cascadeOnDelete();
+            WorldReference::nation($table, 'attacker_nation_id')->cascadeOnDeleteInStandalone();
+            WorldReference::nation($table, 'defender_nation_id')->cascadeOnDeleteInStandalone();
             $table->enum('op_type', SpyOperationType::values());
             $table->unsignedTinyInteger('safety_level')->default(1);
             $table->decimal('calculated_odds', 5, 2)->default(0);
@@ -75,7 +74,7 @@ return new class extends Migration
         Schema::create('spy_assignment_message_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(SpyRound::class, 'spy_round_id')->constrained('spy_rounds')->cascadeOnDelete();
-            $table->foreignIdFor(Nation::class, 'attacker_nation_id')->constrained('nations')->cascadeOnDelete();
+            WorldReference::nation($table, 'attacker_nation_id')->cascadeOnDeleteInStandalone();
             $table->string('message_hash');
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();

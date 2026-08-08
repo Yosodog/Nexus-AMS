@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -42,7 +43,10 @@ return new class extends Migration
         Schema::create('milcom_operation_alliances', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('operation_id');
-            $table->foreignId('alliance_id');
+            WorldReference::alliance(
+                $table,
+                constraintName: 'milcom_op_alliance_alliance_fk',
+            )->restrictOnDeleteInStandalone();
             $table->string('role', 16);
             $table->boolean('included')->default(true);
             $table->json('metadata')->nullable();
@@ -50,15 +54,16 @@ return new class extends Migration
 
             $table->foreign('operation_id', 'milcom_op_alliance_op_fk')
                 ->references('id')->on('milcom_operations')->cascadeOnDelete();
-            $table->foreign('alliance_id', 'milcom_op_alliance_alliance_fk')
-                ->references('id')->on('alliances')->restrictOnDelete();
             $table->unique(['operation_id', 'alliance_id', 'role'], 'milcom_op_alliance_unique');
         });
 
         Schema::create('milcom_operation_nations', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('operation_id');
-            $table->foreignId('nation_id');
+            WorldReference::nation(
+                $table,
+                constraintName: 'milcom_op_nation_nation_fk',
+            )->restrictOnDeleteInStandalone();
             $table->string('role', 16);
             $table->boolean('included')->default(true);
             $table->string('reason')->nullable();
@@ -66,16 +71,28 @@ return new class extends Migration
 
             $table->foreign('operation_id', 'milcom_op_nation_op_fk')
                 ->references('id')->on('milcom_operations')->cascadeOnDelete();
-            $table->foreign('nation_id', 'milcom_op_nation_nation_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
             $table->unique(['operation_id', 'nation_id', 'role'], 'milcom_op_nation_unique');
         });
 
         Schema::create('milcom_incidents', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('war_id');
-            $table->foreignId('attacked_nation_id');
-            $table->foreignId('aggressor_nation_id');
+            WorldReference::war(
+                $table,
+                constraintName: 'milcom_incident_war_fk',
+                indexInHosted: false,
+            )
+                ->restrictOnDeleteInStandalone()
+                ->unique('milcom_incident_war_unique');
+            WorldReference::nation(
+                $table,
+                'attacked_nation_id',
+                'milcom_incident_attacked_fk',
+            )->restrictOnDeleteInStandalone();
+            WorldReference::nation(
+                $table,
+                'aggressor_nation_id',
+                'milcom_incident_aggressor_fk',
+            )->restrictOnDeleteInStandalone();
             $table->string('status', 24)->default('new');
             $table->timestamp('detected_at');
             $table->timestamp('resolved_at')->nullable();
@@ -84,13 +101,6 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
 
-            $table->foreign('war_id', 'milcom_incident_war_fk')
-                ->references('id')->on('wars')->restrictOnDelete();
-            $table->foreign('attacked_nation_id', 'milcom_incident_attacked_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
-            $table->foreign('aggressor_nation_id', 'milcom_incident_aggressor_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
-            $table->unique('war_id', 'milcom_incident_war_unique');
             $table->index(['status', 'detected_at', 'id'], 'milcom_incident_cursor_idx');
             $table->index(['aggressor_nation_id', 'status'], 'milcom_incident_aggressor_idx');
         });
@@ -98,7 +108,11 @@ return new class extends Migration
         Schema::create('milcom_objectives', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('operation_id');
-            $table->foreignId('target_nation_id');
+            WorldReference::nation(
+                $table,
+                'target_nation_id',
+                'milcom_objective_target_fk',
+            )->restrictOnDeleteInStandalone();
             $table->string('priority_tier', 16)->default('standard');
             $table->decimal('priority_score', 7, 2)->default(0);
             $table->unsignedTinyInteger('desired_team_depth')->default(1);
@@ -125,8 +139,6 @@ return new class extends Migration
 
             $table->foreign('operation_id', 'milcom_objective_op_fk')
                 ->references('id')->on('milcom_operations')->cascadeOnDelete();
-            $table->foreign('target_nation_id', 'milcom_objective_target_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
             $table->foreign('source_incident_id', 'milcom_objective_incident_fk')
                 ->references('id')->on('milcom_incidents')->nullOnDelete();
             $table->unique(['operation_id', 'target_nation_id'], 'milcom_objective_target_unique');
@@ -185,9 +197,13 @@ return new class extends Migration
         Schema::create('milcom_readiness_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('recommendation_run_id');
-            $table->foreignId('nation_id');
+            WorldReference::nation(
+                $table,
+                constraintName: 'milcom_snapshot_nation_fk',
+            )->restrictOnDeleteInStandalone();
             $table->string('role', 16);
             $table->foreignId('alliance_id')->nullable();
+            WorldReference::indexInHosted($table, 'alliance_id');
             $table->string('alliance_position', 24)->nullable();
             $table->decimal('score', 12, 2)->nullable();
             $table->unsignedSmallInteger('cities')->nullable();
@@ -210,8 +226,6 @@ return new class extends Migration
 
             $table->foreign('recommendation_run_id', 'milcom_snapshot_run_fk')
                 ->references('id')->on('milcom_recommendation_runs')->cascadeOnDelete();
-            $table->foreign('nation_id', 'milcom_snapshot_nation_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
             $table->unique(
                 ['recommendation_run_id', 'nation_id', 'role'],
                 'milcom_snapshot_run_nation_unique'
@@ -245,7 +259,11 @@ return new class extends Migration
         Schema::create('milcom_assignments', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('objective_id');
-            $table->foreignId('friendly_nation_id');
+            WorldReference::nation(
+                $table,
+                'friendly_nation_id',
+                'milcom_assignment_nation_fk',
+            )->restrictOnDeleteInStandalone();
             $table->decimal('score', 6, 2);
             $table->decimal('confidence', 5, 2)->default(0);
             $table->unsignedSmallInteger('rank')->nullable();
@@ -253,7 +271,11 @@ return new class extends Migration
             $table->boolean('is_locked')->default(false);
             $table->text('override_reason')->nullable();
             $table->foreignId('recommendation_run_id')->nullable();
-            $table->unsignedBigInteger('declared_war_id')->nullable();
+            WorldReference::war(
+                $table,
+                'declared_war_id',
+                'milcom_assignment_war_fk',
+            )->nullable()->nullOnDeleteInStandalone();
             $table->json('factor_explanations')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('dispatched_at')->nullable();
@@ -264,12 +286,8 @@ return new class extends Migration
 
             $table->foreign('objective_id', 'milcom_assignment_objective_fk')
                 ->references('id')->on('milcom_objectives')->cascadeOnDelete();
-            $table->foreign('friendly_nation_id', 'milcom_assignment_nation_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
             $table->foreign('recommendation_run_id', 'milcom_assignment_run_fk')
                 ->references('id')->on('milcom_recommendation_runs')->nullOnDelete();
-            $table->foreign('declared_war_id', 'milcom_assignment_war_fk')
-                ->references('id')->on('wars')->nullOnDelete();
             $table->unique(['objective_id', 'friendly_nation_id'], 'milcom_assignment_pair_unique');
             $table->index(['objective_id', 'status', 'id'], 'milcom_assignment_objective_idx');
             $table->index(['friendly_nation_id', 'status', 'id'], 'milcom_assignment_friendly_idx');
@@ -335,7 +353,14 @@ return new class extends Migration
 
         Schema::create('milcom_nation_capacity_locks', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('friendly_nation_id');
+            WorldReference::nation(
+                $table,
+                'friendly_nation_id',
+                'milcom_capacity_nation_fk',
+                indexInHosted: false,
+            )
+                ->restrictOnDeleteInStandalone()
+                ->unique('milcom_capacity_nation_unique');
             $table->unsignedInteger('version')->default(0);
             $table->unsignedTinyInteger('last_known_capacity')->default(0);
             $table->unsignedTinyInteger('last_known_active_wars')->default(0);
@@ -343,9 +368,6 @@ return new class extends Migration
             $table->timestamp('reconciled_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('friendly_nation_id', 'milcom_capacity_nation_fk')
-                ->references('id')->on('nations')->restrictOnDelete();
-            $table->unique('friendly_nation_id', 'milcom_capacity_nation_unique');
         });
     }
 

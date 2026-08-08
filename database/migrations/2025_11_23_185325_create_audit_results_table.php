@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,8 +16,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('audit_rule_id')->constrained('audit_rules')->cascadeOnDelete();
             $table->string('target_type');
-            $table->foreignId('nation_id')->nullable()->constrained('nations')->nullOnDelete();
-            $table->foreignId('city_id')->nullable()->constrained('cities')->nullOnDelete();
+            WorldReference::nation($table)->nullable()->nullOnDeleteInStandalone();
+            WorldReference::city($table)->nullable()->nullOnDeleteInStandalone();
             $table->json('details')->nullable();
             $table->timestamp('first_detected_at');
             $table->timestamp('last_evaluated_at');

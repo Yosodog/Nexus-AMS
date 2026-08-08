@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('loans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('nation_id')->constrained('nations')->onDelete('cascade');
+            WorldReference::nation($table)->cascadeOnDeleteInStandalone();
             $table->foreignId('account_id')->constrained('accounts')->onDelete('cascade');
             $table->decimal('amount', 15, 2);
             $table->decimal('interest_rate', 5, 2)->nullable();

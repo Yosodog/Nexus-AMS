@@ -2,9 +2,9 @@
 
 use App\Enums\AlliancePositionEnum;
 use App\Enums\WarTypeEnum;
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wars', function (Blueprint $table) {
+        WorldSchema::create('wars', function (Blueprint $table) {
             $table->id();
             $table->timestamp('date')->useCurrent();
             $table->timestamp('end_date')->nullable();
@@ -96,6 +96,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('wars');
+        WorldSchema::dropIfExists('wars');
     }
 };

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,8 +16,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('from_account_id')->constrained('accounts')->cascadeOnUpdate()->restrictOnDelete();
             $table->foreignId('to_account_id')->constrained('accounts')->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreignId('from_nation_id')->constrained('nations')->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreignId('to_nation_id')->constrained('nations')->cascadeOnUpdate()->restrictOnDelete();
+            WorldReference::nation($table, 'from_nation_id')
+                ->cascadeOnUpdateInStandalone()
+                ->restrictOnDeleteInStandalone();
+            WorldReference::nation($table, 'to_nation_id')
+                ->cascadeOnUpdateInStandalone()
+                ->restrictOnDeleteInStandalone();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->restrictOnDelete();
             $table->foreignId('accepted_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('declined_by')->nullable()->constrained('users')->nullOnDelete();

@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('wars', function (Blueprint $table) {
+        WorldSchema::table('wars', function (Blueprint $table) {
             $table->dropColumn([
                 'att_soldiers_killed',
                 'def_soldiers_killed',
@@ -30,7 +30,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('wars', function (Blueprint $table) {
+        WorldSchema::table('wars', function (Blueprint $table) {
             //
         });
     }

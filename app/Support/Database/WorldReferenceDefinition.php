@@ -20,6 +20,7 @@ final class WorldReferenceDefinition
         string $column,
         private readonly bool $usesForeignKey,
         private readonly ?string $constraintName = null,
+        bool $indexInHosted = true,
     ) {
         $this->columnDefinition = $this->table->foreignId($column);
 
@@ -27,7 +28,7 @@ final class WorldReferenceDefinition
             $this->foreignKey = $this->columnDefinition
                 ->references('id', $this->constraintName)
                 ->on($this->referencedTable);
-        } else {
+        } elseif ($indexInHosted) {
             $this->columnDefinition->index();
             $this->hasIndex = true;
         }
@@ -64,7 +65,12 @@ final class WorldReferenceDefinition
     public function index(?string $name = null): self
     {
         if (! $this->hasIndex) {
-            $this->columnDefinition->index($name);
+            if ($name === null) {
+                $this->columnDefinition->index();
+            } else {
+                $this->columnDefinition->index($name);
+            }
+
             $this->hasIndex = true;
         }
 
@@ -73,7 +79,25 @@ final class WorldReferenceDefinition
 
     public function unique(?string $name = null): self
     {
-        $this->columnDefinition->unique($name);
+        if ($name === null) {
+            $this->columnDefinition->unique();
+        } else {
+            $this->columnDefinition->unique($name);
+        }
+
+        $this->hasIndex = true;
+
+        return $this;
+    }
+
+    public function primary(?string $name = null): self
+    {
+        if ($name === null) {
+            $this->columnDefinition->primary();
+        } else {
+            $this->columnDefinition->primary($name);
+        }
+
         $this->hasIndex = true;
 
         return $this;

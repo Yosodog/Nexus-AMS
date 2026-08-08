@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,10 @@ return new class extends Migration
     {
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('nation_id')->nullable();
+            WorldReference::nation($table)
+                ->nullable()
+                ->nullOnDeleteInStandalone()
+                ->noActionOnUpdateInStandalone();
             $table->string('name');
             $table->decimal('money', 15, 2)->default(0);
             $table->decimal('coal', 15, 2)->default(0);
@@ -32,11 +36,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('nation_id')
-                ->references('id')
-                ->on('nations')
-                ->nullOnDelete()
-                ->noActionOnUpdate();
         });
     }
 

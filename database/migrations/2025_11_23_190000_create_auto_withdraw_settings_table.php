@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -10,7 +11,9 @@ return new class extends Migration
     {
         Schema::create('auto_withdraw_settings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('nation_id')->constrained('nations')->cascadeOnDelete();
+            WorldReference::nation($table)
+                ->cascadeOnDeleteInStandalone()
+                ->index();
             $table->foreignId('account_id')->constrained('accounts')->cascadeOnDelete();
             $table->string('resource', 50);
             $table->unsignedBigInteger('threshold');
@@ -20,7 +23,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['nation_id', 'resource']);
-            $table->index('nation_id');
             $table->index('account_id');
         });
     }

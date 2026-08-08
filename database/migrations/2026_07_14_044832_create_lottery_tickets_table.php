@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('lottery_drawing_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('nation_id')->constrained()->restrictOnDelete();
+            WorldReference::nation($table)->restrictOnDeleteInStandalone();
             $table->foreignId('account_id')->constrained()->restrictOnDelete();
             $table->char('code', 3);
             $table->decimal('price_paid', 15, 2);

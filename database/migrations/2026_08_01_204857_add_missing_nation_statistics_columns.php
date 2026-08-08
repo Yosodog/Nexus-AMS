@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
         ])->reject(fn (string $column): bool => Schema::hasColumn('nations', $column));
 
         if ($nationColumns->isNotEmpty()) {
-            Schema::table('nations', function (Blueprint $table) use ($nationColumns): void {
+            WorldSchema::table('nations', function (Blueprint $table) use ($nationColumns): void {
                 foreach ($nationColumns as $column) {
                     $table->float($column)->default(0);
                 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ return new class extends Migration
         }
 
         if (! Schema::hasIndex('nations', 'nations_member_scope_idx')) {
-            Schema::table('nations', function (Blueprint $table): void {
+            WorldSchema::table('nations', function (Blueprint $table): void {
                 $table->index(['alliance_id', 'alliance_position', 'vacation_mode_turns'], 'nations_member_scope_idx');
             });
         }
@@ -53,7 +54,7 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasIndex('nations', 'nations_member_scope_idx')) {
-            Schema::table('nations', function (Blueprint $table): void {
+            WorldSchema::table('nations', function (Blueprint $table): void {
                 $table->dropIndex('nations_member_scope_idx');
             });
         }

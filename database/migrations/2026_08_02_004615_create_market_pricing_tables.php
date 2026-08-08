@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('market_trades', function (Blueprint $table): void {
+        WorldSchema::create('market_trades', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('type', 16);
             $table->string('resource', 24);
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->index('accepted_at');
         });
 
-        Schema::create('market_price_snapshots', function (Blueprint $table): void {
+        WorldSchema::create('market_price_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->string('basis');
             $table->timestamp('window_started_at');
@@ -38,7 +38,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('market_price_snapshot_items', function (Blueprint $table): void {
+        WorldSchema::create('market_price_snapshot_items', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('market_price_snapshot_id')
                 ->constrained('market_price_snapshots')
@@ -63,8 +63,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('market_price_snapshot_items');
-        Schema::dropIfExists('market_price_snapshots');
-        Schema::dropIfExists('market_trades');
+        WorldSchema::dropIfExists('market_price_snapshot_items');
+        WorldSchema::dropIfExists('market_price_snapshots');
+        WorldSchema::dropIfExists('market_trades');
     }
 };

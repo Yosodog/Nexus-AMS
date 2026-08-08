@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        if (DB::getDriverName() === 'sqlite' || ! WorldSchema::usesPhysicalTables()) {
             return;
         }
 
@@ -33,7 +34,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        if (DB::getDriverName() === 'sqlite' || ! WorldSchema::usesPhysicalTables()) {
             return;
         }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -8,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('nations', function (Blueprint $table) {
+        WorldSchema::table('nations', function (Blueprint $table) {
             $table->softDeletes();
         });
 
@@ -20,14 +21,14 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        Schema::table('cities', function (Blueprint $table) {
+        WorldSchema::table('cities', function (Blueprint $table) {
             $table->softDeletes();
         });
     }
 
     public function down(): void
     {
-        Schema::table('nations', function (Blueprint $table) {
+        WorldSchema::table('nations', function (Blueprint $table) {
             $table->dropSoftDeletes();
         });
 
@@ -39,7 +40,7 @@ return new class extends Migration
             $table->dropSoftDeletes();
         });
 
-        Schema::table('cities', function (Blueprint $table) {
+        WorldSchema::table('cities', function (Blueprint $table) {
             $table->dropSoftDeletes();
         });
     }

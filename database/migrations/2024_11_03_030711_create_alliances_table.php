@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('alliances', function (Blueprint $table) {
+        WorldSchema::create('alliances', function (Blueprint $table) {
             $table->id();
             $table->string('name')->index();
             $table->string('acronym', 10);
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('alliances');
+        WorldSchema::dropIfExists('alliances');
     }
 };

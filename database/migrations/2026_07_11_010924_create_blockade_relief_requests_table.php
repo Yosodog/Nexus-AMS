@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,10 +14,17 @@ return new class extends Migration
     {
         Schema::create('blockade_relief_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('requester_nation_id')->constrained('nations')->cascadeOnUpdate()->restrictOnDelete();
+            WorldReference::nation($table, 'requester_nation_id')
+                ->cascadeOnUpdateInStandalone()
+                ->restrictOnDeleteInStandalone();
             $table->unsignedBigInteger('war_id');
-            $table->foreignId('blockading_nation_id')->constrained('nations')->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreignId('claimed_by_nation_id')->nullable()->constrained('nations')->cascadeOnUpdate()->nullOnDelete();
+            WorldReference::nation($table, 'blockading_nation_id')
+                ->cascadeOnUpdateInStandalone()
+                ->restrictOnDeleteInStandalone();
+            WorldReference::nation($table, 'claimed_by_nation_id')
+                ->nullable()
+                ->cascadeOnUpdateInStandalone()
+                ->nullOnDeleteInStandalone();
             $table->string('status', 20)->default('pending');
             $table->unsignedTinyInteger('pending_key')->nullable()->default(1);
             $table->string('note', 255)->nullable();

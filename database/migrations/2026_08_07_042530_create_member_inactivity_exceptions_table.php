@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('member_inactivity_exceptions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('nation_id');
+            WorldReference::nation($table, indexInHosted: false)->cascadeOnDeleteInStandalone();
             $table->string('category', 32);
             $table->timestamp('starts_at');
             $table->timestamp('ends_at');
@@ -31,7 +32,6 @@ return new class extends Migration
             $table->text('revocation_reason')->nullable();
             $table->timestamps();
 
-            $table->foreign('nation_id')->references('id')->on('nations')->cascadeOnDelete();
             $table->index(['nation_id', 'starts_at', 'ends_at'], 'member_inactivity_exception_window_idx');
             $table->index(['expired_at', 'revoked_at', 'ends_at'], 'member_inactivity_exception_expiry_idx');
         });

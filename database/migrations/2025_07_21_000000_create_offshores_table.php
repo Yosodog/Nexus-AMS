@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +15,7 @@ return new class extends Migration
         Schema::create('offshores', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('alliance_id')->constrained('alliances');
+            WorldReference::alliance($table);
             $table->boolean('enabled')->default(true);
             $table->unsignedInteger('priority')->default(0);
             $table->text('api_key')->nullable();

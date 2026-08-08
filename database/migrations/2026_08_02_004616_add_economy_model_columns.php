@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Database\WorldReference;
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('nations', function (Blueprint $table): void {
+        WorldSchema::table('nations', function (Blueprint $table): void {
             $table->unsignedTinyInteger('ground_capacity_research')->nullable();
             $table->unsignedTinyInteger('ground_cost_research')->nullable();
             $table->unsignedTinyInteger('air_capacity_research')->nullable();
@@ -25,19 +27,17 @@ return new class extends Migration
 
         Schema::table('nation_profitability_snapshots', function (Blueprint $table): void {
             $table->unsignedSmallInteger('model_version')->default(1)->index();
-            $table->foreignId('market_price_snapshot_id')
+            WorldReference::marketPriceSnapshot($table)
                 ->nullable()
-                ->constrained('market_price_snapshots')
-                ->restrictOnDelete();
+                ->restrictOnDeleteInStandalone();
             $table->json('calculation_context')->nullable();
         });
 
         Schema::table('nation_build_recommendations', function (Blueprint $table): void {
             $table->unsignedSmallInteger('model_version')->default(1)->index();
-            $table->foreignId('market_price_snapshot_id')
+            WorldReference::marketPriceSnapshot($table)
                 ->nullable()
-                ->constrained('market_price_snapshots')
-                ->restrictOnDelete();
+                ->restrictOnDeleteInStandalone();
             $table->json('calculation_context')->nullable();
             $table->unsignedSmallInteger('available_slots')->default(0);
             $table->unsignedSmallInteger('cities_below_target')->default(0);
@@ -51,7 +51,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('nation_build_recommendations', function (Blueprint $table): void {
-            $table->dropForeign(['market_price_snapshot_id']);
+            WorldReference::drop($table, 'market_price_snapshot_id');
             $table->dropColumn([
                 'model_version',
                 'market_price_snapshot_id',
@@ -63,11 +63,11 @@ return new class extends Migration
         });
 
         Schema::table('nation_profitability_snapshots', function (Blueprint $table): void {
-            $table->dropForeign(['market_price_snapshot_id']);
+            WorldReference::drop($table, 'market_price_snapshot_id');
             $table->dropColumn(['model_version', 'market_price_snapshot_id', 'calculation_context']);
         });
 
-        Schema::table('nations', function (Blueprint $table): void {
+        WorldSchema::table('nations', function (Blueprint $table): void {
             $table->dropColumn([
                 'ground_capacity_research',
                 'ground_cost_research',

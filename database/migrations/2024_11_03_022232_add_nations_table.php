@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('nations', function (Blueprint $table) {
+        WorldSchema::create('nations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('alliance_id')->nullable()->index(); // Alliance relationship
             $table->enum('alliance_position', ['NOALLIANCE', 'APPLICANT', 'MEMBER', 'OFFICER', 'HEIR', 'LEADER']
@@ -84,6 +84,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('nations');
+        WorldSchema::dropIfExists('nations');
     }
 };

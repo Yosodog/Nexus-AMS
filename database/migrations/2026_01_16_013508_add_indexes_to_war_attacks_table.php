@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('war_attacks', function (Blueprint $table) {
+        WorldSchema::table('war_attacks', function (Blueprint $table) {
             $table->index('date', 'idx_war_attacks_date');
             $table->index(['att_id', 'date'], 'idx_war_attacks_att_date');
             $table->index(['type', 'date', 'victor'], 'idx_war_attacks_type_date_victor');
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('war_attacks', function (Blueprint $table) {
+        WorldSchema::table('war_attacks', function (Blueprint $table) {
             $table->dropIndex('idx_war_attacks_date');
             $table->dropIndex('idx_war_attacks_att_date');
             $table->dropIndex('idx_war_attacks_type_date_victor');

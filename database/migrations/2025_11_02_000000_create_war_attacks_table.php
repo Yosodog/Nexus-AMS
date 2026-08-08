@@ -1,15 +1,15 @@
 <?php
 
 use App\Enums\WarAttackTypeEnum;
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('war_attacks', function (Blueprint $table) {
+        WorldSchema::create('war_attacks', function (Blueprint $table) {
             $table->unsignedBigInteger('id')->primary();
             $table->timestamp('date')->nullable();
             $table->unsignedBigInteger('att_id');
@@ -91,6 +91,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('war_attacks');
+        WorldSchema::dropIfExists('war_attacks');
     }
 };

@@ -1,14 +1,14 @@
 <?php
 
+use App\Support\Database\WorldSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up()
     {
-        Schema::create('cities', function (Blueprint $table) {
+        WorldSchema::create('cities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('nation_id')->constrained('nations')->onDelete('cascade');
             $table->string('name');
@@ -49,6 +49,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('cities');
+        WorldSchema::dropIfExists('cities');
     }
 };

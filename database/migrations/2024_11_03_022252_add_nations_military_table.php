@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,10 @@ return new class extends Migration
     {
         Schema::create('nation_military', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('nation_id')->unique()->index()->constrained('nations')->onDelete('cascade');
+            WorldReference::nation($table)
+                ->unique()
+                ->index()
+                ->cascadeOnDeleteInStandalone();
             $table->unsignedInteger('soldiers')->default(0);
             $table->unsignedInteger('tanks')->default(0);
             $table->unsignedInteger('aircraft')->default(0);
