@@ -2,12 +2,16 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\ApplicationStatus;
+use App\Enums\DiscordQueueStatus;
 use App\Enums\SpyAssignmentStatus;
 use App\Enums\SpyCampaignStatus;
 use App\Enums\SpyOperationType;
 use App\Enums\SpyRoundStatus;
 use App\Http\Middleware\RejectLegacyMilcomMutations;
+use App\Models\Application;
 use App\Models\DiscordAccount;
+use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\SpyAssignment;
 use App\Models\SpyCampaign;
@@ -16,6 +20,7 @@ use App\Models\User;
 use App\Models\War;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
+use App\Services\Discord\ApplicationDiscordStatusProjection;
 use App\Services\RaidFinderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -307,6 +312,63 @@ class DiscordOperationsApiTest extends TestCase
             ->assertJsonPath('data.0.id', $visibleAssignment->id)
             ->assertJsonPath('data.0.status', SpyAssignmentStatus::SENT->value)
             ->assertJsonPath('data.0.campaign.name', 'Published campaign');
+    }
+
+    public function test_application_status_returns_only_the_actor_applications_with_nexus_owned_progress(): void
+    {
+        $application = Application::query()->create([
+            'nation_id' => $this->nation->id,
+            'leader_name_snapshot' => $this->nation->leader_name,
+            'discord_user_id' => self::DISCORD_ID,
+            'discord_username' => 'application-member',
+            'discord_channel_id' => '456789012345678901',
+            'discord_reconcile_revision' => 2,
+            'status' => ApplicationStatus::Pending,
+            'pending_key' => 1,
+        ]);
+        $queue = DiscordQueue::query()->create([
+            'action' => ApplicationDiscordStatusProjection::ACTION,
+            'payload' => ['contract_version' => 1],
+            'status' => DiscordQueueStatus::Complete,
+        ]);
+        $application->forceFill(['discord_reconcile_queue_id' => $queue->id])->save();
+
+        $otherNation = Nation::factory()->create();
+        Application::query()->create([
+            'nation_id' => $otherNation->id,
+            'leader_name_snapshot' => $otherNation->leader_name,
+            'discord_user_id' => '567890123456789012',
+            'discord_username' => 'other-applicant',
+            'status' => ApplicationStatus::Denied,
+            'pending_key' => null,
+        ]);
+
+        $response = $this->withHeaders($this->headers())
+            ->getJson('/api/v1/discord/me/applications')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $application->id)
+            ->assertJsonPath('data.0.channel_health.state', 'ready')
+            ->assertJsonPath('data.0.channel_health.channel_id', '456789012345678901')
+            ->assertJsonPath('data.0.progress.facts.0.key', 'submitted')
+            ->assertJsonPath('data.0.progress.facts.0.complete', true)
+            ->assertJsonPath('data.0.progress.facts.2.key', 'staff_decision')
+            ->assertJsonPath('data.0.progress.facts.2.complete', false)
+            ->assertJsonPath('data.0.progress.blockers', [])
+            ->assertJsonPath('data.0.reconciliation.state', 'complete')
+            ->assertJsonPath('data.0.reconciliation.revision', 2)
+            ->assertJsonPath('meta.contract_version', 1);
+
+        $this->assertEqualsCanonicalizing([
+            'id',
+            'status',
+            'created_at',
+            'updated_at',
+            'deep_link_path',
+            'channel_health',
+            'progress',
+            'reconciliation',
+        ], array_keys($response->json('data.0')));
     }
 
     private function createSpyAssignment(

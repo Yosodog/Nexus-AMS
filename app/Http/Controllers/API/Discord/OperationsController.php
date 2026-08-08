@@ -9,12 +9,14 @@ use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\DiscordAssignmentResponse;
+use App\Models\DiscordQueue;
 use App\Models\SpyAssignment;
 use App\Models\User;
 use App\Models\War;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
 use App\Models\WarPlanAssignment;
+use App\Services\Discord\ApplicationDiscordStatusProjection;
 use App\Services\RaidFinderService;
 use App\Services\WarSimulator\WarSimulatorDataService;
 use Illuminate\Http\JsonResponse;
@@ -247,8 +249,10 @@ class OperationsController extends Controller
         ])->all());
     }
 
-    public function applications(Request $request): JsonResponse
-    {
+    public function applications(
+        Request $request,
+        ApplicationDiscordStatusProjection $statusProjection,
+    ): JsonResponse {
         $actor = $this->actor($request);
         $discordId = $request->attributes->get('discord_account')?->discord_id;
         $applications = Application::query()
@@ -262,12 +266,26 @@ class OperationsController extends Controller
             ->limit(25)
             ->get();
 
+        $queueIds = $applications->pluck('discord_reconcile_queue_id')
+            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->unique()
+            ->values();
+        $queues = $queueIds->isEmpty()
+            ? collect()
+            : DiscordQueue::query()->whereKey($queueIds->all())->get()->keyBy(
+                fn (DiscordQueue $queue): string => (string) $queue->getKey(),
+            );
+
         return $this->discordData($applications->map(fn (Application $application): array => [
             'id' => $application->id,
             'status' => $application->status->value,
             'created_at' => $application->created_at->toIso8601String(),
             'updated_at' => $application->updated_at->toIso8601String(),
             'deep_link_path' => route('apply.show', ['application' => $application->id], absolute: false),
+            ...$statusProjection->forMember(
+                $application,
+                $queues->get($application->discord_reconcile_queue_id),
+            ),
         ])->all());
     }
 
