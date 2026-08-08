@@ -23,8 +23,10 @@ class RouteContractTest extends TestCase
 
     public function createApplication(): Application
     {
+        $appDebug = $this->environmentValue('APP_DEBUG');
         $telescopeEnabled = $this->environmentValue('TELESCOPE_ENABLED');
         $routesCache = $this->environmentValue('APP_ROUTES_CACHE');
+        $this->setEnvironmentValue('APP_DEBUG', 'true');
         $this->setEnvironmentValue('TELESCOPE_ENABLED', 'true');
         $this->setEnvironmentValue(
             'APP_ROUTES_CACHE',
@@ -34,6 +36,7 @@ class RouteContractTest extends TestCase
         try {
             return parent::createApplication();
         } finally {
+            $this->restoreEnvironmentValue('APP_DEBUG', $appDebug);
             $this->restoreEnvironmentValue('TELESCOPE_ENABLED', $telescopeEnabled);
             $this->restoreEnvironmentValue('APP_ROUTES_CACHE', $routesCache);
         }
@@ -71,8 +74,8 @@ class RouteContractTest extends TestCase
             }
         }
 
-        $this->assertCount(558, $expected);
-        $this->assertCount(558, $actual);
+        $this->assertCount(561, $expected);
+        $this->assertCount(561, $actual);
 
         foreach ($expected as $index => $expectedRoute) {
             $this->assertSame(

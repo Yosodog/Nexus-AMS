@@ -4,6 +4,7 @@ namespace Tests\Integration;
 
 use App\Enums\NexusRuntime;
 use App\Services\RuntimeCapabilities;
+use App\Services\RuntimeReadinessService;
 use App\Services\World\WorldModelManifest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -147,5 +148,28 @@ class HostedFreshMigrationTest extends TestCase
 
             $this->assertGreaterThanOrEqual(1, (int) $indexCount, "Hosted world reference [{$table}.{$column}] is not indexed.");
         }
+    }
+
+    public function test_hosted_readiness_accepts_the_privileged_world_view_contract(): void
+    {
+        $this->artisan('migrate:fresh', ['--drop-views' => true, '--force' => true])->assertSuccessful();
+
+        foreach (array_keys(WorldModelManifest::modelsByTable()) as $worldTable) {
+            DB::statement("CREATE VIEW `{$worldTable}` AS SELECT CAST(1 AS UNSIGNED) AS `id`");
+        }
+
+        config([
+            'nexus.managed' => true,
+            'nexus.tenant_id' => '01JZ0000000000000000000000',
+            'nexus.release_id' => 'hosted-test-release',
+            'nexus.runtime_contract' => 1,
+            'nexus.world_view_contract' => 3,
+        ]);
+
+        $snapshot = app(RuntimeReadinessService::class)->readiness();
+
+        $this->assertTrue($snapshot['ready']);
+        $this->assertSame('compatible', $snapshot['checks']['world_views']['status']);
+        $this->assertSame('current', $snapshot['checks']['tenant_schema']['status']);
     }
 }

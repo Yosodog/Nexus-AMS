@@ -1736,6 +1736,39 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/internal/v1/build",
+        "name": "api.internal.build",
+        "action": "App\\Http\\Controllers\\API\\Internal\\BuildMetadataController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateNexusAPI"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/internal/v1/readiness",
+        "name": "api.internal.readiness",
+        "action": "App\\Http\\Controllers\\API\\Internal\\ReadinessController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateNexusAPI"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/internal/v1/health",
+        "name": "api.internal.health",
+        "action": "App\\Http\\Controllers\\API\\Internal\\RuntimeHealthController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateNexusAPI"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/nations/{nationId}/profitability",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\NationProfitabilityController@show",

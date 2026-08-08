@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class ValidateNexusAPI
+final class ValidateNexusAPI
 {
     /**
      * Handle an incoming request.
@@ -15,11 +17,11 @@ class ValidateNexusAPI
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Validate Nexus API Token
         $nexusApiToken = config('services.nexus_api_token');
         $providedToken = trim((string) $request->header('Authorization', ''));
+        $expectedToken = is_string($nexusApiToken) ? 'Bearer '.$nexusApiToken : '';
 
-        if (empty($nexusApiToken) || $providedToken !== "Bearer {$nexusApiToken}") {
+        if ($expectedToken === '' || ! hash_equals($expectedToken, $providedToken)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 

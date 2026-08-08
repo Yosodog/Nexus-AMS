@@ -74,6 +74,8 @@ Before first sign-in, set the key environment values in `.env`:
 
 `NEXUS_RUNTIME` defaults to `standalone`, which preserves local public and private writes, schedules, backups, and interactive setup. The `hosted-tenant` and temporary `world-writer` values are managed deployment roles; selecting either value only changes the typed capability contract and does not connect a standalone installation to Nexus Cloud.
 
+`/up` remains the public, boot-only liveness check. Authenticated internal checks are available at `/api/internal/v1/readiness`, `/api/internal/v1/health`, and `/api/internal/v1/build` using the existing `NEXUS_API_TOKEN` bearer credential. These responses expose only allowlisted runtime, release, schema, view-contract, and heartbeat status fields; they never include connection details, raw configuration, exception messages, or secrets.
+
 ## Production Quick Start
 
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.

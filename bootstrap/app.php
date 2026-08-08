@@ -37,6 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         );
         $middleware->append(EnforceTrustedHost::class);
         $middleware->append(ApplySeoRobotsHeaders::class);
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'api/internal/v1/build',
+            'api/internal/v1/readiness',
+            'api/internal/v1/health',
+        ]);
         $middleware->statefulApi();
         $middleware->prependToGroup('web', [
             AssignRequestId::class,
