@@ -100,6 +100,7 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_counter_lock_timeout_propagates_to_the_receipt_transaction(): void
     {
+        config()->set('milcom.v2_enabled', false);
         $membershipService = Mockery::mock(AllianceMembershipService::class);
         $membershipService->shouldReceive('contains')->once()->with(999)->andReturnTrue();
         $orchestrator = Mockery::mock(PlanOrchestratorService::class);

@@ -8,6 +8,7 @@ use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
+use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Jobs\GenerateMilcomRecommendationsJob;
 use App\Models\Alliance;
 use App\Models\MilcomIncident;
@@ -15,6 +16,8 @@ use App\Models\MilcomObjective;
 use App\Models\MilcomOperation;
 use App\Models\MilcomRecommendationRun;
 use App\Models\Nation;
+use App\Models\WarCounter;
+use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
@@ -57,6 +60,33 @@ class MilcomIncidentIngestionTest extends TestCase
             GenerateMilcomRecommendationsJob::class,
             fn (GenerateMilcomRecommendationsJob $job): bool => $job->queue === null,
         );
+    }
+
+    public function test_v2_ingestion_does_not_recreate_legacy_counter_work_after_cutover(): void
+    {
+        SettingService::setWarCounterAutoCreationEnabled(true);
+        [$friendlyAlliance, $enemyAlliance] = $this->alliances();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $aggressor = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $archivedCounter = WarCounter::query()->create([
+            'aggressor_nation_id' => $aggressor->id,
+            'status' => 'archived',
+            'archived_at' => now(),
+        ]);
+
+        $this->postIncomingWar($this->incomingWarPayload(92_005, $aggressor, $attacked))->assertOk();
+
+        $this->assertDatabaseCount('milcom_incidents', 1);
+        $this->assertDatabaseCount('war_counters', 1);
+        $this->assertDatabaseHas('war_counters', [
+            'id' => $archivedCounter->id,
+            'status' => 'archived',
+        ]);
+        $this->assertDatabaseMissing('war_counters', [
+            'aggressor_nation_id' => $aggressor->id,
+            'status' => 'draft',
+        ]);
+        Queue::assertNotPushed(AutoPickCounterAssignmentsJob::class);
     }
 
     public function test_incident_is_linked_to_an_active_plan_only_when_minimum_reserved_coverage_exists(): void

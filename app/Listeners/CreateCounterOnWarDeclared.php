@@ -35,6 +35,10 @@ class CreateCounterOnWarDeclared
 
     public function handle(WarDeclared $event): void
     {
+        if ((bool) config('milcom.v2_enabled', false)) {
+            return;
+        }
+
         if (! $this->membershipService->contains($event->defenderAllianceId)
             || $event->defenderAlliancePosition === AlliancePositionEnum::APPLICANT->value) {
             return;
