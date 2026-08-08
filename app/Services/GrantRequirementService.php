@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Nation;
+use App\Services\GrantRequirements\GrantRequirementBuilderCatalog;
 use App\Services\Rules\RuleTreeKernel;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -19,23 +19,21 @@ class GrantRequirementService
 
     private const MAX_MULTI_VALUES = RuleTreeKernel::MAX_MULTI_VALUES;
 
-    public function __construct(private readonly RuleTreeKernel $kernel) {}
+    private readonly GrantRequirementBuilderCatalog $builderCatalog;
+
+    public function __construct(
+        private readonly RuleTreeKernel $kernel,
+        ?GrantRequirementBuilderCatalog $builderCatalog = null,
+    ) {
+        $this->builderCatalog = $builderCatalog ?? new GrantRequirementBuilderCatalog;
+    }
 
     /**
      * @return array<string, mixed>
      */
     public function getBuilderConfig(): array
     {
-        return [
-            'groups' => [
-                ['value' => 'all', 'label' => 'All conditions must match'],
-                ['value' => 'any', 'label' => 'Any condition may match'],
-                ['value' => 'not', 'label' => 'None of these may match'],
-            ],
-            'operators' => $this->operatorCatalog(),
-            'fields' => array_values($this->fieldCatalog()),
-            'default_tree' => $this->emptyTree(),
-        ];
+        return $this->builderCatalog->getBuilderConfig($this->emptyTree());
     }
 
     /**
@@ -341,7 +339,7 @@ class GrantRequirementService
      */
     private function evaluateCondition(array $node, array $context): array
     {
-        $field = $this->fieldCatalog()[$node['field']];
+        $field = $this->builderCatalog->fields()[$node['field']];
         $actual = $context[$node['field']] ?? null;
         $operator = $node['operator'];
         $value = $node['value'];
@@ -440,16 +438,16 @@ class GrantRequirementService
                 default => "{$label} did not satisfy this grant requirement.",
             },
             'enum' => match ($operator) {
-                'eq' => "{$label} must be {$this->displayValue($value)}.",
-                'neq' => "{$label} must not be {$this->displayValue($value)}.",
-                'in' => "{$label} must be one of: ".$this->displayList($value).'.',
-                'not_in' => "{$label} must not be one of: ".$this->displayList($value).'.',
+                'eq' => "{$label} must be {$this->builderCatalog->displayValue($value)}.",
+                'neq' => "{$label} must not be {$this->builderCatalog->displayValue($value)}.",
+                'in' => "{$label} must be one of: ".$this->builderCatalog->displayList($value).'.',
+                'not_in' => "{$label} must not be one of: ".$this->builderCatalog->displayList($value).'.',
                 default => "{$label} did not satisfy this grant requirement.",
             },
             'collection' => match ($operator) {
-                'contains_all' => "You must have all of these {$label}: ".$this->displayList($value).'.',
-                'contains_any' => "You must have at least one of these {$label}: ".$this->displayList($value).'.',
-                'contains_none' => "You must not have any of these {$label}: ".$this->displayList($value).'.',
+                'contains_all' => "You must have all of these {$label}: ".$this->builderCatalog->displayList($value).'.',
+                'contains_any' => "You must have at least one of these {$label}: ".$this->builderCatalog->displayList($value).'.',
+                'contains_none' => "You must not have any of these {$label}: ".$this->builderCatalog->displayList($value).'.',
                 default => "{$label} did not satisfy this grant requirement.",
             },
             default => $actual !== null ? "{$label} did not satisfy this grant requirement." : "{$label} is unavailable for this grant requirement.",
@@ -471,7 +469,7 @@ class GrantRequirementService
             return $mode.': '.$this->describeChildList($node['rules']);
         }
 
-        $field = $this->fieldCatalog()[$node['field']];
+        $field = $this->builderCatalog->fields()[$node['field']];
         $label = $field['label'];
         $operator = $node['operator'];
         $value = $node['value'];
@@ -489,16 +487,16 @@ class GrantRequirementService
                 default => $label,
             },
             'enum' => match ($operator) {
-                'eq' => "{$label} is {$this->displayValue($value)}",
-                'neq' => "{$label} is not {$this->displayValue($value)}",
-                'in' => "{$label} is one of ".$this->displayList($value),
-                'not_in' => "{$label} is not one of ".$this->displayList($value),
+                'eq' => "{$label} is {$this->builderCatalog->displayValue($value)}",
+                'neq' => "{$label} is not {$this->builderCatalog->displayValue($value)}",
+                'in' => "{$label} is one of ".$this->builderCatalog->displayList($value),
+                'not_in' => "{$label} is not one of ".$this->builderCatalog->displayList($value),
                 default => $label,
             },
             'collection' => match ($operator) {
-                'contains_all' => 'Has all of '.$this->displayList($value)." {$label}",
-                'contains_any' => 'Has any of '.$this->displayList($value)." {$label}",
-                'contains_none' => 'Has none of '.$this->displayList($value)." {$label}",
+                'contains_all' => 'Has all of '.$this->builderCatalog->displayList($value)." {$label}",
+                'contains_any' => 'Has any of '.$this->builderCatalog->displayList($value)." {$label}",
+                'contains_none' => 'Has none of '.$this->builderCatalog->displayList($value)." {$label}",
                 default => $label,
             },
             default => $label,
@@ -625,7 +623,7 @@ class GrantRequirementService
         }
 
         $fieldKey = (string) ($node['field'] ?? '');
-        $field = $this->fieldCatalog()[$fieldKey] ?? null;
+        $field = $this->builderCatalog->fields()[$fieldKey] ?? null;
 
         if ($field === null) {
             $errors[] = 'Grant conditions must use a supported field.';
@@ -865,245 +863,6 @@ class GrantRequirementService
     }
 
     /**
-     * @return array<string, array<string, mixed>>
-     */
-    private function fieldCatalog(): array
-    {
-        static $catalog = null;
-
-        if ($catalog !== null) {
-            return $catalog;
-        }
-
-        $enumOptions = fn (array $values): array => collect($values)
-            ->map(fn (string $value): array => ['value' => $value, 'label' => $this->humanizeOption($value)])
-            ->values()
-            ->all();
-
-        $numberFields = [
-            'num_cities' => ['label' => 'City count', 'category' => 'Nation'],
-            'score' => ['label' => 'Score', 'category' => 'Nation'],
-            'mmr_score' => ['label' => 'MMR score', 'category' => 'Nation'],
-            'alliance_seniority' => ['label' => 'Alliance seniority', 'category' => 'Nation'],
-            'beige_turns' => ['label' => 'Beige turns', 'category' => 'Nation'],
-            'vacation_mode_turns' => ['label' => 'Vacation mode turns', 'category' => 'Nation'],
-            'turns_since_last_city' => ['label' => 'Turns since last city', 'category' => 'Nation'],
-            'turns_since_last_project' => ['label' => 'Turns since last project', 'category' => 'Nation'],
-            'wars_won' => ['label' => 'Wars won', 'category' => 'Nation'],
-            'wars_lost' => ['label' => 'Wars lost', 'category' => 'Nation'],
-            'offensive_wars_count' => ['label' => 'Offensive wars', 'category' => 'Nation'],
-            'defensive_wars_count' => ['label' => 'Defensive wars', 'category' => 'Nation'],
-            'population' => ['label' => 'Population', 'category' => 'Nation'],
-            'gross_national_income' => ['label' => 'Gross national income', 'category' => 'Nation'],
-            'gross_domestic_product' => ['label' => 'Gross domestic product', 'category' => 'Nation'],
-            'total_infrastructure' => ['label' => 'Total infrastructure', 'category' => 'Cities'],
-            'avg_infrastructure_per_city' => ['label' => 'Average infrastructure per city', 'category' => 'Cities'],
-            'soldiers' => ['label' => 'Soldiers', 'category' => 'Military'],
-            'tanks' => ['label' => 'Tanks', 'category' => 'Military'],
-            'aircraft' => ['label' => 'Aircraft', 'category' => 'Military'],
-            'ships' => ['label' => 'Ships', 'category' => 'Military'],
-            'missiles' => ['label' => 'Missiles', 'category' => 'Military'],
-            'nukes' => ['label' => 'Nukes', 'category' => 'Military'],
-            'spies' => ['label' => 'Spies', 'category' => 'Military'],
-            'soldiers_per_city' => ['label' => 'Soldiers per city', 'category' => 'Military'],
-            'tanks_per_city' => ['label' => 'Tanks per city', 'category' => 'Military'],
-            'aircraft_per_city' => ['label' => 'Aircraft per city', 'category' => 'Military'],
-            'ships_per_city' => ['label' => 'Ships per city', 'category' => 'Military'],
-            'missiles_per_city' => ['label' => 'Missiles per city', 'category' => 'Military'],
-            'nukes_per_city' => ['label' => 'Nukes per city', 'category' => 'Military'],
-        ];
-
-        foreach (PWHelperService::resources(true, true) as $resource) {
-            $numberFields[$resource] = [
-                'label' => ucfirst($resource),
-                'category' => 'Resources',
-            ];
-        }
-
-        $catalog = collect($numberFields)
-            ->mapWithKeys(function (array $meta, string $key): array {
-                return [
-                    $key => [
-                        'key' => $key,
-                        'label' => $meta['label'],
-                        'category' => $meta['category'],
-                        'type' => 'number',
-                        'operators' => ['gt', 'gte', 'lt', 'lte', 'eq', 'neq', 'between', 'not_between'],
-                    ],
-                ];
-            })
-            ->merge([
-                'domestic_policy' => [
-                    'key' => 'domestic_policy',
-                    'label' => 'Domestic policy',
-                    'category' => 'Policies',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq', 'in', 'not_in'],
-                    'options' => $enumOptions([
-                        'MANIFEST_DESTINY',
-                        'OPEN_MARKETS',
-                        'TECHNOLOGICAL_ADVANCEMENT',
-                        'URBANIZATION',
-                    ]),
-                ],
-                'war_policy' => [
-                    'key' => 'war_policy',
-                    'label' => 'War policy',
-                    'category' => 'Policies',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq', 'in', 'not_in'],
-                    'options' => $enumOptions([
-                        'ATTRITION',
-                        'TURTLE',
-                        'BLITZKRIEG',
-                        'FORTRESS',
-                        'MONEYBAGS',
-                        'PIRATE',
-                        'TACTICIAN',
-                        'GUARDIAN',
-                        'COVERT',
-                        'ARCANE',
-                        'NONE',
-                    ]),
-                ],
-                'color' => [
-                    'key' => 'color',
-                    'label' => 'Color',
-                    'category' => 'Policies',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq', 'in', 'not_in'],
-                    'options' => $enumOptions([
-                        'AQUA',
-                        'BEIGE',
-                        'BLACK',
-                        'BLUE',
-                        'BROWN',
-                        'GRAY',
-                        'GREEN',
-                        'LIME',
-                        'MAROON',
-                        'OLIVE',
-                        'ORANGE',
-                        'PINK',
-                        'PURPLE',
-                        'RED',
-                        'WHITE',
-                        'YELLOW',
-                    ]),
-                ],
-                'continent' => [
-                    'key' => 'continent',
-                    'label' => 'Continent',
-                    'category' => 'Nation',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq', 'in', 'not_in'],
-                    'options' => $enumOptions([
-                        'AFRICA',
-                        'ANTARCTICA',
-                        'ASIA',
-                        'AUSTRALIA',
-                        'EUROPE',
-                        'NORTH_AMERICA',
-                        'SOUTH_AMERICA',
-                    ]),
-                ],
-                'alliance_position' => [
-                    'key' => 'alliance_position',
-                    'label' => 'Alliance position',
-                    'category' => 'Nation',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq', 'in', 'not_in'],
-                    'options' => $enumOptions([
-                        'APPLICANT',
-                        'MEMBER',
-                        'OFFICER',
-                        'HEIR',
-                        'LEADER',
-                    ]),
-                ],
-                'growth_circle_enrollment' => [
-                    'key' => 'growth_circle_enrollment',
-                    'label' => 'Growth Circles enrollment',
-                    'category' => 'Programs',
-                    'type' => 'enum',
-                    'operators' => ['eq', 'neq'],
-                    'options' => $enumOptions([
-                        'ENROLLED',
-                        'NOT_ENROLLED',
-                    ]),
-                ],
-                'projects' => [
-                    'key' => 'projects',
-                    'label' => 'projects',
-                    'category' => 'Projects',
-                    'type' => 'collection',
-                    'operators' => ['contains_all', 'contains_any', 'contains_none'],
-                    'options' => collect(PWHelperService::projects())
-                        ->map(fn (string $project): array => ['value' => $project, 'label' => $project])
-                        ->values()
-                        ->all(),
-                ],
-            ])
-            ->sortBy([
-                ['category', 'asc'],
-                ['label', 'asc'],
-            ])
-            ->all();
-
-        return $catalog;
-    }
-
-    /**
-     * @return array<int, array<string, string>>
-     */
-    private function operatorCatalog(): array
-    {
-        return [
-            ['value' => 'gt', 'label' => 'Greater than', 'value_type' => 'number'],
-            ['value' => 'gte', 'label' => 'At least', 'value_type' => 'number'],
-            ['value' => 'lt', 'label' => 'Less than', 'value_type' => 'number'],
-            ['value' => 'lte', 'label' => 'At most', 'value_type' => 'number'],
-            ['value' => 'eq', 'label' => 'Equals', 'value_type' => 'single'],
-            ['value' => 'neq', 'label' => 'Does not equal', 'value_type' => 'single'],
-            ['value' => 'between', 'label' => 'Between', 'value_type' => 'range'],
-            ['value' => 'not_between', 'label' => 'Not between', 'value_type' => 'range'],
-            ['value' => 'in', 'label' => 'Is one of', 'value_type' => 'multi'],
-            ['value' => 'not_in', 'label' => 'Is not one of', 'value_type' => 'multi'],
-            ['value' => 'contains_all', 'label' => 'Contains all', 'value_type' => 'multi'],
-            ['value' => 'contains_any', 'label' => 'Contains any', 'value_type' => 'multi'],
-            ['value' => 'contains_none', 'label' => 'Contains none', 'value_type' => 'multi'],
-        ];
-    }
-
-    /**
-     * @param  array<int, string>|string  $value
-     */
-    private function displayList(array|string $value): string
-    {
-        return collect(Arr::wrap($value))
-            ->map(fn (mixed $item): string => $this->displayValue($item))
-            ->implode(', ');
-    }
-
-    private function displayValue(mixed $value): string
-    {
-        if (is_numeric($value)) {
-            return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
-        }
-
-        return $this->humanizeOption((string) $value);
-    }
-
-    private function humanizeOption(string $value): string
-    {
-        if ($value === strtoupper($value)) {
-            return ucwords(strtolower(str_replace('_', ' ', $value)));
-        }
-
-        return $value;
-    }
-
-    /**
      * @return array<string, mixed>|array<int, mixed>|null
      */
     private function coerceLegacyDefinition(array $definition): ?array
@@ -1203,7 +962,7 @@ class GrantRequirementService
      */
     private function normalizeLegacySelections(mixed $value, string $fieldKey): array
     {
-        $field = $this->fieldCatalog()[$fieldKey] ?? null;
+        $field = $this->builderCatalog->fields()[$fieldKey] ?? null;
 
         if ($field === null) {
             return [];
@@ -1214,7 +973,7 @@ class GrantRequirementService
 
     private function normalizeLegacySingleSelection(mixed $value, string $fieldKey): ?string
     {
-        $field = $this->fieldCatalog()[$fieldKey] ?? null;
+        $field = $this->builderCatalog->fields()[$fieldKey] ?? null;
 
         if ($field === null) {
             return null;
