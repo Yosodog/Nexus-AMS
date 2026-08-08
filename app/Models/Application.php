@@ -15,6 +15,10 @@ use Illuminate\Support\Carbon;
  * @property string $discord_user_id
  * @property string $discord_username
  * @property string|null $discord_channel_id
+ * @property int $discord_reconcile_revision
+ * @property string|null $discord_reconcile_queue_id
+ * @property string|null $discord_reconcile_desired_hash
+ * @property array<int, string>|null $discord_reconcile_issues
  * @property ApplicationStatus $status
  * @property Carbon|null $approved_at
  * @property Carbon|null $denied_at
@@ -42,6 +46,8 @@ class Application extends Model
     {
         return [
             'status' => ApplicationStatus::class,
+            'discord_reconcile_revision' => 'integer',
+            'discord_reconcile_issues' => 'array',
             'approved_at' => 'datetime',
             'denied_at' => 'datetime',
             'cancelled_at' => 'datetime',
