@@ -12,6 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** @property LoanStatus|string $status */
 class Loan extends Model
 {
+    /** @var array<string, string> */
+    protected $attributes = [
+        'status' => LoanStatus::Pending->value,
+    ];
+
     /**
      * @var string
      */

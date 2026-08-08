@@ -166,7 +166,10 @@ class AccountService
             throw new UserErrorException('The account has pending city grants.');
         }
 
-        if ($account->loans()->whereIn('status', [LoanStatus::Pending->value, LoanStatus::Approved->value])->exists()) {
+        if ($account->loans()->whereIn('status', [
+            LoanStatus::Pending->value,
+            ...LoanStatus::activeValues(),
+        ])->exists()) {
             throw new UserErrorException('The account has pending or active loans.');
         }
 

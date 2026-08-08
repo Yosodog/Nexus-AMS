@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LoanStatus;
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\DirectDepositEnrollment;
 use App\Models\DiscordAccount;
+use App\Models\Loan;
 use App\Models\MemberTransfer;
 use App\Models\Nation;
 use App\Models\User;
@@ -13,6 +15,7 @@ use App\Services\AccountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AccountDeletionSafetyTest extends TestCase
@@ -70,6 +73,33 @@ class AccountDeletionSafetyTest extends TestCase
     public function test_empty_account_without_pending_work_can_be_deleted(): void
     {
         [$nation, $account] = $this->createNationAndAccount(810008);
+
+        AccountService::deleteAccount($account, $nation->id);
+
+        $this->assertSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    #[DataProvider('accountDeletionBlockingLoanStatusProvider')]
+    public function test_pending_and_active_loans_block_account_deletion(LoanStatus $status): void
+    {
+        [$nation, $account] = $this->createNationAndAccount(810016);
+        $this->createLoanWithStatus($account, $status);
+
+        try {
+            AccountService::deleteAccount($account, $nation->id);
+            $this->fail("An account with a {$status->value} loan was deleted.");
+        } catch (UserErrorException $exception) {
+            $this->assertSame('The account has pending or active loans.', $exception->getMessage());
+        }
+
+        $this->assertNotSoftDeleted('accounts', ['id' => $account->id]);
+    }
+
+    #[DataProvider('terminalLoanStatusProvider')]
+    public function test_terminal_loans_do_not_block_account_deletion(LoanStatus $status): void
+    {
+        [$nation, $account] = $this->createNationAndAccount(810017);
+        $this->createLoanWithStatus($account, $status);
 
         AccountService::deleteAccount($account, $nation->id);
 
@@ -206,6 +236,24 @@ class AccountDeletionSafetyTest extends TestCase
             ->assertSee('Deleted account');
     }
 
+    public static function accountDeletionBlockingLoanStatusProvider(): iterable
+    {
+        yield LoanStatus::Pending->value => [LoanStatus::Pending];
+
+        foreach (LoanStatus::activeValues() as $status) {
+            yield $status => [LoanStatus::from($status)];
+        }
+    }
+
+    public static function terminalLoanStatusProvider(): iterable
+    {
+        foreach (LoanStatus::cases() as $status) {
+            if ($status->isTerminal()) {
+                yield $status->value => [$status];
+            }
+        }
+    }
+
     /**
      * @return array{0: Nation, 1: Account, 2?: User}
      */
@@ -229,6 +277,31 @@ class AccountDeletionSafetyTest extends TestCase
     private function attachDiscordAccount(User $user): void
     {
         DiscordAccount::factory()->create(['user_id' => $user->id]);
+    }
+
+    private function createLoanWithStatus(Account $account, LoanStatus $status): void
+    {
+        $ignoreStaleSqliteConstraint = DB::getDriverName() === 'sqlite'
+            && in_array($status, [LoanStatus::Paid, LoanStatus::Missed], true);
+
+        if ($ignoreStaleSqliteConstraint) {
+            DB::statement('PRAGMA ignore_check_constraints = ON');
+        }
+
+        try {
+            Loan::query()->create([
+                'nation_id' => $account->nation_id,
+                'account_id' => $account->id,
+                'amount' => 1000,
+                'remaining_balance' => 1000,
+                'status' => $status,
+                'pending_key' => $status === LoanStatus::Pending ? 1 : null,
+            ]);
+        } finally {
+            if ($ignoreStaleSqliteConstraint) {
+                DB::statement('PRAGMA ignore_check_constraints = OFF');
+            }
+        }
     }
 
     private function createPendingMemberTransfer(Account $source, Account $destination, User $user): void

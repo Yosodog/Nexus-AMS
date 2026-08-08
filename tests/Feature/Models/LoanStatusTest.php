@@ -36,6 +36,24 @@ class LoanStatusTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_unsaved_loan_uses_the_database_status_default(): void
+    {
+        $loan = new Loan;
+
+        $this->assertSame(LoanStatus::Pending->value, $loan->getAttributes()['status']);
+        $this->assertSame(LoanStatus::Pending, $loan->status);
+        $this->assertTrue($loan->isPending());
+        $this->assertSame(LoanStatus::Pending->value, $loan->toArray()['status']);
+    }
+
+    public function test_explicit_null_status_assignment_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Loan status values must be strings or LoanStatus cases.');
+
+        new Loan(['status' => null]);
+    }
+
     public function test_all_known_statuses_round_trip_and_serialize_as_backed_strings(): void
     {
         [$nation, $account] = $this->createAccountOwner();
