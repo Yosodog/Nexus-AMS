@@ -29,6 +29,7 @@ class StandaloneFreshMigrationTest extends TestCase
 
         $this->assertTrue(Schema::hasTable('nations'));
         $this->assertTrue(Schema::hasTable('cities'));
+        $this->assertTrue(Schema::hasTable('process_heartbeats'));
         $this->assertTrue(Schema::hasTable('scheduled_task_runs'));
         $this->assertDatabaseMissing('settings', ['key' => 'pw_city_average']);
     }

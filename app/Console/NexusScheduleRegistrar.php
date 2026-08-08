@@ -4,11 +4,14 @@ namespace App\Console;
 
 use App\Console\Commands\DrawWeeklyLottery;
 use App\Console\Commands\ProcessDeposits;
+use App\Enums\ProcessHeartbeatRole;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
 use App\Jobs\ReconcileBlockadeReliefRequests;
 use App\Jobs\ReconcileMilcomLifecycleJob;
+use App\Jobs\RecordQueueHeartbeat;
 use App\Jobs\SendAuditRemindersJob;
+use App\Services\ProcessHeartbeatRecorder;
 use App\Services\PWHealthService;
 use App\Services\RuntimeCapabilities;
 use App\Services\SettingService;
@@ -25,6 +28,10 @@ final readonly class NexusScheduleRegistrar
     public function register(Schedule $schedule): void
     {
         $whenPWUp = fn (): bool => $this->pwHealthService->isUp();
+
+        if ($this->capabilities->runsTenantSchedules()) {
+            $this->registerProcessHeartbeatSchedule($schedule);
+        }
 
         if ($this->capabilities->runsPublicWorldSchedules()) {
             $this->registerPublicDependencySchedule($schedule);
@@ -68,6 +75,23 @@ final readonly class NexusScheduleRegistrar
     {
         return $this->capabilities->runsPublicWorldSchedules()
             && $this->capabilities->runsTenantSchedules();
+    }
+
+    private function registerProcessHeartbeatSchedule(Schedule $schedule): void
+    {
+        $queue = config('nexus.health.queue');
+        $queue = is_string($queue) && preg_match('/\A[a-zA-Z0-9:_-]{1,64}\z/D', $queue) === 1
+            ? $queue
+            : 'default';
+
+        $schedule->call(function () use ($queue): void {
+            app(ProcessHeartbeatRecorder::class)->record(ProcessHeartbeatRole::Scheduler);
+            RecordQueueHeartbeat::dispatch()->onQueue($queue);
+        })
+            ->name('health:record-process-heartbeats')
+            ->everyMinute()
+            ->withoutOverlapping(2)
+            ->onOneServer();
     }
 
     private function registerPublicDependencySchedule(Schedule $schedule): void

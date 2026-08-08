@@ -17,6 +17,7 @@ use Tests\TestCase;
 class NexusRuntimeScheduleMatrixTest extends TestCase
 {
     private const STANDALONE_EVENTS = [
+        'health:record-process-heartbeats@* * * * *',
         'pw:health-check@* * * * *',
         'sync:nations:rolling --scope=highscore@15 0 * * *',
         'sync:nations:rolling --scope=all@30 0 * * 1',
@@ -66,6 +67,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
     ];
 
     private const HOSTED_TENANT_EVENTS = [
+        'health:record-process-heartbeats@* * * * *',
         'accounts:process-deposits@* * * * *',
         'loans:process-payments@15 0 * * *',
         'payroll:run-daily@30 0 * * *',

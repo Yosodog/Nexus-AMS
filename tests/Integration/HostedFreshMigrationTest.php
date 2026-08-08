@@ -115,7 +115,7 @@ class HostedFreshMigrationTest extends TestCase
             $this->assertFalse(Schema::hasTable($worldTable), "Hosted migration created world table [{$worldTable}].");
         }
 
-        foreach (['accounts', 'audit_results', 'milcom_operations', 'scheduled_task_runs'] as $tenantTable) {
+        foreach (['accounts', 'audit_results', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs'] as $tenantTable) {
             $this->assertTrue(Schema::hasTable($tenantTable), "Hosted migration omitted tenant table [{$tenantTable}].");
         }
 

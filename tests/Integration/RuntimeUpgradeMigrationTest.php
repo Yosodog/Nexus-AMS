@@ -7,6 +7,7 @@ use App\Services\RuntimeCapabilities;
 use App\Services\World\WorldModelManifest;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class RuntimeUpgradeMigrationTest extends TestCase
@@ -44,6 +45,7 @@ class RuntimeUpgradeMigrationTest extends TestCase
         $this->resumeInterruptedUpgrade($pendingMigrations, $migrationCount);
 
         $this->assertJoinedAllianceReference();
+        $this->assertTrue(Schema::hasTable('process_heartbeats'));
         $this->assertSame(53, $this->worldForeignKeyCount());
     }
 
@@ -60,6 +62,7 @@ class RuntimeUpgradeMigrationTest extends TestCase
 
         $this->assertHostedWorldViewsReadable();
         $this->assertJoinedAllianceReference();
+        $this->assertTrue(Schema::hasTable('process_heartbeats'));
         $this->assertSame(0, $this->worldForeignKeyCount());
     }
 
