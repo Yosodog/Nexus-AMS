@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\LoginResponse;
 use App\Actions\Fortify\TwoFactorLoginResponse;
 use App\Broadcasting\PWMessageChannel;
+use App\Contracts\TenantCallbackTransport;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Logs\CronLog;
 use App\Logs\SubLog;
@@ -43,6 +44,7 @@ use App\Services\StaffWorkQueue\Sources\RebuildingWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\WarAidWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\WithdrawalWorkQueueSource;
 use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
+use App\Services\TenantCallbacks\HttpTenantCallbackTransport;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -68,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
+        $this->app->bind(TenantCallbackTransport::class, HttpTenantCallbackTransport::class);
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
             $app->make(ApplicationWorkQueueSource::class),

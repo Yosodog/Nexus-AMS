@@ -68,6 +68,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
 
     private const HOSTED_TENANT_EVENTS = [
         'health:record-process-heartbeats@* * * * *',
+        'nexus:dispatch-tenant-callbacks --limit=100@* * * * *',
         'accounts:process-deposits@* * * * *',
         'loans:process-payments@15 0 * * *',
         'payroll:run-daily@30 0 * * *',

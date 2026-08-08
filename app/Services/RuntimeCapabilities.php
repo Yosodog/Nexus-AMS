@@ -64,6 +64,14 @@ final readonly class RuntimeCapabilities
         };
     }
 
+    public function sendsTenantCallbacks(): bool
+    {
+        return match ($this->runtime) {
+            NexusRuntime::HostedTenant => true,
+            NexusRuntime::Standalone, NexusRuntime::WorldWriter => false,
+        };
+    }
+
     public function allowsInteractiveSetup(): bool
     {
         return match ($this->runtime) {

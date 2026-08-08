@@ -76,6 +76,8 @@ Before first sign-in, set the key environment values in `.env`:
 
 `/up` remains the public, boot-only liveness check. Authenticated internal checks are available at `/api/internal/v1/readiness`, `/api/internal/v1/health`, and `/api/internal/v1/build` using the existing `NEXUS_API_TOKEN` bearer credential. These responses expose only allowlisted runtime, release, schema, view-contract, and heartbeat status fields; they never include connection details, raw configuration, exception messages, or secrets.
 
+Hosted tenant callbacks use a durable outbox and a versioned HMAC contract. Managed deployments set `NEXUS_CONTROL_CALLBACK_URL` to the fixed HTTPS Cloud receiver and mount the tenant-scoped key at `NEXUS_CONTROL_CALLBACK_KEY_FILE`; raw key material is never placed in an environment variable. Retries keep the callback identity and body stable while signing each attempt with a fresh nonce. Standalone and world-writer runtimes neither schedule callbacks nor read callback credentials.
+
 ## Production Quick Start
 
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.

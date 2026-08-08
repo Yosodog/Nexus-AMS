@@ -3,9 +3,11 @@
 namespace Tests\Integration;
 
 use App\Enums\NexusRuntime;
+use App\Models\TenantCallbackDelivery;
 use App\Services\RuntimeCapabilities;
 use App\Services\RuntimeReadinessService;
 use App\Services\World\WorldModelManifest;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -116,7 +118,7 @@ class HostedFreshMigrationTest extends TestCase
             $this->assertFalse(Schema::hasTable($worldTable), "Hosted migration created world table [{$worldTable}].");
         }
 
-        foreach (['accounts', 'audit_results', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs'] as $tenantTable) {
+        foreach (['accounts', 'audit_results', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs', 'tenant_callback_deliveries'] as $tenantTable) {
             $this->assertTrue(Schema::hasTable($tenantTable), "Hosted migration omitted tenant table [{$tenantTable}].");
         }
 
@@ -148,6 +150,47 @@ class HostedFreshMigrationTest extends TestCase
 
             $this->assertGreaterThanOrEqual(1, (int) $indexCount, "Hosted world reference [{$table}.{$column}] is not indexed.");
         }
+    }
+
+    public function test_hosted_callback_outbox_enforces_transport_and_effect_idempotency(): void
+    {
+        $this->artisan('migrate:fresh', ['--drop-views' => true, '--force' => true])->assertSuccessful();
+
+        $delivery = TenantCallbackDelivery::factory()->create();
+
+        try {
+            TenantCallbackDelivery::factory()->create([
+                'callback_id' => $delivery->callback_id,
+            ]);
+            $this->fail('The hosted outbox accepted a duplicate callback identity.');
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        try {
+            TenantCallbackDelivery::factory()->create([
+                'event_type' => $delivery->event_type,
+                'subject_key' => $delivery->subject_key,
+            ]);
+            $this->fail('The hosted outbox accepted a duplicate callback effect.');
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->assertTrue(Schema::hasIndex('tenant_callback_deliveries', ['callback_id'], 'unique'));
+        $this->assertTrue(Schema::hasIndex(
+            'tenant_callback_deliveries',
+            ['event_type', 'subject_key'],
+            'unique',
+        ));
+        $this->assertTrue(Schema::hasIndex(
+            'tenant_callback_deliveries',
+            ['status', 'next_attempt_at'],
+        ));
+        $this->assertTrue(Schema::hasIndex(
+            'tenant_callback_deliveries',
+            ['status', 'last_attempted_at'],
+        ));
     }
 
     public function test_hosted_readiness_accepts_the_privileged_world_view_contract(): void

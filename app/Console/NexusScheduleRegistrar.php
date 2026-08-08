@@ -33,6 +33,10 @@ final readonly class NexusScheduleRegistrar
             $this->registerProcessHeartbeatSchedule($schedule);
         }
 
+        if ($this->capabilities->sendsTenantCallbacks()) {
+            $this->registerTenantCallbackSchedule($schedule);
+        }
+
         if ($this->capabilities->runsPublicWorldSchedules()) {
             $this->registerPublicDependencySchedule($schedule);
         }
@@ -89,6 +93,15 @@ final readonly class NexusScheduleRegistrar
             RecordQueueHeartbeat::dispatch()->onQueue($queue);
         })
             ->name('health:record-process-heartbeats')
+            ->everyMinute()
+            ->withoutOverlapping(2)
+            ->onOneServer();
+    }
+
+    private function registerTenantCallbackSchedule(Schedule $schedule): void
+    {
+        $schedule->command('nexus:dispatch-tenant-callbacks --limit=100')
+            ->name('platform:dispatch-tenant-callbacks')
             ->everyMinute()
             ->withoutOverlapping(2)
             ->onOneServer();

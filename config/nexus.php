@@ -19,4 +19,14 @@ return [
         'queue_max_age_seconds' => (int) env('NEXUS_QUEUE_HEARTBEAT_MAX_AGE', 180),
         'scheduler_max_age_seconds' => (int) env('NEXUS_SCHEDULER_HEARTBEAT_MAX_AGE', 180),
     ],
+    'control' => [
+        'callback_url' => env('NEXUS_CONTROL_CALLBACK_URL'),
+        'callback_key_file' => env('NEXUS_CONTROL_CALLBACK_KEY_FILE'),
+        'callback_queue' => env('NEXUS_CONTROL_CALLBACK_QUEUE', 'default'),
+        'connect_timeout_seconds' => (int) env('NEXUS_CONTROL_CONNECT_TIMEOUT', 3),
+        'request_timeout_seconds' => (int) env('NEXUS_CONTROL_REQUEST_TIMEOUT', 10),
+        'response_max_age_seconds' => (int) env('NEXUS_CONTROL_RESPONSE_MAX_AGE', 120),
+        'response_future_tolerance_seconds' => (int) env('NEXUS_CONTROL_RESPONSE_FUTURE_TOLERANCE', 30),
+        'callback_lease_seconds' => (int) env('NEXUS_CONTROL_CALLBACK_LEASE', 90),
+    ],
 ];
