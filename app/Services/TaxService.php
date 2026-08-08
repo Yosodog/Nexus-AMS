@@ -29,13 +29,13 @@ class TaxService
      */
     public static function updateAllianceTaxes(int $alliance_id, ?QueryService $client = null): int
     {
+        $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
         TaxImportCheckpoint::recordAttempt($alliance_id);
 
         Cache::forget('tax_summary_stats');
         Cache::forget('tax_resource_chart_data');
         Cache::forget('tax_daily_totals');
 
-        $lastTaxId = self::getLastScannedTaxRecordId($alliance_id);
         try {
             $bankRecords = self::getAllianceTaxRecords($alliance_id, $lastTaxId + 1, $client);
         } catch (Throwable $exception) {

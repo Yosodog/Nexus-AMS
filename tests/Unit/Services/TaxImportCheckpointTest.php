@@ -136,6 +136,38 @@ class TaxImportCheckpointTest extends TestCase
         ]);
     }
 
+    public function test_tax_import_initializes_a_missing_checkpoint_from_the_last_durable_tax_id(): void
+    {
+        Taxes::query()->create($this->taxRow([
+            'id' => 100,
+            'receiver_id' => 777,
+        ]));
+
+        $this->assertDatabaseMissing('tax_import_checkpoints', [
+            'alliance_id' => 777,
+        ]);
+
+        $client = Mockery::mock(QueryService::class);
+        $client->shouldReceive('sendQuery')
+            ->once()
+            ->withArgs(function (GraphQLQueryBuilder $builder): bool {
+                return str_contains($builder->build(), 'min_id: 101');
+            })
+            ->andReturn($this->allianceTaxResponse([]));
+
+        $this->assertSame(100, TaxService::updateAllianceTaxes(777, $client));
+        $this->assertDatabaseHas('tax_import_checkpoints', [
+            'alliance_id' => 777,
+            'last_scanned_id' => 100,
+        ]);
+
+        $checkpoint = TaxImportCheckpoint::query()->where('alliance_id', 777)->firstOrFail();
+
+        $this->assertNotNull($checkpoint->last_attempted_at);
+        $this->assertNotNull($checkpoint->last_succeeded_at);
+        $this->assertFalse($checkpoint->latestAttemptFailed());
+    }
+
     public function test_tax_import_rewinds_an_invalid_checkpoint_to_the_last_durable_tax_id(): void
     {
         $apiTimestamp = '2026-08-02T05:06:07+00:00';
