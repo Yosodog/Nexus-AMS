@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\LoanStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendManualCityGrantRequest;
 use App\Http\Requests\Admin\SendManualGrantRequest;
@@ -24,6 +25,7 @@ use App\Services\GrantService;
 use App\Services\LoanService;
 use App\Services\PWHelperService;
 use App\Services\WarAidService;
+use BackedEnum;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
@@ -244,7 +246,7 @@ class ManualDisbursementController extends Controller
                     'remaining_balance' => $data['amount'],
                     'interest_rate' => $data['interest_rate'],
                     'term_weeks' => $data['term_weeks'],
-                    'status' => 'pending',
+                    'status' => LoanStatus::Pending,
                     'pending_key' => 1,
                 ]);
 
@@ -422,7 +424,9 @@ class ManualDisbursementController extends Controller
                 $workflow = $disburse();
                 $workflow->refresh();
 
-                if ($workflow->getAttribute('status') !== 'approved') {
+                $workflowStatus = $workflow->getAttribute('status');
+
+                if (($workflowStatus instanceof BackedEnum ? $workflowStatus->value : $workflowStatus) !== 'approved') {
                     throw ValidationException::withMessages([
                         'idempotency_key' => 'The manual disbursement was not approved.',
                     ]);

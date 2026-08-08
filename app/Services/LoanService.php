@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DataTransferObjects\AllianceFinanceData;
+use App\Enums\LoanStatus;
 use App\Events\AllianceIncomeOccurred;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
@@ -41,7 +42,7 @@ class LoanService
 
     public function applyForLoan(Nation $nation, Account $account, float $amount, int $termLength): Loan
     {
-        if (Loan::query()->where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
+        if (Loan::query()->where('nation_id', $nation->id)->where('status', LoanStatus::Pending->value)->exists()) {
             throw ValidationException::withMessages([
                 'loan' => 'You already have a pending loan application.',
             ]);
@@ -53,7 +54,7 @@ class LoanService
                 'account_id' => $account->id,
                 'amount' => $amount,
                 'term_weeks' => $termLength,
-                'status' => 'pending',
+                'status' => LoanStatus::Pending,
                 'pending_key' => 1,
                 'remaining_balance' => $amount,
                 'weekly_interest_paid' => 0,
@@ -109,7 +110,7 @@ class LoanService
             ]);
         }
 
-        if (Loan::query()->where('nation_id', $nation->id)->where('status', 'pending')->exists()) {
+        if (Loan::query()->where('nation_id', $nation->id)->where('status', LoanStatus::Pending->value)->exists()) {
             throw ValidationException::withMessages([
                 'loan' => 'You already have a pending loan application.',
             ]);
@@ -129,7 +130,7 @@ class LoanService
             context: 'approve your own loan request'
         );
 
-        if ($approvalSnapshot->status !== 'pending') {
+        if ($approvalSnapshot->status !== LoanStatus::Pending) {
             throw ValidationException::withMessages([
                 'loan' => 'Only pending loans can be approved.',
             ]);
@@ -155,7 +156,7 @@ class LoanService
                 context: 'approve your own loan request'
             );
 
-            if ($lockedLoan->status !== 'pending') {
+            if ($lockedLoan->status !== LoanStatus::Pending) {
                 throw ValidationException::withMessages([
                     'loan' => 'Only pending loans can be approved.',
                 ]);
@@ -193,7 +194,7 @@ class LoanService
                 'amount' => $approvedAmount,
                 'remaining_balance' => $approvedAmount,
                 'term_weeks' => $approvedTermWeeks,
-                'status' => 'approved',
+                'status' => LoanStatus::Approved,
                 'pending_key' => null,
                 'approved_at' => now(),
                 'next_due_date' => now()->addDays(self::DAYS_PER_PAYMENT_CYCLE),
@@ -270,14 +271,14 @@ class LoanService
                 context: 'deny your own loan request'
             );
 
-            if ($lockedLoan->status !== 'pending') {
+            if ($lockedLoan->status !== LoanStatus::Pending) {
                 throw ValidationException::withMessages([
                     'loan' => 'Only pending loans can be denied.',
                 ]);
             }
 
             $lockedLoan->update([
-                'status' => 'denied',
+                'status' => LoanStatus::Denied,
                 'pending_key' => null,
             ]);
 
@@ -311,7 +312,7 @@ class LoanService
         $updated = 0;
 
         Loan::query()
-            ->whereIn('status', ['approved', 'missed'])
+            ->whereIn('status', LoanStatus::activeValues())
             ->where('remaining_balance', '>', 0)
             ->whereNotNull('next_due_date')
             ->chunkById(200, function ($loans) use ($pausedAt, $resumedAt, &$updated) {
@@ -348,7 +349,7 @@ class LoanService
         $today = now()->startOfDay();
 
         $loans = Loan::query()
-            ->whereIn('status', ['approved', 'missed'])
+            ->whereIn('status', LoanStatus::activeValues())
             ->where('remaining_balance', '>', 0)
             ->where(function ($query) use ($today) {
                 $query->where('past_due_amount', '>', 0)
@@ -367,8 +368,8 @@ class LoanService
 
                 $due = $this->calculateCurrentAmountDue($lockedLoan, $today, false);
 
-                if ($due <= 0 && $lockedLoan->status === 'missed') {
-                    $lockedLoan->update(['status' => 'approved']);
+                if ($due <= 0 && $lockedLoan->status === LoanStatus::Missed) {
+                    $lockedLoan->update(['status' => LoanStatus::Approved]);
                 }
 
                 return $due;
@@ -398,7 +399,7 @@ class LoanService
             if (! $paid) {
                 DB::transaction(function () use ($loan, $cyclesAccrued) {
                     $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-                    $lockedLoan->update(['status' => 'missed']);
+                    $lockedLoan->update(['status' => LoanStatus::Missed]);
 
                     if ($cyclesAccrued > 0) {
                         $lockedLoan->nation->notify(
@@ -429,7 +430,7 @@ class LoanService
             return 0.0;
         }
 
-        if ($loan->remaining_balance <= 0 || $loan->status === 'paid') {
+        if ($loan->remaining_balance <= 0 || $loan->status === LoanStatus::Paid) {
             return 0.0;
         }
 
@@ -619,14 +620,14 @@ class LoanService
                 context: 'mark your own loan as paid'
             );
 
-            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+            if (! $lockedLoan->isRepayable()) {
                 throw ValidationException::withMessages([
                     'loan' => 'Only active loans can be marked as paid.',
                 ]);
             }
 
             $lockedLoan->update([
-                'status' => 'paid',
+                'status' => LoanStatus::Paid,
                 'remaining_balance' => 0,
                 'past_due_amount' => 0,
                 'accrued_interest_due' => 0,
@@ -665,7 +666,7 @@ class LoanService
             throw ValidationException::withMessages(['amount' => 'Repayment amount must be greater than zero.']);
         }
 
-        if (! in_array($loan->status, ['approved', 'missed'], true)) {
+        if (! $loan->isRepayable()) {
             throw ValidationException::withMessages(['loan_id' => 'This loan is not in a repayable state.']);
         }
 
@@ -677,7 +678,7 @@ class LoanService
             $lockedLoan = Loan::query()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
             $lockedAccount = Account::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
 
-            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+            if (! $lockedLoan->isRepayable()) {
                 throw ValidationException::withMessages(['loan_id' => 'This loan is not in a repayable state.']);
             }
 
@@ -750,7 +751,7 @@ class LoanService
 
             $this->ensureAccountNotFrozen($lockedAccount);
 
-            if (! in_array($lockedLoan->status, ['approved', 'missed'], true)) {
+            if (! $lockedLoan->isRepayable()) {
                 return null;
             }
 
@@ -840,8 +841,8 @@ class LoanService
         $pastDueAmount = round(max(0.0, (float) $loan->past_due_amount - $amount), 2);
 
         $status = $remainingBalance <= 0 && $accruedInterestDue <= 0
-            ? 'paid'
-            : ($pastDueAmount > 0 || $accruedInterestDue > 0 ? 'missed' : 'approved');
+            ? LoanStatus::Paid
+            : ($pastDueAmount > 0 || $accruedInterestDue > 0 ? LoanStatus::Missed : LoanStatus::Approved);
 
         $loan->update([
             'remaining_balance' => $remainingBalance,
@@ -855,7 +856,7 @@ class LoanService
 
         $freshLoan->nation->notify(new LoanNotification($freshLoan->nation_id, $freshLoan, 'payment_success', $amount));
 
-        if ($status === 'paid') {
+        if ($status === LoanStatus::Paid) {
             $freshLoan->nation->notify(new LoanNotification($freshLoan->nation_id, $freshLoan, 'paid'));
         }
 
@@ -945,7 +946,7 @@ class LoanService
             $loan->accrued_interest_due = round((float) $loan->accrued_interest_due + $interest, 2);
             $loan->past_due_amount = round((float) $loan->past_due_amount + $cycleShortfall, 2);
             $loan->next_due_date = $loan->next_due_date->copy()->addDays(self::DAYS_PER_PAYMENT_CYCLE);
-            $loan->status = 'missed';
+            $loan->status = LoanStatus::Missed;
             $loan->weekly_interest_paid = 0;
 
             $cycles++;
@@ -1006,6 +1007,6 @@ class LoanService
 
     public function countPending(): int
     {
-        return Loan::where('status', 'pending')->count();
+        return Loan::where('status', LoanStatus::Pending->value)->count();
     }
 }

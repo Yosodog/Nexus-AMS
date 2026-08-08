@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AuditPriority;
 use App\Enums\AuditTargetType;
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\AuditResult;
 use App\Models\AuditRule;
@@ -125,7 +126,7 @@ class MemberDashboardAttentionTest extends TestCase
                 'accrued_interest_due' => 15,
                 'interest_rate' => 2,
                 'term_weeks' => 10,
-                'status' => 'missed',
+                'status' => LoanStatus::Missed,
                 'next_due_date' => now()->subDay(),
             ]);
         } finally {

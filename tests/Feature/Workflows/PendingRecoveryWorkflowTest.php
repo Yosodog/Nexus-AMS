@@ -4,6 +4,7 @@ namespace Tests\Feature\Workflows;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\GrantDecisionReason;
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
@@ -142,10 +143,10 @@ class PendingRecoveryWorkflowTest extends TestCase
             'loans' => [
                 'loans',
                 'loans',
-                ['status' => 'pending', 'pending_key' => 1],
-                ['status' => 'pending', 'pending_key' => 1],
-                ['status' => 'denied', 'pending_key' => null],
-                ['status' => 'pending', 'pending_key' => 1],
+                ['status' => LoanStatus::Pending->value, 'pending_key' => 1],
+                ['status' => LoanStatus::Pending->value, 'pending_key' => 1],
+                ['status' => LoanStatus::Denied->value, 'pending_key' => null],
+                ['status' => LoanStatus::Pending->value, 'pending_key' => 1],
                 null,
             ],
             'deposit requests' => [

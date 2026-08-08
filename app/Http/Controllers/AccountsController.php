@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LoanStatus;
 use App\Exceptions\UserErrorException;
 use App\Http\Requests\DeleteAccountRequest;
 use App\Http\Requests\TransferRequest;
@@ -87,7 +88,7 @@ class AccountsController extends Controller
                     ]);
                 }
 
-                if (! in_array($loan->status, ['approved', 'missed'], true)) {
+                if (! $loan->isRepayable()) {
                     throw ValidationException::withMessages([
                         'to' => ['This loan cannot currently receive repayments.'],
                     ]);
@@ -370,7 +371,7 @@ class AccountsController extends Controller
         }
 
         $activeLoans = Loan::where('nation_id', $nationId)
-            ->whereIn('status', ['approved', 'missed'])
+            ->whereIn('status', LoanStatus::activeValues())
             ->where('remaining_balance', '>', 0)
             ->get();
 

@@ -8,6 +8,7 @@ use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
 use App\Enums\ApplicationStatus;
+use App\Enums\LoanStatus;
 use App\Enums\MemberTimelineCategory;
 use App\Models\Account;
 use App\Models\Application;
@@ -539,7 +540,7 @@ class MemberTimelineTest extends TestCase
             'remaining_balance' => 25_000,
             'interest_rate' => 2,
             'term_weeks' => 10,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'approved_at' => $base->subDays(11),
         ]);
         $grant = new Grants;

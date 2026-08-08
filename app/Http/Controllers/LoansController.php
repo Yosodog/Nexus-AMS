@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Loan;
 use App\Services\LoanService;
@@ -59,7 +60,7 @@ class LoansController extends Controller
 
         // Get only active loans (approved and not fully paid)
         $activeLoans = Loan::where('nation_id', $nation->id)
-            ->whereIn('status', ['approved', 'missed'])
+            ->whereIn('status', LoanStatus::activeValues())
             ->where('remaining_balance', '>', 0)
             ->with(['payments.account', 'account'])
             ->get()

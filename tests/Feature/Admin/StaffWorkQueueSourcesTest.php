@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Enums\AuditPriority;
 use App\Enums\AuditTargetType;
 use App\Enums\BlockadeReliefStatus;
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Application;
 use App\Models\AuditResult;
@@ -88,7 +89,7 @@ class StaffWorkQueueSourcesTest extends TestCase
             'account_id' => $sourceAccount->id,
             'amount' => 1_500_000,
             'remaining_balance' => 1_500_000,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
         ]);
         $withdrawal = new Transaction;

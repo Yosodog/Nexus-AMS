@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LoanStatus;
 use App\Models\AuditResult;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
@@ -42,7 +43,7 @@ class MemberDashboardAttentionService
     {
         $loans = Loan::query()
             ->where('nation_id', $nation->getKey())
-            ->where('status', 'missed')
+            ->where('status', LoanStatus::Missed->value)
             ->get(['id', 'past_due_amount', 'accrued_interest_due', 'updated_at']);
 
         if ($loans->isEmpty()) {
@@ -189,7 +190,7 @@ class MemberDashboardAttentionService
             ->get(['id', 'updated_at']);
         $loans = Loan::query()
             ->where('nation_id', $nationId)
-            ->where('status', 'pending')
+            ->where('status', LoanStatus::Pending->value)
             ->get(['id', 'updated_at']);
         $warAid = WarAidRequest::query()
             ->where('nation_id', $nationId)

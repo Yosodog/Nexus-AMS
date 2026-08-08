@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Loan;
 use App\Models\LoanPayment;
@@ -58,7 +59,7 @@ class LoanServiceTest extends FeatureTestCase
             'amount' => 300,
             'interest_rate' => 10,
             'term_weeks' => 3,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
         ]);
 
         $breakdown = app(LoanService::class)->previewPaymentBreakdown($loan, 125);
@@ -107,7 +108,7 @@ class LoanServiceTest extends FeatureTestCase
             'accrued_interest_due' => 0,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'approved_at' => now()->subDays(14),
             'next_due_date' => now()->startOfDay()->subDay(),
         ]);
@@ -137,7 +138,7 @@ class LoanServiceTest extends FeatureTestCase
             'accrued_interest_due' => 0,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'approved_at' => now()->subDays(10),
             'next_due_date' => now()->startOfDay()->addDays(3),
         ]);
@@ -193,7 +194,7 @@ class LoanServiceTest extends FeatureTestCase
             'accrued_interest_due' => 0,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'denied',
+            'status' => LoanStatus::Denied,
             'pending_key' => null,
         ]);
 
@@ -219,7 +220,7 @@ class LoanServiceTest extends FeatureTestCase
             'accrued_interest_due' => 0,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
         ]);
 
@@ -233,7 +234,7 @@ class LoanServiceTest extends FeatureTestCase
         $loan->refresh();
         $account->refresh();
 
-        $this->assertSame('pending', $loan->status);
+        $this->assertSame(LoanStatus::Pending, $loan->status);
         $this->assertSame(500.0, (float) $loan->amount);
         $this->assertSame(500.0, (float) $loan->remaining_balance);
         $this->assertSame(0.0, (float) $account->money);
@@ -267,7 +268,7 @@ class LoanServiceTest extends FeatureTestCase
             'accrued_interest_due' => 0,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'pending_key' => null,
         ]);
 

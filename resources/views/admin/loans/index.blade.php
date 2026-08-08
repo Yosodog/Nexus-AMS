@@ -187,11 +187,14 @@
                     </thead>
                     <tbody>
                         @foreach ($activeLoans as $loan)
+                            @php($loanStatusPresentation = $loan->statusPresentation())
                             <tr>
                                 <td data-order="{{ $loan->nation?->leader_name ?? $loan->nation?->nation_name ?? $loan->nation_id }}">
-                                    <span class="nexus-status {{ $loan->status === 'missed' ? 'nexus-status--warning' : 'nexus-status--success' }}">
-                                        {{ $loan->status === 'missed' ? 'Missed' : 'Active' }}
-                                    </span>
+                                    <x-nexus-status
+                                        :label="$loanStatusPresentation['label']"
+                                        :intent="$loanStatusPresentation['intent']"
+                                        :icon="$loanStatusPresentation['icon']"
+                                    />
                                     @if ($loan->nation)
                                         <a href="https://politicsandwar.com/nation/id={{ $loan->nation->id }}" target="_blank" rel="noopener" class="mt-2 block font-semibold text-primary hover:underline">
                                             {{ $loan->nation->leader_name ?? ('Nation #'.$loan->nation->id) }}

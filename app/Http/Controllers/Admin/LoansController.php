@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\LoanStatus;
 use App\Http\Requests\Admin\UpdateLoanDefaultInterestRateRequest;
 use App\Models\Loan;
 use App\Services\AuditLogger;
@@ -40,13 +41,13 @@ class LoansController
     {
         $this->authorize('view-loans');
 
-        $totalApproved = Loan::whereIn('status', ['approved', 'missed'])->count();
-        $totalDenied = Loan::where('status', 'denied')->count();
-        $pendingCount = Loan::where('status', 'pending')->count();
-        $totalLoanedFunds = Loan::whereIn('status', ['approved', 'missed'])->sum('amount');
+        $totalApproved = Loan::whereIn('status', LoanStatus::activeValues())->count();
+        $totalDenied = Loan::where('status', LoanStatus::Denied->value)->count();
+        $pendingCount = Loan::where('status', LoanStatus::Pending->value)->count();
+        $totalLoanedFunds = Loan::whereIn('status', LoanStatus::activeValues())->sum('amount');
 
-        $pendingLoans = Loan::where('status', 'pending')->with('nation')->get();
-        $activeLoans = Loan::whereIn('status', ['approved', 'missed'])
+        $pendingLoans = Loan::where('status', LoanStatus::Pending->value)->with('nation')->get();
+        $activeLoans = Loan::whereIn('status', LoanStatus::activeValues())
             ->with(['nation', 'payments'])
             ->get()
             ->map(function (Loan $loan) {
@@ -71,7 +72,7 @@ class LoansController
 
         $portfolioStats = [
             'active_count' => $activeLoans->count(),
-            'missed_count' => $activeLoans->where('status', 'missed')->count(),
+            'missed_count' => $activeLoans->where('status', LoanStatus::Missed)->count(),
             'outstanding_principal' => (float) $activeLoans->sum('remaining_balance'),
             'past_due_total' => (float) $activeLoans->sum('past_due_amount'),
             'accrued_interest_total' => (float) $activeLoans->sum('effective_interest_due_now'),
@@ -290,7 +291,7 @@ class LoansController
         $this->authorize('manage-loans');
 
         // Ensure the loan is not already marked as paid
-        if ($loan->status === 'paid') {
+        if ($loan->status === LoanStatus::Paid) {
             return redirect()->route('admin.loans')->with(
                 'alert-message',
                 'This loan is already marked as paid.'

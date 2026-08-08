@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\API\Discord;
 
+use App\Enums\ApplicationStatus;
+use App\Enums\LoanStatus;
 use App\Exceptions\CityGrantRequestException;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
@@ -29,6 +31,7 @@ use App\Services\PWHelperService;
 use App\Services\RebuildingService;
 use App\Services\SettingService;
 use App\Services\WarAidService;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -395,12 +398,16 @@ class WorkflowController extends Controller
             return;
         }
 
-        $pendingValue = $type === 'application' ? 'PENDING' : 'pending';
+        $pendingValue = match ($type) {
+            'application' => ApplicationStatus::Pending->value,
+            'loan' => LoanStatus::Pending->value,
+            default => 'pending',
+        };
         match ($status) {
             'open' => $query->where('status', $pendingValue),
             'closed' => $query->where('status', '!=', $pendingValue),
             'needs-attention' => $type === 'loan'
-                ? $query->whereIn('status', ['missed', 'past_due'])
+                ? $query->whereIn('status', LoanStatus::attentionValues())
                 : $query->where('status', $pendingValue),
         };
     }
@@ -412,7 +419,7 @@ class WorkflowController extends Controller
             'id' => $model->id,
             'status' => $type === 'withdrawal'
                 ? ($model->is_pending ? 'pending' : ($model->denied_at ? 'failed' : 'completed'))
-                : (is_object($model->status) && property_exists($model->status, 'value') ? $model->status->value : $model->status),
+                : ($model->status instanceof BackedEnum ? $model->status->value : $model->status),
             'created_at' => optional($model->created_at)->toIso8601String(),
             'updated_at' => optional($model->updated_at)->toIso8601String(),
             'deep_link_path' => $this->links->member($type, $model),
@@ -483,7 +490,7 @@ class WorkflowController extends Controller
         return [
             'id' => $loan->id,
             'account_id' => $loan->account_id,
-            'status' => $loan->status,
+            'status' => $loan->statusValue(),
             'amount' => (float) $loan->amount,
             'remaining_balance' => (float) $loan->remaining_balance,
             'interest_rate' => $loan->interest_rate === null ? null : (float) $loan->interest_rate,

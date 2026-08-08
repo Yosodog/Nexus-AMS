@@ -196,7 +196,7 @@ class DiscordLoanIntentService
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'Payment amount must be greater than zero.']);
         }
-        if (! in_array($loan->status, ['approved', 'missed'], true)) {
+        if (! $loan->isRepayable()) {
             throw ValidationException::withMessages(['loan_id' => 'This loan is not in a repayable state.']);
         }
         if ($account->frozen) {

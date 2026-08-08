@@ -12,16 +12,15 @@
         </thead>
         <tbody>
             @foreach ($loans as $loan)
+                @php($loanStatusPresentation = $loan->statusPresentation())
                 <tr>
                     <td>${{ number_format($loan->amount) }}</td>
                     <td>
-                        @if($loan->approved_at)
-                            <x-badge  value="Approved" class="badge-success badge-sm" />
-                        @elseif($loan->denied_at)
-                            <x-badge  value="Denied" class="badge-error badge-sm" />
-                        @else
-                            <x-badge  value="Pending" class="badge-warning badge-sm" />
-                        @endif
+                        <x-nexus-status
+                            :label="$loanStatusPresentation['label']"
+                            :intent="$loanStatusPresentation['intent']"
+                            :icon="$loanStatusPresentation['icon']"
+                        />
                     </td>
                     <td>{{ $loan->created_at->format('M d, Y') }}</td>
                 </tr>

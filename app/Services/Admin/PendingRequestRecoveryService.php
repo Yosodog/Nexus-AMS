@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\GrantDecisionReason;
+use App\Enums\LoanStatus;
 use App\Models\Application;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
@@ -133,9 +134,9 @@ class PendingRequestRecoveryService
                 'label' => 'loan applications',
                 'table' => 'loans',
                 'model' => Loan::class,
-                'pending_status' => 'pending',
+                'pending_status' => LoanStatus::Pending->value,
                 'release_payload' => fn (Carbon $releasedAt): array => [
-                    'status' => 'denied',
+                    'status' => LoanStatus::Denied->value,
                     'pending_key' => null,
                 ],
             ],

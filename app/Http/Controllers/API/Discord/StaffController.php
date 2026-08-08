@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Discord;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\LoanStatus;
 use App\Exceptions\ApplicationException;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
@@ -50,7 +51,12 @@ class StaffController extends Controller
             } elseif ($type === 'withdrawal') {
                 $query->where('is_pending', true);
             } else {
-                $query->where($statusColumn, $type === 'application' ? ApplicationStatus::Pending->value : 'pending');
+                $pendingStatus = match ($type) {
+                    'application' => ApplicationStatus::Pending->value,
+                    'loan' => LoanStatus::Pending->value,
+                    default => 'pending',
+                };
+                $query->where($statusColumn, $pendingStatus);
             }
 
             $items->push(...$query->latest()->limit($limit)->get()->map(fn ($model): array => [
@@ -212,12 +218,16 @@ class StaffController extends Controller
             return;
         }
 
-        $pending = $type === 'application' ? ApplicationStatus::Pending->value : 'pending';
+        $pending = match ($type) {
+            'application' => ApplicationStatus::Pending->value,
+            'loan' => LoanStatus::Pending->value,
+            default => 'pending',
+        };
         match ($status) {
             'open' => $query->where('status', $pending),
             'closed' => $query->where('status', '!=', $pending),
             'needs-attention' => $type === 'loan'
-                ? $query->whereIn('status', ['missed', 'past_due'])
+                ? $query->whereIn('status', LoanStatus::attentionValues())
                 : $query->where('status', $pending),
         };
     }

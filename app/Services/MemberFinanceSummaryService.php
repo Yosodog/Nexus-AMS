@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LoanStatus;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
 use App\Models\Loan;
@@ -12,8 +13,6 @@ use Illuminate\Support\Facades\Log;
 class MemberFinanceSummaryService
 {
     private const DISBURSED_GRANT_STATUS = 'approved';
-
-    private const OUTSTANDING_LOAN_STATUSES = ['approved', 'missed'];
 
     /**
      * @return array{grantTotal: float|null, loanTotal: float|null}
@@ -57,7 +56,7 @@ class MemberFinanceSummaryService
         try {
             return (float) Loan::query()
                 ->where('nation_id', $nationId)
-                ->whereIn('status', self::OUTSTANDING_LOAN_STATUSES)
+                ->whereIn('status', LoanStatus::activeValues())
                 ->where('remaining_balance', '>', 0)
                 ->sum('remaining_balance');
         } catch (QueryException $exception) {

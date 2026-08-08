@@ -127,7 +127,7 @@
                             </label>
                             <select name="loan_id" id="repayment_loan_id" class="select w-full" required>
                                 @foreach ($activeLoans as $loan)
-                                    <option value="{{ $loan->id }}">Loan #{{ $loan->id }} ({{ strtoupper($loan->status) }})</option>
+                                    <option value="{{ $loan->id }}">Loan #{{ $loan->id }} ({{ strtoupper($loan->statusValue()) }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -285,6 +285,7 @@
                             $approvedAt = $loan->approved_at ? \Carbon\Carbon::parse($loan->approved_at) : null;
                             $firstDue = $approvedAt ? $approvedAt->copy()->addDays(7) : null;
                             $elapsedWeeks = $approvedAt ? max(0, (int) floor($approvedAt->diffInDays(now()) / 7)) : 0;
+                            $loanStatusPresentation = $loan->statusPresentation();
                         @endphp
 
                         <div class="rounded-xl border border-base-300 p-4">
@@ -292,11 +293,11 @@
                                 <div>
                                     <h3 class="text-lg font-bold">Loan #{{ $loan->id }}</h3>
                                     <p class="text-sm text-base-content/70">
-                                        @if ($loan->status === 'missed')
-                                            <span class="badge badge-warning">Missed</span>
-                                        @else
-                                            <span class="badge badge-success">Approved</span>
-                                        @endif
+                                        <x-nexus-status
+                                            :label="$loanStatusPresentation['label']"
+                                            :intent="$loanStatusPresentation['intent']"
+                                            :icon="$loanStatusPresentation['icon']"
+                                        />
                                         Next due: {{ optional($loan->next_due_date)->format('M d, Y') ?? 'N/A' }}
                                     </p>
                                 </div>
@@ -612,17 +613,12 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($loan->status === 'pending')
-                                        <span class="badge badge-warning">Pending</span>
-                                    @elseif ($loan->status === 'approved')
-                                        <span class="badge badge-success">Approved</span>
-                                    @elseif ($loan->status === 'missed')
-                                        <span class="badge badge-warning">Missed</span>
-                                    @elseif ($loan->status === 'paid')
-                                        <span class="badge badge-primary">Paid</span>
-                                    @else
-                                        <span class="badge badge-error">Denied</span>
-                                    @endif
+                                    @php($historyStatusPresentation = $loan->statusPresentation())
+                                    <x-nexus-status
+                                        :label="$historyStatusPresentation['label']"
+                                        :intent="$historyStatusPresentation['intent']"
+                                        :icon="$historyStatusPresentation['icon']"
+                                    />
                                 </td>
                                 <td>{{ $loan->created_at->format('M d, Y') }}</td>
                             </tr>

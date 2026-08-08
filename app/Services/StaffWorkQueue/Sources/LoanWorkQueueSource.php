@@ -2,6 +2,7 @@
 
 namespace App\Services\StaffWorkQueue\Sources;
 
+use App\Enums\LoanStatus;
 use App\Models\Loan;
 use App\Services\StaffWorkQueue\StaffWorkItem;
 use App\Services\StaffWorkQueue\StaffWorkQueueSource;
@@ -26,7 +27,7 @@ final class LoanWorkQueueSource implements StaffWorkQueueSource
     public function load(): array
     {
         return Loan::query()
-            ->where('status', 'pending')
+            ->where('status', LoanStatus::Pending->value)
             ->with('nation:id,leader_name,nation_name')
             ->oldest()
             ->get()

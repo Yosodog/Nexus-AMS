@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\LoanStatus;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\GrantApplication;
@@ -345,19 +346,19 @@ class DashboardController extends Controller
         $loanStats = [
             'pending' => Loan::query()
                 ->whereIn('nation_id', $memberNationIds)
-                ->where('status', 'pending')
+                ->where('status', LoanStatus::Pending->value)
                 ->count(),
             'active' => Loan::query()
                 ->whereIn('nation_id', $memberNationIds)
-                ->whereIn('status', ['approved', 'missed'])
+                ->whereIn('status', LoanStatus::activeValues())
                 ->count(),
             'paid' => Loan::query()
                 ->whereIn('nation_id', $memberNationIds)
-                ->where('status', 'paid')
+                ->where('status', LoanStatus::Paid->value)
                 ->count(),
             'outstanding_balance' => (float) Loan::query()
                 ->whereIn('nation_id', $memberNationIds)
-                ->whereIn('status', ['approved', 'missed'])
+                ->whereIn('status', LoanStatus::activeValues())
                 ->sum('remaining_balance'),
             'avg_interest' => $loanAvgInterest !== null ? round((float) $loanAvgInterest, 2) : null,
             'avg_term' => $loanAvgTerm !== null ? round((float) $loanAvgTerm, 1) : null,

@@ -156,7 +156,7 @@ final class FinanceTimelineSource implements MemberTimelineSource
             ->limit($recordLimit)
             ->get()
             ->map(function (Loan $loan): MemberTimelineItem {
-                $presentation = $this->workflowStatusPresentation((string) $loan->status);
+                $presentation = $loan->statusPresentation();
 
                 return new MemberTimelineItem(
                     sourceKey: "loan:{$loan->id}",

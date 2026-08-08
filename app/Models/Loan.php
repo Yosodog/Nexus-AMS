@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Casts\LoanStatusCast;
+use App\Enums\LoanStatus;
 use App\Services\LoanService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/** @property LoanStatus|string $status */
 class Loan extends Model
 {
     /**
@@ -34,16 +37,21 @@ class Loan extends Model
         'next_due_date',
     ];
 
-    protected $casts = [
-        'next_due_date' => 'datetime',
-        'amount' => 'float',
-        'remaining_balance' => 'float',
-        'weekly_interest_paid' => 'float',
-        'scheduled_weekly_payment' => 'float',
-        'past_due_amount' => 'float',
-        'accrued_interest_due' => 'float',
-        'interest_rate' => 'float',
-    ];
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'status' => LoanStatusCast::class,
+            'next_due_date' => 'datetime',
+            'amount' => 'float',
+            'remaining_balance' => 'float',
+            'weekly_interest_paid' => 'float',
+            'scheduled_weekly_payment' => 'float',
+            'past_due_amount' => 'float',
+            'accrued_interest_due' => 'float',
+            'interest_rate' => 'float',
+        ];
+    }
 
     /**
      * @return BelongsTo
@@ -63,12 +71,30 @@ class Loan extends Model
 
     public function isPending(): bool
     {
-        return $this->status === 'pending';
+        return $this->status === LoanStatus::Pending;
     }
 
     public function isApproved(): bool
     {
-        return $this->status === 'approved';
+        return $this->status === LoanStatus::Approved;
+    }
+
+    public function isRepayable(): bool
+    {
+        return $this->status instanceof LoanStatus && $this->status->isRepayable();
+    }
+
+    public function statusValue(): string
+    {
+        return LoanStatus::scalar($this->status);
+    }
+
+    /**
+     * @return array{label: string, intent: string, icon: string, explanation: string}
+     */
+    public function statusPresentation(): array
+    {
+        return LoanStatus::presentationFor($this->status);
     }
 
     public function getNextPaymentDue(): float

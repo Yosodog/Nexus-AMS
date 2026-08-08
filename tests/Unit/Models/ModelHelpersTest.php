@@ -3,6 +3,7 @@
 namespace Tests\Unit\Models;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\LoanStatus;
 use App\Models\Application;
 use App\Models\Loan;
 use App\Services\LoanService;
@@ -21,8 +22,8 @@ class ModelHelpersTest extends FeatureTestCase
 
     public function test_loan_status_helpers_report_pending_and_approved_states(): void
     {
-        $pending = new Loan(['status' => 'pending']);
-        $approved = new Loan(['status' => 'approved']);
+        $pending = new Loan(['status' => LoanStatus::Pending]);
+        $approved = new Loan(['status' => LoanStatus::Approved]);
 
         $this->assertTrue($pending->isPending());
         $this->assertFalse($pending->isApproved());

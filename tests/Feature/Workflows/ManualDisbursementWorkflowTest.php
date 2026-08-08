@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflows;
 
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\CityGrant;
 use App\Models\Grants;
@@ -76,7 +77,7 @@ class ManualDisbursementWorkflowTest extends TestCase
         $loan = Loan::query()->sole();
         $account->refresh();
 
-        $this->assertSame('approved', $loan->status);
+        $this->assertSame(LoanStatus::Approved, $loan->status);
         $this->assertNull($loan->pending_key);
         $this->assertSame(125000.5, (float) $account->money);
         $this->assertDatabaseCount('loans', 1);

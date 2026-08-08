@@ -11,6 +11,7 @@ use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
 use App\Domain\Milcom\Enums\RecommendationRunStatus;
 use App\Enums\DiscordQueueStatus;
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Alliance;
 use App\Models\AllianceFinanceEntry;
@@ -320,7 +321,7 @@ class BrowserTestBootstrap
             'remaining_balance' => 7500000,
             'interest_rate' => 3.5,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
         ]);
 

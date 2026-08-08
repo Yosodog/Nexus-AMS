@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflows;
 
+use App\Enums\LoanStatus;
 use App\Models\Account;
 use App\Models\Loan;
 use App\Models\LoanPayment;
@@ -59,7 +60,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
         ]);
     }
@@ -73,7 +74,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -123,7 +124,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -140,7 +141,7 @@ class LoanWorkflowTest extends TestCase
             ->willReturnCallback(function () use ($account, $loan, $testTransactionLevel): void {
                 $this->assertSame($testTransactionLevel, DB::connection()->transactionLevel());
                 $this->assertSame(0.0, (float) $account->fresh()->money);
-                $this->assertSame('pending', $loan->fresh()->status);
+                $this->assertSame(LoanStatus::Pending, $loan->fresh()->status);
             });
         $this->app->instance(AuthoritativeNationMembershipService::class, $membershipValidator);
 
@@ -156,7 +157,7 @@ class LoanWorkflowTest extends TestCase
         $loan->refresh();
         $account->refresh();
 
-        $this->assertSame('approved', $loan->status);
+        $this->assertSame(LoanStatus::Approved, $loan->status);
         $this->assertNull($loan->pending_key);
         $this->assertNotNull($loan->approved_at);
         $this->assertSame(225000.5, (float) $loan->amount);
@@ -186,7 +187,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -220,7 +221,7 @@ class LoanWorkflowTest extends TestCase
             );
         }
 
-        $this->assertSame('pending', $loan->fresh()->status);
+        $this->assertSame(LoanStatus::Pending, $loan->fresh()->status);
         $this->assertSame(0.0, (float) $account->fresh()->money);
         $this->assertDatabaseMissing('manual_transactions', [
             'account_id' => $account->id,
@@ -237,7 +238,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -256,7 +257,7 @@ class LoanWorkflowTest extends TestCase
 
         $loan->refresh();
 
-        $this->assertSame('pending', $loan->status);
+        $this->assertSame(LoanStatus::Pending, $loan->status);
         $this->assertSame(1, $loan->pending_key);
     }
 
@@ -265,7 +266,7 @@ class LoanWorkflowTest extends TestCase
     {
         [, $nation, $account] = $this->createMemberWithAccount();
         $loan = $this->createLoanFor($nation, $account, [
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'interest_rate' => null,
             'approved_at' => null,
@@ -284,7 +285,7 @@ class LoanWorkflowTest extends TestCase
         $loan->refresh();
         $account->refresh();
 
-        $this->assertSame('pending', $loan->status);
+        $this->assertSame(LoanStatus::Pending, $loan->status);
         $this->assertSame(1, $loan->pending_key);
         $this->assertSame(0.0, (float) $account->money);
         $this->assertDatabaseMissing('manual_transactions', [
@@ -313,7 +314,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'pending',
+            'status' => LoanStatus::Pending,
             'pending_key' => 1,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -330,7 +331,7 @@ class LoanWorkflowTest extends TestCase
 
         $loan->refresh();
 
-        $this->assertSame('denied', $loan->status);
+        $this->assertSame(LoanStatus::Denied, $loan->status);
         $this->assertNull($loan->pending_key);
 
         Notification::assertSentTo(
@@ -351,7 +352,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'denied',
+            'status' => LoanStatus::Denied,
             'pending_key' => null,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
@@ -417,7 +418,7 @@ class LoanWorkflowTest extends TestCase
         $this->assertSame(250000.0, (float) $loan->amount);
         $this->assertSame(250000.0, (float) $loan->remaining_balance);
         $this->assertSame(5.0, (float) $loan->interest_rate);
-        $this->assertSame('approved', $loan->status);
+        $this->assertSame(LoanStatus::Approved, $loan->status);
     }
 
     public function test_admin_can_mark_another_members_active_loan_as_paid(): void
@@ -443,7 +444,7 @@ class LoanWorkflowTest extends TestCase
 
         $loan->refresh();
 
-        $this->assertSame('paid', $loan->status);
+        $this->assertSame(LoanStatus::Paid, $loan->status);
         $this->assertSame(0.0, (float) $loan->remaining_balance);
         $this->assertSame(0.0, (float) $loan->past_due_amount);
         $this->assertSame(0.0, (float) $loan->accrued_interest_due);
@@ -468,7 +469,7 @@ class LoanWorkflowTest extends TestCase
 
         $loan->refresh();
 
-        $this->assertSame('approved', $loan->status);
+        $this->assertSame(LoanStatus::Approved, $loan->status);
         $this->assertSame(250000.0, (float) $loan->remaining_balance);
         Notification::assertNothingSent();
     }
@@ -477,7 +478,7 @@ class LoanWorkflowTest extends TestCase
     {
         [, $nation, $account] = $this->createMemberWithAccount();
         $loan = $this->createLoanFor($nation, $account, [
-            'status' => 'denied',
+            'status' => LoanStatus::Denied,
             'approved_at' => null,
         ]);
         $admin = $this->createAdminWithPermission('manage-loans');
@@ -489,7 +490,7 @@ class LoanWorkflowTest extends TestCase
 
         $loan->refresh();
 
-        $this->assertSame('denied', $loan->status);
+        $this->assertSame(LoanStatus::Denied, $loan->status);
         $this->assertSame(250000.0, (float) $loan->remaining_balance);
         Notification::assertNothingSent();
     }
@@ -505,7 +506,7 @@ class LoanWorkflowTest extends TestCase
             'amount' => 300,
             'interest_rate' => 10,
             'term_weeks' => 3,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'pending_key' => null,
             'remaining_balance' => 200,
             'weekly_interest_paid' => 0,
@@ -531,7 +532,7 @@ class LoanWorkflowTest extends TestCase
         $this->assertSame(75.0, (float) $payment->principal_paid);
         $this->assertSame(125.0, (float) $loan->remaining_balance);
         $this->assertSame(0.0, (float) $loan->accrued_interest_due);
-        $this->assertSame('approved', $loan->status);
+        $this->assertSame(LoanStatus::Approved, $loan->status);
         $this->assertSame(375.0, (float) $account->money);
     }
 
@@ -548,7 +549,7 @@ class LoanWorkflowTest extends TestCase
             'amount' => 500,
             'interest_rate' => 10,
             'term_weeks' => 5,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'pending_key' => null,
             'remaining_balance' => 500,
             'weekly_interest_paid' => 0,
@@ -621,7 +622,7 @@ class LoanWorkflowTest extends TestCase
             'account_id' => $account->id,
             'amount' => 250000,
             'term_weeks' => 12,
-            'status' => 'approved',
+            'status' => LoanStatus::Approved,
             'pending_key' => null,
             'remaining_balance' => 250000,
             'weekly_interest_paid' => 0,
