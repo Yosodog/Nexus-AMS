@@ -77,6 +77,40 @@ class DiscordWarCounterAuthorizationTest extends TestCase
         $this->assertSame('archived', $counter->fresh()->status);
     }
 
+    public function test_signed_service_proof_cannot_be_replayed_with_a_different_request_body(): void
+    {
+        $firstCounter = $this->counter();
+        $secondCounter = $this->counter();
+        $headers = $this->signedDiscordServiceHeaders(
+            'discord-war-counter-test-key',
+            self::GUILD_ID,
+            'war-counters.attach-channel',
+        );
+        $firstRequest = [
+            'war_counter_id' => $firstCounter->id,
+            'discord_channel_id' => '567890123456789012',
+        ];
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/discord/war-counters/attach-channel', $firstRequest)
+            ->assertOk();
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/discord/war-counters/attach-channel', $firstRequest)
+            ->assertOk();
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/discord/war-counters/attach-channel', [
+                'war_counter_id' => $secondCounter->id,
+                'discord_channel_id' => '678901234567890123',
+            ])
+            ->assertConflict()
+            ->assertJsonPath('error.code', 'replayed_discord_service_proof');
+
+        $this->assertSame('567890123456789012', $firstCounter->fresh()->discord_channel_id);
+        $this->assertNull($secondCounter->fresh()->discord_channel_id);
+    }
+
     private function counter(): WarCounter
     {
         $aggressor = Nation::factory()->create();

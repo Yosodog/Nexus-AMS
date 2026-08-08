@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use JsonException;
@@ -25,6 +26,8 @@ class VerifyDiscordInteraction
     public const TIMESTAMP_HEADER = 'X-Nexus-Discord-Relay-Timestamp';
 
     public const USER_ATTRIBUTE = 'verified_discord_user_id';
+
+    public function __construct(private readonly Repository $cache) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -78,7 +81,7 @@ class VerifyDiscordInteraction
         }
 
         if (($interaction['proof_type'] ?? null) === 'service') {
-            return $this->handleServiceProof($request, $next, $interaction);
+            return $this->handleServiceProof($request, $next, $interaction, (int) $timestamp, $maxAge);
         }
 
         if (($interaction['proof_type'] ?? null) !== 'interaction') {
@@ -108,8 +111,13 @@ class VerifyDiscordInteraction
     /**
      * @param  array<string, mixed>  $proof
      */
-    private function handleServiceProof(Request $request, Closure $next, array $proof): Response
-    {
+    private function handleServiceProof(
+        Request $request,
+        Closure $next,
+        array $proof,
+        int $timestamp,
+        int $maxAge,
+    ): Response {
         $guildId = trim((string) ($proof['guild_id'] ?? ''));
         $configuredGuildId = trim((string) config('services.discord.guild_id'));
         $nonce = trim((string) ($proof['nonce'] ?? ''));
@@ -121,6 +129,26 @@ class VerifyDiscordInteraction
             || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $nonce) !== 1
             || preg_match('/^[a-z0-9][a-z0-9._-]{0,99}$/', $action) !== 1) {
             return $this->error('invalid_discord_relay_proof', 'The Discord service relay proof is invalid.', 401);
+        }
+
+        $fingerprint = hash('sha256', implode("\n", [
+            strtoupper($request->getMethod()),
+            $request->getRequestUri(),
+            hash('sha256', $request->getContent()),
+        ]));
+        $cacheKey = 'discord:service-proof:'.hash('sha256', $guildId."\0".$nonce);
+        $remainingLifetime = max(1, ($timestamp + $maxAge) - now()->timestamp + 1);
+
+        if (! $this->cache->add($cacheKey, $fingerprint, $remainingLifetime)) {
+            $claimedFingerprint = $this->cache->get($cacheKey);
+
+            if (! is_string($claimedFingerprint) || ! hash_equals($claimedFingerprint, $fingerprint)) {
+                return $this->error(
+                    'replayed_discord_service_proof',
+                    'The Discord service relay proof was already used for a different request.',
+                    409,
+                );
+            }
         }
 
         $request->attributes->set(self::GUILD_ATTRIBUTE, $guildId);
