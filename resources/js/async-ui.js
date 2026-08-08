@@ -238,6 +238,10 @@ const bindDuplicateSubmissionGuard = (root) => {
 
         form.dataset.duplicateGuardBound = 'true';
         form.addEventListener('submit', (event) => {
+            if (form.dataset.confirm && form.dataset.confirmBypass !== 'true') {
+                return;
+            }
+
             if (form.dataset.asyncPending === 'true') {
                 event.preventDefault();
                 announce('This request is already being submitted.');

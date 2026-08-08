@@ -6,6 +6,7 @@ import './milcom';
 import { initAuditRuleBuilders } from './audit-rule-builder';
 import { initAsyncUi } from './async-ui';
 import { initGrantRequirementBuilders } from './grant-requirement-builder';
+import { initializePasskeys } from './passkeys';
 import { initRaidFinders } from './raid-finder';
 
 const SORT_ASC = 'asc';
@@ -678,6 +679,7 @@ const initAppUi = (root = document) => {
     enableConfirmations();
     initAuditRuleBuilders(root);
     initGrantRequirementBuilders(root);
+    initializePasskeys(root);
     initRaidFinders(root);
 };
 

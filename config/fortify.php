@@ -3,6 +3,12 @@
 use App\Http\Middleware\ThrottleRegistrationRequests;
 use Laravel\Fortify\Features;
 
+$passkeyUserHandleSecret = env('PASSKEY_USER_HANDLE_SECRET');
+
+if (! is_string($passkeyUserHandleSecret) || trim($passkeyUserHandleSecret) === '') {
+    $passkeyUserHandleSecret = config('app.key');
+}
+
 return [
 
     /*
@@ -118,6 +124,30 @@ return [
     'limiters' => [
         'login' => 'login',
         'two-factor' => 'two-factor',
+        'passkeys' => 'passkeys',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Passkeys
+    |--------------------------------------------------------------------------
+    |
+    | WebAuthn ceremonies are bound to this exact application origin. Set a
+    | nonblank PASSKEY_USER_HANDLE_SECRET so APP_KEY rotation does not change
+    | the opaque account handles known to authenticators.
+    |
+    | Passkey login deliberately counts required device user verification as
+    | phishing-resistant MFA and does not invoke Fortify's TOTP challenge.
+    | Existing TOTP, recovery, trusted-device, and enrollment-policy flows
+    | remain available and continue to protect password-based access.
+    |
+    */
+
+    'passkeys' => [
+        'relying_party_id' => parse_url((string) config('app.url'), PHP_URL_HOST),
+        'allowed_origins' => [config('app.url')],
+        'user_handle_secret' => $passkeyUserHandleSecret,
+        'timeout' => 60000,
     ],
 
     /*
@@ -154,6 +184,9 @@ return [
             'confirm' => true,
             'confirmPassword' => true,
             // 'window' => 0,
+        ]),
+        Features::passkeys([
+            'confirmPassword' => true,
         ]),
     ],
 

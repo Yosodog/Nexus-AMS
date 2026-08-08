@@ -266,6 +266,183 @@
                     </div>
                 </x-utils.card>
 
+                <x-utils.card class="scroll-mt-24">
+                    <div
+                        id="passkeys"
+                        class="space-y-4"
+                        data-passkey-root
+                        data-passkey-options-url="{{ route('passkey.registration-options') }}"
+                        data-passkey-submit-url="{{ route('passkey.store') }}"
+                    >
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h2 class="text-lg font-semibold">Passkeys</h2>
+                                <p class="text-sm text-base-content/70">
+                                    Sign in with a device unlock, fingerprint, face recognition, or hardware security key.
+                                </p>
+                            </div>
+                            <span class="badge badge-outline">
+                                {{ $passkeys->isEmpty() ? 'None registered' : $passkeys->count().' registered' }}
+                            </span>
+                        </div>
+
+                        @if(session('status') === 'passkey-registered')
+                            <div class="alert alert-success items-start text-sm" role="status">
+                                <span>The passkey was added and is ready for sign-in.</span>
+                            </div>
+                        @endif
+
+                        @if(session('status') === 'passkey-deleted')
+                            <div class="alert alert-success items-start text-sm" role="status">
+                                <span>The passkey was revoked after the server confirmed the request.</span>
+                            </div>
+                        @endif
+
+                        <div
+                            class="alert items-start text-sm"
+                            data-passkey-status
+                            aria-live="polite"
+                            aria-atomic="true"
+                            hidden
+                        ></div>
+
+                        <div class="rounded-box border border-base-300 bg-base-200/50 p-4">
+                            <p class="text-sm">
+                                Passkeys are optional. Your password, authenticator app, trusted devices, and recovery codes remain available.
+                            </p>
+                            <p class="mt-2 text-xs text-base-content/70">
+                                Name each passkey for the device or authenticator you will recognize later. Do not include passwords, recovery codes, or other secrets in the name.
+                            </p>
+                            <p class="mt-2 text-xs text-base-content/70">
+                                Passkey sign-in requires verification on the device and therefore does not add a separate authenticator-code prompt. If alliance policy requires TOTP enrollment, that setup remains required before protected tools open.
+                            </p>
+                        </div>
+
+                        <p class="text-sm text-base-content/70" data-passkey-unsupported hidden>
+                            This browser cannot add a passkey. You can still review or revoke existing passkeys and use your other sign-in methods.
+                        </p>
+
+                        <noscript>
+                            <p class="text-sm text-base-content/70">
+                                Adding a passkey needs JavaScript. Existing passwords and recovery methods are unaffected.
+                            </p>
+                        </noscript>
+
+                        @if($hasRecentAuthentication)
+                            <form
+                                class="grid gap-3 rounded-box border border-base-300 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+                                data-passkey-register
+                                data-passkey-supported-control
+                                novalidate
+                                hidden
+                            >
+                                <x-auth.field
+                                    id="passkey-name"
+                                    name="passkey_name"
+                                    label="Passkey name"
+                                    hint="For example: Personal MacBook or YubiKey 5."
+                                >
+                                    <input
+                                        type="text"
+                                        id="passkey-name"
+                                        name="passkey_name"
+                                        class="input w-full"
+                                        maxlength="255"
+                                        autocomplete="off"
+                                        data-passkey-name
+                                        required
+                                    >
+                                </x-auth.field>
+
+                                <button type="submit" class="btn btn-primary" data-passkey-register-button>
+                                    <span class="loading loading-spinner loading-sm" data-async-button-spinner hidden aria-hidden="true"></span>
+                                    <span data-async-button-label>Add passkey</span>
+                                </button>
+                            </form>
+                        @else
+                            <div class="alert alert-info items-start text-sm">
+                                <div class="space-y-2">
+                                    <p>Confirm your password or an existing passkey before adding or revoking passkeys.</p>
+                                    <a
+                                        class="btn btn-sm btn-outline"
+                                        href="{{ route('password.confirm', ['return_to' => 'passkeys']) }}"
+                                    >
+                                        Confirm identity to manage passkeys
+                                    </a>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="divider">Registered passkeys</div>
+
+                        @if($passkeys->isEmpty())
+                            <div class="rounded-box border border-dashed border-base-300 p-5 text-sm text-base-content/70">
+                                No passkeys are registered. Add one only on a device or authenticator you control.
+                            </div>
+                        @else
+                            <div class="space-y-3">
+                                @foreach($passkeys as $passkey)
+                                    <article class="rounded-box border border-base-300 p-4">
+                                        <div class="flex flex-wrap items-start justify-between gap-4">
+                                            <div class="min-w-0 space-y-2">
+                                                <div>
+                                                    <h3 class="break-words font-semibold">{{ $passkey->name }}</h3>
+                                                    @if($passkey->authenticator)
+                                                        <p class="text-xs text-base-content/70">
+                                                            Authenticator: {{ $passkey->authenticator }}
+                                                        </p>
+                                                    @endif
+                                                </div>
+
+                                                <dl class="grid gap-2 text-xs sm:grid-cols-2 sm:gap-4">
+                                                    <div>
+                                                        <dt class="font-medium text-base-content">Created</dt>
+                                                        <dd class="text-base-content/70">
+                                                            <x-time.display
+                                                                :value="$passkey->created_at"
+                                                                label="Passkey created"
+                                                                :show-exact="true"
+                                                            />
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt class="font-medium text-base-content">Last used</dt>
+                                                        <dd class="text-base-content/70">
+                                                            <x-time.display
+                                                                :value="$passkey->last_used_at"
+                                                                label="Passkey last used"
+                                                                fallback="Never used"
+                                                                :show-exact="true"
+                                                            />
+                                                        </dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
+
+                                            @if($hasRecentAuthentication)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('passkey.destroy', $passkey) }}"
+                                                    data-confirm="Revoke this passkey? It will stop working for sign-in as soon as the server confirms the request."
+                                                    data-confirm-title="Revoke passkey?"
+                                                    data-confirm-label="Revoke passkey"
+                                                    data-confirm-tone="error"
+                                                >
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline btn-error btn-sm">
+                                                        Revoke
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </x-utils.card>
+
                 <x-utils.card>
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>

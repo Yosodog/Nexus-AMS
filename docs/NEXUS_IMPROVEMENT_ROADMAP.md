@@ -1194,6 +1194,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M–L · **Type:** Account security, UX
 
+**Status:** Complete — August 8, 2026
+
 **What should change:** Passkeys can improve phishing resistance and reduce login friction, but should follow the more urgent token-scope and CSP work.
 
 **How it should work:** Allow users to register multiple named passkeys, review last use, and revoke them. Maintain safe account recovery and require recent authentication for credential changes. Do not remove existing methods until adoption and recovery are proven.

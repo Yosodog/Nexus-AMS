@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -31,11 +32,15 @@ class UserController extends Controller
     /**
      * @return Factory|View|Application|object
      */
-    public function settings()
+    public function settings(Request $request): Factory|View
     {
-        $user = Auth::user();
+        $user = $request->user();
         $discordAccount = DiscordAccountService::getActiveAccount($user);
         $apiTokens = $user->tokens()
+            ->latest('created_at')
+            ->get();
+        $passkeys = $user->passkeys()
+            ->latest('last_used_at')
             ->latest('created_at')
             ->get();
         $trustedDeviceService = app(TrustedDeviceService::class);
@@ -45,11 +50,16 @@ class UserController extends Controller
             ->latest('last_used_at')
             ->latest('created_at')
             ->get();
+        $lastAuthenticationConfirmation = (int) $request->session()->get('auth.password_confirmed_at', 0);
+        $hasRecentAuthentication = $lastAuthenticationConfirmation > 0
+            && Date::now()->unix() - $lastAuthenticationConfirmation < (int) config('auth.password_timeout', 10800);
 
         return view('user.settings', [
             'user' => $user,
             'discordAccount' => $discordAccount,
             'apiTokens' => $apiTokens,
+            'passkeys' => $passkeys,
+            'hasRecentAuthentication' => $hasRecentAuthentication,
             'discordVerificationToken' => $discordAccount ? null : DiscordAccountService::getOrCreateVerificationToken($user),
             'discordVerificationRequired' => SettingService::isDiscordVerificationRequired(),
             'mfaRequiredForAllUsers' => SettingService::isMfaRequiredForAllUsers(),

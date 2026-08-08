@@ -7,14 +7,20 @@ use App\Actions\Fortify\RedirectIfTwoFactorAuthenticatable;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Listeners\PasskeyAuditSubscriber;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Passkey;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -53,6 +59,43 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('passkeys', function (Request $request): array {
+            $actor = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return [
+                Limit::perMinute(10)->by('passkeys-minute:'.$actor.'|'.$request->ip()),
+                Limit::perHour(100)->by('passkeys-hour:'.$actor),
+            ];
+        });
+
+        config(['passkeys.redirect' => '/user/dashboard']);
+
+        Passkeys::authorizeLoginUsing(function (Request $request, PasskeyUser $passkeyUser, Passkey $passkey): bool {
+            $allowed = $passkeyUser instanceof User && ! $passkeyUser->disabled;
+
+            if (! $allowed && $passkeyUser instanceof User) {
+                app(AuditLogger::class)->denied(
+                    category: 'authentication',
+                    action: 'passkey_login',
+                    subject: $passkeyUser,
+                    context: [
+                        'reason' => 'account_disabled',
+                        'passkey_id' => $passkey->getKey(),
+                    ],
+                    message: 'Passkey login was denied because the account is disabled.',
+                    actorOverride: [
+                        'type' => 'user',
+                        'id' => (int) $passkeyUser->getAuthIdentifier(),
+                        'name' => $passkeyUser->name,
+                    ],
+                );
+            }
+
+            return $allowed;
+        });
+
+        Event::subscribe(PasskeyAuditSubscriber::class);
+
         Fortify::loginView(function () {
             return view('auth.login');
         });
@@ -87,7 +130,11 @@ class FortifyServiceProvider extends ServiceProvider
             return view('auth.two-factor-challenge');
         });
 
-        Fortify::confirmPasswordView(function () {
+        Fortify::confirmPasswordView(function (Request $request) {
+            if ($request->query('return_to') === 'passkeys') {
+                $request->session()->put('url.intended', route('user.settings').'#passkeys');
+            }
+
             return view('auth.confirm-password');
         });
 

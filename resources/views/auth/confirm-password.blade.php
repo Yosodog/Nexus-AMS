@@ -1,12 +1,12 @@
 @extends('layouts.public')
 
-@section('title', 'Confirm password · '.config('app.name'))
+@section('title', 'Confirm your identity · '.config('app.name'))
 
 @section('content')
     <x-auth.shell
         badge="Security check"
-        title="Confirm your password"
-        description="Re-enter the password for your account. After it is confirmed, you will return to the protected action you requested."
+        title="Confirm it’s you"
+        description="Use your current password or a registered passkey. After confirmation, you will return to the protected action you requested."
     >
         <x-slot:context>
             <div class="inline-grid size-10 place-items-center rounded-lg bg-neutral-content/10 text-neutral-content" aria-hidden="true">
@@ -14,7 +14,7 @@
             </div>
             <h2 class="mt-5 font-display text-2xl font-bold tracking-[-0.02em]">Why we ask again</h2>
             <p class="mt-3 text-sm leading-6 text-neutral-content/70">
-                Some actions can reveal security information or change access to your account. A fresh password check helps protect them if an open session is left unattended.
+                Some actions can reveal security information or change access to your account. A fresh identity check helps protect them if an open session is left unattended.
             </p>
             <p class="mt-6 border-t border-neutral-content/15 pt-5 text-xs leading-5 text-neutral-content/70">
                 Your requested action will not run until this check succeeds.
@@ -52,6 +52,42 @@
 
                 <button type="submit" class="btn btn-primary w-full">Confirm password and continue</button>
             </form>
+
+            @if(auth()->user()?->hasPasskeysEnabled())
+                <div class="divider text-xs uppercase tracking-wide text-base-content/50">or</div>
+
+                <div
+                    class="space-y-3"
+                    data-passkey-root
+                    data-passkey-options-url="{{ route('passkey.confirm-options') }}"
+                    data-passkey-submit-url="{{ route('passkey.confirm') }}"
+                    data-passkey-busy-label="Checking passkey…"
+                    data-passkey-success-message="Passkey verified. Returning to your protected action…"
+                >
+                    <button
+                        type="button"
+                        class="btn btn-outline w-full"
+                        data-passkey-verify
+                        data-passkey-supported-control
+                        hidden
+                    >
+                        <span class="loading loading-spinner loading-sm" data-async-button-spinner hidden aria-hidden="true"></span>
+                        <span data-async-button-label>Confirm with a passkey</span>
+                    </button>
+
+                    <p class="text-sm text-base-content/70" data-passkey-unsupported hidden>
+                        Passkey confirmation is not supported in this browser. Confirm with your password instead.
+                    </p>
+
+                    <div
+                        class="alert items-start text-sm"
+                        data-passkey-status
+                        aria-live="polite"
+                        aria-atomic="true"
+                        hidden
+                    ></div>
+                </div>
+            @endif
         </div>
     </x-auth.shell>
 @endsection

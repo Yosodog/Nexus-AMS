@@ -19,7 +19,7 @@
                     number="1"
                     state="current"
                     title="Sign in"
-                    description="Enter the username and password for your account."
+                    description="Use your password or a passkey already registered to your account."
                 />
                 <x-auth.journey-step
                     number="2"
@@ -66,7 +66,7 @@
                         name="name"
                         value="{{ old('name') }}"
                         @class(['input w-full', 'input-error' => $errors->has('name')])
-                        autocomplete="username"
+                        autocomplete="username webauthn"
                         aria-describedby="login-name-help{{ $errors->has('name') ? ' login-name-error' : '' }}"
                         @if($errors->has('name')) aria-invalid="true" @endif
                         required
@@ -116,6 +116,45 @@
 
                 <button type="submit" class="btn btn-primary w-full">Sign in to member app</button>
             </form>
+
+            <div class="divider text-xs uppercase tracking-wide text-base-content/50">or</div>
+
+            <div
+                class="space-y-3"
+                data-passkey-root
+                data-passkey-autofill="true"
+                data-passkey-options-url="{{ route('passkey.login-options') }}"
+                data-passkey-submit-url="{{ route('passkey.login') }}"
+                data-passkey-busy-label="Checking passkey…"
+                data-passkey-success-message="Passkey verified. Signing you in…"
+            >
+                <button
+                    type="button"
+                    class="btn btn-outline w-full"
+                    data-passkey-verify
+                    data-passkey-supported-control
+                    hidden
+                >
+                    <span class="loading loading-spinner loading-sm" data-async-button-spinner hidden aria-hidden="true"></span>
+                    <span data-async-button-label>Sign in with a passkey</span>
+                </button>
+
+                <p class="text-sm text-base-content/70" data-passkey-unsupported hidden>
+                    Passkeys are not supported in this browser. You can still sign in with your password.
+                </p>
+
+                <div
+                    class="alert items-start text-sm"
+                    data-passkey-status
+                    aria-live="polite"
+                    aria-atomic="true"
+                    hidden
+                ></div>
+
+                <noscript>
+                    <p class="text-sm text-base-content/70">Passkey sign-in needs JavaScript. Password sign-in remains available above.</p>
+                </noscript>
+            </div>
         </div>
 
         <x-slot:footer>
