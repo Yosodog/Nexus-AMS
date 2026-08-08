@@ -3,8 +3,10 @@
 namespace Tests\Feature\Ingestion;
 
 use App\Events\WarDeclared;
+use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Listeners\CreateCounterOnWarDeclared;
 use App\Models\Nation;
+use App\Models\WarCounter;
 use App\Services\AllianceMembershipService;
 use App\Services\SettingService;
 use App\Services\SubscriptionEventProcessor;
@@ -14,6 +16,7 @@ use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Notifications\Dispatcher as NotificationDispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
@@ -54,6 +57,45 @@ class WarDeclarationRetryTest extends TestCase
 
         $this->assertDatabaseHas('war_declaration_receipts', ['war_id' => 901]);
         $this->assertSame($attemptsAfterSuccess, $attempts);
+    }
+
+    public function test_auto_pick_job_waits_for_the_war_declaration_transaction_to_commit(): void
+    {
+        config()->set('milcom.v2_enabled', false);
+        Queue::fake();
+        SettingService::setWarCounterAutoCreationEnabled(true);
+        SettingService::setDiscordWarAlertEnabled(false);
+
+        $aggressor = Nation::factory()->create();
+        $counter = WarCounter::query()->create([
+            'aggressor_nation_id' => $aggressor->id,
+            'status' => 'draft',
+        ]);
+        $membershipService = Mockery::mock(AllianceMembershipService::class);
+        $membershipService->shouldReceive('contains')->once()->with(321)->andReturnTrue();
+        $orchestrator = Mockery::mock(PlanOrchestratorService::class);
+        $orchestrator->shouldReceive('getActiveEnemyAllianceIds')->once()->andReturn([]);
+        $listener = new CreateCounterOnWarDeclared(
+            $membershipService,
+            $orchestrator,
+            app(CacheFactory::class)
+        );
+
+        $listener->handle(new WarDeclared(
+            warId: 901,
+            attackerNationId: $aggressor->id,
+            attackerAllianceId: 999,
+            attackerAlliancePosition: 'MEMBER',
+            defenderNationId: 2002,
+            defenderAllianceId: 321,
+            defenderAlliancePosition: 'MEMBER',
+        ));
+
+        Queue::assertPushed(
+            AutoPickCounterAssignmentsJob::class,
+            fn (AutoPickCounterAssignmentsJob $job): bool => $job->counterId === $counter->id
+                && $job->afterCommit === true
+        );
     }
 
     public function test_counter_lock_timeout_propagates_to_the_receipt_transaction(): void
