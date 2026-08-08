@@ -43,13 +43,14 @@ class DiscordActorContextServiceTest extends TestCase
         $this->assertSame(DiscordActorContextState::Unlinked, $context->state);
         $this->assertFalse($context->isReady());
         $this->assertNull($context->actor);
-        $this->assertSame('/login', $context->userAction['path']);
+        $this->assertSame('/login', $context->userAction['deep_link_path']);
         $this->assertSame([
+            'contract_version' => 1,
             'state' => 'unlinked',
             'message' => 'This Discord account is not linked to Test Nexus.',
             'user_action' => [
                 'label' => 'Sign in to Test Nexus',
-                'path' => '/login',
+                'deep_link_path' => '/login',
             ],
         ], $context->safePayload());
     }
@@ -103,7 +104,7 @@ class DiscordActorContextServiceTest extends TestCase
 
         $this->assertSame(DiscordActorContextState::MfaRequired, $context->state);
         $this->assertSame($actor->id, $context->actor?->id);
-        $this->assertSame('/user/settings', $context->userAction['path']);
+        $this->assertSame('/user/settings', $context->userAction['deep_link_path']);
     }
 
     public function test_it_returns_the_ready_actor_without_exposing_it_in_the_safe_payload(): void
@@ -117,7 +118,7 @@ class DiscordActorContextServiceTest extends TestCase
         $this->assertTrue($context->isReady());
         $this->assertSame($actor->id, $context->actor?->id);
         $this->assertSame($account->id, $context->discordAccount?->id);
-        $this->assertSame('/user/dashboard', $context->userAction['path']);
+        $this->assertSame('/user/dashboard', $context->userAction['deep_link_path']);
         $this->assertArrayNotHasKey('actor', $context->safePayload());
         $this->assertArrayNotHasKey('discord_account', $context->safePayload());
         $this->assertStringNotContainsString($actor->email, json_encode($context->safePayload(), JSON_THROW_ON_ERROR));

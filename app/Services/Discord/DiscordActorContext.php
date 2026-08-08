@@ -9,7 +9,7 @@ use App\Models\User;
 final readonly class DiscordActorContext
 {
     /**
-     * @param  array{label: string, path: string}|null  $userAction
+     * @param  array{label: string, deep_link_path: string}|null  $userAction
      */
     public function __construct(
         public DiscordActorContextState $state,
@@ -28,14 +28,16 @@ final readonly class DiscordActorContext
      * Return only fields that are safe to expose before a linked actor is resolved.
      *
      * @return array{
+     *     contract_version: int,
      *     state: string,
      *     message: string,
-     *     user_action: array{label: string, path: string}|null
+     *     user_action: array{label: string, deep_link_path: string}|null
      * }
      */
     public function safePayload(): array
     {
         return [
+            'contract_version' => 1,
             'state' => $this->state->value,
             'message' => $this->message,
             'user_action' => $this->userAction,

@@ -32,7 +32,7 @@ final class DiscordActorContextService
                 "This Discord account is not linked to {$appName}.",
                 userAction: [
                     'label' => "Sign in to {$appName}",
-                    'path' => route('login', absolute: false),
+                    'deep_link_path' => route('login', absolute: false),
                 ],
             );
         }
@@ -53,7 +53,7 @@ final class DiscordActorContextService
                 "This Discord account is not linked to an available {$appName} user.",
                 userAction: [
                     'label' => "Sign in to {$appName}",
-                    'path' => route('login', absolute: false),
+                    'deep_link_path' => route('login', absolute: false),
                 ],
             );
         }
@@ -75,7 +75,7 @@ final class DiscordActorContextService
                 discordAccount: $discordAccount,
                 userAction: [
                     'label' => 'Finish verification',
-                    'path' => route('login', absolute: false),
+                    'deep_link_path' => route('login', absolute: false),
                 ],
             );
         }
@@ -88,7 +88,7 @@ final class DiscordActorContextService
                 discordAccount: $discordAccount,
                 userAction: [
                     'label' => 'Review account settings',
-                    'path' => route('user.settings', absolute: false),
+                    'deep_link_path' => route('user.settings', absolute: false),
                 ],
             );
         }
@@ -104,7 +104,7 @@ final class DiscordActorContextService
                 discordAccount: $discordAccount,
                 userAction: [
                     'label' => 'Configure MFA',
-                    'path' => route('user.settings', absolute: false),
+                    'deep_link_path' => route('user.settings', absolute: false),
                 ],
             );
         }
@@ -116,7 +116,7 @@ final class DiscordActorContextService
             discordAccount: $discordAccount,
             userAction: [
                 'label' => "Open {$appName}",
-                'path' => route('user.dashboard', absolute: false),
+                'deep_link_path' => route('user.dashboard', absolute: false),
             ],
         );
     }
