@@ -118,29 +118,50 @@ class WarDeclarationRetryTest extends TestCase
         $listener->handle($this->warDeclaredEvent());
     }
 
-    public function test_notification_queue_failure_propagates_to_the_receipt_transaction(): void
+    public function test_notification_queue_failure_does_not_roll_back_the_counter_or_receipt(): void
     {
+        config()->set('milcom.v2_enabled', false);
+        cache()->forever('alliances:membership:ids', [999]);
+        SettingService::setWarCounterAutoCreationEnabled(true);
         SettingService::setDiscordWarAlertEnabled(true);
         SettingService::setDiscordWarAlertChannelId('war-alerts');
         Nation::factory()->create(['id' => 1001]);
         Nation::factory()->create(['id' => 2002]);
+        Queue::fake([AutoPickCounterAssignmentsJob::class]);
         $notificationDispatcher = Mockery::mock(NotificationDispatcher::class);
         $notificationDispatcher->shouldReceive('send')
             ->once()
             ->andThrow(new RuntimeException('Discord queue is unavailable.'));
         $this->app->instance(NotificationDispatcher::class, $notificationDispatcher);
-        $listener = new class(Mockery::mock(AllianceMembershipService::class), Mockery::mock(PlanOrchestratorService::class), app(CacheFactory::class)) extends CreateCounterOnWarDeclared
-        {
-            public function queueDiscordAlert(WarDeclared $event): void
-            {
-                $this->queueDiscordWarAlert($event, null);
-            }
-        };
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Discord queue is unavailable.');
+        app(SubscriptionEventProcessor::class)->process('war', 'create', $this->warPayload());
 
-        $listener->queueDiscordAlert($this->warDeclaredEvent());
+        $this->assertDatabaseHas('war_declaration_receipts', ['war_id' => 901]);
+        $this->assertDatabaseHas('war_counters', [
+            'aggressor_nation_id' => 1001,
+            'status' => 'draft',
+        ]);
+        Queue::assertPushed(AutoPickCounterAssignmentsJob::class, 1);
+    }
+
+    public function test_missing_discord_nation_data_does_not_roll_back_the_counter_or_receipt(): void
+    {
+        config()->set('milcom.v2_enabled', false);
+        cache()->forever('alliances:membership:ids', [999]);
+        SettingService::setWarCounterAutoCreationEnabled(true);
+        SettingService::setDiscordWarAlertEnabled(true);
+        SettingService::setDiscordWarAlertChannelId('war-alerts');
+        Nation::factory()->create(['id' => 1001]);
+        Queue::fake([AutoPickCounterAssignmentsJob::class]);
+
+        app(SubscriptionEventProcessor::class)->process('war', 'create', $this->warPayload());
+
+        $this->assertDatabaseHas('war_declaration_receipts', ['war_id' => 901]);
+        $this->assertDatabaseHas('war_counters', [
+            'aggressor_nation_id' => 1001,
+            'status' => 'draft',
+        ]);
+        Queue::assertPushed(AutoPickCounterAssignmentsJob::class, 1);
     }
 
     /** @return array<string, int|string> */

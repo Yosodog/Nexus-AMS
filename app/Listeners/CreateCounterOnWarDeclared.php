@@ -113,7 +113,17 @@ class CreateCounterOnWarDeclared
                     }
                 }
 
-                $this->queueDiscordWarAlert($event, $counter);
+                try {
+                    $this->queueDiscordWarAlert($event, $counter);
+                } catch (Throwable $exception) {
+                    Log::error('Failed to queue Discord war alert without aborting war counter processing', [
+                        'war_id' => $event->warId,
+                        'attacker_nation_id' => $event->attackerNationId,
+                        'defender_nation_id' => $event->defenderNationId,
+                        'exception_class' => $exception::class,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             });
         } catch (LockTimeoutException $exception) {
             Log::warning('Failed to acquire counter lock', [
@@ -166,29 +176,18 @@ class CreateCounterOnWarDeclared
                     'defender_nation_id' => $event->defenderNationId,
                 ]);
 
-                throw new RuntimeException('Discord war alert requires current attacker and defender nation data.');
+                return true;
             }
 
-            try {
-                Notification::route(DiscordQueueChannel::class, 'discord-bot')
-                    ->notify(new WarDeclaredDiscordNotification(
-                        $event->warId,
-                        $attacker,
-                        $defender,
-                        $counter,
-                        $channelId,
-                        Carbon::now()
-                    ));
-            } catch (Throwable $exception) {
-                Log::error('Failed to queue Discord war alert', [
-                    'war_id' => $event->warId,
-                    'attacker_nation_id' => $event->attackerNationId,
-                    'defender_nation_id' => $event->defenderNationId,
-                    'message' => $exception->getMessage(),
-                ]);
-
-                throw $exception;
-            }
+            Notification::route(DiscordQueueChannel::class, 'discord-bot')
+                ->notify(new WarDeclaredDiscordNotification(
+                    $event->warId,
+                    $attacker,
+                    $defender,
+                    $counter,
+                    $channelId,
+                    Carbon::now()
+                ));
 
             return true;
         });
@@ -197,8 +196,6 @@ class CreateCounterOnWarDeclared
             Log::info('Discord war alert skipped due to overlapping lock', [
                 'war_id' => $event->warId,
             ]);
-
-            throw new RuntimeException('Discord war alert lock is already held.');
         }
     }
 
