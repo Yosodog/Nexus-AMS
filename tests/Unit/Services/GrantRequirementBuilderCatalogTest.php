@@ -11,6 +11,11 @@ use PHPUnit\Framework\TestCase;
 
 class GrantRequirementBuilderCatalogTest extends TestCase
 {
+    /**
+     * Protects the complete pre-extraction builder contract without duplicating its full metadata fixture.
+     */
+    private const PRE_EXTRACTION_BUILDER_CONTRACT_SHA256 = 'f2619090a00db59025f262b6959bef339125b6aa1da53ee3d117ad854491e439';
+
     private GrantRequirementBuilderCatalog $catalog;
 
     protected function setUp(): void
@@ -101,6 +106,32 @@ class GrantRequirementBuilderCatalogTest extends TestCase
         }
     }
 
+    public function test_complete_ordered_builder_contract_matches_pre_extraction_golden_fingerprint(): void
+    {
+        $contract = $this->catalog->getBuilderConfig([
+            'group' => 'all',
+            'rules' => [],
+        ]);
+        $canonicalJson = $this->canonicalJson($contract);
+
+        $this->assertSame(['groups', 'operators', 'fields', 'default_tree'], array_keys($contract));
+        $this->assertCount(3, $contract['groups']);
+        $this->assertCount(13, $contract['operators']);
+        $this->assertCount(50, $contract['fields']);
+        $this->assertSame(self::PRE_EXTRACTION_BUILDER_CONTRACT_SHA256, hash('sha256', $canonicalJson));
+
+        $reorderedContract = $contract;
+        [$reorderedContract['fields'][0], $reorderedContract['fields'][1]] = [
+            $reorderedContract['fields'][1],
+            $reorderedContract['fields'][0],
+        ];
+
+        $this->assertNotSame(
+            self::PRE_EXTRACTION_BUILDER_CONTRACT_SHA256,
+            hash('sha256', $this->canonicalJson($reorderedContract)),
+        );
+    }
+
     /**
      * @return array<string, array{mixed, string}>
      */
@@ -130,5 +161,34 @@ class GrantRequirementBuilderCatalogTest extends TestCase
             $this->catalog->displayList(['NORTH_AMERICA', 12.50, 'Urban Planning']),
         );
         $this->assertSame('', $this->catalog->displayList([]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $contract
+     */
+    private function canonicalJson(array $contract): string
+    {
+        $canonicalize = function (mixed $value) use (&$canonicalize): mixed {
+            if (! is_array($value)) {
+                return $value;
+            }
+
+            if (array_is_list($value)) {
+                return array_map($canonicalize, $value);
+            }
+
+            ksort($value, SORT_STRING);
+
+            foreach ($value as $key => $item) {
+                $value[$key] = $canonicalize($item);
+            }
+
+            return $value;
+        };
+
+        return json_encode(
+            $canonicalize($contract),
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION,
+        );
     }
 }
