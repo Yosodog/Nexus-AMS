@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordQueue;
 use App\Models\Nation;
@@ -71,6 +72,54 @@ class DiscordQueueApiTest extends TestCase
             'worker_id' => (string) Str::uuid(),
             'request_id' => (string) Str::uuid(),
         ])->assertOk()->assertJsonPath('data', null);
+    }
+
+    public function test_unscoped_compatibility_claim_does_not_consume_alert_lanes(): void
+    {
+        $alert = $this->createCommand('ALERT_DELIVERY_V1', [
+            'lane' => DiscordQueueLane::Alerts,
+        ]);
+        $sideEffect = $this->createCommand('WAR_ROOM_CREATE', [
+            'lane' => DiscordQueueLane::SideEffects,
+        ]);
+
+        $this->claimOne()->assertJsonPath('data.id', $sideEffect->id);
+
+        $this->assertSame(DiscordQueueStatus::Pending, $alert->fresh()->status);
+        $this->assertSame(0, $alert->fresh()->attempts);
+    }
+
+    public function test_alert_queue_acknowledgement_requires_a_canonical_delivery_receipt(): void
+    {
+        $command = $this->createCommand('ALERT_DELIVERY_V1', [
+            'lane' => DiscordQueueLane::Alerts,
+        ]);
+        $claim = $this->claimOne(DiscordQueueLane::Alerts);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson("/api/v1/discord/queue/{$command->id}/status", [
+                'lease_token' => $claim->json('data.lease_token'),
+                'status' => DiscordQueueStatus::Complete->value,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['result']);
+
+        $this->withHeaders($this->discordHeaders())
+            ->postJson("/api/v1/discord/queue/{$command->id}/status", [
+                'lease_token' => $claim->json('data.lease_token'),
+                'status' => DiscordQueueStatus::Complete->value,
+                'result' => [
+                    'success' => true,
+                    'delivery_id' => 'delivery-1',
+                    'delivery' => 'delivered',
+                    'provider_message_id' => '123456789012345678',
+                    'guild_id' => '223456789012345678',
+                    'channel_id' => '323456789012345678',
+                    'retryable' => false,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', DiscordQueueStatus::Complete->value);
     }
 
     public function test_distinct_claim_requests_receive_distinct_available_commands(): void
@@ -368,7 +417,7 @@ class DiscordQueueApiTest extends TestCase
         $this->assertSame('legacy_manual_requeue', $command->fresh()->last_error['code']);
     }
 
-    public function test_bot_can_fetch_the_persisted_war_counter_channel(): void
+    public function test_legacy_war_counter_api_returns_gone_after_the_milcom_v2_cutover(): void
     {
         $aggressor = Nation::factory()->create();
         $counter = WarCounter::query()->create([
@@ -381,17 +430,23 @@ class DiscordQueueApiTest extends TestCase
 
         $this->withHeaders($this->discordHeaders())
             ->getJson("/api/v1/discord/war-counters/{$counter->id}")
-            ->assertOk()
-            ->assertJsonPath('counter.id', $counter->id)
-            ->assertJsonPath('counter.discord_channel_id', '123456789012345678');
+            ->assertGone()
+            ->assertJsonPath('error.code', 'legacy_milcom_gone');
     }
 
-    private function claimOne(): TestResponse
+    private function claimOne(?DiscordQueueLane $lane = null): TestResponse
     {
-        return $this->withHeaders($this->discordHeaders())->postJson('/api/v1/discord/queue/claim', [
+        $payload = [
             'worker_id' => (string) Str::uuid(),
             'request_id' => (string) Str::uuid(),
-        ])->assertOk();
+        ];
+        if ($lane !== null) {
+            $payload['lanes'] = [$lane->value];
+        }
+
+        return $this->withHeaders($this->discordHeaders())
+            ->postJson('/api/v1/discord/queue/claim', $payload)
+            ->assertOk();
     }
 
     /**

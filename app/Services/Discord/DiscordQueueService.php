@@ -2,6 +2,7 @@
 
 namespace App\Services\Discord;
 
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordQueue;
 use Carbon\CarbonInterface;
@@ -20,6 +21,10 @@ class DiscordQueueService
         array $payload,
         ?CarbonInterface $availableAt = null,
         ?string $dedupeKey = null,
+        DiscordQueueLane $lane = DiscordQueueLane::Legacy,
+        int $priority = 50,
+        ?string $guildId = null,
+        ?int $alertDeliveryBatchId = null,
     ): DiscordQueue {
         if ($dedupeKey !== null && $dedupeKey !== '') {
             $existing = DiscordQueue::query()->where('dedupe_key', $dedupeKey)->first();
@@ -36,6 +41,10 @@ class DiscordQueueService
                 'status' => DiscordQueueStatus::Pending,
                 'attempts' => 0,
                 'available_at' => $availableAt ?? Carbon::now(),
+                'lane' => $lane,
+                'priority' => max(0, min(100, $priority)),
+                'guild_id' => $guildId,
+                'alert_delivery_batch_id' => $alertDeliveryBatchId,
             ];
             if ($dedupeKey !== null && $dedupeKey !== '') {
                 $attributes['dedupe_key'] = $dedupeKey;

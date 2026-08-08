@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
 use App\Http\Controllers\Controller;
@@ -38,10 +39,21 @@ class DiscordQueueController extends Controller
         $data = $request->validate([
             'worker_id' => ['required', 'uuid'],
             'request_id' => ['required', 'uuid'],
+            'lanes' => ['nullable', 'array', 'min:1', 'max:4'],
+            'lanes.*' => ['required', Rule::enum(DiscordQueueLane::class)],
+            'guild_id' => ['nullable', 'string', 'regex:/^\d{17,20}$/'],
         ]);
 
         try {
-            $command = $this->leaseService->claim($data['worker_id'], $data['request_id']);
+            $command = $this->leaseService->claim(
+                $data['worker_id'],
+                $data['request_id'],
+                array_map(
+                    fn (string $lane): DiscordQueueLane => DiscordQueueLane::from($lane),
+                    $data['lanes'] ?? [],
+                ),
+                $data['guild_id'] ?? null,
+            );
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
         }
@@ -110,7 +122,7 @@ class DiscordQueueController extends Controller
 
     public function update(Request $request, DiscordQueue $command): JsonResponse
     {
-        $data = $request->validate([
+        $rules = [
             'lease_token' => ['nullable', 'uuid'],
             'status' => ['required', Rule::in([
                 DiscordQueueStatus::Complete->value,
@@ -119,7 +131,24 @@ class DiscordQueueController extends Controller
             'error_code' => ['nullable', 'string', 'max:100'],
             'error_message' => ['nullable', 'string', 'max:2000'],
             'result' => ['nullable', 'array', 'max:25'],
-        ]);
+            'result.delivery' => ['nullable', Rule::in(['delivered', 'undeliverable', 'failed', 'quarantined'])],
+            'result.retryable' => ['nullable', 'boolean'],
+            'result.retry_after_ms' => ['nullable', 'integer', 'min:0', 'max:1800000'],
+            'result.error_code' => ['nullable', 'string', 'max:100'],
+            'result.error_message' => ['nullable', 'string', 'max:2000'],
+            'result.provider_message_id' => ['nullable', 'string', 'max:32'],
+            'result.guild_id' => ['nullable', 'string', 'max:32'],
+            'result.channel_id' => ['nullable', 'string', 'max:32'],
+        ];
+        if ($command->action === 'ALERT_DELIVERY_V1') {
+            $rules['result'] = ['required', 'array', 'max:25'];
+            $rules['result.success'] = ['required', 'boolean'];
+            $rules['result.delivery_id'] = ['required', 'string', 'max:120'];
+            $rules['result.delivery'] = ['required', Rule::in(['delivered', 'undeliverable', 'failed', 'quarantined'])];
+            $rules['result.retryable'] = ['required', 'boolean'];
+        }
+
+        $data = $request->validate($rules);
 
         try {
             $command = $this->leaseService->acknowledge(
@@ -154,6 +183,10 @@ class DiscordQueueController extends Controller
         return [
             'id' => $command->id,
             'action' => $command->action,
+            'lane' => $command->lane,
+            'priority' => $command->priority,
+            'guild_id' => $command->guild_id,
+            'alert_delivery_batch_id' => $command->alert_delivery_batch_id,
             'dedupe_key' => $command->dedupe_key,
             'payload' => $command->payload,
             'status' => $command->status,

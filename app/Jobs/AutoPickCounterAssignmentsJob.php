@@ -2,20 +2,14 @@
 
 namespace App\Jobs;
 
-use App\Models\Nation;
-use App\Models\WarCounter;
-use App\Services\AllianceMembershipService;
-use App\Services\PWHealthService;
-use App\Services\War\CounterAssignmentService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
-/**
- * Auto-selects counter assignments for a given aggressor.
- */
+/** Compatibility envelope for legacy queued work created before the Milcom v2 cutover. */
 class AutoPickCounterAssignmentsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -26,34 +20,10 @@ class AutoPickCounterAssignmentsJob implements ShouldQueue
 
     public function __construct(public readonly int $counterId) {}
 
-    public function handle(
-        CounterAssignmentService $assignmentService,
-        AllianceMembershipService $membershipService,
-        PWHealthService $healthService
-    ): void {
-        if ($healthService->isDown()) {
-            $this->release(300);
-
-            return;
-        }
-
-        /** @var WarCounter|null $counter */
-        $counter = WarCounter::query()->with('aggressor')->find($this->counterId);
-
-        if (! $counter) {
-            return;
-        }
-
-        $friendlyAllianceIds = $membershipService->getAllianceIds();
-
-        $friendlies = Nation::query()
-            ->whereIn('alliance_id', $friendlyAllianceIds)
-            ->where(function ($query) {
-                $query->whereNull('alliance_position')
-                    ->orWhere('alliance_position', '!=', 'APPLICANT');
-            })
-            ->get();
-
-        $assignmentService->proposeAssignments($counter, $friendlies);
+    public function handle(): void
+    {
+        Log::notice('Ignored retired legacy war-counter assignment job.', [
+            'war_counter_id' => $this->counterId,
+        ]);
     }
 }

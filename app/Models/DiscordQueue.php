@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -33,6 +35,13 @@ class DiscordQueue extends Model
 {
     use HasUuids;
 
+    protected $attributes = [
+        'status' => 'pending',
+        'attempts' => 0,
+        'lane' => 'legacy',
+        'priority' => 50,
+    ];
+
     protected $table = 'discord_queue';
 
     protected $guarded = [];
@@ -49,6 +58,8 @@ class DiscordQueue extends Model
         return [
             'payload' => 'array',
             'status' => DiscordQueueStatus::class,
+            'lane' => DiscordQueueLane::class,
+            'priority' => 'integer',
             'available_at' => 'datetime',
             'leased_until' => 'datetime',
             'result' => 'array',
@@ -60,13 +71,21 @@ class DiscordQueue extends Model
     /**
      * Scope commands that are ready to be processed.
      */
-    public function scopeAvailable(Builder $query): Builder
+    /** @param list<string>|null $lanes */
+    public function scopeAvailable(Builder $query, ?array $lanes = null): Builder
     {
         return $query
             ->where('status', DiscordQueueStatus::Pending->value)
             ->where('attempts', '<', DiscordQueueLeaseService::MAX_ATTEMPTS)
             ->where('available_at', '<=', Carbon::now())
+            ->when($lanes !== null && $lanes !== [], fn (Builder $laneQuery): Builder => $laneQuery->whereIn('lane', $lanes))
+            ->orderByDesc('priority')
             ->orderBy('available_at')
             ->orderBy('created_at');
+    }
+
+    public function alertDeliveryBatch(): BelongsTo
+    {
+        return $this->belongsTo(AlertDeliveryBatch::class);
     }
 }

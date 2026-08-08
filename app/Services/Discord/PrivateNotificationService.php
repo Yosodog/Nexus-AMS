@@ -9,6 +9,7 @@ use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\SettingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class PrivateNotificationService
@@ -20,8 +21,6 @@ class PrivateNotificationService
         'loans' => 'Loans',
         'war_aid' => 'War aid',
         'rebuilding' => 'Rebuilding',
-        'war_assignments' => 'War assignments',
-        'spy_assignments' => 'Spy assignments',
         'audits' => 'Audit reminders',
         'watchlists' => 'Custom alerts and watchlists',
         'blockade_relief' => 'Blockade relief coordination',
@@ -107,8 +106,6 @@ class PrivateNotificationService
                 'loans' => ['loan_'],
                 'war_aid' => ['war_aid_'],
                 'rebuilding' => ['rebuilding_'],
-                'war_assignments' => ['war_assignment_'],
-                'spy_assignments' => ['spy_assignment_'],
                 'audits' => ['audit_'],
                 'watchlists' => ['watchlist_'],
                 'blockade_relief' => ['blockade_relief_'],
@@ -127,6 +124,31 @@ class PrivateNotificationService
             'result' => json_encode([
                 'delivery' => 'suppressed',
                 'reason' => $user === null ? 'master_disabled' : 'recipient_opt_out',
+            ], JSON_THROW_ON_ERROR),
+            'completed_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function pendingAssignmentNotificationCount(): int
+    {
+        return $this->pendingAssignmentNotificationQuery()->count();
+    }
+
+    public function activeAssignmentNotificationLeaseCount(): int
+    {
+        return $this->assignmentNotificationQuery()
+            ->where('status', DiscordQueueStatus::Processing->value)
+            ->count();
+    }
+
+    public function suppressPendingAssignmentNotifications(): int
+    {
+        return $this->pendingAssignmentNotificationQuery()->update([
+            'status' => DiscordQueueStatus::Complete->value,
+            'result' => json_encode([
+                'delivery' => 'suppressed',
+                'reason' => 'feature_retired',
             ], JSON_THROW_ON_ERROR),
             'completed_at' => now(),
             'updated_at' => now(),
@@ -226,5 +248,22 @@ class PrivateNotificationService
         $path = '/'.ltrim(parse_url($path, PHP_URL_PATH) ?: '/', '/');
 
         return Str::limit($path, 255, '');
+    }
+
+    private function pendingAssignmentNotificationQuery(): Builder
+    {
+        return $this->assignmentNotificationQuery()
+            ->where('status', DiscordQueueStatus::Pending->value);
+    }
+
+    private function assignmentNotificationQuery(): Builder
+    {
+        return DiscordQueue::query()
+            ->where('action', 'PRIVATE_NOTIFICATION')
+            ->where(function (Builder $events): void {
+                $events
+                    ->where('payload->event_type', 'like', 'war_assignment_%')
+                    ->orWhere('payload->event_type', 'like', 'spy_assignment_%');
+            });
     }
 }

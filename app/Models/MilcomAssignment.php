@@ -6,6 +6,7 @@ use App\Domain\Milcom\Enums\AssignmentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MilcomAssignment extends Model
 {
@@ -53,5 +54,10 @@ class MilcomAssignment extends Model
     public function deliveries(): HasMany
     {
         return $this->hasMany(MilcomAssignmentDelivery::class, 'assignment_id');
+    }
+
+    public function discordResponse(): HasOne
+    {
+        return $this->hasOne(MilcomAssignmentResponse::class, 'assignment_id');
     }
 }

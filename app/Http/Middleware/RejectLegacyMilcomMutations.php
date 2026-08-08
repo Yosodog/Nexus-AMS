@@ -23,10 +23,6 @@ class RejectLegacyMilcomMutations
             ]);
         }
 
-        if ($request->isMethodSafe() && ! $request->is('api/v1/discord/me/war-assignments*')) {
-            return $next($request);
-        }
-
         $payload = [
             'message' => 'Legacy Milcom is read-only after the v2 cutover.',
             'error' => [
@@ -46,11 +42,16 @@ class RejectLegacyMilcomMutations
 
     private function isLegacyMilcomPath(Request $request): bool
     {
+        if ($request->route()?->getActionMethod() === 'respondToWarAssignment') {
+            return true;
+        }
+
         return $request->is('admin/war-room*')
             || $request->is('admin/war-plans*')
             || $request->is('admin/war-counters*')
             || $request->is('api/v1/war-plans*')
-            || $request->is('api/v1/discord/me/war-assignments*')
+            || $request->is('api/v1/discord/me/wars/counter')
+            || $request->is('api/v1/discord/war-counters*')
             || $request->is('api/v1/discord/war-counters/attach-channel')
             || $request->is('api/v1/discord/war-counters/archive');
     }

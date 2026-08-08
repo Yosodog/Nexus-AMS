@@ -3,12 +3,15 @@
 namespace App\Services\Discord;
 
 use App\Domain\Federation\Services\FederationOperationGuard;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
 use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomOperation;
+use App\Services\Alerts\AlertDeliveryReceiptService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,14 +31,25 @@ class DiscordQueueLeaseService
         'CITY_TIER_SYNC' => ['roles'],
     ];
 
-    public function __construct(private readonly FederationOperationGuard $federationGuard) {}
+    public function __construct(
+        private readonly FederationOperationGuard $federationGuard,
+        private readonly AlertDeliveryReceiptService $receipts,
+    ) {}
 
-    public function claim(string $workerId, string $requestId): ?DiscordQueue
-    {
+    /** @param list<DiscordQueueLane> $lanes */
+    public function claim(
+        string $workerId,
+        string $requestId,
+        array $lanes = [],
+        ?string $guildId = null,
+    ): ?DiscordQueue {
+        $claimLanes = $lanes === []
+            ? [DiscordQueueLane::Legacy, DiscordQueueLane::SideEffects]
+            : $lanes;
         $heldExisting = false;
 
         try {
-            $claimed = DB::transaction(function () use ($workerId, $requestId, &$heldExisting): ?DiscordQueue {
+            $claimed = DB::transaction(function () use ($workerId, $requestId, $claimLanes, $guildId, &$heldExisting): ?DiscordQueue {
                 $existingId = DiscordQueue::query()
                     ->where('claim_request_id', $requestId)
                     ->value('id');
@@ -62,7 +76,17 @@ class DiscordQueueLeaseService
                 }
 
                 while (true) {
-                    $candidateId = DiscordQueue::query()->available()->value('id');
+                    $candidateId = DiscordQueue::query()
+                        ->available(array_map(
+                        fn (DiscordQueueLane $lane): string => $lane->value,
+                        $claimLanes,
+                        ))
+                        ->when($guildId !== null, function (Builder $query) use ($guildId): void {
+                            $query->where(function (Builder $guildQuery) use ($guildId): void {
+                                $guildQuery->whereNull('guild_id')->orWhere('guild_id', $guildId);
+                            });
+                        })
+                        ->value('id');
 
                     if ($candidateId === null) {
                         return null;
@@ -98,6 +122,10 @@ class DiscordQueueLeaseService
                 throw $this->heldException();
             }
 
+            if ($claimed !== null) {
+                $this->receipts->beginAttempt($claimed);
+            }
+
             return $claimed;
         } catch (QueryException $exception) {
             if (! $this->isUniqueConstraintViolation($exception)) {
@@ -109,6 +137,15 @@ class DiscordQueueLeaseService
                 ->first();
 
             if ($existing && $this->hasActiveLease($existing)) {
+                $operation = $this->lockOperationForQueueId((string) $existing->getKey());
+                if ($operation !== null && $this->federationGuard->isHeld($operation)) {
+                    $this->suppressHeldCommand($existing);
+
+                    throw $this->heldException();
+                }
+
+                $this->receipts->beginAttempt($existing);
+
                 return $existing;
             }
 
@@ -132,7 +169,10 @@ class DiscordQueueLeaseService
             $limit = max(1, $limit);
 
             while ($claimed->count() < $limit) {
-                $candidateId = DiscordQueue::query()->available()->value('id');
+                $candidateId = DiscordQueue::query()->available([
+                    DiscordQueueLane::Legacy->value,
+                    DiscordQueueLane::SideEffects->value,
+                ])->value('id');
 
                 if ($candidateId === null) {
                     break;
@@ -267,14 +307,22 @@ class DiscordQueueLeaseService
                 return $locked->fresh();
             }
 
-            $nextStatus = $locked->attempts >= self::MAX_ATTEMPTS
+            $retryable = $locked->action === 'ALERT_DELIVERY_V1'
+                ? (bool) ($result['retryable'] ?? false)
+                : true;
+            $nextStatus = ! $retryable || $locked->attempts >= self::MAX_ATTEMPTS
                 ? DiscordQueueStatus::Failed
                 : DiscordQueueStatus::Pending;
+
+            $retryAfterMilliseconds = max(0, (int) ($result['retry_after_ms'] ?? 0));
+            $retryAt = $retryAfterMilliseconds > 0
+                ? Carbon::now()->addMilliseconds(min($retryAfterMilliseconds, 30 * 60 * 1000))
+                : Carbon::now()->addMinutes(max(1, $locked->attempts));
 
             $locked->forceFill([
                 'status' => $nextStatus,
                 'available_at' => $nextStatus === DiscordQueueStatus::Pending
-                    ? Carbon::now()->addMinutes(max(1, $locked->attempts))
+                    ? $retryAt
                     : $locked->available_at,
                 'leased_until' => null,
                 'worker_id' => null,
@@ -292,12 +340,14 @@ class DiscordQueueLeaseService
             throw $this->heldException();
         }
 
+        $this->receipts->record($acknowledged, $result ?? $acknowledged->result);
+
         return $acknowledged;
     }
 
     public function reapExpiredLeases(): int
     {
-        return DB::transaction(function (): int {
+        $commands = DB::transaction(function () {
             $commandIds = DiscordQueue::query()
                 ->where('status', DiscordQueueStatus::Processing->value)
                 ->whereNotNull('lease_token')
@@ -306,7 +356,7 @@ class DiscordQueueLeaseService
                 ->orderBy('leased_until')
                 ->limit(100)
                 ->pluck('id');
-            $reaped = 0;
+            $reaped = collect();
 
             foreach ($commandIds as $commandId) {
                 $operation = $this->lockOperationForQueueId((string) $commandId);
@@ -321,7 +371,7 @@ class DiscordQueueLeaseService
 
                 if ($operation !== null && $this->federationGuard->isHeld($operation)) {
                     $this->suppressHeldCommand($command);
-                    $reaped++;
+                    $reaped->push($command->fresh());
 
                     continue;
                 }
@@ -343,11 +393,24 @@ class DiscordQueueLeaseService
                     ],
                     'completed_at' => null,
                 ])->save();
-                $reaped++;
+                $reaped->push($command->fresh());
             }
 
             return $reaped;
         }, attempts: 3);
+
+        $commands->each(function (DiscordQueue $command): void {
+            $error = $command->last_error ?? [];
+
+            $this->receipts->record($command, [
+                'delivery' => 'failed',
+                'error_code' => $error['code'] ?? 'lease_expired',
+                'error_message' => $error['message'] ?? 'The Discord worker lease expired before acknowledgement.',
+                'retryable' => $command->status === DiscordQueueStatus::Pending,
+            ]);
+        });
+
+        return $commands->count();
     }
 
     public function hasActiveLease(DiscordQueue $command): bool

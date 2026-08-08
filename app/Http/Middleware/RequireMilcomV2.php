@@ -30,8 +30,11 @@ class RequireMilcomV2
             ], 503);
         }
 
-        return redirect()
-            ->route('admin.war-room')
-            ->with('alert-warning', 'Milcom v2 is disabled. The legacy war room remains available for rollback.');
+        return response(
+            (bool) config('milcom.v2_requested', false)
+                ? 'Milcom v2 is unavailable until the live Politics & War rules contract is verified.'
+                : 'Milcom v2 is disabled for this deployment.',
+            503,
+        );
     }
 }
