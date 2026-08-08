@@ -50,6 +50,12 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function hideSensitiveRequestDetails(): void
     {
+        Telescope::hideRequestParameters([
+            'bootstrap_token',
+            'password',
+            'password_confirmation',
+        ]);
+
         if ($this->app->environment('local')) {
             return;
         }
@@ -63,8 +69,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             'key',
             'mutationKey',
             'mutation_key',
-            'password',
-            'password_confirmation',
             'recovery_code',
             'token',
             'two_factor_code',
@@ -80,6 +84,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             'x-csrf-token',
             'x-discord-signature',
             'x-discord-timestamp',
+            'x-nexus-bootstrap-token',
             'x-nexus-api-key',
             'x-xsrf-token',
         ]);

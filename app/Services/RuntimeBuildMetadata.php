@@ -114,7 +114,10 @@ final readonly class RuntimeBuildMetadata
     /** @return list<string> */
     public function capabilities(): array
     {
-        return [];
+        return match ($this->runtime) {
+            NexusRuntime::HostedTenant => ['platform-bootstrap-v1'],
+            NexusRuntime::Standalone, NexusRuntime::WorldWriter => [],
+        };
     }
 
     /**

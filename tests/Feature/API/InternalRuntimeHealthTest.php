@@ -82,6 +82,27 @@ class InternalRuntimeHealthTest extends TestCase
         $this->assertStringNotContainsString('internal-test-token', $response->getContent());
     }
 
+    public function test_hosted_build_metadata_advertises_bootstrap_capability_only_in_hosted_mode(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+        config([
+            'nexus.managed' => true,
+            'nexus.tenant_id' => self::TENANT_ID,
+            'nexus.world_view_contract' => 3,
+        ]);
+
+        $this->authorizedGet('/api/internal/v1/build')
+            ->assertOk()
+            ->assertJsonPath('runtime_mode', NexusRuntime::HostedTenant->value)
+            ->assertJsonPath('capabilities', ['platform-bootstrap-v1']);
+
+        $this->configureRuntime(NexusRuntime::WorldWriter);
+
+        $this->authorizedGet('/api/internal/v1/build')
+            ->assertOk()
+            ->assertJsonPath('capabilities', []);
+    }
+
     public function test_standalone_readiness_reports_core_compatibility_without_requiring_heartbeats(): void
     {
         $this->authorizedGet('/api/internal/v1/readiness')

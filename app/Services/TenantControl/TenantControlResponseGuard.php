@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Services\TenantCallbacks;
+namespace App\Services\TenantControl;
 
-use App\Exceptions\TenantCallbackTransportException;
+use App\Exceptions\TenantControlTransportException;
 use Psr\Http\Message\ResponseInterface;
 
-final class TenantCallbackResponseGuard
+final class TenantControlResponseGuard
 {
     public const MAX_BYTES = 8_192;
 
@@ -38,8 +38,8 @@ final class TenantCallbackResponseGuard
 
     private function reject(?int $responseStatus = null): never
     {
-        throw new TenantCallbackTransportException(
-            failureCode: 'invalid_callback_response',
+        throw new TenantControlTransportException(
+            failureCode: 'invalid_control_response',
             retryable: false,
             responseStatus: $responseStatus,
         );

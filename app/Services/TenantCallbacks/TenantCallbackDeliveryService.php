@@ -6,7 +6,7 @@ namespace App\Services\TenantCallbacks;
 
 use App\Contracts\TenantCallbackTransport;
 use App\Enums\TenantCallbackStatus;
-use App\Exceptions\TenantCallbackTransportException;
+use App\Exceptions\TenantControlTransportException;
 use App\Models\TenantCallbackDelivery;
 use App\Services\RuntimeCapabilities;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +34,7 @@ final readonly class TenantCallbackDeliveryService
 
         try {
             $this->transport->send($delivery);
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             $this->recordFailure($deliveryId, $exception);
 
             if ($exception->retryable) {
@@ -47,7 +47,7 @@ final readonly class TenantCallbackDeliveryService
                 'delivery_id' => $deliveryId,
                 'exception' => $exception::class,
             ]);
-            $safeException = new TenantCallbackTransportException(
+            $safeException = new TenantControlTransportException(
                 failureCode: 'unexpected_transport_failure',
                 retryable: true,
             );
@@ -119,7 +119,7 @@ final readonly class TenantCallbackDeliveryService
 
     private function recordFailure(
         int $deliveryId,
-        TenantCallbackTransportException $exception,
+        TenantControlTransportException $exception,
     ): void {
         DB::transaction(function () use ($deliveryId, $exception): void {
             $delivery = TenantCallbackDelivery::query()->lockForUpdate()->find($deliveryId);

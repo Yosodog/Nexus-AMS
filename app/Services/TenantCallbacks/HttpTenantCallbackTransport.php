@@ -7,12 +7,13 @@ namespace App\Services\TenantCallbacks;
 use App\Contracts\TenantCallbackTransport;
 use App\Enums\TenantCallbackType;
 use App\Enums\TenantControlPurpose;
-use App\Exceptions\TenantCallbackTransportException;
 use App\Exceptions\TenantControlAuthenticationException;
 use App\Exceptions\TenantControlConfigurationException;
+use App\Exceptions\TenantControlTransportException;
 use App\Models\TenantCallbackDelivery;
 use App\Services\TenantControl\TenantControlAuthenticator;
 use App\Services\TenantControl\TenantControlEndpoint;
+use App\Services\TenantControl\TenantControlResponseGuard;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
@@ -27,7 +28,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
     public function __construct(
         private TenantControlAuthenticator $authenticator,
         private TenantControlEndpoint $endpoint,
-        private TenantCallbackResponseGuard $responseGuard,
+        private TenantControlResponseGuard $responseGuard,
     ) {}
 
     public function send(TenantCallbackDelivery $delivery): void
@@ -42,7 +43,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
                 ->withHeaders($signed->headers)
                 ->withBody($signed->body, 'application/json')
                 ->post($this->endpoint->fromConfig('nexus.control.callback_url'));
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             throw $exception;
         } catch (RequestException $exception) {
             $nestedFailure = $this->nestedTransportFailure($exception);
@@ -51,7 +52,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
                 throw $nestedFailure;
             }
 
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_response',
                 retryable: false,
                 responseStatus: $exception->response->status(),
@@ -63,19 +64,19 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
                 throw $nestedFailure;
             }
 
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'connection_unknown_outcome',
                 retryable: true,
             );
         } catch (TenantControlConfigurationException) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'configuration_unavailable',
                 retryable: true,
             );
         }
 
         if ($this->isRetryableStatus($response->status())) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'dependency_retryable_response',
                 retryable: true,
                 responseStatus: $response->status(),
@@ -83,7 +84,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
         }
 
         if (! $response->successful()) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'dependency_rejected_callback',
                 retryable: false,
                 responseStatus: $response->status(),
@@ -98,7 +99,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
         if ($delivery->tenant_id !== $this->authenticator->tenantId()
             || ! Str::isUlid($delivery->callback_id)
             || preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9._:@-]{0,63}\z/D', $delivery->release_id) !== 1) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_identity',
                 retryable: false,
             );
@@ -117,7 +118,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
                 'payload' => $payload,
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         } catch (JsonException) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_payload',
                 retryable: false,
             );
@@ -128,7 +129,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
     private function validatedPayload(TenantCallbackDelivery $delivery): array
     {
         if ($delivery->event_type !== TenantCallbackType::BootstrapRedeemed) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'unsupported_callback_type',
                 retryable: false,
             );
@@ -155,7 +156,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
             || ! in_array($payload['mode'] ?? null, ['created', 'linked'], true)
             || ! is_int($payload['nation_id'] ?? null)
             || $payload['nation_id'] < 1) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_payload',
                 retryable: false,
             );
@@ -186,13 +187,13 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
                 $expectedNonce,
             );
         } catch (TenantControlAuthenticationException) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'callback_response_authentication_failed',
                 retryable: false,
                 responseStatus: $response->status(),
             );
         } catch (TenantControlConfigurationException) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'configuration_unavailable',
                 retryable: true,
                 responseStatus: $response->status(),
@@ -202,7 +203,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
         try {
             $decoded = json_decode($body, true, 16, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_response',
                 retryable: false,
                 responseStatus: $response->status(),
@@ -217,7 +218,7 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
             || ($decoded['contract_version'] ?? null) !== TenantControlAuthenticator::CONTRACT_VERSION
             || ($decoded['callback_id'] ?? null) !== $delivery->callback_id
             || ! in_array($decoded['status'] ?? null, ['accepted', 'duplicate'], true)) {
-            throw new TenantCallbackTransportException(
+            throw new TenantControlTransportException(
                 failureCode: 'invalid_callback_response',
                 retryable: false,
                 responseStatus: $response->status(),
@@ -244,12 +245,12 @@ final readonly class HttpTenantCallbackTransport implements TenantCallbackTransp
         return in_array($status, [408, 425, 429], true) || $status >= 500;
     }
 
-    private function nestedTransportFailure(Throwable $exception): ?TenantCallbackTransportException
+    private function nestedTransportFailure(Throwable $exception): ?TenantControlTransportException
     {
         $current = $exception->getPrevious();
 
         while ($current !== null) {
-            if ($current instanceof TenantCallbackTransportException) {
+            if ($current instanceof TenantControlTransportException) {
                 return $current;
             }
 

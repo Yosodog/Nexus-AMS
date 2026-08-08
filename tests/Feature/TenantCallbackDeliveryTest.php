@@ -8,7 +8,7 @@ use App\Contracts\TenantCallbackTransport;
 use App\Enums\NexusRuntime;
 use App\Enums\TenantCallbackStatus;
 use App\Enums\TenantControlPurpose;
-use App\Exceptions\TenantCallbackTransportException;
+use App\Exceptions\TenantControlTransportException;
 use App\Jobs\DeliverTenantCallback;
 use App\Models\TenantCallbackDelivery;
 use App\Services\RuntimeCapabilities;
@@ -139,10 +139,10 @@ class TenantCallbackDeliveryTest extends TestCase
         try {
             $this->deliveryService()->deliver($delivery->id);
             $this->fail('The ambiguous callback outcome did not request a retry.');
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             $this->assertTrue($exception->retryable);
             $this->assertSame('connection_unknown_outcome', $exception->failureCode);
-            $this->assertSame('Tenant callback delivery failed.', $exception->getMessage());
+            $this->assertSame('Tenant control request failed.', $exception->getMessage());
             $this->assertStringNotContainsString(self::CALLBACK_URL, $exception->getMessage());
             $this->assertStringNotContainsString($this->key, $exception->getMessage());
             $this->assertNull($exception->getPrevious());
@@ -191,7 +191,7 @@ class TenantCallbackDeliveryTest extends TestCase
         try {
             $this->deliveryService()->deliver($delivery->id);
             $this->fail('A retryable callback response was treated as successful.');
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             $this->assertTrue($exception->retryable);
             $this->assertSame('dependency_retryable_response', $exception->failureCode);
             $this->assertSame(429, $exception->responseStatus);
@@ -272,7 +272,7 @@ class TenantCallbackDeliveryTest extends TestCase
 
         $delivery->refresh();
         $this->assertSame(TenantCallbackStatus::Rejected, $delivery->status);
-        $this->assertSame('invalid_callback_response', $delivery->last_failure_code);
+        $this->assertSame('invalid_control_response', $delivery->last_failure_code);
         $this->assertSame(202, $delivery->last_response_status);
     }
 
@@ -281,8 +281,8 @@ class TenantCallbackDeliveryTest extends TestCase
         $delivery = TenantCallbackDelivery::factory()->create();
         Http::fake(fn () => throw new ConnectionException(
             'HTTP client wrapper details',
-            previous: new TenantCallbackTransportException(
-                failureCode: 'invalid_callback_response',
+            previous: new TenantControlTransportException(
+                failureCode: 'invalid_control_response',
                 retryable: false,
                 responseStatus: 202,
             ),
@@ -292,7 +292,7 @@ class TenantCallbackDeliveryTest extends TestCase
 
         $delivery->refresh();
         $this->assertSame(TenantCallbackStatus::Rejected, $delivery->status);
-        $this->assertSame('invalid_callback_response', $delivery->last_failure_code);
+        $this->assertSame('invalid_control_response', $delivery->last_failure_code);
         $this->assertSame(202, $delivery->last_response_status);
     }
 
@@ -310,11 +310,11 @@ class TenantCallbackDeliveryTest extends TestCase
         try {
             $this->deliveryService()->deliver($delivery->id);
             $this->fail('Transient control-key unavailability was accepted as terminal.');
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             $this->assertTrue($exception->retryable);
             $this->assertSame('configuration_unavailable', $exception->failureCode);
             $this->assertSame(202, $exception->responseStatus);
-            $this->assertSame('Tenant callback delivery failed.', $exception->getMessage());
+            $this->assertSame('Tenant control request failed.', $exception->getMessage());
         }
 
         $delivery->refresh();
@@ -344,7 +344,7 @@ class TenantCallbackDeliveryTest extends TestCase
         try {
             $this->deliveryService()->deliver($delivery->id);
             $this->fail('An unexpected callback transport failure was swallowed.');
-        } catch (TenantCallbackTransportException $exception) {
+        } catch (TenantControlTransportException $exception) {
             $this->assertTrue($exception->retryable);
             $this->assertSame('unexpected_transport_failure', $exception->failureCode);
             $this->assertStringNotContainsString($sensitiveDetail, $exception->getMessage());

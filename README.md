@@ -78,6 +78,8 @@ Before first sign-in, set the key environment values in `.env`:
 
 Hosted tenant callbacks use a durable outbox and a versioned HMAC contract. Managed deployments set `NEXUS_CONTROL_CALLBACK_URL` to the fixed HTTPS Cloud receiver and mount the tenant-scoped key at `NEXUS_CONTROL_CALLBACK_KEY_FILE`; raw key material is never placed in an environment variable. Retries keep the callback identity and body stable while signing each attempt with a fresh nonce. Standalone and world-writer runtimes neither schedule callbacks nor read callback credentials.
 
+Managed hosted tenants redeem the initial-administrator bootstrap through `POST /api/internal/v1/bootstrap/redeem`. The opaque token is accepted only in the request body, hashed and removed before throttling or telemetry, and introspected through the fixed HTTPS `NEXUS_BOOTSTRAP_INTROSPECTION_URL` using the tenant-control HMAC key. Signed claims are one-action, release-, tenant-, alliance-, nation-, and Cloud-user-scoped, with a hard 15-minute maximum lifetime. Local credentials, sessions, roles, and authentication factors remain tenant-local; the user, protected administrator role, immutable redemption evidence, audit record, and durable `bootstrap.redeemed` callback are committed atomically.
+
 ## Production Quick Start
 
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.

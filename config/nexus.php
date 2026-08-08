@@ -20,6 +20,8 @@ return [
         'scheduler_max_age_seconds' => (int) env('NEXUS_SCHEDULER_HEARTBEAT_MAX_AGE', 180),
     ],
     'control' => [
+        'bootstrap_introspection_url' => env('NEXUS_BOOTSTRAP_INTROSPECTION_URL'),
+        'bootstrap_token_max_ttl_seconds' => (int) env('NEXUS_BOOTSTRAP_TOKEN_MAX_TTL', 900),
         'callback_url' => env('NEXUS_CONTROL_CALLBACK_URL'),
         'callback_key_file' => env('NEXUS_CONTROL_CALLBACK_KEY_FILE'),
         'callback_queue' => env('NEXUS_CONTROL_CALLBACK_QUEUE', 'default'),

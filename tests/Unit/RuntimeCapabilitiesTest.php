@@ -27,6 +27,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'runs_platform_backups' => $capabilities->runsPlatformBackups(),
             'consumes_tenant_events' => $capabilities->consumesTenantEvents(),
             'sends_tenant_callbacks' => $capabilities->sendsTenantCallbacks(),
+            'accepts_bootstrap_redemption' => $capabilities->acceptsBootstrapRedemption(),
             'allows_interactive_setup' => $capabilities->allowsInteractiveSetup(),
         ]);
     }
@@ -55,6 +56,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'runs_platform_backups' => true,
             'consumes_tenant_events' => false,
             'sends_tenant_callbacks' => false,
+            'accepts_bootstrap_redemption' => false,
             'allows_interactive_setup' => true,
         ]];
 
@@ -66,6 +68,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'runs_platform_backups' => false,
             'consumes_tenant_events' => true,
             'sends_tenant_callbacks' => true,
+            'accepts_bootstrap_redemption' => true,
             'allows_interactive_setup' => false,
         ]];
 
@@ -77,6 +80,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'runs_platform_backups' => false,
             'consumes_tenant_events' => false,
             'sends_tenant_callbacks' => false,
+            'accepts_bootstrap_redemption' => false,
             'allows_interactive_setup' => false,
         ]];
     }

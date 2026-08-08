@@ -1768,6 +1768,19 @@
     },
     {
         "domain": null,
+        "method": "POST",
+        "uri": "api/internal/v1/bootstrap/redeem",
+        "name": "api.internal.bootstrap.redeem",
+        "action": "App\\Http\\Controllers\\API\\Internal\\BootstrapRedemptionController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\CaptureBootstrapTokenHash",
+            "App\\Http\\Middleware\\RequireHostedBootstrap",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:tenant-bootstrap"
+        ]
+    },
+    {
+        "domain": null,
         "method": "GET|HEAD",
         "uri": "api/v1/nations/{nationId}/profitability",
         "name": null,
@@ -3468,6 +3481,20 @@
             "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "Illuminate\\Routing\\Middleware\\ThrottleRequests:raid-leaderboards"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "calculators",
+        "name": "calculators.index",
+        "action": "App\\Livewire\\CalculatorCenter",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured"
         ]
     },
     {

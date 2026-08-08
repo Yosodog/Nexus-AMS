@@ -3,6 +3,7 @@
 namespace Tests\Integration;
 
 use App\Enums\NexusRuntime;
+use App\Models\BootstrapRedemption;
 use App\Models\TenantCallbackDelivery;
 use App\Services\RuntimeCapabilities;
 use App\Services\RuntimeReadinessService;
@@ -118,7 +119,7 @@ class HostedFreshMigrationTest extends TestCase
             $this->assertFalse(Schema::hasTable($worldTable), "Hosted migration created world table [{$worldTable}].");
         }
 
-        foreach (['accounts', 'audit_results', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs', 'tenant_callback_deliveries'] as $tenantTable) {
+        foreach (['accounts', 'audit_results', 'bootstrap_redemptions', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs', 'tenant_callback_deliveries'] as $tenantTable) {
             $this->assertTrue(Schema::hasTable($tenantTable), "Hosted migration omitted tenant table [{$tenantTable}].");
         }
 
@@ -191,6 +192,53 @@ class HostedFreshMigrationTest extends TestCase
             'tenant_callback_deliveries',
             ['status', 'last_attempted_at'],
         ));
+    }
+
+    public function test_hosted_bootstrap_redemption_enforces_token_and_action_idempotency(): void
+    {
+        $this->artisan('migrate:fresh', ['--drop-views' => true, '--force' => true])->assertSuccessful();
+
+        $redemption = BootstrapRedemption::factory()->create([
+            'local_user_id' => null,
+            'mode' => null,
+            'redeemed_at' => null,
+        ]);
+
+        try {
+            BootstrapRedemption::factory()->create([
+                'token_hash' => $redemption->getRawOriginal('token_hash'),
+                'tenant_id' => '01JZ9999999999999999999999',
+                'local_user_id' => null,
+                'mode' => null,
+                'redeemed_at' => null,
+            ]);
+            $this->fail('The hosted bootstrap ledger accepted a duplicate token digest.');
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        try {
+            BootstrapRedemption::factory()->create([
+                'token_hash' => hash('sha256', 'different-bootstrap-token'),
+                'tenant_id' => $redemption->tenant_id,
+                'action' => $redemption->action,
+                'local_user_id' => null,
+                'mode' => null,
+                'redeemed_at' => null,
+            ]);
+            $this->fail('The hosted bootstrap ledger accepted a second initial-admin action.');
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->assertTrue(Schema::hasIndex('bootstrap_redemptions', ['token_hash'], 'unique'));
+        $this->assertTrue(Schema::hasIndex(
+            'bootstrap_redemptions',
+            ['tenant_id', 'action'],
+            'unique',
+        ));
+        $this->assertTrue(Schema::hasIndex('bootstrap_redemptions', ['cloud_user_id']));
+        $this->assertTrue(Schema::hasIndex('bootstrap_redemptions', ['local_user_id']));
     }
 
     public function test_hosted_readiness_accepts_the_privileged_world_view_contract(): void

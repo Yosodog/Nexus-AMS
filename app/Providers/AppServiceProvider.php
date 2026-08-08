@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\LoginResponse;
 use App\Actions\Fortify\TwoFactorLoginResponse;
 use App\Broadcasting\PWMessageChannel;
+use App\Contracts\BootstrapTokenIntrospector;
 use App\Contracts\TenantCallbackTransport;
 use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLinkController;
 use App\Logs\CronLog;
@@ -45,6 +46,7 @@ use App\Services\StaffWorkQueue\Sources\WarAidWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\WithdrawalWorkQueueSource;
 use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use App\Services\TenantCallbacks\HttpTenantCallbackTransport;
+use App\Services\TenantControl\HttpBootstrapTokenIntrospector;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -70,6 +72,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FortifyPasswordResetLinkController::class, AppPasswordResetLinkController::class);
+        $this->app->bind(BootstrapTokenIntrospector::class, HttpBootstrapTokenIntrospector::class);
         $this->app->bind(TenantCallbackTransport::class, HttpTenantCallbackTransport::class);
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
@@ -114,6 +117,20 @@ class AppServiceProvider extends ServiceProvider
         if (is_string($applicationScheme) && in_array($applicationScheme, ['http', 'https'], true)) {
             URL::forceScheme($applicationScheme);
         }
+
+        RateLimiter::for('tenant-bootstrap', function (Request $request): array {
+            $tokenHash = $request->attributes->get('bootstrap_token_hash');
+            $tokenHash = is_string($tokenHash)
+                && preg_match('/\A[a-f0-9]{64}\z/D', $tokenHash) === 1
+                    ? $tokenHash
+                    : 'invalid';
+
+            return [
+                Limit::perMinute(5)->by('tenant-bootstrap:token:'.$tokenHash),
+                Limit::perMinute(10)->by('tenant-bootstrap:ip:'.$request->ip()),
+                Limit::perMinute(30)->by('tenant-bootstrap:global'),
+            ];
+        });
 
         RateLimiter::for('account-transfers', function (Request $request) {
             $key = $request->user()?->nation_id ?? $request->ip();
