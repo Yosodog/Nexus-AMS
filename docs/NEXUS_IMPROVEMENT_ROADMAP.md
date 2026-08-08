@@ -1028,6 +1028,8 @@ Each page should have a focused save boundary, permission check, validation requ
 
 **Effort:** M–L · **Type:** Staff context, member support
 
+**Status:** Complete — August 8, 2026
+
 **What should change:** Authorized staff need chronological context across requests, decisions, transactions, audits, membership changes, assignments, and significant communications.
 
 **How it should work:** Build a read-only timeline from domain events/read models with category filters and links to source records. Label actor/source and distinguish system observations from staff actions. Apply field-level permissions so finance, recruitment, security, and military details are not universally visible.
@@ -1375,6 +1377,8 @@ Each page should have a focused save boundary, permission check, validation requ
 ### P1E-03 — Split the admin settings controller along the same boundaries
 
 **Effort:** M · **Type:** Backend/UI maintainability
+
+**Status:** Complete — August 8, 2026
 
 **What should change:** The settings controller/page should not remain a single orchestration point after the navigation is split.
 

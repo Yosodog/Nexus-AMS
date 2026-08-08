@@ -20,6 +20,7 @@ use App\Models\DiscordAccount;
 use App\Models\GrantApplication;
 use App\Models\Grants;
 use App\Models\Loan;
+use App\Models\MemberInactivityException;
 use App\Models\MilcomAssignment;
 use App\Models\MilcomAssignmentDelivery;
 use App\Models\MilcomEvent;
@@ -191,6 +192,53 @@ class MemberTimelineTest extends TestCase
         $militaryViewer = $this->createAdmin(['view-members', 'manage-war-room']);
         $militaryResult = $service->forNation($fixture['nation'], $militaryViewer, [MemberTimelineCategory::Military]);
         $this->assertContains("milcom-event:{$fixture['milcom_event']->id}", $militaryResult->items->pluck('sourceKey')->all());
+    }
+
+    public function test_inactivity_exception_events_are_only_projected_for_authorized_staff_without_private_reasons(): void
+    {
+        $nation = $this->createMemberNation();
+        $manager = $this->createAdmin(['view-members', 'manage-member-exceptions']);
+        $approvedAt = CarbonImmutable::parse('2026-08-01 12:00:00');
+        $exception = MemberInactivityException::factory()->create([
+            'nation_id' => $nation->id,
+            'approved_by_user_id' => $manager->id,
+            'last_reviewed_by_user_id' => $manager->id,
+            'approved_at' => $approvedAt,
+            'last_reviewed_at' => $approvedAt->addDay(),
+            'revoked_at' => $approvedAt->addDays(2),
+            'member_reason' => 'SECRET-MEMBER-EXCEPTION-REASON',
+            'private_notes' => 'SECRET-PRIVATE-EXCEPTION-NOTES',
+            'updated_at' => $approvedAt->addDays(2),
+        ]);
+        $service = app(MemberTimelineService::class);
+
+        $membersViewer = $this->createAdmin(['view-members']);
+        [$membersResult, $memberQueries] = $this->captureQueries(
+            $membersViewer,
+            fn () => $service->forNation($nation, $membersViewer, [MemberTimelineCategory::Membership]),
+        );
+
+        $this->assertSame(0, $this->queryCountForTable($memberQueries, 'member_inactivity_exceptions'));
+        $this->assertFalse($membersResult->items->contains(
+            fn ($item): bool => str_starts_with($item->sourceKey, 'member-inactivity-exception:'),
+        ));
+
+        [$managerResult, $managerQueries] = $this->captureQueries(
+            $manager,
+            fn () => $service->forNation($nation, $manager, [MemberTimelineCategory::Membership]),
+        );
+        $keys = $managerResult->items->pluck('sourceKey')->all();
+
+        $this->assertGreaterThan(0, $this->queryCountForTable($managerQueries, 'member_inactivity_exceptions'));
+        $this->assertContains("member-inactivity-exception:{$exception->id}:approved", $keys);
+        $this->assertContains("member-inactivity-exception:{$exception->id}:reviewed", $keys);
+        $this->assertContains("member-inactivity-exception:{$exception->id}:revoked", $keys);
+
+        $serialized = json_encode($managerResult->items->all(), JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('SECRET-MEMBER-EXCEPTION-REASON', $serialized);
+        $this->assertStringNotContainsString('SECRET-PRIVATE-EXCEPTION-NOTES', $serialized);
+        $this->assertStringNotContainsString('member_reason', implode("\n", $managerQueries));
+        $this->assertStringNotContainsString('private_notes', implode("\n", $managerQueries));
     }
 
     public function test_sensitive_columns_and_message_bodies_are_never_selected_or_rendered(): void

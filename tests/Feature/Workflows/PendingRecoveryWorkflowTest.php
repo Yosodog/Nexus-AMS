@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflows;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\GrantDecisionReason;
 use App\Models\Account;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
@@ -41,6 +42,12 @@ class PendingRecoveryWorkflowTest extends TestCase
 
         $oldId = $this->createPendingRecord($type, $oldPending, now()->subHours(72));
         $freshId = $this->createPendingRecord($type, $freshPending, now()->subHours(2));
+        $legacyCacheKey = "testing.pending-recovery.{$type}.counts";
+        $projectionCacheKey = "testing.pending-recovery.{$type}.projection";
+        config()->set('pending_requests.cache_key', $legacyCacheKey);
+        config()->set('pending_requests.projection_cache_key', $projectionCacheKey);
+        Cache::put($legacyCacheKey, ['stale' => 1]);
+        Cache::put($projectionCacheKey, ['stale' => 1]);
 
         $this->actingAs($admin)
             ->post(route('admin.settings.pending-requests.release-stale'), [
@@ -58,10 +65,16 @@ class PendingRecoveryWorkflowTest extends TestCase
 
         $this->assertDatabaseHas($table, ['id' => $oldId, ...$releasedState]);
         $this->assertDatabaseHas($table, ['id' => $freshId, ...$freshState]);
+        $this->assertNull(Cache::get($legacyCacheKey));
+        $this->assertNull(Cache::get($projectionCacheKey));
 
         if ($terminalTimestampColumn) {
             $this->assertDatabaseMissing($table, ['id' => $oldId, $terminalTimestampColumn => null]);
             $this->assertDatabaseHas($table, ['id' => $freshId, $terminalTimestampColumn => null]);
+        }
+
+        if ($type === 'grant_applications') {
+            $this->assertDatabaseMissing($table, ['id' => $oldId, 'decided_at' => null]);
         }
     }
 
@@ -149,7 +162,12 @@ class PendingRecoveryWorkflowTest extends TestCase
                 'grant_applications',
                 ['status' => 'pending', 'pending_key' => 1],
                 ['status' => 'pending', 'pending_key' => 1],
-                ['status' => 'denied', 'pending_key' => null],
+                [
+                    'status' => 'denied',
+                    'pending_key' => null,
+                    'decision_reason_code' => GrantDecisionReason::OtherPolicyReason->value,
+                    'decision_explanation' => 'This request was closed during stale-request recovery. Contact leadership if the original request still needs review.',
+                ],
                 ['status' => 'pending', 'pending_key' => 1],
                 'denied_at',
             ],

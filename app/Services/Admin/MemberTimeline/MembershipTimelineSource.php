@@ -5,6 +5,7 @@ namespace App\Services\Admin\MemberTimeline;
 use App\DataTransferObjects\Admin\MemberTimelineItem;
 use App\Enums\MemberTimelineCategory;
 use App\Models\DiscordAccount;
+use App\Models\MemberInactivityException;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\RoleDelegationService;
@@ -47,6 +48,10 @@ final class MembershipTimelineSource implements MemberTimelineSource
                 sourceUrl: "https://politicsandwar.com/nation/id={$nation->id}",
                 sourceLabel: "nation #{$nation->id}",
             ));
+        }
+
+        if ($viewer->can('manage-member-exceptions')) {
+            $items->push(...$this->inactivityExceptionItems($nation, $recordLimit));
         }
 
         if (! $viewer->can('edit-users')) {
@@ -152,5 +157,104 @@ final class MembershipTimelineSource implements MemberTimelineSource
             });
 
         return $items;
+    }
+
+    /** @return Collection<int, MemberTimelineItem> */
+    private function inactivityExceptionItems(Nation $nation, int $recordLimit): Collection
+    {
+        return MemberInactivityException::query()
+            ->select([
+                'id',
+                'nation_id',
+                'category',
+                'approved_at',
+                'last_reviewed_at',
+                'expired_at',
+                'revoked_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->where('nation_id', $nation->id)
+            ->latest('updated_at')
+            ->limit($recordLimit)
+            ->get()
+            ->flatMap(function (MemberInactivityException $exception) use ($nation): array {
+                $label = $exception->category->label();
+                $url = route('admin.members.show', ['Nation' => $nation->id]).'#inactivity-exceptions';
+                $approvedAt = $exception->approved_at ?? $exception->created_at;
+                $items = [new MemberTimelineItem(
+                    sourceKey: "member-inactivity-exception:{$exception->id}:approved",
+                    deduplicationKey: "member-inactivity-exception:{$exception->id}:approved",
+                    category: $this->category(),
+                    occurredAt: CarbonImmutable::instance($approvedAt),
+                    actorKind: 'staff',
+                    actorLabel: 'Membership administration',
+                    summary: "{$label} exception approved.",
+                    statusLabel: 'Approved',
+                    statusIntent: 'active',
+                    statusIcon: 'check-circle',
+                    sourceUrl: $url,
+                    sourceLabel: "inactivity exception #{$exception->id}",
+                    sourcePriority: 70,
+                )];
+
+                if ($exception->last_reviewed_at !== null
+                    && ! $exception->last_reviewed_at->equalTo($approvedAt)) {
+                    $items[] = new MemberTimelineItem(
+                        sourceKey: "member-inactivity-exception:{$exception->id}:reviewed",
+                        deduplicationKey: "member-inactivity-exception:{$exception->id}:reviewed",
+                        category: $this->category(),
+                        occurredAt: CarbonImmutable::instance($exception->last_reviewed_at),
+                        actorKind: 'staff',
+                        actorLabel: 'Membership administration',
+                        summary: "{$label} exception reviewed or extended.",
+                        statusLabel: 'Reviewed',
+                        statusIntent: 'active',
+                        statusIcon: 'pencil-square',
+                        sourceUrl: $url,
+                        sourceLabel: "inactivity exception #{$exception->id}",
+                        sourcePriority: 75,
+                    );
+                }
+
+                if ($exception->expired_at !== null) {
+                    $items[] = new MemberTimelineItem(
+                        sourceKey: "member-inactivity-exception:{$exception->id}:expired",
+                        deduplicationKey: "member-inactivity-exception:{$exception->id}:expired",
+                        category: $this->category(),
+                        occurredAt: CarbonImmutable::instance($exception->expired_at),
+                        actorKind: 'system',
+                        actorLabel: 'Membership policy scheduler',
+                        summary: "{$label} exception expired.",
+                        statusLabel: 'Expired',
+                        statusIntent: 'neutral',
+                        statusIcon: 'archive-box',
+                        sourceUrl: $url,
+                        sourceLabel: "inactivity exception #{$exception->id}",
+                        sourcePriority: 80,
+                    );
+                }
+
+                if ($exception->revoked_at !== null) {
+                    $items[] = new MemberTimelineItem(
+                        sourceKey: "member-inactivity-exception:{$exception->id}:revoked",
+                        deduplicationKey: "member-inactivity-exception:{$exception->id}:revoked",
+                        category: $this->category(),
+                        occurredAt: CarbonImmutable::instance($exception->revoked_at),
+                        actorKind: 'staff',
+                        actorLabel: 'Membership administration',
+                        summary: "{$label} exception revoked.",
+                        statusLabel: 'Revoked',
+                        statusIntent: 'warning',
+                        statusIcon: 'minus-circle',
+                        sourceUrl: $url,
+                        sourceLabel: "inactivity exception #{$exception->id}",
+                        sourcePriority: 90,
+                    );
+                }
+
+                return $items;
+            })
+            ->values();
     }
 }

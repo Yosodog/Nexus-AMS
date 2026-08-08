@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\GrantDecisionReason;
 use App\Models\Application;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
@@ -11,6 +12,7 @@ use App\Models\GrantApplication;
 use App\Models\Loan;
 use App\Models\RebuildingRequest;
 use App\Models\WarAidRequest;
+use App\Services\PendingRequestsService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\DB;
 class PendingRequestRecoveryService
 {
     public const DEFAULT_STALE_PENDING_HOURS = 24;
+
+    public function __construct(private readonly PendingRequestsService $pendingRequests) {}
 
     /** @return array<int, string> */
     public function supportedTypes(): array
@@ -77,6 +81,10 @@ class PendingRequestRecoveryService
             ->where('status', $definition['pending_status'])
             ->where('created_at', '<=', $cutoff)
             ->update(($definition['release_payload'])($releasedAt)));
+
+        if ($releasedCount > 0) {
+            $this->pendingRequests->flushCache();
+        }
 
         return [
             'type' => $type,
@@ -150,6 +158,9 @@ class PendingRequestRecoveryService
                     'status' => 'denied',
                     'pending_key' => null,
                     'denied_at' => $releasedAt,
+                    'decided_at' => $releasedAt,
+                    'decision_reason_code' => GrantDecisionReason::OtherPolicyReason->value,
+                    'decision_explanation' => 'This request was closed during stale-request recovery. Contact leadership if the original request still needs review.',
                 ],
             ],
             'city_grant_requests' => [
