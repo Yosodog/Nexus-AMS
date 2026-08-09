@@ -16,6 +16,9 @@ use Illuminate\Support\Carbon;
  *
  * @property string $id
  * @property string $action
+ * @property string|null $connection_id
+ * @property string|null $application_id
+ * @property int|null $connection_generation
  * @property string|null $dedupe_key
  * @property array $payload
  * @property DiscordQueueStatus $status
@@ -60,6 +63,7 @@ class DiscordQueue extends Model
             'status' => DiscordQueueStatus::class,
             'lane' => DiscordQueueLane::class,
             'priority' => 'integer',
+            'connection_generation' => 'integer',
             'available_at' => 'datetime',
             'leased_until' => 'datetime',
             'result' => 'array',

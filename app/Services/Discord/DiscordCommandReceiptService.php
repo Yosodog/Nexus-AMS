@@ -2,6 +2,7 @@
 
 namespace App\Services\Discord;
 
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\DiscordCommandReceipt;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -28,6 +29,9 @@ class DiscordCommandReceiptService
 
         $attributes = [
             'interaction_id' => $interactionId,
+            'connection_id' => $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE)?->connectionId,
+            'connection_generation' => $request->attributes->get(VerifyDiscordInteraction::GENERATION_ATTRIBUTE),
+            'relay_idempotency_key' => $request->attributes->get(VerifyDiscordInteraction::IDEMPOTENCY_ATTRIBUTE),
             'guild_id' => trim((string) $request->header('X-Discord-Guild-ID')),
             'discord_user_id' => trim((string) $request->header('X-Discord-User-ID')),
             'user_id' => $actor->id,
@@ -46,12 +50,27 @@ class DiscordCommandReceiptService
         }
 
         $receipt = DiscordCommandReceipt::query()
-            ->where('interaction_id', $interactionId)
+            ->where(function ($query) use ($attributes, $interactionId): void {
+                $query->where('interaction_id', $interactionId);
+                if ($attributes['connection_id'] !== null
+                    && $attributes['connection_generation'] !== null
+                    && $attributes['relay_idempotency_key'] !== null) {
+                    $query->orWhere(function ($idempotency) use ($attributes): void {
+                        $idempotency
+                            ->where('connection_id', $attributes['connection_id'])
+                            ->where('connection_generation', $attributes['connection_generation'])
+                            ->where('relay_idempotency_key', $attributes['relay_idempotency_key']);
+                    });
+                }
+            })
             ->firstOrFail();
 
-        if ($receipt->request_hash !== $attributes['request_hash']
+        if ($receipt->interaction_id !== $attributes['interaction_id']
+            || $receipt->request_hash !== $attributes['request_hash']
             || $receipt->user_id !== $actor->id
-            || $receipt->guild_id !== $attributes['guild_id']) {
+            || $receipt->guild_id !== $attributes['guild_id']
+            || $receipt->connection_id !== $attributes['connection_id']
+            || $receipt->connection_generation !== $attributes['connection_generation']) {
             return ['receipt' => null, 'response' => $this->error(
                 'discord_interaction_conflict',
                 'This interaction ID was already used for a different request.',

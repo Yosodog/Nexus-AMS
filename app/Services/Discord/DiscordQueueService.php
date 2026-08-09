@@ -25,9 +25,14 @@ class DiscordQueueService
         int $priority = 50,
         ?string $guildId = null,
         ?int $alertDeliveryBatchId = null,
+        ?DiscordConnectionContext $connection = null,
     ): DiscordQueue {
+        $dedupeScope = $connection?->dedupeScope() ?? 'legacy';
         if ($dedupeKey !== null && $dedupeKey !== '') {
-            $existing = DiscordQueue::query()->where('dedupe_key', $dedupeKey)->first();
+            $existing = DiscordQueue::query()
+                ->where('dedupe_scope', $dedupeScope)
+                ->where('dedupe_key', $dedupeKey)
+                ->first();
 
             if ($existing) {
                 return $existing;
@@ -45,6 +50,10 @@ class DiscordQueueService
                 'priority' => max(0, min(100, $priority)),
                 'guild_id' => $guildId,
                 'alert_delivery_batch_id' => $alertDeliveryBatchId,
+                'connection_id' => $connection?->connectionId,
+                'application_id' => $connection?->applicationId,
+                'connection_generation' => $connection?->generation,
+                'dedupe_scope' => $dedupeScope,
             ];
             if ($dedupeKey !== null && $dedupeKey !== '') {
                 $attributes['dedupe_key'] = $dedupeKey;
@@ -56,7 +65,10 @@ class DiscordQueueService
                 throw $exception;
             }
 
-            return DiscordQueue::query()->where('dedupe_key', $dedupeKey)->firstOrFail();
+            return DiscordQueue::query()
+                ->where('dedupe_scope', $dedupeScope)
+                ->where('dedupe_key', $dedupeKey)
+                ->firstOrFail();
         }
     }
 }

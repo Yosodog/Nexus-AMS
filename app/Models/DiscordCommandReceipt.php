@@ -20,6 +20,7 @@ class DiscordCommandReceipt extends Model
         return [
             'response_body' => 'array',
             'response_status' => 'integer',
+            'connection_generation' => 'integer',
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
         ];

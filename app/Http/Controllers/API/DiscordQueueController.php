@@ -6,7 +6,9 @@ use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\DiscordQueue;
+use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,13 @@ class DiscordQueueController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        if ((int) $request->attributes->get(VerifyDiscordInteraction::PROTOCOL_ATTRIBUTE, 1) >= 2) {
+            return response()->json([
+                'error' => 'legacy_queue_endpoint_unavailable',
+                'message' => 'Relay-v2 connections must use leased queue claims.',
+            ], 410);
+        }
+
         $validated = $request->validate([
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -42,7 +51,23 @@ class DiscordQueueController extends Controller
             'lanes' => ['nullable', 'array', 'min:1', 'max:4'],
             'lanes.*' => ['required', Rule::enum(DiscordQueueLane::class)],
             'guild_id' => ['nullable', 'string', 'regex:/^\d{17,20}$/'],
+            'connection_id' => ['nullable', 'uuid'],
+            'application_id' => ['nullable', 'string', 'regex:/^\d{17,20}$/'],
+            'generation' => ['nullable', 'integer', 'min:1', 'max:2147483647'],
         ]);
+
+        $connection = $this->connection($request);
+        if ($connection !== null && (
+            ($data['connection_id'] ?? $connection->connectionId) !== $connection->connectionId
+            || ($data['application_id'] ?? $connection->applicationId) !== $connection->applicationId
+            || (int) ($data['generation'] ?? $connection->generation) !== $connection->generation
+            || ($data['guild_id'] ?? $connection->guildId) !== $connection->guildId
+        )) {
+            return response()->json([
+                'error' => 'discord_connection_binding_mismatch',
+                'message' => 'The queue claim does not match the verified Discord connection.',
+            ], 403);
+        }
 
         try {
             $command = $this->leaseService->claim(
@@ -52,7 +77,8 @@ class DiscordQueueController extends Controller
                     fn (string $lane): DiscordQueueLane => DiscordQueueLane::from($lane),
                     $data['lanes'] ?? [],
                 ),
-                $data['guild_id'] ?? null,
+                $connection?->guildId ?? ($data['guild_id'] ?? null),
+                $connection,
             );
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
@@ -70,7 +96,7 @@ class DiscordQueueController extends Controller
         ]);
 
         try {
-            $command = $this->leaseService->renew($command, $data['lease_token']);
+            $command = $this->leaseService->renew($command, $data['lease_token'], $this->connection($request));
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
         }
@@ -110,7 +136,12 @@ class DiscordQueueController extends Controller
         $data = $request->validate($rules);
 
         try {
-            $command = $this->leaseService->checkpoint($command, $data['lease_token'], $data['result']);
+            $command = $this->leaseService->checkpoint(
+                $command,
+                $data['lease_token'],
+                $data['result'],
+                $this->connection($request),
+            );
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
         }
@@ -158,6 +189,7 @@ class DiscordQueueController extends Controller
                 $data['error_code'] ?? null,
                 $data['error_message'] ?? null,
                 $data['result'] ?? null,
+                $this->connection($request),
             );
         } catch (DiscordQueueLeaseException $exception) {
             return $this->leaseError($exception);
@@ -183,6 +215,9 @@ class DiscordQueueController extends Controller
         return [
             'id' => $command->id,
             'action' => $command->action,
+            'connection_id' => $command->connection_id,
+            'application_id' => $command->application_id,
+            'generation' => $command->connection_generation,
             'lane' => $command->lane,
             'priority' => $command->priority,
             'guild_id' => $command->guild_id,
@@ -205,5 +240,12 @@ class DiscordQueueController extends Controller
             'error' => $exception->error,
             'message' => $exception->getMessage(),
         ], $exception->status);
+    }
+
+    private function connection(Request $request): ?DiscordConnectionContext
+    {
+        $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
+
+        return $connection instanceof DiscordConnectionContext ? $connection : null;
     }
 }

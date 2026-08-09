@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\DiscordAccount;
+use App\Services\Discord\DiscordConnectionContext;
 use App\Services\SettingService;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -25,16 +26,19 @@ class ResolveDiscordActor
     public function handle(Request $request, Closure $next): Response
     {
         $appName = trim((string) config('app.name', 'Laravel')) ?: 'Laravel';
-        $configuredGuildId = trim((string) config('services.discord.guild_id'));
-
-        if ($configuredGuildId === '') {
-            return $this->error('discord_guild_not_configured', 'Discord guild validation is not configured.', 503);
-        }
-
+        $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
         $guildId = trim((string) $request->attributes->get(VerifyDiscordInteraction::GUILD_ATTRIBUTE));
         $discordUserId = trim((string) $request->attributes->get(VerifyDiscordInteraction::USER_ATTRIBUTE));
 
-        if (! $this->isSnowflake($guildId) || ! hash_equals($configuredGuildId, $guildId)) {
+        if (! $connection instanceof DiscordConnectionContext) {
+            return $this->error(
+                'discord_connection_missing',
+                'Discord connection resolution must run before actor resolution.',
+                503,
+            );
+        }
+
+        if (! $this->isSnowflake($guildId) || ! hash_equals($connection->guildId, $guildId)) {
             return $this->error('invalid_discord_guild', 'The Discord guild is not authorized.', 403);
         }
 

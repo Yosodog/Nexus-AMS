@@ -1,0 +1,29 @@
+{
+  "contract": "relay-proof",
+  "contract_version": 2,
+  "issuer": "discord-relay",
+  "audience": "nexus",
+  "key_scope": "discord-relay->nexus",
+  "connection_id": "11111111-2222-4333-8444-555555555555",
+  "app_id": "123456789012345678",
+  "guild_id": "223456789012345678",
+  "generation": 7,
+  "key_id": "relay-current-2026-01",
+  "issued_at": "2026-08-08T12:00:00Z",
+  "expires_at": "2026-08-08T12:00:30Z",
+  "idempotency_key": "33333333-4444-4555-8666-777777777777",
+  "proof": {
+    "type": "interaction",
+    "interaction_id": "323456789012345678",
+    "user_id": "423456789012345678",
+    "command": "applications",
+    "action": "applications.approve"
+  },
+  "method": "POST",
+  "normalized_path_query": "/api/v1/discord/staff/applications/opaque/approve?a=1&a=1&b=2",
+  "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "signature": {
+    "algorithm": "ed25519",
+    "value": "186202c05ab0718902661c99630976fd2ecd9d859c2a4aca1a8f6d72613dba0f184e75489443057f379f194a4de9fabee669ac9388a20611ade5cf9c547e0a0f"
+  }
+}

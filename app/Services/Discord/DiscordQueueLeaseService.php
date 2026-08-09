@@ -42,6 +42,7 @@ class DiscordQueueLeaseService
         string $requestId,
         array $lanes = [],
         ?string $guildId = null,
+        ?DiscordConnectionContext $connection = null,
     ): ?DiscordQueue {
         $claimLanes = $lanes === []
             ? [DiscordQueueLane::Legacy, DiscordQueueLane::SideEffects]
@@ -49,7 +50,7 @@ class DiscordQueueLeaseService
         $heldExisting = false;
 
         try {
-            $claimed = DB::transaction(function () use ($workerId, $requestId, $claimLanes, $guildId, &$heldExisting): ?DiscordQueue {
+            $claimed = DB::transaction(function () use ($workerId, $requestId, $claimLanes, $guildId, $connection, &$heldExisting): ?DiscordQueue {
                 $existingId = DiscordQueue::query()
                     ->where('claim_request_id', $requestId)
                     ->value('id');
@@ -57,6 +58,7 @@ class DiscordQueueLeaseService
                 if ($existingId !== null) {
                     $operation = $this->lockOperationForQueueId((string) $existingId);
                     $existing = DiscordQueue::query()->lockForUpdate()->findOrFail($existingId);
+                    $this->assertConnection($existing, $connection);
 
                     if ($this->hasActiveLease($existing)) {
                         if ($operation !== null && $this->federationGuard->isHeld($operation)) {
@@ -78,12 +80,27 @@ class DiscordQueueLeaseService
                 while (true) {
                     $candidateId = DiscordQueue::query()
                         ->available(array_map(
-                        fn (DiscordQueueLane $lane): string => $lane->value,
-                        $claimLanes,
+                            fn (DiscordQueueLane $lane): string => $lane->value,
+                            $claimLanes,
                         ))
                         ->when($guildId !== null, function (Builder $query) use ($guildId): void {
                             $query->where(function (Builder $guildQuery) use ($guildId): void {
                                 $guildQuery->whereNull('guild_id')->orWhere('guild_id', $guildId);
+                            });
+                        })
+                        ->when($connection !== null, function (Builder $query) use ($connection): void {
+                            $query->where(function (Builder $binding) use ($connection): void {
+                                $binding->where(function (Builder $current) use ($connection): void {
+                                    $current
+                                        ->where('connection_id', $connection->connectionId)
+                                        ->where('application_id', $connection->applicationId)
+                                        ->where('connection_generation', $connection->generation);
+                                })->orWhere(function (Builder $legacy) use ($connection): void {
+                                    $legacy->whereNull('connection_id')
+                                        ->where(function (Builder $guild) use ($connection): void {
+                                            $guild->whereNull('guild_id')->orWhere('guild_id', $connection->guildId);
+                                        });
+                                    });
                             });
                         })
                         ->value('id');
@@ -102,6 +119,16 @@ class DiscordQueueLeaseService
                         $this->suppressHeldCommand($command);
 
                         continue;
+                    }
+
+                    if ($connection !== null && $command->connection_id === null) {
+                        $command->forceFill([
+                            'connection_id' => $connection->connectionId,
+                            'application_id' => $connection->applicationId,
+                            'connection_generation' => $connection->generation,
+                            'guild_id' => $command->guild_id ?? $connection->guildId,
+                            'dedupe_scope' => $connection->dedupeScope(),
+                        ])->save();
                     }
 
                     $command->forceFill([
@@ -137,6 +164,7 @@ class DiscordQueueLeaseService
                 ->first();
 
             if ($existing && $this->hasActiveLease($existing)) {
+                $this->assertConnection($existing, $connection);
                 $operation = $this->lockOperationForQueueId((string) $existing->getKey());
                 if ($operation !== null && $this->federationGuard->isHeld($operation)) {
                     $this->suppressHeldCommand($existing);
@@ -206,11 +234,15 @@ class DiscordQueueLeaseService
         }, attempts: 3);
     }
 
-    public function renew(DiscordQueue $command, string $leaseToken): DiscordQueue
-    {
+    public function renew(
+        DiscordQueue $command,
+        string $leaseToken,
+        ?DiscordConnectionContext $connection = null,
+    ): DiscordQueue {
         $held = false;
-        $renewed = DB::transaction(function () use ($command, $leaseToken, &$held): DiscordQueue {
+        $renewed = DB::transaction(function () use ($command, $leaseToken, $connection, &$held): DiscordQueue {
             [$locked, $operation] = $this->lockCommandAndOperation($command);
+            $this->assertConnection($locked, $connection);
             if ($this->suppressIfHeld($locked, $operation)) {
                 $held = true;
 
@@ -235,11 +267,16 @@ class DiscordQueueLeaseService
     /**
      * @param  array<string, mixed>  $result
      */
-    public function checkpoint(DiscordQueue $command, string $leaseToken, array $result): DiscordQueue
-    {
+    public function checkpoint(
+        DiscordQueue $command,
+        string $leaseToken,
+        array $result,
+        ?DiscordConnectionContext $connection = null,
+    ): DiscordQueue {
         $held = false;
-        $checkpointed = DB::transaction(function () use ($command, $leaseToken, $result, &$held): DiscordQueue {
+        $checkpointed = DB::transaction(function () use ($command, $leaseToken, $result, $connection, &$held): DiscordQueue {
             [$locked, $operation] = $this->lockCommandAndOperation($command);
+            $this->assertConnection($locked, $connection);
             if ($this->suppressIfHeld($locked, $operation)) {
                 $held = true;
 
@@ -278,10 +315,12 @@ class DiscordQueueLeaseService
         ?string $errorCode,
         ?string $errorMessage,
         ?array $result = null,
+        ?DiscordConnectionContext $connection = null,
     ): DiscordQueue {
         $held = false;
-        $acknowledged = DB::transaction(function () use ($command, $status, $leaseToken, $errorCode, $errorMessage, $result, &$held): DiscordQueue {
+        $acknowledged = DB::transaction(function () use ($command, $status, $leaseToken, $errorCode, $errorMessage, $result, $connection, &$held): DiscordQueue {
             [$locked, $operation] = $this->lockCommandAndOperation($command);
+            $this->assertConnection($locked, $connection);
             if ($this->suppressIfHeld($locked, $operation)) {
                 $held = true;
 
@@ -509,6 +548,33 @@ class DiscordQueueLeaseService
             throw new DiscordQueueLeaseException(
                 'lease_conflict',
                 'The queue lease is missing, expired, or owned by another worker.',
+            );
+        }
+    }
+
+    private function assertConnection(
+        DiscordQueue $command,
+        ?DiscordConnectionContext $connection,
+    ): void {
+        if ($connection === null) {
+            return;
+        }
+
+        if ($command->connection_id === null
+            && $connection->isDedicated()
+            && $connection->protocolVersion === 1) {
+            return;
+        }
+
+        if (! is_string($command->connection_id)
+            || ! hash_equals($connection->connectionId, $command->connection_id)
+            || ! is_string($command->application_id)
+            || ! hash_equals($connection->applicationId, $command->application_id)
+            || (int) $command->connection_generation !== $connection->generation
+            || ($command->guild_id !== null && ! hash_equals($connection->guildId, $command->guild_id))) {
+            throw new DiscordQueueLeaseException(
+                'stale_connection_generation',
+                'The queue item is not bound to the active Discord connection generation.',
             );
         }
     }
