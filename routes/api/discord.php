@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Discord\AlertRendererManifestController as DiscordAlertRendererManifestController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
+use App\Http\Controllers\API\Discord\DirectoryController as DiscordDirectoryController;
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberContextController;
 use App\Http\Controllers\API\Discord\MemberProfileSyncController as DiscordMemberProfileSyncController;
@@ -144,6 +145,22 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             EnsureDiscordInteractionIdempotency::class,
         ]);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);
+
+    Route::prefix('directory')->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function () {
+        Route::get('/discord-users/{discordUserId}', [DiscordDirectoryController::class, 'discordUser'])
+            ->middleware(EnsureDiscordInteractionCommand::class.':who')
+            ->whereNumber('discordUserId');
+        Route::get('/nations', [DiscordDirectoryController::class, 'nations'])
+            ->middleware(EnsureDiscordInteractionCommand::class.':nation');
+        Route::get('/nations/{nation}', [DiscordDirectoryController::class, 'nation'])
+            ->middleware(EnsureDiscordInteractionCommand::class.':nation')
+            ->whereNumber('nation');
+        Route::get('/alliances', [DiscordDirectoryController::class, 'alliances'])
+            ->middleware(EnsureDiscordInteractionCommand::class.':alliance');
+        Route::get('/alliances/{alliance}', [DiscordDirectoryController::class, 'alliance'])
+            ->middleware(EnsureDiscordInteractionCommand::class.':alliance')
+            ->whereNumber('alliance');
+    });
 
     Route::prefix('me')->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function () {
         Route::get('/accounts', [DiscordFinanceController::class, 'accounts']);

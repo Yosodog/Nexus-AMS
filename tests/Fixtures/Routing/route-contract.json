@@ -2502,6 +2502,76 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/v1/discord/directory/discord-users/{discordUserId}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\DirectoryController@discordUser",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:who"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/directory/nations",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\DirectoryController@nations",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:nation"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/directory/nations/{nation}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\DirectoryController@nation",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:nation"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/directory/alliances",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\DirectoryController@alliances",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:alliance"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/directory/alliances/{alliance}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\DirectoryController@alliance",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:alliance"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/discord/me/accounts",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\FinanceController@accounts",
