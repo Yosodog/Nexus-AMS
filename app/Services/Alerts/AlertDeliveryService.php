@@ -28,6 +28,7 @@ class AlertDeliveryService
         private readonly AlertEventCatalog $catalog,
         private readonly AlertDeliveryPolicy $policy,
         private readonly DiscordQueueService $discordQueue,
+        private readonly AlertUserSettingsService $userSettings,
     ) {}
 
     /** @return Collection<int, AlertDelivery> */
@@ -35,6 +36,7 @@ class AlertDeliveryService
         AlertOccurrence $occurrence,
         ?AlertSubscription $subscription = null,
         bool $discordEnabled = false,
+        bool $forceImmediate = false,
     ): Collection {
         $deliveries = collect();
 
@@ -45,8 +47,11 @@ class AlertDeliveryService
             }
 
             $deliveries->push($this->createWebDelivery($occurrence, $recipient, $subscription));
-            if ($discordEnabled && ($subscription?->discord_enabled ?? true)) {
-                $deliveries->push($this->createMemberDiscordDelivery($occurrence, $recipient, $subscription));
+            if ($discordEnabled) {
+                $suppressionReason = $this->memberDiscordSuppressionReason($recipient, $subscription);
+                $deliveries->push($suppressionReason === null
+                    ? $this->createMemberDiscordDelivery($occurrence, $recipient, $subscription, $forceImmediate)
+                    : $this->createMemberDiscordSuppression($occurrence, $recipient, $subscription, $suppressionReason));
             }
 
             return $deliveries;
@@ -152,6 +157,7 @@ class AlertDeliveryService
         AlertOccurrence $occurrence,
         User $recipient,
         ?AlertSubscription $subscription,
+        bool $forceImmediate,
     ): AlertDelivery {
         $discordId = $recipient->activeDiscordAccount()?->discord_id;
         $matchKey = $this->matchKey($occurrence, $subscription?->id, null, 'discord-dm:user:'.$recipient->id);
@@ -171,7 +177,7 @@ class AlertDeliveryService
             );
         }
 
-        $scheduledAt = $subscription === null
+        $scheduledAt = $forceImmediate || $subscription === null
             ? null
             : $this->policy->scheduledAtForSubscription($subscription, $recipient);
 
@@ -184,10 +190,47 @@ class AlertDeliveryService
                 'discord_user_id' => $discordId,
             ],
             scheduledAt: $scheduledAt,
-            deliveryMode: $subscription?->delivery_mode ?? AlertDeliveryMode::Immediate,
+            deliveryMode: $forceImmediate
+                ? AlertDeliveryMode::Immediate
+                : ($subscription?->delivery_mode ?? AlertDeliveryMode::Immediate),
             subscriptionId: $subscription?->id,
             recipientUserId: $recipient->id,
         );
+    }
+
+    private function createMemberDiscordSuppression(
+        AlertOccurrence $occurrence,
+        User $recipient,
+        ?AlertSubscription $subscription,
+        string $reasonCode,
+    ): AlertDelivery {
+        return AlertDelivery::query()->firstOrCreate(
+            ['match_key' => $this->matchKey($occurrence, $subscription?->id, null, 'discord-dm:user:'.$recipient->id)],
+            [
+                'alert_occurrence_id' => $occurrence->id,
+                'alert_subscription_id' => $subscription?->id,
+                'recipient_user_id' => $recipient->id,
+                'destination_kind' => AlertDestinationKind::DiscordDm,
+                'delivery_mode' => AlertDeliveryMode::Immediate,
+                'status' => AlertDeliveryStatus::Suppressed,
+                'reason_code' => $reasonCode,
+            ],
+        );
+    }
+
+    private function memberDiscordSuppressionReason(
+        User $recipient,
+        ?AlertSubscription $subscription,
+    ): ?string {
+        if ($subscription !== null && ! $subscription->discord_enabled) {
+            return 'subscription_discord_disabled';
+        }
+
+        if (! $this->userSettings->isDiscordEnabled($recipient)) {
+            return 'user_discord_disabled';
+        }
+
+        return null;
     }
 
     private function createRouteDiscordDelivery(AlertOccurrence $occurrence, AlertRoute $route): AlertDelivery

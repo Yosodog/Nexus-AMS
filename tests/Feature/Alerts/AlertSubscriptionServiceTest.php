@@ -17,6 +17,7 @@ use App\Services\Discord\PrivateNotificationService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class AlertSubscriptionServiceTest extends TestCase
@@ -44,6 +45,15 @@ class AlertSubscriptionServiceTest extends TestCase
         ]);
 
         $this->assertSame($member->id, $subscription->user_id);
+        $this->assertSame('nation', $subscription->target_type);
+        $this->assertSame($member->nation_id, $subscription->target_id);
+        $this->assertSame([], $subscription->filter_config);
+        $this->assertFalse($subscription->discord_enabled);
+        $this->assertNotNull($subscription->active_fingerprint);
+        $this->assertSame(
+            ['nation.beige.exited'],
+            $subscription->events->pluck('event_key')->all(),
+        );
         $this->assertDatabaseHas('alert_subscriptions', [
             'user_id' => $member->id,
             'type' => 'nation',
@@ -58,6 +68,70 @@ class AlertSubscriptionServiceTest extends TestCase
             'direction' => 'below',
             'threshold' => 3000,
         ]);
+    }
+
+    public function test_active_fingerprints_prevent_duplicates_and_are_released_when_paused(): void
+    {
+        $alliance = Alliance::factory()->create();
+        config(['services.pw.alliance_id' => $alliance->id]);
+        app(AllianceMembershipService::class)->refresh();
+        $user = $this->eligibleUser($alliance->id);
+        $service = app(AlertSubscriptionService::class);
+        $input = [
+            'type' => 'market',
+            'resource' => 'steel',
+            'direction' => 'above',
+            'threshold' => 4000,
+            'delivery_mode' => 'weekly',
+            'discord_enabled' => true,
+            'rearm_percent' => 2.5,
+            'timezone' => 'America/Chicago',
+        ];
+        $original = $service->createForUser($user, $input);
+
+        $this->assertSame(['market.price.crossed'], $original->events->pluck('event_key')->all());
+        $this->assertSame('weekly', $original->delivery_mode->value);
+        $this->assertTrue($original->discord_enabled);
+        $this->assertSame('2.50', $original->rearm_percent);
+        $this->assertSame('America/Chicago', $original->timezone);
+
+        try {
+            $service->createForUser($user, $input);
+            $this->fail('A duplicate active subscription was accepted.');
+        } catch (ValidationException) {
+            $this->assertDatabaseCount('alert_subscriptions', 1);
+        }
+
+        $paused = $service->setActive($user, $original, false);
+        $this->assertFalse($paused->is_active);
+        $this->assertSame('paused', $paused->status->value);
+        $this->assertNull($paused->active_fingerprint);
+
+        $replacement = $service->createForUser($user, $input);
+        $this->assertNotSame($original->id, $replacement->id);
+
+        $this->expectException(ValidationException::class);
+        $service->setActive($user, $paused, true);
+    }
+
+    public function test_stable_catalog_event_keys_are_accepted_while_legacy_config_stays_compatible(): void
+    {
+        $alliance = Alliance::factory()->create();
+        config(['services.pw.alliance_id' => $alliance->id]);
+        app(AllianceMembershipService::class)->refresh();
+        $user = $this->eligibleUser($alliance->id);
+
+        $subscription = app(AlertSubscriptionService::class)->createForUser($user, [
+            'type' => 'nation',
+            'target_id' => $user->nation_id,
+            'events' => ['nation.city_count.changed'],
+        ]);
+
+        $this->assertSame(['city_count_changed'], $subscription->config['events']);
+        $this->assertSame(
+            ['nation.city_count.changed'],
+            $subscription->events->pluck('event_key')->all(),
+        );
     }
 
     public function test_market_threshold_is_edge_triggered_and_uses_private_notification_preferences(): void

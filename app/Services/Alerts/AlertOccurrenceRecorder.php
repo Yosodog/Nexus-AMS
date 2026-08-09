@@ -36,6 +36,7 @@ class AlertOccurrenceRecorder
         bool $isTest = false,
         ?AlertSubscription $subscription = null,
         bool $discordEnabled = false,
+        bool $forceImmediate = false,
     ): AlertOccurrence {
         $definition = $this->catalog->get($eventKey);
 
@@ -59,6 +60,7 @@ class AlertOccurrenceRecorder
                 $isTest,
                 $subscription,
                 $discordEnabled,
+                $forceImmediate,
             ): AlertOccurrence {
                 $occurrence = AlertOccurrence::query()->firstOrCreate(
                     ['dedupe_key' => $dedupeKey],
@@ -92,6 +94,7 @@ class AlertOccurrenceRecorder
                         $occurrence,
                         $subscription,
                         $discordEnabled,
+                        $forceImmediate,
                     );
                 }
 
