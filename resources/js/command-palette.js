@@ -1,24 +1,10 @@
-const FAVORITES_KEY = 'nexus.admin.command-palette.favorites.v1';
-const RECENTS_KEY = 'nexus.admin.command-palette.recents.v1';
-const MAX_RECENTS = 8;
-
-function readIds(key) {
-    try {
-        const value = JSON.parse(localStorage.getItem(key) ?? '[]');
-
-        return Array.isArray(value) ? value.filter((id) => typeof id === 'string') : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeIds(key, ids) {
-    try {
-        localStorage.setItem(key, JSON.stringify(ids));
-    } catch {
-        // Storage can be unavailable in hardened browser modes; the palette still works.
-    }
-}
+import {
+    FAVORITES_KEY,
+    MAX_RECENTS,
+    RECENTS_KEY,
+    readNavigationIds,
+    writeNavigationIds,
+} from './admin-navigation-state';
 
 function createEntityResult(result) {
     const item = document.createElement('li');
@@ -75,14 +61,11 @@ function enhancePalette(dialog) {
     const commandItems = [...dialog.querySelectorAll('[data-command-item]')];
     const allowedIds = new Set(commandItems.map((item) => item.dataset.commandId));
     const entitySearchUrl = dialog.dataset.entitySearchUrl;
-    let favorites = readIds(FAVORITES_KEY).filter((id) => allowedIds.has(id));
-    let recents = readIds(RECENTS_KEY).filter((id) => allowedIds.has(id));
+    let favorites = readNavigationIds(FAVORITES_KEY).filter((id) => allowedIds.has(id));
+    let recents = readNavigationIds(RECENTS_KEY).filter((id) => allowedIds.has(id));
     let requestController = null;
     let searchTimer = null;
     let restoreFocusTo = null;
-
-    writeIds(FAVORITES_KEY, favorites);
-    writeIds(RECENTS_KEY, recents);
 
     const focusableResults = () => [...list.querySelectorAll(
         '[data-command-item]:not([hidden]) [data-command-link], [data-entity-item] [data-entity-link]',
@@ -279,7 +262,7 @@ function enhancePalette(dialog) {
             favorites = favorites.includes(id)
                 ? favorites.filter((favoriteId) => favoriteId !== id)
                 : [id, ...favorites];
-            writeIds(FAVORITES_KEY, favorites);
+            writeNavigationIds(FAVORITES_KEY, favorites);
             renderCommands(input.value);
             favoriteButton.focus();
             announce(favorites.includes(id) ? 'Command added to favorites.' : 'Command removed from favorites.');
@@ -290,7 +273,7 @@ function enhancePalette(dialog) {
         if (link) {
             const id = link.closest('[data-command-item]').dataset.commandId;
             recents = [id, ...recents.filter((recentId) => recentId !== id)].slice(0, MAX_RECENTS);
-            writeIds(RECENTS_KEY, recents);
+            writeNavigationIds(RECENTS_KEY, recents);
         }
     });
 

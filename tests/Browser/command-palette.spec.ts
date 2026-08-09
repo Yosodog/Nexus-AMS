@@ -11,7 +11,7 @@ test('staff can open, search, favorite, and navigate the command palette by keyb
   await expect(search).toBeFocused();
 
   await search.fill('Finance ledger');
-  const financeResult = dialog.getByRole('option', { name: 'Open Finance ledger, Finance' });
+  const financeResult = dialog.getByRole('option', { name: 'Open Finance ledger, Economics' });
   await expect(financeResult).toBeVisible();
   await expect(dialog.getByRole('status')).toContainText('1 result available');
 
@@ -46,7 +46,7 @@ test('limited staff never receive unauthorized command metadata', async ({ page 
   await page.keyboard.press('Control+k');
 
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
-  await expect(dialog.getByRole('option', { name: 'Open Users, Alliance' })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: 'Open Users, System & Administration' })).toBeVisible();
   await expect(dialog.getByText('Finance ledger', { exact: true })).toHaveCount(0);
   await expect(dialog.locator('[data-entity-search-url]')).toHaveCount(0);
 });

@@ -19,10 +19,26 @@ class AppSidebar extends Component
             ? app(PendingRequestsService::class)->getCountsForUser($user)
             : ['counts' => [], 'total' => 0];
         $pendingCounts = $pendingRequests['counts'] ?? [];
+        $navigation = $user ? app(AdminNavigationCatalog::class)->groups($user, $pendingCounts) : [];
+        $groups = collect($navigation);
+        $primaryNavigation = $groups
+            ->where('area', 'primary')
+            ->flatMap(fn (array $group): array => $group['items'])
+            ->values()
+            ->all();
+        $departments = $groups->where('area', 'department')->values()->all();
+        $systemNavigation = $groups->firstWhere('area', 'system');
+        $quickAccessItems = $groups
+            ->flatMap(fn (array $group): array => $group['items'])
+            ->reject(fn (array $item): bool => in_array($item['id'], ['overview', 'work-queue'], true))
+            ->values()
+            ->all();
 
         return view('livewire.admin.app-sidebar', [
-            'navigation' => $user ? app(AdminNavigationCatalog::class)->groups($user, $pendingCounts) : [],
-            'pendingTotal' => $pendingRequests['total'] ?? 0,
+            'primaryNavigation' => $primaryNavigation,
+            'departments' => $departments,
+            'systemNavigation' => $systemNavigation,
+            'quickAccessItems' => $quickAccessItems,
             'pendingComplete' => $pendingRequests['complete'] ?? true,
             'pendingUnavailable' => $pendingRequests['unavailable'] ?? [],
         ]);

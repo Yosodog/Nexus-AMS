@@ -1,4 +1,5 @@
 import './bootstrap';
+import { initAdminSidebars } from './admin-sidebar';
 import { initCommandPalettes } from './command-palette';
 import { initializeCopyActions } from './copy-action';
 import { initializeFormRecovery } from './form-recovery';
@@ -670,6 +671,7 @@ enablePageLoadingIndicator();
 const initAppUi = (root = document) => {
     initAsyncUi(root);
     initCommandPalettes(root);
+    initAdminSidebars(root);
     initializeCopyActions(root);
     initializeFormRecovery(root);
     enableSortableTables(root);
