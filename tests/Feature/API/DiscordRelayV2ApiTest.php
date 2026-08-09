@@ -173,6 +173,125 @@ class DiscordRelayV2ApiTest extends TestCase
             ->assertJsonMissingPath('data.permissions');
     }
 
+    public function test_unlinked_actor_can_preview_and_confirm_an_installation_bound_account_link(): void
+    {
+        DiscordAccount::query()->delete();
+        $token = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+        $nation = Nation::factory()->create([
+            'nation_name' => 'Link Target',
+            'leader_name' => 'Link Leader',
+        ]);
+        $target = User::factory()->create([
+            'nation_id' => $nation->id,
+            'discord_verification_token' => $token,
+        ]);
+        $previewPayload = ['token' => $token, 'discord_username' => 'link-applicant'];
+        $previewBody = json_encode($previewPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+
+        $preview = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/link/preview',
+            $previewBody,
+            'verify',
+            'verify',
+            interactionId: '433456789012345678',
+        ))->postJson('/api/v1/discord/link/preview', $previewPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.intent.action', 'account.link')
+            ->assertJsonPath('data.summary.nation.id', $nation->id)
+            ->assertJsonPath('data.summary.replaces_existing_link', false);
+
+        $intent = DiscordActionIntent::query()->firstOrFail();
+        $this->assertSame($target->id, $intent->payload['target_user_id']);
+        $this->assertSame(hash('sha256', $token), $intent->payload['verification_token_hash']);
+        $this->assertStringNotContainsString($token, json_encode($intent->payload, JSON_THROW_ON_ERROR));
+
+        $confirmPayload = ['intent_id' => $preview->json('data.intent.id')];
+        $confirmBody = json_encode($confirmPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $confirm = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/link/confirm',
+            $confirmBody,
+            'verify',
+            'verify',
+            interactionId: '443456789012345678',
+        ))->postJson('/api/v1/discord/link/confirm', $confirmPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.linked', true)
+            ->assertJsonPath('data.discord_user_id', self::DISCORD_USER_ID)
+            ->assertJsonPath('data.nation.id', $nation->id)
+            ->assertJsonPath('meta.idempotent_replay', false);
+
+        $this->assertDatabaseHas('discord_accounts', [
+            'user_id' => $target->id,
+            'discord_id' => self::DISCORD_USER_ID,
+            'discord_username' => 'link-applicant',
+            'unlinked_at' => null,
+        ]);
+        $this->assertNull($target->fresh()->discord_verification_token);
+        $this->assertSame(DiscordActionIntent::STATUS_CONFIRMED, $intent->fresh()->status);
+        $this->assertDatabaseHas('discord_command_receipts', [
+            'interaction_id' => '443456789012345678',
+            'discord_user_id' => self::DISCORD_USER_ID,
+            'user_id' => null,
+            'connection_id' => self::CONNECTION_ID,
+            'connection_generation' => 7,
+            'status' => DiscordCommandReceipt::STATUS_COMPLETED,
+        ]);
+
+        $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/link/confirm',
+            $confirmBody,
+            'verify',
+            'verify',
+            interactionId: '453456789012345678',
+        ))->postJson('/api/v1/discord/link/confirm', $confirmPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.discord_user_id', $confirm->json('data.discord_user_id'))
+            ->assertJsonPath('meta.idempotent_replay', true);
+
+        $this->assertSame(1, DiscordAccount::query()->whereNull('unlinked_at')->count());
+    }
+
+    public function test_account_link_confirmation_rejects_a_rotated_verification_token(): void
+    {
+        DiscordAccount::query()->delete();
+        $token = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+        $target = User::factory()->create(['discord_verification_token' => $token]);
+        $previewPayload = ['token' => $token, 'discord_username' => 'rotated-applicant'];
+        $previewBody = json_encode($previewPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $preview = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/link/preview',
+            $previewBody,
+            'verify',
+            'verify',
+            interactionId: '463456789012345678',
+        ))->postJson('/api/v1/discord/link/preview', $previewPayload)->assertCreated();
+
+        $target->forceFill([
+            'discord_verification_token' => 'cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa',
+        ])->save();
+        $confirmPayload = ['intent_id' => $preview->json('data.intent.id')];
+        $confirmBody = json_encode($confirmPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+
+        $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/link/confirm',
+            $confirmBody,
+            'verify',
+            'verify',
+            interactionId: '473456789012345678',
+        ))->postJson('/api/v1/discord/link/confirm', $confirmPayload)
+            ->assertConflict()
+            ->assertJsonPath('error.code', 'verification_intent_stale');
+
+        $this->assertSame(0, DiscordAccount::query()->count());
+        $this->assertSame(DiscordActionIntent::STATUS_DRAFT, DiscordActionIntent::query()->firstOrFail()->status);
+        $this->assertSame('cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa', $target->fresh()->discord_verification_token);
+    }
+
     public function test_me_summary_supports_ready_and_unlinked_actors_without_actor_middleware(): void
     {
         $target = '/api/v1/discord/me/summary';

@@ -22,6 +22,17 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(function () {
     Route::post('/verify', [DiscordVerificationController::class, 'verify']);
+    Route::post('/link/preview', [DiscordVerificationController::class, 'preview'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':verify',
+        ]);
+    Route::post('/link/confirm', [DiscordVerificationController::class, 'confirm'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':verify',
+            EnsureDiscordInteractionIdempotency::class,
+        ]);
     Route::get('/queue', [DiscordQueueController::class, 'index'])
         ->middleware(VerifyDiscordInteraction::class.':queue.legacy-fetch,legacy-unsigned');
     Route::post('/queue/claim', [DiscordQueueController::class, 'claim'])

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DiscordAccount;
 use App\Models\User;
+use App\Services\Discord\DiscordConnectionContext;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,33 +51,67 @@ class DiscordAccountService
      */
     public static function verifyWithToken(string $token, string $discordId, string $discordUsername): ?DiscordAccount
     {
-        $user = User::query()
+        return DB::transaction(function () use ($token, $discordId, $discordUsername): ?DiscordAccount {
+            $user = User::query()
+                ->where('discord_verification_token', $token)
+                ->lockForUpdate()
+                ->first();
+
+            return $user
+                ? self::linkUser($user, $discordId, $discordUsername)
+                : null;
+        });
+    }
+
+    public static function findUserByVerificationToken(string $token): ?User
+    {
+        return User::query()
+            ->with('nation:id,nation_name,leader_name')
             ->where('discord_verification_token', $token)
             ->first();
+    }
 
-        if (! $user) {
-            return null;
-        }
+    /**
+     * Consume a previewed verification code without storing the raw code in
+     * the Discord action intent.
+     */
+    public static function verifyWithTokenHash(
+        int $userId,
+        string $tokenHash,
+        string $discordId,
+        string $discordUsername,
+        DiscordConnectionContext $connection,
+    ): ?DiscordAccount {
+        return DB::transaction(function () use ($userId, $tokenHash, $discordId, $discordUsername, $connection): ?DiscordAccount {
+            $user = User::query()->whereKey($userId)->lockForUpdate()->first();
+            $token = $user?->discord_verification_token;
 
-        return DB::transaction(function () use ($user, $discordId, $discordUsername) {
-            $now = now();
+            if (! $user || ! is_string($token) || ! hash_equals(hash('sha256', $token), $tokenHash)) {
+                return null;
+            }
 
-            self::closeActiveLinkForUser($user, $now);
-            self::closeActiveLinksForDiscordId($discordId, $user->id, $now);
+            $discordAccount = self::linkUser($user, $discordId, $discordUsername);
+            app(AuditLogger::class)->recordAfterCommit(
+                category: 'discord',
+                action: 'discord_account_linked',
+                outcome: 'success',
+                severity: 'info',
+                subject: $discordAccount,
+                context: ['data' => [
+                    'discord_user_id' => $discordId,
+                    'connection_id' => $connection->connectionId,
+                    'connection_generation' => $connection->generation,
+                    'guild_id' => $connection->guildId,
+                ]],
+                message: 'Discord account linked through a confirmed interaction.',
+                actorOverride: [
+                    'type' => 'discord',
+                    'id' => null,
+                    'name' => $discordUsername,
+                ],
+            );
 
-            $discordAccount = new DiscordAccount([
-                'user_id' => $user->id,
-                'discord_id' => $discordId,
-                'discord_username' => mb_substr($discordUsername, 0, 255),
-                'linked_at' => $now,
-            ]);
-
-            $discordAccount->save();
-
-            $user->discord_verification_token = null;
-            $user->save();
-
-            return $discordAccount->fresh();
+            return $discordAccount;
         });
     }
 
@@ -139,5 +174,26 @@ class DiscordAccountService
             ->update([
                 'unlinked_at' => $timestamp,
             ]);
+    }
+
+    private static function linkUser(User $user, string $discordId, string $discordUsername): DiscordAccount
+    {
+        $now = now();
+
+        self::closeActiveLinkForUser($user, $now);
+        self::closeActiveLinksForDiscordId($discordId, $user->id, $now);
+
+        $discordAccount = new DiscordAccount([
+            'user_id' => $user->id,
+            'discord_id' => $discordId,
+            'discord_username' => mb_substr($discordUsername, 0, 255),
+            'linked_at' => $now,
+        ]);
+        $discordAccount->save();
+
+        $user->discord_verification_token = null;
+        $user->save();
+
+        return $discordAccount->fresh();
     }
 }
