@@ -2,9 +2,15 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
+         defaultTestSuite="All"
          colors="true"
 >
     <testsuites>
+        <testsuite name="All">
+            <directory>tests/Unit</directory>
+            <directory>tests/Feature</directory>
+            <directory>tests/Integration</directory>
+        </testsuite>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
         </testsuite>
@@ -26,7 +32,7 @@
         </include>
     </source>
     <php>
-        <ini name="memory_limit" value="256M"/>
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
