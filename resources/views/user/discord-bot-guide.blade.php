@@ -137,7 +137,7 @@
                                     <li>Grant and city-grant status</li>
                                     <li>Loan status</li>
                                     <li>War-aid and rebuilding status</li>
-                                    <li>War and spy assignments</li>
+                                    <li>War planning and spy assignments you request</li>
                                 </ul>
                             </div>
                             <div>

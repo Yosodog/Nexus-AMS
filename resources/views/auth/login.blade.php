@@ -6,12 +6,12 @@
     <x-auth.shell
         badge="Member access"
         title="Sign in to {{ config('app.name') }}"
-        description="Use your member credentials. After sign-in, the system checks your verification status and opens the tools allowed by your role."
+        description="Sign in with your username and password or a registered passkey."
     >
         <x-slot:context>
-            <h2 class="font-display text-2xl font-bold tracking-[-0.02em]">How access opens</h2>
+            <h2 class="font-display text-2xl font-bold tracking-[-0.02em]">Before you continue</h2>
             <p class="mt-3 text-sm leading-6 text-neutral-content/70">
-                Your credentials are only the first check. Any alliance-required identity and security steps remain in place.
+                You may need to complete additional identity or security checks required by the alliance.
             </p>
 
             <ol class="mt-7 space-y-5">
@@ -24,12 +24,12 @@
                 <x-auth.journey-step
                     number="2"
                     title="Complete required checks"
-                    description="You may be asked for nation, Discord, or multi-factor verification."
+                    description="You may need to confirm your nation, link Discord, or complete an extra security check."
                 />
                 <x-auth.journey-step
                     number="3"
                     title="Open the member app"
-                    description="Your role and permissions determine which operational tools appear."
+                    description="Your account access determines which member tools appear."
                 />
             </ol>
         </x-slot:context>
@@ -114,10 +114,10 @@
                     </a>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-full">Sign in to member app</button>
+                <button type="submit" class="btn btn-primary w-full">Sign in to the member app</button>
             </form>
 
-            <div class="divider text-xs uppercase tracking-wide text-base-content/50">or</div>
+            <div class="divider text-sm text-base-content/70">or</div>
 
             <div
                 class="space-y-3"

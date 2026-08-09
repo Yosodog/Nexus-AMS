@@ -90,8 +90,8 @@
             <section class="nexus-panel" aria-labelledby="inactivity-exception-heading">
                 <div class="nexus-panel__header">
                     <div>
-                        <h2 id="inactivity-exception-heading" class="nexus-section-title">Approved leave or inactivity exception</h2>
-                        <p class="nexus-body-muted mt-1">Only the listed automations are paused. Other account and membership rules still apply.</p>
+                        <h2 id="inactivity-exception-heading" class="nexus-section-title">Approved leave or temporary pause</h2>
+                        <p class="nexus-body-muted mt-1">Only the listed account actions are paused. Other account and membership rules still apply.</p>
                     </div>
                     <x-nexus-status label="Active" intent="active" icon="bolt" />
                 </div>
@@ -107,8 +107,8 @@
                             </div>
                             <p class="text-sm leading-6 text-base-content/80">{{ $effect['reason'] }}</p>
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">Temporarily paused</p>
-                                <ul class="mt-2 flex flex-wrap gap-2" aria-label="Paused automations">
+                                <p class="text-sm font-semibold nexus-text-muted">Temporarily paused</p>
+                                <ul class="mt-2 flex flex-wrap gap-2" aria-label="Paused account actions">
                                     @foreach($effect['effects'] as $automation)
                                         <li class="badge badge-outline">{{ $automation }}</li>
                                     @endforeach
@@ -124,7 +124,7 @@
             <div class="nexus-panel__header">
                 <div>
                     <h2 id="attention-heading" class="nexus-section-title">What needs my attention?</h2>
-                    <p class="nexus-body-muted mt-1">Decisions, blockers, and stale information that may need your next action.</p>
+                    <p class="nexus-body-muted mt-1">Requests, overdue items, and out-of-date information that may need your attention.</p>
                 </div>
                 <span class="nexus-status {{ $attentionCount > 0 ? 'nexus-status--warning' : 'nexus-status--success' }}">
                     {{ $attentionCount > 0 ? $attentionCount.' open' : 'Caught up' }}

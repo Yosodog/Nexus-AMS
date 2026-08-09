@@ -129,7 +129,7 @@ class PasskeySecurityTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('2 registered')
+            ->assertSee('2 passkeys')
             ->assertSee('Personal MacBook')
             ->assertSee('YubiKey 5 NFC')
             ->assertSee((string) $knownAuthenticator)
@@ -272,7 +272,7 @@ class PasskeySecurityTest extends TestCase
 
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Sign in to member app')
+            ->assertSee('Sign in to '.config('app.name'))
             ->assertSee('Sign in with a passkey')
             ->assertSee('name="csrf-token"', false)
             ->assertSee(route('password.request'), false);

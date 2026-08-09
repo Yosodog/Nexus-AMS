@@ -27,7 +27,7 @@ const messageForError = (error) => {
     }
 
     if (isErrorType(error, NotSupportedError, 'NotSupportedError')) {
-        return 'Passkeys are not supported in this browser. Use your password or another supported browser.';
+        return 'This browser cannot use passkeys. Sign in with your password or try another browser.';
     }
 
     if (isErrorType(error, UserCancelledError, 'UserCancelledError')) {
@@ -35,11 +35,11 @@ const messageForError = (error) => {
     }
 
     if (isErrorType(error, PasskeyExistsError, 'PasskeyExistsError')) {
-        return 'That passkey is already registered. Choose another device or authenticator.';
+        return 'That passkey is already registered. Try a different device or security key.';
     }
 
     if (isErrorType(error, InvalidDomainError, 'InvalidDomainError')) {
-        return 'Passkeys are unavailable on this address. Return to the configured application address and try again.';
+        return 'Passkeys are unavailable at this web address. Open the site from its usual address and try again.';
     }
 
     if (/password confirmation required/i.test(error?.message ?? '')) {
@@ -47,7 +47,7 @@ const messageForError = (error) => {
     }
 
     if (/unable to register this passkey/i.test(error?.message ?? '')) {
-        return 'That passkey is already registered. Choose another device or authenticator.';
+        return 'That passkey is already registered. Try a different device or security key.';
     }
 
     if (/too many attempts|status 429/i.test(error?.message ?? '')) {
@@ -55,10 +55,10 @@ const messageForError = (error) => {
     }
 
     if (error instanceof PasskeyError || error instanceof Error) {
-        return 'The passkey action could not be completed. Try again or use your existing sign-in method.';
+        return 'We could not complete that passkey request. Try again or use another sign-in method.';
     }
 
-    return 'The passkey action could not be completed. Try again or use your existing sign-in method.';
+    return 'We could not complete that passkey request. Try again or use another sign-in method.';
 };
 
 const showStatus = (root, message, state = 'info') => {

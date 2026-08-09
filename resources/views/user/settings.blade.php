@@ -282,7 +282,7 @@
                                 </p>
                             </div>
                             <span class="badge badge-outline">
-                                {{ $passkeys->isEmpty() ? 'None registered' : $passkeys->count().' registered' }}
+                                {{ $passkeys->isEmpty() ? 'No passkeys' : $passkeys->count().' '.str('passkey')->plural($passkeys->count()) }}
                             </span>
                         </div>
 
@@ -294,7 +294,7 @@
 
                         @if(session('status') === 'passkey-deleted')
                             <div class="alert alert-success items-start text-sm" role="status">
-                                <span>The passkey was revoked after the server confirmed the request.</span>
+                                <span>The passkey was removed.</span>
                             </div>
                         @endif
 
@@ -308,13 +308,13 @@
 
                         <div class="rounded-box border border-base-300 bg-base-200/50 p-4">
                             <p class="text-sm">
-                                Passkeys are optional. Your password, authenticator app, trusted devices, and recovery codes remain available.
+                                Passkeys are optional. You can keep using your password and other sign-in methods.
                             </p>
                             <p class="mt-2 text-xs text-base-content/70">
-                                Name each passkey for the device or authenticator you will recognize later. Do not include passwords, recovery codes, or other secrets in the name.
+                                Give each passkey a name you will recognize later. Do not include passwords, recovery codes, or other secrets in the name.
                             </p>
                             <p class="mt-2 text-xs text-base-content/70">
-                                Passkey sign-in requires verification on the device and therefore does not add a separate authenticator-code prompt. If alliance policy requires TOTP enrollment, that setup remains required before protected tools open.
+                                A passkey uses your device's security check, so you will not be asked for a separate code. If the alliance requires an authenticator app, you must still set one up before using sensitive tools.
                             </p>
                         </div>
 
@@ -324,7 +324,7 @@
 
                         <noscript>
                             <p class="text-sm text-base-content/70">
-                                Adding a passkey needs JavaScript. Existing passwords and recovery methods are unaffected.
+                                You need JavaScript enabled to add a passkey. Existing passwords and recovery methods are unaffected.
                             </p>
                         </noscript>
 
@@ -389,7 +389,7 @@
                                                     <h3 class="break-words font-semibold">{{ $passkey->name }}</h3>
                                                     @if($passkey->authenticator)
                                                         <p class="text-xs text-base-content/70">
-                                                            Authenticator: {{ $passkey->authenticator }}
+                                                            Sign-in method: {{ $passkey->authenticator }}
                                                         </p>
                                                     @endif
                                                 </div>
@@ -423,7 +423,7 @@
                                                 <form
                                                     method="POST"
                                                     action="{{ route('passkey.destroy', $passkey) }}"
-                                                    data-confirm="Revoke this passkey? It will stop working for sign-in as soon as the server confirms the request."
+                                                    data-confirm="Revoke this passkey? It will stop working for sign-in immediately."
                                                     data-confirm-title="Revoke passkey?"
                                                     data-confirm-label="Revoke passkey"
                                                     data-confirm-tone="error"
@@ -652,7 +652,7 @@
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div>
                             <h2 class="text-lg font-semibold">Discord</h2>
-                            <p class="text-sm text-base-content/70">Link Discord so the app can verify you and route coordination alerts correctly.</p>
+                            <p class="text-sm text-base-content/70">Link Discord so the app can verify you and send the right alerts.</p>
                         </div>
                         <span class="badge badge-outline">{{ $discordAccount ? 'Connected' : 'Not linked' }}</span>
                     </div>
@@ -676,7 +676,7 @@
                             <div class="alert alert-info">
                                 <div>
                                     <h3 class="font-semibold text-base">Link your Discord</h3>
-                                    <p class="text-sm">{{ $discordVerificationRequired ? 'Discord verification is required after your in-game verification.' : 'Discord linking is optional but recommended for smoother coordination.' }}</p>
+                                    <p class="text-sm">{{ $discordVerificationRequired ? 'Discord verification is required after your in-game verification.' : 'Discord linking is optional. Link it to receive alerts and use Discord tools.' }}</p>
                                 </div>
                             </div>
 
@@ -697,7 +697,7 @@
                             <div class="flex flex-wrap gap-3">
                                 <form method="POST" action="{{ route('discord.token.regenerate') }}">
                                     @csrf
-                                    <button class="btn btn-outline">Regenerate Token</button>
+                                    <button class="btn btn-outline">Regenerate token</button>
                                 </form>
                                 <a href="{{ route('discord.verify.show') }}" class="btn btn-link">Open verification page</a>
                             </div>
@@ -711,7 +711,6 @@
                             <h3 class="text-lg font-semibold">Shortcuts</h3>
                             <p class="text-sm text-base-content/70">Use these shortcuts to return to your dashboard or manage Discord verification.</p>
                         </div>
-                        <div class="badge badge-outline">Helper</div>
                     </div>
                     <div class="mt-4 grid gap-3">
                         <a href="{{ route('user.dashboard') }}" class="btn btn-outline btn-sm justify-start">Back to dashboard</a>
