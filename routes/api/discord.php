@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Discord\AlertRendererManifestController as DiscordAlertRendererManifestController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
+use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberContextController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
 use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
@@ -41,6 +42,13 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             VerifyDiscordInteraction::class,
             ResolveDiscordActor::class,
             EnsureDiscordInteractionCommand::class.':nexus.status',
+        ]);
+    Route::get('/context', [DiscordMemberContextController::class, 'context'])
+        ->middleware(VerifyDiscordInteraction::class);
+    Route::get('/me/summary', [DiscordMemberContextController::class, 'summary'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':me',
         ]);
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);

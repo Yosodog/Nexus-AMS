@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\DiscordConnectionMode;
 use App\Enums\DiscordConnectionState;
 use App\Http\Middleware\VerifyDiscordInteraction;
+use App\Models\Application;
 use App\Models\DiscordAccount;
 use App\Models\DiscordConnection;
 use App\Models\Nation;
@@ -133,6 +135,95 @@ class DiscordRelayV2ApiTest extends TestCase
             ->get('/api/v1/discord/status')
             ->assertForbidden()
             ->assertJsonMissingPath('data.provider');
+    }
+
+    public function test_context_returns_only_safe_link_state_for_an_unlinked_actor(): void
+    {
+        DiscordAccount::query()->where('discord_id', self::DISCORD_USER_ID)->delete();
+        $target = '/api/v1/discord/context';
+
+        $this->withHeaders($this->interactionHeaders('GET', $target, '', 'me', 'me'))
+            ->get($target)
+            ->assertOk()
+            ->assertJsonPath('data.contract_version', 1)
+            ->assertJsonPath('data.state', 'unlinked')
+            ->assertJsonPath('data.installation.connection_id', self::CONNECTION_ID)
+            ->assertJsonPath('data.installation.generation', 7)
+            ->assertJsonPath('data.installation.guild_id', self::GUILD_ID)
+            ->assertJsonPath('meta.connection_id', self::CONNECTION_ID)
+            ->assertJsonPath('meta.correlation_id', '323456789012345678')
+            ->assertJsonMissingPath('data.identity')
+            ->assertJsonMissingPath('data.actor')
+            ->assertJsonMissingPath('data.permissions');
+    }
+
+    public function test_me_summary_supports_ready_and_unlinked_actors_without_actor_middleware(): void
+    {
+        $target = '/api/v1/discord/me/summary';
+        $headers = $this->interactionHeaders('GET', $target, '', 'me', 'me');
+
+        $this->withHeaders($headers)
+            ->get($target)
+            ->assertOk()
+            ->assertJsonPath('data.contract_version', 1)
+            ->assertJsonPath('data.state', 'ready')
+            ->assertJsonPath('data.capabilities.revision', 1)
+            ->assertJsonPath('data.profile_sync.state', 'unknown')
+            ->assertJsonPath('meta.connection_generation', 7)
+            ->assertJsonMissingPath('data.balances')
+            ->assertJsonMissingPath('data.military');
+
+        DiscordAccount::query()->where('discord_id', self::DISCORD_USER_ID)->delete();
+
+        $this->withHeaders($this->interactionHeaders('GET', $target, '', 'me', 'me'))
+            ->get($target)
+            ->assertOk()
+            ->assertJsonPath('data.state', 'unlinked')
+            ->assertJsonPath('data.user_action.label', 'Sign in to '.config('app.name'))
+            ->assertJsonMissingPath('data.identity');
+    }
+
+    public function test_staff_application_views_are_isolated_by_connection_and_hide_ambiguous_legacy_rows(): void
+    {
+        $this->actor->forceFill(['is_admin' => true])->save();
+        $this->actor = $this->grantPermissions($this->actor, ['manage-applications']);
+        $foreignConnection = $this->createConnection([
+            'id' => '21111111-2222-4333-8444-555555555555',
+            'application_id' => '133456789012345678',
+            'guild_id' => '233456789012345678',
+        ]);
+        $current = $this->application([
+            'nation_id' => 9001,
+            'discord_user_id' => '523456789012345678',
+            'discord_connection_id' => self::CONNECTION_ID,
+            'discord_connection_generation' => 7,
+            'discord_application_id' => self::APP_ID,
+            'discord_guild_id' => self::GUILD_ID,
+        ]);
+        $foreign = $this->application([
+            'nation_id' => 9002,
+            'discord_user_id' => '623456789012345678',
+            'discord_connection_id' => $foreignConnection->id,
+            'discord_connection_generation' => $foreignConnection->generation,
+            'discord_application_id' => $foreignConnection->application_id,
+            'discord_guild_id' => $foreignConnection->guild_id,
+        ]);
+        $this->application([
+            'nation_id' => 9003,
+            'discord_user_id' => '723456789012345678',
+        ]);
+        $target = '/api/v1/discord/staff/applications';
+
+        $this->withHeaders($this->interactionHeaders('GET', $target, '', 'applications', 'applications'))
+            ->get($target)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $current->id);
+
+        $foreignTarget = $target.'/'.$foreign->id;
+        $this->withHeaders($this->interactionHeaders('GET', $foreignTarget, '', 'applications', 'applications'))
+            ->get($foreignTarget)
+            ->assertNotFound();
     }
 
     public function test_config_backed_dedicated_v2_connection_requires_no_cloud_state(): void
@@ -353,6 +444,17 @@ class DiscordRelayV2ApiTest extends TestCase
             ],
             'v1_reader_enabled' => true,
             'activated_at' => now(),
+        ], $overrides));
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function application(array $overrides): Application
+    {
+        return Application::query()->create(array_merge([
+            'leader_name_snapshot' => 'Example Leader',
+            'discord_username' => 'example-user',
+            'status' => ApplicationStatus::Pending,
+            'pending_key' => 1,
         ], $overrides));
     }
 
