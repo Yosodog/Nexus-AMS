@@ -31,6 +31,7 @@ class DiscordQueueLeaseService
         'WAR_ROOM_CREATE' => ['discord_channel_id'],
         'CITY_TIER_SYNC' => ['roles'],
         'APPLICATION_DISCORD_RECONCILE' => ['application_reconcile'],
+        'MEMBER_PROFILE_SYNC' => ['member_profile_sync'],
     ];
 
     public function __construct(
@@ -302,6 +303,12 @@ class DiscordQueueLeaseService
                     $result['application_reconcile'] ?? null,
                 );
             }
+            if ($locked->action === DiscordMemberProfileSyncService::ACTION) {
+                $this->assertMemberProfileSyncCheckpoint(
+                    $locked,
+                    $result['member_profile_sync'] ?? null,
+                );
+            }
 
             $locked->forceFill([
                 'result' => array_replace($locked->result ?? [], $result),
@@ -482,6 +489,44 @@ class DiscordQueueLeaseService
         return is_array($value)
             && array_is_list($value)
             && collect($value)->every(static fn (mixed $item): bool => is_string($item));
+    }
+
+    private function assertMemberProfileSyncCheckpoint(DiscordQueue $command, mixed $checkpoint): void
+    {
+        $required = ['profile_revision', 'nickname_applied', 'roles_added', 'roles_removed'];
+        if (! is_array($checkpoint)
+            || array_diff(array_keys($checkpoint), $required) !== []
+            || array_diff($required, array_keys($checkpoint)) !== []
+            || ! is_string($checkpoint['profile_revision'])
+            || preg_match('/^[a-f0-9]{64}$/', $checkpoint['profile_revision']) !== 1
+            || ! is_bool($checkpoint['nickname_applied'])
+            || ! $this->isStringList($checkpoint['roles_added'])
+            || ! $this->isStringList($checkpoint['roles_removed'])
+            || count($checkpoint['roles_added']) !== count(array_unique($checkpoint['roles_added']))
+            || count($checkpoint['roles_removed']) !== count(array_unique($checkpoint['roles_removed']))) {
+            throw new DiscordQueueLeaseException(
+                'member_profile_sync_checkpoint_invalid',
+                'The member profile synchronization checkpoint is invalid.',
+                422,
+            );
+        }
+
+        $payload = $command->payload;
+        $profileRevision = data_get($payload, 'member.profile_revision');
+        $desiredAdds = data_get($payload, 'desired.roles.add', []);
+        $desiredRemoves = data_get($payload, 'desired.roles.remove', []);
+        if (! is_string($profileRevision)
+            || ! hash_equals($profileRevision, $checkpoint['profile_revision'])
+            || ! $this->isStringList($desiredAdds)
+            || ! $this->isStringList($desiredRemoves)
+            || array_diff($checkpoint['roles_added'], $desiredAdds) !== []
+            || array_diff($checkpoint['roles_removed'], $desiredRemoves) !== []) {
+            throw new DiscordQueueLeaseException(
+                'member_profile_sync_checkpoint_conflict',
+                'The checkpoint contains Discord operations outside the Nexus profile plan.',
+                409,
+            );
+        }
     }
 
     public function acknowledge(

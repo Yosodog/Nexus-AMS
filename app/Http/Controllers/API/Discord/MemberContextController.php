@@ -8,6 +8,7 @@ use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Services\Discord\DiscordActorContext;
 use App\Services\Discord\DiscordActorContextService;
 use App\Services\Discord\DiscordConnectionContext;
+use App\Services\Discord\DiscordMemberProfileSyncService;
 use App\Services\Discord\DiscordMemberSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ final class MemberContextController extends Controller
     public function __construct(
         private readonly DiscordActorContextService $contexts,
         private readonly DiscordMemberSummaryService $summaries,
+        private readonly DiscordMemberProfileSyncService $profileSync,
     ) {}
 
     public function context(Request $request): JsonResponse
@@ -40,16 +42,18 @@ final class MemberContextController extends Controller
     public function summary(Request $request): JsonResponse
     {
         [$connection, $context] = $this->resolve($request);
-        $checkedAt = now()->toIso8601String();
+        $profileSync = $context->isReady() && $context->actor && $context->discordAccount
+            ? $this->profileSync->status($context->actor, $context->discordAccount, $connection)
+            : [
+                'state' => 'unavailable',
+                'label' => 'Profile synchronization requires a ready linked Nexus account.',
+                'checked_at' => now()->toIso8601String(),
+                'issues' => [],
+            ];
         $summary = $this->summaries->summarize(
             $context,
             $connection->capabilityVersion,
-            [
-                'state' => 'unknown',
-                'label' => 'Discord profile synchronization has not been checked yet.',
-                'checked_at' => $checkedAt,
-                'issues' => [],
-            ],
+            $profileSync,
         );
 
         return $this->discordData($summary, meta: $this->metadata($request, $connection));

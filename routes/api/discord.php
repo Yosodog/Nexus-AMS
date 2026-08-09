@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Discord\AlertRendererManifestController as DiscordA
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberContextController;
+use App\Http\Controllers\API\Discord\MemberProfileSyncController as DiscordMemberProfileSyncController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
 use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
@@ -60,6 +61,19 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
         ->middleware([
             VerifyDiscordInteraction::class,
             EnsureDiscordInteractionCommand::class.':me',
+        ]);
+    Route::post('/me/profile-sync/preview', [DiscordMemberProfileSyncController::class, 'preview'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':me',
+        ]);
+    Route::post('/me/profile-sync/confirm', [DiscordMemberProfileSyncController::class, 'confirm'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':me',
+            EnsureDiscordInteractionIdempotency::class,
         ]);
     Route::post('/applications/preview', [DiscordApplicationController::class, 'preview'])
         ->middleware([

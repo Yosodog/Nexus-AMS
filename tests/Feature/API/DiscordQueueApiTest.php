@@ -229,6 +229,40 @@ class DiscordQueueApiTest extends TestCase
             ->assertJsonPath('data.result.roles.0.discord_role_id', '123456789012345678');
     }
 
+    public function test_member_profile_sync_checkpoint_accepts_only_the_nexus_plan(): void
+    {
+        $revision = str_repeat('a', 64);
+        $command = $this->createCommand('MEMBER_PROFILE_SYNC', [
+            'payload' => [
+                'member' => ['profile_revision' => $revision],
+                'desired' => ['roles' => [
+                    'add' => ['123456789012345678'],
+                    'remove' => ['223456789012345678'],
+                ]],
+            ],
+        ]);
+        $claim = $this->claimOne();
+        $checkpoint = [
+            'profile_revision' => $revision,
+            'nickname_applied' => true,
+            'roles_added' => ['123456789012345678'],
+            'roles_removed' => [],
+        ];
+
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            ['lease_token' => $claim->json('data.lease_token'), 'result' => ['member_profile_sync' => $checkpoint]],
+        )->assertOk()
+            ->assertJsonPath('data.result.member_profile_sync.nickname_applied', true);
+
+        $checkpoint['roles_removed'] = ['323456789012345678'];
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            ['lease_token' => $claim->json('data.lease_token'), 'result' => ['member_profile_sync' => $checkpoint]],
+        )->assertConflict()
+            ->assertJsonPath('error', 'member_profile_sync_checkpoint_conflict');
+    }
+
     public function test_failed_acknowledgements_back_off_without_double_counting_attempts_and_stop_at_three(): void
     {
         $command = $this->createCommand();

@@ -10,6 +10,7 @@ use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\Application;
 use App\Models\DiscordAccount;
 use App\Models\DiscordActionIntent;
+use App\Models\DiscordCityTierRole;
 use App\Models\DiscordCommandReceipt;
 use App\Models\DiscordConnection;
 use App\Models\DiscordQueue;
@@ -21,6 +22,7 @@ use App\Services\ApplicationService;
 use App\Services\Discord\ApplicationDiscordReconciliationService;
 use App\Services\Discord\DiscordCommandReceiptService;
 use App\Services\Discord\DiscordConnectionResolver;
+use App\Services\Discord\DiscordMemberProfileSyncService;
 use App\Services\Discord\Relay\CanonicalJson;
 use App\Services\Discord\Relay\DiscordRelayProofVerifier;
 use App\Services\Discord\Relay\StrictJson;
@@ -303,7 +305,7 @@ class DiscordRelayV2ApiTest extends TestCase
             ->assertJsonPath('data.contract_version', 1)
             ->assertJsonPath('data.state', 'ready')
             ->assertJsonPath('data.capabilities.revision', 1)
-            ->assertJsonPath('data.profile_sync.state', 'unknown')
+            ->assertJsonPath('data.profile_sync.state', 'unavailable')
             ->assertJsonPath('meta.connection_generation', 7)
             ->assertJsonMissingPath('data.balances')
             ->assertJsonMissingPath('data.military');
@@ -316,6 +318,141 @@ class DiscordRelayV2ApiTest extends TestCase
             ->assertJsonPath('data.state', 'unlinked')
             ->assertJsonPath('data.user_action.label', 'Sign in to '.config('app.name'))
             ->assertJsonMissingPath('data.identity');
+    }
+
+    public function test_member_can_preview_confirm_and_replay_an_installation_bound_profile_sync(): void
+    {
+        $nation = $this->actor->nation()->firstOrFail();
+        $nation->forceFill([
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
+            'alliance_position' => 'MEMBER',
+            'leader_name' => 'Profile Leader',
+            'num_cities' => 12,
+        ])->save();
+        DiscordCityTierRole::query()->create([
+            'bucket_start' => 11,
+            'bucket_end' => 15,
+            'discord_role_id' => '423456789012345684',
+        ]);
+        $previewPayload = [
+            'observed' => [
+                'nickname' => 'Old Nickname',
+                'role_ids' => [
+                    '423456789012345679',
+                    '423456789012345699',
+                ],
+            ],
+        ];
+        $previewBody = json_encode($previewPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $preview = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/preview',
+            $previewBody,
+            'me',
+            'me',
+            interactionId: '773456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/preview', $previewPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.intent.action', DiscordMemberProfileSyncService::INTENT_ACTION)
+            ->assertJsonPath('data.summary.nickname.desired', 'Profile Leader')
+            ->assertJsonPath('data.summary.roles.add_count', 2)
+            ->assertJsonPath('data.summary.roles.remove_count', 1)
+            ->assertJsonPath('meta.connection_generation', 7);
+
+        $intentId = (string) $preview->json('data.intent.id');
+        $this->assertSame(64, strlen($intentId));
+        $this->assertNotSame($intentId, DiscordActionIntent::query()->firstOrFail()->token_hash);
+        $confirmPayload = ['intent_id' => $intentId];
+        $confirmBody = json_encode($confirmPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $confirm = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/confirm',
+            $confirmBody,
+            'me',
+            'me',
+            interactionId: '783456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/confirm', $confirmPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.profile_sync.state', 'pending')
+            ->assertJsonPath('meta.idempotent_replay', false);
+
+        $queue = DiscordQueue::query()->where('action', DiscordMemberProfileSyncService::ACTION)->firstOrFail();
+        $this->assertSame(self::CONNECTION_ID, $queue->connection_id);
+        $this->assertSame(7, $queue->connection_generation);
+        $this->assertSame('Profile Leader', data_get($queue->payload, 'desired.nickname'));
+        $this->assertSame([
+            '423456789012345681',
+            '423456789012345684',
+        ], data_get($queue->payload, 'desired.roles.add'));
+        $this->assertSame(['423456789012345679'], data_get($queue->payload, 'desired.roles.remove'));
+        $this->assertNotContains('423456789012345699', data_get($queue->payload, 'desired.roles.remove'));
+
+        $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/confirm',
+            $confirmBody,
+            'me',
+            'me',
+            interactionId: '793456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/confirm', $confirmPayload)
+            ->assertCreated()
+            ->assertJsonPath('data.queue.id', $confirm->json('data.queue.id'))
+            ->assertJsonPath('meta.idempotent_replay', true);
+
+        $this->assertSame(1, DiscordQueue::query()->where('action', DiscordMemberProfileSyncService::ACTION)->count());
+    }
+
+    public function test_profile_sync_revalidates_policy_and_capability_at_confirmation(): void
+    {
+        $nation = $this->actor->nation()->firstOrFail();
+        $nation->forceFill([
+            'alliance_id' => app(AllianceMembershipService::class)->getPrimaryAllianceId(),
+            'alliance_position' => 'MEMBER',
+            'leader_name' => 'Before Preview',
+            'num_cities' => 12,
+        ])->save();
+        $previewPayload = ['observed' => ['nickname' => null, 'role_ids' => []]];
+        $previewBody = json_encode($previewPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $preview = $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/preview',
+            $previewBody,
+            'me',
+            'me',
+            interactionId: '803456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/preview', $previewPayload)->assertCreated();
+
+        $nation->forceFill(['leader_name' => 'Changed After Preview'])->save();
+        $confirmPayload = ['intent_id' => $preview->json('data.intent.id')];
+        $confirmBody = json_encode($confirmPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/confirm',
+            $confirmBody,
+            'me',
+            'me',
+            interactionId: '813456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/confirm', $confirmPayload)
+            ->assertConflict()
+            ->assertJsonPath('error.code', 'profile_sync_stale');
+        $this->assertDatabaseCount('discord_queue', 0);
+
+        $nation->forceFill(['leader_name' => 'Before Preview'])->save();
+        DiscordConnection::query()->firstOrFail()->forceFill([
+            'capabilities' => ['capabilities' => ['relay.proof.v2' => true], 'supported_queue_actions' => []],
+        ])->save();
+        $this->withHeaders($this->interactionHeaders(
+            'POST',
+            '/api/v1/discord/me/profile-sync/confirm',
+            $confirmBody,
+            'me',
+            'me',
+            interactionId: '823456789012345678',
+        ))->postJson('/api/v1/discord/me/profile-sync/confirm', $confirmPayload)
+            ->assertConflict()
+            ->assertJsonPath('error.code', 'profile_sync_unavailable');
+        $this->assertDatabaseCount('discord_queue', 0);
     }
 
     public function test_unlinked_actor_can_preview_and_confirm_an_application_with_durable_reconciliation(): void
@@ -781,6 +918,7 @@ class DiscordRelayV2ApiTest extends TestCase
                 ],
                 'supported_queue_actions' => [
                     ApplicationDiscordReconciliationService::ACTION,
+                    DiscordMemberProfileSyncService::ACTION,
                 ],
             ],
             'v1_reader_enabled' => true,
