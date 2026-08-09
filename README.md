@@ -84,6 +84,10 @@ Routed tenant events are a separate, disabled-by-default hosted transport. Manag
 
 ## Production Quick Start
 
+Managed hosted releases build the repository's [`Dockerfile`](Dockerfile) once and deploy the same digest for every service role. Every build must supply `NEXUS_APPLICATION_VERSION` (1–64 release-safe characters) and `NEXUS_COMMIT_SHA` (the exact lowercase 40-character Git commit); the build fails when either identity is absent or invalid. The image accepts exactly one of `web`, `queue`, `scheduler`, `migrator`, `bootstrap`, or `event-consumer`; it does not pass arbitrary commands through to a shell. Composer dependencies and Vite assets are built in isolated stages, the final PHP 8.3/Apache runtime runs as `www-data`, and the image embeds OCI build labels plus a deterministic CycloneDX runtime dependency inventory at `/usr/share/nexus/sbom/nexus-ams.cdx.json`, including the pinned base image, Debian packages, PHP extensions, production Composer packages, and compiled frontend packages.
+
+The deployment template should use a read-only root filesystem, drop all Linux capabilities, prevent privilege escalation, and mount writable paths for `/var/www/html/storage`, `/var/www/html/bootstrap/cache`, and `/tmp` with UID/GID 33 ownership. Queue workers finish their active Laravel job after `SIGTERM`; the web supervisor translates `SIGTERM` into Apache's graceful-stop signal. Set the orchestrator stop grace period to at least 960 seconds so the current 900-second hosted jobs can drain before a forced stop. Release ID and image digest remain runtime-supplied values because an image cannot safely self-reference its final digest.
+
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.
 
 Interactive install:

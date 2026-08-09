@@ -159,3 +159,28 @@ jobs:
         run: npm run test:browser
         env:
           PLAYWRIGHT_PHP_COMMAND: php
+
+  production-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pcntl, posix
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Verify static production image contract
+        run: php artisan test --compact tests/Unit/ProductionImageContractTest.php
+
+      - name: Build and exercise the production image
+        run: php artisan test --compact tests/Integration/ProductionImageTest.php
+        env:
+          NEXUS_PRODUCTION_IMAGE_TEST: '1'
