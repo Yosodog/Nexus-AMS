@@ -233,6 +233,81 @@
         </section>
     @endif
 
+    @if ($dashboard['daily_resource_totals'] !== [])
+        <section aria-labelledby="resource-trends-heading" class="mb-8 grid gap-4">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 id="resource-trends-heading" class="text-lg font-semibold">Resource trends</h2>
+                    <p class="text-sm nexus-text-muted">Daily tax intake across the same 30-day period as the summary above.</p>
+                </div>
+                <span class="badge badge-outline">30 calendar days</span>
+            </div>
+
+            <div class="grid gap-4 xl:grid-cols-2">
+                @foreach ($dashboard['daily_resource_totals'] as $resource => $dailyTotals)
+                    <article class="rounded-lg border border-base-300 bg-base-100 p-4">
+                        <div>
+                            <h3 class="font-semibold">{{ $resource === 'money' ? 'Money' : ucfirst($resource) }} collected</h3>
+                            <p class="text-sm nexus-text-muted">Daily total received through alliance taxes.</p>
+                        </div>
+                        <div class="mt-4 h-72 min-w-0">
+                            <canvas
+                                id="tax-chart-{{ $resource }}"
+                                class="h-full w-full"
+                                aria-label="{{ $resource === 'money' ? 'Money' : ucfirst($resource) }} collected by day"
+                            ></canvas>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+
+        <section aria-labelledby="daily-tax-values-heading" class="mb-6 grid gap-4">
+            <div>
+                <h2 id="daily-tax-values-heading" class="text-lg font-semibold">Daily tax values</h2>
+                <p class="text-sm nexus-text-muted">Exact daily totals behind each chart, including zero-collection days.</p>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($dashboard['daily_resource_totals'] as $resource => $dailyTotals)
+                    <article class="overflow-hidden rounded-lg border border-base-300 bg-base-100">
+                        <div class="border-b border-base-300 px-4 py-3">
+                            <h3 class="font-semibold">{{ $resource === 'money' ? 'Money' : ucfirst($resource) }}</h3>
+                            <p class="text-xs nexus-text-muted">30-day daily values</p>
+                        </div>
+                        <div class="max-h-72 overflow-auto">
+                            <table class="table table-sm table-zebra" data-sortable="false">
+                                <caption class="sr-only">
+                                    Daily {{ $resource === 'money' ? 'money' : $resource }} tax values
+                                </caption>
+                                <thead class="sticky top-0 z-10 bg-base-100">
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col" class="text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($dailyTotals as $dailyTotal)
+                                        <tr>
+                                            <td>
+                                                <time datetime="{{ $dailyTotal['day'] }}">
+                                                    {{ Illuminate\Support\Carbon::parse($dailyTotal['day'])->format('M j, Y') }}
+                                                </time>
+                                            </td>
+                                            <td class="text-right font-mono tabular-nums">
+                                                {{ $resource === 'money' ? '$' : '' }}{{ number_format($dailyTotal['total'], 2) }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @unless ($ledgerUrl)
         <div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3 text-sm" role="note">
             <p class="font-medium">Need transaction-level detail?</p>
@@ -242,3 +317,56 @@
         </div>
     @endunless
 @endsection
+
+@push('scripts')
+    <x-chart-js />
+    <script>
+        (() => {
+            const resourceSeries = @json($dashboard['daily_resource_totals']);
+            const seriesColors = ['primary', 'secondary', 'success', 'info', 'warning', 'error'];
+
+            Object.entries(resourceSeries).forEach(([resource, dailyTotals], index) => {
+                const canvas = document.getElementById(`tax-chart-${resource}`);
+
+                if (!canvas) {
+                    return;
+                }
+
+                new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: dailyTotals.map((entry) => entry.day),
+                        datasets: [{
+                            label: resource === 'money' ? 'Money' : resource.charAt(0).toUpperCase() + resource.slice(1),
+                            nexusColor: seriesColors[index % seriesColors.length],
+                            data: dailyTotals.map((entry) => Number(entry.total)),
+                            fill: false,
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (value) => resource === 'money'
+                                        ? `$${Number(value).toLocaleString()}`
+                                        : Number(value).toLocaleString(),
+                                },
+                            },
+                        },
+                    },
+                });
+            });
+        })();
+    </script>
+@endpush

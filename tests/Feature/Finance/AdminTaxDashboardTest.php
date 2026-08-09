@@ -64,6 +64,19 @@ class AdminTaxDashboardTest extends TestCase
         $this->assertSame(2, $dashboard['period']['record_count']);
         $this->assertSame(10.0, $dashboard['period']['average_daily_money']);
         $this->assertSame(100.0, $dashboard['period']['resource_totals']['coal']);
+        $this->assertCount(30, $dashboard['daily_resource_totals']['money']);
+        $this->assertSame(
+            ['day' => '2026-07-08', 'total' => 120.0],
+            $dashboard['daily_resource_totals']['money'][0],
+        );
+        $this->assertSame(
+            ['day' => '2026-08-06', 'total' => 180.0],
+            $dashboard['daily_resource_totals']['money'][29],
+        );
+        $this->assertSame(
+            ['day' => '2026-07-09', 'total' => 0.0],
+            $dashboard['daily_resource_totals']['coal'][1],
+        );
         $this->assertSame(150.0, $dashboard['trend']['previous_money']);
         $this->assertSame(100.0, $dashboard['trend']['percent_change']);
         $this->assertSame($dashboard['period']['total_money'], $ledgerTotals['income']);
@@ -93,9 +106,10 @@ class AdminTaxDashboardTest extends TestCase
             ->assertSeeText('No collection exceptions are active.')
             ->assertSeeText('Current resource intake')
             ->assertSee('href="'.e($ledgerUrl).'"', false)
-            ->assertDontSee('<canvas', false)
-            ->assertDontSeeText('Resource Trends (30 Days)')
-            ->assertDontSeeText('Daily Totals')
+            ->assertSee('id="tax-chart-money"', false)
+            ->assertSeeText('Resource trends')
+            ->assertSeeText('Daily tax values')
+            ->assertSeeText('Jul 8, 2026')
             ->assertDontSeeText('Top Resource');
 
         $this->actingAs($admin)

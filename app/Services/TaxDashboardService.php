@@ -51,6 +51,10 @@ class TaxDashboardService
      *             occurred_at: Carbon|null
      *         }>
      *     },
+     *     daily_resource_totals: array<string, array<int, array{
+     *         day: string,
+     *         total: float
+     *     }>>,
      *     ledger_filters: array{
      *         from: string,
      *         to: string,
@@ -88,6 +92,9 @@ class TaxDashboardService
                 'direction' => $this->trendDirection($period['total_money'], $previousMoney),
             ],
             'freshness' => $this->freshness($now),
+            'daily_resource_totals' => $period['record_count'] > 0
+                ? $this->dailyResourceTotals($periodStartsAt, $periodEndsAt)
+                : [],
             'ledger_filters' => [
                 'from' => $periodStartsAt->toDateString(),
                 'to' => $periodEndsAt->toDateString(),
@@ -95,6 +102,39 @@ class TaxDashboardService
                 'categories' => ['tax'],
             ],
         ];
+    }
+
+    /**
+     * @return array<string, array<int, array{day: string, total: float}>>
+     */
+    private function dailyResourceTotals(Carbon $startsAt, Carbon $endsAt): array
+    {
+        $resources = PWHelperService::resources();
+        $aggregateColumns = collect($resources)
+            ->map(static fn (string $resource): string => "SUM(`{$resource}`) as `{$resource}`")
+            ->implode(', ');
+
+        $totalsByDay = Taxes::query()
+            ->whereBetween('date', [$startsAt, $endsAt])
+            ->select('day')
+            ->selectRaw($aggregateColumns)
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy(static fn (Taxes $taxes): string => Carbon::parse($taxes->day)->toDateString());
+        $dates = collect(range(0, self::PERIOD_DAYS - 1))
+            ->map(static fn (int $offset): string => $startsAt->copy()->addDays($offset)->toDateString());
+
+        return collect($resources)
+            ->mapWithKeys(static fn (string $resource): array => [
+                $resource => $dates
+                    ->map(static fn (string $date): array => [
+                        'day' => $date,
+                        'total' => (float) ($totalsByDay->get($date)?->{$resource} ?? 0),
+                    ])
+                    ->all(),
+            ])
+            ->all();
     }
 
     /**
