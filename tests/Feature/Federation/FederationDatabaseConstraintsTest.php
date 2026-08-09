@@ -20,10 +20,12 @@ use App\Models\FederationPublicationVersion;
 use App\Models\FederationReceivedResource;
 use App\Models\FederationReceivedVersion;
 use Closure;
+use Illuminate\Database\MySqlConnection;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use PDO;
 use Tests\TestCase;
 
 class FederationDatabaseConstraintsTest extends TestCase
@@ -327,6 +329,49 @@ class FederationDatabaseConstraintsTest extends TestCase
 
         $this->assertContains('fed_inbox_sender_message_unique', $indexNames);
         $this->assertContains('fed_inbox_sender_nonce_unique', $indexNames);
+    }
+
+    public function test_federation_migration_foreign_key_names_fit_mysql_identifier_limit(): void
+    {
+        $connection = new MySqlConnection(new PDO('sqlite::memory:'), 'testing');
+        $originalSchema = Schema::getFacadeRoot();
+        Schema::swap($connection->getSchemaBuilder());
+        $queries = [];
+
+        try {
+            $migrationFiles = glob(database_path('migrations/*federation*.php')) ?: [];
+
+            foreach ($migrationFiles as $migrationFile) {
+                $migration = require $migrationFile;
+                $queries = [
+                    ...$queries,
+                    ...$connection->pretend(static fn (): mixed => $migration->up()),
+                ];
+            }
+        } finally {
+            Schema::swap($originalSchema);
+        }
+
+        $constraintNames = [];
+
+        foreach ($queries as $query) {
+            if (preg_match('/add constraint `([^`]+)`/i', (string) $query['query'], $matches) === 1) {
+                $constraintNames[] = $matches[1];
+            }
+        }
+
+        $this->assertNotEmpty($constraintNames);
+        $this->assertContains('fed_pub_version_publication_fk', $constraintNames);
+        $this->assertContains('fed_pub_delivery_version_fk', $constraintNames);
+        $this->assertContains('fed_received_version_resource_fk', $constraintNames);
+
+        foreach ($constraintNames as $constraintName) {
+            $this->assertLessThanOrEqual(
+                64,
+                strlen($constraintName),
+                "MySQL foreign key identifier [{$constraintName}] exceeds 64 characters."
+            );
+        }
     }
 
     private function assertConstraintViolation(Closure $operation): void

@@ -31,7 +31,9 @@ return new class extends Migration
 
         Schema::create('federation_publication_versions', function (Blueprint $table): void {
             $table->ulid('id')->primary();
-            $table->foreignUlid('federation_publication_id')->constrained('federation_publications')->cascadeOnDelete();
+            $table->foreignUlid('federation_publication_id')
+                ->constrained('federation_publications', indexName: 'fed_pub_version_publication_fk')
+                ->cascadeOnDelete();
             $table->unsignedInteger('version');
             $table->unsignedBigInteger('revision');
             $table->unsignedInteger('source_generation');
@@ -53,7 +55,8 @@ return new class extends Migration
         Schema::create('federation_publication_deliveries', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('federation_publication_version_id')
-                ->constrained('federation_publication_versions')->cascadeOnDelete();
+                ->constrained('federation_publication_versions', indexName: 'fed_pub_delivery_version_fk')
+                ->cascadeOnDelete();
             $table->foreignUlid('federation_link_id')->constrained('federation_links')->restrictOnDelete();
             $table->ulid('recipient_installation_id');
             $table->string('state', 32)->default('pending');
@@ -101,7 +104,8 @@ return new class extends Migration
         Schema::create('federation_received_versions', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('federation_received_resource_id')
-                ->constrained('federation_received_resources')->cascadeOnDelete();
+                ->constrained('federation_received_resources', indexName: 'fed_received_version_resource_fk')
+                ->cascadeOnDelete();
             $table->ulid('source_installation_id');
             $table->ulid('source_publication_id');
             $table->ulid('source_version_id');
