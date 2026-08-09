@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplication
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
+use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
 use App\Http\Controllers\API\Discord\WarCounterController as DiscordWarCounterController;
 use App\Http\Controllers\API\DiscordQueueController;
 use App\Http\Controllers\API\DiscordVerificationController;
@@ -80,4 +81,13 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             Route::post('/withdrawals/{intent}/cancel', [DiscordFinanceController::class, 'cancelWithdrawal']);
         });
     });
+
+    Route::prefix('staff')
+        ->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])
+        ->group(function (): void {
+            Route::get('/work-items', [DiscordOperationsWorkItemController::class, 'index'])
+                ->name('api.discord.staff.work-items.index');
+            Route::get('/work-items/{type}/{id}', [DiscordOperationsWorkItemController::class, 'show'])
+                ->name('api.discord.staff.work-items.show');
+        });
 });
