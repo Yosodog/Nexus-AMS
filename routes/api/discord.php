@@ -7,6 +7,7 @@ use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceControll
 use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberContextController;
 use App\Http\Controllers\API\Discord\MemberProfileSyncController as DiscordMemberProfileSyncController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
+use App\Http\Controllers\API\Discord\MilcomProjectionController as DiscordMilcomProjectionController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
 use App\Http\Controllers\API\Discord\OffshoreSweepIntentController as DiscordOffshoreSweepIntentController;
 use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
@@ -124,6 +125,20 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             VerifyDiscordInteraction::class,
             EnsureDiscordInteractionCommand::class.':milcom.objectives.attach-room',
         ]);
+    Route::prefix('milcom')
+        ->middleware([
+            RequireMilcomV2::class,
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+        ])
+        ->group(function (): void {
+            Route::get('/assignments', [DiscordMilcomProjectionController::class, 'assignments'])
+                ->name('api.discord.milcom.assignments.index');
+            Route::get('/readiness', [DiscordMilcomProjectionController::class, 'readiness'])
+                ->name('api.discord.milcom.readiness.show');
+            Route::get('/war-rooms/{objective}', [DiscordMilcomProjectionController::class, 'warRoom'])
+                ->name('api.discord.milcom.war-rooms.show');
+        });
     Route::post('/offshores/sweep-primary', [DiscordOffshoreController::class, 'sweepPrimary'])
         ->middleware([
             VerifyDiscordInteraction::class,

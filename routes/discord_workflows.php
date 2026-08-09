@@ -28,6 +28,9 @@ Route::middleware([ValidateDiscordBotAPI::class, VerifyDiscordInteraction::class
         Route::get('/applications', [OperationsController::class, 'applications']);
         Route::get('/audits', [DiscordAuditController::class, 'index']);
         Route::get('/alerts', [DiscordAlertSubscriptionController::class, 'index']);
+        Route::get('/alerts/settings', [DiscordAlertSubscriptionController::class, 'settings']);
+        Route::get('/alerts/activity', [DiscordAlertSubscriptionController::class, 'activity']);
+        Route::get('/alerts/deliveries/{alertDelivery}', [DiscordAlertSubscriptionController::class, 'delivery']);
         Route::get('/blockade-relief', [DiscordBlockadeReliefController::class, 'index']);
         Route::get('/blockade-relief/available', [DiscordBlockadeReliefController::class, 'available']);
 
@@ -48,6 +51,11 @@ Route::middleware([ValidateDiscordBotAPI::class, VerifyDiscordInteraction::class
             Route::post('/audits/{auditResult}/acknowledge', [DiscordAuditController::class, 'acknowledge']);
             Route::post('/audits/{auditResult}/snooze', [DiscordAuditController::class, 'snooze']);
             Route::post('/alerts', [DiscordAlertSubscriptionController::class, 'store']);
+            Route::put('/alerts/settings', [DiscordAlertSubscriptionController::class, 'updateSettings']);
+            Route::patch('/alerts/activity/{alertDelivery}/read', [DiscordAlertSubscriptionController::class, 'markActivityRead']);
+            Route::post('/alerts/preview', [DiscordAlertSubscriptionController::class, 'preview']);
+            Route::post('/alerts/test', [DiscordAlertSubscriptionController::class, 'testDraft']);
+            Route::put('/alerts/{alertSubscription}', [DiscordAlertSubscriptionController::class, 'update']);
             Route::patch('/alerts/{alertSubscription}/status', [DiscordAlertSubscriptionController::class, 'updateStatus']);
             Route::post('/alerts/{alertSubscription}/test', [DiscordAlertSubscriptionController::class, 'test']);
             Route::delete('/alerts/{alertSubscription}', [DiscordAlertSubscriptionController::class, 'destroy']);

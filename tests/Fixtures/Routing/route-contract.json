@@ -1335,6 +1335,45 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/alerts/settings",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@settings",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/alerts/activity",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@activity",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/alerts/deliveries/{alertDelivery}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@delivery",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/discord/me/blockade-relief",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\BlockadeReliefController@index",
@@ -1574,6 +1613,76 @@
         "uri": "api/v1/discord/me/alerts",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@store",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "api/v1/discord/me/alerts/settings",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@updateSettings",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PATCH",
+        "uri": "api/v1/discord/me/alerts/activity/{alertDelivery}/read",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@markActivityRead",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/alerts/preview",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/alerts/test",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@testDraft",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "api/v1/discord/me/alerts/{alertSubscription}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertSubscriptionController@update",
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
@@ -2442,6 +2551,48 @@
             "App\\Http\\Middleware\\RequireMilcomV2",
             "App\\Http\\Middleware\\VerifyDiscordInteraction",
             "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:milcom.objectives.attach-room"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/milcom/assignments",
+        "name": "api.discord.milcom.assignments.index",
+        "action": "App\\Http\\Controllers\\API\\Discord\\MilcomProjectionController@assignments",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/milcom/readiness",
+        "name": "api.discord.milcom.readiness.show",
+        "action": "App\\Http\\Controllers\\API\\Discord\\MilcomProjectionController@readiness",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/milcom/war-rooms/{objective}",
+        "name": "api.discord.milcom.war-rooms.show",
+        "action": "App\\Http\\Controllers\\API\\Discord\\MilcomProjectionController@warRoom",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
         ]
     },
     {
@@ -3766,6 +3917,48 @@
         "uri": "user/alerts",
         "name": "user.alerts.store",
         "action": "App\\Http\\Controllers\\AlertSubscriptionController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "user/alerts/settings",
+        "name": "user.alerts.settings.update",
+        "action": "App\\Http\\Controllers\\AlertSubscriptionController@updateSettings",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PATCH",
+        "uri": "user/alerts/activity/{alertDelivery}/read",
+        "name": "user.alerts.activity.read",
+        "action": "App\\Http\\Controllers\\AlertSubscriptionController@markActivityRead",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "user/alerts/{alertSubscription}",
+        "name": "user.alerts.update",
+        "action": "App\\Http\\Controllers\\AlertSubscriptionController@update",
         "middleware": [
             "web",
             "Illuminate\\Auth\\Middleware\\Authenticate",

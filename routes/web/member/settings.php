@@ -38,6 +38,12 @@ Route::get('/user/discord-bot-guide', DiscordBotGuideController::class)->name('u
 // Custom alerts and watchlists
 Route::get('/user/alerts', [AlertSubscriptionController::class, 'index'])->name('user.alerts.index');
 Route::post('/user/alerts', [AlertSubscriptionController::class, 'store'])->name('user.alerts.store');
+Route::put('/user/alerts/settings', [AlertSubscriptionController::class, 'updateSettings'])
+    ->name('user.alerts.settings.update');
+Route::patch('/user/alerts/activity/{alertDelivery}/read', [AlertSubscriptionController::class, 'markActivityRead'])
+    ->name('user.alerts.activity.read');
+Route::put('/user/alerts/{alertSubscription}', [AlertSubscriptionController::class, 'update'])
+    ->name('user.alerts.update');
 Route::patch('/user/alerts/{alertSubscription}/status', [AlertSubscriptionController::class, 'updateStatus'])
     ->name('user.alerts.status');
 Route::post('/user/alerts/{alertSubscription}/test', [AlertSubscriptionController::class, 'test'])
