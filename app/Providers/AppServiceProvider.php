@@ -16,8 +16,6 @@ use App\Http\Controllers\Auth\PasswordResetLinkController as AppPasswordResetLin
 use App\Logs\CronLog;
 use App\Logs\SubLog;
 use App\Models\Application;
-use App\Models\AuditResult;
-use App\Models\AuditResultEvent;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
 use App\Models\FederationCoalitionInvitation;
@@ -46,7 +44,6 @@ use App\Services\PWMessageService;
 use App\Services\SettingService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
-use App\Services\StaffWorkQueue\Sources\AuditRemediationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\BlockadeReliefWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\CityGrantWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\FederationWorkQueueSource;
@@ -100,7 +97,6 @@ class AppServiceProvider extends ServiceProvider
             $app->make(WarAidWorkQueueSource::class),
             $app->make(RebuildingWorkQueueSource::class),
             $app->make(BlockadeReliefWorkQueueSource::class),
-            $app->make(AuditRemediationWorkQueueSource::class),
             $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::LINK_APPROVALS]),
             $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::COALITION_WORKFLOWS]),
             $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::RECEIVED_REVIEWS]),
@@ -284,8 +280,6 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ([
             Application::class,
-            AuditResult::class,
-            AuditResultEvent::class,
             BlockadeReliefRequest::class,
             CityGrantRequest::class,
             FederationCoalitionInvitation::class,

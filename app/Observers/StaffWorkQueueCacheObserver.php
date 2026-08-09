@@ -3,8 +3,6 @@
 namespace App\Observers;
 
 use App\Models\Application;
-use App\Models\AuditResult;
-use App\Models\AuditResultEvent;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
 use App\Models\FederationCoalitionInvitation;
@@ -74,7 +72,6 @@ class StaffWorkQueueCacheObserver implements ShouldHandleEventsAfterCommit
     {
         return match (true) {
             $model instanceof Application => ['applications'],
-            $model instanceof AuditResult, $model instanceof AuditResultEvent => ['audit_remediation'],
             $model instanceof BlockadeReliefRequest => ['blockade_relief'],
             $model instanceof CityGrantRequest => ['city_grants'],
             $model instanceof FederationCoalitionInvitation,

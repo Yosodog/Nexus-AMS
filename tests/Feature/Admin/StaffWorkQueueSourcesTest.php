@@ -178,12 +178,14 @@ class StaffWorkQueueSourcesTest extends TestCase
             'war_aid:'.$warAid->id,
             'rebuilding:'.$rebuilding->id,
             'blockade_relief:'.$blockade->id,
-            'audit_remediation:'.$audit->id,
         ];
 
         $this->assertTrue($snapshot['complete'], json_encode($snapshot['failures'], JSON_THROW_ON_ERROR));
         $this->assertLessThanOrEqual(35, $projectionQueries);
         $this->assertEqualsCanonicalizing($expectedKeys, $items->keys()->all());
+        $this->assertArrayNotHasKey('audit_remediation', $snapshot['types']);
+        $this->assertArrayNotHasKey('audit_remediation', $snapshot['counts']);
+        $this->assertFalse($items->has('audit_remediation:'.$audit->id));
         $this->assertSame(route('admin.applications.show', $application), $items['applications:'.$application->id]['url']);
         $this->assertSame(route('admin.loans.view', ['Loan' => $loan->id]), $items['loans:'.$loan->id]['url']);
         $this->assertStringStartsWith(route('admin.accounts.view', $sourceAccount), $items['withdrawals:'.$withdrawal->id]['url']);
@@ -194,10 +196,6 @@ class StaffWorkQueueSourcesTest extends TestCase
         $this->assertStringStartsWith(route('admin.war-aid'), $items['war_aid:'.$warAid->id]['url']);
         $this->assertStringStartsWith(route('admin.rebuilding.index'), $items['rebuilding:'.$rebuilding->id]['url']);
         $this->assertStringStartsWith(route('defense.blockade-relief'), $items['blockade_relief:'.$blockade->id]['url']);
-        $this->assertStringStartsWith(
-            route('admin.audits.rules.violations', $auditRule),
-            $items['audit_remediation:'.$audit->id]['url'],
-        );
         $this->assertSame('nation:'.$recipient->id, $items['member_transfers:'.$memberTransfer->id]['owner_key']);
         $this->assertSame('nation:'.$recipient->id, $items['blockade_relief:'.$blockade->id]['owner_key']);
 
