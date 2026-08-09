@@ -24,6 +24,7 @@ class DiscordActionIntent extends Model
     {
         return [
             'payload' => 'array',
+            'connection_generation' => 'integer',
             'expires_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'canceled_at' => 'datetime',

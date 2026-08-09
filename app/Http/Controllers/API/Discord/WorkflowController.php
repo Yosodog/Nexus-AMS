@@ -7,6 +7,7 @@ use App\Enums\LoanStatus;
 use App\Exceptions\CityGrantRequestException;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\Application;
 use App\Models\CityGrant;
 use App\Models\CityGrantRequest;
@@ -21,6 +22,7 @@ use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\CityCostService;
 use App\Services\CityGrantService;
+use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordLoanIntentService;
 use App\Services\Discord\DiscordWorkflowIntentService;
 use App\Services\Discord\DiscordWorkflowLinkService;
@@ -132,7 +134,7 @@ class WorkflowController extends Controller
         $intent = $intents->create($user, $this->discordAccount($request), $this->guildId($request), $this->interactionId($request), 'grant.application', [
             'grant_id' => $grant->id,
             'account_id' => (int) $data['account_id'],
-        ]);
+        ], $this->connection($request));
 
         return $this->discordData([
             'intent' => $this->intentPayload($intent),
@@ -155,6 +157,7 @@ class WorkflowController extends Controller
                 $actor->nation,
                 (int) $payload['account_id'],
             ),
+            $this->connection($request),
         );
 
         return $this->discordData($this->requestSummary('grant', $application), 201);
@@ -183,7 +186,7 @@ class WorkflowController extends Controller
             'city_grant_id' => $grant->id,
             'account_id' => (int) $data['account_id'],
             'city_number' => $grant->city_number,
-        ]);
+        ], $this->connection($request));
 
         return $this->discordData([
             'intent' => $this->intentPayload($intent),
@@ -202,12 +205,19 @@ class WorkflowController extends Controller
         $actor = $this->actor($request);
 
         try {
-            $cityRequest = $intents->consume($actor, $this->guildId($request), $data['intent_id'], 'city_grant.request', function (array $payload) use ($actor) {
-                $grant = CityGrant::query()->findOrFail($payload['city_grant_id']);
-                abort_unless((int) $grant->city_number === (int) $actor->nation->num_cities + 1, 409, 'The next city changed after preview.');
+            $cityRequest = $intents->consume(
+                $actor,
+                $this->guildId($request),
+                $data['intent_id'],
+                'city_grant.request',
+                function (array $payload) use ($actor) {
+                    $grant = CityGrant::query()->findOrFail($payload['city_grant_id']);
+                    abort_unless((int) $grant->city_number === (int) $actor->nation->num_cities + 1, 409, 'The next city changed after preview.');
 
-                return CityGrantService::createRequest($grant, $actor->nation, (int) $payload['account_id']);
-            });
+                    return CityGrantService::createRequest($grant, $actor->nation, (int) $payload['account_id']);
+                },
+                $this->connection($request),
+            );
         } catch (CityGrantRequestException $exception) {
             return $this->discordError(
                 'city_grant_'.$exception->reason->value,
@@ -308,7 +318,15 @@ class WorkflowController extends Controller
             return $this->discordError('account_not_owned', 'The selected account does not belong to this actor.', 403);
         }
 
-        $intent = $intents->create($actor, $this->discordAccount($request), $this->guildId($request), $this->interactionId($request), 'war_aid.request', $data);
+        $intent = $intents->create(
+            $actor,
+            $this->discordAccount($request),
+            $this->guildId($request),
+            $this->interactionId($request),
+            'war_aid.request',
+            $data,
+            $this->connection($request),
+        );
 
         return $this->discordData(['intent' => $this->intentPayload($intent)], 201);
     }
@@ -316,7 +334,13 @@ class WorkflowController extends Controller
     public function reviewWarAid(Request $request, DiscordWorkflowIntentService $intents): JsonResponse
     {
         $data = $request->validate(['intent_id' => ['required', 'string', 'size:64']]);
-        $intent = $intents->get($this->actor($request), $this->guildId($request), $data['intent_id'], 'war_aid.request');
+        $intent = $intents->get(
+            $this->actor($request),
+            $this->guildId($request),
+            $data['intent_id'],
+            'war_aid.request',
+            $this->connection($request),
+        );
 
         return $this->warAidIntentReview($intent);
     }
@@ -334,6 +358,7 @@ class WorkflowController extends Controller
             $data['intent_id'],
             'war_aid.request',
             fn (array $payload) => $service->submitAidRequest($actor->nation, $payload),
+            $this->connection($request),
         );
 
         return $this->discordData($this->requestSummary('war_aid', $aidRequest), 201);
@@ -477,12 +502,20 @@ class WorkflowController extends Controller
 
     private function guildId(Request $request): string
     {
-        return (string) $request->header('X-Discord-Guild-ID');
+        return $this->connection($request)->guildId;
     }
 
     private function interactionId(Request $request): string
     {
-        return (string) $request->header('X-Discord-Interaction-ID');
+        return (string) $request->attributes->get(VerifyDiscordInteraction::INTERACTION_ATTRIBUTE);
+    }
+
+    private function connection(Request $request): DiscordConnectionContext
+    {
+        $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
+        abort_unless($connection instanceof DiscordConnectionContext, 503, 'Discord connection context is missing.');
+
+        return $connection;
     }
 
     private function loanPayload(Loan $loan, LoanService $service): array
