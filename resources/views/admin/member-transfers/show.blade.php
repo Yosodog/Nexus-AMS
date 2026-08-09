@@ -19,7 +19,7 @@
             <h1 class="nexus-page-title">Transfer #{{ $memberTransfer->id }}</h1>
             <p class="nexus-page-summary">
                 Requested <x-time.display :value="$memberTransfer->created_at" :server-now="now()" label="Transfer requested" />.
-                This page is context only; acceptance and decline remain with the recipient workflow.
+                The recipient must accept or decline the transfer.
             </p>
         </div>
         <div class="nexus-page-header__actions">
@@ -33,25 +33,25 @@
     <div class="grid gap-5 lg:grid-cols-2">
         <section class="nexus-panel" aria-labelledby="transfer-parties-title">
             <div class="nexus-panel__header">
-                <h2 id="transfer-parties-title" class="nexus-section-title">Transfer parties</h2>
+                <h2 id="transfer-parties-title" class="nexus-section-title">Transfer details</h2>
             </div>
             <dl class="grid gap-4 px-5 pb-5 sm:grid-cols-2">
                 <div>
-                    <dt class="text-sm font-medium text-base-content/60">From</dt>
+                    <dt class="text-sm font-medium text-base-content/70">From</dt>
                     <dd class="mt-1 font-semibold">{{ $memberTransfer->fromNation?->leader_name ?? 'Nation #'.$memberTransfer->from_nation_id }}</dd>
-                    <dd class="text-sm text-base-content/60">{{ $memberTransfer->fromAccount?->name ?? 'Account #'.$memberTransfer->from_account_id }}</dd>
+                    <dd class="text-sm text-base-content/70">{{ $memberTransfer->fromAccount?->name ?? 'Account #'.$memberTransfer->from_account_id }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-base-content/60">To</dt>
+                    <dt class="text-sm font-medium text-base-content/70">To</dt>
                     <dd class="mt-1 font-semibold">{{ $memberTransfer->toNation?->leader_name ?? 'Nation #'.$memberTransfer->to_nation_id }}</dd>
-                    <dd class="text-sm text-base-content/60">{{ $memberTransfer->toAccount?->name ?? 'Account #'.$memberTransfer->to_account_id }}</dd>
+                    <dd class="text-sm text-base-content/70">{{ $memberTransfer->toAccount?->name ?? 'Account #'.$memberTransfer->to_account_id }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-base-content/60">Requested by</dt>
+                    <dt class="text-sm font-medium text-base-content/70">Requested by</dt>
                     <dd class="mt-1">{{ $memberTransfer->createdBy?->name ?? 'User #'.$memberTransfer->created_by }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-base-content/60">Current owner</dt>
+                    <dt class="text-sm font-medium text-base-content/70">Current owner</dt>
                     <dd class="mt-1">{{ $memberTransfer->toNation?->leader_name ?? 'Nation #'.$memberTransfer->to_nation_id }}</dd>
                 </div>
             </dl>
@@ -59,7 +59,7 @@
 
         <section class="nexus-panel" aria-labelledby="transfer-vector-title">
             <div class="nexus-panel__header">
-                <h2 id="transfer-vector-title" class="nexus-section-title">Resource vector</h2>
+                <h2 id="transfer-vector-title" class="nexus-section-title">Resources</h2>
             </div>
             <div class="overflow-x-auto px-5 pb-5">
                 <table class="table table-sm">
@@ -90,8 +90,8 @@
         <section class="nexus-panel mt-5" aria-labelledby="transfer-recovery-title">
             <div class="nexus-panel__header">
                 <div>
-                    <h2 id="transfer-recovery-title" class="nexus-section-title">Administrative recovery</h2>
-                    <p class="nexus-body-muted mt-1">Cancel only when the transfer must be unwound; held resources return to the source account.</p>
+                    <h2 id="transfer-recovery-title" class="nexus-section-title">Cancel transfer</h2>
+                    <p class="nexus-body-muted mt-1">Cancel only if the transfer should not continue. Held resources will return to the source account.</p>
                 </div>
                 <form
                     method="POST"

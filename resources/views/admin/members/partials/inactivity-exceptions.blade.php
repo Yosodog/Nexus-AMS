@@ -10,10 +10,10 @@
             <div>
                 <h2 id="inactivity-exceptions-heading" class="text-lg font-semibold text-base-content">Leave and inactivity exceptions</h2>
                 <p class="mt-1 max-w-3xl text-sm nexus-text-muted">
-                    Time-bounded exceptions pause only the selected automations. Times are entered in {{ $sourceTimezone }} and stored in UTC.
+                    Set a start and end time, then choose which automatic actions to pause. Times are shown in {{ $sourceTimezone }}.
                 </p>
             </div>
-            <span class="badge badge-outline">{{ $memberInactivityExceptions->count() }} recorded</span>
+            <span class="badge badge-outline">{{ $memberInactivityExceptions->count() }} {{ str('exception')->plural($memberInactivityExceptions->count()) }} recorded</span>
         </div>
 
         <div class="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] xl:items-start">
@@ -59,11 +59,11 @@
 
                         <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                             <div class="sm:col-span-2">
-                                <dt class="font-medium text-base-content">Member-visible reason and effect</dt>
+                                <dt class="font-medium text-base-content">What the member sees</dt>
                                 <dd class="mt-1 text-base-content/75">{{ $exception->member_reason }}</dd>
                             </div>
                             <div class="sm:col-span-2">
-                                <dt class="font-medium text-base-content">Paused automations</dt>
+                                <dt class="font-medium text-base-content">Paused automatic actions</dt>
                                 <dd class="mt-2 flex flex-wrap gap-2">
                                     @foreach($exception->affected_automations as $automation)
                                         <span class="badge badge-outline badge-sm">{{ $automation->label() }}</span>
@@ -73,7 +73,7 @@
                             <div>
                                 <dt class="font-medium text-base-content">Approved</dt>
                                 <dd class="mt-1 nexus-text-muted">
-                                    {{ $exception->approver?->name ?? 'Former staff user' }}
+                                    {{ $exception->approver?->name ?? 'Former staff member' }}
                                     <span aria-hidden="true">&middot;</span>
                                     <x-time.display :value="$exception->approved_at" :server-now="now()" />
                                 </dd>
@@ -81,7 +81,7 @@
                             <div>
                                 <dt class="font-medium text-base-content">Last reviewed</dt>
                                 <dd class="mt-1 nexus-text-muted">
-                                    {{ $exception->lastReviewer?->name ?? 'Former staff user' }}
+                                    {{ $exception->lastReviewer?->name ?? 'Former staff member' }}
                                     <span aria-hidden="true">&middot;</span>
                                     <x-time.display :value="$exception->last_reviewed_at" :server-now="now()" />
                                 </dd>
@@ -109,8 +109,8 @@
                             <div class="mt-4 grid gap-3 lg:grid-cols-2">
                                 <details class="rounded-box border border-base-300 p-3">
                                     <summary class="cursor-pointer font-medium text-base-content">Review or extend</summary>
-                                    <p class="mt-2 text-xs nexus-text-muted">
-                                        Active exceptions cannot change their start, category, or source timezone and may only be extended.
+                                    <p class="mt-2 text-sm nexus-text-muted">
+                                        After an exception starts, you can extend its end time but cannot change when it started, its category, or its time zone.
                                     </p>
                                     <form method="POST" action="{{ route('admin.members.inactivity-exceptions.update', [$nation, $exception]) }}" class="mt-4 space-y-3">
                                         @csrf
@@ -138,7 +138,7 @@
                                         </div>
 
                                         <label class="form-control w-full">
-                                            <span class="label-text font-medium">Member-visible reason and effect</span>
+                                            <span class="label-text font-medium">What the member sees</span>
                                             <textarea name="member_reason" class="textarea textarea-bordered w-full" rows="3" required>{{ $exception->member_reason }}</textarea>
                                         </label>
                                         <label class="form-control w-full">
@@ -147,7 +147,7 @@
                                         </label>
 
                                         <fieldset>
-                                            <legend class="font-medium text-base-content">Paused automations</legend>
+                                            <legend class="font-medium text-base-content">Paused automatic actions</legend>
                                             <div class="mt-2 grid gap-2">
                                                 @foreach(\App\Enums\MemberInactivityAutomation::cases() as $automation)
                                                     <label class="flex items-start gap-2 text-sm">
@@ -158,20 +158,20 @@
                                             </div>
                                         </fieldset>
 
-                                        <button type="submit" class="btn btn-primary btn-sm">Save reviewed exception</button>
+                                        <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
                                     </form>
                                 </details>
 
                                 <details class="rounded-box border border-error/30 p-3">
-                                    <summary class="cursor-pointer font-medium text-error">Revoke early</summary>
+                                    <summary class="cursor-pointer font-medium text-error">End early</summary>
                                     <form method="POST" action="{{ route('admin.members.inactivity-exceptions.destroy', [$nation, $exception]) }}" class="mt-4 space-y-3">
                                         @csrf
                                         @method('DELETE')
                                         <label class="form-control w-full">
-                                            <span class="label-text font-medium">Staff revocation reason</span>
+                                            <span class="label-text font-medium">Reason for ending early</span>
                                             <textarea name="revocation_reason" class="textarea textarea-bordered w-full" rows="3" required></textarea>
                                         </label>
-                                        <button type="submit" class="btn btn-error btn-sm">Confirm revocation</button>
+                                        <button type="submit" class="btn btn-error btn-sm">End exception</button>
                                     </form>
                                 </details>
                             </div>
@@ -185,8 +185,8 @@
             </div>
 
             <div class="rounded-box border border-base-300 bg-base-100 p-4">
-                <h3 class="font-semibold text-base-content">Approve an exception</h3>
-                <p class="mt-1 text-sm nexus-text-muted">An end time is required. Adjacent windows are allowed; overlapping windows are not.</p>
+                <h3 class="font-semibold text-base-content">Add an exception</h3>
+                <p class="mt-1 text-sm nexus-text-muted">An end time is required. Back-to-back exceptions are allowed, but their dates cannot overlap.</p>
 
                 <x-form.error-summary
                     class="mt-4"
@@ -231,8 +231,8 @@
                     <x-form.textarea
                         id="exception-member-reason"
                         name="member_reason"
-                        label="Member-visible reason and practical effect"
-                        hint="Explain why the exception exists and what the member should expect. Do not include private evidence."
+                        label="What the member sees"
+                        hint="Explain why the exception exists and what the member should expect. Do not include confidential details."
                         rows="4"
                         required
                     />
@@ -240,14 +240,14 @@
                         id="exception-private-notes"
                         name="private_notes"
                         label="Private staff notes"
-                        hint="Visible only to staff with the dedicated exception-management permission."
+                        hint="Only staff who can manage inactivity exceptions can see these notes."
                         rows="4"
                         optional
                     />
 
                     <fieldset>
-                        <legend class="font-medium text-base-content">Automations to pause <span aria-hidden="true">*</span></legend>
-                        <p class="mt-1 text-xs nexus-text-muted">Unselected automations continue normally.</p>
+                        <legend class="font-medium text-base-content">Automatic actions to pause <span aria-hidden="true">*</span></legend>
+                        <p class="mt-1 text-sm nexus-text-muted">Actions you do not select will continue normally.</p>
                         <div class="mt-3 grid gap-2">
                             @foreach(\App\Enums\MemberInactivityAutomation::cases() as $automation)
                                 <label class="flex items-start gap-2 text-sm">
@@ -267,7 +267,7 @@
                         @enderror
                     </fieldset>
 
-                    <button type="submit" class="btn btn-primary w-full">Approve exception</button>
+                    <button type="submit" class="btn btn-primary w-full">Add exception</button>
                 </form>
             </div>
         </div>

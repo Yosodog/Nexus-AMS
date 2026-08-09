@@ -1,10 +1,10 @@
 <section class="nexus-panel mb-6" aria-labelledby="member-timeline-heading">
     <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,28rem)] lg:items-start">
         <div>
-            <p class="nexus-eyebrow">Member context</p>
-            <h2 id="member-timeline-heading" class="nexus-section-title">Member 360 timeline</h2>
+            <p class="nexus-eyebrow">Member activity</p>
+            <h2 id="member-timeline-heading" class="nexus-section-title">Member history</h2>
             <p class="mt-2 max-w-3xl text-sm nexus-text-muted">
-                A read-only projection of retained records you are authorized to view. Source modules remain the authoritative record.
+                Review recent account and alliance activity you can access.
             </p>
         </div>
 
@@ -12,7 +12,7 @@
             <input type="hidden" name="timeline_filter" value="1">
             <fieldset class="grid gap-2">
                 <legend class="text-sm font-semibold">Activity categories</legend>
-                <p id="member-timeline-filter-help" class="text-xs nexus-text-muted">Only categories permitted for your role are available.</p>
+                <p id="member-timeline-filter-help" class="text-sm nexus-text-muted">Only categories you can access are available.</p>
                 <div class="grid gap-2 sm:grid-cols-2">
                     @foreach($timeline->availableCategories as $category)
                         <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-base-300 px-3 py-2 text-sm">
@@ -25,7 +25,7 @@
                             >
                             <span>
                                 <span class="block font-medium">{{ $category->label() }}</span>
-                                <span class="block text-xs nexus-text-muted">{{ $category->description() }}</span>
+                                <span class="block text-sm nexus-text-muted">{{ $category->description() }}</span>
                             </span>
                         </label>
                     @endforeach
@@ -42,16 +42,16 @@
         <div class="mx-5 mb-5 rounded-lg border border-warning/40 bg-warning/10 p-4" role="status">
             <p class="font-semibold">Some activity is temporarily unavailable.</p>
             <p class="mt-1 text-sm">
-                {{ collect($timeline->unavailableCategories)->map(fn ($category) => $category->label())->join(', ') }} could not be loaded. Other retained sources are shown below.
+                We could not load {{ collect($timeline->unavailableCategories)->map(fn ($category) => $category->label())->join(', ') }}. Other activity is shown below.
             </p>
         </div>
     @endif
 
     @if($timeline->items->isEmpty())
         <div class="border-t border-base-300 px-5 py-8 text-center">
-            <p class="font-semibold">No retained activity matches this view.</p>
+            <p class="font-semibold">No activity matches these filters.</p>
             <p class="mt-1 text-sm nexus-text-muted">
-                Try another permitted category. Older source records may also have expired under their retention policy.
+                Try another category. Older records may no longer be available.
             </p>
         </div>
     @else
@@ -69,7 +69,7 @@
                         </p>
                         @if($item->sourceUrl !== null)
                             <a href="{{ $item->sourceUrl }}" class="mt-2 inline-flex text-sm font-semibold text-primary hover:underline">
-                                Open {{ $item->sourceLabel ?? 'source record' }}
+                                Open {{ $item->sourceLabel ?? 'record' }}
                             </a>
                         @endif
                     </div>
@@ -83,8 +83,8 @@
         </ol>
 
         @if($timeline->isTruncated)
-            <p class="border-t border-base-300 px-5 py-3 text-xs nexus-text-muted" role="note">
-                Showing the newest {{ $timeline->displayLimit }} retained records. Open a source module for older activity.
+            <p class="border-t border-base-300 px-5 py-3 text-sm nexus-text-muted" role="note">
+                Showing the newest {{ $timeline->displayLimit }} records. Open a linked record to review more details.
             </p>
         @endif
     @endif

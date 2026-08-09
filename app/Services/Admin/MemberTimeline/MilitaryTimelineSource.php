@@ -145,7 +145,7 @@ final class MilitaryTimelineSource implements MemberTimelineSource
             category: $this->category(),
             occurredAt: CarbonImmutable::instance($occurredAt),
             actorKind: 'system',
-            actorLabel: 'Milcom assignment projection',
+            actorLabel: 'Milcom',
             summary: "Milcom assignment {$presentation['summary']}.",
             statusLabel: $presentation['label'],
             statusIntent: $presentation['intent'],
@@ -172,7 +172,7 @@ final class MilitaryTimelineSource implements MemberTimelineSource
             category: $this->category(),
             occurredAt: CarbonImmutable::instance($event->occurred_at),
             actorKind: $actorKind,
-            actorLabel: $event->actor?->name ?? 'Milcom automation',
+            actorLabel: $event->actor?->name ?? 'Milcom',
             summary: $presentation['summary'],
             statusLabel: $presentation['label'],
             statusIntent: $presentation['intent'],
@@ -208,7 +208,7 @@ final class MilitaryTimelineSource implements MemberTimelineSource
             category: $this->category(),
             occurredAt: CarbonImmutable::instance($occurredAt),
             actorKind: 'system',
-            actorLabel: 'Milcom delivery service',
+            actorLabel: 'Assignment delivery',
             summary: "Assignment delivery via {$channel}.",
             statusLabel: $presentation['label'],
             statusIntent: $presentation['intent'],
@@ -258,12 +258,12 @@ final class MilitaryTimelineSource implements MemberTimelineSource
     private function eventPresentation(string $eventType): array
     {
         return match ($eventType) {
-            'assignment.engaged' => ['action' => 'engaged', 'summary' => 'Milcom assignment engagement recorded.', 'label' => 'Engaged', 'intent' => 'active', 'icon' => 'bolt'],
-            'assignment.completed' => ['action' => 'completed', 'summary' => 'Milcom assignment outcome completed.', 'label' => 'Completed', 'intent' => 'success', 'icon' => 'check-circle'],
+            'assignment.engaged' => ['action' => 'engaged', 'summary' => 'Milcom assignment marked engaged.', 'label' => 'Engaged', 'intent' => 'active', 'icon' => 'bolt'],
+            'assignment.completed' => ['action' => 'completed', 'summary' => 'Milcom assignment marked complete.', 'label' => 'Completed', 'intent' => 'success', 'icon' => 'check-circle'],
             'assignment.released' => ['action' => 'released', 'summary' => 'Milcom assignment released.', 'label' => 'Released', 'intent' => 'neutral', 'icon' => 'minus-circle'],
             'assignment.in_game_sent' => ['action' => 'in-game-sent', 'summary' => 'Milcom assignment delivered in game.', 'label' => 'Delivered', 'intent' => 'success', 'icon' => 'check-circle'],
             'assignment.manually_set' => ['action' => 'approved', 'summary' => 'Milcom assignment set by an officer.', 'label' => 'Assigned', 'intent' => 'active', 'icon' => 'pencil-square'],
-            default => ['action' => 'selection', 'summary' => 'Milcom assignment team selection updated.', 'label' => 'Updated', 'intent' => 'active', 'icon' => 'arrow-path'],
+            default => ['action' => 'selection', 'summary' => 'Milcom assignment team updated.', 'label' => 'Updated', 'intent' => 'active', 'icon' => 'arrow-path'],
         };
     }
 }

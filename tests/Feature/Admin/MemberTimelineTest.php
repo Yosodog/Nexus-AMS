@@ -59,7 +59,7 @@ class MemberTimelineTest extends TestCase
                 'timeline_categories' => ['applications'],
             ]))
             ->assertOk()
-            ->assertSee('Member 360 timeline')
+            ->assertSee('Member history')
             ->assertSee('value="applications"', false)
             ->assertSee('checked', false)
             ->assertSee("data-timeline-source=\"application:{$application->id}:submitted\"", false)
@@ -71,8 +71,8 @@ class MemberTimelineTest extends TestCase
                 'timeline_filter' => 1,
             ]))
             ->assertOk()
-            ->assertSee('No retained activity matches this view.')
-            ->assertSee('Older source records may also have expired under their retention policy.');
+            ->assertSee('No activity matches these filters.')
+            ->assertSee('Older records may no longer be available.');
     }
 
     public function test_high_value_sources_have_timeline_parity_without_unsafe_payloads(): void
@@ -454,8 +454,8 @@ class MemberTimelineTest extends TestCase
                 ]))
                 ->assertOk()
                 ->assertSee('Some activity is temporarily unavailable.')
-                ->assertSee('Audits could not be loaded.')
-                ->assertSee('Other retained sources are shown below.');
+                ->assertSee('We could not load Audits.')
+                ->assertSee('Other activity is shown below.');
         } finally {
             Schema::rename('audit_result_events_unavailable', 'audit_result_events');
         }

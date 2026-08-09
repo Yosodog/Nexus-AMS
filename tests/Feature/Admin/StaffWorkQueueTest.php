@@ -205,7 +205,7 @@ class StaffWorkQueueTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('View unified queue')
+            ->assertSee('View all pending work')
             ->assertSee('1 pending')
             ->assertSee(route('admin.work-queue.index'), false)
             ->assertSee('Work queue');

@@ -48,8 +48,8 @@
         <div class="nexus-page-header__copy">
             <h1 class="nexus-page-title">Operations overview</h1>
             <p class="nexus-page-summary">
-                Current alliance workload and readiness signals, limited to the areas you are authorized to review.
-                Snapshot updated
+                Current alliance workload and readiness checks for the areas you can review.
+                Updated
                 <time
                     datetime="{{ $lastRefreshedAt->toIso8601String() }}"
                     class="tooltip tooltip-bottom cursor-help"
@@ -68,11 +68,11 @@
                 'nexus-status--warning' => $snapshotIsStale,
                 'nexus-status--success' => ! $snapshotIsStale,
             ])>
-                {{ $snapshotIsStale ? 'Refresh due' : $cacheTtlMinutes.' min cache' }}
+                {{ $snapshotIsStale ? 'Update available' : 'Updated within '.$cacheTtlMinutes.' min' }}
             </span>
             <a href="{{ route('admin.dashboard', ['refresh' => 1]) }}" class="btn btn-outline btn-sm">
                 <x-icon name="o-arrow-path" class="size-4" aria-hidden="true" />
-                Refresh snapshot
+                Refresh data
             </a>
         </div>
     </header>
@@ -81,12 +81,12 @@
         <section class="nexus-panel nexus-panel--raised" aria-labelledby="decision-queue-title">
             <div class="nexus-panel__header">
                 <div>
-                    <h2 id="decision-queue-title" class="nexus-section-title">Decision queue</h2>
-                    <p class="nexus-body-muted mt-1">Authorized workspaces and readiness signals surfaced by the cached snapshot.</p>
+                    <h2 id="decision-queue-title" class="nexus-section-title">Pending decisions</h2>
+                    <p class="nexus-body-muted mt-1">Review requests and readiness checks you can access.</p>
                 </div>
                 @if ($canUseWorkQueue)
                     <a href="{{ route('admin.work-queue.index') }}" class="btn btn-primary btn-sm">
-                        View unified queue
+                        View all pending work
                         @if ($workQueueTotal > 0)
                             <span class="badge badge-sm">{{ $formatNumber($workQueueTotal) }}</span>
                         @endif
@@ -100,8 +100,8 @@
                 <div class="alert alert-warning mx-5 mb-4" role="status">
                     <x-icon name="o-exclamation-triangle" class="size-5" aria-hidden="true" />
                     <span>
-                        Unified queue counts are incomplete because
-                        {{ collect($workQueueUnavailable)->pluck('label')->join(', ', ' and ') }} could not be loaded.
+                        Some totals are unavailable because we could not check
+                        {{ collect($workQueueUnavailable)->pluck('label')->join(', ', ' and ') }}.
                     </span>
                 </div>
             @endif
@@ -361,7 +361,7 @@
                         <dt class="nexus-stat-label">Estimated resource value</dt>
                         <dd class="nexus-stat-value mt-1">{{ $formatMoney($resourceTotalValue) }}</dd>
                         <p class="nexus-stat-helper mt-1">
-                            {{ $latestTradePriceDate ? 'Market prices from '.$latestTradePriceDate : 'Market price snapshot unavailable' }}
+                            {{ $latestTradePriceDate ? 'Market prices from '.$latestTradePriceDate : 'Market prices unavailable' }}
                         </p>
                     </div>
                 </dl>
@@ -369,7 +369,7 @@
                 @if (count($resourceValueBreakdown) > 0)
                     <div class="min-w-0">
                         <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3">
-                            <h3 class="font-semibold">Resource exposure</h3>
+                            <h3 class="font-semibold">Resources by value</h3>
                             <span class="text-xs nexus-text-muted">Latest nation sign-ins</span>
                         </div>
                         <div class="overflow-x-auto">
@@ -389,7 +389,7 @@
                                         @endphp
                                         <tr>
                                             <td class="font-medium capitalize">{{ str_replace('_', ' ', $resourceKey) }}</td>
-                                            <td class="text-right">{{ $units !== null ? $formatNumber($units, $units >= 1000 ? 0 : 2) : '—' }}</td>
+                                            <td class="text-right">{{ $units !== null ? $formatNumber($units, $units >= 1000 ? 0 : 2) : 'Unavailable' }}</td>
                                             <td class="text-right font-medium">{{ $formatMoney($value) }}</td>
                                         </tr>
                                     @endforeach
@@ -592,9 +592,9 @@
             <div class="nexus-empty-state">
                 <x-icon name="o-shield-check" class="size-8 nexus-text-muted" aria-hidden="true" />
                 <div>
-                    <h2 id="restricted-overview-title" class="text-lg font-semibold">No operational summary available</h2>
-                    <p class="mt-1 text-sm text-base-content/65">
-                        This dashboard only exposes telemetry covered by your assigned permissions. Use the navigation to continue to an authorized workspace.
+                    <h2 id="restricted-overview-title" class="text-lg font-semibold">No summary available</h2>
+                    <p class="mt-1 text-sm text-base-content/70">
+                        This dashboard only shows information you have permission to view. Use the navigation to open another section.
                     </p>
                 </div>
             </div>

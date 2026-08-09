@@ -116,7 +116,7 @@ final class AuditTimelineSource implements MemberTimelineSource
             occurredAt: CarbonImmutable::instance($result->first_detected_at ?? $result->created_at),
             actorKind: 'system',
             actorLabel: 'Audit evaluator',
-            summary: 'Retained audit finding is currently recorded.',
+            summary: 'Audit finding recorded.',
             statusLabel: $presentation['label'],
             statusIntent: $presentation['intent'],
             statusIcon: $presentation['icon'],
@@ -137,8 +137,8 @@ final class AuditTimelineSource implements MemberTimelineSource
             'waived' => ['summary' => 'Audit finding waiver recorded.', 'label' => 'Waived', 'intent' => 'warning', 'icon' => 'exclamation-triangle'],
             'rule_revised' => ['summary' => 'Audit finding reevaluated after a rule revision.', 'label' => 'Reevaluated', 'intent' => 'active', 'icon' => 'arrow-path'],
             'rule_disabled' => ['summary' => 'Audit finding closed after its rule was disabled.', 'label' => 'Closed', 'intent' => 'neutral', 'icon' => 'archive-box'],
-            'admin_updated' => ['summary' => 'Audit remediation schedule updated.', 'label' => 'Updated', 'intent' => 'active', 'icon' => 'pencil-square'],
-            default => ['summary' => 'Audit finding lifecycle updated.', 'label' => 'Updated', 'intent' => 'neutral', 'icon' => 'arrow-path'],
+            'admin_updated' => ['summary' => 'Audit follow-up date updated.', 'label' => 'Updated', 'intent' => 'active', 'icon' => 'pencil-square'],
+            default => ['summary' => 'Audit finding updated.', 'label' => 'Updated', 'intent' => 'neutral', 'icon' => 'arrow-path'],
         };
     }
 }

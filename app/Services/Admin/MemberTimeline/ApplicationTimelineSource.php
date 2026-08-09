@@ -81,7 +81,7 @@ final class ApplicationTimelineSource implements MemberTimelineSource
             occurredAt: CarbonImmutable::instance($decisionAt),
             actorKind: $application->status === ApplicationStatus::Cancelled ? 'system' : 'staff',
             actorLabel: $application->status === ApplicationStatus::Cancelled
-                ? 'Application workflow'
+                ? 'Application'
                 : 'Application review team',
             summary: "Membership application {$presentation['label']}.",
             statusLabel: $presentation['label'],
