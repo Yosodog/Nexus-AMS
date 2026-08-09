@@ -78,35 +78,35 @@ class AdminPresentationAuthorizationTest extends TestCase
         $this->actingAs($accountManager)
             ->get(route('admin.settings'))
             ->assertOk()
-            ->assertSee('Auto Withdraw')
-            ->assertDontSee('Account Inactivity Auto-Disable')
-            ->assertDontSee('Data Synchronization')
-            ->assertDontSee('Loan Payments')
-            ->assertDontSee('Grant Approvals');
+            ->assertSee('Automatic withdrawals')
+            ->assertDontSee('Automatic account disabling')
+            ->assertDontSee('Data synchronization')
+            ->assertDontSee('Loan payments')
+            ->assertDontSee('Grant approvals');
 
         $userManager = $this->createAdmin(['edit-users'], 930006);
 
         $this->actingAs($userManager)
             ->get(route('admin.settings'))
             ->assertOk()
-            ->assertSee('Account Inactivity Auto-Disable')
-            ->assertDontSee('Auto Withdraw');
+            ->assertSee('Automatic account disabling')
+            ->assertDontSee('Automatic withdrawals');
 
         $loanManager = $this->createAdmin(['manage-loans'], 930004);
 
         $this->actingAs($loanManager)
             ->get(route('admin.settings'))
             ->assertOk()
-            ->assertSee('Loan Payments')
-            ->assertDontSee('Pending Request Recovery');
+            ->assertSee('Loan payments')
+            ->assertDontSee('Stuck request recovery');
 
         $grantManager = $this->createAdmin(['manage-grants'], 930005);
 
         $this->actingAs($grantManager)
             ->get(route('admin.settings'))
             ->assertOk()
-            ->assertSee('Grant Approvals')
-            ->assertDontSee('Homepage Messaging');
+            ->assertSee('Grant approvals')
+            ->assertDontSee('Homepage messaging');
     }
 
     public function test_admin_without_settings_permissions_cannot_open_settings(): void
@@ -128,7 +128,7 @@ class AdminPresentationAuthorizationTest extends TestCase
             ->assertSee('Find a setting')
             ->assertSee('Lottery configuration')
             ->assertSee(route('admin.lottery.index').'#lottery-settings', false)
-            ->assertDontSee('Homepage Messaging')
+            ->assertDontSee('Homepage messaging')
             ->assertDontSee('Backups');
 
         Livewire::test(AppSidebar::class)
@@ -144,8 +144,8 @@ class AdminPresentationAuthorizationTest extends TestCase
             ->assertOk()
             ->assertSee('Settings in feature areas')
             ->assertSee('MFA requirements')
-            ->assertSee('Resource pricing &amp; purchase caps', false)
-            ->assertSee('Roles &amp; permissions', false)
+            ->assertSee('Resource pricing and purchase caps')
+            ->assertSee('Roles and permissions')
             ->assertSee('Audit rules');
     }
 

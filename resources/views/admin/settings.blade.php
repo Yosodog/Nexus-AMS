@@ -1,7 +1,7 @@
 @extends('admin.settings.layout')
 
-@section('settings-title', 'Admin Settings')
-@section('settings-subtitle', 'Find global controls and feature-owned configuration without loading unrelated settings domains.')
+@section('settings-title', 'Admin settings')
+@section('settings-subtitle', 'Find site-wide and feature settings without opening each section.')
 
 @section('settings-content')
     @php
@@ -38,7 +38,7 @@
         <div class="space-y-6">
             <div class="nexus-panel p-4 sm:p-5">
                 <label for="settings-search" class="block font-semibold text-base-content">Find a setting</label>
-                <p class="mt-1 text-sm text-base-content/70">Search by name, feature, or task—such as “backup,” “Discord,” or “applications.”</p>
+                <p class="mt-1 text-sm text-base-content/70">Search by name, feature, or task, such as "backup," "Discord," or "applications."</p>
                 <div class="relative mt-4 max-w-3xl">
                     <x-icon name="o-magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-base-content/60" aria-hidden="true" />
                     <input
@@ -51,50 +51,50 @@
                         data-settings-search
                     >
                 </div>
-                <p class="mt-2 text-xs text-base-content/60" aria-live="polite" data-settings-search-status>Showing all available settings.</p>
+                <p class="mt-2 text-sm text-base-content/70" aria-live="polite" data-settings-search-status>Showing all available settings.</p>
             </div>
 
             <div id="settings-directory-results" class="space-y-6">
                 <section data-settings-directory-group>
                     <div class="mb-3">
                         <h2 class="text-lg font-semibold">Global settings</h2>
-                        <p class="mt-1 text-sm text-base-content/70">Each destination owns its data, authorization, validation, and save boundary.</p>
+                        <p class="mt-1 text-sm text-base-content/70">Open a section to view or change its settings.</p>
                     </div>
 
                     <div class="nexus-panel divide-y divide-base-300 overflow-hidden">
                         @if ($canViewDiagnostics)
-                            <x-admin.settings-link :href="route('admin.settings.public-site') . '#homepage-messaging'" category="Public site" title="Homepage Messaging" description="Headline, supporting copy, calls to action, and recruitment highlights." keywords="home landing page content copy" />
-                            <x-admin.settings-link :href="route('admin.settings.public-site') . '#search-sharing'" category="Public site" title="Search & Sharing" description="Search indexing, page metadata, and social preview image." keywords="seo metadata robots social open graph" />
+                            <x-admin.settings-link :href="route('admin.settings.public-site') . '#homepage-messaging'" category="Public site" title="Homepage messaging" description="Headline, supporting copy, calls to action, and recruitment highlights." keywords="home landing page content copy" />
+                            <x-admin.settings-link :href="route('admin.settings.public-site') . '#search-sharing'" category="Public site" title="Search and sharing" description="Search visibility, page details, and the image shown when pages are shared." keywords="seo metadata robots social open graph" />
                             <x-admin.settings-link :href="route('admin.settings.public-site') . '#favicon-settings'" category="Public site" title="Favicon" description="Browser tab and bookmark icon." keywords="icon logo browser" />
 
                             <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-verification'" category="Discord" title="Verification requirement" description="Require an active Discord account after in-game verification." keywords="link account authentication" />
-                            <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-private-notifications'" category="Discord" title="Private workflow notifications" description="Allow users to opt into minimal direct-message status updates." keywords="dm direct message alerts" />
-                            <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-city-tiers'" category="Discord" title="City tier roles" description="Choose the city-count range represented by each bot-managed role." keywords="roles buckets" />
+                            <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-private-notifications'" category="Discord" title="Private Discord notifications" description="Allow users to choose which status updates they receive by direct message." keywords="dm direct message alerts" />
+                            <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-city-tiers'" category="Discord" title="City tier roles" description="Set which city range each Discord role covers." keywords="roles buckets" />
                             <x-admin.settings-link :href="route('admin.settings.discord.index') . '#discord-departures'" category="Discord" title="Alliance departure alerts" description="Notify a channel when a member leaves the alliance group." keywords="leave left channel alert" />
                         @endif
 
                         @can('manage-accounts')
-                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#auto-withdraw'" category="Finance policy" title="Auto Withdraw" description="Global scheduler availability for automatic withdrawals." keywords="bank account scheduler" />
+                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#auto-withdraw'" category="Finance policy" title="Automatic withdrawals" description="Turn scheduled withdrawals on or off for all accounts." keywords="bank account scheduler" />
                         @endcan
 
                         @can('manage-loans')
-                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#loan-payments'" category="Finance policy" title="Loan Payments" description="Globally require or pause scheduled loan payments." keywords="war pause" />
+                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#loan-payments'" category="Finance policy" title="Loan payments" description="Require or pause scheduled loan payments for all loans." keywords="war pause" />
                         @endcan
 
                         @can('manage-grants')
-                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#grant-approvals'" category="Finance policy" title="Grant Approvals" description="Emergency availability switch for grant approvals." keywords="city grants kill switch" />
+                            <x-admin.settings-link :href="route('admin.settings.finance-policy') . '#grant-approvals'" category="Finance policy" title="Grant approvals" description="Pause or resume grant approvals." keywords="city grants kill switch" />
                         @endcan
 
                         @can('edit-users')
-                            <x-admin.settings-link :href="route('admin.settings.security-retention') . '#account-inactivity'" category="Security & retention" title="Account Inactivity Auto-Disable" description="Disable {{ config('app.name') }} user accounts after a period without activity." keywords="users access security lifecycle" />
+                            <x-admin.settings-link :href="route('admin.settings.security-retention') . '#account-inactivity'" category="Security & retention" title="Automatic account disabling" description="Disable {{ config('app.name') }} accounts after a period without activity." keywords="users access security lifecycle" />
                         @endcan
 
                         @if ($canViewDiagnostics)
-                            <x-admin.settings-link :href="route('admin.settings.data-sync') . '#data-synchronization'" category="Operations" title="Data Synchronization" description="Manual nation, alliance, war, and rolling sync controls." keywords="politics and war import queue jobs" />
+                            <x-admin.settings-link :href="route('admin.settings.data-sync') . '#data-synchronization'" category="Operations" title="Data synchronization" description="Review or start nation, alliance, war, and rolling updates." keywords="politics and war import queue jobs" />
                             <x-admin.settings-link :href="route('admin.settings.security-retention') . '#backup-settings'" category="Security & retention" title="Backups" description="Scheduled backup availability and recovery prerequisites." keywords="database archive recovery" />
-                            <x-admin.settings-link :href="route('admin.settings.security-retention') . '#audit-retention'" category="Security & retention" title="Audit Log Retention" description="Number of days persisted audit records are retained." keywords="history cleanup records" />
-                            <x-admin.settings-link :href="route('admin.settings.recovery') . '#pending-request-recovery'" category="Operations" title="Pending Request Recovery" description="Release genuinely stuck pending workflow rows." keywords="diagnostics stuck force release" />
-                            <x-admin.settings-link :href="route('admin.settings.system-health') . '#system-health-title'" category="Operations" title="System Health" description="Freshness checks for the scheduler, API, imports, and data pipelines." keywords="status diagnostics monitoring pulse" />
+                            <x-admin.settings-link :href="route('admin.settings.security-retention') . '#audit-retention'" category="Security & retention" title="Audit log retention" description="Choose how long audit records remain available." keywords="history cleanup records" />
+                            <x-admin.settings-link :href="route('admin.settings.recovery') . '#pending-request-recovery'" category="Operations" title="Stuck request recovery" description="Close requests that are stuck in a pending state." keywords="diagnostics stuck force release" />
+                            <x-admin.settings-link :href="route('admin.settings.system-health') . '#system-health-title'" category="Operations" title="System health" description="Check scheduled tasks, connected services, imports, and recent data updates." keywords="status diagnostics monitoring pulse" />
                         @endif
 
                         @can('view-federation')
@@ -107,7 +107,7 @@
                     <section data-settings-directory-group>
                         <div class="mb-3">
                             <h2 class="text-lg font-semibold">Settings in feature areas</h2>
-                            <p class="mt-1 text-sm text-base-content/70">These controls stay with the workflows they affect; links open the exact feature context.</p>
+                            <p class="mt-1 text-sm text-base-content/70">Open a feature to manage its related settings.</p>
                         </div>
 
                         <div class="nexus-panel divide-y divide-base-300 overflow-hidden">
@@ -119,12 +119,12 @@
                                 <x-admin.settings-link :href="route('admin.users.index')" category="People & access" title="User administration" description="User access, account state, role assignment, password reset, and trusted-device recovery." keywords="accounts users security authentication" external />
 
                                 @if ($settingsUser->can('edit-users') && $settingsUser->can('bypass-self-restrictions'))
-                                    <x-admin.settings-link :href="route('admin.users.index') . '#mfa-requirements'" category="People & access" title="MFA requirements" description="Require multifactor enrollment for all users or administrators." keywords="two factor authentication security Fortify" external />
+                                    <x-admin.settings-link :href="route('admin.users.index') . '#mfa-requirements'" category="People & access" title="MFA requirements" description="Require an extra sign-in step for all users or administrators." keywords="two factor authentication security Fortify" external />
                                 @endif
                             @endcan
 
                             @can('view-applications')
-                                <x-admin.settings-link :href="route('admin.applications.index') . '#application-settings'" category="Applications" title="Application intake & Discord handoff" description="Application availability, role mapping, announcement channel, and approval message." keywords="recruit applicants interview" external />
+                                <x-admin.settings-link :href="route('admin.applications.index') . '#application-settings'" category="Applications" title="Application intake and Discord" description="Application availability, role mapping, announcement channel, and approval message." keywords="recruit applicants interview" external />
                             @endcan
 
                             @can('view-recruitment')
@@ -135,7 +135,7 @@
                                 <x-admin.settings-link :href="route('admin.accounts.dashboard')" category="Accounts" title="Account administration" description="Alliance accounts, pending withdrawals, balances, and transaction activity." keywords="bank balances transactions" external />
 
                                 @can('view-dd')
-                                    <x-admin.settings-link :href="route('admin.accounts.dashboard') . '#direct-deposit'" category="Accounts" title="Direct deposit" description="Tax bracket IDs and city-based direct-deposit bracket rules." keywords="dd taxes banking" external />
+                                    <x-admin.settings-link :href="route('admin.accounts.dashboard') . '#direct-deposit'" category="Accounts" title="Direct deposit" description="Direct deposit tax brackets by city." keywords="dd taxes banking" external />
                                 @endcan
                             @endcan
 
@@ -156,7 +156,7 @@
                             @endcan
 
                             @can('view-market')
-                                <x-admin.settings-link :href="route('admin.market.index')" category="Alliance market" title="Resource pricing & purchase caps" description="Per-resource availability, price adjustments, and remaining purchase limits." keywords="market resources prices caps" external />
+                                <x-admin.settings-link :href="route('admin.market.index')" category="Alliance market" title="Resource pricing and purchase caps" description="Resource availability, price adjustments, and remaining purchase limits." keywords="market resources prices caps" external />
                             @endcan
 
                             @can('view-offshores')
@@ -172,29 +172,29 @@
                             @endcan
 
                             @can('view_payroll')
-                                <x-admin.settings-link :href="route('admin.payroll.index')" category="Payroll" title="Payroll grades & members" description="Daily payroll grades, assignments, and member compensation." keywords="salary payment grades" external />
+                                <x-admin.settings-link :href="route('admin.payroll.index')" category="Payroll" title="Payroll grades and members" description="Daily payroll grades, assignments, and member compensation." keywords="salary payment grades" external />
                             @endcan
 
                             @can('view-raids')
                                 <x-admin.settings-link :href="route('admin.raids.index')" category="Raids" title="Raid policy" description="No-raid alliances and the top-city policy cap." keywords="defense alliances targets" external />
-                                <x-admin.settings-link :href="route('admin.beige-alerts.index') . '#beige-alert-settings'" category="Beige alerts" title="Alert channel & timing" description="Discord destination and alert lead time for beige exits." keywords="raids Discord turn" external />
+                                <x-admin.settings-link :href="route('admin.beige-alerts.index') . '#beige-alert-settings'" category="Beige alerts" title="Alert channel and timing" description="Discord destination and alert lead time for beige exits." keywords="raids Discord turn" external />
                             @endcan
 
                             @can('view-war-aid')
-                                <x-admin.settings-link :href="route('admin.war-aid')" category="War support" title="War aid availability" description="Review workflow status and control whether members can request war aid." keywords="defense requests toggle" external />
+                                <x-admin.settings-link :href="route('admin.war-aid')" category="War support" title="War aid availability" description="Review request status and control whether members can request war aid." keywords="defense requests toggle" external />
                             @endcan
 
                             @can('view-rebuilding')
-                                <x-admin.settings-link :href="route('admin.rebuilding.index')" category="War support" title="Rebuilding policy" description="Workflow availability, tiers, cycle state, and eligibility exclusions." keywords="defense aid recovery" external />
+                                <x-admin.settings-link :href="route('admin.rebuilding.index')" category="War support" title="Rebuilding policy" description="Turn rebuilding on or off, set tiers, and review eligibility rules." keywords="defense aid recovery" external />
                             @endcan
 
                             @can('view-mmr')
-                                <x-admin.settings-link :href="route('admin.mmr.index') . '#mmr-assistant-settings'" category="MMR" title="Assistant resource settings" description="Resource eligibility and surcharge percentages for the MMR assistant." keywords="military requirements resources" external />
+                                <x-admin.settings-link :href="route('admin.mmr.index') . '#mmr-assistant-settings'" category="MMR" title="Assistant resource settings" description="Choose eligible resources and extra costs for the MMR assistant." keywords="military requirements resources" external />
                             @endcan
 
                             @can('manage-war-room')
                                 @if (config('milcom.v2_enabled', false))
-                                    <x-admin.settings-link :href="route('admin.milcom.settings')" category="Defense" title="Milcom settings" description="War planning and Milcom workflow configuration." keywords="war room Discord defense" external />
+                                    <x-admin.settings-link :href="route('admin.milcom.settings')" category="Defense" title="Milcom settings" description="War-planning settings." keywords="war room Discord defense" external />
                                 @else
                                     <x-admin.settings-link :href="route('admin.war-room') . '#war-room-settings'" category="Defense" title="War room settings" description="Discord channel, forum, role, and automatic room creation." keywords="milcom war planning" external />
                                 @endif
@@ -205,7 +205,7 @@
                             @endcan
 
                             @can('view-roles')
-                                <x-admin.settings-link :href="route('admin.roles.index')" category="People & access" title="Roles & permissions" description="Review role assignments and administrative capabilities." keywords="rbac authorization access" external />
+                                <x-admin.settings-link :href="route('admin.roles.index')" category="People & access" title="Roles and permissions" description="Review role assignments and administrator access." keywords="rbac authorization access" external />
                             @endcan
 
                             @can('view-audits')
@@ -228,15 +228,15 @@
             <ul class="mt-3 grid gap-3 text-sm text-base-content/70">
                 <li class="flex gap-2">
                     <x-icon name="o-check-circle" class="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
-                    <span><strong class="text-base-content">Global domains</strong> have focused pages and independent saves.</span>
+                    <span><strong class="text-base-content">Site-wide settings</strong> have their own pages and save separately.</span>
                 </li>
                 <li class="flex gap-2">
                     <x-icon name="o-arrow-top-right-on-square" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                    <span><strong class="text-base-content">Feature settings</strong> remain with the workflow that owns them.</span>
+                    <span><strong class="text-base-content">Feature settings</strong> stay with the feature they affect.</span>
                 </li>
                 <li class="flex gap-2">
                     <x-icon name="o-lock-closed" class="mt-0.5 size-4 shrink-0 text-base-content/60" aria-hidden="true" />
-                    <span>You only see destinations your permissions allow.</span>
+                    <span>You only see settings you can access.</span>
                 </li>
             </ul>
         </aside>

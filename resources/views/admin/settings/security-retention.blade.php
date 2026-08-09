@@ -1,7 +1,7 @@
 @extends('admin.settings.layout')
 
-@section('settings-title', 'Security & Retention Settings')
-@section('settings-subtitle', 'Manage backup availability, audit retention, and account inactivity controls within their existing permissions.')
+@section('settings-title', 'Security and retention settings')
+@section('settings-subtitle', 'Manage backups, audit history, and automatic account disabling.')
 
 @section('settings-content')
     <div class="space-y-8">

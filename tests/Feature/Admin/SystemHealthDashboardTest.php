@@ -39,7 +39,7 @@ class SystemHealthDashboardTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.settings.system-health'))
             ->assertOk()
-            ->assertSee('System Health')
+            ->assertSee('System health')
             ->assertSee('Tax records')
             ->assertSee('Last tax record imported')
             ->assertSee('Scheduler &amp; P&amp;W API', false);
@@ -52,7 +52,7 @@ class SystemHealthDashboardTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.settings'))
             ->assertOk()
-            ->assertDontSee('System Health')
+            ->assertDontSee('System health')
             ->assertDontSee('Scheduler &amp; P&amp;W API', false);
     }
 

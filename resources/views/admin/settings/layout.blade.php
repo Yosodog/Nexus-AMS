@@ -2,9 +2,9 @@
 
 @section('content')
     @php
-        $settingsTitle = trim($__env->yieldContent('settings-title')) ?: 'Admin Settings';
+        $settingsTitle = trim($__env->yieldContent('settings-title')) ?: 'Admin settings';
         $settingsSubtitle = trim($__env->yieldContent('settings-subtitle'))
-            ?: 'Manage one settings domain at a time with permission-aware save boundaries.';
+            ?: 'Manage one section at a time. You will only see settings you can access.';
     @endphp
 
     <x-header :title="$settingsTitle" separator use-h1>
@@ -12,7 +12,7 @@
     </x-header>
 
     <div class="space-y-6">
-        <nav class="nexus-panel overflow-x-auto" aria-label="Admin settings domains">
+        <nav class="nexus-panel overflow-x-auto" aria-label="Admin settings sections">
             <div class="tabs tabs-border min-w-max px-2 sm:px-3">
                 <a
                     href="{{ route('admin.settings') }}"

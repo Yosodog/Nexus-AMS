@@ -5,26 +5,26 @@
 <div class="nexus-panel divide-y divide-base-300 overflow-hidden">
     <x-admin.settings-disclosure
         id="pending-request-recovery"
-        title="Pending Request Recovery"
-        description="Force genuinely stuck pending workflow rows into a terminal state without approving them."
-        :status="$stalePendingCount > 0 ? number_format($stalePendingCount) . ' stale' : 'No stale rows'"
+        title="Stuck request recovery"
+        description="Close requests that are stuck in a pending state without approving them."
+        :status="$stalePendingCount > 0 ? number_format($stalePendingCount) . ' stuck' : 'No stuck requests'"
         :status-class="$stalePendingCount > 0 ? 'badge-warning' : 'badge-ghost'"
         class="bg-warning/5"
         :open="$errors->hasAny(['type', 'older_than_hours', 'confirm_release'])"
     >
         <div class="space-y-5">
-            <x-contextual-help title="Use pending-request recovery only for confirmed stuck rows" owner="Operations and security" open>
+            <x-contextual-help title="Use recovery only after confirming a request is stuck" owner="Operations and security" open>
                 <x-slot:why>
-                    A request can remain pending when a worker, external delivery, or earlier deployment stopped after creating the row. Recovery closes matching stale rows; it never approves or completes their business action.
+                    A request may stay pending if processing or delivery stops unexpectedly. Recovery closes old pending requests. It does not approve them.
                 </x-slot:why>
                 <x-slot:next>
-                    First verify the domain queue and external system, choose the narrowest workflow, and use an age older than the normal processing window. Record the support context before releasing anything.
+                    Check the request in its normal area and confirm any related transfer or message. Choose the specific request type and an age longer than its normal processing time. Record why you are releasing it.
                 </x-slot:next>
                 <x-slot:timing>
-                    Matching rows move immediately to that workflow's recovery terminal state. Related external transfers or messages are not retried by this control.
+                    Matching requests close immediately. This tool does not retry transfers or messages.
                 </x-slot:timing>
                 <x-slot:support>
-                    If the external outcome is uncertain, do not release the row. Escalate with its request or correlation ID so the domain owner can reconcile it first.
+                    If you cannot confirm what happened, do not release the request. Escalate with the request ID so the responsible team can investigate.
                 </x-slot:support>
             </x-contextual-help>
 
@@ -32,9 +32,9 @@
                 <table class="table table-zebra" data-sortable="false">
                     <thead>
                     <tr>
-                        <th scope="col">Workflow</th>
+                        <th scope="col">Request type</th>
                         <th scope="col">Pending</th>
-                        <th scope="col">Stale ({{ $stalePendingDefaultHours }}h+)</th>
+                        <th scope="col">Stuck for more than {{ $stalePendingDefaultHours }} hours</th>
                         <th scope="col">Oldest pending</th>
                         <th scope="col">Recovery action</th>
                     </tr>
@@ -52,9 +52,9 @@
                             <td>
                                 @if ($item['oldestCreatedAt'])
                                     <div>{{ $item['oldestCreatedAt']->format('M d, Y H:i') }}</div>
-                                    <div class="text-sm text-base-content/60">{{ $item['oldestCreatedAt']->diffForHumans() }}</div>
+                                    <div class="text-sm text-base-content/70">{{ $item['oldestCreatedAt']->diffForHumans() }}</div>
                                 @else
-                                    <span class="text-sm text-base-content/60">None</span>
+                                    <span class="text-sm text-base-content/70">None</span>
                                 @endif
                             </td>
                             <td>
@@ -62,16 +62,16 @@
                                     method="POST"
                                     action="{{ route('admin.settings.pending-requests.release-stale') }}"
                                     class="grid min-w-64 gap-3"
-                                    data-confirm="Release stale {{ strtolower($item['label']) }} rows? Matching requests will be moved to a terminal state."
-                                    data-confirm-title="Release stale requests?"
-                                    data-confirm-label="Release stale"
+                                    data-confirm="Close stuck {{ strtolower($item['label']) }} requests? This does not approve them or retry related transfers or messages."
+                                    data-confirm-title="Close stuck requests?"
+                                    data-confirm-label="Close requests"
                                     data-confirm-tone="warning"
                                 >
                                     @csrf
                                     <input type="hidden" name="type" value="{{ $item['type'] }}">
 
                                     <label class="block space-y-2">
-                                        <span class="text-xs font-medium">Older than (hours)</span>
+                                        <span class="text-sm font-medium">Older than (hours)</span>
                                         <input
                                             type="number"
                                             class="input input-sm w-28"
@@ -93,10 +93,10 @@
                                             value="1"
                                             required
                                         >
-                                        <span>I reviewed the workflow and confirmed the external outcome is not uncertain.</span>
+                                        <span>I reviewed these requests and confirmed that any related transfer or message has a known result.</span>
                                     </label>
 
-                                    <button class="btn btn-warning btn-outline btn-sm justify-self-start" type="submit">Release stale</button>
+                                    <button class="btn btn-warning btn-outline btn-sm justify-self-start" type="submit">Close stuck requests</button>
                                 </form>
                             </td>
                         </tr>

@@ -35,9 +35,9 @@
 <section class="mt-10" aria-labelledby="system-health-title">
     <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-            <h2 id="system-health-title" class="text-lg font-semibold">System Health</h2>
+            <h2 id="system-health-title" class="text-lg font-semibold">System health</h2>
             <p class="max-w-3xl text-sm nexus-text-muted">
-                Freshness checks for the scheduler, external API, imports, and data pipelines that keep {{ config('app.name') }} current.
+                See whether scheduled tasks, connected services, and imports are keeping {{ config('app.name') }} up to date.
             </p>
         </div>
         <span class="badge {{ $overallStyle['badge'] }} gap-2" aria-label="Overall system health: {{ $overallStyle['label'] }}">
@@ -140,16 +140,16 @@
                     </dl>
 
                     <div class="sm:col-span-2 xl:col-span-1 xl:text-right">
-                        <div class="text-xs font-medium text-base-content/70">Expected cadence</div>
+                        <div class="text-sm font-medium text-base-content/70">Expected schedule</div>
                         <div class="mt-0.5 text-sm font-medium text-base-content">{{ $check['cadence'] }}</div>
                     </div>
                 </li>
             @endforeach
         </ul>
 
-        <p class="mt-4 text-xs text-base-content/70">
-            Evaluated <time datetime="{{ $health['checked_at']->toIso8601String() }}">{{ $health['checked_at']->format('M j, Y H:i T') }}</time>.
-            Health reflects persisted activity; use the sync controls and application logs above to investigate flagged pipelines.
+        <p class="mt-4 text-sm text-base-content/70">
+            Checked <time datetime="{{ $health['checked_at']->toIso8601String() }}">{{ $health['checked_at']->format('M j, Y H:i T') }}</time>.
+            These results use recent activity. Review the sync status and related details to investigate warnings.
         </p>
     </x-card>
 </section>
