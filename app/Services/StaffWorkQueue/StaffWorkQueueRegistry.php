@@ -131,6 +131,23 @@ final class StaffWorkQueueRegistry implements OperationsReadStore
         return $this->typeLabels($this->allowedSources($user));
     }
 
+    /** @return array<string, array<string, mixed>> */
+    public function reconciliationSnapshots(?string $type = null, bool $forceRefresh = false): array
+    {
+        if ($type !== null && ! isset($this->sources[$type])) {
+            throw new InvalidArgumentException("Unknown Operations source [{$type}].");
+        }
+
+        $sources = $type === null ? $this->sources : [$type => $this->sources[$type]];
+        $snapshots = [];
+
+        foreach ($sources as $sourceType => $source) {
+            $snapshots[$sourceType] = $this->sourceSnapshot($source, null, $forceRefresh);
+        }
+
+        return $snapshots;
+    }
+
     /** @return array<string, StaffWorkQueueSource> */
     private function allowedSources(User $user): array
     {

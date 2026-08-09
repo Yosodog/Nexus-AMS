@@ -3,6 +3,8 @@
 namespace App\Services\Discord;
 
 use App\Models\User;
+use App\Services\StaffWorkQueue\OperationsCoordinationReconciler;
+use App\Services\StaffWorkQueue\OperationsCoordinationService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\StaffWorkQueueFilterSet;
 use App\Services\StaffWorkQueue\StaffWorkQueueQuery;
@@ -13,6 +15,8 @@ final readonly class DiscordOperationsReadProvider
     public function __construct(
         private OperationsReadStore $readStore,
         private StaffWorkQueueQuery $query,
+        private OperationsCoordinationReconciler $reconciler,
+        private OperationsCoordinationService $coordination,
     ) {}
 
     /**
@@ -28,6 +32,7 @@ final readonly class DiscordOperationsReadProvider
             throw new AuthorizationException('This actor cannot view any Operations sources.');
         }
 
+        $projection['items'] = $this->reconciler->overlay($projection['items'], $actor);
         $filters = StaffWorkQueueFilterSet::fromArray($input, array_keys($projection['types']));
         $page = max(1, (int) ($input['page'] ?? 1));
         $perPage = min(
@@ -43,7 +48,10 @@ final readonly class DiscordOperationsReadProvider
         );
 
         return [
-            'items' => array_values($paginator->items()),
+            'items' => array_map(
+                fn (array $item): array => $this->withCapabilities($actor, $item),
+                array_values($paginator->items()),
+            ),
             'meta' => [
                 'provider' => 'nexus_operations',
                 'projection_schema_version' => (int) ($projection['schema'] ?? 2),
@@ -77,6 +85,7 @@ final readonly class DiscordOperationsReadProvider
             return null;
         }
 
+        $item = $this->reconciler->overlay([$item], $actor)[0];
         $paginator = $this->query->paginate(
             items: [$item],
             filters: new StaffWorkQueueFilterSet,
@@ -85,7 +94,9 @@ final readonly class DiscordOperationsReadProvider
             queryParameters: [],
         );
 
-        return $paginator->items()[0] ?? null;
+        $item = $paginator->items()[0] ?? null;
+
+        return is_array($item) ? $this->withCapabilities($actor, $item) : null;
     }
 
     /** @param  array<string, mixed>  $projection @return array<string, array<string, mixed>> */
@@ -132,5 +143,13 @@ final readonly class DiscordOperationsReadProvider
         if (! $actor->is_admin || $actor->disabled || $actor->verified_at === null) {
             throw new AuthorizationException('Discord Operations requires an active Nexus administrator.');
         }
+    }
+
+    /** @param  array<string, mixed>  $item @return array<string, mixed> */
+    private function withCapabilities(User $actor, array $item): array
+    {
+        $item['operations_capabilities'] = $this->coordination->capabilities($actor, $item);
+
+        return $item;
     }
 }

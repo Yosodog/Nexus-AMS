@@ -27,6 +27,7 @@ class OperationsWorkCoordination extends Model
         'assignee_user_id',
         'assigned_by_user_id',
         'assigned_at',
+        'assignment_expires_at',
         'triage_acknowledged_at',
         'triage_acknowledged_by_user_id',
         'escalated_at',
@@ -54,6 +55,7 @@ class OperationsWorkCoordination extends Model
     {
         return [
             'assigned_at' => 'datetime',
+            'assignment_expires_at' => 'datetime',
             'triage_acknowledged_at' => 'datetime',
             'escalated_at' => 'datetime',
             'first_seen_at' => 'datetime',

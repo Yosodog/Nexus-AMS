@@ -24,6 +24,8 @@ class OperationsPersistenceTest extends TestCase
         $coordination = OperationsWorkCoordination::factory()->create([
             'assignee_user_id' => $user->id,
             'assigned_by_user_id' => $user->id,
+            'assigned_at' => now(),
+            'assignment_expires_at' => now()->addMinutes(30),
             'triage_acknowledged_by_user_id' => $user->id,
             'escalated_by_user_id' => $user->id,
         ]);
@@ -55,6 +57,8 @@ class OperationsPersistenceTest extends TestCase
         ]);
 
         $this->assertInstanceOf(Carbon::class, $coordination->first_seen_at);
+        $this->assertInstanceOf(Carbon::class, $coordination->assignment_expires_at);
+        $this->assertTrue($coordination->assignment_expires_at->isAfter($coordination->assigned_at));
         $this->assertSame(1, $coordination->lock_version);
         $this->assertSame(['kind' => 'assignment'], $event->metadata);
         $this->assertInstanceOf(Carbon::class, $watch->muted_until);

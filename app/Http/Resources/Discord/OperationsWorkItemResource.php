@@ -72,6 +72,15 @@ final class OperationsWorkItemResource extends JsonResource
                 ->values()
                 ->all(),
             'facts' => (array) ($item['safe_facts'] ?? []),
+            'coordination' => [
+                'assignee' => data_get($item, 'coordination.assignee'),
+                'assigned_at' => data_get($item, 'coordination.assigned_at'),
+                'assignment_expires_at' => data_get($item, 'coordination.assignment_expires_at'),
+                'assignment_expired' => (bool) data_get($item, 'coordination.assignment_expired', false),
+                'lock_version' => data_get($item, 'coordination.lock_version'),
+                'source_revision' => (string) data_get($item, 'coordination.source_revision', ''),
+            ],
+            'capabilities' => array_values((array) ($item['operations_capabilities'] ?? [])),
             'next_action' => [
                 'key' => (string) data_get($item, 'next_action.key', 'domain.view'),
                 'label' => (string) data_get($item, 'next_action.label', $item['next_action_label'] ?? 'View'),

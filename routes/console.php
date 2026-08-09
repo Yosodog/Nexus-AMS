@@ -116,6 +116,11 @@ Schedule::command('discord-queue:reap-leases')
     ->everyMinute()
     ->withoutOverlapping(1)
     ->onOneServer();
+Schedule::command('operations:reconcile')
+    ->everyMinute()
+    ->withoutOverlapping(1)
+    ->onOneServer()
+    ->when(fn (): bool => (bool) config('operations.features.coordination', false));
 Schedule::command('discord:sync-city-tiers')
     ->hourlyAt(20)
     ->runInBackground()

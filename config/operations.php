@@ -141,6 +141,9 @@ return [
     ],
 
     'batch' => ['maximum_items' => 25],
+    'coordination' => [
+        'assignment_ttl_minutes' => 30,
+    ],
     'action_intents' => ['ttl_seconds' => 300, 'retention_hours' => 24],
     'retention' => [
         'coordination_days' => 365,

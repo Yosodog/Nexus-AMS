@@ -50,6 +50,7 @@ class DiscordOperationsWorkItemProviderTest extends TestCase
             'services.discord_bot_key' => 'operations-provider-test-key',
             'services.discord.guild_id' => self::GUILD_ID,
             'pending_requests.projection_cache_key' => 'testing.discord.operations.projection',
+            'operations.features.coordination' => false,
         ]);
         Cache::flush();
 
@@ -72,6 +73,14 @@ class DiscordOperationsWorkItemProviderTest extends TestCase
         $this->assertContains('api/v1/discord/staff/requests', $getRoutes);
         $this->assertContains('api/v1/discord/staff/work-items', $getRoutes);
         $this->assertContains('api/v1/discord/staff/work-items/{type}/{id}', $getRoutes);
+
+        $postRoutes = collect(Route::getRoutes())
+            ->filter(fn (RoutingRoute $route): bool => in_array('POST', $route->methods(), true))
+            ->map(fn (RoutingRoute $route): string => $route->uri())
+            ->values();
+
+        $this->assertContains('api/v1/discord/staff/work-items/{type}/{id}/claim', $postRoutes);
+        $this->assertContains('api/v1/discord/staff/work-items/{type}/{id}/release', $postRoutes);
     }
 
     public function test_list_is_actor_permission_filtered_and_characterizes_the_safe_contract(): void
@@ -128,6 +137,10 @@ class DiscordOperationsWorkItemProviderTest extends TestCase
             ->assertJsonPath('data.0.freshness.state', 'fresh')
             ->assertJsonPath('data.0.freshness.source_complete', true)
             ->assertJsonPath('data.0.facts.risk_band', 'high')
+            ->assertJsonPath('data.0.coordination.assignee', null)
+            ->assertJsonPath('data.0.coordination.lock_version', null)
+            ->assertJsonPath('data.0.coordination.source_revision', $loan->sourceFingerprint())
+            ->assertJsonPath('data.0.capabilities', [])
             ->assertJsonPath('data.0.next_action.deep_link_path', '/admin/loans/42?from=operations');
 
         $payload = $response->json('data.0');

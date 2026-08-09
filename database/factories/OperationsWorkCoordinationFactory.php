@@ -28,6 +28,7 @@ class OperationsWorkCoordinationFactory extends Factory
             'assignee_user_id' => null,
             'assigned_by_user_id' => null,
             'assigned_at' => null,
+            'assignment_expires_at' => null,
             'triage_acknowledged_at' => null,
             'triage_acknowledged_by_user_id' => null,
             'escalated_at' => null,

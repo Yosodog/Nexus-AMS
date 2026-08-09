@@ -89,5 +89,17 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
                 ->name('api.discord.staff.work-items.index');
             Route::get('/work-items/{type}/{id}', [DiscordOperationsWorkItemController::class, 'show'])
                 ->name('api.discord.staff.work-items.show');
+            Route::post('/work-items/{type}/{id}/claim', [DiscordOperationsWorkItemController::class, 'claim'])
+                ->middleware([
+                    EnsureDiscordInteractionCommand::class.':work.claim',
+                    EnsureDiscordInteractionIdempotency::class,
+                ])
+                ->name('api.discord.staff.work-items.claim');
+            Route::post('/work-items/{type}/{id}/release', [DiscordOperationsWorkItemController::class, 'release'])
+                ->middleware([
+                    EnsureDiscordInteractionCommand::class.':work.release',
+                    EnsureDiscordInteractionIdempotency::class,
+                ])
+                ->name('api.discord.staff.work-items.release');
         });
 });
