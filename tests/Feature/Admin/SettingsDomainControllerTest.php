@@ -165,7 +165,7 @@ class SettingsDomainControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Homepage Messaging')
             ->assertDontSee('Verification requirement')
-            ->assertDontSee('Audit Log Retention');
+            ->assertDontSee('Audit log retention');
 
         $this->actingAs($diagnosticAdmin)
             ->get(route('admin.settings.discord.index'))
@@ -176,14 +176,14 @@ class SettingsDomainControllerTest extends TestCase
         $this->actingAs($diagnosticAdmin)
             ->get(route('admin.settings.data-sync'))
             ->assertOk()
-            ->assertSee('Nation Sync (Manual)')
+            ->assertSee('Nation sync (manual)')
             ->assertDontSee('Backups');
 
         $this->actingAs($diagnosticAdmin)
             ->get(route('admin.settings.security-retention'))
             ->assertOk()
             ->assertSee('Backups')
-            ->assertSee('Audit Log Retention')
+            ->assertSee('Audit log retention')
             ->assertDontSee('Account Inactivity Auto-Disable');
 
         $accountManager = $this->createAdmin(['manage-accounts'], 970002);
@@ -205,7 +205,7 @@ class SettingsDomainControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Account Inactivity Auto-Disable')
             ->assertDontSee('Backups')
-            ->assertDontSee('Audit Log Retention');
+            ->assertDontSee('Audit log retention');
 
         $this->actingAs($userManager)->get(route('admin.settings.finance-policy'))->assertForbidden();
     }

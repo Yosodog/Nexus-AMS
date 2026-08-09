@@ -40,7 +40,7 @@ final class OperationsWorkItemController extends Controller
         if ($item === null) {
             return $this->discordError(
                 'not_found',
-                'The Operations work item was not found or is not visible to this actor.',
+                'This work item was not found or you do not have access to it.',
                 404,
             );
         }

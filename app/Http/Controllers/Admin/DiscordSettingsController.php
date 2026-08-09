@@ -143,7 +143,7 @@ class DiscordSettingsController extends Controller
         );
 
         return redirect()->route('admin.settings')->with([
-            'alert-message' => 'Discord city-tier settings updated. The next hourly sync will apply the new buckets.',
+            'alert-message' => 'Discord city tier settings updated. The next hourly update will apply the new city ranges.',
             'alert-type' => 'success',
         ]);
     }

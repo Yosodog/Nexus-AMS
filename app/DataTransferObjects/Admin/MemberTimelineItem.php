@@ -41,7 +41,7 @@ final readonly class MemberTimelineItem
         return match ($this->actorKind) {
             'staff' => 'Staff action',
             'member' => 'Member action',
-            default => 'System observation',
+            default => 'Automated update',
         };
     }
 }

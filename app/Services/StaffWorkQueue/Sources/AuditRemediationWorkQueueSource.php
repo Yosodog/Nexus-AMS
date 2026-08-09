@@ -49,7 +49,7 @@ final class AuditRemediationWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $result->getKey(),
                     typeLabel: 'Audit remediation',
-                    subject: $target.' — '.$rule,
+                    subject: $target.' · '.$rule,
                     createdAt: $result->first_detected_at ?? $result->created_at,
                     ownerKey: null,
                     ownerLabel: null,

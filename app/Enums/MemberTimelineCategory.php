@@ -14,7 +14,7 @@ enum MemberTimelineCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::Membership => 'Membership & account',
+            self::Membership => 'Membership and account',
             self::Applications => 'Applications',
             self::Finance => 'Finance',
             self::Audits => 'Audits',
@@ -26,12 +26,12 @@ enum MemberTimelineCategory: string
     public function description(): string
     {
         return match ($this) {
-            self::Membership => 'Nation observations and authorized account lifecycle records.',
-            self::Applications => 'Membership requests and recorded decisions.',
-            self::Finance => 'Transactions, loans, and grant activity you are allowed to view.',
-            self::Audits => 'Safe audit lifecycle events without finding evidence or private notes.',
-            self::Military => 'Milcom assignment, outcome, and delivery records.',
-            self::Communications => 'Communication events without message bodies.',
+            self::Membership => 'Nation activity and account changes.',
+            self::Applications => 'Membership requests and decisions.',
+            self::Finance => 'Transactions, loans, and grants you can view.',
+            self::Audits => 'Audit status changes without private details.',
+            self::Military => 'War planning assignments, results, and notifications.',
+            self::Communications => 'Communication history without message contents.',
         };
     }
 

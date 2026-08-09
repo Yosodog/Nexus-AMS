@@ -44,7 +44,7 @@ class DataSyncSettingsController extends Controller
         Artisan::call('sync:nations');
 
         return redirect()->route('admin.settings')->with([
-            'alert-message' => 'Nation sync command dispatched.',
+            'alert-message' => 'Nation sync started.',
             'alert-type' => 'success',
         ]);
     }
@@ -54,7 +54,7 @@ class DataSyncSettingsController extends Controller
         Artisan::call('sync:alliances');
 
         return redirect()->route('admin.settings')->with([
-            'alert-message' => 'Alliance sync command dispatched.',
+            'alert-message' => 'Alliance sync started.',
             'alert-type' => 'success',
         ]);
     }
@@ -64,7 +64,7 @@ class DataSyncSettingsController extends Controller
         Artisan::call('sync:wars');
 
         return redirect()->route('admin.settings')->with([
-            'alert-message' => 'War sync command dispatched.',
+            'alert-message' => 'War sync started.',
             'alert-type' => 'success',
         ]);
     }

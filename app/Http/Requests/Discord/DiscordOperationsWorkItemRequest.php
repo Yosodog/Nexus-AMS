@@ -21,7 +21,7 @@ abstract class DiscordOperationsWorkItemRequest extends FormRequest
         $actor = $this->attributes->get(ResolveDiscordActor::ACTOR_ATTRIBUTE);
 
         if (! $actor instanceof User || ! $actor->is_admin) {
-            throw new AuthorizationException('Discord Operations requires an authorized Nexus administrator.');
+            throw new AuthorizationException('This command requires an active Nexus administrator with permission to view operations.');
         }
 
         return $actor;

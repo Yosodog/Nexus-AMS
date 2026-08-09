@@ -22,8 +22,8 @@ class RequireMilcomV2
                         ? 'milcom_rules_contract_unverified'
                         : 'milcom_v2_disabled',
                     'message' => (bool) config('milcom.v2_requested', false)
-                        ? 'Verify the live Politics & War rules contract before enabling Milcom v2.'
-                        : 'Milcom v2 is disabled for this deployment.',
+                        ? 'Milcom is temporarily unavailable while the current Politics & War rules are checked.'
+                        : 'Milcom is unavailable right now.',
                 ],
                 'meta' => ['contract_version' => 2],
                 'links' => [],
@@ -32,8 +32,8 @@ class RequireMilcomV2
 
         return response(
             (bool) config('milcom.v2_requested', false)
-                ? 'Milcom v2 is unavailable until the live Politics & War rules contract is verified.'
-                : 'Milcom v2 is disabled for this deployment.',
+                ? 'Milcom is temporarily unavailable while the current Politics & War rules are checked.'
+                : 'Milcom is unavailable right now.',
             503,
         );
     }

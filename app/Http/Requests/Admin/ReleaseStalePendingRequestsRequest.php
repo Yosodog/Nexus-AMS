@@ -35,7 +35,7 @@ class ReleaseStalePendingRequestsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'confirm_release.accepted' => 'Confirm that you reviewed the workflow and external outcome before releasing stale requests.',
+            'confirm_release.accepted' => 'Confirm that you reviewed these requests and checked any related transfers or messages before closing them.',
         ];
     }
 }

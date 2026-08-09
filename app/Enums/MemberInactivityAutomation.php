@@ -12,10 +12,10 @@ enum MemberInactivityAutomation: string
     public function label(): string
     {
         return match ($this) {
-            self::AutoEnrollDirectDeposit => 'Direct Deposit auto-enrollment',
-            self::SendInGameMessage => 'in-game inactivity messages',
-            self::SendDiscordNotification => 'Discord inactivity notifications',
-            self::DisableAccount => 'automatic account disablement',
+            self::AutoEnrollDirectDeposit => 'Automatic direct deposit enrollment',
+            self::SendInGameMessage => 'In-game inactivity messages',
+            self::SendDiscordNotification => 'Discord inactivity alerts',
+            self::DisableAccount => 'Automatic account disabling',
         };
     }
 

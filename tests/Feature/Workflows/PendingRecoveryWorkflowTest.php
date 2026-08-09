@@ -60,7 +60,7 @@ class PendingRecoveryWorkflowTest extends TestCase
             ->assertSessionHas('alert-type', 'success')
             ->assertSessionHas(
                 'alert-message',
-                fn (string $message): bool => str_contains($message, 'Released 1 stale')
+                fn (string $message): bool => str_contains($message, 'Closed 1 stuck')
                     && str_contains($message, '48 hours')
             );
 
@@ -167,7 +167,7 @@ class PendingRecoveryWorkflowTest extends TestCase
                     'status' => 'denied',
                     'pending_key' => null,
                     'decision_reason_code' => GrantDecisionReason::OtherPolicyReason->value,
-                    'decision_explanation' => 'This request was closed during stale-request recovery. Contact leadership if the original request still needs review.',
+                    'decision_explanation' => 'Staff closed this request because it remained pending longer than expected. Contact leadership if you still need a review.',
                 ],
                 ['status' => 'pending', 'pending_key' => 1],
                 'denied_at',

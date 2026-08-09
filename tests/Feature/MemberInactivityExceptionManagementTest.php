@@ -259,7 +259,7 @@ class MemberInactivityExceptionManagementTest extends TestCase
             ->assertOk()
             ->assertSeeText('Approved leave or temporary pause')
             ->assertSeeText('Your in-game inactivity message is paused during approved leave.')
-            ->assertSeeText('in-game inactivity messages')
+            ->assertSeeText('In-game inactivity messages')
             ->assertDontSeeText('Private evidence reference CASE-9921.');
     }
 

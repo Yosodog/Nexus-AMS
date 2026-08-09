@@ -47,12 +47,12 @@ class PendingRequestRecoveryController extends Controller
                     'operator_confirmed' => true,
                 ],
             ],
-            message: 'Stale pending requests released.'
+            message: 'Stuck pending requests closed.'
         );
 
         $message = $result['releasedCount'] > 0
-            ? "Released {$result['releasedCount']} stale {$result['label']} entries older than {$result['olderThanHours']} hours."
-            : "No stale {$result['label']} entries older than {$result['olderThanHours']} hours were found.";
+            ? "Closed {$result['releasedCount']} stuck {$result['label']} requests older than {$result['olderThanHours']} hours."
+            : "No stuck {$result['label']} requests older than {$result['olderThanHours']} hours were found.";
 
         return redirect()->route('admin.settings')->with([
             'alert-message' => $message,

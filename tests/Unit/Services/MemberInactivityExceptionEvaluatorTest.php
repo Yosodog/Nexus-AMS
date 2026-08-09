@@ -107,7 +107,7 @@ class MemberInactivityExceptionEvaluatorTest extends TestCase
 
         $this->assertCount(1, $effects);
         $this->assertStringContainsString('Public practical effect.', $serialized);
-        $this->assertStringContainsString('Discord inactivity notifications', $serialized);
+        $this->assertStringContainsString('Discord inactivity alerts', $serialized);
         $this->assertStringNotContainsString('Do not disclose this evidence.', $serialized);
         $this->assertStringNotContainsString('approved_by_user_id', $serialized);
     }

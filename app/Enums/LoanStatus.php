@@ -53,7 +53,7 @@ enum LoanStatus: string
             'label' => 'Unknown',
             'intent' => 'neutral',
             'icon' => 'minus-circle',
-            'explanation' => 'This loan has an unrecognized legacy status.',
+            'explanation' => 'The loan status is unavailable. Contact staff if this looks wrong.',
         ];
     }
 
@@ -103,7 +103,7 @@ enum LoanStatus: string
                 'label' => 'Approved',
                 'intent' => 'active',
                 'icon' => 'bolt',
-                'explanation' => 'The loan is in active servicing.',
+                'explanation' => 'Repayment is in progress.',
             ],
             self::Denied => [
                 'label' => 'Denied',

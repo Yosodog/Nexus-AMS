@@ -135,7 +135,7 @@ class LoanStatusTest extends TestCase
             'label' => 'Unknown',
             'intent' => 'neutral',
             'icon' => 'minus-circle',
-            'explanation' => 'This loan has an unrecognized legacy status.',
+            'explanation' => 'The loan status is unavailable. Contact staff if this looks wrong.',
         ], LoanStatus::presentationFor('legacy_review'));
         $this->assertSame('neutral', LoanStatus::presentationFor('past_due')['intent']);
     }

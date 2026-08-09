@@ -161,7 +161,7 @@ class PendingRequestRecoveryService
                     'denied_at' => $releasedAt,
                     'decided_at' => $releasedAt,
                     'decision_reason_code' => GrantDecisionReason::OtherPolicyReason->value,
-                    'decision_explanation' => 'This request was closed during stale-request recovery. Contact leadership if the original request still needs review.',
+                    'decision_explanation' => 'Staff closed this request because it remained pending longer than expected. Contact leadership if you still need a review.',
                 ],
             ],
             'city_grant_requests' => [
