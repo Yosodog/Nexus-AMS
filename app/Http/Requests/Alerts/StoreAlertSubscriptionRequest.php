@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Alerts;
 
+use App\Enums\AlertDeliveryMode;
 use App\Enums\AlertSubscriptionType;
+use App\Services\Alerts\AlertEventCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,10 +16,11 @@ class StoreAlertSubscriptionRequest extends FormRequest
     }
 
     /** @return array<string, array<int, mixed>> */
-    public function rules(): array
+    public function rules(AlertEventCatalog $catalog): array
     {
         $eventNames = collect(AlertSubscriptionType::cases())
             ->flatMap(fn (AlertSubscriptionType $type): array => array_keys($type->events()))
+            ->merge(array_keys($catalog->memberSubscriptionEvents()))
             ->unique()
             ->values()
             ->all();
@@ -56,7 +59,12 @@ class StoreAlertSubscriptionRequest extends FormRequest
                 'max:1000000000',
             ],
             'cooldown_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
+            'delivery_mode' => ['nullable', Rule::enum(AlertDeliveryMode::class)],
+            'discord_enabled' => ['nullable', 'boolean'],
+            'rearm_percent' => ['nullable', 'numeric', 'min:0.01', 'max:25'],
+            'timezone' => ['nullable', 'string', 'max:64', 'timezone'],
             'expires_at' => ['nullable', 'date', 'after:now'],
+            'submit_action' => ['nullable', Rule::in(['save', 'preview', 'test'])],
         ];
     }
 

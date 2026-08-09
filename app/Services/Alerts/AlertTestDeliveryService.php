@@ -19,15 +19,38 @@ class AlertTestDeliveryService
 
     public function send(User $user, AlertSubscription $subscription): AlertOccurrence
     {
-        if ((int) $subscription->user_id !== (int) $user->id) {
-            throw new AuthorizationException('You may test only your own alerts.');
-        }
-
         $allowedEventKeys = $this->events->eventKeys($subscription->type, $subscription->config);
         $storedEventKey = $subscription->events()->oldest('id')->value('event_key');
         $eventKey = is_string($storedEventKey) && in_array($storedEventKey, $allowedEventKeys, true)
             ? $storedEventKey
             : $allowedEventKeys[0];
+
+        return $this->recordTest($user, $subscription, $eventKey);
+    }
+
+    /** @param list<string> $eventKeys */
+    public function sendDraft(
+        User $user,
+        AlertSubscription $subscription,
+        array $eventKeys,
+    ): AlertOccurrence {
+        if ($eventKeys === []) {
+            throw new \InvalidArgumentException('A draft alert test requires an event key.');
+        }
+
+        return $this->recordTest($user, $subscription, $eventKeys[0]);
+    }
+
+    private function recordTest(
+        User $user,
+        AlertSubscription $subscription,
+        string $eventKey,
+    ): AlertOccurrence {
+        if ((int) $subscription->user_id !== (int) $user->id) {
+            throw new AuthorizationException('You may test only your own alerts.');
+        }
+
+        $testId = (string) Str::uuid();
         $targetId = $subscription->target_id
             ?? ($subscription->config['target_id'] ?? null);
         $allianceId = match ($subscription->type) {
@@ -40,9 +63,9 @@ class AlertTestDeliveryService
 
         return $this->occurrences->record(
             eventKey: $eventKey,
-            sourceType: 'alert_subscription_test',
-            sourceId: $subscription->id,
-            dedupeKey: 'alert-test:'.$subscription->id.':'.Str::uuid(),
+            sourceType: $subscription->exists ? 'alert_subscription_test' : 'alert_subscription_draft_test',
+            sourceId: $subscription->exists ? $subscription->id : $testId,
+            dedupeKey: 'alert-test:'.($subscription->exists ? $subscription->id : 'draft').':'.$testId,
             payload: $this->payload($eventKey, $subscription),
             occurredAt: now(),
             observedAt: now(),
@@ -51,7 +74,9 @@ class AlertTestDeliveryService
             subjectType: $subscription->type->value,
             subjectId: is_scalar($targetId) ? (string) $targetId : null,
             sourceVersion: 'test-v1',
-            correlationKey: 'alert-subscription:'.$subscription->id,
+            correlationKey: $subscription->exists
+                ? 'alert-subscription:'.$subscription->id
+                : 'alert-subscription-draft:'.$testId,
             deepLinkPath: '/user/alerts',
             isTest: true,
             subscription: $subscription,

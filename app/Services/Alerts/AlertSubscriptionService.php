@@ -39,33 +39,21 @@ class AlertSubscriptionService
             ]);
         }
 
-        $type = AlertSubscriptionType::tryFrom((string) ($data['type'] ?? ''));
-        if ($type === null) {
-            throw ValidationException::withMessages(['type' => 'Choose a supported alert type.']);
-        }
-
-        $config = $this->configFor($type, $data);
-        $eventKeys = $this->events->eventKeys($type, $config);
-        if ($type !== AlertSubscriptionType::Market) {
-            $config['events'] = $this->events->legacyEvents($type, $eventKeys);
-        }
-        $preferences = $this->deliveryPreferences($data);
-        $targetId = isset($config['target_id']) ? (int) $config['target_id'] : null;
-        $filterConfig = $type === AlertSubscriptionType::Market
-            ? [
-                'resource' => $config['resource'],
-                'direction' => $config['direction'],
-                'threshold' => $config['threshold'],
-            ]
-            : [];
-        $fingerprint = $this->fingerprint($type, $targetId, $filterConfig, $eventKeys);
+        $draft = $this->prepareDraft($data);
+        $type = $draft['type'];
+        $config = $draft['config'];
+        $eventKeys = $draft['event_keys'];
+        $preferences = $draft['preferences'];
+        $targetId = $draft['target_id'];
+        $filterConfig = $draft['filter_config'];
+        $fingerprint = $draft['fingerprint'];
 
         $this->assertFingerprintAvailable($user, $fingerprint);
 
         try {
             return DB::transaction(function () use (
                 $user,
-                $data,
+                $draft,
                 $type,
                 $config,
                 $eventKeys,
@@ -77,7 +65,7 @@ class AlertSubscriptionService
                 $subscription = AlertSubscription::query()->create([
                     'user_id' => $user->id,
                     'type' => $type,
-                    'name' => isset($data['name']) ? trim((string) $data['name']) ?: null : null,
+                    'name' => $draft['name'],
                     'config' => $config,
                     'target_type' => $type->value,
                     'target_id' => $targetId,
@@ -90,7 +78,7 @@ class AlertSubscriptionService
                     'discord_enabled' => $preferences['discord_enabled'],
                     'rearm_percent' => $preferences['rearm_percent'],
                     'timezone' => $preferences['timezone'],
-                    'expires_at' => $data['expires_at'] ?? null,
+                    'expires_at' => $draft['expires_at'],
                     'active_fingerprint' => $fingerprint,
                 ]);
                 $subscription->events()->createMany(array_map(
@@ -103,6 +91,145 @@ class AlertSubscriptionService
         } catch (QueryException $exception) {
             if (! $this->isUniqueConstraintViolation($exception)
                 || ! $this->fingerprintExists($user, $fingerprint)) {
+                throw $exception;
+            }
+
+            throw ValidationException::withMessages([
+                'alert' => 'An active alert already watches the same target, events, and threshold.',
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function previewForUser(User $user, array $data): array
+    {
+        $this->authorize($user);
+        $draft = $this->prepareDraft($data);
+
+        return [
+            'name' => $draft['name']
+                ?? $this->draftDisplayName($draft['type'], $draft['config']),
+            'type' => $draft['type']->value,
+            'type_label' => $draft['type']->label(),
+            'target_id' => $draft['target_id'],
+            'events' => collect($draft['event_keys'])->map(fn (string $eventKey): array => [
+                'key' => $eventKey,
+                'label' => (string) str($eventKey)->replace('.', ' ')->headline()->lower()->ucfirst(),
+            ])->values()->all(),
+            'condition' => $this->draftCondition($draft['type'], $draft['config'], $draft['event_keys']),
+            'cooldown_minutes' => $draft['preferences']['cooldown_minutes'],
+            'rearm_percent' => $draft['preferences']['rearm_percent'],
+            'expires_at' => $draft['expires_at'],
+            'baseline_state' => 'established_after_save',
+            'can_save' => $this->activeCount($user) < self::MAX_ACTIVE_PER_USER,
+            'delivery' => [
+                'mode' => $draft['preferences']['delivery_mode']->value,
+                'discord_enabled' => $draft['preferences']['discord_enabled'],
+                'timezone' => $draft['preferences']['timezone'],
+            ],
+        ];
+    }
+
+    /** @param array<string, mixed> $data */
+    public function testDraft(User $user, array $data): AlertOccurrence
+    {
+        $this->authorize($user);
+        $draft = $this->prepareDraft($data);
+        $subscription = new AlertSubscription([
+            'user_id' => $user->id,
+            'type' => $draft['type'],
+            'name' => $draft['name'],
+            'config' => $draft['config'],
+            'target_type' => $draft['type']->value,
+            'target_id' => $draft['target_id'],
+            'filter_config' => $draft['filter_config'],
+            'cooldown_minutes' => $draft['preferences']['cooldown_minutes'],
+            'delivery_mode' => $draft['preferences']['delivery_mode'],
+            'discord_enabled' => $draft['preferences']['discord_enabled'],
+            'rearm_percent' => $draft['preferences']['rearm_percent'],
+            'timezone' => $draft['preferences']['timezone'],
+        ]);
+
+        return $this->testDeliveries->sendDraft($user, $subscription, $draft['event_keys']);
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateForUser(
+        User $user,
+        AlertSubscription $subscription,
+        array $data,
+    ): AlertSubscription {
+        $this->authorizeOwnership($user, $subscription);
+        $this->expireSubscriptions($user);
+        $draft = $this->prepareDraft($data);
+
+        try {
+            return DB::transaction(function () use ($user, $subscription, $draft): AlertSubscription {
+                $locked = AlertSubscription::query()
+                    ->whereKey($subscription->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $currentEventKeys = $this->events->eventKeys($locked->type, $locked->config);
+                $currentTargetId = $locked->target_id
+                    ?? (isset($locked->config['target_id']) ? (int) $locked->config['target_id'] : null);
+                $currentFilter = $locked->filter_config ?? ($locked->type === AlertSubscriptionType::Market
+                    ? [
+                        'resource' => $locked->config['resource'],
+                        'direction' => $locked->config['direction'],
+                        'threshold' => $locked->config['threshold'],
+                    ]
+                    : []);
+                $currentFingerprint = $this->fingerprint(
+                    $locked->type,
+                    $currentTargetId,
+                    $currentFilter,
+                    $currentEventKeys,
+                );
+                $triggerChanged = ! hash_equals($currentFingerprint, $draft['fingerprint']);
+
+                if ($locked->is_active) {
+                    $this->assertFingerprintAvailable($user, $draft['fingerprint'], $locked->id);
+                }
+
+                $updates = [
+                    'type' => $draft['type'],
+                    'name' => $draft['name'],
+                    'config' => $draft['config'],
+                    'target_type' => $draft['type']->value,
+                    'target_id' => $draft['target_id'],
+                    'filter_config' => $draft['filter_config'],
+                    'cooldown_minutes' => $draft['preferences']['cooldown_minutes'],
+                    'delivery_mode' => $draft['preferences']['delivery_mode'],
+                    'discord_enabled' => $draft['preferences']['discord_enabled'],
+                    'rearm_percent' => $draft['preferences']['rearm_percent'],
+                    'timezone' => $draft['preferences']['timezone'],
+                    'expires_at' => $draft['expires_at'],
+                    'active_fingerprint' => $locked->is_active ? $draft['fingerprint'] : null,
+                ];
+                if ($triggerChanged) {
+                    $updates += [
+                        'last_observed_state' => null,
+                        'last_condition' => null,
+                        'last_evaluated_at' => null,
+                        'last_triggered_at' => null,
+                        'last_source_version' => null,
+                        'last_source_observed_at' => null,
+                    ];
+                }
+                $locked->forceFill($updates)->save();
+                $locked->events()->delete();
+                $locked->events()->createMany(array_map(
+                    fn (string $eventKey): array => ['event_key' => $eventKey],
+                    $draft['event_keys'],
+                ));
+
+                return $locked->refresh()->load('events');
+            }, attempts: 3);
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
                 throw $exception;
             }
 
@@ -210,6 +337,12 @@ class AlertSubscriptionService
         return $this->testDeliveries->send($user, $subscription);
     }
 
+    /** @return list<string> */
+    public function eventKeysFor(AlertSubscription $subscription): array
+    {
+        return $this->events->eventKeys($subscription->type, $subscription->config);
+    }
+
     public function authorize(User $user): void
     {
         if (! $this->eligibility->isEligible($user)) {
@@ -307,6 +440,92 @@ class AlertSubscriptionService
             'rearm_percent' => (float) $validated['rearm_percent'],
             'timezone' => $validated['timezone'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{
+     *     type:AlertSubscriptionType,
+     *     name:string|null,
+     *     config:array<string,mixed>,
+     *     event_keys:list<string>,
+     *     preferences:array{cooldown_minutes:int,delivery_mode:AlertDeliveryMode,discord_enabled:bool,rearm_percent:float,timezone:string|null},
+     *     target_id:int|null,
+     *     filter_config:array<string,mixed>,
+     *     fingerprint:string,
+     *     expires_at:mixed
+     * }
+     */
+    private function prepareDraft(array $data): array
+    {
+        $type = AlertSubscriptionType::tryFrom((string) ($data['type'] ?? ''));
+        if ($type === null) {
+            throw ValidationException::withMessages(['type' => 'Choose a supported alert type.']);
+        }
+
+        $config = $this->configFor($type, $data);
+        $eventKeys = $this->events->eventKeys($type, $config);
+        if ($type !== AlertSubscriptionType::Market) {
+            $config['events'] = $this->events->legacyEvents($type, $eventKeys);
+        }
+        $preferences = $this->deliveryPreferences($data);
+        $targetId = isset($config['target_id']) ? (int) $config['target_id'] : null;
+        $filterConfig = $type === AlertSubscriptionType::Market
+            ? [
+                'resource' => $config['resource'],
+                'direction' => $config['direction'],
+                'threshold' => $config['threshold'],
+            ]
+            : [];
+
+        return [
+            'type' => $type,
+            'name' => isset($data['name']) ? trim((string) $data['name']) ?: null : null,
+            'config' => $config,
+            'event_keys' => $eventKeys,
+            'preferences' => $preferences,
+            'target_id' => $targetId,
+            'filter_config' => $filterConfig,
+            'fingerprint' => $this->fingerprint($type, $targetId, $filterConfig, $eventKeys),
+            'expires_at' => $data['expires_at'] ?? null,
+        ];
+    }
+
+    /** @param array<string, mixed> $config */
+    private function draftDisplayName(AlertSubscriptionType $type, array $config): string
+    {
+        return match ($type) {
+            AlertSubscriptionType::Nation => 'Nation #'.(int) $config['target_id'],
+            AlertSubscriptionType::Alliance => 'Alliance #'.(int) $config['target_id'],
+            AlertSubscriptionType::Market => ucfirst((string) $config['resource']).' price',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @param  list<string>  $eventKeys
+     */
+    private function draftCondition(
+        AlertSubscriptionType $type,
+        array $config,
+        array $eventKeys,
+    ): string {
+        if ($type === AlertSubscriptionType::Market) {
+            return sprintf(
+                '%s %s %s',
+                ucfirst((string) $config['resource']),
+                (string) $config['direction'],
+                number_format((float) $config['threshold'], 2),
+            );
+        }
+
+        return collect($eventKeys)
+            ->map(fn (string $eventKey): string => (string) str($eventKey)
+                ->replace('.', ' ')
+                ->headline()
+                ->lower()
+                ->ucfirst())
+            ->join(', ');
     }
 
     /**

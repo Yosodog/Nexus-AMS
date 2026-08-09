@@ -61,6 +61,12 @@ class AlertActivityServiceTest extends TestCase
             'retryable' => true,
             'finished_at' => now(),
         ]);
+        $foreignSibling = AlertDelivery::factory()->create([
+            'alert_occurrence_id' => $occurrence->id,
+            'recipient_user_id' => $otherUser->id,
+            'destination_kind' => AlertDestinationKind::DiscordDm,
+            'status' => AlertDeliveryStatus::Delivered,
+        ]);
         $otherOccurrence = AlertOccurrence::factory()->create(['audience_user_id' => $otherUser->id]);
         $otherWeb = AlertDelivery::factory()->create([
             'alert_occurrence_id' => $otherOccurrence->id,
@@ -75,6 +81,7 @@ class AlertActivityServiceTest extends TestCase
         $this->assertSame($web->id, $item['activity_id']);
         $this->assertTrue($item['is_test']);
         $this->assertSame(['delivered', 'failed'], array_column($item['deliveries'], 'status'));
+        $this->assertNotContains($foreignSibling->id, array_column($item['deliveries'], 'id'));
         $discordState = collect($item['deliveries'])->firstWhere('id', $discord->id);
         $this->assertSame($occurrence->id, $discordState['occurrence_id']);
         $this->assertSame('nation.city_count.changed', $discordState['event_key']);

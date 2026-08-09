@@ -134,6 +134,102 @@ class AlertSubscriptionServiceTest extends TestCase
         );
     }
 
+    public function test_preview_and_delivery_only_edits_do_not_persist_or_reset_the_baseline(): void
+    {
+        $alliance = Alliance::factory()->create();
+        config(['services.pw.alliance_id' => $alliance->id]);
+        app(AllianceMembershipService::class)->refresh();
+        $user = $this->eligibleUser($alliance->id);
+        $service = app(AlertSubscriptionService::class);
+        $input = [
+            'type' => 'nation',
+            'name' => 'City watch',
+            'target_id' => $user->nation_id,
+            'events' => ['nation.city_count.changed'],
+            'delivery_mode' => 'immediate',
+            'discord_enabled' => true,
+        ];
+        $expiredSentinel = AlertSubscription::factory()->create([
+            'user_id' => $user->id,
+            'is_active' => true,
+            'status' => 'active',
+            'expires_at' => now()->subMinute(),
+            'active_fingerprint' => null,
+        ]);
+
+        $preview = $service->previewForUser($user, $input);
+
+        $this->assertSame('established_after_save', $preview['baseline_state']);
+        $this->assertSame('nation.city_count.changed', $preview['events'][0]['key']);
+        $this->assertTrue($expiredSentinel->refresh()->is_active);
+        $this->assertSame('active', $expiredSentinel->status->value);
+
+        $subscription = $service->createForUser($user, $input);
+        $subscription->forceFill([
+            'last_observed_state' => ['cities' => 10],
+            'last_condition' => true,
+            'last_evaluated_at' => now(),
+        ])->save();
+
+        $updated = $service->updateForUser($user, $subscription, [
+            ...$input,
+            'name' => 'Renamed city watch',
+            'delivery_mode' => 'daily',
+            'cooldown_minutes' => 90,
+        ]);
+
+        $this->assertSame('Renamed city watch', $updated->name);
+        $this->assertSame('daily', $updated->delivery_mode->value);
+        $this->assertSame(['cities' => 10], $updated->last_observed_state);
+        $this->assertTrue($updated->last_condition);
+    }
+
+    public function test_trigger_edits_reset_the_baseline_and_reject_an_existing_active_fingerprint(): void
+    {
+        $alliance = Alliance::factory()->create();
+        config(['services.pw.alliance_id' => $alliance->id]);
+        app(AllianceMembershipService::class)->refresh();
+        $user = $this->eligibleUser($alliance->id);
+        $service = app(AlertSubscriptionService::class);
+        $first = $service->createForUser($user, [
+            'type' => 'market',
+            'resource' => 'steel',
+            'direction' => 'above',
+            'threshold' => 4000,
+        ]);
+        $duplicateTarget = $service->createForUser($user, [
+            'type' => 'market',
+            'resource' => 'steel',
+            'direction' => 'below',
+            'threshold' => 3000,
+        ]);
+        $first->forceFill([
+            'last_observed_state' => ['price' => 3500],
+            'last_condition' => false,
+            'last_evaluated_at' => now(),
+        ])->save();
+
+        $changed = $service->updateForUser($user, $first, [
+            'type' => 'market',
+            'resource' => 'steel',
+            'direction' => 'above',
+            'threshold' => 4500,
+        ]);
+
+        $this->assertNull($changed->last_observed_state);
+        $this->assertNull($changed->last_condition);
+        $this->assertNull($changed->last_evaluated_at);
+
+        $this->assertNotNull($duplicateTarget->active_fingerprint);
+        $this->expectException(ValidationException::class);
+        $service->updateForUser($user, $changed, [
+            'type' => 'market',
+            'resource' => 'steel',
+            'direction' => 'below',
+            'threshold' => 3000,
+        ]);
+    }
+
     public function test_market_threshold_is_edge_triggered_and_uses_private_notification_preferences(): void
     {
         $alliance = Alliance::factory()->create();

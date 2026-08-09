@@ -22,8 +22,10 @@ class AlertActivityService
             ->where('destination_kind', AlertDestinationKind::Web->value)
             ->when($beforeDeliveryId !== null, fn (Builder $query): Builder => $query->whereKeyNot($beforeDeliveryId)->where('id', '<', $beforeDeliveryId))
             ->with([
-                'occurrence.deliveries' => fn ($query) => $query->oldest('id'),
-                'occurrence.deliveries.batch.attempts' => fn ($query) => $query->oldest('attempt_number'),
+                'occurrence.deliveries' => fn ($query) => $query
+                    ->whereBelongsTo($user, 'recipient')
+                    ->oldest('id')
+                    ->with(['batch.attempts' => fn ($attempts) => $attempts->oldest('attempt_number')]),
             ])
             ->latest('id')
             ->limit($pageSize + 1)
