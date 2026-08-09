@@ -31,6 +31,24 @@ class SubscriptionEnvelopeAuthenticatorTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function test_it_verifies_the_exact_nexus_subs_raw_v1_fixture(): void
+    {
+        $fixture = $this->subscriptionFixture();
+        $envelope = $fixture['envelope'];
+        config()->set('subscriptions.redis.hmac_secret', $fixture['hmac_key']);
+
+        $this->assertSame(
+            $fixture['canonical_payload'],
+            SubscriptionEnvelopeAuthenticator::canonicalPayload($envelope)
+        );
+        $this->assertSame(
+            $envelope['signature'],
+            hash_hmac('sha256', $fixture['canonical_payload'], $fixture['hmac_key'])
+        );
+
+        app(SubscriptionEnvelopeAuthenticator::class)->verify($envelope, false);
+    }
+
     public function test_it_rejects_tampered_and_stale_envelopes(): void
     {
         $authenticator = app(SubscriptionEnvelopeAuthenticator::class);
@@ -121,5 +139,19 @@ class SubscriptionEnvelopeAuthenticatorTest extends TestCase
         );
 
         return $fields;
+    }
+
+    /**
+     * @return array{fixture_version: string, hmac_key: string, canonical_payload: string, envelope: array<string, string>}
+     */
+    private function subscriptionFixture(): array
+    {
+        $contents = file_get_contents(base_path('tests/Fixtures/Subscriptions/subscription-envelope-v1.json'));
+        $this->assertIsString($contents);
+
+        $fixture = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($fixture);
+
+        return $fixture;
     }
 }

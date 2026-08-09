@@ -89,6 +89,42 @@ class SubscriptionStreamConsumerTest extends TestCase
         $this->assertSame(0, (int) $this->raw('XPENDING', $this->stream, $this->group)[0]);
     }
 
+    public function test_it_admits_and_routes_the_exact_nexus_subs_raw_v1_fixture(): void
+    {
+        Queue::fake();
+        Log::spy();
+        $fixture = $this->subscriptionFixture();
+        config()->set('subscriptions.redis.hmac_secret', $fixture['hmac_key']);
+        $this->travelTo('2026-08-08 12:34:56.789 UTC');
+
+        $consumer = app(SubscriptionStreamConsumer::class);
+        $consumer->ensureConsumerGroup();
+        $this->publishEnvelope($fixture['envelope']);
+
+        $this->assertSame(1, $consumer->consumeOnce());
+
+        Queue::assertPushed(
+            UpdateNationJob::class,
+            fn (UpdateNationJob $job): bool => $job->nationsData === [[
+                'id' => 4242,
+                'name' => 'Synthetic Nation',
+            ]]
+        );
+        Log::shouldHaveReceived('info')->withArgs(
+            fn (string $message, array $context): bool => $message === 'Processed subscription stream message.'
+                && $context['message_id'] === 'fixture-message-0001'
+                && $context['model'] === 'nation'
+                && $context['event'] === 'update'
+                && $context['source'] === 'bulk'
+                && $context['record_count'] === 1
+                && $context['representative_ids'] === [4242]
+                && ! array_key_exists('payload', $context)
+        )->once();
+        $this->assertSame(0, (int) $this->raw('XLEN', $this->stream));
+        $this->assertSame(0, (int) $this->raw('XPENDING', $this->stream, $this->group)[0]);
+        $this->assertFileDoesNotExist($this->deadLetterFile);
+    }
+
     public function test_it_reclaims_a_message_abandoned_by_another_consumer(): void
     {
         $processor = Mockery::mock(SubscriptionEventProcessor::class);
@@ -257,8 +293,35 @@ class SubscriptionStreamConsumerTest extends TestCase
         return (string) $this->raw(...$arguments);
     }
 
+    /** @param array<string, string> $fields */
+    private function publishEnvelope(array $fields): string
+    {
+        $arguments = ['XADD', $this->stream, '*'];
+
+        foreach ($fields as $field => $value) {
+            $arguments[] = $field;
+            $arguments[] = $value;
+        }
+
+        return (string) $this->raw(...$arguments);
+    }
+
     private function raw(string ...$arguments): mixed
     {
         return Redis::connection('subscriptions')->client()->rawCommand(...$arguments);
+    }
+
+    /**
+     * @return array{fixture_version: string, hmac_key: string, canonical_payload: string, envelope: array<string, string>}
+     */
+    private function subscriptionFixture(): array
+    {
+        $contents = file_get_contents(base_path('tests/Fixtures/Subscriptions/subscription-envelope-v1.json'));
+        $this->assertIsString($contents);
+
+        $fixture = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($fixture);
+
+        return $fixture;
     }
 }
