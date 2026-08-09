@@ -39,6 +39,47 @@ class DiscordConnectionResolver
         );
     }
 
+    public function resolveForQueueProducer(?string $connectionId = null): DiscordConnectionContext
+    {
+        $connectionId = strtolower(trim((string) $connectionId));
+        if ($connectionId !== '') {
+            return $this->resolveForVerification($connectionId);
+        }
+
+        $hasPersistedConnections = Schema::hasTable('discord_connections')
+            && DiscordConnection::query()->active()->exists();
+        $matches = $hasPersistedConnections
+            ? DiscordConnection::query()
+                ->active()
+                ->where('protocol_version', '>=', 2)
+                ->limit(2)
+                ->get()
+            : collect();
+
+        if ($matches->count() > 1) {
+            throw new DiscordConnectionResolutionException(
+                'ambiguous_discord_connection',
+                'Multiple active Discord connections are available; an explicit connection is required.',
+                409,
+            );
+        }
+
+        if ($matches->count() === 1) {
+            return $this->fromModel($matches->first());
+        }
+
+        $configured = $hasPersistedConnections ? null : $this->configuredContext();
+        if ($configured !== null && $configured->protocolVersion >= 2) {
+            return $configured;
+        }
+
+        throw new DiscordConnectionResolutionException(
+            'discord_connection_not_active',
+            'No active Discord connection is available for queue delivery.',
+            503,
+        );
+    }
+
     public function resolveV2(
         string $connectionId,
         string $applicationId,

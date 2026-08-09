@@ -7,6 +7,7 @@ use App\Enums\LoanStatus;
 use App\Exceptions\ApplicationException;
 use App\Http\Controllers\API\Discord\Concerns\DiscordApiResponses;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\Application;
 use App\Models\CityGrantRequest;
 use App\Models\GrantApplication;
@@ -17,6 +18,8 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Services\ApplicationService;
+use App\Services\Discord\DiscordConnectionContext;
+use App\Services\Discord\DiscordConnectionResolver;
 use App\Services\Discord\DiscordWorkflowLinkService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,6 +49,9 @@ class StaffController extends Controller
                 continue;
             }
             [$query, $statusColumn] = $source;
+            if ($type === 'application') {
+                $this->scopeApplicationQuery($query, $request);
+            }
             if (isset($data['status'])) {
                 $this->applyQueueStatus($query, $type, $data['status']);
             } elseif ($type === 'withdrawal') {
@@ -89,7 +95,9 @@ class StaffController extends Controller
             'discord_channel_id' => ['nullable', 'string', 'regex:/^\d{1,20}$/'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
-        $applications = Application::query()
+        $query = Application::query();
+        $this->scopeApplicationQuery($query, $request);
+        $applications = $query
             ->when(isset($data['status']), fn ($query) => $query->where('status', $data['status']))
             ->when(! isset($data['status']), fn ($query) => $query->where('status', ApplicationStatus::Pending->value))
             ->when(($data['filter'] ?? null) === 'stale', fn ($query) => $query->where('created_at', '<=', now()->subDays(7)))
@@ -112,6 +120,7 @@ class StaffController extends Controller
     public function application(Request $request, Application $application): JsonResponse
     {
         $this->authorizeApplications($request);
+        $this->assertApplicationVisible($application, $request);
         $application->load(['messages' => fn ($query) => $query->oldest()]);
 
         return $this->discordData($this->applicationPayload($application, true));
@@ -126,6 +135,7 @@ class StaffController extends Controller
                 $actor,
                 (string) $request->header('X-Discord-User-ID'),
                 (string) $request->header('X-Discord-Interaction-ID'),
+                $this->connection($request),
             );
         } catch (ApplicationException $exception) {
             return $this->discordError($exception->error, $exception->getMessage(), $exception->status, $exception->context);
@@ -145,6 +155,7 @@ class StaffController extends Controller
                 (string) $request->header('X-Discord-User-ID'),
                 $data['reason'],
                 (string) $request->header('X-Discord-Interaction-ID'),
+                $this->connection($request),
             );
         } catch (ApplicationException $exception) {
             return $this->discordError($exception->error, $exception->getMessage(), $exception->status, $exception->context);
@@ -250,5 +261,48 @@ class StaffController extends Controller
         }
 
         return $actor;
+    }
+
+    private function connection(Request $request): ?DiscordConnectionContext
+    {
+        $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
+
+        return $connection instanceof DiscordConnectionContext ? $connection : null;
+    }
+
+    private function scopeApplicationQuery(Builder $query, Request $request): void
+    {
+        $connection = $this->connection($request);
+        abort_unless($connection instanceof DiscordConnectionContext, 503, 'Discord connection context is missing.');
+        $includeUnbound = $this->canAdoptUnboundApplications($connection);
+
+        $query->where(function (Builder $nested) use ($connection, $includeUnbound): void {
+            $nested->where('discord_connection_id', $connection->connectionId);
+            if ($includeUnbound) {
+                $nested->orWhereNull('discord_connection_id');
+            }
+        });
+    }
+
+    private function assertApplicationVisible(Application $application, Request $request): void
+    {
+        $connection = $this->connection($request);
+        abort_unless($connection instanceof DiscordConnectionContext, 503, 'Discord connection context is missing.');
+
+        $visible = is_string($application->discord_connection_id)
+            ? hash_equals($connection->connectionId, $application->discord_connection_id)
+            : $this->canAdoptUnboundApplications($connection);
+        abort_unless($visible, 404);
+    }
+
+    private function canAdoptUnboundApplications(DiscordConnectionContext $connection): bool
+    {
+        try {
+            $default = app(DiscordConnectionResolver::class)->resolveForQueueProducer();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return hash_equals($default->connectionId, $connection->connectionId);
     }
 }

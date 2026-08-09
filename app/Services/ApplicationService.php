@@ -12,6 +12,10 @@ use App\Models\Nation as NationRecord;
 use App\Models\User;
 use App\Services\Applications\ApplicationApplicantValidator;
 use App\Services\Applications\ApplicationNationLookup;
+use App\Services\Discord\ApplicationDiscordReconciliationException;
+use App\Services\Discord\ApplicationDiscordReconciliationService;
+use App\Services\Discord\DiscordConnectionContext;
+use App\Services\Discord\DiscordConnectionResolver;
 use App\Services\Discord\PrivateNotificationService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\QueryException;
@@ -39,15 +43,22 @@ class ApplicationService
         $this->applicantValidator = $applicantValidator ?? new ApplicationApplicantValidator($membershipService);
     }
 
-    public function approveById(Application $application, User $moderator, string $moderatorDiscordId, ?string $requestId = null): Application
-    {
+    public function approveById(
+        Application $application,
+        User $moderator,
+        string $moderatorDiscordId,
+        ?string $requestId = null,
+        ?DiscordConnectionContext $connection = null,
+    ): Application {
         if (! Gate::forUser($moderator)->allows('manage-applications')) {
             throw new ApplicationException('forbidden', 'You do not have permission to approve applications.', 403);
         }
+        $this->assertApplicationConnection($application, $connection);
 
-        return Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $requestId): Application {
-            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $requestId): Application {
+        $application = Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $requestId, $connection): Application {
+            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $requestId, $connection): Application {
                 $application = Application::query()->lockForUpdate()->findOrFail($application->id);
+                $this->assertApplicationConnection($application, $connection);
                 if ($application->status === ApplicationStatus::Approved && $requestId !== null && $application->approval_request_id === $requestId) {
                     return $application;
                 }
@@ -79,6 +90,8 @@ class ApplicationService
                 return $application->fresh();
             }, attempts: 3);
         });
+
+        return $this->reconcileDiscordApplication($application, $connection);
     }
 
     public function denyById(
@@ -87,14 +100,17 @@ class ApplicationService
         string $moderatorDiscordId,
         string $reason,
         ?string $requestId = null,
+        ?DiscordConnectionContext $connection = null,
     ): Application {
         if (! Gate::forUser($moderator)->allows('manage-applications')) {
             throw new ApplicationException('forbidden', 'You do not have permission to deny applications.', 403);
         }
+        $this->assertApplicationConnection($application, $connection);
 
-        return Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId): Application {
-            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId): Application {
+        $application = Cache::lock('applications:decision:id:'.$application->id, 30)->block(25, function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId, $connection): Application {
+            return DB::transaction(function () use ($application, $moderator, $moderatorDiscordId, $reason, $requestId, $connection): Application {
                 $application = Application::query()->lockForUpdate()->findOrFail($application->id);
+                $this->assertApplicationConnection($application, $connection);
                 if ($application->status === ApplicationStatus::Denied && $requestId !== null && $application->denial_request_id === $requestId) {
                     return $application;
                 }
@@ -126,6 +142,8 @@ class ApplicationService
                 return $application->fresh();
             }, attempts: 3);
         });
+
+        return $this->reconcileDiscordApplication($application, $connection);
     }
 
     private function queueApplicationNotification(Application $application, string $status): void
@@ -218,8 +236,12 @@ class ApplicationService
      *
      * @throws ApplicationException
      */
-    public function createApplicationFromDiscord(int $nationId, string $discordUserId, string $discordUsername): Application
-    {
+    public function createApplicationFromDiscord(
+        int $nationId,
+        string $discordUserId,
+        string $discordUsername,
+        ?DiscordConnectionContext $connection = null,
+    ): Application {
         $this->assertApplicationsEnabled();
 
         $nation = $this->fetchEligibleApplicantNation($nationId);
@@ -254,12 +276,16 @@ class ApplicationService
                 ]);
             }
 
-            return $application;
+            $this->assertApplicationConnection($application, $connection, allowUnbound: true);
+
+            return $this->reconcileDiscordApplication($application, $connection);
         } catch (LockTimeoutException) {
             $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
 
             if ($existingApplication) {
-                return $existingApplication;
+                $this->assertApplicationConnection($existingApplication, $connection, allowUnbound: true);
+
+                return $this->reconcileDiscordApplication($existingApplication, $connection);
             }
 
             throw new ApplicationException(
@@ -272,7 +298,9 @@ class ApplicationService
                 $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
 
                 if ($existingApplication) {
-                    return $existingApplication;
+                    $this->assertApplicationConnection($existingApplication, $connection, allowUnbound: true);
+
+                    return $this->reconcileDiscordApplication($existingApplication, $connection);
                 }
 
                 throw new ApplicationException(
@@ -382,12 +410,13 @@ class ApplicationService
         string $applicantDiscordId,
         string $moderatorDiscordId,
         string $approvalRequestId,
+        ?DiscordConnectionContext $connection = null,
     ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
         try {
-            return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
-                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator): Application {
+            $application = Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
+                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator, $connection): Application {
                     $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
                         ApplicationStatus::Approved,
@@ -395,11 +424,21 @@ class ApplicationService
                     );
 
                     if ($existingApplication) {
+                        $this->assertApplicationConnection($existingApplication, $connection);
+
                         return $existingApplication;
                     }
 
-                    return $this->approvePendingApplication($applicantDiscordId, $moderatorDiscordId, $approvalRequestId, $moderator);
+                    return $this->approvePendingApplication(
+                        $applicantDiscordId,
+                        $moderatorDiscordId,
+                        $approvalRequestId,
+                        $moderator,
+                        $connection,
+                    );
                 });
+
+            return $this->reconcileDiscordApplication($application, $connection);
         } catch (LockTimeoutException) {
             throw new ApplicationException(
                 'approval_in_progress',
@@ -416,9 +455,11 @@ class ApplicationService
         string $applicantDiscordId,
         string $moderatorDiscordId,
         ?string $approvalRequestId,
-        User $moderator
+        User $moderator,
+        ?DiscordConnectionContext $connection = null,
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
+        $this->assertApplicationConnection($application, $connection);
         $nation = $this->fetchNationInAlliance($application->nation_id);
 
         $this->assertNationInAlliance($nation);
@@ -477,12 +518,13 @@ class ApplicationService
         string $applicantDiscordId,
         string $moderatorDiscordId,
         string $denialRequestId,
+        ?DiscordConnectionContext $connection = null,
     ): Application {
         $moderator = $this->resolveModerator($moderatorDiscordId);
 
         try {
-            return Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
-                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator): Application {
+            $application = Cache::lock($this->applicationDecisionLockKey($applicantDiscordId), 30)
+                ->block(25, function () use ($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator, $connection): Application {
                     $existingApplication = $this->findExistingDecision(
                         $applicantDiscordId,
                         ApplicationStatus::Denied,
@@ -490,11 +532,21 @@ class ApplicationService
                     );
 
                     if ($existingApplication) {
+                        $this->assertApplicationConnection($existingApplication, $connection);
+
                         return $existingApplication;
                     }
 
-                    return $this->denyPendingApplication($applicantDiscordId, $moderatorDiscordId, $denialRequestId, $moderator);
+                    return $this->denyPendingApplication(
+                        $applicantDiscordId,
+                        $moderatorDiscordId,
+                        $denialRequestId,
+                        $moderator,
+                        $connection,
+                    );
                 });
+
+            return $this->reconcileDiscordApplication($application, $connection);
         } catch (LockTimeoutException) {
             throw new ApplicationException(
                 'denial_in_progress',
@@ -511,9 +563,11 @@ class ApplicationService
         string $applicantDiscordId,
         string $moderatorDiscordId,
         ?string $denialRequestId,
-        User $moderator
+        User $moderator,
+        ?DiscordConnectionContext $connection = null,
     ): Application {
         $application = $this->findPendingApplication($applicantDiscordId);
+        $this->assertApplicationConnection($application, $connection);
 
         $this->syncAllianceDecisionOrFail(
             $application,
@@ -565,8 +619,11 @@ class ApplicationService
      *
      * @throws ApplicationException
      */
-    public function cancel(Application $application, User $actor): Application
-    {
+    public function cancel(
+        Application $application,
+        User $actor,
+        ?DiscordConnectionContext $connection = null,
+    ): Application {
         if (! Gate::forUser($actor)->allows('manage-applications')) {
             throw new ApplicationException(
                 'forbidden',
@@ -574,6 +631,7 @@ class ApplicationService
                 403
             );
         }
+        $this->assertApplicationConnection($application, $connection);
 
         if ($application->status !== ApplicationStatus::Pending) {
             throw new ApplicationException(
@@ -614,7 +672,148 @@ class ApplicationService
             ]
         );
 
-        return $application;
+        return $this->reconcileDiscordApplication($application, $connection);
+    }
+
+    /**
+     * Keep an application scoped to the installation that created or first
+     * reconciled it. A generation rotation on the same connection is allowed.
+     *
+     * @throws ApplicationException
+     */
+    private function assertApplicationConnection(
+        Application $application,
+        ?DiscordConnectionContext $connection,
+        bool $allowUnbound = false,
+    ): void {
+        if ($connection === null) {
+            return;
+        }
+
+        $bindings = [
+            'discord_connection_id' => $connection->connectionId,
+            'discord_application_id' => $connection->applicationId,
+            'discord_guild_id' => $connection->guildId,
+        ];
+
+        $isUnbound = collect(array_keys($bindings))
+            ->every(fn (string $field): bool => $application->{$field} === null);
+        if ($isUnbound && ! $allowUnbound) {
+            if ($connection->protocolVersion === 1 && $connection->isDedicated()) {
+                return;
+            }
+
+            try {
+                $default = app(DiscordConnectionResolver::class)->resolveForQueueProducer();
+            } catch (Throwable) {
+                throw new ApplicationException(
+                    'application_installation_mismatch',
+                    'The application is not available in this Discord installation.',
+                    404,
+                );
+            }
+
+            if (! hash_equals($default->connectionId, $connection->connectionId)) {
+                throw new ApplicationException(
+                    'application_installation_mismatch',
+                    'The application is not available in this Discord installation.',
+                    404,
+                );
+            }
+        }
+
+        foreach ($bindings as $field => $expected) {
+            $current = $application->{$field};
+
+            if ($current !== null && ! hash_equals((string) $current, $expected)) {
+                throw new ApplicationException(
+                    'application_installation_mismatch',
+                    'The application is not available in this Discord installation.',
+                    404,
+                );
+            }
+        }
+    }
+
+    private function reconcileDiscordApplication(
+        Application $application,
+        ?DiscordConnectionContext $connection,
+    ): Application {
+        try {
+            return app(ApplicationDiscordReconciliationService::class)->reconcile($application, $connection);
+        } catch (ApplicationDiscordReconciliationException $exception) {
+            $trackFailure = $connection !== null
+                || $application->discord_connection_id !== null
+                || (int) $application->discord_reconcile_revision > 0;
+            Log::log($trackFailure ? 'warning' : 'debug', 'Discord application reconciliation was not queued.', [
+                'application_id' => $application->getKey(),
+                'error' => $exception->errorCode,
+                'status' => $exception->status,
+            ]);
+
+            if (! $trackFailure || $exception->errorCode === 'application_discord_binding_mismatch') {
+                return $application->fresh();
+            }
+
+            try {
+                $application = DB::transaction(function () use ($application, $connection, $exception): Application {
+                    $locked = Application::query()->lockForUpdate()->findOrFail($application->getKey());
+                    $this->assertApplicationConnection($locked, $connection, allowUnbound: true);
+                    $issues = collect($locked->discord_reconcile_issues ?? [])
+                        ->filter(static fn (mixed $issue): bool => is_string($issue) && trim($issue) !== '')
+                        ->push($exception->errorCode)
+                        ->unique()
+                        ->values()
+                        ->all();
+                    $revision = max(0, (int) $locked->discord_reconcile_revision);
+                    if ($revision === 0 || $locked->discord_reconcile_queue_id !== null) {
+                        $revision++;
+                    }
+
+                    $attributes = [
+                        'discord_reconcile_revision' => $revision,
+                        'discord_reconcile_queue_id' => null,
+                        'discord_reconcile_desired_hash' => null,
+                        'discord_reconcile_issues' => $issues,
+                    ];
+                    if ($connection !== null) {
+                        $attributes += [
+                            'discord_connection_id' => $connection->connectionId,
+                            'discord_connection_generation' => $connection->generation,
+                            'discord_application_id' => $connection->applicationId,
+                            'discord_guild_id' => $connection->guildId,
+                        ];
+                    }
+
+                    $locked->forceFill($attributes)->save();
+
+                    return $locked->fresh();
+                }, attempts: 3);
+
+                app(AuditLogger::class)->recordAfterCommit(
+                    category: 'applications',
+                    action: 'application_discord_reconciliation_failed',
+                    outcome: 'failure',
+                    severity: 'warning',
+                    subject: $application,
+                    context: ['data' => [
+                        'error' => $exception->errorCode,
+                        'connection_id' => $connection?->connectionId ?? $application->discord_connection_id,
+                        'connection_generation' => $connection?->generation ?? $application->discord_connection_generation,
+                        'guild_id' => $connection?->guildId ?? $application->discord_guild_id,
+                    ]],
+                    message: 'Discord application reconciliation could not be queued.',
+                );
+            } catch (Throwable $recordingException) {
+                Log::error('Discord application reconciliation failure could not be recorded.', [
+                    'application_id' => $application->getKey(),
+                    'error' => $exception->errorCode,
+                    'exception' => $recordingException::class,
+                ]);
+            }
+
+            return $application->fresh();
+        }
     }
 
     /**

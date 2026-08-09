@@ -63,7 +63,9 @@ final class ApplicationDiscordStatusProjection
         if (! $queue
             || ! is_string($application->discord_reconcile_queue_id)
             || ! hash_equals($application->discord_reconcile_queue_id, (string) $queue->getKey())
-            || $queue->action !== self::ACTION) {
+            || $queue->action !== self::ACTION
+            || (int) data_get($queue->payload, 'application.id') !== (int) $application->getKey()
+            || (int) data_get($queue->payload, 'application.revision') !== (int) $application->discord_reconcile_revision) {
             return null;
         }
 

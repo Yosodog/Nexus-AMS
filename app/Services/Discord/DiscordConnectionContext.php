@@ -44,7 +44,10 @@ final readonly class DiscordConnectionContext
 
     public function supports(string $capability): bool
     {
-        $values = $this->capabilities['capabilities'] ?? $this->capabilities;
+        $values = $this->capabilities['capabilities']
+            ?? $this->capabilities['keys']
+            ?? $this->capabilities['features']
+            ?? $this->capabilities;
 
         if (is_array($values) && array_is_list($values)) {
             return in_array($capability, $values, true);
@@ -53,10 +56,22 @@ final readonly class DiscordConnectionContext
         return is_array($values) && ($values[$capability] ?? false) === true;
     }
 
+    public function supportsQueueAction(string $action): bool
+    {
+        $actions = $this->capabilities['supported_queue_actions'] ?? [];
+
+        return is_array($actions)
+            && array_is_list($actions)
+            && in_array($action, $actions, true);
+    }
+
     /** @return list<string> */
     public function capabilityKeys(): array
     {
-        $values = $this->capabilities['capabilities'] ?? $this->capabilities;
+        $values = $this->capabilities['capabilities']
+            ?? $this->capabilities['keys']
+            ?? $this->capabilities['features']
+            ?? $this->capabilities;
         $keys = is_array($values) && array_is_list($values)
             ? $values
             : array_keys(array_filter(

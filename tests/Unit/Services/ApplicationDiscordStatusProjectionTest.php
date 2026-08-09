@@ -169,6 +169,26 @@ class ApplicationDiscordStatusProjectionTest extends TestCase
         }
     }
 
+    public function test_stale_queue_revision_is_never_reported_as_current_reconciliation(): void
+    {
+        [$application, $queue] = $this->applicationWithQueue(
+            ApplicationStatus::Pending,
+            DiscordQueueStatus::Complete,
+        );
+        $queue->forceFill(['payload' => [
+            'contract_version' => 1,
+            'application' => [
+                'id' => $application->id,
+                'revision' => 1,
+            ],
+        ]])->save();
+        $application->forceFill(['discord_reconcile_revision' => 2])->save();
+
+        $status = $this->projection->forMember($application->fresh(), $queue->fresh());
+
+        $this->assertSame('attention', $status['reconciliation']['state']);
+    }
+
     /** @param array<string, mixed> $overrides */
     private function application(ApplicationStatus $status, array $overrides = []): Application
     {
@@ -196,7 +216,13 @@ class ApplicationDiscordStatusProjectionTest extends TestCase
         ], $overrides));
         $queue = DiscordQueue::query()->create([
             'action' => ApplicationDiscordStatusProjection::ACTION,
-            'payload' => ['contract_version' => 1],
+            'payload' => [
+                'contract_version' => 1,
+                'application' => [
+                    'id' => $application->id,
+                    'revision' => $application->discord_reconcile_revision,
+                ],
+            ],
             'status' => $queueStatus,
         ]);
         $application->forceFill(['discord_reconcile_queue_id' => $queue->id])->save();

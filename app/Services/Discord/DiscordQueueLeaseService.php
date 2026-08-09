@@ -6,6 +6,7 @@ use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
+use App\Models\Application;
 use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomOperation;
@@ -29,6 +30,7 @@ class DiscordQueueLeaseService
     private const CHECKPOINT_FIELDS = [
         'WAR_ROOM_CREATE' => ['discord_channel_id'],
         'CITY_TIER_SYNC' => ['roles'],
+        'APPLICATION_DISCORD_RECONCILE' => ['application_reconcile'],
     ];
 
     public function __construct(
@@ -294,6 +296,13 @@ class DiscordQueueLeaseService
                 );
             }
 
+            if ($locked->action === ApplicationDiscordReconciliationService::ACTION) {
+                $this->applyApplicationReconcileCheckpoint(
+                    $locked,
+                    $result['application_reconcile'] ?? null,
+                );
+            }
+
             $locked->forceFill([
                 'result' => array_replace($locked->result ?? [], $result),
             ])->save();
@@ -306,6 +315,173 @@ class DiscordQueueLeaseService
         }
 
         return $checkpointed;
+    }
+
+    private function applyApplicationReconcileCheckpoint(
+        DiscordQueue $command,
+        mixed $checkpoint,
+    ): void {
+        if (! is_array($checkpoint)) {
+            throw new DiscordQueueLeaseException(
+                'application_reconcile_checkpoint_invalid',
+                'The application reconciliation checkpoint is invalid.',
+                422,
+            );
+        }
+
+        $payload = $command->payload;
+        $applicationId = data_get($payload, 'application.id');
+        $revision = data_get($payload, 'application.revision');
+        if (! is_int($applicationId) || $applicationId < 1 || ! is_int($revision) || $revision < 1) {
+            throw new DiscordQueueLeaseException(
+                'application_reconcile_payload_invalid',
+                'The queued application reconciliation contract is invalid.',
+                409,
+            );
+        }
+
+        $application = Application::query()->whereKey($applicationId)->lockForUpdate()->first();
+        if (! $application
+            || ! is_string($application->discord_reconcile_queue_id)
+            || ! hash_equals($application->discord_reconcile_queue_id, (string) $command->getKey())
+            || (int) $application->discord_reconcile_revision !== $revision
+            || ($checkpoint['application_revision'] ?? null) !== $revision
+            || strtolower($application->status->value) !== data_get($payload, 'application.state')
+            || (int) $application->nation_id !== data_get($payload, 'application.nation_id')
+            || ! hash_equals((string) $application->discord_user_id, (string) data_get($payload, 'application.discord_user_id'))) {
+            throw new DiscordQueueLeaseException(
+                'stale_application_reconciliation',
+                'A newer application state superseded this reconciliation revision.',
+                409,
+            );
+        }
+
+        $bindings = [
+            [$application->discord_connection_id, $command->connection_id, data_get($payload, 'installation.connection_id')],
+            [$application->discord_application_id, $command->application_id, data_get($payload, 'installation.application_id')],
+            [$application->discord_guild_id, $command->guild_id, data_get($payload, 'installation.guild_id')],
+        ];
+        foreach ($bindings as [$applicationValue, $queueValue, $payloadValue]) {
+            if (! is_string($applicationValue)
+                || ! is_string($queueValue)
+                || ! is_string($payloadValue)
+                || ! hash_equals($applicationValue, $queueValue)
+                || ! hash_equals($applicationValue, $payloadValue)) {
+                throw new DiscordQueueLeaseException(
+                    'application_reconcile_binding_mismatch',
+                    'The application reconciliation does not match its Discord installation.',
+                    409,
+                );
+            }
+        }
+        if ((int) $application->discord_connection_generation !== (int) $command->connection_generation
+            || (int) $application->discord_connection_generation !== data_get($payload, 'installation.generation')) {
+            throw new DiscordQueueLeaseException(
+                'stale_application_reconciliation',
+                'A newer Discord connection generation superseded this reconciliation revision.',
+                409,
+            );
+        }
+
+        $this->assertApplicationCheckpointMatchesDesiredState($payload, $checkpoint);
+
+        $channelId = $checkpoint['channel_id'];
+        if ($checkpoint['channel_deleted'] === true) {
+            $application->discord_channel_id = null;
+        } elseif (is_string($channelId)) {
+            $currentChannelId = trim((string) $application->discord_channel_id);
+            if ($currentChannelId !== '' && ! hash_equals($currentChannelId, $channelId)) {
+                throw new DiscordQueueLeaseException(
+                    'application_channel_conflict',
+                    'The application channel changed while Discord reconciliation was running.',
+                    409,
+                );
+            }
+
+            $application->discord_channel_id = $channelId;
+        }
+
+        if ($application->isDirty()) {
+            $application->save();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $checkpoint
+     */
+    private function assertApplicationCheckpointMatchesDesiredState(array $payload, array $checkpoint): void
+    {
+        $required = [
+            'application_revision',
+            'channel_id',
+            'channel_deleted',
+            'roles_added',
+            'roles_removed',
+            'intro_messages',
+            'notifications',
+        ];
+        if (array_diff(array_keys($checkpoint), $required) !== []
+            || array_diff($required, array_keys($checkpoint)) !== []
+            || ! is_int($checkpoint['application_revision'])
+            || ($checkpoint['channel_id'] !== null && ! is_string($checkpoint['channel_id']))
+            || ! is_bool($checkpoint['channel_deleted'])
+            || ! $this->isStringList($checkpoint['roles_added'])
+            || ! $this->isStringList($checkpoint['roles_removed'])
+            || ! $this->isStringList($checkpoint['intro_messages'])
+            || ! $this->isStringList($checkpoint['notifications'])) {
+            throw new DiscordQueueLeaseException(
+                'application_reconcile_checkpoint_invalid',
+                'The application reconciliation checkpoint is invalid.',
+                422,
+            );
+        }
+
+        $channelId = $checkpoint['channel_id'];
+        $desiredMode = data_get($payload, 'desired.channel.mode');
+        $desiredChannelId = data_get($payload, 'desired.channel.channel_id');
+        if (($checkpoint['channel_deleted'] === true
+                && ($desiredMode !== 'absent' || $channelId !== null))
+            || ($desiredMode === 'absent' && $channelId !== null)
+            || (is_string($channelId)
+                && is_string($desiredChannelId)
+                && ! hash_equals($desiredChannelId, $channelId))) {
+            throw new DiscordQueueLeaseException(
+                'application_reconcile_checkpoint_conflict',
+                'The checkpoint does not match the desired application channel state.',
+                409,
+            );
+        }
+
+        $desiredAdds = data_get($payload, 'desired.roles.add', []);
+        $desiredRemoves = data_get($payload, 'desired.roles.remove', []);
+        $desiredIntroKeys = collect(data_get($payload, 'desired.channel.intro_messages', []))
+            ->pluck('key')
+            ->all();
+        $desiredNotificationKeys = collect(data_get($payload, 'desired.notifications', []))
+            ->pluck('key')
+            ->all();
+        if (! $this->isStringList($desiredAdds)
+            || ! $this->isStringList($desiredRemoves)
+            || ! $this->isStringList($desiredIntroKeys)
+            || ! $this->isStringList($desiredNotificationKeys)
+            || array_diff($checkpoint['roles_added'], $desiredAdds) !== []
+            || array_diff($checkpoint['roles_removed'], $desiredRemoves) !== []
+            || array_diff($checkpoint['intro_messages'], $desiredIntroKeys) !== []
+            || array_diff($checkpoint['notifications'], $desiredNotificationKeys) !== []) {
+            throw new DiscordQueueLeaseException(
+                'application_reconcile_checkpoint_conflict',
+                'The checkpoint contains Discord operations outside the Nexus desired state.',
+                409,
+            );
+        }
+    }
+
+    private function isStringList(mixed $value): bool
+    {
+        return is_array($value)
+            && array_is_list($value)
+            && collect($value)->every(static fn (mixed $item): bool => is_string($item));
     }
 
     public function acknowledge(

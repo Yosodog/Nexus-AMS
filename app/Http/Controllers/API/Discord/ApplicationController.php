@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Discord;
 use App\Exceptions\ApplicationException;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolveDiscordActor;
+use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Http\Requests\Discord\DiscordApplicationApproveRequest;
 use App\Http\Requests\Discord\DiscordApplicationDenyRequest;
 use App\Http\Requests\Discord\DiscordApplicationMessageRequest;
@@ -13,6 +14,7 @@ use App\Http\Requests\Discord\DiscordAttachChannelRequest;
 use App\Models\Application;
 use App\Models\DiscordAccount;
 use App\Services\ApplicationService;
+use App\Services\Discord\DiscordConnectionContext;
 use Illuminate\Http\JsonResponse;
 
 class ApplicationController extends Controller
@@ -25,7 +27,8 @@ class ApplicationController extends Controller
             $application = $this->applicationService->createApplicationFromDiscord(
                 $request->integer('nation_id'),
                 $request->string('discord_user_id')->toString(),
-                $request->string('discord_username')->toString()
+                $request->string('discord_username')->toString(),
+                $this->connection($request),
             );
             $nation = $this->applicationService->getNation($application->nation_id);
         } catch (ApplicationException $e) {
@@ -82,7 +85,8 @@ class ApplicationController extends Controller
             $application = $this->applicationService->approveByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
                 $moderatorDiscordId,
-                $request->string('approval_request_id')->toString()
+                $request->string('approval_request_id')->toString(),
+                $this->connection($request),
             );
         } catch (ApplicationException $e) {
             return $this->errorResponse($e);
@@ -106,7 +110,8 @@ class ApplicationController extends Controller
             $application = $this->applicationService->denyByDiscordUser(
                 $request->string('applicant_discord_id')->toString(),
                 $moderatorDiscordId,
-                $request->string('denial_request_id')->toString()
+                $request->string('denial_request_id')->toString(),
+                $this->connection($request),
             );
         } catch (ApplicationException $e) {
             return $this->errorResponse($e);
@@ -142,5 +147,13 @@ class ApplicationController extends Controller
         }
 
         return (string) $account->discord_id;
+    }
+
+    private function connection(
+        DiscordApplicationStoreRequest|DiscordApplicationApproveRequest|DiscordApplicationDenyRequest $request,
+    ): ?DiscordConnectionContext {
+        $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
+
+        return $connection instanceof DiscordConnectionContext ? $connection : null;
     }
 }
