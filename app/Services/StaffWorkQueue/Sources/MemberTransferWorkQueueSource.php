@@ -3,11 +3,14 @@
 namespace App\Services\StaffWorkQueue\Sources;
 
 use App\Models\MemberTransfer;
+use App\Services\StaffWorkQueue\ProvidesStaffWorkQueueSourceV2;
 use App\Services\StaffWorkQueue\StaffWorkItem;
-use App\Services\StaffWorkQueue\StaffWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueSourceV2;
 
-final class MemberTransferWorkQueueSource implements StaffWorkQueueSource
+final class MemberTransferWorkQueueSource implements StaffWorkQueueSourceV2
 {
+    use ProvidesStaffWorkQueueSourceV2;
+
     public function type(): string
     {
         return 'member_transfers';

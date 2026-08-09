@@ -4,11 +4,14 @@ namespace App\Services\StaffWorkQueue\Sources;
 
 use App\Models\RebuildingRequest;
 use App\Services\RebuildingService;
+use App\Services\StaffWorkQueue\ProvidesStaffWorkQueueSourceV2;
 use App\Services\StaffWorkQueue\StaffWorkItem;
-use App\Services\StaffWorkQueue\StaffWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueSourceV2;
 
-final class RebuildingWorkQueueSource implements StaffWorkQueueSource
+final class RebuildingWorkQueueSource implements StaffWorkQueueSourceV2
 {
+    use ProvidesStaffWorkQueueSourceV2;
+
     public function __construct(private readonly RebuildingService $rebuildingService) {}
 
     public function type(): string

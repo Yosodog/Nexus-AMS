@@ -3,11 +3,14 @@
 namespace App\Services\StaffWorkQueue\Sources;
 
 use App\Models\Transaction;
+use App\Services\StaffWorkQueue\ProvidesStaffWorkQueueSourceV2;
 use App\Services\StaffWorkQueue\StaffWorkItem;
-use App\Services\StaffWorkQueue\StaffWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueSourceV2;
 
-final class WithdrawalWorkQueueSource implements StaffWorkQueueSource
+final class WithdrawalWorkQueueSource implements StaffWorkQueueSourceV2
 {
+    use ProvidesStaffWorkQueueSourceV2;
+
     public function type(): string
     {
         return 'withdrawals';

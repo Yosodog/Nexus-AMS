@@ -4,11 +4,14 @@ namespace App\Services\StaffWorkQueue\Sources;
 
 use App\Enums\BlockadeReliefStatus;
 use App\Models\BlockadeReliefRequest;
+use App\Services\StaffWorkQueue\ProvidesStaffWorkQueueSourceV2;
 use App\Services\StaffWorkQueue\StaffWorkItem;
-use App\Services\StaffWorkQueue\StaffWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueSourceV2;
 
-final class BlockadeReliefWorkQueueSource implements StaffWorkQueueSource
+final class BlockadeReliefWorkQueueSource implements StaffWorkQueueSourceV2
 {
+    use ProvidesStaffWorkQueueSourceV2;
+
     public function type(): string
     {
         return 'blockade_relief';

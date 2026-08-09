@@ -100,7 +100,7 @@ class StaffWorkQueueRegistryTest extends TestCase
         $this->assertSame(2, $counts['total']);
         $this->assertSame(['loans:1', 'loans:2'], array_column($projection['items'], 'key'));
         $this->assertSame(1, $loans->loads);
-        $this->assertSame(1, $applications->loads);
+        $this->assertSame(0, $applications->loads);
     }
 
     public function test_flush_cache_rebuilds_the_projection_once(): void

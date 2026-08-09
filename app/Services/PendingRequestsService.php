@@ -41,10 +41,6 @@ class PendingRequestsService
     {
         $projection = $this->registry->forUser($user);
 
-        if ($projection['types'] !== []) {
-            $this->mirrorLegacyCounts($this->registry->snapshot()['counts']);
-        }
-
         return [
             'counts' => $projection['counts'],
             'total' => $projection['total'],

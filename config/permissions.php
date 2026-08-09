@@ -52,4 +52,7 @@ return [
     'manage-lottery',
     'view-audits',
     'manage-audits',
+    'coordinate-operations',
+    'manage-operations',
+    'view-milcom-operations',
 ];

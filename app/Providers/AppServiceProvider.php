@@ -31,6 +31,7 @@ use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use App\Services\SettingService;
+use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\AuditRemediationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\BlockadeReliefWorkQueueSource;
@@ -80,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(BlockadeReliefWorkQueueSource::class),
             $app->make(AuditRemediationWorkQueueSource::class),
         ]));
+        $this->app->bind(OperationsReadStore::class, fn ($app): OperationsReadStore => $app->make(StaffWorkQueueRegistry::class));
 
         $this->app->scoped('pw.health.view-data', function () {
             $status = Cache::get(PWHealthService::CACHE_KEY_STATUS);

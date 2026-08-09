@@ -3,11 +3,14 @@
 namespace App\Services\StaffWorkQueue\Sources;
 
 use App\Models\CityGrantRequest;
+use App\Services\StaffWorkQueue\ProvidesStaffWorkQueueSourceV2;
 use App\Services\StaffWorkQueue\StaffWorkItem;
-use App\Services\StaffWorkQueue\StaffWorkQueueSource;
+use App\Services\StaffWorkQueue\StaffWorkQueueSourceV2;
 
-final class CityGrantWorkQueueSource implements StaffWorkQueueSource
+final class CityGrantWorkQueueSource implements StaffWorkQueueSourceV2
 {
+    use ProvidesStaffWorkQueueSourceV2;
+
     public function type(): string
     {
         return 'city_grants';
