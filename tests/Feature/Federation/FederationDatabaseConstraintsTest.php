@@ -22,10 +22,13 @@ use App\Models\FederationReceivedVersion;
 use Closure;
 use Illuminate\Database\MySqlConnection;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PDO;
+use RuntimeException;
 use Tests\TestCase;
 
 class FederationDatabaseConstraintsTest extends TestCase
@@ -371,6 +374,67 @@ class FederationDatabaseConstraintsTest extends TestCase
                 strlen($constraintName),
                 "MySQL foreign key identifier [{$constraintName}] exceeds 64 characters."
             );
+        }
+    }
+
+    public function test_publication_migration_recovers_empty_partial_tables_from_failed_mysql_ddl(): void
+    {
+        $connection = new SQLiteConnection(new PDO('sqlite::memory:'), 'testing');
+        $schema = $connection->getSchemaBuilder();
+        $schema->create('federation_publications', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->string('partial_marker');
+        });
+        $schema->create('federation_publication_versions', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->string('partial_marker');
+        });
+
+        $originalSchema = Schema::getFacadeRoot();
+        Schema::swap($schema);
+
+        try {
+            $migration = require database_path(
+                'migrations/2026_08_08_221551_create_federation_publication_and_received_resource_tables.php'
+            );
+            $migration->up();
+
+            $this->assertTrue($schema->hasTable('federation_publications'));
+            $this->assertTrue($schema->hasTable('federation_publication_versions'));
+            $this->assertTrue($schema->hasTable('federation_publication_deliveries'));
+            $this->assertTrue($schema->hasTable('federation_received_resources'));
+            $this->assertTrue($schema->hasTable('federation_received_versions'));
+            $this->assertTrue($schema->hasColumn('federation_publications', 'milcom_operation_id'));
+            $this->assertFalse($schema->hasColumn('federation_publications', 'partial_marker'));
+        } finally {
+            Schema::swap($originalSchema);
+        }
+    }
+
+    public function test_publication_migration_refuses_to_delete_nonempty_partial_tables(): void
+    {
+        $connection = new SQLiteConnection(new PDO('sqlite::memory:'), 'testing');
+        $schema = $connection->getSchemaBuilder();
+        $schema->create('federation_publications', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+        });
+        $connection->table('federation_publications')->insert(['id' => (string) Str::ulid()]);
+
+        $originalSchema = Schema::getFacadeRoot();
+        Schema::swap($schema);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Federation migration recovery refused because [federation_publications] contains data.'
+        );
+
+        try {
+            $migration = require database_path(
+                'migrations/2026_08_08_221551_create_federation_publication_and_received_resource_tables.php'
+            );
+            $migration->up();
+        } finally {
+            Schema::swap($originalSchema);
         }
     }
 

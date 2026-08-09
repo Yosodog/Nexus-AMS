@@ -6,8 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    private const TABLES_IN_DROP_ORDER = [
+        'federation_received_versions',
+        'federation_received_resources',
+        'federation_publication_deliveries',
+        'federation_publication_versions',
+        'federation_publications',
+    ];
+
     public function up(): void
     {
+        $this->recoverEmptyPartialTables();
+
         Schema::create('federation_publications', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignId('milcom_operation_id')->constrained('milcom_operations')->restrictOnDelete();
@@ -147,10 +157,34 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('federation_received_versions');
-        Schema::dropIfExists('federation_received_resources');
-        Schema::dropIfExists('federation_publication_deliveries');
-        Schema::dropIfExists('federation_publication_versions');
-        Schema::dropIfExists('federation_publications');
+        foreach (self::TABLES_IN_DROP_ORDER as $table) {
+            Schema::dropIfExists($table);
+        }
+    }
+
+    private function recoverEmptyPartialTables(): void
+    {
+        $existingTables = array_values(array_filter(
+            self::TABLES_IN_DROP_ORDER,
+            static fn (string $table): bool => Schema::hasTable($table)
+        ));
+
+        if ($existingTables === []) {
+            return;
+        }
+
+        $connection = Schema::getConnection();
+
+        foreach ($existingTables as $table) {
+            if ($connection->table($table)->exists()) {
+                throw new RuntimeException(
+                    "Federation migration recovery refused because [{$table}] contains data."
+                );
+            }
+        }
+
+        foreach ($existingTables as $table) {
+            Schema::dropIfExists($table);
+        }
     }
 };
