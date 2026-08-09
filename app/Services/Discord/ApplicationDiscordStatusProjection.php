@@ -67,6 +67,21 @@ final class ApplicationDiscordStatusProjection
             return null;
         }
 
+        $bindings = [
+            'discord_connection_id' => 'connection_id',
+            'discord_connection_generation' => 'connection_generation',
+            'discord_application_id' => 'application_id',
+            'discord_guild_id' => 'guild_id',
+        ];
+
+        foreach ($bindings as $applicationField => $queueField) {
+            $expected = $application->{$applicationField};
+
+            if ($expected !== null && ! hash_equals((string) $expected, (string) $queue->{$queueField})) {
+                return null;
+            }
+        }
+
         return $queue;
     }
 

@@ -126,6 +126,49 @@ class ApplicationDiscordStatusProjectionTest extends TestCase
         $this->assertSame('attention', $status['channel_health']['state']);
     }
 
+    public function test_bound_application_requires_exact_reconciliation_queue_provenance(): void
+    {
+        $applicationBindings = [
+            'discord_connection_id' => '019fe8de-d604-7b0e-95eb-eb70429b8f6a',
+            'discord_connection_generation' => 7,
+            'discord_application_id' => '123456789012345678',
+            'discord_guild_id' => '223456789012345678',
+        ];
+        $queueBindings = [
+            'connection_id' => $applicationBindings['discord_connection_id'],
+            'connection_generation' => $applicationBindings['discord_connection_generation'],
+            'application_id' => $applicationBindings['discord_application_id'],
+            'guild_id' => $applicationBindings['discord_guild_id'],
+        ];
+        [$application, $queue] = $this->applicationWithQueue(
+            ApplicationStatus::Pending,
+            DiscordQueueStatus::Complete,
+            $applicationBindings,
+        );
+        $queue->forceFill($queueBindings)->save();
+
+        $this->assertSame(
+            'complete',
+            $this->projection->forMember($application->fresh(), $queue->fresh())['reconciliation']['state'],
+        );
+
+        $foreignValues = [
+            'connection_id' => '019fe8de-d604-7b0e-95eb-eb70429b8f6b',
+            'connection_generation' => 8,
+            'application_id' => '323456789012345678',
+            'guild_id' => '423456789012345678',
+        ];
+
+        foreach ($foreignValues as $field => $foreignValue) {
+            $queue->forceFill([$field => $foreignValue])->save();
+
+            $status = $this->projection->forMember($application->fresh(), $queue->fresh());
+
+            $this->assertSame('attention', $status['reconciliation']['state'], $field);
+            $queue->forceFill([$field => $queueBindings[$field]])->save();
+        }
+    }
+
     /** @param array<string, mixed> $overrides */
     private function application(ApplicationStatus $status, array $overrides = []): Application
     {
