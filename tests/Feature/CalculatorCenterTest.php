@@ -103,7 +103,9 @@ class CalculatorCenterTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('projectResult.calculator', 'project_purchase')
             ->assertSet('projectResult.breakdowns.purchase.money', 9_125_000.0)
-            ->assertSet('projectResult.breakdowns.purchase.resources.coal', 456.25);
+            ->assertSet('projectResult.breakdowns.purchase.resources.coal', 456.25)
+            ->assertSeeText('Arms Stockpile')
+            ->assertDontSeeText('Catalog source commit');
     }
 
     public function test_research_calculator_action(): void
@@ -149,7 +151,9 @@ class CalculatorCenterTest extends TestCase
             ->call('calculateEconomics')
             ->assertHasNoErrors()
             ->assertSet('economicsResult.calculator', 'city_build_economics')
-            ->assertSet('economicsResult.metrics.powered', true);
+            ->assertSet('economicsResult.metrics.powered', true)
+            ->assertSeeText('City powered')
+            ->assertDontSeeText('Model version');
     }
 
     public function test_prefill_is_scoped_to_the_authenticated_users_nation(): void

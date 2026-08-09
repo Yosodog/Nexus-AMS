@@ -10,7 +10,7 @@ use Illuminate\Contracts\Support\Arrayable;
  */
 final readonly class CostBreakdown implements Arrayable
 {
-    public const ROUNDING = 'Money and resources are rounded to 0.01 with half-up rounding; market totals are rounded after conversion.';
+    public const ROUNDING = 'Money and resources are rounded to the nearest 0.01. Market values are rounded after prices are applied.';
 
     /**
      * @param  array<string, float>  $resources

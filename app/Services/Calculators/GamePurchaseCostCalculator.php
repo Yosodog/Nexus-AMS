@@ -75,7 +75,7 @@ final class GamePurchaseCostCalculator
             assumptions: [
                 'The requested city number is the city being purchased, not the nation\'s current city count.',
                 'Existing city-refund credits and event-specific discounts are excluded.',
-                'The dynamic top-20% city average is supplied separately and is not embedded in the formula.',
+                'The calculation uses the top 20% city average entered above.',
             ],
             metrics: [
                 'city_number' => $cityNumber,
@@ -112,8 +112,8 @@ final class GamePurchaseCostCalculator
                 $this->modifier('advanced_engineering_corps', 'Advanced Engineering Corps', 0.05, $advancedEngineeringCorps),
                 $this->modifier('center_for_civil_engineering', 'Center for Civil Engineering', 0.05, $centerForCivilEngineering),
                 $this->modifier('urbanization', 'Urbanization', 0.05, $urbanization),
-                $this->modifier('government_support_agency', 'Government Support Agency synergy', 0.025, $urbanization && $governmentSupportAgency, 'Requires Urbanization.'),
-                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs synergy', 0.0125, $urbanization && $bureauOfDomesticAffairs, 'Requires Urbanization.'),
+                $this->modifier('government_support_agency', 'Government Support Agency', 0.025, $urbanization && $governmentSupportAgency, 'Requires Urbanization.'),
+                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs', 0.0125, $urbanization && $bureauOfDomesticAffairs, 'Requires Urbanization.'),
             ],
             assumptions: [
                 'This is a purchase-only calculation; selling infrastructure is not included.',
@@ -155,8 +155,8 @@ final class GamePurchaseCostCalculator
                 $this->modifier('advanced_engineering_corps', 'Advanced Engineering Corps', 0.05, $advancedEngineeringCorps),
                 $this->modifier('arable_land_agency', 'Arable Land Agency', 0.05, $arableLandAgency),
                 $this->modifier('rapid_expansion', 'Rapid Expansion', 0.05, $rapidExpansion),
-                $this->modifier('government_support_agency', 'Government Support Agency synergy', 0.025, $rapidExpansion && $governmentSupportAgency, 'Requires Rapid Expansion.'),
-                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs synergy', 0.0125, $rapidExpansion && $bureauOfDomesticAffairs, 'Requires Rapid Expansion.'),
+                $this->modifier('government_support_agency', 'Government Support Agency', 0.025, $rapidExpansion && $governmentSupportAgency, 'Requires Rapid Expansion.'),
+                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs', 0.0125, $rapidExpansion && $bureauOfDomesticAffairs, 'Requires Rapid Expansion.'),
             ],
             assumptions: [
                 'This is a purchase-only calculation; selling land is not included.',
@@ -197,8 +197,8 @@ final class GamePurchaseCostCalculator
             breakdowns: ['purchase' => CostBreakdown::acquisition($money, $costs, $prices)],
             modifiers: $modifiers,
             assumptions: [
-                'Prerequisite projects, city-count requirements, project slots, and purchase timers are not eligibility checks in this cost-only result.',
-                'Removed planning projects are excluded from the catalog.',
+                'This result does not check project prerequisites, city requirements, open project slots, or purchase timers.',
+                'Projects that can no longer be purchased are not listed.',
             ],
             metrics: [
                 'project' => $project,
@@ -351,8 +351,8 @@ final class GamePurchaseCostCalculator
 
         return [$factor, [
             $this->modifier($policyKey, $policyLabel, 0.05, $policy),
-            $this->modifier('government_support_agency', 'Government Support Agency synergy', 0.025, $policy && $governmentSupportAgency, "Requires {$policyLabel}."),
-            $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs synergy', 0.0125, $policy && $bureauOfDomesticAffairs, "Requires {$policyLabel}."),
+            $this->modifier('government_support_agency', 'Government Support Agency', 0.025, $policy && $governmentSupportAgency, "Requires {$policyLabel}."),
+            $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs', 0.0125, $policy && $bureauOfDomesticAffairs, "Requires {$policyLabel}."),
         ]];
     }
 

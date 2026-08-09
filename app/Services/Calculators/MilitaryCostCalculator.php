@@ -63,8 +63,8 @@ final class MilitaryCostCalculator
             modifiers: [
                 $this->modifier('wartime', 'Wartime upkeep', null, $wartime, 'Changes daily upkeep rates; it does not change purchase prices.'),
                 $this->modifier('imperialism', 'Imperialism', 0.05, $imperialism),
-                $this->modifier('government_support_agency', 'Government Support Agency synergy', 0.025, $imperialism && $governmentSupportAgency, 'Requires Imperialism.'),
-                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs synergy', 0.0125, $imperialism && $bureauOfDomesticAffairs, 'Requires Imperialism.'),
+                $this->modifier('government_support_agency', 'Government Support Agency', 0.025, $imperialism && $governmentSupportAgency, 'Requires Imperialism.'),
+                $this->modifier('bureau_of_domestic_affairs', 'Bureau of Domestic Affairs', 0.0125, $imperialism && $bureauOfDomesticAffairs, 'Requires Imperialism.'),
                 $this->modifier('ground_cost_research', 'Ground cost research', null, $research['ground_cost'] > 0, 'Reduces soldier and tank purchase prices and upkeep.'),
                 $this->modifier('ground_capacity_research', 'Ground capacity research', null, $research['ground_capacity'] > 0, 'Also reduces soldier and tank upkeep.'),
                 $this->modifier('air_cost_research', 'Air cost research', null, $research['air_cost'] > 0, 'Reduces aircraft purchase prices and upkeep.'),

@@ -2,8 +2,45 @@
 
 @php
     $formatMoney = static fn (float|int $value): string => ($value < 0 ? '-$' : '$').number_format(abs((float) $value), 2);
+    $breakdownLabels = [
+        'purchase' => 'Purchase cost',
+        'daily_upkeep' => 'Daily upkeep',
+        'gross_income_per_day' => 'Gross income per day',
+        'expenses_per_day' => 'Expenses per day',
+        'net_per_day' => 'Net income per day',
+        'incremental_profit_per_day' => 'Added profit per day',
+        'improvement_investment' => 'Improvement cost',
+    ];
+    $valuationBasisLabels = [
+        'acquisition' => 'Buy prices',
+        'liquidation' => 'Sell prices',
+        'side-specific net' => 'Buy and sell prices',
+    ];
+    $metricLabels = [
+        'city_number' => 'City being purchased',
+        'top_twenty_average' => 'Top 20% city average',
+        'base_cost' => 'Cost before discounts',
+        'discount_percent' => 'Discount (%)',
+        'current' => 'Current level',
+        'target' => 'Target level',
+        'project_label' => 'Project',
+        'purchased_levels' => 'Levels purchased',
+        'wartime' => 'Wartime rates',
+        'upkeep_discount_percent' => 'Upkeep discount (%)',
+        'payback_days' => 'Payback period (days)',
+        'roi_days' => 'Return period (days)',
+        'roi_percent' => 'Estimated return (%)',
+        'city_income_per_day' => 'City income per day',
+        'money_profit_per_day' => 'Cash profit per day',
+        'powered' => 'City powered',
+        'population' => 'Population',
+        'commerce' => 'Commerce',
+        'crime' => 'Crime',
+        'disease' => 'Disease',
+        'pollution' => 'Pollution',
+    ];
     $scalarMetrics = collect($result['metrics'] ?? [])->filter(
-        static fn ($value) => $value === null || is_scalar($value)
+        static fn ($value, $key) => array_key_exists($key, $metricLabels) && ($value === null || is_scalar($value))
     );
 @endphp
 
@@ -19,7 +56,7 @@
     <div class="mt-4 grid gap-4 xl:grid-cols-2">
         @foreach($result['breakdowns'] as $key => $breakdown)
             <article class="rounded-lg border border-base-300 bg-base-100 p-4">
-                <h4 class="font-semibold text-base-content">{{ str($key)->headline() }}</h4>
+                <h4 class="font-semibold text-base-content">{{ $breakdownLabels[$key] ?? 'Cost details' }}</h4>
                 <dl class="mt-3 grid gap-2 text-sm">
                     <div class="flex items-center justify-between gap-4">
                         <dt class="nexus-text-muted">Money</dt>
@@ -34,7 +71,7 @@
                     <div class="mt-1 flex items-center justify-between gap-4 border-t border-base-300 pt-2">
                         <dt>
                             <span class="font-semibold">Market value</span>
-                            <span class="block text-xs nexus-text-muted">{{ str($breakdown['valuation_basis'])->headline() }}</span>
+                            <span class="block text-sm nexus-text-muted">{{ $valuationBasisLabels[$breakdown['valuation_basis']] ?? 'Current market prices' }}</span>
                         </dt>
                         <dd class="font-bold tabular-nums">
                             {{ $breakdown['market_value'] === null ? 'Unavailable' : $formatMoney($breakdown['market_value']) }}
@@ -49,7 +86,7 @@
         <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @foreach($scalarMetrics as $key => $value)
                 <div class="rounded-lg border border-base-300 bg-base-100 p-3">
-                    <dt class="text-xs font-semibold uppercase tracking-wide nexus-text-muted">{{ str($key)->headline() }}</dt>
+                    <dt class="text-sm font-semibold nexus-text-muted">{{ $metricLabels[$key] }}</dt>
                     <dd class="mt-1 font-semibold tabular-nums">
                         @if(is_bool($value))
                             {{ $value ? 'Yes' : 'No' }}
@@ -68,7 +105,7 @@
 
     <div class="mt-5 grid gap-5 lg:grid-cols-2">
         <div>
-            <h4 class="font-semibold">Modifiers</h4>
+            <h4 class="font-semibold">Discounts and effects</h4>
             <ul class="mt-2 grid gap-2 text-sm">
                 @foreach($result['modifiers'] as $modifier)
                     <li class="flex items-start justify-between gap-4 rounded-md border border-base-300 bg-base-100 p-3">

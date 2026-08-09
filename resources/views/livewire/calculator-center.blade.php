@@ -5,7 +5,7 @@
             <h1 class="nexus-page-title">Calculator center</h1>
             <p class="nexus-page-summary max-w-3xl">
                 Plan purchases and city economics with the same rules Nexus uses for grants, rebuilding, and profitability.
-                Every result lists active modifiers, assumptions, raw resources, and market valuation.
+                Each result shows applied discounts, assumptions, resource costs, and an estimated market value.
             </p>
         </div>
         <button type="button" class="btn btn-primary btn-sm" wire:click="prefillFromNation" wire:loading.attr="disabled" wire:target="prefillFromNation">
@@ -23,14 +23,14 @@
             <div class="flex items-center justify-between gap-3">
                 <h2 class="font-semibold">Nation data</h2>
                 <span class="nexus-status {{ ($nationContext['available'] ?? false) ? 'nexus-status--success' : 'nexus-status--neutral' }}">
-                    {{ ($nationContext['available'] ?? false) ? 'Available' : 'Manual only' }}
+                    {{ ($nationContext['available'] ?? false) ? 'Available' : 'Enter manually' }}
                 </span>
             </div>
             <p class="mt-2 text-sm nexus-text-muted">
                 @if(filled($nationContext['calculated_from'] ?? null))
-                    Source timestamp <time datetime="{{ $nationContext['calculated_from'] }}">{{ \Carbon\Carbon::parse($nationContext['calculated_from'])->toDayDateTimeString() }}</time>
+                    Updated <time datetime="{{ $nationContext['calculated_from'] }}">{{ \Carbon\Carbon::parse($nationContext['calculated_from'])->toDayDateTimeString() }}</time>
                 @else
-                    No nation timestamp is available.
+                    The last update time is unavailable.
                 @endif
             </p>
         </article>
@@ -38,16 +38,16 @@
             <div class="flex items-center justify-between gap-3">
                 <h2 class="font-semibold">Market prices</h2>
                 <span class="nexus-status {{ !($marketContext['available'] ?? false) || ($marketContext['stale'] ?? true) ? 'nexus-status--warning' : 'nexus-status--success' }}">
-                    {{ !($marketContext['available'] ?? false) ? 'Unavailable' : (($marketContext['stale'] ?? true) ? 'Stale' : 'Current') }}
+                    {{ !($marketContext['available'] ?? false) ? 'Unavailable' : (($marketContext['stale'] ?? true) ? 'Needs update' : 'Current') }}
                 </span>
             </div>
             <p class="mt-2 text-sm nexus-text-muted">
                 @if(filled($marketContext['calculated_at'] ?? null))
-                    Source timestamp <time datetime="{{ $marketContext['calculated_at'] }}">{{ \Carbon\Carbon::parse($marketContext['calculated_at'])->toDayDateTimeString() }}</time>
+                    Updated <time datetime="{{ $marketContext['calculated_at'] }}">{{ \Carbon\Carbon::parse($marketContext['calculated_at'])->toDayDateTimeString() }}</time>
                 @elseif($marketContext['available'] ?? false)
-                    Using {{ $marketContext['basis'] ?? 'fallback market prices' }}; this source has no snapshot timestamp.
+                    Using {{ $marketContext['basis'] ?? 'backup market prices' }}. The last update time is unavailable.
                 @else
-                    Raw results remain available without market valuation.
+                    You can still see resource costs, but no cash estimate is available.
                 @endif
             </p>
         </article>
@@ -55,12 +55,12 @@
             <div class="flex items-center justify-between gap-3">
                 <h2 class="font-semibold">World context</h2>
                 <span class="nexus-status {{ !($worldContext['available'] ?? false) || ($worldContext['stale'] ?? true) ? 'nexus-status--warning' : 'nexus-status--success' }}">
-                    {{ !($worldContext['available'] ?? false) ? 'Unavailable' : (($worldContext['stale'] ?? true) ? 'Stale' : 'Current') }}
+                    {{ !($worldContext['available'] ?? false) ? 'Unavailable' : (($worldContext['stale'] ?? true) ? 'Needs update' : 'Current') }}
                 </span>
             </div>
             <p class="mt-2 text-sm nexus-text-muted">
                 @if(filled($worldContext['snapshot_at'] ?? null))
-                    Radiation timestamp <time datetime="{{ $worldContext['snapshot_at'] }}">{{ \Carbon\Carbon::parse($worldContext['snapshot_at'])->toDayDateTimeString() }}</time>
+                    Radiation updated <time datetime="{{ $worldContext['snapshot_at'] }}">{{ \Carbon\Carbon::parse($worldContext['snapshot_at'])->toDayDateTimeString() }}</time>
                 @else
                     Required only when a build contains farms.
                 @endif
@@ -71,14 +71,14 @@
     @if($nationCities !== [])
         <section class="nexus-panel p-4" aria-labelledby="nation-city-prefill-heading">
             <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                <x-form.select id="nation-city-prefill" name="nation_city_prefill" label="Prefill from one of my cities" hint="Only cities belonging to your authenticated nation can be loaded." wire:change="prefillCity($event.target.value)">
+                <x-form.select id="nation-city-prefill" name="nation_city_prefill" label="Fill from one of my cities" hint="You can only load cities from your nation." wire:change="prefillCity($event.target.value)">
                     @foreach($nationCities as $nationCity)
                         <option value="{{ $nationCity['id'] }}" @selected($selectedCityId === $nationCity['id'])>
-                            {{ $nationCity['name'] }} · {{ number_format($nationCity['infrastructure'], 2) }} infra · {{ number_format($nationCity['land'], 2) }} land
+                            {{ $nationCity['name'] }} · {{ number_format($nationCity['infrastructure'], 2) }} infrastructure · {{ number_format($nationCity['land'], 2) }} land
                         </option>
                     @endforeach
                 </x-form.select>
-                <p id="nation-city-prefill-heading" class="text-sm nexus-text-muted">Targets remain editable after prefill.</p>
+                <p id="nation-city-prefill-heading" class="text-sm nexus-text-muted">You can edit the values after loading a city.</p>
             </div>
         </section>
     @endif
@@ -101,16 +101,16 @@
     </nav>
 
     <section id="city-cost" class="nexus-panel scroll-mt-28 p-4 sm:p-6" aria-labelledby="city-cost-heading">
-        <div class="nexus-panel__header"><div><p class="nexus-kicker">Development</p><h2 id="city-cost-heading" class="nexus-section-title">City purchase cost</h2><p class="nexus-body-muted mt-1">Uses the dynamic top-20% city average and current domestic-policy synergies.</p></div></div>
+        <div class="nexus-panel__header"><div><p class="nexus-kicker">Development</p><h2 id="city-cost-heading" class="nexus-section-title">City purchase cost</h2><p class="nexus-body-muted mt-1">Uses the current top 20% city average and matching domestic policy bonuses.</p></div></div>
         <form wire:submit="calculateCity" class="grid gap-5 p-4 sm:p-5">
             <div class="grid gap-4 md:grid-cols-2">
                 <x-form.input id="city-number" name="city.city_number" label="City being purchased" type="number" min="1" max="10000" step="1" :value="$city['city_number']" wire:model.number="city.city_number" required />
-                <x-form.input id="city-average" name="city.top_twenty_average" label="Top-20% city average" type="number" min="0.01" max="10000" step="0.0001" :value="$city['top_twenty_average']" wire:model.number="city.top_twenty_average" required>
+                <x-form.input id="city-average" name="city.top_twenty_average" label="Top 20% city average" type="number" min="0.01" max="10000" step="0.0001" :value="$city['top_twenty_average']" wire:model.number="city.top_twenty_average" required>
                     <x-slot:help>
                         @if(filled($cityAverageContext['calculated_at'] ?? null))
-                            Cached {{ \Carbon\Carbon::parse($cityAverageContext['calculated_at'])->diffForHumans() }}{{ ($cityAverageContext['stale'] ?? true) ? ' (stale)' : '' }}.
+                            Updated {{ \Carbon\Carbon::parse($cityAverageContext['calculated_at'])->diffForHumans() }}{{ ($cityAverageContext['stale'] ?? true) ? ' (needs update)' : '' }}.
                         @else
-                            Enter the current API value manually.
+                            Enter the latest value manually.
                         @endif
                     </x-slot:help>
                 </x-form.input>
@@ -184,7 +184,7 @@
     </section>
 
     <section id="research-cost" class="nexus-panel scroll-mt-28 p-4 sm:p-6" aria-labelledby="research-cost-heading">
-        <div class="nexus-panel__header"><div><p class="nexus-kicker">Military development</p><h2 id="research-cost-heading" class="nexus-section-title">Military research cost</h2><p class="nexus-body-muted mt-1">All six current levels matter because total and branch progress affect each upgrade.</p></div></div>
+        <div class="nexus-panel__header"><div><p class="nexus-kicker">Military development</p><h2 id="research-cost-heading" class="nexus-section-title">Military research cost</h2><p class="nexus-body-muted mt-1">Enter the current and target level for each research branch. The calculator uses all six values.</p></div></div>
         <form wire:submit="calculateResearch" class="grid gap-5 p-4 sm:p-5">
             <div class="overflow-x-auto">
                 <table class="table min-w-[42rem]">
@@ -236,7 +236,7 @@
     </section>
 
     <section id="military-cost" class="nexus-panel scroll-mt-28 p-4 sm:p-6" aria-labelledby="military-cost-heading">
-        <div class="nexus-panel__header"><div><p class="nexus-kicker">Force budgeting</p><h2 id="military-cost-heading" class="nexus-section-title">Military unit purchase and upkeep</h2><p class="nexus-body-muted mt-1">Calculates one-time purchase resources and daily upkeep without combat consumption.</p></div></div>
+        <div class="nexus-panel__header"><div><p class="nexus-kicker">Military costs</p><h2 id="military-cost-heading" class="nexus-section-title">Military unit purchase and upkeep</h2><p class="nexus-body-muted mt-1">Shows the resources needed to buy the units and their daily upkeep. Combat use is not included.</p></div></div>
         <form wire:submit="calculateMilitary" class="grid gap-6 p-4 sm:p-5">
             <fieldset>
                 <legend class="font-semibold">Unit quantities</legend>
@@ -267,7 +267,7 @@
     </section>
 
     <section id="city-economics" class="nexus-panel scroll-mt-28 p-4 sm:p-6" aria-labelledby="city-economics-heading">
-        <div class="nexus-panel__header"><div><p class="nexus-kicker">Economic planning</p><h2 id="city-economics-heading" class="nexus-section-title">City and build economics</h2><p class="nexus-body-muted mt-1">Reuses Nexus’s profitability engine for income, expenses, resource output, and improvement payback.</p></div></div>
+        <div class="nexus-panel__header"><div><p class="nexus-kicker">Economic planning</p><h2 id="city-economics-heading" class="nexus-section-title">City and build economics</h2><p class="nexus-body-muted mt-1">Estimate city income, expenses, resource output, and how long improvements take to pay for themselves.</p></div></div>
         <form wire:submit="calculateEconomics" class="grid gap-7 p-4 sm:p-5">
             <fieldset>
                 <legend class="font-semibold">City context</legend>
@@ -275,7 +275,7 @@
                     <x-form.select id="economics-continent" name="economics.continent" label="Continent" wire:model="economics.continent" required>
                         @foreach(['NA' => 'North America', 'SA' => 'South America', 'EU' => 'Europe', 'AF' => 'Africa', 'AS' => 'Asia', 'AU' => 'Australia', 'AN' => 'Antarctica'] as $code => $label)<option value="{{ $code }}" @selected($economics['continent'] === $code)>{{ $label }}</option>@endforeach
                     </x-form.select>
-                    <x-form.input id="economics-cities" name="economics.num_cities" label="Nation city count" type="number" min="1" max="1000" step="1" :value="$economics['num_cities']" wire:model.number="economics.num_cities" required />
+                    <x-form.input id="economics-cities" name="economics.num_cities" label="Number of cities" type="number" min="1" max="1000" step="1" :value="$economics['num_cities']" wire:model.number="economics.num_cities" required />
                     <x-form.input id="economics-infra" name="economics.infrastructure" label="Infrastructure" type="number" min="0" max="20000" step="0.01" :value="$economics['infrastructure']" wire:model.number="economics.infrastructure" required />
                     <x-form.input id="economics-land" name="economics.land" label="Land" type="number" min="0" max="20000" step="0.01" :value="$economics['land']" wire:model.number="economics.land" required />
                     <x-form.input id="economics-age" name="economics.age_days" label="City age (days)" type="number" min="1" max="100000" step="1" :value="$economics['age_days']" wire:model.number="economics.age_days" required />
@@ -283,9 +283,9 @@
                         <option value="NONE" @selected($economics['domestic_policy'] === 'NONE')>No income modifier</option><option value="OPEN_MARKETS" @selected($economics['domestic_policy'] === 'OPEN_MARKETS')>Open Markets</option>
                     </x-form.select>
                     <x-form.input id="economics-treasure" name="economics.treasure_income_percent" label="Treasure income bonus (%)" type="number" min="0" max="100" step="0.01" :value="$economics['treasure_income_percent']" wire:model.number="economics.treasure_income_percent" required />
-                    <x-form.input id="economics-roi-days" name="economics.roi_days" label="ROI period (days)" type="number" min="1" max="3650" step="1" :value="$economics['roi_days']" wire:model.number="economics.roi_days" required />
+                    <x-form.input id="economics-roi-days" name="economics.roi_days" label="Return period (days)" type="number" min="1" max="3650" step="1" :value="$economics['roi_days']" wire:model.number="economics.roi_days" required />
                 </div>
-                <div class="mt-4 max-w-xl"><x-form.toggle id="economics-powered" name="economics.powered" label="City reports as powered" hint="Installed capacity must also cover the selected infrastructure." :checked="$economics['powered']" wire:model="economics.powered" /></div>
+                <div class="mt-4 max-w-xl"><x-form.toggle id="economics-powered" name="economics.powered" label="City is powered" hint="Power capacity must cover the selected infrastructure." :checked="$economics['powered']" wire:model="economics.powered" /></div>
             </fieldset>
 
             @foreach($buildingGroups as $group => $fields)
