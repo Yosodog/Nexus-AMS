@@ -34,6 +34,10 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
+        <env name="FEDERATION_ENABLED" value="false"/>
+        <env name="FEDERATION_INBOUND_ENABLED" value="false"/>
+        <env name="FEDERATION_LINKING_ENABLED" value="false"/>
+        <env name="FEDERATION_PUBLISHING_ENABLED" value="false"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="MILCOM_V1_ENABLED" value="false"/>
         <env name="NEXUS_API_TOKEN" value="testing-nexus-token"/>

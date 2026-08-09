@@ -15,6 +15,13 @@ class TrustedHostSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function tearDown(): void
+    {
+        Request::setTrustedHosts([]);
+
+        parent::tearDown();
+    }
+
     public function test_only_the_configured_application_host_is_trusted(): void
     {
         $configuredHost = parse_url((string) config('app.url'), PHP_URL_HOST);
@@ -52,14 +59,19 @@ class TrustedHostSecurityTest extends TestCase
     {
         $user = User::factory()->create(['nation_id' => 887002]);
         Notification::fake();
+        $originalEnvironment = $this->app->environment();
         $this->app['env'] = 'production';
 
-        $this->withSession(['_token' => 'test-token'])
-            ->post('http://attacker.example'.route('password.email', absolute: false), [
-                '_token' => 'test-token',
-                'nation_id' => $user->nation_id,
-            ])
-            ->assertBadRequest();
+        try {
+            $this->withSession(['_token' => 'test-token'])
+                ->post('http://attacker.example'.route('password.email', absolute: false), [
+                    '_token' => 'test-token',
+                    'nation_id' => $user->nation_id,
+                ])
+                ->assertBadRequest();
+        } finally {
+            $this->app['env'] = $originalEnvironment;
+        }
 
         Notification::assertNothingSent();
     }
@@ -68,15 +80,20 @@ class TrustedHostSecurityTest extends TestCase
     {
         $user = User::factory()->create(['nation_id' => 887003]);
         Notification::fake();
+        $originalEnvironment = $this->app->environment();
         $this->app['env'] = 'production';
         $configuredOrigin = rtrim((string) config('app.url'), '/');
 
-        $this->withSession(['_token' => 'test-token'])
-            ->post($configuredOrigin.route('password.email', absolute: false), [
-                '_token' => 'test-token',
-                'nation_id' => $user->nation_id,
-            ])
-            ->assertRedirect();
+        try {
+            $this->withSession(['_token' => 'test-token'])
+                ->post($configuredOrigin.route('password.email', absolute: false), [
+                    '_token' => 'test-token',
+                    'nation_id' => $user->nation_id,
+                ])
+                ->assertRedirect();
+        } finally {
+            $this->app['env'] = $originalEnvironment;
+        }
 
         Notification::assertSentTo($user, PasswordResetNotification::class);
     }

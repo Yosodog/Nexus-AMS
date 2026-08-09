@@ -113,7 +113,7 @@ class CreateCounterOnWarDeclared
                             'last_war_declared_at' => now(),
                         ]);
 
-                        AutoPickCounterAssignmentsJob::dispatch($counter->id);
+                        AutoPickCounterAssignmentsJob::dispatch($counter->id)->afterCommit();
                     }
                 }
 

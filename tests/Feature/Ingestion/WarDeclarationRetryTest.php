@@ -27,6 +27,8 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_failed_war_side_effects_roll_back_the_receipt_and_retry_once(): void
     {
+        config()->set('milcom.v1_enabled', true);
+        config()->set('milcom.v2_enabled', false);
         cache()->forever('alliances:membership:ids', [321]);
         $payload = $this->warPayload();
         $attempts = 0;

@@ -136,11 +136,20 @@ class BeigeAlertServiceTest extends TestCase
 
         Schema::create('discord_queue', function ($table): void {
             $table->uuid('id')->primary();
+            $table->unsignedBigInteger('alert_delivery_batch_id')->nullable();
+            $table->uuid('connection_id')->nullable();
+            $table->string('application_id', 20)->nullable();
+            $table->unsignedInteger('connection_generation')->nullable();
             $table->string('action');
+            $table->string('guild_id', 32)->nullable();
+            $table->string('lane', 24)->default('legacy');
+            $table->unsignedTinyInteger('priority')->default(50);
             $table->json('payload');
             $table->string('status');
             $table->unsignedInteger('attempts')->default(0);
             $table->timestamp('available_at')->nullable();
+            $table->string('dedupe_key')->nullable();
+            $table->string('dedupe_scope', 80)->default('legacy');
             $table->timestamps();
         });
     }

@@ -24,6 +24,9 @@ class WarPlanJsonDataMinimizationTest extends TestCase
 
     public function test_war_plan_json_endpoints_only_return_allowlisted_nation_fields(): void
     {
+        config()->set('milcom.v1_enabled', true);
+        config()->set('milcom.v2_enabled', false);
+
         $friendlyAlliance = Alliance::factory()->create();
         $enemyAlliance = Alliance::factory()->create();
         $assignedFriendly = $this->createNationWithSensitiveSnapshots($friendlyAlliance);

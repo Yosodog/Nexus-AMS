@@ -37,6 +37,7 @@ class StaffWorkQueueSourcesTest extends TestCase
 
     public function test_mature_workflows_are_normalized_with_direct_domain_links(): void
     {
+        config()->set('federation.enabled', false);
         config()->set('pending_requests.cache_key', 'testing.staff-work-queue.sources');
         config()->set('pending_requests.projection_cache_key', 'testing.staff-work-queue.sources.projection');
         Cache::forget('testing.staff-work-queue.sources');
