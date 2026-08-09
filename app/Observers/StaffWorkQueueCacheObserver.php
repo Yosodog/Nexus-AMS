@@ -7,12 +7,19 @@ use App\Models\AuditResult;
 use App\Models\AuditResultEvent;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
+use App\Models\FederationCoalitionInvitation;
+use App\Models\FederationCoalitionProposal;
+use App\Models\FederationLinkInvitation;
+use App\Models\FederationReceivedResource;
+use App\Models\FederationReceivedVersion;
 use App\Models\GrantApplication;
 use App\Models\Loan;
 use App\Models\MemberTransfer;
+use App\Models\MilcomOperation;
 use App\Models\RebuildingRequest;
 use App\Models\Transaction;
 use App\Models\WarAidRequest;
+use App\Services\StaffWorkQueue\Sources\FederationWorkQueueSource;
 use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 use Illuminate\Database\Eloquent\Model;
@@ -42,7 +49,9 @@ class StaffWorkQueueCacheObserver implements ShouldHandleEventsAfterCommit
     private function flush(Model $model): void
     {
         Cache::forget((string) config('pending_requests.cache_key', 'pending_requests.counts'));
-        $this->registry->flushCache($this->sourceType($model));
+        foreach ($this->sourceTypes($model) as $sourceType) {
+            $this->registry->flushCache($sourceType);
+        }
     }
 
     private function affectsProjection(Model $model): bool
@@ -58,19 +67,31 @@ class StaffWorkQueueCacheObserver implements ShouldHandleEventsAfterCommit
             || $isPendingWithdrawal($model->getOriginal('transaction_type'), $model->getOriginal('is_pending'));
     }
 
-    private function sourceType(Model $model): string
+    /**
+     * @return list<string>
+     */
+    private function sourceTypes(Model $model): array
     {
         return match (true) {
-            $model instanceof Application => 'applications',
-            $model instanceof AuditResult, $model instanceof AuditResultEvent => 'audit_remediation',
-            $model instanceof BlockadeReliefRequest => 'blockade_relief',
-            $model instanceof CityGrantRequest => 'city_grants',
-            $model instanceof GrantApplication => 'grants',
-            $model instanceof Loan => 'loans',
-            $model instanceof MemberTransfer => 'member_transfers',
-            $model instanceof RebuildingRequest => 'rebuilding',
-            $model instanceof Transaction => 'withdrawals',
-            $model instanceof WarAidRequest => 'war_aid',
+            $model instanceof Application => ['applications'],
+            $model instanceof AuditResult, $model instanceof AuditResultEvent => ['audit_remediation'],
+            $model instanceof BlockadeReliefRequest => ['blockade_relief'],
+            $model instanceof CityGrantRequest => ['city_grants'],
+            $model instanceof FederationCoalitionInvitation,
+            $model instanceof FederationCoalitionProposal => [FederationWorkQueueSource::COALITION_WORKFLOWS],
+            $model instanceof FederationLinkInvitation => [FederationWorkQueueSource::LINK_APPROVALS],
+            $model instanceof FederationReceivedResource,
+            $model instanceof FederationReceivedVersion => [
+                FederationWorkQueueSource::RECEIVED_REVIEWS,
+                FederationWorkQueueSource::BLOCKED_IMPORTS,
+            ],
+            $model instanceof GrantApplication => ['grants'],
+            $model instanceof Loan => ['loans'],
+            $model instanceof MemberTransfer => ['member_transfers'],
+            $model instanceof MilcomOperation => [FederationWorkQueueSource::HELD_OPERATIONS],
+            $model instanceof RebuildingRequest => ['rebuilding'],
+            $model instanceof Transaction => ['withdrawals'],
+            $model instanceof WarAidRequest => ['war_aid'],
             default => throw new \LogicException('Unmapped Operations source model ['.$model::class.'].')
         };
     }
