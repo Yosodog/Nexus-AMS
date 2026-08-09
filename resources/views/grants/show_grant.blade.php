@@ -120,6 +120,8 @@
                                 id="grant-account"
                                 name="account_id"
                                 label="Deposit account"
+                                :aria-invalid="$errors->has('account_id') ? 'true' : null"
+                                :aria-errormessage="$errors->has('account_id') ? 'grant-account-error' : null"
                                 required
                             >
                                 <x-slot:help>Grant resources will be deposited into this account after approval.</x-slot:help>

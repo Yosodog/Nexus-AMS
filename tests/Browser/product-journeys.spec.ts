@@ -79,10 +79,8 @@ test('full admin can reach core operations and inspect ledger activity', async (
   await expect(page.getByText('$2,400,000.00', { exact: true }).first()).toBeVisible();
   await expect(page.locator('#financeNetChart')).toContainText('$2,400,000');
   await expect(page.locator('#financeCategoryChart')).toContainText('$3,150,000');
-  const ledgerDay = page.getByRole('button', { name: /2 recorded entries/i });
-  await ledgerDay.click();
-  await expect(page.getByText('Member tax settlement')).toBeVisible();
-  await expect(page.getByText('Infrastructure grant reserve')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Member tax settlement' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Infrastructure grant reserve' })).toBeVisible();
 
   await page.goto('/admin/members');
   await expectApplicationShell(page);
@@ -95,7 +93,8 @@ test('full admin can review populated grant, city grant, and loan queues', async
   await expectApplicationShell(page);
   await expect(page.getByRole('heading', { name: 'Grant programs' })).toBeVisible();
   await expect(page.getByText('Pending grant requests')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Infrastructure reserve' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Program name not recorded' })).toBeVisible();
+  await expect(page.getByText(/current linked program: Infrastructure reserve/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve and deposit' })).toBeVisible();
 
   await page.goto('/admin/grants/city');
@@ -115,15 +114,15 @@ test('full admin can reach war planning, settings, and custom-page editing', asy
   await page.goto('/_browser/login/admin?redirect=/admin/milcom');
 
   await expectApplicationShell(page);
-  await expect(page.getByRole('heading', { name: 'Milcom Command Desk' })).toBeVisible();
-  await page.getByRole('link', { name: 'Mass planning' }).click();
-  await expect(page.getByRole('heading', { name: 'Mass War Planning' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'New operation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Milcom dashboard' })).toBeVisible();
+  await page.locator('#milcom-dashboard').getByRole('link', { name: 'Mass plans' }).click();
+  await expect(page.getByRole('heading', { name: 'Mass war plans' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'New plan' })).toBeVisible();
 
   await page.goto('/admin/settings');
   await expectApplicationShell(page);
-  await expect(page.getByRole('heading', { name: 'Admin Settings' })).toBeVisible();
-  await expect(page.getByText('Synchronization')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Admin settings' })).toBeVisible();
+  await expect(page.getByText('Data synchronization')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Directory', exact: true })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('searchbox', { name: 'Find a setting' }).fill('backup');

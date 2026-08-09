@@ -9,7 +9,7 @@ test('keeps password sign-in available when passkeys are unsupported', async ({ 
 
   await page.goto('/login');
 
-  await expect(page.getByRole('button', { name: 'Sign in to member app' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in to the member app' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in with a passkey' })).toBeHidden();
   await expect(page.getByText('Passkeys are not supported in this browser.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Reset your password' })).toBeVisible();
@@ -189,7 +189,7 @@ test('completes registration, login, confirmation, and revocation with a virtual
     await page.waitForURL(/\/user\/settings#passkeys$/);
     await page.getByRole('button', { name: 'Revoke', exact: true }).click();
     await page.getByRole('button', { name: 'Revoke passkey', exact: true }).click();
-    await expect(page.getByText('The passkey was revoked after the server confirmed the request.')).toBeVisible();
+    await expect(page.getByText('The passkey was removed.')).toBeVisible();
     await expect(page.getByText('No passkeys are registered.')).toBeVisible();
   } finally {
     await devtools.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });

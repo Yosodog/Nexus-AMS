@@ -1913,6 +1913,7 @@ html[data-theme] .ck.ck-editor__editable_inline {
 
     .admin-app {
         min-height: 100vh;
+        overflow-x: hidden;
         background: var(--color-base-200);
     }
 

@@ -45,7 +45,7 @@
 
     <span
         {{ $attributes->class([
-            'inline-flex',
+            'relative inline-flex',
             'flex-col items-start' => $showExact,
             'items-baseline gap-x-2' => ! $showExact,
         ]) }}

@@ -318,6 +318,14 @@ class AuditRuleBuilder {
             this.impactDialog.close('confirmed');
 
             if (this.form) {
+                this.form.dataset.asyncPending = 'false';
+                this.form.removeAttribute('aria-busy');
+
+                if (this.pendingSubmitter instanceof HTMLElement) {
+                    this.pendingSubmitter.removeAttribute('aria-disabled');
+                    this.pendingSubmitter.dataset.asyncBusy = 'false';
+                }
+
                 this.form.requestSubmit(this.pendingSubmitter || undefined);
             }
         });

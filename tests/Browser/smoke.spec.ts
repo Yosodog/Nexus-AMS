@@ -26,7 +26,7 @@ test('public login route and form actions are interactive', async ({ page }) => 
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Username').fill('nobody');
   await page.getByLabel('Password').fill('wrong-password');
-  await page.getByRole('button', { name: 'Sign in to member app' }).click();
+  await page.getByRole('button', { name: 'Sign in to the member app' }).click();
 
   await expect(page.getByText(/We could not sign you in\./)).toBeVisible();
 });

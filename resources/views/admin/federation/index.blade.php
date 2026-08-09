@@ -233,7 +233,9 @@
                 <h3 class="font-semibold">Endpoint changes awaiting action</h3>
                 <div class="mt-3 grid gap-3">
                     @foreach ($endpointProposals as $proposal)
-                        @php($proposalLink = $links->firstWhere('id', $proposal->federation_link_id))
+                        @php
+                            $proposalLink = $links->firstWhere('id', $proposal->federation_link_id);
+                        @endphp
                         <div class="flex flex-col gap-3 rounded-md bg-base-200/65 p-4 lg:flex-row lg:items-center lg:justify-between">
                             <div><p class="font-semibold">{{ $proposalLink?->remote_display_name ?: $proposalLink?->remote_installation_id }}</p><p class="mt-1 break-all text-xs nexus-text-muted">{{ $proposalLink?->approved_origin }} → {{ $proposal->peer_origin }}</p></div>
                             <div class="flex flex-wrap gap-2">
@@ -361,8 +363,16 @@
                         <x-icon name="o-chevron-down" class="size-5 shrink-0 transition group-open:rotate-180" aria-hidden="true" />
                     </summary>
                     <div class="border-t border-base-300 p-5">
-                        @php($localMembership = $coalition->memberships->firstWhere('installation_id', $identityId))
-                        @php($capabilityMatrix = $coalition->capabilities->sortByDesc('revision')->unique(fn ($capability) => implode(':', [$capability->issuer_installation_id, $capability->peer_installation_id, $capability->direction->value])))
+                        @php
+                            $localMembership = $coalition->memberships->firstWhere('installation_id', $identityId);
+                            $capabilityMatrix = $coalition->capabilities
+                                ->sortByDesc('revision')
+                                ->unique(fn ($capability) => implode(':', [
+                                    $capability->issuer_installation_id,
+                                    $capability->peer_installation_id,
+                                    $capability->direction->value,
+                                ]));
+                        @endphp
                         <div class="overflow-x-auto">
                             <table class="table table-sm">
                                 <thead><tr><th>Installation</th><th>Role</th><th>Status</th><th>Roster</th><th></th></tr></thead>
@@ -561,9 +571,11 @@
         <div class="nexus-panel__header"><div><h2 id="federation-received-title" class="nexus-section-title">Received plans</h2><p class="mt-1 text-sm text-base-content/65">Review exact shared fields and version changes. Acceptance queues an idempotent local draft import.</p></div><span class="badge badge-outline">{{ $receivedReviews->count() }} versions</span></div>
         <div class="divide-y divide-base-300">
             @forelse ($receivedReviews as $row)
-                @php($version = $row['version'])
-                @php($resource = $row['resource'])
-                @php($snapshot = $row['snapshot'])
+                @php
+                    $version = $row['version'];
+                    $resource = $row['resource'];
+                    $snapshot = $row['snapshot'];
+                @endphp
                 <details @if ($version->disposition->value === 'pending') open @endif>
                     <summary class="flex cursor-pointer list-none flex-col gap-2 p-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between">
                         <div><span class="font-semibold">{{ $snapshot?->title ?: 'Redacted federation snapshot' }}</span><p class="mt-1 text-xs nexus-text-muted">{{ $resource->link?->remote_display_name ?: $resource->source_installation_id }} · v{{ $version->version }} · r{{ $version->revision }}</p></div>

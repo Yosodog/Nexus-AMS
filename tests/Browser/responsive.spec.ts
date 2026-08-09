@@ -15,6 +15,23 @@ const expectNoHorizontalOverflow = async (page: Page, path: string, width: numbe
     return {
       rootOverflow: document.documentElement.scrollWidth - viewportWidth,
       bodyOverflow: document.body.scrollWidth - viewportWidth,
+      layout: {
+        viewportWidth,
+        rootClientWidth: document.documentElement.clientWidth,
+        rootScrollWidth: document.documentElement.scrollWidth,
+        bodyClientWidth: document.body.clientWidth,
+        bodyScrollWidth: document.body.scrollWidth,
+        drawerChecked: document.querySelector<HTMLInputElement>('.drawer-toggle')?.checked ?? null,
+        drawer: (() => {
+          const element = document.querySelector<HTMLElement>('.drawer');
+          const bounds = element?.getBoundingClientRect();
+
+          return element && bounds
+            ? { left: bounds.left, right: bounds.right, width: bounds.width, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }
+            : null;
+        })(),
+        drawerSideContentDisplay: getComputedStyle(document.querySelector<HTMLElement>('.drawer-side > :not(.drawer-overlay)') ?? document.body).display,
+      },
       offenders: Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .map((element) => {
           const bounds = element.getBoundingClientRect();
@@ -48,6 +65,24 @@ const expectNoHorizontalOverflow = async (page: Page, path: string, width: numbe
           };
         })
         .slice(0, 8),
+      scrollWidthOffenders: Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .filter((element) => element.scrollWidth > element.clientWidth + 1)
+        .map((element) => {
+          const bounds = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+
+          return {
+            element: element.tagName.toLowerCase(),
+            classes: element.className?.toString().slice(0, 160) ?? '',
+            left: Math.round(bounds.left),
+            right: Math.round(bounds.right),
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            overflowX: style.overflowX,
+          };
+        })
+        .sort((left, right) => right.scrollWidth - left.scrollWidth)
+        .slice(0, 16),
       uncontainedOffenders: Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .filter((element) => !element.closest('.overflow-x-auto'))
         .map((element) => {
@@ -68,8 +103,10 @@ const expectNoHorizontalOverflow = async (page: Page, path: string, width: numbe
   });
 
   const diagnostic = JSON.stringify({
+    layout: report.layout,
     offenders: report.offenders,
     overflowContainers: report.overflowContainers,
+    scrollWidthOffenders: report.scrollWidthOffenders,
     uncontainedOffenders: report.uncontainedOffenders,
   });
   expect(report.rootOverflow, `${path} should not overflow the ${width}px root viewport: ${diagnostic}`).toBeLessThanOrEqual(1);
