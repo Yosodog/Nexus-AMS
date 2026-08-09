@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\WarDeclared;
 use App\Jobs\CreateAllianceJob;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
@@ -17,7 +16,7 @@ use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
-use App\Models\WarDeclarationReceipt;
+use App\Services\TenantEvents\WarDeclarationReactionService;
 use InvalidArgumentException;
 
 class SubscriptionEventProcessor
@@ -26,6 +25,7 @@ class SubscriptionEventProcessor
         private readonly AllianceMembershipService $allianceMembershipService,
         private readonly NationProfitabilityService $nationProfitabilityService,
         private readonly SubscriptionEventValidator $eventValidator,
+        private readonly WarDeclarationReactionService $warDeclarations,
     ) {}
 
     /** @param  array<int|string, mixed>  $payload */
@@ -151,27 +151,7 @@ class SubscriptionEventProcessor
                 continue;
             }
 
-            $war = War::updateFromAPI((object) $record);
-
-            $war->getConnection()->transaction(function () use ($record): void {
-                $receipt = WarDeclarationReceipt::query()->firstOrCreate([
-                    'war_id' => (int) $record['id'],
-                ]);
-
-                if (! $receipt->wasRecentlyCreated) {
-                    return;
-                }
-
-                event(new WarDeclared(
-                    warId: $record['id'],
-                    attackerNationId: $record['att_id'],
-                    attackerAllianceId: $record['att_alliance_id'] ?? null,
-                    attackerAlliancePosition: $record['att_alliance_position'] ?? null,
-                    defenderNationId: $record['def_id'],
-                    defenderAllianceId: $record['def_alliance_id'] ?? null,
-                    defenderAlliancePosition: $record['def_alliance_position'] ?? null,
-                ));
-            });
+            $this->warDeclarations->react(War::updateFromAPI((object) $record));
         }
     }
 

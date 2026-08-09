@@ -9,6 +9,7 @@ use App\Enums\TenantControlPurpose;
 use App\Exceptions\TenantControlAuthenticationException;
 use App\Exceptions\TenantControlConfigurationException;
 use App\Services\RuntimeBuildMetadata;
+use App\Services\RuntimeCapabilities;
 use App\Services\TenantControl\TenantControlAuthenticator;
 use App\Services\TenantControl\TenantControlEndpoint;
 use App\Services\TenantControl\TenantControlKey;
@@ -186,7 +187,10 @@ class TenantControlAuthenticatorTest extends TestCase
     {
         return new TenantControlAuthenticator(
             new TenantControlKey,
-            new RuntimeBuildMetadata(NexusRuntime::HostedTenant),
+            new RuntimeBuildMetadata(
+                NexusRuntime::HostedTenant,
+                new RuntimeCapabilities(NexusRuntime::HostedTenant),
+            ),
         );
     }
 }

@@ -6,7 +6,10 @@ use App\Enums\NexusRuntime;
 
 final readonly class RuntimeCapabilities
 {
-    public function __construct(private NexusRuntime $runtime) {}
+    public function __construct(
+        private NexusRuntime $runtime,
+        private bool $tenantEventsEnabled = false,
+    ) {}
 
     public function runtime(): NexusRuntime
     {
@@ -58,10 +61,8 @@ final readonly class RuntimeCapabilities
 
     public function consumesTenantEvents(): bool
     {
-        return match ($this->runtime) {
-            NexusRuntime::HostedTenant => true,
-            NexusRuntime::Standalone, NexusRuntime::WorldWriter => false,
-        };
+        return $this->runtime === NexusRuntime::HostedTenant
+            && $this->tenantEventsEnabled;
     }
 
     public function sendsTenantCallbacks(): bool

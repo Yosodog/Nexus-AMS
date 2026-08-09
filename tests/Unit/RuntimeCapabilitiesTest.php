@@ -43,6 +43,17 @@ class RuntimeCapabilitiesTest extends TestCase
         $this->assertSame(NexusRuntime::cases(), $matrixRuntimes);
     }
 
+    #[Test]
+    public function tenant_event_feature_flag_only_enables_the_hosted_runtime(): void
+    {
+        foreach (NexusRuntime::cases() as $runtime) {
+            $this->assertSame(
+                $runtime === NexusRuntime::HostedTenant,
+                (new RuntimeCapabilities($runtime, tenantEventsEnabled: true))->consumesTenantEvents(),
+            );
+        }
+    }
+
     /**
      * @return iterable<string, array{NexusRuntime, array<string, bool>}>
      */
@@ -66,7 +77,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'runs_public_world_schedules' => false,
             'runs_tenant_schedules' => true,
             'runs_platform_backups' => false,
-            'consumes_tenant_events' => true,
+            'consumes_tenant_events' => false,
             'sends_tenant_callbacks' => true,
             'accepts_bootstrap_redemption' => true,
             'allows_interactive_setup' => false,

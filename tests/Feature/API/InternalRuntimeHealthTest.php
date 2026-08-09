@@ -39,6 +39,7 @@ class InternalRuntimeHealthTest extends TestCase
             'nexus.build.commit' => str_repeat('b', 40),
             'nexus.health.queue_max_age_seconds' => 180,
             'nexus.health.scheduler_max_age_seconds' => 180,
+            'nexus.tenant_events.enabled' => false,
         ]);
     }
 
@@ -72,7 +73,7 @@ class InternalRuntimeHealthTest extends TestCase
             ->assertJsonPath('release_id', 'test-release')
             ->assertJsonPath('runtime_mode', 'standalone')
             ->assertJsonPath('runtime_contract', 1)
-            ->assertJsonPath('tenant_schema', 41)
+            ->assertJsonPath('tenant_schema', 42)
             ->assertJsonPath('world_view_contract', null)
             ->assertJsonPath('capabilities', []);
 
@@ -101,6 +102,60 @@ class InternalRuntimeHealthTest extends TestCase
         $this->authorizedGet('/api/internal/v1/build')
             ->assertOk()
             ->assertJsonPath('capabilities', []);
+    }
+
+    public function test_hosted_build_metadata_advertises_tenant_events_only_when_enabled(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+        config([
+            'nexus.managed' => true,
+            'nexus.tenant_id' => self::TENANT_ID,
+            'nexus.world_view_contract' => 3,
+            'nexus.tenant_events.enabled' => true,
+        ]);
+
+        $this->authorizedGet('/api/internal/v1/build')
+            ->assertOk()
+            ->assertJsonPath('capabilities', ['platform-bootstrap-v1', 'tenant-events-v1']);
+
+        config(['nexus.managed' => false]);
+        $this->app->forgetInstance(RuntimeCapabilities::class);
+
+        $this->authorizedGet('/api/internal/v1/build')
+            ->assertOk()
+            ->assertJsonPath('capabilities', ['platform-bootstrap-v1']);
+    }
+
+    public function test_enabled_tenant_event_transport_fails_readiness_without_its_mounted_key(): void
+    {
+        $this->configureRuntime(NexusRuntime::HostedTenant);
+        config([
+            'nexus.managed' => true,
+            'nexus.tenant_id' => self::TENANT_ID,
+            'nexus.world_view_contract' => 3,
+            'nexus.tenant_events.enabled' => true,
+            'nexus.tenant_events.key_file' => '/missing/private/tenant-event-key',
+        ]);
+
+        $response = $this->authorizedGet('/api/internal/v1/readiness')
+            ->assertServiceUnavailable()
+            ->assertJsonPath('checks.tenant_events.status', 'mismatch');
+        $this->assertStringNotContainsString('/missing/private/tenant-event-key', $response->getContent());
+
+        $keyFile = tempnam(sys_get_temp_dir(), 'nexus-tenant-event-health-key-');
+        $this->assertNotFalse($keyFile);
+
+        try {
+            $this->assertNotFalse(file_put_contents($keyFile, base64_encode(random_bytes(48))));
+            config(['nexus.tenant_events.key_file' => $keyFile]);
+
+            $this->authorizedGet('/api/internal/v1/readiness')
+                ->assertJsonPath('checks.tenant_events.status', 'compatible');
+        } finally {
+            if (is_file($keyFile)) {
+                unlink($keyFile);
+            }
+        }
     }
 
     public function test_standalone_readiness_reports_core_compatibility_without_requiring_heartbeats(): void

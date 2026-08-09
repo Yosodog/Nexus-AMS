@@ -6,6 +6,8 @@ namespace App\Services;
 
 use App\Enums\NexusRuntime;
 use App\Enums\ProcessHeartbeatRole;
+use App\Exceptions\TenantEventConfigurationException;
+use App\Services\TenantEvents\TenantEventAuthenticator;
 use App\Services\World\WorldModelManifest;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Migrations\Migrator;
@@ -21,6 +23,7 @@ final readonly class RuntimeReadinessService
         private RuntimeBuildMetadata $build,
         private RuntimeCapabilities $capabilities,
         private Migrator $migrator,
+        private TenantEventAuthenticator $tenantEvents,
     ) {}
 
     /**
@@ -37,6 +40,7 @@ final readonly class RuntimeReadinessService
         $cache = $this->cacheCheck();
         $runtimeContract = $this->runtimeContractCheck();
         $runtimeIdentity = $this->runtimeIdentityCheck();
+        $tenantEvents = $this->tenantEventsCheck();
         $release = $this->releaseCheck();
         $tenantSchema = $database['status'] === 'ok'
             ? $this->tenantSchemaCheck()
@@ -50,6 +54,7 @@ final readonly class RuntimeReadinessService
             && $cache['status'] === 'ok'
             && $runtimeContract['status'] === 'compatible'
             && $runtimeIdentity['status'] === 'compatible'
+            && in_array($tenantEvents['status'], ['compatible', 'not_required'], true)
             && in_array($release['status'], ['compatible', 'not_required'], true)
             && $tenantSchema['status'] === 'current'
             && in_array($worldViewContract['status'], ['compatible', 'not_required'], true)
@@ -66,6 +71,7 @@ final readonly class RuntimeReadinessService
                 'maintenance' => $maintenance,
                 'runtime_contract' => $runtimeContract,
                 'runtime_identity' => $runtimeIdentity,
+                'tenant_events' => $tenantEvents,
                 'release' => $release,
                 'tenant_schema' => $tenantSchema,
                 'world_view_contract' => $worldViewContract,
@@ -166,6 +172,22 @@ final readonly class RuntimeReadinessService
         };
 
         return ['status' => $compatible ? 'compatible' : 'mismatch'];
+    }
+
+    /** @return array{status: 'compatible'|'mismatch'|'not_required'} */
+    private function tenantEventsCheck(): array
+    {
+        if (! $this->capabilities->consumesTenantEvents()) {
+            return ['status' => 'not_required'];
+        }
+
+        try {
+            $this->tenantEvents->assertConfigured();
+
+            return ['status' => 'compatible'];
+        } catch (TenantEventConfigurationException) {
+            return ['status' => 'mismatch'];
+        }
     }
 
     /** @return array{status: 'compatible'|'missing'|'not_required'} */

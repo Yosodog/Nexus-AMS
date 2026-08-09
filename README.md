@@ -80,6 +80,8 @@ Hosted tenant callbacks use a durable outbox and a versioned HMAC contract. Mana
 
 Managed hosted tenants redeem the initial-administrator bootstrap through `POST /api/internal/v1/bootstrap/redeem`. The opaque token is accepted only in the request body, hashed and removed before throttling or telemetry, and introspected through the fixed HTTPS `NEXUS_BOOTSTRAP_INTROSPECTION_URL` using the tenant-control HMAC key. Signed claims are one-action, release-, tenant-, alliance-, nation-, and Cloud-user-scoped, with a hard 15-minute maximum lifetime. Local credentials, sessions, roles, and authentication factors remain tenant-local; the user, protected administrator role, immutable redemption evidence, audit record, and durable `bootstrap.redeemed` callback are committed atomically.
 
+Routed tenant events are a separate, disabled-by-default hosted transport. Managed deployments may set `NEXUS_TENANT_EVENTS_ENABLED=true`, mount a dedicated HMAC key at `NEXUS_TENANT_EVENTS_KEY_FILE`, and provide a tenant-scoped Redis ACL credential. `nexus:consume-tenant-events` reads only the stream deterministically derived from the immutable tenant ID, validates the signed `tenant-events-v1` envelope, records an immutable receipt with no raw payload, and applies tenant-local reactions transactionally. Standalone and world-writer runtimes never read the key or connect to this stream.
+
 ## Production Quick Start
 
 If you want a fast production-style install, use the companion installer from `Nexus-Setup`.

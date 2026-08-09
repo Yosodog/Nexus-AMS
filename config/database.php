@@ -198,6 +198,16 @@ return [
             'database' => env('SUBS_REDIS_DB', '3'),
         ],
 
+        'tenant_events' => [
+            'url' => env('NEXUS_TENANT_EVENTS_REDIS_URL'),
+            'prefix' => '',
+            'host' => env('NEXUS_TENANT_EVENTS_REDIS_HOST', '127.0.0.1'),
+            'username' => env('NEXUS_TENANT_EVENTS_REDIS_USERNAME'),
+            'password' => env('NEXUS_TENANT_EVENTS_REDIS_PASSWORD'),
+            'port' => env('NEXUS_TENANT_EVENTS_REDIS_PORT', '6379'),
+            'database' => env('NEXUS_TENANT_EVENTS_REDIS_DB', '4'),
+        ],
+
     ],
 
 ];

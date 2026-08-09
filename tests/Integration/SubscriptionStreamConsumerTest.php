@@ -109,12 +109,18 @@ class SubscriptionStreamConsumerTest extends TestCase
     public function test_it_retries_a_previously_admitted_message_after_its_envelope_age_expires(): void
     {
         config()->set('subscriptions.redis.max_deliveries', 3);
+        $attempt = 0;
         $processor = Mockery::mock(SubscriptionEventProcessor::class);
         $processor->shouldReceive('process')
             ->twice()
             ->with('nation', 'update', ['id' => 4242])
-            ->andThrow(new RuntimeException('Temporary processor failure.'))
-            ->andReturnNull();
+            ->andReturnUsing(static function () use (&$attempt): void {
+                $attempt++;
+
+                if ($attempt === 1) {
+                    throw new RuntimeException('Temporary processor failure.');
+                }
+            });
 
         $consumer = new SubscriptionStreamConsumer($processor, app(SubscriptionEnvelopeAuthenticator::class));
         $consumer->ensureConsumerGroup();

@@ -110,7 +110,7 @@ class RecommendationEngine
             return $run;
         }, attempts: 5);
 
-        GenerateMilcomRecommendationsJob::dispatch($run->id);
+        GenerateMilcomRecommendationsJob::dispatch($run->id)->afterCommit();
 
         return $run;
     }

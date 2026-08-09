@@ -1,0 +1,15 @@
+{
+    "delivery_id": "01KZHV17VQ9S6GDGBK0QJ5GF1Y",
+    "event_id": "world:war:123456:create:v1",
+    "contract_version": 1,
+    "tenant_id": "01KZHV17VQ9S6GDGBK0QJ5GF1Z",
+    "type": "war.declared",
+    "subject": {
+        "war_id": 123456
+    },
+    "reason": {
+        "matched_alliance_ids": [10014]
+    },
+    "occurred_at": "2026-08-08T22:00:00Z",
+    "trace_id": "01KZHV17VQ9S6GDGBK0QJ5GF20"
+}

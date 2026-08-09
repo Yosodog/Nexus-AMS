@@ -13,7 +13,7 @@ final readonly class RuntimeBuildMetadata
 
     public const RUNTIME_CONTRACT = 1;
 
-    public const TENANT_SCHEMA = 41;
+    public const TENANT_SCHEMA = 42;
 
     public const WORLD_VIEW_MIN = 3;
 
@@ -27,7 +27,10 @@ final readonly class RuntimeBuildMetadata
 
     private const COMMIT_PATTERN = '/\A[a-f0-9]{7,64}\z/D';
 
-    public function __construct(private NexusRuntime $runtime) {}
+    public function __construct(
+        private NexusRuntime $runtime,
+        private RuntimeCapabilities $runtimeCapabilities,
+    ) {}
 
     public function runtime(): NexusRuntime
     {
@@ -114,10 +117,17 @@ final readonly class RuntimeBuildMetadata
     /** @return list<string> */
     public function capabilities(): array
     {
-        return match ($this->runtime) {
-            NexusRuntime::HostedTenant => ['platform-bootstrap-v1'],
-            NexusRuntime::Standalone, NexusRuntime::WorldWriter => [],
-        };
+        if ($this->runtime !== NexusRuntime::HostedTenant) {
+            return [];
+        }
+
+        $capabilities = ['platform-bootstrap-v1'];
+
+        if ($this->runtimeCapabilities->consumesTenantEvents()) {
+            $capabilities[] = 'tenant-events-v1';
+        }
+
+        return $capabilities;
     }
 
     /**

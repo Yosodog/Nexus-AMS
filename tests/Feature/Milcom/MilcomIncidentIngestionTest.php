@@ -58,7 +58,8 @@ class MilcomIncidentIngestionTest extends TestCase
         Queue::assertPushed(GenerateMilcomRecommendationsJob::class, 1);
         Queue::assertPushed(
             GenerateMilcomRecommendationsJob::class,
-            fn (GenerateMilcomRecommendationsJob $job): bool => $job->queue === null,
+            fn (GenerateMilcomRecommendationsJob $job): bool => $job->queue === null
+                && $job->afterCommit === true,
         );
     }
 

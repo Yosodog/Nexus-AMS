@@ -37,6 +37,29 @@ class RuntimeServiceProviderTest extends TestCase
     }
 
     #[Test]
+    public function tenant_events_require_managed_hosted_runtime_and_an_explicit_flag(): void
+    {
+        config([
+            'nexus.runtime' => NexusRuntime::HostedTenant->value,
+            'nexus.managed' => true,
+            'nexus.tenant_events.enabled' => true,
+        ]);
+        $this->forgetRuntimeSingletons();
+        $this->assertTrue($this->app->make(RuntimeCapabilities::class)->consumesTenantEvents());
+
+        config(['nexus.managed' => false]);
+        $this->forgetRuntimeSingletons();
+        $this->assertFalse($this->app->make(RuntimeCapabilities::class)->consumesTenantEvents());
+
+        config([
+            'nexus.runtime' => NexusRuntime::Standalone->value,
+            'nexus.managed' => true,
+        ]);
+        $this->forgetRuntimeSingletons();
+        $this->assertFalse($this->app->make(RuntimeCapabilities::class)->consumesTenantEvents());
+    }
+
+    #[Test]
     public function unsupported_runtime_configuration_is_rejected(): void
     {
         config(['nexus.runtime' => 'unsupported']);

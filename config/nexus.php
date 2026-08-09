@@ -31,4 +31,17 @@ return [
         'response_future_tolerance_seconds' => (int) env('NEXUS_CONTROL_RESPONSE_FUTURE_TOLERANCE', 30),
         'callback_lease_seconds' => (int) env('NEXUS_CONTROL_CALLBACK_LEASE', 90),
     ],
+    'tenant_events' => [
+        'enabled' => env('NEXUS_TENANT_EVENTS_ENABLED', false),
+        'key_file' => env('NEXUS_TENANT_EVENTS_KEY_FILE'),
+        'consumer' => env('NEXUS_TENANT_EVENTS_CONSUMER'),
+        'block_ms' => (int) env('NEXUS_TENANT_EVENTS_BLOCK_MS', 5000),
+        'read_count' => (int) env('NEXUS_TENANT_EVENTS_READ_COUNT', 10),
+        'claim_idle_ms' => (int) env('NEXUS_TENANT_EVENTS_CLAIM_IDLE_MS', 60000),
+        'max_deliveries' => (int) env('NEXUS_TENANT_EVENTS_MAX_DELIVERIES', 5),
+        'retry_delay_ms' => (int) env('NEXUS_TENANT_EVENTS_RETRY_DELAY_MS', 2000),
+        'max_body_bytes' => (int) env('NEXUS_TENANT_EVENTS_MAX_BODY_BYTES', 8192),
+        'max_age_seconds' => (int) env('NEXUS_TENANT_EVENTS_MAX_AGE', 300),
+        'future_tolerance_seconds' => (int) env('NEXUS_TENANT_EVENTS_FUTURE_TOLERANCE', 30),
+    ],
 ];
