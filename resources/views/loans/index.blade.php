@@ -613,7 +613,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @php($historyStatusPresentation = $loan->statusPresentation())
+                                    @php
+                                        $historyStatusPresentation = $loan->statusPresentation();
+                                    @endphp
                                     <x-nexus-status
                                         :label="$historyStatusPresentation['label']"
                                         :intent="$historyStatusPresentation['intent']"
