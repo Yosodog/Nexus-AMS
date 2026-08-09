@@ -51,7 +51,7 @@ final class StaffWorkQueueQuery
      */
     public function ownerOptions(array $items): array
     {
-        return ['unassigned' => 'No domain owner'] + collect($items)
+        return ['unassigned' => 'Unassigned'] + collect($items)
             ->map(function (array $item): ?array {
                 $key = $item['domain_owner']['key'] ?? $item['owner_key'] ?? null;
                 $label = $item['domain_owner']['label'] ?? $item['owner_label'] ?? null;

@@ -47,7 +47,7 @@ final class RebuildingWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $request->getKey(),
                     typeLabel: 'Rebuilding request',
-                    subject: $leader.' — $'.number_format((float) $request->estimated_amount, 2),
+                    subject: $leader.' · $'.number_format((float) $request->estimated_amount, 2),
                     createdAt: $request->created_at,
                     ownerKey: null,
                     ownerLabel: null,

@@ -45,7 +45,7 @@ final class GrantWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $application->getKey(),
                     typeLabel: 'Custom grant',
-                    subject: $leader.' — '.$program,
+                    subject: $leader.' · '.$program,
                     createdAt: $application->created_at,
                     ownerKey: null,
                     ownerLabel: null,

@@ -60,7 +60,7 @@ final class OperationsCoordinationService
                     )) {
                         return $this->error(
                             'work_item_changed',
-                            'This work-item occurrence has already left the active queue. Refresh before continuing.',
+                            'This item is no longer pending. Refresh before continuing.',
                             409,
                         );
                     }
@@ -68,7 +68,7 @@ final class OperationsCoordinationService
                     if ($lockVersion !== null) {
                         return $this->error(
                             'coordination_conflict',
-                            'The work-item coordination state changed. Refresh and try again.',
+                            'Someone else changed this item. Refresh and try again.',
                             409,
                         );
                     }
@@ -81,7 +81,7 @@ final class OperationsCoordinationService
                 if ($row->occurrence_key !== $item['occurrence_key']) {
                     return $this->error(
                         'work_item_changed',
-                        'The work item entered a new occurrence. Refresh before claiming it.',
+                        'This item was reopened or replaced. Refresh before assigning it.',
                         409,
                     );
                 }
@@ -93,7 +93,7 @@ final class OperationsCoordinationService
                 if (! $created && ($lockVersion === null || $row->lock_version !== $lockVersion)) {
                     return $this->error(
                         'coordination_conflict',
-                        'The work-item coordination state changed. Refresh and try again.',
+                        'Someone else changed this item. Refresh and try again.',
                         409,
                         ['lock_version' => $row->lock_version],
                     );
@@ -176,7 +176,7 @@ final class OperationsCoordinationService
             if ($row === null || $row->occurrence_key !== $item['occurrence_key']) {
                 return $this->error(
                     'work_item_changed',
-                    'The work item is no longer in the expected active occurrence.',
+                    'This item is no longer active.',
                     409,
                 );
             }
@@ -184,7 +184,7 @@ final class OperationsCoordinationService
             if ($row->lock_version !== $lockVersion) {
                 return $this->error(
                     'coordination_conflict',
-                    'The work-item coordination state changed. Refresh and try again.',
+                    'Someone else changed this item. Refresh and try again.',
                     409,
                     ['lock_version' => $row->lock_version],
                 );
@@ -209,20 +209,20 @@ final class OperationsCoordinationService
 
                 return $this->error(
                     'assignment_expired',
-                    'The assignment expired before it could be released.',
+                    'Your assignment expired before it could be released.',
                     409,
                     ['lock_version' => $row->lock_version],
                 );
             }
 
             if ($row->assignee_user_id === null) {
-                return $this->error('not_claimed', 'The work item is not currently claimed.', 409);
+                return $this->error('not_claimed', 'The work item is not currently assigned.', 409);
             }
 
             $canManage = Gate::forUser($actor)->allows((string) config('operations.permissions.manage'));
 
             if ($row->assignee_user_id !== $actor->id && ! $canManage) {
-                throw new AuthorizationException('Only the assignee or an Operations manager may release this work item.');
+                throw new AuthorizationException('Only the person assigned to this item or an operations manager can release it.');
             }
 
             $releasedAssigneeId = $row->assignee_user_id;
@@ -274,23 +274,23 @@ final class OperationsCoordinationService
     private function authorizeActor(User $actor, bool $requireCoordinate = false): void
     {
         if (! (bool) config('operations.features.coordination', false)) {
-            throw new AuthorizationException('Operations coordination is not enabled.');
+            throw new AuthorizationException('Work assignment is not enabled.');
         }
 
         if (! $actor->is_admin || $actor->disabled || $actor->verified_at === null) {
-            throw new AuthorizationException('Operations coordination requires an active Nexus administrator.');
+            throw new AuthorizationException('You need an active administrator account to assign work.');
         }
 
         $gate = Gate::forUser($actor);
 
         if ($requireCoordinate && ! $gate->allows((string) config('operations.permissions.coordinate'))) {
-            throw new AuthorizationException('This actor cannot coordinate Operations work.');
+            throw new AuthorizationException('You do not have permission to assign this work.');
         }
 
         if (! $requireCoordinate
             && ! $gate->allows((string) config('operations.permissions.coordinate'))
             && ! $gate->allows((string) config('operations.permissions.manage'))) {
-            throw new AuthorizationException('This actor cannot coordinate Operations work.');
+            throw new AuthorizationException('You do not have permission to assign this work.');
         }
     }
 
@@ -300,7 +300,7 @@ final class OperationsCoordinationService
         if ($item === null) {
             return $this->error(
                 'not_found',
-                'The Operations work item was not found or is not visible to this actor.',
+                'This work item was not found or you do not have access to it.',
                 404,
             );
         }
@@ -317,7 +317,7 @@ final class OperationsCoordinationService
         if (! $this->sourceCanMutate($item)) {
             return $this->error(
                 'source_unavailable',
-                'Coordination is unavailable while the source is stale or incomplete.',
+                'This item cannot be assigned until its information is fully available and up to date.',
                 409,
             );
         }
@@ -416,7 +416,7 @@ final class OperationsCoordinationService
 
         return $this->error(
             'already_claimed',
-            'Another operator currently owns this work item.',
+            'This work item is already assigned to someone else.',
             409,
             ['assignee' => $assignee === null ? null : [
                 'id' => $assignee->id,

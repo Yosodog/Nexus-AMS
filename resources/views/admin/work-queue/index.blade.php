@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Staff Work Queue')
+@section('title', 'Staff work queue')
 
 @section('content')
     @php
@@ -16,11 +16,10 @@
     <header class="nexus-page-header">
         <div class="nexus-page-header__copy">
             <p class="nexus-eyebrow">Staff operations</p>
-            <h1 class="nexus-page-title">Unified work queue</h1>
+            <h1 class="nexus-page-title">Staff work queue</h1>
             <p class="nexus-page-summary">
-                Discover authorized review work here; decisions still happen in each domain's established workflow.
-                Projection updated
-                <x-time.display :value="$generatedAt" :server-now="now()" label="Queue projection updated" />.
+                Find pending work you can review. Open an item to make a decision in its usual section.
+                Last updated <x-time.display :value="$generatedAt" :server-now="now()" label="Work queue updated" />.
             </p>
         </div>
         <div class="nexus-page-header__actions">
@@ -35,10 +34,10 @@
         <div class="alert alert-warning mb-5" role="status" aria-live="polite">
             <x-icon name="o-exclamation-triangle" class="size-5" aria-hidden="true" />
             <div>
-                <p class="font-semibold">Some queue sources could not be loaded.</p>
+                <p class="font-semibold">Some types of work could not be loaded.</p>
                 <p class="text-sm">
                     {{ collect($failures)->pluck('label')->join(', ', ' and ') }}
-                    {{ count($failures) === 1 ? 'is' : 'are' }} temporarily unavailable. Available work remains visible; refresh to retry.
+                    {{ count($failures) === 1 ? 'is' : 'are' }} temporarily unavailable. Other pending work is still shown. Refresh to try again.
                 </p>
             </div>
         </div>
@@ -49,7 +48,7 @@
             <div class="nexus-panel__header">
                 <div>
                     <h2 id="saved-views-title" class="nexus-section-title">Saved views</h2>
-                    <p class="nexus-body-muted mt-1">Saved views contain filter values only and are scoped to your account.</p>
+                    <p class="nexus-body-muted mt-1">Only you can see your saved views.</p>
                 </div>
             </div>
             <ul class="flex flex-wrap gap-2 px-5 pb-5">
@@ -77,8 +76,8 @@
     <section class="nexus-panel mb-5" aria-labelledby="queue-filters-title">
         <div class="nexus-panel__header">
             <div>
-                <h2 id="queue-filters-title" class="nexus-section-title">Narrow the queue</h2>
-                <p class="nexus-body-muted mt-1">Filters remain in the URL so this view can be shared or revisited.</p>
+                <h2 id="queue-filters-title" class="nexus-section-title">Filter the queue</h2>
+                <p class="nexus-body-muted mt-1">You can bookmark or share the filtered page.</p>
             </div>
             @if ($filters->hasActiveFilters() || $selectedSavedView)
                 <a href="{{ route('admin.work-queue.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
@@ -101,7 +100,7 @@
             <label class="form-control" for="queue-type">
                 <span class="label-text mb-1 font-medium">Type</span>
                 <select id="queue-type" name="type" class="select select-bordered w-full">
-                    <option value="">All authorized types</option>
+                    <option value="">All types I can access</option>
                     @foreach ($types as $type => $label)
                         <option value="{{ $type }}" @selected($filters->type === $type)>{{ $label }}</option>
                     @endforeach
@@ -154,13 +153,13 @@
             <div>
                 <h2 id="queue-results-title" class="nexus-section-title">Pending work</h2>
                 <p class="nexus-body-muted mt-1">
-                    {{ number_format($items->total()) }} matching of {{ number_format($unfilteredTotal) }} authorized items.
+                    Showing {{ number_format($items->total()) }} of {{ number_format($unfilteredTotal) }} items.
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2" aria-label="Authorized queue counts">
+            <div class="flex flex-wrap gap-2" aria-label="Pending work totals">
                 @foreach ($types as $type => $label)
                     @if (isset($failures[$type]))
-                        <span class="badge badge-warning">{{ $label }} unavailable</span>
+                        <span class="badge badge-warning">{{ $label }} is unavailable</span>
                     @else
                         <a href="{{ route('admin.work-queue.index', ['type' => $type, 'sort' => 'age', 'direction' => 'desc']) }}" class="badge badge-outline">
                             {{ $label }} {{ number_format($counts[$type] ?? 0) }}
@@ -177,13 +176,13 @@
                 </span>
                 @if ($filters->hasActiveFilters() || $selectedSavedView)
                     <h3 class="font-semibold text-base-content">No work matches these filters</h3>
-                    <p class="nexus-body-muted mt-1">Clear or adjust the filters; your saved view and current values remain available.</p>
+                    <p class="nexus-body-muted mt-1">Clear or adjust the filters to see more work.</p>
                 @elseif ($failures !== [])
-                    <h3 class="font-semibold text-base-content">No work is visible from the available sources</h3>
-                    <p class="nexus-body-muted mt-1">This is not an all-clear result until the unavailable sources load successfully.</p>
+                    <h3 class="font-semibold text-base-content">No pending work is available right now</h3>
+                    <p class="nexus-body-muted mt-1">Some work could not be loaded, so there may still be items waiting for review.</p>
                 @else
-                    <h3 class="font-semibold text-base-content">The authorized queue is clear</h3>
-                    <p class="nexus-body-muted mt-1">There are no pending items in the workflows you can manage.</p>
+                    <h3 class="font-semibold text-base-content">You are caught up</h3>
+                    <p class="nexus-body-muted mt-1">There is no pending work in the sections you can manage.</p>
                 @endif
             </div>
         @else
@@ -194,10 +193,10 @@
                             <th scope="col">Work item</th>
                             <th scope="col">Status</th>
                             <th scope="col">Urgency</th>
-                            <th scope="col">Owner</th>
+                            <th scope="col">Assigned to</th>
                             <th scope="col">
                                 <a href="{{ route('admin.work-queue.index', array_merge($filterQuery, ['sort' => 'age', 'direction' => $nextAgeDirection])) }}" class="inline-flex items-center gap-1">
-                                    Age
+                                    Created
                                     <span class="sr-only">Sort {{ $nextAgeDirection === 'desc' ? 'oldest first' : 'newest first' }}</span>
                                     <x-icon name="o-arrows-up-down" class="size-4" aria-hidden="true" />
                                 </a>
@@ -211,7 +210,7 @@
                             <tr data-work-item-key="{{ $item['key'] }}">
                                 <td>
                                     <p class="font-semibold text-base-content">{{ $item['subject'] }}</p>
-                                    <p class="mt-1 text-xs text-base-content/60">{{ $item['type_label'] }} · {{ $item['key'] }}</p>
+                                    <p class="mt-1 text-sm text-base-content/70">{{ $item['type_label'] }}</p>
                                 </td>
                                 <td>
                                     <x-nexus-status
@@ -227,7 +226,7 @@
                                         :icon="$urgency['icon']"
                                     />
                                     @if ($item['due_at'])
-                                        <span class="mt-1 block text-xs text-base-content/60">
+                                        <span class="mt-1 block text-sm text-base-content/70">
                                             Due <x-time.display :value="$item['due_at']" :server-now="now()" label="Work item due" />
                                         </span>
                                     @endif

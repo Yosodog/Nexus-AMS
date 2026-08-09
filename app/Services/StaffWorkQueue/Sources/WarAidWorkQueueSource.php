@@ -40,7 +40,7 @@ final class WarAidWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $request->getKey(),
                     typeLabel: 'War aid',
-                    subject: $leader.' — $'.number_format((float) $request->money, 2),
+                    subject: $leader.' · $'.number_format((float) $request->money, 2),
                     createdAt: $request->created_at,
                     ownerKey: null,
                     ownerLabel: null,

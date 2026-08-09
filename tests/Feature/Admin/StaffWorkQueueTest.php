@@ -99,7 +99,7 @@ class StaffWorkQueueTest extends TestCase
             ->get(route('admin.work-queue.index', ['q' => 'no match']))
             ->assertOk()
             ->assertSee('No work matches these filters')
-            ->assertDontSee('The authorized queue is clear');
+            ->assertDontSee('You are caught up');
 
         $this->actingAs($admin)
             ->get(route('admin.work-queue.index', ['sort' => 'age', 'direction' => 'desc']))
@@ -187,10 +187,10 @@ class StaffWorkQueueTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.work-queue.index'))
             ->assertOk()
-            ->assertSee('Some queue sources could not be loaded')
+            ->assertSee('Some types of work could not be loaded')
             ->assertSeeInOrder(['Applications', 'is temporarily unavailable'])
             ->assertSee('Healthy loan item')
-            ->assertDontSee('The authorized queue is clear');
+            ->assertDontSee('You are caught up');
     }
 
     public function test_dashboard_and_navigation_counts_use_the_same_projection(): void

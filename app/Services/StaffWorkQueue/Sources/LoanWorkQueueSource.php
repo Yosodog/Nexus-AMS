@@ -41,7 +41,7 @@ final class LoanWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $loan->getKey(),
                     typeLabel: 'Loan application',
-                    subject: $leader.' — $'.number_format((float) $loan->amount, 2),
+                    subject: $leader.' · $'.number_format((float) $loan->amount, 2),
                     createdAt: $loan->created_at,
                     ownerKey: null,
                     ownerLabel: null,

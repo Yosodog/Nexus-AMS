@@ -40,7 +40,7 @@ final class CityGrantWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $request->getKey(),
                     typeLabel: 'City grant',
-                    subject: $leader.' — City '.$request->city_number,
+                    subject: $leader.' · City '.$request->city_number,
                     createdAt: $request->created_at,
                     ownerKey: null,
                     ownerLabel: null,

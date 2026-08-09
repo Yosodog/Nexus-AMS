@@ -53,7 +53,7 @@ final class WithdrawalWorkQueueSource implements StaffWorkQueueSourceV2
                     type: $this->type(),
                     id: $transaction->getKey(),
                     typeLabel: 'Withdrawal',
-                    subject: $leader.' — $'.number_format((float) $transaction->money, 2),
+                    subject: $leader.' · $'.number_format((float) $transaction->money, 2),
                     createdAt: $transaction->created_at,
                     ownerKey: null,
                     ownerLabel: null,
