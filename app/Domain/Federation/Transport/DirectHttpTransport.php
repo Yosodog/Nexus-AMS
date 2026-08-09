@@ -9,6 +9,7 @@ use App\Domain\Federation\DTO\TransportResult;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -30,11 +31,10 @@ final class DirectHttpTransport implements FederationTransport
             throw new RuntimeException('Federation discovery request failed.');
         }
 
-        $body = $response->body();
-
-        if (strlen($body) > (int) config('federation.limits.outer_request_bytes', 1048576)) {
-            throw new RuntimeException('Federation discovery response is too large.');
-        }
+        $body = $this->boundedBody(
+            $response,
+            (int) config('federation.limits.outer_request_bytes', 1048576),
+        );
 
         $document = FederationDiscoveryDocument::fromJson($body);
 
@@ -60,7 +60,11 @@ final class DirectHttpTransport implements FederationTransport
             ->withBody($body, 'application/json')
             ->post($origin->endpoint($endpoint));
 
-        return new TransportResult($response->status(), $response->body(), $correlationId);
+        return new TransportResult(
+            $response->status(),
+            $this->boundedBody($response, (int) config('federation.limits.outer_request_bytes', 1048576)),
+            $correlationId,
+        );
     }
 
     private function request(PeerOrigin $origin, string $correlationId): PendingRequest
@@ -75,13 +79,14 @@ final class DirectHttpTransport implements FederationTransport
             RequestOptions::CONNECT_TIMEOUT => (int) config('federation.network.connect_timeout_seconds', 3),
             RequestOptions::TIMEOUT => (int) config('federation.network.request_timeout_seconds', 10),
             RequestOptions::VERIFY => true,
-            RequestOptions::PROTOCOLS => ['https'],
+            RequestOptions::PROTOCOLS => [$origin->scheme],
             RequestOptions::VERSION => '1.1',
             RequestOptions::CRYPTO_METHOD => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT,
             RequestOptions::HTTP_ERRORS => false,
             RequestOptions::EXPECT => false,
             RequestOptions::COOKIES => false,
             RequestOptions::IDN_CONVERSION => false,
+            RequestOptions::STREAM => true,
             RequestOptions::PROXY => '',
             RequestOptions::FORCE_IP_RESOLVE => str_contains($address, ':') ? 'v6' : 'v4',
             RequestOptions::CURL => [
@@ -94,5 +99,34 @@ final class DirectHttpTransport implements FederationTransport
             'User-Agent' => 'Nexus-Federation/1.0',
             'X-Nexus-Correlation-ID' => $correlationId,
         ]);
+    }
+
+    private function boundedBody(Response $response, int $maximumBytes): string
+    {
+        $maximumBytes = max($maximumBytes, 1);
+        $stream = $response->toPsrResponse()->getBody();
+        $body = '';
+
+        while (! $stream->eof()) {
+            $remaining = $maximumBytes + 1 - strlen($body);
+
+            if ($remaining <= 0) {
+                throw new RuntimeException('Federation peer response is too large.');
+            }
+
+            $chunk = $stream->read(min(8192, $remaining));
+
+            if ($chunk === '' && ! $stream->eof()) {
+                throw new RuntimeException('Federation peer response could not be read.');
+            }
+
+            $body .= $chunk;
+        }
+
+        if (strlen($body) > $maximumBytes) {
+            throw new RuntimeException('Federation peer response is too large.');
+        }
+
+        return $body;
     }
 }

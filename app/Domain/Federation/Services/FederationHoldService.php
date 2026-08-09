@@ -7,6 +7,7 @@ use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordQueue;
 use App\Models\FederationReceivedResource;
 use App\Models\FederationReceivedVersion;
+use App\Models\MilcomAssignmentDelivery;
 use App\Models\MilcomOperation;
 use App\Services\AuditLogger;
 use App\Services\Milcom\OperationService;
@@ -50,7 +51,17 @@ final class FederationHoldService
                     'federation_hold_reason' => Str::limit(Str::snake($reasonCode), 64, ''),
                     'federation_held_at' => $locked->federation_held_at ?? now(),
                 ])->save();
+                MilcomAssignmentDelivery::query()
+                    ->where('operation_id', $locked->id)
+                    ->where('status', 'pending')
+                    ->update([
+                        'status' => 'failed',
+                        'last_error' => FederationOperationGuard::HELD_ERROR_CODE,
+                        'failed_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 $this->suppressPendingDiscordCommands($locked);
+                $this->recordUnrecalledInGameDeliveries($locked);
                 $held++;
             }, attempts: 5);
         }
@@ -156,6 +167,22 @@ final class FederationHoldService
                 'operation_id' => $operation->id,
                 'leased_action_count' => $leasedCount,
                 'reason_code' => 'already_leased',
+            ]);
+        }
+    }
+
+    private function recordUnrecalledInGameDeliveries(MilcomOperation $operation): void
+    {
+        $sendingCount = MilcomAssignmentDelivery::query()
+            ->where('operation_id', $operation->id)
+            ->where('status', 'sending')
+            ->count();
+
+        if ($sendingCount > 0) {
+            $this->audit->failure('federation', 'hold.external_action_not_recalled', $operation, [
+                'operation_id' => $operation->id,
+                'leased_action_count' => $sendingCount,
+                'reason_code' => 'in_game_delivery_already_leased',
             ]);
         }
     }

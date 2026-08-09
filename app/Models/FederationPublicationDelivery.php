@@ -27,6 +27,7 @@ class FederationPublicationDelivery extends Model
         'transport_accepted_at',
         'validated_at',
         'acknowledged_at',
+        'access_revocation_revision',
         'access_revoked_at',
     ];
 

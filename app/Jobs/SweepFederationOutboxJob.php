@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Domain\Federation\Enums\InboxStatus;
 use App\Domain\Federation\Enums\OutboxStatus;
+use App\Models\FederationInboxMessage;
 use App\Models\FederationOutboxMessage;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,5 +43,16 @@ class SweepFederationOutboxJob implements ShouldBeUnique, ShouldQueue
                 'envelope_body' => null,
                 'updated_at' => now(),
             ]);
+
+        FederationInboxMessage::query()
+            ->where('status', InboxStatus::Accepted->value)
+            ->where('expires_at', '>', now())
+            ->where(function ($query): void {
+                $query->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', now());
+            })
+            ->oldest('created_at')
+            ->limit(200)
+            ->pluck('id')
+            ->each(fn (string $id) => ProcessFederationInboxMessageJob::dispatch($id));
     }
 }

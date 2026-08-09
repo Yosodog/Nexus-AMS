@@ -28,12 +28,14 @@ class FederationInboxMessage extends Model
         'envelope_body',
         'decrypted_payload',
         'status',
+        'processing_attempts',
         'safe_error_code',
         'correlation_id',
         'issued_at',
         'expires_at',
         'processed_at',
         'quarantined_at',
+        'next_attempt_at',
     ];
 
     protected $hidden = ['envelope_body', 'decrypted_payload', 'nonce'];
@@ -52,6 +54,7 @@ class FederationInboxMessage extends Model
             'expires_at' => 'datetime',
             'processed_at' => 'datetime',
             'quarantined_at' => 'datetime',
+            'next_attempt_at' => 'datetime',
         ];
     }
 }

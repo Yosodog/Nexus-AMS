@@ -4,6 +4,7 @@ namespace App\Domain\Federation\Services;
 
 use App\Domain\Federation\DTO\ProtectedHeader;
 use App\Domain\Federation\Enums\FederationKeyStatus;
+use App\Domain\Federation\Enums\FederationLinkStatus;
 use App\Domain\Federation\Enums\FederationMessageType;
 use App\Domain\Federation\Enums\OutboxStatus;
 use App\Domain\Federation\Protocol\FederationEnvelopeService;
@@ -31,10 +32,25 @@ final class FederationOutboxService
         ?string $resourceSchema = null,
         bool $includeHandshakeKey = false,
     ): FederationOutboxMessage {
+        if (! (bool) config('federation.enabled', false)) {
+            throw ValidationException::withMessages([
+                'federation' => 'Federation is disabled by server configuration.',
+            ]);
+        }
+
+        if ($link->status->isTerminal()
+            || ($link->status !== FederationLinkStatus::Active
+                && ! $type->isHandshake()
+                && ! ($link->status === FederationLinkStatus::Suspended && $type->isAllowedWhileSuspended()))) {
+            throw ValidationException::withMessages([
+                'federation' => 'The peer link does not allow this message type in its current state.',
+            ]);
+        }
+
         $identity = FederationIdentity::query()->with('activeKey')->firstOrFail();
         $senderKey = $identity->activeKey;
         $recipientKey = $link->peerKeys()
-            ->whereNotIn('status', [FederationKeyStatus::Compromised->value, FederationKeyStatus::Retired->value])
+            ->where('status', FederationKeyStatus::Active->value)
             ->latest('generation')
             ->first();
 

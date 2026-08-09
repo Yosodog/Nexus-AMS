@@ -16,6 +16,7 @@ class FederationCoalitionProposal extends Model
     use HasFactory, HasUlids;
 
     protected $fillable = [
+        'id',
         'federation_coalition_id',
         'proposer_installation_id',
         'proposal_type',

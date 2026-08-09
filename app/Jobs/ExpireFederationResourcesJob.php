@@ -2,26 +2,21 @@
 
 namespace App\Jobs;
 
+use App\Domain\Federation\Services\FederationExpiryService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class ExpireFederationResourcesJob implements ShouldQueue
+class ExpireFederationResourcesJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public int $timeout = 120;
 
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    public function handle(FederationExpiryService $expiry): void
     {
-        //
+        if ((bool) config('federation.enabled', false)) {
+            $expiry->run();
+        }
     }
 }

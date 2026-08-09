@@ -70,4 +70,18 @@ class FederationIdentityFeatureTest extends TestCase
 
         $this->getJson('/.well-known/nexus-federation')->assertNotFound();
     }
+
+    public function test_ownership_transfer_advances_the_epoch_and_stages_a_cross_signed_rotation_atomically(): void
+    {
+        $service = app(FederationIdentityService::class);
+        $identity = $service->enable();
+        $activeKeyId = $identity->activeKey->id;
+
+        $pending = $service->transferOwnership();
+
+        $this->assertSame(2, $identity->fresh()->ownership_epoch);
+        $this->assertSame('pending', $pending->status->value);
+        $this->assertNotNull($pending->rotation_statement);
+        $this->assertSame($activeKeyId, $identity->fresh()->activeKey->id);
+    }
 }

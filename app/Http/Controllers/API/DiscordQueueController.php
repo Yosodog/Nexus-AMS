@@ -9,7 +9,6 @@ use App\Models\DiscordQueue;
 use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DiscordQueueController extends Controller
@@ -27,27 +26,7 @@ class DiscordQueueController extends Controller
 
         $limit = (int) ($validated['limit'] ?? 20);
 
-        $entries = DB::transaction(function () use ($limit) {
-            $commands = DiscordQueue::query()
-                ->available()
-                ->limit($limit)
-                ->lockForUpdate()
-                ->get();
-
-            $commands->each(function (DiscordQueue $command): void {
-                $command->forceFill([
-                    'status' => DiscordQueueStatus::Processing,
-                    'attempts' => $command->attempts + 1,
-                    'claim_request_id' => null,
-                    'worker_id' => null,
-                    'lease_token' => null,
-                    'leased_until' => null,
-                    'last_error' => null,
-                ])->save();
-            });
-
-            return $commands;
-        }, attempts: 3);
+        $entries = $this->leaseService->claimLegacyBatch($limit);
 
         return response()->json([
             'data' => $entries->map(fn (DiscordQueue $command): array => $this->commandData($command)),

@@ -9,8 +9,10 @@ use App\Domain\Federation\Support\CanonicalJson;
 use App\Domain\Federation\Transport\PeerOrigin;
 use App\Models\FederationIdentity;
 use App\Models\FederationIdentityKey;
+use App\Models\FederationInboxMessage;
 use App\Models\FederationLink;
 use App\Services\AuditLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -84,9 +86,9 @@ final class FederationIdentityService
         return $identity;
     }
 
-    public function initiateRoutineRotation(): FederationIdentityKey
+    public function initiateRoutineRotation(bool $incrementOwnershipEpoch = false): FederationIdentityKey
     {
-        $newKey = DB::transaction(function (): FederationIdentityKey {
+        $newKey = DB::transaction(function () use ($incrementOwnershipEpoch): FederationIdentityKey {
             $identity = FederationIdentity::query()->lockForUpdate()->firstOrFail();
             $oldKey = $identity->keys()->where('active_key', 1)->lockForUpdate()->firstOrFail();
 
@@ -94,6 +96,12 @@ final class FederationIdentityService
                 throw ValidationException::withMessages([
                     'rotation' => 'A key rotation is already awaiting peer acknowledgment.',
                 ]);
+            }
+
+            if ($incrementOwnershipEpoch) {
+                $identity->forceFill([
+                    'ownership_epoch' => (int) $identity->ownership_epoch + 1,
+                ])->save();
             }
 
             $newKey = $this->createKey($identity, FederationKeyStatus::Pending, false);
@@ -142,11 +150,22 @@ final class FederationIdentityService
 
             $oldKey = $identity->keys()->where('active_key', 1)->lockForUpdate()->firstOrFail();
             $graceDays = max((int) config('federation.retiring_key_grace_days', 30), 1);
+            $latestKnownExpiry = FederationInboxMessage::query()
+                ->where('recipient_key_id', $oldKey->id)
+                ->max('expires_at');
+            $messageHorizon = CarbonImmutable::now('UTC')->addDays(
+                max((int) config('federation.publication_max_expiry_days', 30), 1)
+            );
+
+            if ($latestKnownExpiry !== null && CarbonImmutable::parse($latestKnownExpiry)->isAfter($messageHorizon)) {
+                $messageHorizon = CarbonImmutable::parse($latestKnownExpiry);
+            }
+
             $oldKey->forceFill([
                 'active_key' => null,
                 'status' => FederationKeyStatus::Retiring,
                 'retiring_at' => now(),
-                'purge_after' => now()->addDays($graceDays),
+                'purge_after' => $messageHorizon->addDays($graceDays),
             ])->save();
             $pending->forceFill([
                 'active_key' => 1,
@@ -170,11 +189,36 @@ final class FederationIdentityService
         $replacement = DB::transaction(function () use ($key): FederationIdentityKey {
             $identity = FederationIdentity::query()->lockForUpdate()->firstOrFail();
             $compromised = $identity->keys()->lockForUpdate()->findOrFail($key->id);
+            $activeKey = $identity->keys()->where('active_key', 1)->lockForUpdate()->first();
             $compromised->forceFill([
                 'active_key' => null,
                 'status' => FederationKeyStatus::Compromised,
                 'compromised_at' => now(),
+                'signing_private_key' => null,
+                'box_private_key' => null,
             ])->save();
+
+            if ($activeKey instanceof FederationIdentityKey && $activeKey->id !== $compromised->id) {
+                $activeKey->forceFill([
+                    'active_key' => null,
+                    'status' => FederationKeyStatus::Retiring,
+                    'retiring_at' => now(),
+                    'purge_after' => now()
+                        ->addDays(max((int) config('federation.publication_max_expiry_days', 30), 1))
+                        ->addDays(max((int) config('federation.retiring_key_grace_days', 30), 1)),
+                ])->save();
+            }
+
+            $identity->keys()
+                ->where('status', FederationKeyStatus::Pending->value)
+                ->where('id', '!=', $compromised->id)
+                ->update([
+                    'status' => FederationKeyStatus::Compromised->value,
+                    'signing_private_key' => null,
+                    'box_private_key' => null,
+                    'compromised_at' => now(),
+                    'updated_at' => now(),
+                ]);
             FederationLink::query()
                 ->whereIn('status', [FederationLinkStatus::Active->value, FederationLinkStatus::PendingLocal->value])
                 ->update([
@@ -184,7 +228,7 @@ final class FederationIdentityService
                     'updated_at' => now(),
                 ]);
 
-            return $this->createKey($identity, FederationKeyStatus::Pending, false);
+            return $this->createKey($identity, FederationKeyStatus::Active, true);
         }, attempts: 5);
 
         $this->audit->success('federation', 'identity.key_compromised', $replacement, [
@@ -197,12 +241,16 @@ final class FederationIdentityService
 
     public function transferOwnership(): FederationIdentityKey
     {
-        DB::transaction(function (): void {
-            $identity = FederationIdentity::query()->lockForUpdate()->firstOrFail();
-            $identity->increment('ownership_epoch');
-        });
+        $newKey = $this->initiateRoutineRotation(incrementOwnershipEpoch: true);
+        $identity = $newKey->identity()->firstOrFail();
 
-        return $this->initiateRoutineRotation();
+        $this->audit->success('federation', 'identity.ownership_transferred', $identity, [
+            'installation_id' => $identity->id,
+            'ownership_epoch' => (int) $identity->ownership_epoch,
+            'replacement_key_id' => $newKey->id,
+        ]);
+
+        return $newKey;
     }
 
     private function createKey(

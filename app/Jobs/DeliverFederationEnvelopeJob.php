@@ -3,11 +3,16 @@
 namespace App\Jobs;
 
 use App\Domain\Federation\Contracts\FederationTransport;
+use App\Domain\Federation\Enums\DeliveryState;
 use App\Domain\Federation\Enums\FederationErrorCode;
+use App\Domain\Federation\Enums\FederationLinkStatus;
+use App\Domain\Federation\Enums\FederationMessageType;
 use App\Domain\Federation\Enums\OutboxStatus;
 use App\Domain\Federation\Transport\FederationEndpoint;
 use App\Domain\Federation\Transport\PeerOrigin;
+use App\Models\FederationIdentity;
 use App\Models\FederationOutboxMessage;
+use App\Models\FederationPublicationDelivery;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,8 +52,76 @@ class DeliverFederationEnvelopeJob implements ShouldBeUnique, ShouldQueue
                 'safe_error_code' => FederationErrorCode::MessageExpired->value,
                 'failed_at' => now(),
             ])->save();
+            $this->failDelivery($message, FederationErrorCode::MessageExpired);
 
             return;
+        }
+
+        if (! $this->featureGateAllows($message->message_type)) {
+            $message->forceFill([
+                'status' => OutboxStatus::Pending,
+                'safe_error_code' => FederationErrorCode::TemporaryUnavailable->value,
+                'next_attempt_at' => now()->addMinutes(15),
+            ])->save();
+
+            return;
+        }
+
+        if (! FederationIdentity::query()->where('enabled', true)->exists()) {
+            $message->forceFill([
+                'status' => OutboxStatus::Pending,
+                'safe_error_code' => FederationErrorCode::TemporaryUnavailable->value,
+                'next_attempt_at' => now()->addMinutes(15),
+            ])->save();
+
+            return;
+        }
+
+        if ($message->link === null || $message->link->status->isTerminal()) {
+            $message->forceFill([
+                'status' => OutboxStatus::Failed,
+                'safe_error_code' => FederationErrorCode::LinkInactive->value,
+                'failed_at' => now(),
+            ])->save();
+            $this->failDelivery($message, FederationErrorCode::LinkInactive);
+
+            return;
+        }
+
+        if ($message->link->status !== FederationLinkStatus::Active
+            && ! $message->message_type->isHandshake()
+            && ! ($message->link->status === FederationLinkStatus::Suspended
+                && $message->message_type->isAllowedWhileSuspended())) {
+            $message->forceFill([
+                'status' => OutboxStatus::Pending,
+                'safe_error_code' => FederationErrorCode::LinkInactive->value,
+                'next_attempt_at' => now()->addMinutes(15),
+            ])->save();
+
+            return;
+        }
+
+        if (in_array($message->message_type, [
+            FederationMessageType::ResourcePublished,
+            FederationMessageType::ResourceUpdated,
+        ], true)) {
+            $delivery = FederationPublicationDelivery::query()
+                ->where('outbox_message_id', $message->message_id)
+                ->first();
+
+            if ($delivery instanceof FederationPublicationDelivery
+                && ($delivery->state === DeliveryState::Revoked
+                    || $delivery->access_revoked_at !== null
+                    || $delivery->canonical_payload === null)) {
+                $message->forceFill([
+                    'status' => OutboxStatus::Failed,
+                    'safe_error_code' => FederationErrorCode::CapabilityDenied->value,
+                    'failed_at' => now(),
+                    'envelope_body' => null,
+                ])->save();
+
+                return;
+            }
         }
 
         $message->forceFill([
@@ -74,6 +147,17 @@ class DeliverFederationEnvelopeJob implements ShouldBeUnique, ShouldQueue
                     'correlation_id' => $result->correlationId,
                     'safe_error_code' => null,
                 ])->save();
+                FederationPublicationDelivery::query()
+                    ->where('outbox_message_id', $message->message_id)
+                    ->whereIn('state', [
+                        DeliveryState::Pending->value,
+                        DeliveryState::Failed->value,
+                    ])
+                    ->update([
+                        'state' => DeliveryState::TransportAccepted->value,
+                        'transport_accepted_at' => now(),
+                        'updated_at' => now(),
+                    ]);
 
                 return;
             }
@@ -86,18 +170,21 @@ class DeliverFederationEnvelopeJob implements ShouldBeUnique, ShouldQueue
                 throw new ConnectionException('Federation peer returned a transient response.');
             }
 
+            $errorCode = $this->safeErrorForStatus($result->status);
             $message->forceFill([
                 'status' => OutboxStatus::Failed,
-                'safe_error_code' => $this->safeErrorForStatus($result->status)->value,
+                'safe_error_code' => $errorCode->value,
                 'failed_at' => now(),
                 'envelope_body' => null,
             ])->save();
+            $this->failDelivery($message, $errorCode);
         } catch (InvalidArgumentException $exception) {
             $message->forceFill([
                 'status' => OutboxStatus::Failed,
                 'safe_error_code' => FederationErrorCode::InvalidEnvelope->value,
                 'failed_at' => now(),
             ])->save();
+            $this->failDelivery($message, FederationErrorCode::InvalidEnvelope);
 
             Log::warning('Federation delivery blocked by local validation.', [
                 'message_id' => $message->message_id,
@@ -166,5 +253,47 @@ class DeliverFederationEnvelopeJob implements ShouldBeUnique, ShouldQueue
             422 => FederationErrorCode::InvalidEnvelope,
             default => FederationErrorCode::InvalidEnvelope,
         };
+    }
+
+    private function failDelivery(
+        FederationOutboxMessage $message,
+        FederationErrorCode $errorCode,
+    ): void {
+        FederationPublicationDelivery::query()
+            ->where('outbox_message_id', $message->message_id)
+            ->whereIn('state', [
+                DeliveryState::Pending->value,
+                DeliveryState::TransportAccepted->value,
+                DeliveryState::Failed->value,
+            ])
+            ->update([
+                'state' => DeliveryState::Failed->value,
+                'safe_error_code' => $errorCode->value,
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function featureGateAllows(FederationMessageType $type): bool
+    {
+        if (! (bool) config('federation.enabled', false)) {
+            return false;
+        }
+
+        if (in_array($type, [
+            FederationMessageType::ResourcePublished,
+            FederationMessageType::ResourceUpdated,
+        ], true)) {
+            return (bool) config('federation.features.publishing', false);
+        }
+
+        if ($type->isHandshake()
+            || in_array($type, [
+                FederationMessageType::KeyRotation,
+                FederationMessageType::EndpointChange,
+            ], true)) {
+            return (bool) config('federation.features.linking', false);
+        }
+
+        return true;
     }
 }

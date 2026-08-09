@@ -23,12 +23,14 @@ return new class extends Migration
             $table->longText('envelope_body')->nullable();
             $table->longText('decrypted_payload')->nullable();
             $table->string('status', 24)->default('accepted');
+            $table->unsignedInteger('processing_attempts')->default(0);
             $table->string('safe_error_code', 64)->nullable();
             $table->ulid('correlation_id');
             $table->timestamp('issued_at');
             $table->timestamp('expires_at');
             $table->timestamp('processed_at')->nullable();
             $table->timestamp('quarantined_at')->nullable();
+            $table->timestamp('next_attempt_at')->nullable();
             $table->timestamps();
 
             $table->unique(['sender_installation_id', 'message_id'], 'fed_inbox_sender_message_unique');
@@ -37,6 +39,7 @@ return new class extends Migration
                 'fed_inbox_sender_nonce_unique'
             );
             $table->index(['status', 'created_at'], 'fed_inbox_processing_idx');
+            $table->index(['status', 'next_attempt_at'], 'fed_inbox_retry_idx');
             $table->index(['processed_at', 'created_at'], 'fed_inbox_retention_idx');
         });
 

@@ -145,51 +145,110 @@ class AssignmentDeliveryService
 
     public function deliver(int $deliveryId): void
     {
-        $delivery = MilcomAssignmentDelivery::query()->findOrFail($deliveryId);
+        $deliveryAttempt = DB::transaction(function () use ($deliveryId): ?array {
+            $deliveryReference = MilcomAssignmentDelivery::query()->findOrFail($deliveryId);
+            $operation = MilcomOperation::query()
+                ->lockForUpdate()
+                ->findOrFail($deliveryReference->operation_id);
+            $delivery = MilcomAssignmentDelivery::query()
+                ->lockForUpdate()
+                ->findOrFail($deliveryId);
 
-        if ($delivery->status === 'sent') {
+            if ($delivery->status !== 'pending') {
+                return null;
+            }
+
+            if ($this->federationGuard->isHeld($operation)) {
+                $delivery->forceFill([
+                    'status' => 'failed',
+                    'last_error' => FederationOperationGuard::HELD_ERROR_CODE,
+                    'failed_at' => now(),
+                ])->save();
+
+                return null;
+            }
+
+            $this->federationGuard->assertMutable($operation, 'in_game_delivery_send');
+            $delivery->forceFill([
+                'status' => 'sending',
+                'attempts' => (int) $delivery->attempts + 1,
+                'last_error' => null,
+                'failed_at' => null,
+            ])->save();
+
+            return [
+                'delivery_id' => (int) $delivery->id,
+                'operation_id' => (int) $delivery->operation_id,
+                'assignment_id' => (int) $delivery->assignment_id,
+                'nation_id' => (int) $delivery->payload_snapshot['nation_id'],
+                'subject' => (string) $delivery->subject,
+                'message' => (string) $delivery->payload_snapshot['message'],
+            ];
+        }, attempts: 3);
+
+        if ($deliveryAttempt === null) {
             return;
         }
 
-        $payload = $delivery->payload_snapshot;
-        $delivery->forceFill([
-            'status' => 'pending',
-            'attempts' => (int) $delivery->attempts + 1,
-            'last_error' => null,
-        ])->save();
+        try {
+            $sent = $this->messages->sendMessage(
+                $deliveryAttempt['nation_id'],
+                $deliveryAttempt['subject'],
+                $deliveryAttempt['message'],
+            );
+        } catch (\Throwable $exception) {
+            MilcomAssignmentDelivery::query()
+                ->whereKey($deliveryAttempt['delivery_id'])
+                ->where('status', 'sending')
+                ->update([
+                    'status' => 'failed',
+                    'last_error' => 'Politics & War delivery outcome is uncertain; manual retry is required.',
+                    'failed_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-        $operation = MilcomOperation::query()->findOrFail($delivery->operation_id);
-        $this->federationGuard->assertMutable($operation, 'in_game_delivery_send');
+            throw $exception;
+        }
 
-        if (! $this->messages->sendMessage(
-            (int) $payload['nation_id'],
-            (string) $delivery->subject,
-            (string) $payload['message'],
-        )) {
-            $delivery->forceFill([
-                'status' => 'failed',
-                'last_error' => 'Politics & War rejected the message or could not be reached.',
-                'failed_at' => now(),
-            ])->save();
+        if (! $sent) {
+            MilcomAssignmentDelivery::query()
+                ->whereKey($deliveryAttempt['delivery_id'])
+                ->where('status', 'sending')
+                ->update([
+                    'status' => 'failed',
+                    'last_error' => 'Politics & War rejected the message or could not be reached.',
+                    'failed_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
             throw new RuntimeException('Politics & War assignment delivery failed.');
         }
 
-        $delivery->forceFill([
-            'status' => 'sent',
-            'sent_at' => now(),
-            'failed_at' => null,
-            'last_error' => null,
-        ])->save();
+        DB::transaction(function () use ($deliveryAttempt): void {
+            $delivery = MilcomAssignmentDelivery::query()
+                ->lockForUpdate()
+                ->findOrFail($deliveryAttempt['delivery_id']);
 
-        $this->events->record(
-            eventType: 'assignment.in_game_sent',
-            source: 'system',
-            operationId: $delivery->operation_id,
-            objectiveId: $delivery->assignment?->objective_id,
-            assignmentId: $delivery->assignment_id,
-            payload: ['delivery_id' => $delivery->id],
-        );
+            if ($delivery->status !== 'sending') {
+                return;
+            }
+
+            $delivery->forceFill([
+                'status' => 'sent',
+                'sent_at' => now(),
+                'failed_at' => null,
+                'last_error' => null,
+            ])->save();
+
+            $this->events->record(
+                eventType: 'assignment.in_game_sent',
+                source: 'system',
+                operationId: $deliveryAttempt['operation_id'],
+                objectiveId: $delivery->assignment?->objective_id,
+                assignmentId: $deliveryAttempt['assignment_id'],
+                payload: ['delivery_id' => $deliveryAttempt['delivery_id']],
+            );
+        }, attempts: 3);
     }
 
     /** @return array{nation_id:int, subject:string, message:string} */

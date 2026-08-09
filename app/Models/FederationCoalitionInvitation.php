@@ -16,6 +16,7 @@ class FederationCoalitionInvitation extends Model
     use HasFactory, HasUlids;
 
     protected $fillable = [
+        'id',
         'federation_coalition_id',
         'federation_link_id',
         'installation_id',

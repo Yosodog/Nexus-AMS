@@ -60,7 +60,15 @@ final readonly class WarPlanSnapshotV1
             }
         }
 
-        if ($version < 1 || $revision < 1 || $rosterRevision < 1 || $sourceGeneration < 1 || $sourceAllianceId < 1) {
+        if ($version < 1
+            || $version > (int) config('federation.limits.max_resource_version', 1000000000)
+            || $revision < 1
+            || $revision > (int) config('federation.limits.max_resource_revision', 1000000000)
+            || $rosterRevision < 1
+            || $rosterRevision > (int) config('federation.limits.max_resource_revision', 1000000000)
+            || $sourceGeneration < 1
+            || $sourceGeneration > (int) config('federation.limits.max_resource_revision', 1000000000)
+            || $sourceAllianceId < 1) {
             throw new InvalidArgumentException('War-plan snapshot revisions and identifiers must be positive.');
         }
 
@@ -72,6 +80,12 @@ final readonly class WarPlanSnapshotV1
             if (! $target instanceof WarPlanTargetV1) {
                 throw new InvalidArgumentException('War-plan snapshot targets are invalid.');
             }
+        }
+
+        $targetIds = array_map(fn (WarPlanTargetV1 $target): int => $target->targetNationId, $targets);
+
+        if (count($targetIds) !== count(array_unique($targetIds))) {
+            throw new InvalidArgumentException('War-plan snapshot target nation IDs must be unique.');
         }
 
         if (Str::length($title) < 1 || Str::length($title) > 255 || Str::length($waveLabel) > 100) {

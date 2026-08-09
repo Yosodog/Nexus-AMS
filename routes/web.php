@@ -28,6 +28,7 @@ Route::middleware(['auth', EnsureUserIsVerified::class, DiscordVerifiedMiddlewar
         require __DIR__.'/admin/milcom.php';
         require __DIR__.'/admin/applications.php';
         require __DIR__.'/admin/settings.php';
+        require __DIR__.'/admin/federation.php';
         require __DIR__.'/admin/mmr.php';
         require __DIR__.'/admin/customization.php';
     });

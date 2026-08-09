@@ -29,5 +29,6 @@ return [
         'view-mmr',
         'manage-war-room',
         'manage-custom-pages',
+        'view-federation',
     ],
 ];

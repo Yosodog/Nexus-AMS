@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Domain\Milcom\Enums\RecommendationRunStatus;
+use App\Models\MilcomOperation;
 use App\Models\MilcomRecommendationRun;
 use App\Services\Milcom\RecommendationEngine;
 use Illuminate\Bus\Queueable;
@@ -10,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 class GenerateMilcomRecommendationsJob implements ShouldBeUnique, ShouldQueue
 {
@@ -49,7 +52,37 @@ class GenerateMilcomRecommendationsJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(RecommendationEngine $engine): void
     {
-        $run = MilcomRecommendationRun::query()->findOrFail($this->recommendationRunId);
+        $run = DB::transaction(function (): ?MilcomRecommendationRun {
+            $runReference = MilcomRecommendationRun::query()->findOrFail($this->recommendationRunId);
+            $operation = MilcomOperation::query()
+                ->lockForUpdate()
+                ->findOrFail($runReference->operation_id);
+            $run = MilcomRecommendationRun::query()
+                ->lockForUpdate()
+                ->findOrFail($this->recommendationRunId);
+
+            if (! $operation->federation_action_required) {
+                return $run;
+            }
+
+            if (in_array($run->status, [
+                RecommendationRunStatus::Queued,
+                RecommendationRunStatus::Running,
+            ], true)) {
+                $run->forceFill([
+                    'status' => RecommendationRunStatus::Superseded,
+                    'finished_at' => now(),
+                    'updated_at' => now(),
+                ])->save();
+            }
+
+            return null;
+        }, attempts: 3);
+
+        if ($run === null) {
+            return;
+        }
+
         $engine->execute($run);
     }
 

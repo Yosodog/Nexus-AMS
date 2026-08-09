@@ -17,39 +17,49 @@ use App\Models\FederationLink;
 
 final class FederationAuthorizationService
 {
-    public function assertCanPublish(FederationCoalition $coalition, FederationLink $link): void
-    {
+    public function assertCanPublish(
+        FederationCoalition $coalition,
+        FederationLink $link,
+        bool $lockForUpdate = false,
+    ): void {
         $identity = FederationIdentity::query()->where('enabled', true)->firstOrFail();
-        $this->assertCommonScope($coalition, $link, $identity->id);
+        $this->assertCommonScope($coalition, $link, $identity->id, $lockForUpdate);
         $this->assertCurrentCapability(
             issuerId: $identity->id,
             peerId: $link->remote_installation_id,
             coalition: $coalition,
             direction: CapabilityDirection::Outbound,
+            lockForUpdate: $lockForUpdate,
         );
         $this->assertCurrentCapability(
             issuerId: $link->remote_installation_id,
             peerId: $identity->id,
             coalition: $coalition,
             direction: CapabilityDirection::Inbound,
+            lockForUpdate: $lockForUpdate,
         );
     }
 
-    public function assertCanReceive(FederationCoalition $coalition, FederationLink $link): void
-    {
+    public function assertCanReceive(
+        FederationCoalition $coalition,
+        FederationLink $link,
+        bool $lockForUpdate = false,
+    ): void {
         $identity = FederationIdentity::query()->where('enabled', true)->firstOrFail();
-        $this->assertCommonScope($coalition, $link, $identity->id);
+        $this->assertCommonScope($coalition, $link, $identity->id, $lockForUpdate);
         $this->assertCurrentCapability(
             issuerId: $identity->id,
             peerId: $link->remote_installation_id,
             coalition: $coalition,
             direction: CapabilityDirection::Inbound,
+            lockForUpdate: $lockForUpdate,
         );
         $this->assertCurrentCapability(
             issuerId: $link->remote_installation_id,
             peerId: $identity->id,
             coalition: $coalition,
             direction: CapabilityDirection::Outbound,
+            lockForUpdate: $lockForUpdate,
         );
     }
 
@@ -57,20 +67,30 @@ final class FederationAuthorizationService
         FederationCoalition $coalition,
         FederationLink $link,
         string $localInstallationId,
+        bool $lockForUpdate,
     ): void {
-        if ($link->status !== FederationLinkStatus::Active) {
+        $currentLink = FederationLink::query()
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
+            ->find($link->id);
+        $currentCoalition = FederationCoalition::query()
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
+            ->find($coalition->id);
+
+        if (! $currentLink instanceof FederationLink || $currentLink->status !== FederationLinkStatus::Active) {
             throw new FederationProtocolException(FederationErrorCode::LinkInactive, 403);
         }
 
-        if ($coalition->status !== CoalitionStatus::Active
-            || ($coalition->expires_at !== null && $coalition->expires_at->isPast())) {
+        if (! $currentCoalition instanceof FederationCoalition
+            || $currentCoalition->status !== CoalitionStatus::Active
+            || ($currentCoalition->expires_at !== null && $currentCoalition->expires_at->isPast())) {
             throw new FederationProtocolException(FederationErrorCode::CoalitionInactive, 403);
         }
 
-        $members = $coalition->memberships()
-            ->whereIn('installation_id', [$localInstallationId, $link->remote_installation_id])
+        $members = $currentCoalition->memberships()
+            ->whereIn('installation_id', [$localInstallationId, $currentLink->remote_installation_id])
             ->where('status', MembershipStatus::Active->value)
             ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
             ->pluck('installation_id');
 
         if ($members->unique()->count() !== 2) {
@@ -83,6 +103,7 @@ final class FederationAuthorizationService
         string $peerId,
         FederationCoalition $coalition,
         CapabilityDirection $direction,
+        bool $lockForUpdate,
     ): void {
         $capability = FederationCapability::query()
             ->where('issuer_installation_id', $issuerId)
@@ -91,6 +112,7 @@ final class FederationAuthorizationService
             ->where('resource_type', FederationResourceType::WarPlanSnapshot->value)
             ->where('direction', $direction->value)
             ->latest('revision')
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
             ->first();
 
         if (! $capability instanceof FederationCapability

@@ -7,6 +7,8 @@ use JsonException;
 
 final class StrictJson
 {
+    private const MAX_DEPTH = 64;
+
     private int $offset = 0;
 
     private int $length;
@@ -23,7 +25,7 @@ final class StrictJson
     {
         $scanner = new self($json);
         $scanner->skipWhitespace();
-        $scanner->scanObject();
+        $scanner->scanObject(1);
         $scanner->skipWhitespace();
 
         if ($scanner->offset !== $scanner->length) {
@@ -69,20 +71,24 @@ final class StrictJson
         }
     }
 
-    private function scanValue(): void
+    private function scanValue(int $depth): void
     {
+        if ($depth > self::MAX_DEPTH) {
+            throw new InvalidArgumentException('JSON nesting exceeds the supported depth.');
+        }
+
         $this->skipWhitespace();
         $character = $this->current();
 
         match ($character) {
-            '{' => $this->scanObject(),
-            '[' => $this->scanArray(),
+            '{' => $this->scanObject($depth),
+            '[' => $this->scanArray($depth),
             '"' => $this->scanString(),
             default => $this->scanPrimitive(),
         };
     }
 
-    private function scanObject(): void
+    private function scanObject(int $depth): void
     {
         $this->expect('{');
         $this->skipWhitespace();
@@ -109,7 +115,7 @@ final class StrictJson
             $keys[$key] = true;
             $this->skipWhitespace();
             $this->expect(':');
-            $this->scanValue();
+            $this->scanValue($depth + 1);
             $this->skipWhitespace();
 
             if ($this->consume('}')) {
@@ -120,7 +126,7 @@ final class StrictJson
         }
     }
 
-    private function scanArray(): void
+    private function scanArray(int $depth): void
     {
         $this->expect('[');
         $this->skipWhitespace();
@@ -130,7 +136,7 @@ final class StrictJson
         }
 
         while (true) {
-            $this->scanValue();
+            $this->scanValue($depth + 1);
             $this->skipWhitespace();
 
             if ($this->consume(']')) {

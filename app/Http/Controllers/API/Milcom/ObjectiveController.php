@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\RecommendationRunStatus;
@@ -32,6 +33,7 @@ class ObjectiveController extends Controller
         private readonly ApprovalService $approvals,
         private readonly DiscordDispatchService $discord,
         private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
     ) {}
 
     public function update(
@@ -126,6 +128,7 @@ class ObjectiveController extends Controller
                 }
 
                 $nationIds = array_values(array_unique(array_map('intval', $alternative['nation_ids'])));
+                $this->federationGuard->assertMutable($operation, 'alternative_selection');
                 $locked->assignments()
                     ->where('status', AssignmentStatus::Proposed->value)
                     ->delete();
@@ -299,6 +302,8 @@ class ObjectiveController extends Controller
                 if ((int) $operation->generation_version !== $expected) {
                     throw new StaleGenerationException($expected, (int) $operation->generation_version);
                 }
+
+                $this->federationGuard->assertMutable($operation, 'discord_retry');
 
                 return $this->discord->retryLocked($locked, (int) $request->user()->id);
             }, attempts: 5);

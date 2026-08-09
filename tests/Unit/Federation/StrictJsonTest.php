@@ -34,4 +34,12 @@ class StrictJsonTest extends TestCase
 
         $this->assertSame(2, $this->numberOfAssertionsPerformed());
     }
+
+    public function test_it_rejects_excessive_nesting_before_recursive_scanning_can_exhaust_the_stack(): void
+    {
+        $json = '{"root":'.str_repeat('[', 65).'null'.str_repeat(']', 65).'}';
+
+        $this->expectException(InvalidArgumentException::class);
+        StrictJson::decodeObject($json);
+    }
 }

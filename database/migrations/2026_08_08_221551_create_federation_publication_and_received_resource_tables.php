@@ -38,7 +38,7 @@ return new class extends Migration
             $table->string('schema_version', 16);
             $table->char('recipients_hash', 64);
             $table->char('preview_hash', 64);
-            $table->longText('canonical_preview');
+            $table->longText('canonical_preview')->nullable();
             $table->string('status', 24)->default('preview');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('expires_at');
@@ -65,6 +65,7 @@ return new class extends Migration
             $table->timestamp('transport_accepted_at')->nullable();
             $table->timestamp('validated_at')->nullable();
             $table->timestamp('acknowledged_at')->nullable();
+            $table->unsignedBigInteger('access_revocation_revision')->nullable();
             $table->timestamp('access_revoked_at')->nullable();
             $table->timestamps();
 
@@ -80,7 +81,7 @@ return new class extends Migration
             $table->foreignUlid('federation_link_id')->nullable()->constrained('federation_links')->nullOnDelete();
             $table->ulid('source_installation_id');
             $table->ulid('source_publication_id');
-            $table->ulid('coalition_id');
+            $table->ulid('coalition_id')->nullable();
             $table->string('resource_type', 96);
             $table->string('state', 32)->default('pending_review');
             $table->unsignedInteger('current_version')->default(0);

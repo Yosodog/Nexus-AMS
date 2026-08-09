@@ -9,16 +9,25 @@ use Illuminate\Validation\ValidationException;
 
 final class FederationOperationGuard
 {
+    public const HELD_ERROR_CODE = 'federation_action_required';
+
+    public const HELD_ERROR_MESSAGE = 'This imported operation is frozen pending federation action.';
+
     /** @var array<int, true> */
     private array $retirementOperationIds = [];
 
+    public function isHeld(MilcomOperation $operation): bool
+    {
+        return (bool) $operation->federation_action_required
+            && ! $this->isRetirement($operation);
+    }
+
     public function assertMutable(MilcomOperation $operation, string $action): void
     {
-        if ($operation->federation_action_required
-            && ! isset($this->retirementOperationIds[(int) $operation->id])) {
+        if ($this->isHeld($operation)) {
             throw ValidationException::withMessages([
-                'operation' => "This imported operation is frozen after a federation {$operation->federation_hold_reason}. "
-                    .'Continue independently or retire it before making changes.',
+                'operation' => self::HELD_ERROR_MESSAGE,
+                'federation_error' => self::HELD_ERROR_CODE,
                 'federation_action' => $action,
             ]);
         }

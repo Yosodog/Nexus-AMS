@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Milcom;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
@@ -14,6 +15,7 @@ use App\Models\Nation;
 use App\Services\Milcom\AssignmentDeliveryService;
 use App\Services\PWMessageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
@@ -64,10 +66,12 @@ class MilcomAssignmentDeliveryTest extends TestCase
         Queue::fake();
         [$operation, $objective, $friendlies] = $this->activeWaveWithTeam();
         $target = $objective->target;
+        $baselineTransactionLevel = DB::transactionLevel();
         $this->mock(PWMessageService::class)
             ->shouldReceive('sendMessage')
             ->once()
-            ->withArgs(function (int $nationId, string $subject, string $message) use ($target, $friendlies): bool {
+            ->withArgs(function (int $nationId, string $subject, string $message) use ($target, $friendlies, $baselineTransactionLevel): bool {
+                $this->assertSame($baselineTransactionLevel, DB::transactionLevel());
                 $this->assertSame($friendlies[0]->id, $nationId);
                 $this->assertStringContainsString('War target:', $subject);
                 $this->assertStringContainsString(
@@ -101,6 +105,30 @@ class MilcomAssignmentDeliveryTest extends TestCase
 
         $this->assertSame('sent', $delivery->fresh()->status);
         $this->assertNotNull($delivery->fresh()->sent_at);
+    }
+
+    public function test_interrupted_sending_lease_is_not_automatically_sent_twice(): void
+    {
+        Queue::fake();
+        [$operation] = $this->activeWaveWithTeam();
+        $this->authenticateMilcomManager();
+        $this->postJson("/api/v1/milcom/operations/{$operation->id}/deliver-in-game", [
+            'generation_version' => 1,
+        ])->assertAccepted();
+        $delivery = MilcomAssignmentDelivery::query()->firstOrFail();
+        $delivery->forceFill(['status' => 'sending'])->save();
+        $deliveries = $this->mock(AssignmentDeliveryService::class);
+        $deliveries->shouldNotReceive('deliver');
+
+        (new SendMilcomAssignmentMessageJob($delivery->id))->handle(
+            $deliveries,
+            app(FederationOperationGuard::class),
+        );
+
+        $delivery = $delivery->fresh();
+        $this->assertSame('failed', $delivery->status);
+        $this->assertStringContainsString('uncertain', $delivery->last_error);
+        $this->assertNull($delivery->sent_at);
     }
 
     /** @return array{0: MilcomOperation, 1: MilcomObjective, 2: list<Nation>} */

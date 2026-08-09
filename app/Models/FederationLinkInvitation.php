@@ -15,6 +15,7 @@ class FederationLinkInvitation extends Model
     use HasFactory, HasUlids;
 
     protected $fillable = [
+        'id',
         'federation_link_id',
         'direction',
         'peer_origin',

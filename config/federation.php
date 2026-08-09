@@ -27,6 +27,9 @@ return [
         'decrypted_payload_bytes' => 512 * 1024,
         'targets_per_publication' => 500,
         'recipient_instructions_characters' => 1000,
+        'pending_link_requests' => 100,
+        'max_resource_version' => 1000000000,
+        'max_resource_revision' => 1000000000,
     ],
 
     'invitation_expiry_hours' => 24,
@@ -43,5 +46,6 @@ return [
         'ip_per_minute' => 30,
         'sender_per_minute' => 60,
         'handshake_ip_per_minute' => 10,
+        'unknown_origin_per_hour' => 3,
     ],
 ];

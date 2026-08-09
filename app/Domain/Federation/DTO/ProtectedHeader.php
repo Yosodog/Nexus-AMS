@@ -3,6 +3,7 @@
 namespace App\Domain\Federation\DTO;
 
 use App\Domain\Federation\Enums\FederationMessageType;
+use App\Domain\Federation\Support\Base64Url;
 use App\Domain\Federation\Support\CanonicalJson;
 use App\Domain\Federation\Support\StrictJson;
 use Carbon\CarbonImmutable;
@@ -51,6 +52,30 @@ final readonly class ProtectedHeader
 
         if (preg_match('/^[a-f0-9]{64}$/D', $payloadDigest) !== 1) {
             throw new InvalidArgumentException('Protected header contains an invalid payload digest.');
+        }
+
+        if (preg_match('/^[1-9][0-9]*\.[0-9]+$/D', $protocolVersion) !== 1
+            || strlen($protocolVersion) > 16) {
+            throw new InvalidArgumentException('Protected header contains an invalid protocol version.');
+        }
+
+        try {
+            if (strlen(Base64Url::decode($nonce)) !== 24) {
+                throw new InvalidArgumentException('Protected header contains an invalid nonce.');
+            }
+
+            if ($handshakeSigningPublicKey !== null
+                && strlen(Base64Url::decode($handshakeSigningPublicKey)) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+                throw new InvalidArgumentException('Protected header contains an invalid handshake key.');
+            }
+        } catch (InvalidArgumentException) {
+            throw new InvalidArgumentException('Protected header contains invalid encoded fields.');
+        }
+
+        if ($resourceSchema !== null
+            && (strlen($resourceSchema) > 64
+                || preg_match('/^[a-z0-9][a-z0-9.-]*\/[1-9][0-9]*\.[0-9]+$/D', $resourceSchema) !== 1)) {
+            throw new InvalidArgumentException('Protected header contains an invalid resource schema.');
         }
     }
 

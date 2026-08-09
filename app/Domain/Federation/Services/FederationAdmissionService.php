@@ -13,10 +13,12 @@ use App\Domain\Federation\Exceptions\FederationProtocolException;
 use App\Domain\Federation\Protocol\FederationEnvelopeService;
 use App\Domain\Federation\Support\Base64Url;
 use App\Domain\Federation\Support\FederationFingerprint;
+use App\Domain\Federation\Transport\PeerOrigin;
 use App\Jobs\ProcessFederationInboxMessageJob;
 use App\Models\FederationIdentity;
 use App\Models\FederationInboxMessage;
 use App\Models\FederationLink;
+use App\Models\FederationLinkInvitation;
 use App\Models\FederationPeerKey;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -49,14 +51,6 @@ final class FederationAdmissionService
             throw new FederationProtocolException(FederationErrorCode::InvalidEnvelope);
         }
 
-        $senderLimitKey = 'federation:sender:'.$header->senderInstallationId;
-        $senderLimit = max((int) config('federation.rate_limits.sender_per_minute', 60), 1);
-
-        if (RateLimiter::tooManyAttempts($senderLimitKey, $senderLimit)) {
-            throw new FederationProtocolException(FederationErrorCode::RateLimited, 429);
-        }
-
-        RateLimiter::hit($senderLimitKey, 60);
         $identity = FederationIdentity::query()->first();
 
         if (! $identity instanceof FederationIdentity || ! $identity->enabled) {
@@ -65,7 +59,7 @@ final class FederationAdmissionService
 
         $recipientKey = $identity->keys()
             ->whereKey($header->recipientKeyId)
-            ->whereNotIn('status', [FederationKeyStatus::Retired->value, FederationKeyStatus::Compromised->value])
+            ->whereIn('status', [FederationKeyStatus::Active->value, FederationKeyStatus::Retiring->value])
             ->first();
 
         if ($recipientKey === null) {
@@ -79,6 +73,18 @@ final class FederationAdmissionService
         $this->assertLinkAllows($header->messageType, $link);
         $opened = $this->envelopes->open($envelope, $identity->id, $recipientKey, $senderKey);
         $this->assertHandshakeIdentity($opened->header, $opened->payload);
+        $senderLimitKey = 'federation:sender:'.$opened->header->senderInstallationId;
+        $senderLimit = max((int) config('federation.rate_limits.sender_per_minute', 60), 1);
+
+        if (RateLimiter::tooManyAttempts($senderLimitKey, $senderLimit)) {
+            throw new FederationProtocolException(FederationErrorCode::RateLimited, 429);
+        }
+
+        RateLimiter::hit($senderLimitKey, 60);
+
+        if ($opened->header->messageType === FederationMessageType::LinkRequest && $link === null) {
+            $this->assertUnknownLinkRequestQuota($opened->payload);
+        }
 
         try {
             $message = DB::transaction(function () use ($body, $opened): FederationInboxMessage {
@@ -124,7 +130,11 @@ final class FederationAdmissionService
             }, attempts: 5);
         } catch (FederationProtocolException $exception) {
             throw $exception;
-        } catch (QueryException) {
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw new FederationProtocolException(FederationErrorCode::TemporaryUnavailable, 503);
+            }
+
             $duplicate = FederationInboxMessage::query()
                 ->where('sender_installation_id', $opened->header->senderInstallationId)
                 ->where('message_id', $opened->header->messageId)
@@ -132,7 +142,8 @@ final class FederationAdmissionService
 
             if ($duplicate instanceof FederationInboxMessage
                 && hash_equals($duplicate->payload_hash, $opened->header->payloadDigest)
-                && hash_equals($duplicate->nonce, $opened->header->nonce)) {
+                && hash_equals($duplicate->nonce, $opened->header->nonce)
+                && hash_equals($duplicate->sender_key_id, $opened->header->senderKeyId)) {
                 return $duplicate;
             }
 
@@ -142,6 +153,11 @@ final class FederationAdmissionService
         return $message;
     }
 
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        return in_array((string) ($exception->errorInfo[0] ?? ''), ['23000', '23505'], true);
+    }
+
     private function assertAvailable(bool $handshake): void
     {
         if (! (bool) config('federation.enabled', false)
@@ -149,6 +165,39 @@ final class FederationAdmissionService
             || ($handshake && ! (bool) config('federation.features.linking', false))) {
             throw new FederationProtocolException(FederationErrorCode::TemporaryUnavailable, 503);
         }
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    private function assertUnknownLinkRequestQuota(array $payload): void
+    {
+        $maximumPending = max((int) config('federation.limits.pending_link_requests', 100), 1);
+        $pendingInbox = FederationInboxMessage::query()
+            ->where('message_type', FederationMessageType::LinkRequest->value)
+            ->whereIn('status', [InboxStatus::Accepted->value, InboxStatus::Processing->value])
+            ->count();
+        $pendingInvitations = FederationLinkInvitation::query()
+            ->where('direction', 'inbound')
+            ->where('status', 'pending')
+            ->count();
+
+        if ($pendingInbox >= $maximumPending || $pendingInvitations >= $maximumPending) {
+            throw new FederationProtocolException(FederationErrorCode::RateLimited, 429);
+        }
+
+        try {
+            $origin = PeerOrigin::fromUrl((string) $payload['source_origin'])->value();
+        } catch (Throwable) {
+            throw new FederationProtocolException(FederationErrorCode::InvalidEnvelope);
+        }
+
+        $originKey = 'federation:unknown-origin:'.hash('sha256', $origin);
+        $originLimit = max((int) config('federation.rate_limits.unknown_origin_per_hour', 3), 1);
+
+        if (RateLimiter::tooManyAttempts($originKey, $originLimit)) {
+            throw new FederationProtocolException(FederationErrorCode::RateLimited, 429);
+        }
+
+        RateLimiter::hit($originKey, 3600);
     }
 
     private function senderKey(ProtectedHeader $header, ?FederationLink $link): FederationPeerKey|string
@@ -165,16 +214,31 @@ final class FederationAdmissionService
             throw new FederationProtocolException(FederationErrorCode::UnknownPeer, 404);
         }
 
-        $key = $link->peerKeys()
-            ->where('remote_key_id', $header->senderKeyId)
-            ->whereNotIn('status', [FederationKeyStatus::Compromised->value, FederationKeyStatus::Retired->value])
-            ->first();
+        $key = $link->peerKeys()->where('remote_key_id', $header->senderKeyId)->first();
 
         if (! $key instanceof FederationPeerKey) {
             throw new FederationProtocolException(FederationErrorCode::UnknownPeer, 404);
         }
 
-        return $key;
+        if ($key->status === FederationKeyStatus::Active) {
+            return $key;
+        }
+
+        if ($key->status === FederationKeyStatus::Pending
+            && ($header->messageType === FederationMessageType::KeyRotation
+                || ($header->messageType === FederationMessageType::LinkRequest
+                    && $link->status === FederationLinkStatus::PendingLocal))) {
+            return $key;
+        }
+
+        if ($key->status === FederationKeyStatus::Retiring
+            && $header->issuedAt->isBefore($key->updated_at->addSeconds(
+                max((int) config('federation.clock_skew_seconds', 300), 0)
+            ))) {
+            return $key;
+        }
+
+        throw new FederationProtocolException(FederationErrorCode::UnknownPeer, 404);
     }
 
     private function assertLinkAllows(FederationMessageType $type, ?FederationLink $link): void
@@ -187,7 +251,14 @@ final class FederationAdmissionService
             throw new FederationProtocolException(FederationErrorCode::UnknownPeer, 404);
         }
 
-        if ($link->status === FederationLinkStatus::Active || $type->isHandshake()) {
+        if ($link->status === FederationLinkStatus::Active) {
+            return;
+        }
+
+        if (in_array($link->status, [
+            FederationLinkStatus::PendingLocal,
+            FederationLinkStatus::PendingRemote,
+        ], true) && $type->isHandshake()) {
             return;
         }
 

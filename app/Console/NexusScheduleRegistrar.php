@@ -7,10 +7,14 @@ use App\Console\Commands\ProcessDeposits;
 use App\Enums\ProcessHeartbeatRole;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
+use App\Jobs\ExpireFederationResourcesJob;
+use App\Jobs\PruneFederationMessagesJob;
 use App\Jobs\ReconcileBlockadeReliefRequests;
+use App\Jobs\ReconcileFederationLinksJob;
 use App\Jobs\ReconcileMilcomLifecycleJob;
 use App\Jobs\RecordQueueHeartbeat;
 use App\Jobs\SendAuditRemindersJob;
+use App\Jobs\SweepFederationOutboxJob;
 use App\Services\ProcessHeartbeatRecorder;
 use App\Services\PWHealthService;
 use App\Services\RuntimeCapabilities;
@@ -223,6 +227,22 @@ final readonly class NexusScheduleRegistrar
             ->withoutOverlapping(1)
             ->onOneServer()
             ->when(fn (): bool => (bool) config('operations.features.coordination', false));
+        $schedule->job(new SweepFederationOutboxJob, 'default')
+            ->everyMinute()
+            ->withoutOverlapping(1)
+            ->onOneServer();
+        $schedule->job(new ReconcileFederationLinksJob, 'default')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping(14)
+            ->onOneServer();
+        $schedule->job(new ExpireFederationResourcesJob, 'default')
+            ->everyFiveMinutes()
+            ->withoutOverlapping(4)
+            ->onOneServer();
+        $schedule->job(new PruneFederationMessagesJob, 'default')
+            ->dailyAt('02:30')
+            ->withoutOverlapping(120)
+            ->onOneServer();
         $schedule->command('discord:sync-city-tiers')
             ->hourlyAt(20)
             ->runInBackground()

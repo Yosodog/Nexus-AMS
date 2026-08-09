@@ -46,6 +46,10 @@ final readonly class WarPlanTargetV1
             throw new InvalidArgumentException('War-plan team sizes are invalid.');
         }
 
+        if (! in_array(Str::lower($warType), array_keys((array) config('war.war_types', [])), true)) {
+            throw new InvalidArgumentException('War-plan target war type is unsupported.');
+        }
+
         if (Str::length($targetNationName) > 255
             || Str::length($targetAllianceName ?? '') > 255
             || Str::length($warType) > 32) {

@@ -75,6 +75,34 @@ final readonly class FederationDiscoveryDocument
             }
         }
 
+        if (! Str::isUlid($data['current_key']['key_id'])
+            || $data['supported_protocol_versions'] === []
+            || count($data['supported_protocol_versions']) !== count(array_unique($data['supported_protocol_versions']))) {
+            throw new InvalidArgumentException('Discovery key or protocol versions are invalid.');
+        }
+
+        foreach ($data['supported_protocol_versions'] as $version) {
+            if (! is_string($version) || preg_match('/^[1-9][0-9]*\.[0-9]+$/D', $version) !== 1) {
+                throw new InvalidArgumentException('Discovery protocol versions are invalid.');
+            }
+        }
+
+        foreach ($data['resource_schemas'] as $resource => $versions) {
+            if (! is_string($resource)
+                || $resource === ''
+                || ! is_array($versions)
+                || ! array_is_list($versions)
+                || $versions === []) {
+                throw new InvalidArgumentException('Discovery resource schemas are invalid.');
+            }
+
+            foreach ($versions as $version) {
+                if (! is_string($version) || preg_match('/^[1-9][0-9]*\.[0-9]+$/D', $version) !== 1) {
+                    throw new InvalidArgumentException('Discovery resource schema versions are invalid.');
+                }
+            }
+        }
+
         $expectedIngress = [
             'handshakes' => FederationEndpoint::Handshakes->value,
             'envelopes' => FederationEndpoint::Envelopes->value,
@@ -82,6 +110,25 @@ final readonly class FederationDiscoveryDocument
 
         if ($data['ingress'] !== $expectedIngress) {
             throw new InvalidArgumentException('Discovery ingress paths are unsupported.');
+        }
+
+        StrictJson::rejectUnknown($data['size_limits'], [
+            'outer_request_bytes',
+            'decrypted_payload_bytes',
+        ]);
+        StrictJson::requireProperties($data['size_limits'], [
+            'outer_request_bytes',
+            'decrypted_payload_bytes',
+        ]);
+
+        foreach ($data['size_limits'] as $limit) {
+            if (! is_int($limit) || $limit < 1) {
+                throw new InvalidArgumentException('Discovery size limits are invalid.');
+            }
+        }
+
+        if (Str::length($data['display_name']) < 1 || Str::length($data['display_name']) > 255) {
+            throw new InvalidArgumentException('Discovery display name is invalid.');
         }
 
         $origin = PeerOrigin::fromUrl($data['origin'])->value();

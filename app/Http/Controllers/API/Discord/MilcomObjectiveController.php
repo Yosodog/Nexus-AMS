@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\API\Discord;
 
+use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\DispatchStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Discord\AttachMilcomObjectiveRoomRequest;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomObjective;
+use App\Models\MilcomOperation;
 use App\Services\Milcom\MilcomEventRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +16,10 @@ use Illuminate\Support\Facades\Log;
 
 class MilcomObjectiveController extends Controller
 {
-    public function __construct(private readonly MilcomEventRecorder $events) {}
+    public function __construct(
+        private readonly MilcomEventRecorder $events,
+        private readonly FederationOperationGuard $federationGuard,
+    ) {}
 
     public function show(MilcomObjective $objective): JsonResponse
     {
@@ -38,12 +43,22 @@ class MilcomObjectiveController extends Controller
         $validated = $request->validated();
 
         $result = DB::transaction(function () use ($validated): array {
+            $objectiveReference = MilcomObjective::query()
+                ->findOrFail((int) $validated['objective_id']);
+            $operation = MilcomOperation::query()
+                ->lockForUpdate()
+                ->findOrFail($objectiveReference->operation_id);
             $objective = MilcomObjective::query()
                 ->lockForUpdate()
                 ->findOrFail((int) $validated['objective_id']);
             $dispatch = MilcomDispatch::query()
                 ->lockForUpdate()
                 ->findOrFail((int) $validated['dispatch_id']);
+
+            if ((int) $objective->operation_id !== (int) $operation->id
+                || (int) $dispatch->operation_id !== (int) $operation->id) {
+                abort(422, 'The dispatch does not belong to this Milcom operation.');
+            }
 
             if ((int) $dispatch->objective_id !== (int) $objective->id) {
                 abort(422, 'The dispatch does not belong to this Milcom objective.');
@@ -75,6 +90,7 @@ class MilcomObjectiveController extends Controller
                 ?? $dispatch->created_at?->diffInMilliseconds(now())
                 ?? 0;
 
+            $this->federationGuard->assertMutable($operation, 'discord_room_attach');
             $objective->forceFill(['discord_channel_id' => $channelId])->save();
             $dispatch->forceFill([
                 'status' => DispatchStatus::Sent,

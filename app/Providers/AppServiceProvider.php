@@ -20,9 +20,15 @@ use App\Models\AuditResult;
 use App\Models\AuditResultEvent;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
+use App\Models\FederationCoalitionInvitation;
+use App\Models\FederationCoalitionProposal;
+use App\Models\FederationLinkInvitation;
+use App\Models\FederationReceivedResource;
+use App\Models\FederationReceivedVersion;
 use App\Models\GrantApplication;
 use App\Models\Loan;
 use App\Models\MemberTransfer;
+use App\Models\MilcomOperation;
 use App\Models\Nation;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
@@ -43,6 +49,7 @@ use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\AuditRemediationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\BlockadeReliefWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\CityGrantWorkQueueSource;
+use App\Services\StaffWorkQueue\Sources\FederationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\GrantWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\LoanWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\MemberTransferWorkQueueSource;
@@ -94,6 +101,11 @@ class AppServiceProvider extends ServiceProvider
             $app->make(RebuildingWorkQueueSource::class),
             $app->make(BlockadeReliefWorkQueueSource::class),
             $app->make(AuditRemediationWorkQueueSource::class),
+            $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::LINK_APPROVALS]),
+            $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::COALITION_WORKFLOWS]),
+            $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::RECEIVED_REVIEWS]),
+            $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::BLOCKED_IMPORTS]),
+            $app->make(FederationWorkQueueSource::class, ['category' => FederationWorkQueueSource::HELD_OPERATIONS]),
         ]));
         $this->app->bind(OperationsReadStore::class, fn ($app): OperationsReadStore => $app->make(StaffWorkQueueRegistry::class));
 
@@ -194,21 +206,34 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        RateLimiter::for('federation-handshakes', function (Request $request) {
+        $federationRateLimited = static function (Request $request, array $headers) {
+            return response()->json([
+                'error' => [
+                    'code' => 'rate_limited',
+                    'message' => 'The federation request could not be accepted.',
+                ],
+            ], 429, $headers);
+        };
+
+        RateLimiter::for('federation-handshakes', function (Request $request) use ($federationRateLimited) {
             return [
                 Limit::perMinute((int) config('federation.rate_limits.handshake_ip_per_minute', 10))
-                    ->by('federation:handshake:ip:'.$request->ip()),
+                    ->by('federation:handshake:ip:'.$request->ip())
+                    ->response($federationRateLimited),
                 Limit::perMinute((int) config('federation.rate_limits.global_per_minute', 120))
-                    ->by('federation:handshake:global'),
+                    ->by('federation:handshake:global')
+                    ->response($federationRateLimited),
             ];
         });
 
-        RateLimiter::for('federation-ingress', function (Request $request) {
+        RateLimiter::for('federation-ingress', function (Request $request) use ($federationRateLimited) {
             return [
                 Limit::perMinute((int) config('federation.rate_limits.ip_per_minute', 30))
-                    ->by('federation:ingress:ip:'.$request->ip()),
+                    ->by('federation:ingress:ip:'.$request->ip())
+                    ->response($federationRateLimited),
                 Limit::perMinute((int) config('federation.rate_limits.global_per_minute', 120))
-                    ->by('federation:ingress:global'),
+                    ->by('federation:ingress:global')
+                    ->response($federationRateLimited),
             ];
         });
 
@@ -263,9 +288,15 @@ class AppServiceProvider extends ServiceProvider
             AuditResultEvent::class,
             BlockadeReliefRequest::class,
             CityGrantRequest::class,
+            FederationCoalitionInvitation::class,
+            FederationCoalitionProposal::class,
+            FederationLinkInvitation::class,
+            FederationReceivedResource::class,
+            FederationReceivedVersion::class,
             GrantApplication::class,
             Loan::class,
             MemberTransfer::class,
+            MilcomOperation::class,
             RebuildingRequest::class,
             Transaction::class,
             WarAidRequest::class,

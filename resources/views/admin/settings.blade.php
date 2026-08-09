@@ -30,6 +30,7 @@
             'manage-custom-pages',
             'view-roles',
             'view-audits',
+            'view-federation',
         ]);
     @endphp
 
@@ -95,6 +96,10 @@
                             <x-admin.settings-link :href="route('admin.settings.recovery') . '#pending-request-recovery'" category="Operations" title="Pending Request Recovery" description="Release genuinely stuck pending workflow rows." keywords="diagnostics stuck force release" />
                             <x-admin.settings-link :href="route('admin.settings.system-health') . '#system-health-title'" category="Operations" title="System Health" description="Freshness checks for the scheduler, API, imports, and data pipelines." keywords="status diagnostics monitoring pulse" />
                         @endif
+
+                        @can('view-federation')
+                            <x-admin.settings-link :href="route('admin.federation.index')" category="Federation" title="Nexus Federation" description="Installation identity, peer links, coalition capabilities, shared war plans, and delivery health." keywords="peer nexus coalition sharing fingerprints encryption war plans" external />
+                        @endcan
                     </div>
                 </section>
 

@@ -27,9 +27,9 @@ return new class extends Migration
             $table->string('status', 24)->default('pending');
             $table->unsignedTinyInteger('active_key')->nullable();
             $table->string('signing_public_key', 128);
-            $table->longText('signing_private_key');
+            $table->longText('signing_private_key')->nullable();
             $table->string('box_public_key', 128);
-            $table->longText('box_private_key');
+            $table->longText('box_private_key')->nullable();
             $table->string('signing_fingerprint', 128);
             $table->string('box_fingerprint', 128);
             $table->longText('rotation_statement')->nullable();
@@ -89,7 +89,7 @@ return new class extends Migration
         Schema::create('federation_link_invitations', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('federation_link_id')->nullable()->constrained('federation_links')->nullOnDelete();
-            $table->string('direction', 16);
+            $table->string('direction', 24);
             $table->string('peer_origin', 512);
             $table->ulid('peer_installation_id')->nullable();
             $table->char('token_hash', 64)->unique();

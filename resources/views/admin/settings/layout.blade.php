@@ -38,6 +38,10 @@
                     <a href="{{ route('admin.settings.recovery') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.settings.recovery') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.settings.recovery')) aria-current="page" @endif>Recovery</a>
                     <a href="{{ route('admin.settings.system-health') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.settings.system-health') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.settings.system-health')) aria-current="page" @endif>System health</a>
                 @endcan
+
+                @can('view-federation')
+                    <a href="{{ route('admin.federation.index') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.federation.*') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.federation.*')) aria-current="page" @endif>Federation</a>
+                @endcan
             </div>
         </nav>
 

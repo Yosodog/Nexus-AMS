@@ -171,6 +171,19 @@ class FederationReceivedPlanImportFeatureTest extends TestCase
         );
     }
 
+    public function test_receive_rejects_a_snapshot_beyond_the_local_expiry_maximum(): void
+    {
+        $coalition = $this->createAuthorizedCoalition();
+        $snapshot = $this->snapshot($coalition, expiryDays: 31);
+
+        $this->assertProtocolError(
+            fn () => app(FederationReceivedWarPlanService::class)
+                ->store($this->inboxMessage($snapshot), $snapshot->toArray()),
+            FederationErrorCode::InvalidEnvelope,
+        );
+        $this->assertSame(0, FederationReceivedResource::query()->count());
+    }
+
     public function test_receive_denies_a_missing_remote_outbound_capability_and_removed_membership(): void
     {
         $coalition = $this->createAuthorizedCoalition();
@@ -354,6 +367,36 @@ class FederationReceivedPlanImportFeatureTest extends TestCase
         $this->assertSame('source_revoked', $operation->federation_hold_reason);
     }
 
+    public function test_revocation_arriving_before_publication_creates_a_tombstone_that_blocks_resurrection(): void
+    {
+        $publicationId = (string) Str::ulid();
+        $payload = [
+            'publication_id' => $publicationId,
+            'revision' => 2,
+            'reason_code' => 'source_revoked',
+            'revoked_at' => now()->utc()->toIso8601String(),
+        ];
+        $service = app(FederationReceivedWarPlanService::class);
+        $service->revoke(
+            $this->controlInboxMessage(FederationMessageType::ResourceRevoked, $payload),
+            $payload,
+            false,
+        );
+
+        $tombstone = FederationReceivedResource::query()->firstOrFail();
+        $this->assertSame(ReceivedResourceState::Revoked, $tombstone->state);
+        $this->assertSame(2, $tombstone->current_revision);
+        $this->assertNull($tombstone->coalition_id);
+
+        $coalition = $this->createAuthorizedCoalition();
+        $snapshot = $this->snapshot($coalition, publicationId: $publicationId);
+        $this->assertProtocolError(
+            fn () => $service->store($this->inboxMessage($snapshot), $snapshot->toArray()),
+            FederationErrorCode::VersionConflict,
+        );
+        $this->assertSame(0, FederationReceivedVersion::query()->count());
+    }
+
     public function test_duplicate_and_lower_revision_snapshots_are_no_ops(): void
     {
         $coalition = $this->createAuthorizedCoalition();
@@ -516,6 +559,7 @@ class FederationReceivedPlanImportFeatureTest extends TestCase
         array $targetIds = [901001],
         string $priorityTier = 'high',
         string $recipientInstructions = 'Coordinate with the local war room.',
+        int $expiryDays = 7,
     ): WarPlanSnapshotV1 {
         $publishedAt = CarbonImmutable::now('UTC')->subMinute();
 
@@ -530,7 +574,7 @@ class FederationReceivedPlanImportFeatureTest extends TestCase
             rosterRevision: (int) $coalition->roster_revision,
             sourceGeneration: 1,
             publishedAt: $publishedAt,
-            expiresAt: $publishedAt->addDays(7),
+            expiresAt: $publishedAt->addDays($expiryDays),
             recipientInstallationId: $this->identity->id,
             title: 'Operation Cedar',
             waveLabel: 'Wave '.$version,
@@ -554,12 +598,15 @@ class FederationReceivedPlanImportFeatureTest extends TestCase
 
     private function inboxMessage(WarPlanSnapshotV1 $snapshot): FederationInboxMessage
     {
-        return $this->controlInboxMessage(
+        $message = $this->controlInboxMessage(
             FederationMessageType::ResourcePublished,
             $snapshot->toArray(),
             $snapshot->toJson(),
             WarPlanSnapshotV1::SCHEMA,
         );
+        $message->forceFill(['expires_at' => $snapshot->expiresAt])->save();
+
+        return $message;
     }
 
     /** @param array<string, mixed> $payload */

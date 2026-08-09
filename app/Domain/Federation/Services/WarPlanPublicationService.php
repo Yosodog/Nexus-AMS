@@ -6,6 +6,7 @@ use App\Domain\Federation\DTO\WarPlanSnapshotV1;
 use App\Domain\Federation\Enums\DeliveryState;
 use App\Domain\Federation\Enums\FederationMessageType;
 use App\Domain\Federation\Enums\FederationResourceType;
+use App\Domain\Federation\Enums\OutboxStatus;
 use App\Domain\Federation\Enums\PublicationStatus;
 use App\Domain\Federation\Resources\WarPlanSnapshotFactory;
 use App\Domain\Federation\Support\CanonicalJson;
@@ -16,6 +17,7 @@ use App\Domain\Milcom\Enums\PriorityTier;
 use App\Models\FederationCoalition;
 use App\Models\FederationIdentity;
 use App\Models\FederationLink;
+use App\Models\FederationOutboxMessage;
 use App\Models\FederationPublication;
 use App\Models\FederationPublicationDelivery;
 use App\Models\FederationPublicationVersion;
@@ -59,6 +61,13 @@ final class WarPlanPublicationService
         $objectiveIds = array_values(array_unique(array_map('intval', $objectiveIds)));
         $isUpdate = $publication instanceof FederationPublication;
         $this->assertExpiry($expiresAt);
+
+        if ($recipientLinkIds === []
+            || count($recipientLinkIds) > (int) config('federation.limits.targets_per_publication', 500)) {
+            throw ValidationException::withMessages([
+                'recipients' => 'Select between 1 and 500 recipient installations.',
+            ]);
+        }
 
         return DB::transaction(function () use (
             $operation,
@@ -107,8 +116,23 @@ final class WarPlanPublicationService
 
             if ((int) $lockedPublication->milcom_operation_id !== (int) $lockedOperation->id
                 || ! hash_equals($lockedPublication->federation_coalition_id, $coalition->id)
-                || in_array($lockedPublication->status, [PublicationStatus::Revoked, PublicationStatus::Expired], true)) {
+                || in_array($lockedPublication->status, [PublicationStatus::Revoked, PublicationStatus::Expired], true)
+                || ($isUpdate && $lockedPublication->expires_at->isPast())) {
                 throw ValidationException::withMessages(['publication' => 'This publication cannot be updated.']);
+            }
+
+            $recipientInstallationIds = $links->pluck('remote_installation_id')->all();
+
+            if ($isUpdate && FederationPublicationDelivery::query()
+                ->whereHas('version', fn ($query) => $query
+                    ->where('federation_publication_id', $lockedPublication->id)
+                    ->where('status', 'published'))
+                ->whereIn('recipient_installation_id', $recipientInstallationIds)
+                ->whereNotNull('access_revoked_at')
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'recipients' => 'A recipient revoked from this publication cannot be re-added. Create a new publication.',
+                ]);
             }
 
             $versionNumber = ((int) $lockedPublication->versions()->max('version')) + 1;
@@ -202,7 +226,9 @@ final class WarPlanPublicationService
 
             if ($lockedVersion->status !== 'preview'
                 || ! hash_equals($lockedVersion->preview_hash, $previewHash)
-                || (int) $operation->generation_version !== (int) $lockedVersion->source_generation) {
+                || (int) $operation->generation_version !== (int) $lockedVersion->source_generation
+                || $lockedVersion->expires_at->isPast()
+                || in_array($publication->status, [PublicationStatus::Revoked, PublicationStatus::Expired], true)) {
                 throw ValidationException::withMessages([
                     'preview' => 'The operation, recipients, capabilities, or preview changed. Generate a new preview.',
                 ]);
@@ -210,9 +236,24 @@ final class WarPlanPublicationService
 
             $isUpdate = (int) $publication->current_version > 0;
             $this->assertOperationEligible($operation, $isUpdate);
+            $recipientInstallationIds = $lockedVersion->deliveries
+                ->pluck('recipient_installation_id')
+                ->all();
+
+            if (FederationPublicationDelivery::query()
+                ->whereHas('version', fn ($query) => $query
+                    ->where('federation_publication_id', $publication->id)
+                    ->where('status', 'published'))
+                ->whereIn('recipient_installation_id', $recipientInstallationIds)
+                ->whereNotNull('access_revoked_at')
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'recipients' => 'A revoked recipient cannot be restored for this publication ID.',
+                ]);
+            }
 
             foreach ($lockedVersion->deliveries as $delivery) {
-                $this->authorization->assertCanPublish($coalition, $delivery->link);
+                $this->authorization->assertCanPublish($coalition, $delivery->link, lockForUpdate: true);
                 $expected = WarPlanSnapshotV1::fromJson((string) $delivery->canonical_payload);
                 $objectives = $this->selectedObjectivesByTarget($operation, $expected, $isUpdate);
                 $rebuilt = $this->snapshots->build(
@@ -250,14 +291,48 @@ final class WarPlanPublicationService
                 $delivery->forceFill(['outbox_message_id' => $message->message_id])->save();
             }
 
+            $previousVersion = FederationPublicationVersion::query()
+                ->where('federation_publication_id', $publication->id)
+                ->where('status', 'published')
+                ->where('revision', '<', $lockedVersion->revision)
+                ->latest('revision')
+                ->first();
+            $removedRecipientIds = $previousVersion instanceof FederationPublicationVersion
+                ? $previousVersion->deliveries()
+                    ->whereNull('access_revoked_at')
+                    ->whereNotIn('recipient_installation_id', $recipientInstallationIds)
+                    ->pluck('recipient_installation_id')
+                    ->unique()
+                    ->values()
+                : collect();
+            $currentRevision = (int) $lockedVersion->revision;
+
+            foreach ($removedRecipientIds as $removedRecipientId) {
+                $currentRevision++;
+                $this->revokeRecipientDeliveriesLocked(
+                    $publication,
+                    (string) $removedRecipientId,
+                    $currentRevision,
+                    'recipient_removed_from_update',
+                );
+            }
+
             $lockedVersion->forceFill([
                 'status' => 'published',
                 'published_at' => now(),
             ])->save();
             $publication->forceFill([
-                'status' => PublicationStatus::Published,
+                'status' => $removedRecipientIds->isNotEmpty()
+                    || FederationPublicationDelivery::query()
+                        ->whereHas('version', fn ($query) => $query
+                            ->where('federation_publication_id', $publication->id)
+                            ->where('status', 'published'))
+                        ->whereNotNull('access_revoked_at')
+                        ->exists()
+                    ? PublicationStatus::PartiallyRevoked
+                    : PublicationStatus::Published,
                 'current_version' => $lockedVersion->version,
-                'current_revision' => $lockedVersion->revision,
+                'current_revision' => $currentRevision,
                 'source_generation' => $operation->generation_version,
                 'expires_at' => $lockedVersion->expires_at,
                 'published_at' => $publication->published_at ?? now(),
@@ -284,30 +359,36 @@ final class WarPlanPublicationService
     ): void {
         DB::transaction(function () use ($publication, $recipientInstallationId, $reasonCode): void {
             $locked = FederationPublication::query()->lockForUpdate()->findOrFail($publication->id);
+
+            if (in_array($locked->status, [PublicationStatus::Revoked, PublicationStatus::Expired], true)) {
+                return;
+            }
+
             $delivery = FederationPublicationDelivery::query()
-                ->whereHas('version', fn ($query) => $query->where('federation_publication_id', $locked->id))
+                ->whereHas('version', fn ($query) => $query
+                    ->where('federation_publication_id', $locked->id)
+                    ->where('status', 'published'))
                 ->where('recipient_installation_id', $recipientInstallationId)
-                ->latest('created_at')
-                ->lockForUpdate()
-                ->firstOrFail();
+                ->with('version')
+                ->get()
+                ->sortByDesc(fn (FederationPublicationDelivery $candidate): int => (int) $candidate->version->revision)
+                ->first();
+
+            if (! $delivery instanceof FederationPublicationDelivery) {
+                throw ValidationException::withMessages(['recipient' => 'This recipient has no published access.']);
+            }
+
+            if ($delivery->access_revoked_at !== null || $delivery->state === DeliveryState::Revoked) {
+                return;
+            }
+
             $revision = (int) $locked->current_revision + 1;
-            $this->outbox->queue(
-                $delivery->link,
-                FederationMessageType::ResourceAccessRevoked,
-                [
-                    'publication_id' => $locked->id,
-                    'recipient_installation_id' => $recipientInstallationId,
-                    'revision' => $revision,
-                    'reason_code' => Str::limit(Str::snake($reasonCode), 64, ''),
-                    'revoked_at' => now()->utc()->toIso8601String(),
-                ],
-                CarbonImmutable::now('UTC')->addDays(7),
+            $this->revokeRecipientDeliveriesLocked(
+                $locked,
+                $recipientInstallationId,
+                $revision,
+                $reasonCode,
             );
-            $delivery->forceFill([
-                'state' => DeliveryState::Revoked,
-                'access_revoked_at' => now(),
-                'canonical_payload' => null,
-            ])->save();
             $locked->forceFill([
                 'status' => PublicationStatus::PartiallyRevoked,
                 'current_revision' => $revision,
@@ -325,31 +406,49 @@ final class WarPlanPublicationService
     {
         DB::transaction(function () use ($publication, $reasonCode): void {
             $locked = FederationPublication::query()->lockForUpdate()->findOrFail($publication->id);
+
+            if ($locked->status === PublicationStatus::Revoked) {
+                return;
+            }
+
+            if ($locked->status === PublicationStatus::Expired) {
+                throw ValidationException::withMessages(['publication' => 'An expired publication is terminal.']);
+            }
+
             $revision = (int) $locked->current_revision + 1;
-            $latestDeliveries = FederationPublicationDelivery::query()
-                ->whereHas('version', fn ($query) => $query->where('federation_publication_id', $locked->id))
-                ->with('link')
-                ->get()
+            $publishedDeliveries = FederationPublicationDelivery::query()
+                ->whereHas('version', fn ($query) => $query
+                    ->where('federation_publication_id', $locked->id)
+                    ->where('status', 'published'))
+                ->with(['link', 'version'])
+                ->lockForUpdate()
+                ->get();
+            $this->cancelPendingResourceOutboxes($publishedDeliveries);
+            $latestDeliveries = $publishedDeliveries
+                ->sortByDesc(fn (FederationPublicationDelivery $delivery): int => (int) $delivery->version->revision)
                 ->unique('recipient_installation_id');
 
             foreach ($latestDeliveries as $delivery) {
-                $this->outbox->queue(
-                    $delivery->link,
-                    FederationMessageType::ResourceRevoked,
-                    [
-                        'publication_id' => $locked->id,
-                        'revision' => $revision,
-                        'reason_code' => Str::limit(Str::snake($reasonCode), 64, ''),
-                        'revoked_at' => now()->utc()->toIso8601String(),
-                    ],
-                    CarbonImmutable::now('UTC')->addDays(7),
-                );
+                if (! $delivery->link->status->isTerminal()) {
+                    $this->outbox->queue(
+                        $delivery->link,
+                        FederationMessageType::ResourceRevoked,
+                        [
+                            'publication_id' => $locked->id,
+                            'revision' => $revision,
+                            'reason_code' => Str::limit(Str::snake($reasonCode), 64, ''),
+                            'revoked_at' => now()->utc()->toIso8601String(),
+                        ],
+                        CarbonImmutable::now('UTC')->addDays(7),
+                    );
+                }
             }
 
             FederationPublicationDelivery::query()
                 ->whereHas('version', fn ($query) => $query->where('federation_publication_id', $locked->id))
                 ->update([
                     'state' => DeliveryState::Revoked->value,
+                    'access_revocation_revision' => $revision,
                     'access_revoked_at' => now(),
                     'canonical_payload' => null,
                     'updated_at' => now(),
@@ -365,6 +464,110 @@ final class WarPlanPublicationService
             'publication_id' => $publication->id,
             'actor_id' => $actorUserId,
         ]);
+    }
+
+    public function revokeForRecipientScope(
+        string $coalitionId,
+        string $recipientInstallationId,
+        string $reasonCode,
+    ): int {
+        $identity = FederationIdentity::query()->first();
+
+        if (! $identity instanceof FederationIdentity) {
+            return 0;
+        }
+
+        $publications = FederationPublication::query()
+            ->where('federation_coalition_id', $coalitionId)
+            ->where('source_installation_id', $identity->id)
+            ->whereIn('status', [
+                PublicationStatus::Published->value,
+                PublicationStatus::PartiallyRevoked->value,
+            ])
+            ->whereHas('versions.deliveries', fn ($query) => $query
+                ->where('recipient_installation_id', $recipientInstallationId))
+            ->get();
+
+        foreach ($publications as $publication) {
+            $this->revokeRecipient($publication, $recipientInstallationId, $reasonCode, 0);
+        }
+
+        return $publications->count();
+    }
+
+    private function revokeRecipientDeliveriesLocked(
+        FederationPublication $publication,
+        string $recipientInstallationId,
+        int $revision,
+        string $reasonCode,
+    ): void {
+        $deliveries = FederationPublicationDelivery::query()
+            ->whereHas('version', fn ($query) => $query
+                ->where('federation_publication_id', $publication->id)
+                ->where('status', 'published'))
+            ->where('recipient_installation_id', $recipientInstallationId)
+            ->with(['link', 'version'])
+            ->lockForUpdate()
+            ->get();
+        $latest = $deliveries
+            ->sortByDesc(fn (FederationPublicationDelivery $delivery): int => (int) $delivery->version->revision)
+            ->first();
+
+        if (! $latest instanceof FederationPublicationDelivery) {
+            throw ValidationException::withMessages(['recipient' => 'This recipient has no published access.']);
+        }
+
+        $this->cancelPendingResourceOutboxes($deliveries);
+
+        if (! $latest->link->status->isTerminal()) {
+            $this->outbox->queue(
+                $latest->link,
+                FederationMessageType::ResourceAccessRevoked,
+                [
+                    'publication_id' => $publication->id,
+                    'recipient_installation_id' => $recipientInstallationId,
+                    'revision' => $revision,
+                    'reason_code' => Str::limit(Str::snake($reasonCode), 64, ''),
+                    'revoked_at' => now()->utc()->toIso8601String(),
+                ],
+                CarbonImmutable::now('UTC')->addDays(7),
+            );
+        }
+
+        FederationPublicationDelivery::query()
+            ->whereIn('id', $deliveries->pluck('id'))
+            ->update([
+                'state' => DeliveryState::Revoked->value,
+                'access_revocation_revision' => $revision,
+                'access_revoked_at' => now(),
+                'canonical_payload' => null,
+                'updated_at' => now(),
+            ]);
+    }
+
+    /** @param  Collection<int, FederationPublicationDelivery>  $deliveries */
+    private function cancelPendingResourceOutboxes(Collection $deliveries): void
+    {
+        $messageIds = $deliveries->pluck('outbox_message_id')->filter()->values();
+
+        if ($messageIds->isEmpty()) {
+            return;
+        }
+
+        FederationOutboxMessage::query()
+            ->whereIn('message_id', $messageIds)
+            ->whereIn('message_type', [
+                FederationMessageType::ResourcePublished->value,
+                FederationMessageType::ResourceUpdated->value,
+            ])
+            ->where('status', OutboxStatus::Pending->value)
+            ->update([
+                'status' => OutboxStatus::Failed->value,
+                'safe_error_code' => 'capability_denied',
+                'failed_at' => now(),
+                'envelope_body' => null,
+                'updated_at' => now(),
+            ]);
     }
 
     private function assertPublishingEnabled(): void

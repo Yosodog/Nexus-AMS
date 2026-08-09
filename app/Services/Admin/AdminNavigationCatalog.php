@@ -70,6 +70,7 @@ final class AdminNavigationCatalog
             ]),
             $this->group('System', [
                 $this->item('settings', 'Settings', 'o-adjustments-horizontal', route('admin.settings'), $this->request->routeIs('admin.settings'), visible: $user->canAny((array) config('admin-settings.access_permissions')), keywords: 'configuration'),
+                $this->item('federation', 'Federation', 'o-link', route('admin.federation.index'), $this->request->routeIs('admin.federation.*'), visible: $user->can('view-federation'), keywords: 'peer links coalitions shared war plans'),
                 $this->item('custom-pages', 'Custom pages', 'o-paint-brush', route('admin.customization.index'), $this->request->routeIs('admin.customization.*'), visible: $user->can('manage-custom-pages'), keywords: 'content editor'),
                 $this->item('audit-logs', 'Audit logs', 'o-clipboard-document-list', route('admin.audit-logs.index'), $this->request->routeIs('admin.audit-logs.*'), visible: $user->can('view-diagnostic-info'), keywords: 'history events'),
                 $this->item('telescope', 'Telescope', 'o-bug-ant', url('/telescope'), $this->request->is('telescope*'), visible: $user->can('view-diagnostic-info'), keywords: 'debug requests jobs'),
