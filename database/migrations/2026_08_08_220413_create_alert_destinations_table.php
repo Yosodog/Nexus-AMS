@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('alert_destinations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('alliance_id')->nullable()->constrained()->nullOnDelete();
+            WorldReference::alliance($table)->nullable()->nullOnDeleteInStandalone();
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('name', 100);
             $table->string('kind', 32);

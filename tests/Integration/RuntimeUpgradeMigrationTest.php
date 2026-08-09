@@ -46,7 +46,7 @@ class RuntimeUpgradeMigrationTest extends TestCase
 
         $this->assertJoinedAllianceReference();
         $this->assertTrue(Schema::hasTable('process_heartbeats'));
-        $this->assertSame(53, $this->worldForeignKeyCount());
+        $this->assertSame(58, $this->worldForeignKeyCount());
     }
 
     public function test_hosted_upgrade_resumes_without_mutating_existing_world_views(): void

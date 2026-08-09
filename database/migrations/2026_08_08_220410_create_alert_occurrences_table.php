@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('event_key', 96);
             $table->unsignedSmallInteger('schema_version')->default(1);
-            $table->foreignId('alliance_id')->nullable()->constrained()->nullOnDelete();
+            WorldReference::alliance($table)->nullable()->nullOnDeleteInStandalone();
             $table->foreignId('audience_user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('source_type', 64);
             $table->string('source_id', 191);

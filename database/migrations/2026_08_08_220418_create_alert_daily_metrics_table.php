@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Database\WorldReference;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +15,7 @@ return new class extends Migration
         Schema::create('alert_daily_metrics', function (Blueprint $table) {
             $table->id();
             $table->date('metric_date');
-            $table->foreignId('alliance_id')->nullable()->constrained()->nullOnDelete();
+            WorldReference::alliance($table)->nullable()->nullOnDeleteInStandalone();
             $table->string('scope_key', 32)->default('global');
             $table->string('event_key', 96);
             $table->string('destination_kind', 32);
