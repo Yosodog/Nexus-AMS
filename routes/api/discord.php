@@ -7,6 +7,7 @@ use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberCon
 use App\Http\Controllers\API\Discord\MemberProfileSyncController as DiscordMemberProfileSyncController;
 use App\Http\Controllers\API\Discord\MilcomObjectiveController as DiscordMilcomObjectiveController;
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
+use App\Http\Controllers\API\Discord\OffshoreSweepIntentController as DiscordOffshoreSweepIntentController;
 use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
 use App\Http\Controllers\API\Discord\StatusController as DiscordStatusController;
 use App\Http\Controllers\API\Discord\WarCounterController as DiscordWarCounterController;
@@ -127,6 +128,19 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             VerifyDiscordInteraction::class,
             ResolveDiscordActor::class,
             EnsureDiscordInteractionCommand::class.':sweepbank,offshores.sweep-primary',
+            EnsureDiscordInteractionIdempotency::class,
+        ]);
+    Route::post('/offshores/sweep-primary/preview', [DiscordOffshoreSweepIntentController::class, 'preview'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':sweepbank',
+        ]);
+    Route::post('/offshores/sweep-primary/confirm', [DiscordOffshoreSweepIntentController::class, 'confirm'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            ResolveDiscordActor::class,
+            EnsureDiscordInteractionCommand::class.':sweepbank',
             EnsureDiscordInteractionIdempotency::class,
         ]);
     Route::post('/intel', [ApiIntelReportController::class, 'store']);

@@ -19,7 +19,7 @@ class RouteContractTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENHANCED_ROUTE_CONTRACT_SHA256 = 'd522a477568b44f89937f2f78bc0c9711c821a946818522bd84185f2c975c5f6';
+    private const ENHANCED_ROUTE_CONTRACT_SHA256 = '6f9fd1be38b26e87e2d242855e1070c8caf46b97400e9e1ee2f6a14fd2319170';
 
     public function createApplication(): Application
     {
@@ -74,8 +74,8 @@ class RouteContractTest extends TestCase
             }
         }
 
-        $this->assertCount(563, $expected);
-        $this->assertCount(563, $actual);
+        $this->assertCount(622, $expected);
+        $this->assertCount(622, $actual);
 
         foreach ($expected as $index => $expectedRoute) {
             $this->assertSame(
@@ -109,7 +109,7 @@ class RouteContractTest extends TestCase
     {
         $contract = $this->enhancedRouteContract($this->app);
 
-        $this->assertCount(563, $contract);
+        $this->assertCount(622, $contract);
         $this->assertSame(
             self::ENHANCED_ROUTE_CONTRACT_SHA256,
             hash('sha256', $this->canonicalJson($contract)),

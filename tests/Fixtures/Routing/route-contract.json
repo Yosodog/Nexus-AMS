@@ -2125,13 +2125,41 @@
     },
     {
         "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/link/preview",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\DiscordVerificationController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:verify"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/link/confirm",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\DiscordVerificationController@confirm",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:verify",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
         "method": "GET|HEAD",
         "uri": "api/v1/discord/queue",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\DiscordQueueController@index",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.legacy-fetch,legacy-unsigned"
         ]
     },
     {
@@ -2142,7 +2170,8 @@
         "action": "App\\Http\\Controllers\\API\\DiscordQueueController@claim",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.claim,legacy-unsigned"
         ]
     },
     {
@@ -2153,7 +2182,8 @@
         "action": "App\\Http\\Controllers\\API\\DiscordQueueController@lease",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.lease,legacy-unsigned"
         ]
     },
     {
@@ -2164,7 +2194,8 @@
         "action": "App\\Http\\Controllers\\API\\DiscordQueueController@checkpoint",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.checkpoint,legacy-unsigned"
         ]
     },
     {
@@ -2175,7 +2206,116 @@
         "action": "App\\Http\\Controllers\\API\\DiscordQueueController@update",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.acknowledge,legacy-unsigned"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/alerts/manifest",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\AlertRendererManifestController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:alerts.manifest"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/status",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\StatusController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:nexus.status"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/context",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\MemberContextController@context",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/summary",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\MemberContextController@summary",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:me"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/profile-sync/preview",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\MemberProfileSyncController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:me"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/profile-sync/confirm",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\MemberProfileSyncController@confirm",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:me",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/applications/preview",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ApplicationController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:apply"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/applications/confirm",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ApplicationController@confirm",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:apply",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
         ]
     },
     {
@@ -2222,7 +2362,7 @@
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
             "App\\Http\\Middleware\\VerifyDiscordInteraction",
             "App\\Http\\Middleware\\ResolveDiscordActor",
-            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:approve"
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:approve,applications.approve"
         ]
     },
     {
@@ -2236,7 +2376,7 @@
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
             "App\\Http\\Middleware\\VerifyDiscordInteraction",
             "App\\Http\\Middleware\\ResolveDiscordActor",
-            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:deny"
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:deny,applications.deny"
         ]
     },
     {
@@ -2263,7 +2403,7 @@
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
             "App\\Http\\Middleware\\VerifyDiscordInteraction",
             "App\\Http\\Middleware\\ResolveDiscordActor",
-            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:archivecounter",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:archivecounter,war-counters.archive",
             "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
         ]
     },
@@ -2310,6 +2450,35 @@
         "uri": "api/v1/discord/offshores/sweep-primary",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\OffshoreController@sweepPrimary",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:sweepbank,offshores.sweep-primary",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/offshores/sweep-primary/preview",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\OffshoreSweepIntentController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:sweepbank"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/offshores/sweep-primary/confirm",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\OffshoreSweepIntentController@confirm",
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
@@ -2428,6 +2597,62 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/v1/discord/staff/work-items",
+        "name": "api.discord.staff.work-items.index",
+        "action": "App\\Http\\Controllers\\API\\Discord\\OperationsWorkItemController@index",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/staff/work-items/{type}/{id}",
+        "name": "api.discord.staff.work-items.show",
+        "action": "App\\Http\\Controllers\\API\\Discord\\OperationsWorkItemController@show",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/staff/work-items/{type}/{id}/claim",
+        "name": "api.discord.staff.work-items.claim",
+        "action": "App\\Http\\Controllers\\API\\Discord\\OperationsWorkItemController@claim",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:work.claim",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/staff/work-items/{type}/{id}/release",
+        "name": "api.discord.staff.work-items.release",
+        "action": "App\\Http\\Controllers\\API\\Discord\\OperationsWorkItemController@release",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:work.release",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/war-plans/{plan}/targets",
         "name": "api.admin.war-plans.targets",
         "action": "App\\Http\\Controllers\\Admin\\WarPlanController@targetsData",
@@ -2499,7 +2724,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2516,7 +2742,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2533,7 +2760,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2550,7 +2778,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2567,7 +2796,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2584,7 +2814,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2601,7 +2832,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2618,7 +2850,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2635,7 +2868,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2652,7 +2886,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2669,7 +2904,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2686,7 +2922,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2703,7 +2940,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2720,7 +2958,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2737,7 +2976,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2754,7 +2994,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2771,7 +3012,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2788,7 +3030,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2805,7 +3048,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2822,7 +3066,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2839,7 +3084,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2856,7 +3102,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2873,7 +3120,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2890,7 +3138,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2907,7 +3156,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2924,7 +3174,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2941,7 +3192,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2958,7 +3210,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2975,7 +3228,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -2992,7 +3246,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -3009,7 +3264,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -3026,7 +3282,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -3043,7 +3300,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -3060,7 +3318,8 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
         ]
     },
     {
@@ -3077,7 +3336,30 @@
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\AdminMiddleware",
             "Illuminate\\Auth\\Middleware\\Authorize:manage-war-room",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\RejectFederationHeldOperation"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/federation/handshakes",
+        "name": "api.federation.handshakes",
+        "action": "App\\Http\\Controllers\\API\\FederationHandshakeController",
+        "middleware": [
+            "api",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:federation-handshakes"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/federation/envelopes",
+        "name": "api.federation.envelopes",
+        "action": "App\\Http\\Controllers\\API\\FederationEnvelopeController",
+        "middleware": [
+            "api",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:federation-ingress"
         ]
     },
     {
@@ -3104,6 +3386,16 @@
         "uri": "sitemap.xml",
         "name": "seo.sitemap",
         "action": "App\\Http\\Controllers\\SeoController@sitemap",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": ".well-known/nexus-federation",
+        "name": "federation.discovery",
+        "action": "App\\Http\\Controllers\\WellKnownFederationController",
         "middleware": [
             "web"
         ]
@@ -7642,6 +7934,606 @@
         "uri": "admin/settings/pending-requests/release-stale",
         "name": "admin.settings.pending-requests.release-stale",
         "action": "App\\Http\\Controllers\\Admin\\PendingRequestRecoveryController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "admin/federation",
+        "name": "admin.federation.index",
+        "action": "App\\Http\\Controllers\\Admin\\FederationController@index",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/enable",
+        "name": "admin.federation.identity.enable",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@enable",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/disable",
+        "name": "admin.federation.identity.disable",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@disable",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/rotate",
+        "name": "admin.federation.identity.rotate",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@rotate",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/transfer-ownership",
+        "name": "admin.federation.identity.transfer-ownership",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@transferOwnership",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/keys/{key}/activate",
+        "name": "admin.federation.identity.keys.activate",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@activate",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/identity/keys/{key}/compromise",
+        "name": "admin.federation.identity.keys.compromise",
+        "action": "App\\Http\\Controllers\\Admin\\FederationIdentityController@compromise",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/discover",
+        "name": "admin.federation.links.discover",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@discover",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links",
+        "name": "admin.federation.links.store",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/link-invitations/{invitation}/approve",
+        "name": "admin.federation.links.approve",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@approve",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/link-invitations/{invitation}/activate",
+        "name": "admin.federation.links.activate",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@activate",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/{link}/suspend",
+        "name": "admin.federation.links.suspend",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@suspend",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/{link}/revoke",
+        "name": "admin.federation.links.revoke",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@revoke",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/{link}/endpoint-change",
+        "name": "admin.federation.links.endpoint.propose",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@proposeEndpoint",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/endpoint-changes/{proposal}/approve",
+        "name": "admin.federation.links.endpoint.approve",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@approveEndpoint",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/endpoint-changes/{proposal}/reject",
+        "name": "admin.federation.links.endpoint.reject",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@rejectEndpoint",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/endpoint-changes/{proposal}/activate",
+        "name": "admin.federation.links.endpoint.activate",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@activateEndpoint",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/{link}/peer-keys/{key}/reapprove",
+        "name": "admin.federation.links.keys.reapprove",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@reapproveKey",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/links/{link}/stage-recovery-key",
+        "name": "admin.federation.links.keys.stage-recovery",
+        "action": "App\\Http\\Controllers\\Admin\\FederationLinkController@stageRecoveryKey",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions",
+        "name": "admin.federation.coalitions.store",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions/{coalition}/invite",
+        "name": "admin.federation.coalitions.invite",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@invite",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalition-invitations/{invitation}/accept",
+        "name": "admin.federation.coalitions.accept",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@accept",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions/{coalition}/memberships/{membership}/remove",
+        "name": "admin.federation.coalitions.memberships.remove",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@remove",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions/{coalition}/dissolve",
+        "name": "admin.federation.coalitions.dissolve",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@dissolve",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions/{coalition}/proposals",
+        "name": "admin.federation.coalitions.proposals.store",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@propose",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalition-proposals/{proposal}/approve",
+        "name": "admin.federation.coalitions.proposals.approve",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@approveProposal",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalition-proposals/{proposal}/reject",
+        "name": "admin.federation.coalitions.proposals.reject",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@rejectProposal",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalition-proposals/{proposal}/accept-transfer",
+        "name": "admin.federation.coalitions.transfers.accept",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@acceptTransfer",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalition-proposals/{proposal}/approve-transfer",
+        "name": "admin.federation.coalitions.transfers.approve",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCoalitionController@approveTransfer",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/coalitions/{coalition}/capabilities",
+        "name": "admin.federation.capabilities.store",
+        "action": "App\\Http\\Controllers\\Admin\\FederationCapabilityController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/publications/preview",
+        "name": "admin.federation.publications.preview",
+        "action": "App\\Http\\Controllers\\Admin\\FederationPublicationController@preview",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "admin/federation/publication-versions/{version}/preview",
+        "name": "admin.federation.publications.preview.show",
+        "action": "App\\Http\\Controllers\\Admin\\FederationPublicationController@showPreview",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/publication-versions/{version}/publish",
+        "name": "admin.federation.publications.publish",
+        "action": "App\\Http\\Controllers\\Admin\\FederationPublicationController@publish",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/publications/{publication}/revoke-recipient",
+        "name": "admin.federation.publications.revoke-recipient",
+        "action": "App\\Http\\Controllers\\Admin\\FederationPublicationController@revokeRecipient",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/publications/{publication}/revoke",
+        "name": "admin.federation.publications.revoke",
+        "action": "App\\Http\\Controllers\\Admin\\FederationPublicationController@revokeAll",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/received-versions/{version}/accept",
+        "name": "admin.federation.received.accept",
+        "action": "App\\Http\\Controllers\\Admin\\FederationReceivedPlanController@accept",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/received-versions/{version}/reject",
+        "name": "admin.federation.received.reject",
+        "action": "App\\Http\\Controllers\\Admin\\FederationReceivedPlanController@reject",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/received-versions/{version}/retry-import",
+        "name": "admin.federation.received.retry-import",
+        "action": "App\\Http\\Controllers\\Admin\\FederationReceivedPlanController@retryImport",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/operations/{operation}/detach",
+        "name": "admin.federation.operations.detach",
+        "action": "App\\Http\\Controllers\\Admin\\FederationReceivedPlanController@detach",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/federation/operations/{operation}/retire",
+        "name": "admin.federation.operations.retire",
+        "action": "App\\Http\\Controllers\\Admin\\FederationReceivedPlanController@retire",
         "middleware": [
             "web",
             "Illuminate\\Auth\\Middleware\\Authenticate",

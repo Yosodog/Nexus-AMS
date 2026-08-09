@@ -328,7 +328,13 @@ class DiscordOperationsApiTest extends TestCase
         ]);
         $queue = DiscordQueue::query()->create([
             'action' => ApplicationDiscordStatusProjection::ACTION,
-            'payload' => ['contract_version' => 1],
+            'payload' => [
+                'contract_version' => 1,
+                'application' => [
+                    'id' => $application->id,
+                    'revision' => $application->discord_reconcile_revision,
+                ],
+            ],
             'status' => DiscordQueueStatus::Complete,
         ]);
         $application->forceFill(['discord_reconcile_queue_id' => $queue->id])->save();
