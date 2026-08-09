@@ -3,8 +3,8 @@
 namespace App\Services\Discord;
 
 use App\Domain\Milcom\Enums\AssignmentStatus;
-use App\Models\DiscordAssignmentResponse;
 use App\Models\MilcomAssignment;
+use App\Models\MilcomAssignmentResponse;
 use App\Models\MilcomObjective;
 use App\Models\MilcomOperation;
 use App\Models\User;
@@ -50,7 +50,7 @@ final readonly class DiscordMilcomAssignmentResponseService
             );
         }
 
-        $currentResponse = $this->currentResponse($actor, $assignmentId);
+        $currentResponse = $this->currentResponse($assignmentId);
         $assignment->setRelation('discordActorResponse', $currentResponse);
 
         return [
@@ -69,8 +69,8 @@ final readonly class DiscordMilcomAssignmentResponseService
         int $assignmentId,
         array $payload,
         string $interactionId,
-    ): DiscordAssignmentResponse {
-        return DB::transaction(function () use ($actor, $assignmentId, $payload, $interactionId): DiscordAssignmentResponse {
+    ): MilcomAssignmentResponse {
+        return DB::transaction(function () use ($actor, $assignmentId, $payload, $interactionId): MilcomAssignmentResponse {
             $actorNationId = $this->actorNationId($actor);
 
             if ((int) ($payload['assignment_id'] ?? 0) !== $assignmentId
@@ -90,24 +90,24 @@ final readonly class DiscordMilcomAssignmentResponseService
                 throw $this->staleAssignment();
             }
 
-            $currentResponse = $this->currentResponse($actor, $assignmentId, lock: true);
+            $currentResponse = $this->currentResponse($assignmentId, lock: true);
             $resourceVersion = $this->resourceVersion($assignment, $currentResponse);
 
             if (! hash_equals((string) $payload['resource_version'], $resourceVersion)) {
                 throw $this->staleAssignment();
             }
 
-            $assignmentResponse = DiscordAssignmentResponse::query()->updateOrCreate(
+            $assignmentResponse = MilcomAssignmentResponse::query()->updateOrCreate(
                 [
-                    'assignment_type' => self::ASSIGNMENT_TYPE,
                     'assignment_id' => $assignmentId,
-                    'user_id' => $actor->id,
                 ],
                 [
+                    'user_id' => $actor->id,
                     'nation_id' => $actorNationId,
                     'response' => $response,
                     'reason' => $reason,
                     'discord_interaction_id' => $interactionId,
+                    'responded_at' => now(),
                 ],
             );
 
@@ -189,7 +189,7 @@ final readonly class DiscordMilcomAssignmentResponseService
             ? MilcomOperation::query()->lockForUpdate()->find($objective->operation_id)
             : null;
         $war = $assignment->declared_war_id !== null
-            ? War::query()->find($assignment->declared_war_id)
+            ? War::query()->lockForUpdate()->find($assignment->declared_war_id)
             : null;
 
         if (! $objective instanceof MilcomObjective || ! $operation instanceof MilcomOperation) {
@@ -217,15 +217,10 @@ final readonly class DiscordMilcomAssignmentResponseService
             && (! $war instanceof War || ($war->end_date === null && (int) $war->turns_left > 0));
     }
 
-    private function currentResponse(
-        User $actor,
-        int $assignmentId,
-        bool $lock = false,
-    ): ?DiscordAssignmentResponse {
-        $query = DiscordAssignmentResponse::query()
-            ->where('assignment_type', self::ASSIGNMENT_TYPE)
-            ->where('assignment_id', $assignmentId)
-            ->where('user_id', $actor->id);
+    private function currentResponse(int $assignmentId, bool $lock = false): ?MilcomAssignmentResponse
+    {
+        $query = MilcomAssignmentResponse::query()
+            ->where('assignment_id', $assignmentId);
 
         if ($lock) {
             $query->lockForUpdate();
@@ -294,7 +289,7 @@ final readonly class DiscordMilcomAssignmentResponseService
     /** @throws JsonException */
     private function resourceVersion(
         MilcomAssignment $assignment,
-        ?DiscordAssignmentResponse $currentResponse,
+        ?MilcomAssignmentResponse $currentResponse,
     ): string {
         $objective = $assignment->objective;
         $operation = $objective->operation;
@@ -323,7 +318,7 @@ final readonly class DiscordMilcomAssignmentResponseService
                 'turns_left' => (int) $war->turns_left,
                 'updated_at' => $war->updated_at?->format('Y-m-d\TH:i:s.uP'),
             ] : null,
-            'current_response' => $currentResponse instanceof DiscordAssignmentResponse ? [
+            'current_response' => $currentResponse instanceof MilcomAssignmentResponse ? [
                 'id' => (int) $currentResponse->id,
                 'nation_id' => (int) $currentResponse->nation_id,
                 'response' => (string) $currentResponse->response,

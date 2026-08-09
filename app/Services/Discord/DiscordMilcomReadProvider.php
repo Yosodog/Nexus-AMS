@@ -6,8 +6,8 @@ use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\ReadinessProfile;
-use App\Models\DiscordAssignmentResponse;
 use App\Models\MilcomAssignment;
+use App\Models\MilcomAssignmentResponse;
 use App\Models\MilcomObjective;
 use App\Models\MilcomReadinessSnapshot;
 use App\Models\Nation;
@@ -75,9 +75,7 @@ final readonly class DiscordMilcomReadProvider
             return $assignments;
         }
 
-        $responses = DiscordAssignmentResponse::query()
-            ->where('assignment_type', DiscordMilcomAssignmentResponseService::ASSIGNMENT_TYPE)
-            ->where('user_id', $actor->id)
+        $responses = MilcomAssignmentResponse::query()
             ->whereIn('assignment_id', $assignments->modelKeys())
             ->get()
             ->keyBy('assignment_id');

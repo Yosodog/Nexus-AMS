@@ -10,6 +10,7 @@ use App\Models\DiscordAccount;
 use App\Models\DiscordActionIntent;
 use App\Models\DiscordAssignmentResponse;
 use App\Models\MilcomAssignment;
+use App\Models\MilcomAssignmentResponse;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\Discord\DiscordMilcomAssignmentResponseService;
@@ -93,8 +94,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             ->assertJsonMissingPath('data.discord_interaction_id');
 
         $this->assertSame($originalStatus, $assignment->fresh()->status);
-        $this->assertDatabaseHas('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseHas('milcom_assignment_responses', [
             'assignment_id' => $assignment->id,
             'user_id' => $this->actor->id,
             'nation_id' => $this->actorNation->id,
@@ -141,8 +141,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'validation_error');
 
-        $this->assertDatabaseMissing('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseMissing('milcom_assignment_responses', [
             'assignment_id' => $assignment->id,
             'user_id' => $other->id,
         ]);
@@ -170,8 +169,29 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             ->assertConflict()
             ->assertJsonPath('error.code', 'milcom_assignment_response_stale')
             ->assertJsonPath('error.details.retryable', false);
-        $this->assertDatabaseMissing('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseMissing('milcom_assignment_responses', [
+            'assignment_id' => $assignment->id,
+        ]);
+    }
+
+    public function test_war_end_after_preview_is_rejected_before_response_commit(): void
+    {
+        $assignment = $this->currentAssignment();
+        $war = $this->createWar(900002, $this->actorNation, $assignment->objective->target, [
+            'end_date' => null,
+            'turns_left' => 12,
+        ]);
+        $assignment->forceFill(['declared_war_id' => $war->id])->save();
+        $intentId = (string) $this->preview($assignment, 'acknowledged', null, '456789012345678926')
+            ->assertCreated()
+            ->json('data.intent.id');
+
+        $war->forceFill(['end_date' => now(), 'turns_left' => 0])->save();
+
+        $this->confirm($assignment, $intentId, '456789012345678927')
+            ->assertConflict()
+            ->assertJsonPath('error.code', 'milcom_assignment_response_stale');
+        $this->assertDatabaseMissing('milcom_assignment_responses', [
             'assignment_id' => $assignment->id,
         ]);
     }
@@ -214,8 +234,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
         $this->confirm($assignment, $intentId, '456789012345678917')
             ->assertForbidden()
             ->assertJsonPath('error.code', 'discord_actor_not_linked');
-        $this->assertDatabaseMissing('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseMissing('milcom_assignment_responses', [
             'assignment_id' => $assignment->id,
         ]);
     }
@@ -258,8 +277,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             ->assertJsonPath('data.responded_at', $first->json('data.responded_at'))
             ->assertJsonPath('meta.idempotent_replay', true);
 
-        $this->assertSame(1, DiscordAssignmentResponse::query()
-            ->where('assignment_type', 'milcom_v2')
+        $this->assertSame(1, MilcomAssignmentResponse::query()
             ->where('assignment_id', $assignment->id)
             ->count());
         $this->assertSame(1, AuditLog::query()
@@ -281,8 +299,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             ->assertConflict()
             ->assertJsonPath('error.code', 'discord_interaction_conflict');
 
-        $this->assertDatabaseHas('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseHas('milcom_assignment_responses', [
             'assignment_id' => $assignment->id,
             'response' => 'acknowledged',
             'reason' => null,
@@ -315,8 +332,7 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             'response' => 'acknowledged',
             'reason' => null,
         ]);
-        $this->assertDatabaseMissing('discord_assignment_responses', [
-            'assignment_type' => 'milcom_v2',
+        $this->assertDatabaseMissing('milcom_assignment_responses', [
             'assignment_id' => $legacyId,
         ]);
     }

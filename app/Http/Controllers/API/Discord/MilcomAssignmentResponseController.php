@@ -11,7 +11,7 @@ use App\Http\Requests\Discord\DiscordMilcomAssignmentResponsePreviewRequest;
 use App\Http\Resources\Discord\MilcomAssignmentResource;
 use App\Http\Resources\Discord\MilcomAssignmentResponseResource;
 use App\Models\DiscordAccount;
-use App\Models\DiscordAssignmentResponse;
+use App\Models\MilcomAssignmentResponse;
 use App\Models\User;
 use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordMilcomAssignmentResponseException;
@@ -82,7 +82,7 @@ final class MilcomAssignmentResponseController extends Controller
                 $connection->guildId,
                 $request->intentId(),
                 DiscordMilcomAssignmentResponseService::INTENT_ACTION,
-                function (array $payload) use ($responses, $actor, $assignment, $request, &$executed): DiscordAssignmentResponse {
+                function (array $payload) use ($responses, $actor, $assignment, $request, &$executed): MilcomAssignmentResponse {
                     $response = $responses->confirm(
                         $actor,
                         $assignment,
@@ -99,7 +99,7 @@ final class MilcomAssignmentResponseController extends Controller
             return $this->responseError($request, $connection, $exception);
         }
 
-        if (! $result instanceof DiscordAssignmentResponse) {
+        if (! $result instanceof MilcomAssignmentResponse) {
             throw new LogicException('A Milcom-v2 response intent returned an unexpected result model.');
         }
 
