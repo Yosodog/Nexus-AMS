@@ -15,15 +15,20 @@ trait DiscordApiResponses
         ], $status);
     }
 
-    protected function discordError(string $code, string $message, int $status, array $details = []): JsonResponse
-    {
+    protected function discordError(
+        string $code,
+        string $message,
+        int $status,
+        array $details = [],
+        array $meta = [],
+    ): JsonResponse {
         return response()->json([
             'error' => array_filter([
                 'code' => $code,
                 'message' => $message,
                 'details' => $details,
             ], fn (mixed $value): bool => $value !== []),
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, ...$meta],
         ], $status);
     }
 }

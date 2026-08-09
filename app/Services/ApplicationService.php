@@ -232,6 +232,52 @@ class ApplicationService
     }
 
     /**
+     * Validate and summarize a Discord application without changing state.
+     *
+     * @return array{nation: Nation, application: Application|null, resource_version: string, warnings: list<string>}
+     *
+     * @throws ApplicationException
+     */
+    public function previewApplicationFromDiscord(
+        int $nationId,
+        string $discordUserId,
+        ?DiscordConnectionContext $connection = null,
+    ): array {
+        $this->assertApplicationsEnabled();
+
+        $nation = $this->fetchEligibleApplicantNation($nationId);
+        $this->assertApplicantEligible($nation);
+
+        try {
+            return Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
+                ->block(10, function () use ($nationId, $discordUserId, $nation, $connection): array {
+                    $application = $this->findMatchingPendingApplication($nationId, $discordUserId);
+
+                    if ($application) {
+                        $this->assertApplicationConnection($application, $connection, allowUnbound: true);
+                    } else {
+                        $this->assertNoConflictingPendingApplication($nationId, $discordUserId);
+                    }
+
+                    return [
+                        'nation' => $nation,
+                        'application' => $application,
+                        'resource_version' => $this->applicationPreviewVersion($nation, $application),
+                        'warnings' => $application
+                            ? ['Nexus found your existing pending application and will continue it.']
+                            : [],
+                    ];
+                });
+        } catch (LockTimeoutException) {
+            throw new ApplicationException(
+                'application_creation_in_progress',
+                'Application creation is already in progress for this applicant. Please try again shortly.',
+                409,
+            );
+        }
+    }
+
+    /**
      * Start a recruitment application initiated from Discord.
      *
      * @throws ApplicationException
@@ -241,6 +287,7 @@ class ApplicationService
         string $discordUserId,
         string $discordUsername,
         ?DiscordConnectionContext $connection = null,
+        ?string $expectedResourceVersion = null,
     ): Application {
         $this->assertApplicationsEnabled();
 
@@ -250,14 +297,23 @@ class ApplicationService
 
         try {
             $application = Cache::lock($this->applicationCreationLockKey($nationId, $discordUserId), 15)
-                ->block(10, function () use ($nationId, $discordUserId, $discordUsername, $nation): Application {
+                ->block(10, function () use ($nationId, $discordUserId, $discordUsername, $nation, $connection, $expectedResourceVersion): Application {
                     $existingApplication = $this->findMatchingPendingApplication($nationId, $discordUserId);
 
                     if ($existingApplication) {
+                        $this->assertApplicationConnection($existingApplication, $connection, allowUnbound: true);
+
+                        $this->assertApplicationPreviewCurrent(
+                            $nation,
+                            $existingApplication,
+                            $expectedResourceVersion,
+                        );
+
                         return $existingApplication;
                     }
 
                     $this->assertNoConflictingPendingApplication($nationId, $discordUserId);
+                    $this->assertApplicationPreviewCurrent($nation, null, $expectedResourceVersion);
 
                     return Application::query()->create([
                         'nation_id' => $nationId,
@@ -274,6 +330,26 @@ class ApplicationService
                     'event' => 'application_submitted',
                     'channel' => 'discord',
                 ]);
+                app(AuditLogger::class)->recordAfterCommit(
+                    category: 'applications',
+                    action: 'application_submitted',
+                    outcome: 'success',
+                    severity: 'info',
+                    subject: $application,
+                    context: ['data' => [
+                        'nation_id' => $application->nation_id,
+                        'discord_user_id' => $discordUserId,
+                        'connection_id' => $connection?->connectionId,
+                        'connection_generation' => $connection?->generation,
+                        'guild_id' => $connection?->guildId,
+                    ]],
+                    message: 'Application submitted from Discord.',
+                    actorOverride: [
+                        'type' => 'discord',
+                        'id' => null,
+                        'name' => $discordUsername,
+                    ],
+                );
             }
 
             $this->assertApplicationConnection($application, $connection, allowUnbound: true);
@@ -947,6 +1023,42 @@ class ApplicationService
     private function applicationCreationLockKey(int $nationId, string $discordUserId): string
     {
         return sprintf('applications:create:%d:%s', $nationId, sha1($discordUserId));
+    }
+
+    private function assertApplicationPreviewCurrent(
+        Nation $nation,
+        ?Application $application,
+        ?string $expectedResourceVersion,
+    ): void {
+        if ($expectedResourceVersion === null) {
+            return;
+        }
+
+        $current = $this->applicationPreviewVersion($nation, $application);
+        if (! hash_equals($current, $expectedResourceVersion)) {
+            throw new ApplicationException(
+                'application_preview_stale',
+                'Your application eligibility changed after the preview. Review the latest details and try again.',
+                409,
+            );
+        }
+    }
+
+    private function applicationPreviewVersion(Nation $nation, ?Application $application): string
+    {
+        return hash('sha256', json_encode([
+            'nation' => [
+                'id' => $nation->id,
+                'alliance_id' => $nation->alliance_id,
+                'alliance_position' => $nation->alliance_position,
+                'leader_name' => $nation->leader_name,
+            ],
+            'application' => $application ? [
+                'id' => $application->getKey(),
+                'status' => $application->status->value,
+                'updated_at' => $application->updated_at?->toIso8601String(),
+            ] : null,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
     }
 
     protected function findLocalNationSnapshot(int $nationId): ?NationRecord

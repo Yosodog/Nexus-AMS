@@ -19,11 +19,11 @@ class EnsureDiscordInteractionIdempotency
     {
         $actor = $request->attributes->get(ResolveDiscordActor::ACTOR_ATTRIBUTE);
 
-        if (! $actor instanceof User) {
+        if ($actor !== null && ! $actor instanceof User) {
             return response()->json([
                 'error' => [
-                    'code' => 'discord_actor_missing',
-                    'message' => 'Discord actor resolution must run before idempotency handling.',
+                    'code' => 'discord_actor_invalid',
+                    'message' => 'The resolved Discord actor is invalid.',
                 ],
                 'meta' => ['contract_version' => 1],
             ], 500);

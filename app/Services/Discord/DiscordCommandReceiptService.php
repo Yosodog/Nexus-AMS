@@ -15,9 +15,10 @@ class DiscordCommandReceiptService
     /**
      * @return array{receipt: DiscordCommandReceipt|null, response: JsonResponse|null}
      */
-    public function claim(Request $request, User $actor): array
+    public function claim(Request $request, ?User $actor): array
     {
-        $interactionId = trim((string) $request->header('X-Discord-Interaction-ID'));
+        $interactionId = trim((string) ($request->attributes->get(VerifyDiscordInteraction::INTERACTION_ATTRIBUTE)
+            ?? $request->header('X-Discord-Interaction-ID')));
 
         if (preg_match('/^\d{1,32}$/', $interactionId) !== 1) {
             return ['receipt' => null, 'response' => $this->error(
@@ -32,9 +33,11 @@ class DiscordCommandReceiptService
             'connection_id' => $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE)?->connectionId,
             'connection_generation' => $request->attributes->get(VerifyDiscordInteraction::GENERATION_ATTRIBUTE),
             'relay_idempotency_key' => $request->attributes->get(VerifyDiscordInteraction::IDEMPOTENCY_ATTRIBUTE),
-            'guild_id' => trim((string) $request->header('X-Discord-Guild-ID')),
-            'discord_user_id' => trim((string) $request->header('X-Discord-User-ID')),
-            'user_id' => $actor->id,
+            'guild_id' => trim((string) ($request->attributes->get(VerifyDiscordInteraction::GUILD_ATTRIBUTE)
+                ?? $request->header('X-Discord-Guild-ID'))),
+            'discord_user_id' => trim((string) ($request->attributes->get(VerifyDiscordInteraction::USER_ATTRIBUTE)
+                ?? $request->header('X-Discord-User-ID'))),
+            'user_id' => $actor?->id,
             'method' => strtoupper($request->method()),
             'route' => $request->route()?->uri() ?? $request->path(),
             'request_hash' => $this->requestHash($request),
@@ -67,8 +70,9 @@ class DiscordCommandReceiptService
 
         if ($receipt->interaction_id !== $attributes['interaction_id']
             || $receipt->request_hash !== $attributes['request_hash']
-            || $receipt->user_id !== $actor->id
+            || $receipt->user_id !== $actor?->id
             || $receipt->guild_id !== $attributes['guild_id']
+            || $receipt->discord_user_id !== $attributes['discord_user_id']
             || $receipt->connection_id !== $attributes['connection_id']
             || $receipt->connection_generation !== $attributes['connection_generation']) {
             return ['receipt' => null, 'response' => $this->error(
@@ -108,7 +112,7 @@ class DiscordCommandReceiptService
         $body = is_array($body) ? $body : ['data' => $body];
         $body['meta'] = array_merge($body['meta'] ?? [], [
             'contract_version' => 1,
-            'idempotent_replay' => false,
+            'idempotent_replay' => (bool) ($body['meta']['idempotent_replay'] ?? false),
         ]);
 
         $receipt->forceFill([

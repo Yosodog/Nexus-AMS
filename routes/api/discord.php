@@ -50,6 +50,17 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             VerifyDiscordInteraction::class,
             EnsureDiscordInteractionCommand::class.':me',
         ]);
+    Route::post('/applications/preview', [DiscordApplicationController::class, 'preview'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':apply',
+        ]);
+    Route::post('/applications/confirm', [DiscordApplicationController::class, 'confirm'])
+        ->middleware([
+            VerifyDiscordInteraction::class,
+            EnsureDiscordInteractionCommand::class.':apply',
+            EnsureDiscordInteractionIdempotency::class,
+        ]);
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);

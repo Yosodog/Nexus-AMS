@@ -55,10 +55,16 @@ return [
         'nexus_next_public_key' => env('DISCORD_NEXUS_NEXT_PUBLIC_KEY'),
         'nexus_next_activates_at' => env('DISCORD_NEXUS_NEXT_ACTIVATES_AT'),
         'capability_version' => (int) env('DISCORD_CAPABILITY_VERSION', 1),
-        'capabilities' => array_values(array_filter(array_map(
-            'trim',
-            explode(',', (string) env('DISCORD_CAPABILITIES', '')),
-        ))),
+        'capabilities' => [
+            'capabilities' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('DISCORD_CAPABILITIES', '')),
+            ))),
+            'supported_queue_actions' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('DISCORD_SUPPORTED_QUEUE_ACTIONS', '')),
+            ))),
+        ],
         'v1_reader_enabled' => filter_var(env('DISCORD_RELAY_V1_READER_ENABLED', true), FILTER_VALIDATE_BOOL),
         'legacy_unsigned_queue_enabled' => filter_var(
             env('DISCORD_LEGACY_UNSIGNED_QUEUE_ENABLED', true),

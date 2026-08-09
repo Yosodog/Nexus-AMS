@@ -63,6 +63,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         $isDiscordActorApi = static fn (Request $request): bool => $request->is('api/v1/discord/me/*')
             || $request->is('api/v1/discord/staff/*')
+            || $request->is('api/v1/discord/applications/preview')
+            || $request->is('api/v1/discord/applications/confirm')
             || $request->is('api/v1/discord/war-counters/*')
             || $request->is('api/v1/discord/milcom/*')
             || $request->is('api/v1/discord/offshores/sweep-primary');
