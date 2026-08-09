@@ -11,8 +11,8 @@ use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomOperation;
 use App\Services\Alerts\AlertDeliveryReceiptService;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -103,7 +103,7 @@ class DiscordQueueLeaseService
                                         ->where(function (Builder $guild) use ($connection): void {
                                             $guild->whereNull('guild_id')->orWhere('guild_id', $connection->guildId);
                                         });
-                                    });
+                                });
                             });
                         })
                         ->value('id');
