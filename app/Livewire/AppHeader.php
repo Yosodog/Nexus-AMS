@@ -80,12 +80,6 @@ class AppHeader extends Component
                 'active' => request()->routeIs('user.dashboard'),
             ],
             [
-                'label' => 'Calculators',
-                'icon' => 'o-calculator',
-                'route' => route('calculators.index'),
-                'active' => request()->routeIs('calculators.*'),
-            ],
-            [
                 'label' => 'Finance',
                 'icon' => 'o-banknotes',
                 'active' => request()->routeIs('accounts*', 'member-transfers.*', 'market.*', 'lottery.*', 'loans.*'),
@@ -113,8 +107,9 @@ class AppHeader extends Component
             [
                 'label' => 'Readiness',
                 'icon' => 'o-shield-check',
-                'active' => request()->routeIs('audit.*', 'defense.counters*', 'defense.war-stats*', 'defense.simulators*'),
+                'active' => request()->routeIs('calculators.*', 'audit.*', 'defense.counters*', 'defense.war-stats*', 'defense.simulators*'),
                 'items' => [
+                    ['label' => 'Calculators', 'route' => route('calculators.index'), 'active' => request()->routeIs('calculators.*')],
                     ['label' => 'Audit recommendations', 'route' => route('audit.index'), 'active' => request()->routeIs('audit.*')],
                     ['label' => 'Counter finder', 'route' => route('defense.counters'), 'active' => request()->routeIs('defense.counters*')],
                     ['label' => 'War statistics', 'route' => route('defense.war-stats'), 'active' => request()->routeIs('defense.war-stats*')],

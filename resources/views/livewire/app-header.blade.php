@@ -233,7 +233,7 @@
                 <x-icon name="o-lifebuoy" class="size-5" />
                 <span>Aid</span>
             </a>
-            <a href="{{ route('audit.index') }}" @if(request()->routeIs('audit.*', 'defense.counters*', 'defense.war-stats*', 'defense.simulators*')) aria-current="page" @endif>
+            <a href="{{ route('audit.index') }}" @if(request()->routeIs('calculators.*', 'audit.*', 'defense.counters*', 'defense.war-stats*', 'defense.simulators*')) aria-current="page" @endif>
                 <x-icon name="o-shield-check" class="size-5" />
                 <span>Readiness</span>
             </a>
