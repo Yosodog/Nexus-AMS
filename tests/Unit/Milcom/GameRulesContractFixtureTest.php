@@ -30,14 +30,11 @@ class GameRulesContractFixtureTest extends TestCase
         }
     }
 
-    public function test_v2_cannot_be_requested_without_an_explicit_live_contract_acknowledgement(): void
+    public function test_v2_is_the_default_while_contract_verification_remains_visible(): void
     {
-        config()->set('milcom.v2_requested', true);
-        config()->set('milcom.game_rules.contract_verified', false);
-        config()->set('milcom.v2_enabled', false);
-
+        $this->assertFalse(config('milcom.v1_enabled'));
         $this->assertTrue(config('milcom.v2_requested'));
-        $this->assertFalse(config('milcom.game_rules.contract_verified'));
-        $this->assertFalse(config('milcom.v2_enabled'));
+        $this->assertTrue(config('milcom.v2_enabled'));
+        $this->assertIsBool(config('milcom.game_rules.contract_verified'));
     }
 }

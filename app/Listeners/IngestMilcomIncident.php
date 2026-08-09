@@ -13,7 +13,7 @@ class IngestMilcomIncident
 
     public function handle(WarDeclared $event): void
     {
-        if (! (bool) config('milcom.v2_enabled', false)) {
+        if (! (bool) config('milcom.v2_enabled', true)) {
             return;
         }
 

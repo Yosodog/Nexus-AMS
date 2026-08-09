@@ -35,7 +35,7 @@ class CreateCounterOnWarDeclared
 
     public function handle(WarDeclared $event): void
     {
-        if ((bool) config('milcom.v2_enabled', false)) {
+        if (! (bool) config('milcom.v1_enabled', false)) {
             return;
         }
 

@@ -221,7 +221,7 @@ final class MilitaryTimelineSource implements MemberTimelineSource
 
     private function sourceUrl(?MilcomAssignment $assignment): ?string
     {
-        if (! config('milcom.v2_enabled', false) || $assignment?->objective?->operation === null) {
+        if (! config('milcom.v2_enabled', true) || $assignment?->objective?->operation === null) {
             return null;
         }
 

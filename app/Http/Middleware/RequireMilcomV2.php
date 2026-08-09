@@ -10,7 +10,7 @@ class RequireMilcomV2
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ((bool) config('milcom.v2_enabled', false)) {
+        if ((bool) config('milcom.v2_enabled', true)) {
             return $next($request);
         }
 

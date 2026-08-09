@@ -35,6 +35,7 @@
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="MILCOM_V1_ENABLED" value="false"/>
         <env name="NEXUS_API_TOKEN" value="testing-nexus-token"/>
         <env name="PW_API_ENDPOINT" value="https://pw.test/graphql"/>
         <env name="PW_API_KEY" value="testing-pw-key"/>

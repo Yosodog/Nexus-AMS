@@ -20,6 +20,7 @@ class AdminWarPlanInformationBoundaryTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_requested', false);
         config()->set('milcom.v2_enabled', false);
     }

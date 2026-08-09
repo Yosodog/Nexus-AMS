@@ -61,6 +61,7 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_auto_pick_job_waits_for_the_war_declaration_transaction_to_commit(): void
     {
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_enabled', false);
         Queue::fake();
         SettingService::setWarCounterAutoCreationEnabled(true);
@@ -100,6 +101,7 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_counter_lock_timeout_propagates_to_the_receipt_transaction(): void
     {
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_enabled', false);
         $membershipService = Mockery::mock(AllianceMembershipService::class);
         $membershipService->shouldReceive('contains')->once()->with(999)->andReturnTrue();
@@ -121,6 +123,7 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_notification_queue_failure_does_not_roll_back_the_counter_or_receipt(): void
     {
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_enabled', false);
         cache()->forever('alliances:membership:ids', [999]);
         SettingService::setWarCounterAutoCreationEnabled(true);
@@ -147,6 +150,7 @@ class WarDeclarationRetryTest extends TestCase
 
     public function test_missing_discord_nation_data_does_not_roll_back_the_counter_or_receipt(): void
     {
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_enabled', false);
         cache()->forever('alliances:membership:ids', [999]);
         SettingService::setWarCounterAutoCreationEnabled(true);

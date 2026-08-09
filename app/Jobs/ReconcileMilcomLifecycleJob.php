@@ -33,7 +33,7 @@ class ReconcileMilcomLifecycleJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(LifecycleReconciler $lifecycle): void
     {
-        if ((bool) config('milcom.v2_enabled', false)) {
+        if ((bool) config('milcom.v2_enabled', true)) {
             $lifecycle->reconcileAll();
         }
     }

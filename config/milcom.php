@@ -1,9 +1,11 @@
 <?php
 
+$legacyV1Enabled = (bool) env('MILCOM_V1_ENABLED', false);
+
 return [
-    'v2_requested' => env('MILCOM_V2_ENABLED', false),
-    'v2_enabled' => env('MILCOM_V2_ENABLED', false)
-        && env('MILCOM_RULES_CONTRACT_VERIFIED', false),
+    'v1_enabled' => $legacyV1Enabled,
+    'v2_requested' => ! $legacyV1Enabled,
+    'v2_enabled' => ! $legacyV1Enabled,
 
     'doctrine' => [
         'version' => 'fixed-v1',

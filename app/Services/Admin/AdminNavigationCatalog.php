@@ -57,7 +57,7 @@ final class AdminNavigationCatalog
                 $this->item('lottery', 'Weekly lottery', 'o-ticket', route('admin.lottery.index'), $this->request->routeIs('admin.lottery.*'), visible: $user->canAny(['view-lottery', 'manage-lottery']), keywords: 'tickets drawing'),
             ]),
             $this->group('Defense', [
-                (bool) config('milcom.v2_enabled', false)
+                (bool) config('milcom.v2_enabled', true)
                     ? $this->item('milcom', 'Milcom', 'o-command-line', route('admin.milcom.dashboard'), $this->request->routeIs('admin.milcom.*'), visible: $user->can('manage-war-room'), keywords: 'operations assignments')
                     : $this->item('war-room', 'War room', 'o-command-line', route('admin.war-room'), $this->request->routeIs('admin.war-room', 'admin.war-plans.*', 'admin.war-counters.*'), visible: $user->can('manage-war-room'), keywords: 'plans counters'),
                 $this->item('wars', 'Wars', 'o-bolt', route('admin.wars'), $this->request->routeIs('admin.wars'), visible: $user->can('view-wars'), keywords: 'conflicts attacks'),

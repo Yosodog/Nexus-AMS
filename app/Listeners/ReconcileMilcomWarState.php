@@ -14,7 +14,7 @@ class ReconcileMilcomWarState
 
     public function handle(WarAttackRecorded|WarDeclared|WarStateChanged $event): void
     {
-        if (! (bool) config('milcom.v2_enabled', false)) {
+        if (! (bool) config('milcom.v2_enabled', true)) {
             return;
         }
 

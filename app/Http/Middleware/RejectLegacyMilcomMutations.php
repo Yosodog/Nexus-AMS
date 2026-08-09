@@ -10,7 +10,7 @@ class RejectLegacyMilcomMutations
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! (bool) config('milcom.v2_enabled', false) || ! $this->isLegacyMilcomPath($request)) {
+        if ((bool) config('milcom.v1_enabled', false) || ! $this->isLegacyMilcomPath($request)) {
             return $next($request);
         }
 

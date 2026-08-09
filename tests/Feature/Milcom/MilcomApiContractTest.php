@@ -32,6 +32,7 @@ class MilcomApiContractTest extends TestCase
     public function test_v2_api_is_unavailable_when_the_feature_flag_is_disabled(): void
     {
         $this->authenticateMilcomManager();
+        config()->set('milcom.v1_enabled', true);
         config()->set('milcom.v2_requested', false);
         config()->set('milcom.v2_enabled', false);
 
