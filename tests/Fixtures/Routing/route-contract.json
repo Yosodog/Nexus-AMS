@@ -2569,6 +2569,35 @@
     },
     {
         "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/milcom/assignments/{assignment}/response/preview",
+        "name": "api.discord.milcom.assignments.response.preview",
+        "action": "App\\Http\\Controllers\\API\\Discord\\MilcomAssignmentResponseController@preview",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/milcom/assignments/{assignment}/response/confirm",
+        "name": "api.discord.milcom.assignments.response.confirm",
+        "action": "App\\Http\\Controllers\\API\\Discord\\MilcomAssignmentResponseController@confirm",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
         "method": "GET|HEAD",
         "uri": "api/v1/discord/milcom/readiness",
         "name": "api.discord.milcom.readiness.show",

@@ -5,13 +5,6 @@ namespace Tests\Feature\API;
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
-use App\Http\Controllers\API\Discord\MilcomAssignmentResponseController;
-use App\Http\Controllers\API\Discord\MilcomProjectionController;
-use App\Http\Middleware\EnsureDiscordInteractionIdempotency;
-use App\Http\Middleware\RequireMilcomV2;
-use App\Http\Middleware\ResolveDiscordActor;
-use App\Http\Middleware\ValidateDiscordBotAPI;
-use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Models\AuditLog;
 use App\Models\DiscordAccount;
 use App\Models\DiscordActionIntent;
@@ -21,7 +14,6 @@ use App\Models\Nation;
 use App\Models\User;
 use App\Services\Discord\DiscordMilcomAssignmentResponseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\SignsDiscordInteractions;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
@@ -54,21 +46,6 @@ class DiscordMilcomAssignmentResponseApiTest extends TestCase
             'services.discord_bot_key' => 'milcom-response-test-key',
             'services.discord.guild_id' => self::GUILD_ID,
         ]);
-
-        Route::prefix('api/v1/discord/milcom')
-            ->middleware([
-                'api',
-                ValidateDiscordBotAPI::class,
-                RequireMilcomV2::class,
-                VerifyDiscordInteraction::class,
-                ResolveDiscordActor::class,
-            ])
-            ->group(function (): void {
-                Route::get('/assignments', [MilcomProjectionController::class, 'assignments']);
-                Route::post('/assignments/{assignment}/response/preview', [MilcomAssignmentResponseController::class, 'preview']);
-                Route::post('/assignments/{assignment}/response/confirm', [MilcomAssignmentResponseController::class, 'confirm'])
-                    ->middleware(EnsureDiscordInteractionIdempotency::class);
-            });
 
         $this->actorNation = Nation::factory()->create();
         $this->actor = $this->linkedUser($this->actorNation, self::ACTOR_DISCORD_ID);
