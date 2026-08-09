@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Discord;
 
+use App\Models\DiscordAssignmentResponse;
 use App\Models\MilcomAssignment;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -18,11 +19,17 @@ final class MilcomAssignmentResource extends JsonResource
         $operation = $objective->operation;
         $target = $objective->target;
         $war = $assignment->declaredWar;
+        $currentResponse = $assignment->relationLoaded('discordActorResponse')
+            ? $assignment->getRelation('discordActorResponse')
+            : null;
 
         return [
             'assignment_id' => (int) $assignment->id,
             'status' => $assignment->status->value,
             'rank' => (int) $assignment->rank,
+            'response' => $currentResponse instanceof DiscordAssignmentResponse
+                ? (new MilcomAssignmentResponseResource($currentResponse))->resolve($request)
+                : null,
             'operation' => [
                 'id' => (int) $operation->id,
                 'name' => (string) $operation->name,

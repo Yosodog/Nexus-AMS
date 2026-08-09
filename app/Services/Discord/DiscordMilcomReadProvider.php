@@ -6,6 +6,7 @@ use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\ReadinessProfile;
+use App\Models\DiscordAssignmentResponse;
 use App\Models\MilcomAssignment;
 use App\Models\MilcomObjective;
 use App\Models\MilcomReadinessSnapshot;
@@ -40,7 +41,7 @@ final readonly class DiscordMilcomReadProvider
     {
         $nationId = $this->actorNationId($actor);
 
-        return MilcomAssignment::query()
+        $assignments = MilcomAssignment::query()
             ->where('friendly_nation_id', $nationId)
             ->whereIn('status', self::CURRENT_ASSIGNMENT_STATUSES)
             ->whereHas('objective', fn ($query) => $query
@@ -69,6 +70,23 @@ final readonly class DiscordMilcomReadProvider
             )
             ->orderBy('id')
             ->get();
+
+        if ($assignments->isEmpty()) {
+            return $assignments;
+        }
+
+        $responses = DiscordAssignmentResponse::query()
+            ->where('assignment_type', DiscordMilcomAssignmentResponseService::ASSIGNMENT_TYPE)
+            ->where('user_id', $actor->id)
+            ->whereIn('assignment_id', $assignments->modelKeys())
+            ->get()
+            ->keyBy('assignment_id');
+
+        $assignments->each(function (MilcomAssignment $assignment) use ($responses): void {
+            $assignment->setRelation('discordActorResponse', $responses->get($assignment->id));
+        });
+
+        return $assignments;
     }
 
     /**
