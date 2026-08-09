@@ -24,6 +24,6 @@ abstract class MySqlIntegrationTestCase extends TestCase
                 ],
             ]),
         ]);
-        $this->artisan('migrate:fresh', ['--force' => true]);
+        $this->artisan('migrate:fresh', ['--drop-views' => true, '--force' => true]);
     }
 }
