@@ -204,6 +204,39 @@ class DiscordAlertSubscriptionApiTest extends TestCase
         $this->assertDatabaseCount('alert_subscription_events', 0);
     }
 
+    public function test_market_subscription_projection_exposes_only_typed_edit_filters(): void
+    {
+        $market = app(AlertSubscriptionService::class)->createForUser($this->actor, [
+            'type' => 'market',
+            'name' => 'Oil threshold',
+            'resource' => 'oil',
+            'direction' => 'above',
+            'threshold' => 123.45,
+            'cooldown_minutes' => 30,
+        ]);
+        $market->forceFill([
+            'config' => [
+                ...$market->config,
+                'provider_account' => 'must-not-leak',
+            ],
+        ])->save();
+
+        $response = $this->withHeaders($this->headers('929456789012345678'))
+            ->getJson('/api/v1/discord/me/alerts')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $market->id)
+            ->assertJsonPath('data.0.filter.resource', 'oil')
+            ->assertJsonPath('data.0.filter.direction', 'above')
+            ->assertJsonPath('data.0.filter.threshold', 123.45);
+
+        $this->assertSame([
+            'resource' => 'oil',
+            'direction' => 'above',
+            'threshold' => 123.45,
+        ], $response->json('data.0.filter'));
+        $this->assertStringNotContainsString('must-not-leak', $response->getContent());
+    }
+
     public function test_member_can_manage_quiet_hours_and_read_owner_scoped_activity_receipts(): void
     {
         $this->withHeaders($this->headers('934567890123456789'))

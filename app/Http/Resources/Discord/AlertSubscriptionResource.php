@@ -43,6 +43,7 @@ class AlertSubscriptionResource extends JsonResource
             'type' => $this->type->value,
             'type_label' => $this->type->label(),
             'target_id' => $this->target_id ?? ($config['target_id'] ?? null),
+            'filter' => $this->safeFilter($config),
             'events' => collect($this->eventKeys)->map(fn (string $key): array => [
                 'key' => $key,
                 'label' => AlertActivityResource::eventLabel($key),
@@ -69,6 +70,30 @@ class AlertSubscriptionResource extends JsonResource
             ],
             'deep_link_path' => route('user.alerts.index', absolute: false),
         ];
+    }
+
+    /** @param array<string, mixed> $config
+     * @return array{target_id: int|null}|array{resource: string|null, direction: string|null, threshold: float|null}
+     */
+    private function safeFilter(array $config): array
+    {
+        if ($this->type->value === 'market') {
+            $resource = $config['resource'] ?? null;
+            $direction = $config['direction'] ?? null;
+            $threshold = $config['threshold'] ?? null;
+
+            return [
+                'resource' => is_string($resource) && $resource !== '' ? $resource : null,
+                'direction' => is_string($direction) && in_array($direction, ['above', 'below'], true)
+                    ? $direction
+                    : null,
+                'threshold' => is_numeric($threshold) ? (float) $threshold : null,
+            ];
+        }
+
+        $targetId = $this->target_id ?? ($config['target_id'] ?? null);
+
+        return ['target_id' => is_numeric($targetId) ? (int) $targetId : null];
     }
 
     private function deliveryHealth(): string
