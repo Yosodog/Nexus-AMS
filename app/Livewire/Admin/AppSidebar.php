@@ -30,7 +30,6 @@ class AppSidebar extends Component
         $systemNavigation = $groups->firstWhere('area', 'system');
         $quickAccessItems = $groups
             ->flatMap(fn (array $group): array => $group['items'])
-            ->reject(fn (array $item): bool => in_array($item['id'], ['overview', 'work-queue'], true))
             ->values()
             ->all();
 

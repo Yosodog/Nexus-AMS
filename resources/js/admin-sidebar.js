@@ -1,12 +1,14 @@
 import {
+    FAVORITE_LIMIT_MESSAGE,
     FAVORITES_KEY,
     NAVIGATION_STATE_EVENT,
     RECENTS_KEY,
-    quickAccessEntries,
+    favoriteNavigationIds,
+    readFavoriteNavigationIds,
     recordRecentNavigationId,
+    toggleFavoriteNavigationId,
 } from './admin-navigation-state';
 
-const MAX_QUICK_ACCESS = 5;
 const MOBILE_BREAKPOINT = '(max-width: 63.999rem)';
 let globalListenersBound = false;
 
@@ -24,21 +26,12 @@ function renderQuickAccess(root) {
         template.dataset.adminQuickAccessTemplate,
         template,
     ]));
-    const entries = quickAccessEntries(new Set(templatesById.keys()), MAX_QUICK_ACCESS);
-    const items = entries.map(({ id, context }) => {
+    const favoriteIds = favoriteNavigationIds(new Set(templatesById.keys()));
+    const items = favoriteIds.map((id) => {
         const item = templatesById.get(id)?.content.firstElementChild?.cloneNode(true);
 
         if (!(item instanceof HTMLElement)) {
             return null;
-        }
-
-        const favoriteContext = item.querySelector('[data-admin-quick-access-favorite]');
-        const recentContext = item.querySelector('[data-admin-quick-access-recent]');
-        if (favoriteContext instanceof HTMLElement) {
-            favoriteContext.hidden = context !== 'favorite';
-        }
-        if (recentContext instanceof HTMLElement) {
-            recentContext.hidden = context !== 'recent';
         }
 
         return item;
@@ -47,6 +40,50 @@ function renderQuickAccess(root) {
     list.replaceChildren(...items);
     empty.hidden = items.length > 0;
     region.hidden = false;
+}
+
+function syncPinControls(root) {
+    const favoriteIds = new Set(readFavoriteNavigationIds());
+
+    root.querySelectorAll('[data-admin-pin-navigation]').forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const id = button.dataset.adminPinNavigation;
+        const label = button.dataset.adminPinLabel;
+        const isPinned = favoriteIds.has(id);
+        const action = isPinned ? 'Unpin' : 'Pin';
+
+        button.classList.toggle('is-pinned', isPinned);
+        button.setAttribute('aria-pressed', String(isPinned));
+        button.setAttribute('aria-label', `${action} ${label}`);
+        button.title = `${action} ${label}`;
+    });
+}
+
+function togglePinnedNavigation(root, button) {
+    const id = button.dataset.adminPinNavigation;
+    const label = button.dataset.adminPinLabel;
+
+    if (!id || !label) {
+        return;
+    }
+
+    const result = toggleFavoriteNavigationId(id);
+    const limitStatus = root.querySelector('[data-admin-pin-limit-status]');
+
+    const status = root.querySelector('[data-admin-pin-status]');
+    if (status instanceof HTMLElement) {
+        status.textContent = result.outcome === 'limit'
+            ? FAVORITE_LIMIT_MESSAGE
+            : `${label} ${result.outcome === 'removed' ? 'unpinned' : 'pinned'}.`;
+    }
+
+    if (limitStatus instanceof HTMLElement) {
+        limitStatus.textContent = result.outcome === 'limit' ? FAVORITE_LIMIT_MESSAGE : '';
+        limitStatus.hidden = result.outcome !== 'limit';
+    }
 }
 
 function closeMobileDrawer(root) {
@@ -60,45 +97,40 @@ function closeMobileDrawer(root) {
     }
 }
 
-function enhanceDepartmentAccordions(root) {
-    const departments = [...root.querySelectorAll('[data-admin-department]')];
+function enhanceNavigationSections(root) {
+    const sections = [...root.querySelectorAll('[data-admin-navigation-section]')];
 
-    departments.forEach((department) => {
-        if (!(department instanceof HTMLDetailsElement) || department.dataset.adminDepartmentReady === 'true') {
+    sections.forEach((section) => {
+        if (!(section instanceof HTMLDetailsElement) || section.dataset.adminNavigationSectionReady === 'true') {
             return;
         }
 
-        department.dataset.adminDepartmentReady = 'true';
-        const summary = department.querySelector(':scope > summary');
+        section.dataset.adminNavigationSectionReady = 'true';
+        const summary = section.querySelector(':scope > summary');
 
         const syncExpandedState = () => {
-            summary?.setAttribute('aria-expanded', String(department.open));
+            summary?.setAttribute('aria-expanded', String(section.open));
         };
 
         syncExpandedState();
-        department.addEventListener('toggle', () => {
-            syncExpandedState();
-
-            if (!department.open) {
-                return;
-            }
-
-            departments.forEach((otherDepartment) => {
-                if (otherDepartment !== department && otherDepartment instanceof HTMLDetailsElement) {
-                    otherDepartment.open = false;
-                }
-            });
-        });
+        section.addEventListener('toggle', syncExpandedState);
     });
 }
 
 function enhanceSidebar(root) {
     if (root.dataset.adminNavigationReady !== 'true') {
         root.dataset.adminNavigationReady = 'true';
-        enhanceDepartmentAccordions(root);
+        enhanceNavigationSections(root);
 
         root.addEventListener('click', (event) => {
             if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const pinButton = event.target.closest('[data-admin-pin-navigation]');
+            if (pinButton instanceof HTMLButtonElement) {
+                togglePinnedNavigation(root, pinButton);
+
                 return;
             }
 
@@ -113,6 +145,7 @@ function enhanceSidebar(root) {
     }
 
     renderQuickAccess(root);
+    syncPinControls(root);
 }
 
 function bindGlobalListeners() {

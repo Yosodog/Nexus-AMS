@@ -57,6 +57,18 @@ class AdminSidebarNavigationTest extends TestCase
             'alliance-market',
             'lottery',
         ], collect($groups->firstWhere('id', 'economics')['items'])->pluck('id')->all());
+        $this->assertSame(
+            ['Programs & funding', 'Treasury', 'Commerce & rewards'],
+            collect($groups->firstWhere('id', 'economics')['sections'])->pluck('label')->all(),
+        );
+        $this->assertSame(
+            ['accounts', 'taxes', 'offshores', 'finance-ledger', 'payroll'],
+            collect($groups->firstWhere('id', 'economics')['sections'][1]['items'])->pluck('id')->all(),
+        );
+        $this->assertSame(
+            ['alliance-market', 'lottery'],
+            collect($groups->firstWhere('id', 'economics')['sections'][2]['items'])->pluck('id')->all(),
+        );
         $this->assertSame([
             'milcom',
             'wars',
@@ -67,6 +79,10 @@ class AdminSidebarNavigationTest extends TestCase
             'beige-alerts',
             'mmr',
         ], collect($groups->firstWhere('id', 'defense')['items'])->pluck('id')->all());
+        $this->assertSame(
+            ['Operations', 'Member support', 'Targets & readiness'],
+            collect($groups->firstWhere('id', 'defense')['sections'])->pluck('label')->all(),
+        );
         $this->assertSame([
             'applications',
             'recruitment',
@@ -74,6 +90,10 @@ class AdminSidebarNavigationTest extends TestCase
             'cities',
             'audits',
         ], collect($groups->firstWhere('id', 'internal-affairs')['items'])->pluck('id')->all());
+        $this->assertSame(
+            ['Membership', 'Governance & compliance'],
+            collect($groups->firstWhere('id', 'internal-affairs')['sections'])->pluck('label')->all(),
+        );
         $this->assertSame([
             'users',
             'roles',
@@ -85,6 +105,11 @@ class AdminSidebarNavigationTest extends TestCase
             'pulse',
             'log-viewer',
         ], collect($groups->firstWhere('id', 'system')['items'])->pluck('id')->all());
+        $this->assertSame('Administration', $groups->firstWhere('id', 'system')['label']);
+        $this->assertSame(
+            ['Access control', 'Configuration', 'Diagnostics'],
+            collect($groups->firstWhere('id', 'system')['sections'])->pluck('label')->all(),
+        );
         $this->assertSame(25, $groups->firstWhere('id', 'economics')['badge']);
         $this->assertSame(27, $groups->firstWhere('id', 'defense')['badge']);
         $this->assertSame(13, $groups->firstWhere('id', 'internal-affairs')['badge']);
@@ -110,6 +135,8 @@ class AdminSidebarNavigationTest extends TestCase
         $this->assertTrue($groups->firstWhere('id', 'economics')['active']);
         $this->assertFalse($groups->firstWhere('id', 'workspace')['active']);
         $this->assertSame(['loans'], collect($groups->firstWhere('id', 'economics')['items'])->pluck('id')->all());
+        $this->assertSame(['Programs & funding'], collect($groups->firstWhere('id', 'economics')['sections'])->pluck('label')->all());
+        $this->assertTrue($groups->firstWhere('id', 'economics')['sections'][0]['active']);
 
         $settingsRoute = new Route(['GET'], 'admin/settings/public-site', fn () => null);
         $settingsRoute->name('admin.settings.public-site');
@@ -119,7 +146,7 @@ class AdminSidebarNavigationTest extends TestCase
         $this->assertTrue($settingsGroups->firstWhere('id', 'system')['active']);
     }
 
-    public function test_sidebar_renders_accessible_disclosures_and_permission_scoped_quick_access_templates(): void
+    public function test_sidebar_renders_department_categories_and_direct_pin_controls(): void
     {
         $admin = $this->createAdmin(['view-loans', 'manage-loans']);
         $this->mock(PendingRequestsService::class, function (MockInterface $mock): void {
@@ -138,10 +165,14 @@ class AdminSidebarNavigationTest extends TestCase
             ->assertSee('data-admin-navigation-id="work-queue"', false)
             ->assertSee('data-admin-department="economics"', false)
             ->assertSee('data-admin-department-count="2"', false)
-            ->assertSee('aria-controls="admin-nav-department-economics"', false)
+            ->assertSee('aria-labelledby="admin-nav-department-economics"', false)
+            ->assertSee('data-admin-navigation-section="economics.programs-funding"', false)
+            ->assertSee('aria-controls="admin-nav-section-economics-programs-funding"', false)
             ->assertSee('aria-expanded="false"', false)
             ->assertSee('data-admin-quick-access-template="loans"', false)
+            ->assertSee('data-admin-pin-navigation="loans"', false)
             ->assertDontSee('data-admin-quick-access-template="members"', false)
+            ->assertDontSee('Alliance departments')
             ->assertDontSee('Foreign Affairs');
     }
 

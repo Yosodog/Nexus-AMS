@@ -46,6 +46,15 @@
 
         <p class="sr-only" data-command-palette-status role="status" aria-live="polite" aria-atomic="true"></p>
 
+        <p
+            class="admin-pin-limit-message"
+            data-command-pin-limit-status
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            hidden
+        ></p>
+
         <div class="command-palette__results" data-command-palette-results aria-busy="false">
             <ul id="admin-command-palette-results" class="command-palette__list" role="listbox" aria-label="Command results">
                 @foreach($commands as $index => $command)

@@ -3,38 +3,39 @@ import { expect, test } from '@playwright/test';
 const favoritesKey = 'nexus.admin.command-palette.favorites.v1';
 const recentsKey = 'nexus.admin.command-palette.recents.v1';
 
-test('department navigation opens the active area and keeps one disclosure open', async ({ page }) => {
+test('department navigation exposes category disclosures and opens the active category', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/finance');
 
   const navigation = page.getByRole('navigation', { name: 'Administrative navigation' });
-  const economics = navigation.locator('details[data-admin-department="economics"]');
-  const defense = navigation.locator('details[data-admin-department="defense"]');
+  const economics = navigation.locator('[data-admin-department="economics"]');
+  const treasury = navigation.locator('details[data-admin-navigation-section="economics.treasury"]');
+  const defenseOperations = navigation.locator('details[data-admin-navigation-section="defense.operations"]');
 
   await expect(navigation.getByRole('button', { name: 'Search permitted staff tools' })).toBeVisible();
   await expect(navigation.getByRole('link', { name: /^Work queue/ })).toBeVisible();
-  await expect(economics).toHaveAttribute('open', '');
-  await expect(economics.locator('summary')).toHaveAttribute('aria-expanded', 'true');
-  await expect(defense).not.toHaveAttribute('open', '');
+  await expect(economics.getByRole('heading', { name: 'Economics' })).toBeVisible();
+  await expect(navigation.getByText('Alliance departments', { exact: true })).toHaveCount(0);
+  await expect(treasury).toHaveAttribute('open', '');
+  await expect(treasury.locator('summary')).toHaveAttribute('aria-expanded', 'true');
+  await expect(defenseOperations).not.toHaveAttribute('open', '');
 
-  await defense.locator('summary').click();
-  await expect(defense).toHaveAttribute('open', '');
-  await expect(defense.locator('summary')).toHaveAttribute('aria-expanded', 'true');
-  await expect(economics).not.toHaveAttribute('open', '');
-  await expect(economics.locator('summary')).toHaveAttribute('aria-expanded', 'false');
+  await defenseOperations.locator('summary').click();
+  await expect(defenseOperations).toHaveAttribute('open', '');
+  await expect(defenseOperations.locator('summary')).toHaveAttribute('aria-expanded', 'true');
+  await expect(treasury).toHaveAttribute('open', '');
 });
 
-test('quick access shows at most five permitted favorites and recents', async ({ page }) => {
+test('pinned shortcuts show at most five permitted favorites and ignore recents', async ({ page }) => {
   await page.addInitScript(({ favoritesKey: storedFavoritesKey, recentsKey: storedRecentsKey }) => {
     window.localStorage.setItem(storedFavoritesKey, JSON.stringify([
       'members',
       'grants-workspace',
       'finance-ledger',
       'war-support',
-    ]));
-    window.localStorage.setItem(storedRecentsKey, JSON.stringify([
-      'finance-ledger',
       'loans',
       'audits',
+    ]));
+    window.localStorage.setItem(storedRecentsKey, JSON.stringify([
       'roles',
     ]));
   }, { favoritesKey, recentsKey });
@@ -51,6 +52,9 @@ test('quick access shows at most five permitted favorites and recents', async ({
   await expect(quickLinks.nth(3)).toHaveAttribute('data-admin-navigation-id', 'war-aid');
   await expect(quickLinks.nth(4)).toHaveAttribute('data-admin-navigation-id', 'loans');
   await expect(quickAccess.locator('[data-admin-navigation-id="audits"]')).toHaveCount(0);
+  await expect(quickAccess.locator('[data-admin-navigation-id="roles"]')).toHaveCount(0);
+  await expect.poll(() => page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]'), favoritesKey))
+    .toEqual(['members', 'grant-programs', 'finance-ledger', 'war-aid', 'loans']);
 });
 
 test('favorite changes in the command palette update quick access without a reload', async ({ page }) => {
@@ -64,7 +68,42 @@ test('favorite changes in the command palette update quick access without a relo
 
   const quickAccess = page.locator('[data-admin-quick-access]');
   await expect(quickAccess.locator('[data-admin-navigation-id="finance-ledger"]')).toBeVisible();
-  await expect(quickAccess.locator('[data-admin-quick-access-favorite]:not([hidden])')).toHaveCount(1);
+  await expect(quickAccess.getByRole('button', { name: 'Unpin Finance ledger' })).toBeVisible();
+});
+
+test('links can be pinned and unpinned directly from the sidebar', async ({ page }) => {
+  await page.goto('/_browser/login/admin?redirect=/admin/finance');
+
+  const treasury = page.locator('[data-admin-navigation-section="economics.treasury"]');
+  await treasury.getByRole('button', { name: 'Pin Finance ledger' }).click();
+
+  const quickAccess = page.locator('[data-admin-quick-access]');
+  await expect(quickAccess.locator('[data-admin-navigation-id="finance-ledger"]')).toBeVisible();
+  await expect(treasury.getByRole('button', { name: 'Unpin Finance ledger' })).toHaveAttribute('aria-pressed', 'true');
+
+  await quickAccess.getByRole('button', { name: 'Unpin Finance ledger' }).click();
+  await expect(quickAccess.locator('[data-admin-navigation-id="finance-ledger"]')).toHaveCount(0);
+  await expect(treasury.getByRole('button', { name: 'Pin Finance ledger' })).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('sidebar warns and preserves existing pins when the five-pin limit is reached', async ({ page }) => {
+  const pinnedIds = ['members', 'grant-programs', 'finance-ledger', 'war-aid', 'loans'];
+  await page.addInitScript(({ favoritesKey: storedFavoritesKey, pinnedIds: storedPinnedIds }) => {
+    window.localStorage.setItem(storedFavoritesKey, JSON.stringify(storedPinnedIds));
+  }, { favoritesKey, pinnedIds });
+
+  await page.goto('/_browser/login/admin?redirect=/admin');
+
+  const navigation = page.getByRole('navigation', { name: 'Administrative navigation' });
+  await navigation.getByRole('button', { name: 'Pin Overview' }).click();
+
+  const warning = navigation.locator('[data-admin-pin-limit-status]');
+  await expect(warning).toBeVisible();
+  await expect(warning).toHaveText('You can pin up to 5 links. Unpin one before adding another.');
+  await expect(navigation.getByRole('button', { name: 'Pin Overview' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-admin-quick-access] [data-admin-navigation-id]')).toHaveCount(5);
+  await expect.poll(() => page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]'), favoritesKey))
+    .toEqual(pinnedIds);
 });
 
 test('quick access never exposes destinations outside the current permissions', async ({ page }) => {
@@ -87,12 +126,12 @@ test('collapsed department controls expand the desktop sidebar before disclosure
   await collapseControl.click();
   await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBe(62);
 
-  const defense = page.locator('details[data-admin-department="defense"]');
-  await defense.locator('summary').click();
+  const defenseOperations = page.locator('details[data-admin-navigation-section="defense.operations"]');
+  await defenseOperations.locator('summary').click();
 
   await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBe(270);
-  await expect(defense).toHaveAttribute('open', '');
-  await expect(defense.locator('summary')).toBeFocused();
+  await expect(defenseOperations).toHaveAttribute('open', '');
+  await expect(defenseOperations.locator('summary')).toBeFocused();
 });
 
 test('mobile destination clicks close the admin drawer', async ({ page }) => {

@@ -22,7 +22,8 @@ final class AdminNavigationCatalog
      *     area: string,
      *     active: bool,
      *     badge: int|null,
-     *     items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>
+     *     items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>,
+     *     sections: list<array{id: string, label: string, icon: string, active: bool, badge: int|null, items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>}>
      * }>
      */
     public function groups(User $user, array $pendingCounts = []): array
@@ -44,13 +45,17 @@ final class AdminNavigationCatalog
                 $this->item('grant-programs', 'Grant programs', 'o-gift', route('admin.grants'), $this->request->route()?->getName() === 'admin.grants', $pendingCounts['grants'] ?? 0, $user->can('view-grants'), 'funding requirements', 'Programs & funding'),
                 $this->item('growth-circles', 'Growth Circles', 'o-arrow-trending-up', route('admin.growth-circles.index'), $this->request->routeIs('admin.growth-circles.*'), visible: $user->can('view-growth-circles'), keywords: 'program enrollment', section: 'Programs & funding'),
                 $this->item('loans', 'Loans', 'o-banknotes', route('admin.loans'), $this->request->routeIs('admin.loans*'), $pendingCounts['loans'] ?? 0, $user->can('view-loans'), 'applications repayment', 'Programs & funding'),
-                $this->item('accounts', 'Accounts', 'o-building-library', route('admin.accounts.dashboard'), $this->request->routeIs('admin.accounts.*', 'admin.withdrawals.*'), $accountPending, $user->can('view-accounts'), 'bank balances withdrawals transfers', 'Treasury & commerce'),
-                $this->item('taxes', 'Taxes', 'o-receipt-percent', route('admin.taxes'), $this->request->routeIs('admin.taxes'), visible: $user->can('view-taxes'), keywords: 'revenue rates', section: 'Treasury & commerce'),
-                $this->item('offshores', 'Offshores', 'o-globe-alt', route('admin.offshores.index'), $this->request->routeIs('admin.offshores.*'), visible: $user->can('view-offshores'), keywords: 'banks transfers', section: 'Treasury & commerce'),
-                $this->item('finance-ledger', 'Finance ledger', 'o-book-open', route('admin.finance.index'), $this->request->routeIs('admin.finance.*'), visible: $user->can('view-financial-reports'), keywords: 'transactions reports', section: 'Treasury & commerce'),
-                $this->item('payroll', 'Payroll', 'o-currency-dollar', route('admin.payroll.index'), $this->request->routeIs('admin.payroll.*'), visible: $user->can('view_payroll'), keywords: 'salary grades', section: 'Treasury & commerce'),
-                $this->item('alliance-market', 'Alliance market', 'o-shopping-bag', route('admin.market.index'), $this->request->routeIs('admin.market.*'), visible: $user->can('view-market'), keywords: 'resources trades', section: 'Treasury & commerce'),
-                $this->item('lottery', 'Weekly lottery', 'o-ticket', route('admin.lottery.index'), $this->request->routeIs('admin.lottery.*'), visible: $user->canAny(['view-lottery', 'manage-lottery']), keywords: 'tickets drawing', section: 'Treasury & commerce'),
+                $this->item('accounts', 'Accounts', 'o-building-library', route('admin.accounts.dashboard'), $this->request->routeIs('admin.accounts.*', 'admin.withdrawals.*'), $accountPending, $user->can('view-accounts'), 'bank balances withdrawals transfers', 'Treasury'),
+                $this->item('taxes', 'Taxes', 'o-receipt-percent', route('admin.taxes'), $this->request->routeIs('admin.taxes'), visible: $user->can('view-taxes'), keywords: 'revenue rates', section: 'Treasury'),
+                $this->item('offshores', 'Offshores', 'o-globe-alt', route('admin.offshores.index'), $this->request->routeIs('admin.offshores.*'), visible: $user->can('view-offshores'), keywords: 'banks transfers', section: 'Treasury'),
+                $this->item('finance-ledger', 'Finance ledger', 'o-book-open', route('admin.finance.index'), $this->request->routeIs('admin.finance.*'), visible: $user->can('view-financial-reports'), keywords: 'transactions reports', section: 'Treasury'),
+                $this->item('payroll', 'Payroll', 'o-currency-dollar', route('admin.payroll.index'), $this->request->routeIs('admin.payroll.*'), visible: $user->can('view_payroll'), keywords: 'salary grades', section: 'Treasury'),
+                $this->item('alliance-market', 'Alliance market', 'o-shopping-bag', route('admin.market.index'), $this->request->routeIs('admin.market.*'), visible: $user->can('view-market'), keywords: 'resources trades', section: 'Commerce & rewards'),
+                $this->item('lottery', 'Weekly lottery', 'o-ticket', route('admin.lottery.index'), $this->request->routeIs('admin.lottery.*'), visible: $user->canAny(['view-lottery', 'manage-lottery']), keywords: 'tickets drawing', section: 'Commerce & rewards'),
+            ], sectionIcons: [
+                'Programs & funding' => 'o-gift',
+                'Treasury' => 'o-building-library',
+                'Commerce & rewards' => 'o-shopping-bag',
             ]),
             $this->group('defense', 'Defense', 'o-shield-check', 'department', [
                 (bool) config('milcom.v2_enabled', true)
@@ -63,15 +68,22 @@ final class AdminNavigationCatalog
                 $this->item('raids', 'Raids', 'o-arrow-trending-up', route('admin.raids.index'), $this->request->routeIs('admin.raids.*'), visible: $user->can('view-raids'), keywords: 'targets performance', section: 'Targets & readiness'),
                 $this->item('beige-alerts', 'Beige alerts', 'o-bell-alert', route('admin.beige-alerts.index'), $this->request->routeIs('admin.beige-alerts.*'), visible: $user->can('view-raids'), keywords: 'targets notifications', section: 'Targets & readiness'),
                 $this->item('mmr', 'MMR', 'o-shield-exclamation', route('admin.mmr.index'), $this->request->routeIs('admin.mmr.*'), visible: $user->can('view-mmr'), keywords: 'military readiness', section: 'Targets & readiness'),
-            ], badge: $defensePending),
+            ], badge: $defensePending, sectionIcons: [
+                'Operations' => 'o-command-line',
+                'Member support' => 'o-heart',
+                'Targets & readiness' => 'o-shield-exclamation',
+            ]),
             $this->group('internal-affairs', 'Internal Affairs', 'o-users', 'department', [
                 $this->item('applications', 'Applications', 'o-document-text', route('admin.applications.index'), $this->request->routeIs('admin.applications.*'), $pendingCounts['applications'] ?? 0, $user->can('view-applications'), 'recruitment decisions', 'Membership'),
                 $this->item('recruitment', 'Recruitment', 'o-envelope', route('admin.recruitment.index'), $this->request->routeIs('admin.recruitment.*'), visible: $user->can('view-recruitment'), keywords: 'prospects messages', section: 'Membership'),
                 $this->item('members', 'Members', 'o-users', route('admin.members'), $this->request->routeIs('admin.members*'), visible: $user->can('view-members'), keywords: 'nations leaders', section: 'Membership'),
                 $this->item('cities', 'Cities', 'o-building-office-2', route('admin.cities.index'), $this->request->routeIs('admin.cities.*'), visible: $user->can('view-members'), keywords: 'infrastructure land', section: 'Membership'),
-                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation', 'Governance'),
+                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation', 'Governance & compliance'),
+            ], sectionIcons: [
+                'Membership' => 'o-users',
+                'Governance & compliance' => 'o-shield-check',
             ]),
-            $this->group('system', 'System & Administration', 'o-adjustments-horizontal', 'system', [
+            $this->group('system', 'Administration', 'o-adjustments-horizontal', 'system', [
                 $this->item('users', 'Users', 'o-user-group', route('admin.users.index'), $this->request->routeIs('admin.users.*'), visible: $user->can('view-users'), keywords: 'accounts login', section: 'Access control'),
                 $this->item('roles', 'Roles', 'o-identification', route('admin.roles.index'), $this->request->routeIs('admin.roles.*'), visible: $user->can('view-roles'), keywords: 'permissions access', section: 'Access control'),
                 $this->item('settings', 'Settings', 'o-adjustments-horizontal', route('admin.settings'), $this->request->routeIs('admin.settings', 'admin.settings.*'), visible: $user->canAny((array) config('admin-settings.access_permissions')), keywords: 'configuration', section: 'Configuration'),
@@ -81,6 +93,10 @@ final class AdminNavigationCatalog
                 $this->item('telescope', 'Telescope', 'o-bug-ant', url('/telescope'), $this->request->is('telescope*'), visible: $user->can('view-diagnostic-info'), keywords: 'debug requests jobs', section: 'Diagnostics'),
                 $this->item('pulse', 'Pulse', 'o-signal', url('/pulse'), $this->request->is('pulse*'), visible: $user->can('view-diagnostic-info'), keywords: 'performance metrics', section: 'Diagnostics'),
                 $this->item('log-viewer', 'Log viewer', 'o-document-magnifying-glass', url('/log-viewer'), $this->request->is('log-viewer*'), visible: $user->is_admin && $user->can('view-application-logs'), keywords: 'errors diagnostics', section: 'Diagnostics'),
+            ], sectionIcons: [
+                'Access control' => 'o-user-group',
+                'Configuration' => 'o-adjustments-horizontal',
+                'Diagnostics' => 'o-signal',
             ]),
         ]));
     }
@@ -108,7 +124,8 @@ final class AdminNavigationCatalog
 
     /**
      * @param  list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}|null>  $items
-     * @return array{id: string, label: string, icon: string, area: string, active: bool, badge: int|null, items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>}|null
+     * @param  array<string, string>  $sectionIcons
+     * @return array{id: string, label: string, icon: string, area: string, active: bool, badge: int|null, items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>, sections: list<array{id: string, label: string, icon: string, active: bool, badge: int|null, items: list<array{id: string, label: string, icon: string, route: string, active: bool, badge: int|null, keywords: string, section: string}>}>}|null
      */
     private function group(
         string $id,
@@ -117,6 +134,7 @@ final class AdminNavigationCatalog
         string $area,
         array $items,
         ?int $badge = null,
+        array $sectionIcons = [],
     ): ?array {
         $visibleItems = array_values(array_filter($items));
 
@@ -125,6 +143,23 @@ final class AdminNavigationCatalog
         }
 
         $aggregateBadge = $badge ?? array_sum(array_column($visibleItems, 'badge'));
+        $sections = collect($visibleItems)
+            ->groupBy('section')
+            ->map(function ($sectionItems, $sectionLabel) use ($id, $icon, $sectionIcons): array {
+                $sectionItems = $sectionItems->values();
+                $sectionBadge = (int) $sectionItems->sum('badge');
+
+                return [
+                    'id' => (string) str($sectionLabel !== '' ? $sectionLabel : $id)->slug(),
+                    'label' => $sectionLabel,
+                    'icon' => $sectionIcons[$sectionLabel] ?? $icon,
+                    'active' => $sectionItems->contains('active', true),
+                    'badge' => $sectionBadge > 0 ? $sectionBadge : null,
+                    'items' => $sectionItems->all(),
+                ];
+            })
+            ->values()
+            ->all();
 
         return [
             'id' => $id,
@@ -134,6 +169,7 @@ final class AdminNavigationCatalog
             'active' => collect($visibleItems)->contains('active', true),
             'badge' => $aggregateBadge > 0 ? $aggregateBadge : null,
             'items' => $visibleItems,
+            'sections' => $sections,
         ];
     }
 

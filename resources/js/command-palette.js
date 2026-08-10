@@ -1,8 +1,10 @@
 import {
-    FAVORITES_KEY,
+    FAVORITE_LIMIT_MESSAGE,
     MAX_RECENTS,
     RECENTS_KEY,
+    readFavoriteNavigationIds,
     readNavigationIds,
+    toggleFavoriteNavigationId,
     writeNavigationIds,
 } from './admin-navigation-state';
 
@@ -55,13 +57,14 @@ function enhancePalette(dialog) {
     const input = dialog.querySelector('[data-command-palette-input]');
     const list = dialog.querySelector('[data-command-palette-results]');
     const status = dialog.querySelector('[data-command-palette-status]');
+    const pinLimitStatus = dialog.querySelector('[data-command-pin-limit-status]');
     const empty = dialog.querySelector('[data-command-palette-empty]');
     const error = dialog.querySelector('[data-command-palette-error]');
     const resultsRegion = dialog.querySelector('.command-palette__results');
     const commandItems = [...dialog.querySelectorAll('[data-command-item]')];
     const allowedIds = new Set(commandItems.map((item) => item.dataset.commandId));
     const entitySearchUrl = dialog.dataset.entitySearchUrl;
-    let favorites = readNavigationIds(FAVORITES_KEY).filter((id) => allowedIds.has(id));
+    let favorites = readFavoriteNavigationIds().filter((id) => allowedIds.has(id));
     let recents = readNavigationIds(RECENTS_KEY).filter((id) => allowedIds.has(id));
     let requestController = null;
     let searchTimer = null;
@@ -198,6 +201,7 @@ function enhancePalette(dialog) {
         }
         input.value = '';
         error.hidden = true;
+        pinLimitStatus.hidden = true;
         clearEntities();
         renderCommands();
         updateEmpty();
@@ -259,13 +263,22 @@ function enhancePalette(dialog) {
         if (favoriteButton) {
             const item = favoriteButton.closest('[data-command-item]');
             const id = item.dataset.commandId;
-            favorites = favorites.includes(id)
-                ? favorites.filter((favoriteId) => favoriteId !== id)
-                : [id, ...favorites];
-            writeNavigationIds(FAVORITES_KEY, favorites);
+            const result = toggleFavoriteNavigationId(id);
+            favorites = result.favoriteIds.filter((favoriteId) => allowedIds.has(favoriteId));
+
+            if (result.outcome === 'limit') {
+                pinLimitStatus.textContent = FAVORITE_LIMIT_MESSAGE;
+                pinLimitStatus.hidden = false;
+                favoriteButton.focus();
+                announce(FAVORITE_LIMIT_MESSAGE);
+
+                return;
+            }
+
+            pinLimitStatus.hidden = true;
             renderCommands(input.value);
             favoriteButton.focus();
-            announce(favorites.includes(id) ? 'Command added to favorites.' : 'Command removed from favorites.');
+            announce(result.outcome === 'added' ? 'Command added to favorites.' : 'Command removed from favorites.');
             return;
         }
 

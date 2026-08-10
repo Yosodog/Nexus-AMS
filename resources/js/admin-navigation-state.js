@@ -1,6 +1,8 @@
 export const FAVORITES_KEY = 'nexus.admin.command-palette.favorites.v1';
 export const RECENTS_KEY = 'nexus.admin.command-palette.recents.v1';
+export const MAX_FAVORITES = 5;
 export const MAX_RECENTS = 8;
+export const FAVORITE_LIMIT_MESSAGE = `You can pin up to ${MAX_FAVORITES} links. Unpin one before adding another.`;
 export const NAVIGATION_STATE_EVENT = 'nexus:admin-navigation-state-changed';
 
 const LEGACY_NAVIGATION_IDS = new Map([
@@ -51,23 +53,42 @@ export function recordRecentNavigationId(id) {
     return writeNavigationIds(RECENTS_KEY, recents);
 }
 
-export function quickAccessEntries(allowedIds, limit = 5) {
-    const entries = [];
-    const includedIds = new Set();
+export function readFavoriteNavigationIds() {
+    const favoriteIds = readNavigationIds(FAVORITES_KEY);
 
-    const addEntries = (ids, context) => {
-        ids.forEach((id) => {
-            if (entries.length >= limit || includedIds.has(id) || !allowedIds.has(id)) {
-                return;
-            }
+    return favoriteIds.length > MAX_FAVORITES
+        ? writeNavigationIds(FAVORITES_KEY, favoriteIds.slice(0, MAX_FAVORITES))
+        : favoriteIds;
+}
 
-            entries.push({ id, context });
-            includedIds.add(id);
-        });
+export function toggleFavoriteNavigationId(id) {
+    const favoriteIds = readFavoriteNavigationIds();
+
+    if (typeof id !== 'string' || id === '') {
+        return { favoriteIds, outcome: 'invalid' };
+    }
+
+    if (favoriteIds.includes(id)) {
+        const nextFavoriteIds = favoriteIds.filter((favoriteId) => favoriteId !== id);
+
+        return {
+            favoriteIds: writeNavigationIds(FAVORITES_KEY, nextFavoriteIds),
+            outcome: 'removed',
+        };
+    }
+
+    if (favoriteIds.length >= MAX_FAVORITES) {
+        return { favoriteIds, outcome: 'limit' };
+    }
+
+    return {
+        favoriteIds: writeNavigationIds(FAVORITES_KEY, [id, ...favoriteIds]),
+        outcome: 'added',
     };
+}
 
-    addEntries(readNavigationIds(FAVORITES_KEY), 'favorite');
-    addEntries(readNavigationIds(RECENTS_KEY), 'recent');
-
-    return entries;
+export function favoriteNavigationIds(allowedIds) {
+    return readFavoriteNavigationIds()
+        .filter((id) => allowedIds.has(id))
+        .slice(0, MAX_FAVORITES);
 }

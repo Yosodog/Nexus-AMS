@@ -12,6 +12,8 @@
         </span>
     </a>
 
+    <p class="sr-only" data-admin-pin-status role="status" aria-live="polite" aria-atomic="true"></p>
+
     <div class="admin-sidebar-nav__primary">
         <button
             type="button"
@@ -31,7 +33,7 @@
         <ul class="admin-sidebar-nav__primary-list">
             @foreach($primaryNavigation as $item)
                 @php($queueIncomplete = $item['id'] === 'work-queue' && ! $pendingComplete)
-                <li>
+                <li @class(['admin-nav-item', 'is-active' => $item['active']])>
                     <a
                         href="{{ $item['route'] }}"
                         @class([
@@ -67,43 +69,62 @@
                             <span class="admin-nav-link__attention-dot display-when-collapsed hidden" aria-hidden="true"></span>
                         @endif
                     </a>
+
+                    <x-admin.navigation-pin :navigation-id="$item['id']" :label="$item['label']" />
                 </li>
             @endforeach
         </ul>
     </div>
 
     @if($quickAccessItems !== [])
-        <section class="admin-sidebar-nav__quick-access mary-hideable" data-admin-quick-access hidden>
-            <div class="admin-sidebar-nav__section-heading">
-                <h2>Pinned & recent</h2>
-                <span>Up to 5</span>
+        <section class="admin-sidebar-nav__quick-access" data-admin-quick-access hidden>
+            <div class="mary-hideable">
+                <div class="admin-sidebar-nav__section-heading">
+                    <h2>Pinned</h2>
+                    <span>Up to 5</span>
+                </div>
             </div>
 
             <ul class="admin-sidebar-nav__quick-list" data-admin-quick-access-list></ul>
 
-            <button
-                type="button"
-                class="admin-sidebar-nav__quick-empty"
-                data-admin-quick-access-empty
-                data-command-palette-open
-                hidden
-                aria-label="Open search to pin staff tools"
-                aria-haspopup="dialog"
-                aria-controls="admin-command-palette"
-            >
-                <x-icon name="o-star" class="size-4" />
-                Pin tools from Search
-            </button>
+            <div class="mary-hideable">
+                <p
+                    class="admin-sidebar-nav__quick-empty"
+                    data-admin-quick-access-empty
+                    hidden
+                >
+                    <x-icon name="o-star" class="size-4" />
+                    Use the star beside any link
+                </p>
+            </div>
+
+            <div class="mary-hideable">
+                <p
+                    class="admin-pin-limit-message"
+                    data-admin-pin-limit-status
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    hidden
+                ></p>
+            </div>
         </section>
 
         <div hidden aria-hidden="true" data-admin-quick-access-templates>
             @foreach($quickAccessItems as $item)
                 <template data-admin-quick-access-template="{{ $item['id'] }}">
-                    <li>
+                    <li @class(['admin-nav-item', 'is-active' => $item['active']])>
                         <a
                             href="{{ $item['route'] }}"
-                            class="admin-nav-link admin-nav-link--quick tooltip tooltip-right"
+                            @class([
+                                'admin-nav-link',
+                                'admin-nav-link--quick',
+                                'tooltip',
+                                'tooltip-right',
+                                'is-active' => $item['active'],
+                            ])
                             data-admin-navigation-id="{{ $item['id'] }}"
+                            @if($item['active']) aria-current="page" @endif
                             aria-label="{{ $item['label'] }}"
                             :data-tip="collapsed ? @js($item['label']) : ''"
                         >
@@ -117,18 +138,9 @@
                                     </span>
                                 </span>
                             @endif
-
-                            <span class="admin-nav-link__quick-context mary-hideable" data-admin-quick-access-context>
-                                <span data-admin-quick-access-favorite hidden>
-                                    <x-icon name="o-star" class="size-3.5" />
-                                    <span class="sr-only">Pinned</span>
-                                </span>
-                                <span data-admin-quick-access-recent hidden>
-                                    <x-icon name="o-clock" class="size-3.5" />
-                                    <span class="sr-only">Recent</span>
-                                </span>
-                            </span>
                         </a>
+
+                        <x-admin.navigation-pin :navigation-id="$item['id']" :label="$item['label']" />
                     </li>
                 </template>
             @endforeach
@@ -136,9 +148,7 @@
     @endif
 
     @if($departments !== [])
-        <div class="admin-sidebar-nav__departments" aria-label="Alliance departments">
-            <h2 class="admin-sidebar-nav__section-label mary-hideable">Alliance departments</h2>
-
+        <div class="admin-sidebar-nav__departments" aria-label="Departments">
             @foreach($departments as $department)
                 @include('livewire.admin.partials.sidebar-department', ['group' => $department, 'system' => false])
             @endforeach
