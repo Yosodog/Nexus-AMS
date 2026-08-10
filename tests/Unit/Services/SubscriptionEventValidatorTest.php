@@ -65,6 +65,98 @@ class SubscriptionEventValidatorTest extends TestCase
         ]], $validated->records);
     }
 
+    public function test_it_normalizes_unallied_nation_sentinels_to_null(): void
+    {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('nation', 'update', [
+            ['id' => 101, 'alliance_id' => 0],
+            ['id' => '102', 'alliance_id' => '0'],
+        ]);
+
+        $this->assertSame([
+            ['id' => 101, 'alliance_id' => null],
+            ['id' => 102, 'alliance_id' => null],
+        ], $validated->records);
+    }
+
+    public function test_it_normalizes_the_pw_city_zero_date_to_null(): void
+    {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('city', 'update', [
+            'id' => '201',
+            'nation_id' => '101',
+            'nuke_date' => '0000-00-00',
+        ]);
+
+        $this->assertSame([[
+            'id' => 201,
+            'nation_id' => 101,
+            'nuke_date' => null,
+        ]], $validated->records);
+    }
+
+    public function test_it_normalizes_pw_war_none_sentinels_to_null(): void
+    {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('war', 'update', [
+            [
+                'id' => 301,
+                'att_id' => 101,
+                'def_id' => 102,
+                'winner_id' => 0,
+                'ground_control' => 0,
+                'air_superiority' => 0,
+                'naval_blockade' => 0,
+                'att_alliance_id' => 0,
+                'def_alliance_id' => 9001,
+            ],
+            [
+                'id' => '302',
+                'att_id' => '103',
+                'def_id' => '104',
+                'winner_id' => '0',
+                'ground_control' => '0',
+                'air_superiority' => '0',
+                'naval_blockade' => '0',
+                'att_alliance_id' => '9001',
+                'def_alliance_id' => '0',
+            ],
+        ]);
+
+        $this->assertSame([
+            [
+                'id' => 301,
+                'att_id' => 101,
+                'def_id' => 102,
+                'winner_id' => null,
+                'ground_control' => null,
+                'air_superiority' => null,
+                'naval_blockade' => null,
+                'att_alliance_id' => null,
+                'def_alliance_id' => 9001,
+            ],
+            [
+                'id' => 302,
+                'att_id' => 103,
+                'def_id' => 104,
+                'winner_id' => null,
+                'ground_control' => null,
+                'air_superiority' => null,
+                'naval_blockade' => null,
+                'att_alliance_id' => 9001,
+                'def_alliance_id' => null,
+            ],
+        ], $validated->records);
+    }
+
+    #[DataProvider('invalidSentinelAdjacentRecordProvider')]
+    public function test_it_keeps_negative_identifiers_and_non_sentinel_dates_invalid(
+        string $model,
+        array $payload,
+    ): void {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('contains no valid records');
+
+        app(SubscriptionEventValidator::class)->validateAndNormalize($model, 'update', $payload);
+    }
+
     public function test_it_accepts_an_empty_batch_for_a_supported_event(): void
     {
         $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('nation', 'update', []);
@@ -143,5 +235,17 @@ class SubscriptionEventValidatorTest extends TestCase
         yield 'account create' => ['account', 'create', ['id' => '101']];
         yield 'account update' => ['account', 'update', ['id' => '101']];
         yield 'account delete' => ['account', 'delete', ['id' => '101']];
+    }
+
+    /** @return iterable<string, array{string, array<string, mixed>}> */
+    public static function invalidSentinelAdjacentRecordProvider(): iterable
+    {
+        yield 'required record ID remains positive' => ['nation', ['id' => -1, 'alliance_id' => 0]];
+        yield 'required attacker ID remains positive' => ['war', ['id' => 301, 'att_id' => -1]];
+        yield 'required defender ID remains positive' => ['war', ['id' => 301, 'def_id' => -1]];
+        yield 'optional nation alliance ID cannot be negative' => ['nation', ['id' => 101, 'alliance_id' => -1]];
+        yield 'optional war winner ID cannot be negative' => ['war', ['id' => 301, 'winner_id' => -1]];
+        yield 'malformed city date is not a sentinel' => ['city', ['id' => 201, 'nuke_date' => '2026-99-99']];
+        yield 'near-match city zero date is not a sentinel' => ['city', ['id' => 201, 'nuke_date' => '0000-00-00T00:00:00']];
     }
 }

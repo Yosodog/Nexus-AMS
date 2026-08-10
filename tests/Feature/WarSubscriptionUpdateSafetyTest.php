@@ -105,6 +105,34 @@ class WarSubscriptionUpdateSafetyTest extends TestCase
         $this->assertSame(3, $war->refresh()->turns_left);
     }
 
+    public function test_job_persists_normalized_absent_war_owners_and_winner_as_null(): void
+    {
+        $war = $this->createWar(910006, [
+            'winner_id' => 911006,
+            'ground_control' => 911006,
+            'air_superiority' => 912006,
+            'naval_blockade' => 912006,
+        ]);
+
+        (new UpdateWarJob([[
+            'id' => $war->id,
+            'att_alliance_id' => null,
+            'def_alliance_id' => 321,
+            'winner_id' => null,
+            'ground_control' => null,
+            'air_superiority' => null,
+            'naval_blockade' => null,
+        ]]))->handle();
+
+        $war->refresh();
+
+        $this->assertNull($war->att_alliance_id);
+        $this->assertNull($war->winner_id);
+        $this->assertNull($war->ground_control);
+        $this->assertNull($war->air_superiority);
+        $this->assertNull($war->naval_blockade);
+    }
+
     public function test_job_quarantines_invalid_payloads_and_continues_with_valid_records(): void
     {
         $war = $this->createWar(910004);

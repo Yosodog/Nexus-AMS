@@ -128,6 +128,72 @@ class SubscriptionEventProcessorTest extends TestCase
         $this->assertFileDoesNotExist($this->quarantineFile);
     }
 
+    public function test_pw_sentinels_are_normalized_before_jobs_are_dispatched(): void
+    {
+        Queue::fake();
+
+        $processor = app(SubscriptionEventProcessor::class);
+        $processor->process('nation', 'update', [
+            'id' => '701',
+            'alliance_id' => '0',
+        ]);
+        $processor->process('city', 'update', [
+            'id' => '801',
+            'nation_id' => '701',
+            'nuke_date' => '0000-00-00',
+        ]);
+        $processor->process('war', 'update', [
+            'id' => '901',
+            'att_id' => '701',
+            'def_id' => '702',
+            'att_alliance_id' => '0',
+            'def_alliance_id' => '9001',
+            'winner_id' => '0',
+            'ground_control' => '0',
+            'air_superiority' => '0',
+            'naval_blockade' => '0',
+        ]);
+
+        Queue::assertPushed(UpdateNationJob::class, fn (UpdateNationJob $job): bool => $job->nationsData === [[
+            'id' => 701,
+            'alliance_id' => null,
+        ]]);
+        Queue::assertPushed(UpdateCityJob::class, fn (UpdateCityJob $job): bool => $job->citiesData === [[
+            'id' => 801,
+            'nation_id' => 701,
+            'nuke_date' => null,
+        ]]);
+        Queue::assertPushed(UpdateWarJob::class, fn (UpdateWarJob $job): bool => $job->warsData === [[
+            'id' => 901,
+            'att_id' => 701,
+            'def_id' => 702,
+            'att_alliance_id' => null,
+            'def_alliance_id' => 9001,
+            'winner_id' => null,
+            'ground_control' => null,
+            'air_superiority' => null,
+            'naval_blockade' => null,
+        ]]);
+    }
+
+    public function test_mixed_war_batch_dispatches_normalized_valid_records_and_quarantines_invalid_records(): void
+    {
+        Queue::fake();
+
+        app(SubscriptionEventProcessor::class)->process('war', 'update', [
+            ['id' => 901, 'att_alliance_id' => 0, 'winner_id' => 0],
+            ['id' => 902, 'def_alliance_id' => -1],
+        ]);
+
+        Queue::assertPushed(UpdateWarJob::class, fn (UpdateWarJob $job): bool => $job->warsData === [[
+            'id' => 901,
+            'att_alliance_id' => null,
+            'winner_id' => null,
+        ]]);
+        $this->assertFileExists($this->quarantineFile);
+        $this->assertStringContainsString('validation_failed', file_get_contents($this->quarantineFile));
+    }
+
     public function test_it_accepts_an_empty_batch_without_dispatching_work(): void
     {
         Queue::fake();

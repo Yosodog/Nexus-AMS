@@ -68,6 +68,19 @@ final readonly class SubscriptionEventValidator
         'def_fortify',
     ];
 
+    /** @var array<string, list<string>> */
+    private const ZERO_AS_NULL_FIELDS = [
+        'nation' => ['alliance_id'],
+        'war' => [
+            'att_alliance_id',
+            'def_alliance_id',
+            'winner_id',
+            'ground_control',
+            'air_superiority',
+            'naval_blockade',
+        ],
+    ];
+
     public function __construct(private SubscriptionRecordQuarantine $quarantine) {}
 
     /**
@@ -113,13 +126,16 @@ final readonly class SubscriptionEventValidator
                 continue;
             }
 
+            $recordForQuarantine = $record;
+            $record = $this->normalizeSentinels($model, $record);
+
             $validator = Validator::make($record, $rules);
 
             if ($validator->fails()) {
                 $this->quarantine->quarantine(
                     $model,
                     $event,
-                    $record,
+                    $recordForQuarantine,
                     'validation_failed: '.implode(' ', $validator->errors()->all())
                 );
 
@@ -134,6 +150,30 @@ final readonly class SubscriptionEventValidator
         }
 
         return $validRecords;
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return array<string, mixed>
+     */
+    private function normalizeSentinels(string $model, array $record): array
+    {
+        foreach (self::ZERO_AS_NULL_FIELDS[$model] ?? [] as $field) {
+            if (array_key_exists($field, $record) && in_array($record[$field], [0, '0'], true)) {
+                $record[$field] = null;
+            }
+        }
+
+        if (
+            $model === 'city'
+            && array_key_exists('nuke_date', $record)
+            && is_string($record['nuke_date'])
+            && trim($record['nuke_date']) === '0000-00-00'
+        ) {
+            $record['nuke_date'] = null;
+        }
+
+        return $record;
     }
 
     /** @return array<string, list<string>> */
