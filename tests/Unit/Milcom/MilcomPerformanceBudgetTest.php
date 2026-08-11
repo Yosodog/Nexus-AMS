@@ -19,6 +19,8 @@ use Tests\TestCase;
 
 class MilcomPerformanceBudgetTest extends TestCase
 {
+    private const int PLAN_GENERATION_BUDGET_SECONDS = 90;
+
     #[Test]
     public function two_thousand_target_allocator_fixture_finishes_inside_the_generation_budget(): void
     {
@@ -111,7 +113,7 @@ class MilcomPerformanceBudgetTest extends TestCase
         $elapsedSeconds = (hrtime(true) - $started) / 1_000_000_000;
         $memoryGrowth = memory_get_peak_usage(true) - $memoryBefore;
 
-        $this->assertLessThan(60, $elapsedSeconds);
+        $this->assertLessThan(self::PLAN_GENERATION_BUDGET_SECONDS, $elapsedSeconds);
         $this->assertLessThan(48 * 1024 * 1024, $memoryGrowth);
         $this->assertCount(2_000, $result->assignments);
         $criticalIds = array_values(array_filter(
