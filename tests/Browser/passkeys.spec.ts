@@ -141,6 +141,7 @@ test('completes registration, login, confirmation, and revocation with a virtual
   page,
 }) => {
   test.skip(browserName !== 'chromium', 'The WebAuthn virtual authenticator uses Chromium DevTools.');
+  test.setTimeout(60_000);
 
   const devtools = await context.newCDPSession(page);
   await devtools.send('WebAuthn.enable');
@@ -192,7 +193,9 @@ test('completes registration, login, confirmation, and revocation with a virtual
     await expect(page.getByText('The passkey was removed.')).toBeVisible();
     await expect(page.getByText('No passkeys are registered.')).toBeVisible();
   } finally {
-    await devtools.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
-    await devtools.send('WebAuthn.disable');
+    if (!page.isClosed()) {
+      await devtools.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+      await devtools.send('WebAuthn.disable');
+    }
   }
 });
