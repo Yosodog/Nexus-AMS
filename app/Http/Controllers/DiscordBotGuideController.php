@@ -71,7 +71,7 @@ class DiscordBotGuideController extends Controller
                         'description' => 'Create a private deposit code for an in-game bank transfer.',
                         'usage' => [
                             "Choose the {$appName} account that should receive the deposit.",
-                            'Copy the returned code into the note field of your Politics & War bank transfer.',
+                            'Copy the returned code into the note field of a transfer to the primary alliance bank or an enabled offshore bank.',
                             "The code expires after one hour. If an active code already exists, {$appName} safely reuses it.",
                         ],
                         'note' => "Keep the code private. {$appName} matches the code when it imports the bank transfer.",

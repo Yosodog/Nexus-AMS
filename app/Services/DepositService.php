@@ -5,125 +5,152 @@ namespace App\Services;
 use App\Exceptions\PWQueryFailedException;
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
+use App\Models\DepositImportCheckpoint;
 use App\Models\DepositRequest;
 use App\Notifications\DepositCompletedNotification;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class DepositService
 {
     /**
-     * @return void
-     *
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public static function processDeposits(int $allianceId)
+    public static function processDeposits(int $allianceId, ?QueryService $client = null): int
     {
-        // Step 1: Check if there are any pending deposits
-        $pendingDeposits = DepositService::getPendingDeposits();
+        $pendingDeposits = self::getPendingDeposits();
+        $lastScannedId = DepositImportCheckpoint::lastScannedId($allianceId);
+
         if ($pendingDeposits->isEmpty()) {
-            return; // Exit early if no pending deposits
+            return $lastScannedId;
         }
 
-        // Step 2: Get last scanned bank record ID
-        $lastScannedId = SettingService::getLastScannedBankRecordId();
+        DepositImportCheckpoint::recordAttempt($allianceId);
+        $updatedLastId = $lastScannedId;
+        $importedDeposit = false;
 
-        // Step 3: Fetch all deposits since last scanned ID
-        $bankRecords = app(BankRecordQueryService::class)->getAllianceDeposits($allianceId, options: [
-            'minId' => $lastScannedId + 1,
-            'orderByColumn' => 'ID',
-            'orderByDirection' => 'ASC',
-        ]);
+        try {
+            $bankRecords = app(BankRecordQueryService::class)->getAllianceDeposits(
+                $allianceId,
+                options: [
+                    'minId' => $lastScannedId + 1,
+                    'orderByColumn' => 'ID',
+                    'orderByDirection' => 'ASC',
+                ],
+                client: $client,
+            );
 
-        $updatedLastId = $lastScannedId; // This will be set to the highest next value for saving
+            $records = collect(iterator_to_array($bankRecords))
+                ->sortBy(fn ($record): int => $record->id)
+                ->values();
 
-        foreach ($bankRecords as $record) {
-            if ($record->id <= $updatedLastId) {
-                continue; // This BankRecord has already been scanned
-            }
-
-            $updatedLastId = $record->id;
-
-            // Ensure it's a deposit into the alliance bank
-            if ($record->receiver_type != 2) {
-                continue;
-            }
-
-            // Step 4: Match deposit with a pending request
-            $note = trim($record->note);
-            $shouldSendConfirmation = false;
-            $depositedAccountName = null;
-            DB::transaction(function () use ($note, $record, $allianceId, &$shouldSendConfirmation, &$depositedAccountName) {
-                $depositRequest = DepositRequest::where('deposit_code', $note)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (! $depositRequest || $depositRequest->status !== 'pending') {
-                    return;
+            foreach ($records as $record) {
+                if ($record->id <= $updatedLastId) {
+                    continue;
                 }
 
-                if ($depositRequest->expires_at?->isPast()) {
-                    $depositRequest->status = 'expired';
-                    $depositRequest->pending_key = null;
-                    $depositRequest->save();
+                if ($record->receiver_type !== 2 || $record->receiver_id !== $allianceId) {
+                    Log::error('Deposit import received a bank record outside the requested alliance.', [
+                        'alliance_id' => $allianceId,
+                        'bank_record_id' => $record->id,
+                        'receiver_id' => $record->receiver_id,
+                        'receiver_type' => $record->receiver_type,
+                    ]);
 
-                    return;
+                    throw new RuntimeException('Received a bank record outside the requested alliance.');
                 }
 
-                $account = Account::whereKey($depositRequest->account_id)->lockForUpdate()->first();
-                if (! $account) {
+                $note = trim((string) $record->note);
+
+                /** @var array{nation_id: int, account_name: string}|null $confirmation */
+                $confirmation = DB::transaction(function () use ($note, $record): ?array {
+                    $depositRequest = DepositRequest::query()
+                        ->where('deposit_code', $note)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $depositRequest || $depositRequest->status !== 'pending') {
+                        return null;
+                    }
+
+                    if ($depositRequest->expires_at?->isPast()) {
+                        $depositRequest->status = 'expired';
+                        $depositRequest->pending_key = null;
+                        $depositRequest->save();
+
+                        return null;
+                    }
+
+                    $account = Account::query()
+                        ->whereKey($depositRequest->account_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $account) {
+                        self::setDepositCompleted($depositRequest);
+
+                        return null;
+                    }
+
+                    AccountService::updateAccountBalanceFromBankRec($account, $record);
+
+                    $depositRequest->fulfilled_bank_record_id = $record->id;
                     self::setDepositCompleted($depositRequest);
 
-                    return;
+                    TransactionService::createTransactionForDeposit($account, $record);
+
+                    return [
+                        'nation_id' => (int) $account->nation_id,
+                        'account_name' => (string) $account->name,
+                    ];
+                });
+
+                if ($confirmation !== null) {
+                    $resourcePayload = [];
+                    foreach (PWHelperService::resources() as $resource) {
+                        $resourcePayload[$resource] = (float) $record->{$resource};
+                    }
+
+                    Notification::route('pnw', 'pnw')
+                        ->notify(new DepositCompletedNotification(
+                            nationId: $confirmation['nation_id'],
+                            accountName: $confirmation['account_name'],
+                            resources: $resourcePayload,
+                        ));
+
+                    $importedDeposit = true;
                 }
 
-                if ($record->receiver_id != $allianceId) {
-                    self::setDepositCompleted($depositRequest);
-
-                    return;
-                }
-
-                // Step 5: Update the member's account balance using AccountService
-                AccountService::updateAccountBalanceFromBankRec($account, $record);
-
-                // Step 6: Mark deposit request as completed
-                $depositRequest->fulfilled_bank_record_id = $record->id;
-                self::setDepositCompleted($depositRequest);
-
-                // Step 8: Log the transaction using TransactionService
-                TransactionService::createTransactionForDeposit($account, $record);
-
-                $shouldSendConfirmation = true;
-                $depositedAccountName = $account->name;
-            });
-
-            if ($shouldSendConfirmation) {
-                $resourcePayload = [];
-                foreach (PWHelperService::resources() as $resource) {
-                    $resourcePayload[$resource] = (float) $record->{$resource};
-                }
-
-                Notification::route('pnw', 'pnw')
-                    ->notify(new DepositCompletedNotification(
-                        nationId: (int) $record->sender_id,
-                        accountName: $depositedAccountName,
-                        resources: $resourcePayload
-                    ));
+                DepositImportCheckpoint::advance($allianceId, $record->id);
+                $updatedLastId = $record->id;
             }
+
+            if ($importedDeposit) {
+                DepositImportCheckpoint::recordImport($allianceId);
+            }
+
+            DepositImportCheckpoint::recordSuccess($allianceId);
+        } catch (Throwable $exception) {
+            DepositImportCheckpoint::recordFailure($allianceId, $exception->getMessage());
+
+            throw $exception;
         }
 
-        // Now persist the data
-        SettingService::setLastScannedBankRecordId($updatedLastId);
+        return $updatedLastId;
     }
 
     /**
-     * @return mixed
+     * @return Collection<int, DepositRequest>
      */
-    public static function getPendingDeposits()
+    public static function getPendingDeposits(): Collection
     {
         self::expirePendingRequests();
 

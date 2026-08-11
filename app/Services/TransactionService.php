@@ -51,8 +51,15 @@ class TransactionService
 
         $transaction->from_account_id = null;
         $transaction->to_account_id = $account->id;
-        $transaction->nation_id = $record->sender_id;
+        $transaction->nation_id = $record->sender_type === 1 ? $record->sender_id : null;
         $transaction->transaction_type = 'deposit';
+        $transaction->bank_record_id = $record->id;
+
+        if ($record->sender_type !== 1) {
+            $transaction->note = $record->sender_type === 2
+                ? "Deposit from alliance bank #{$record->sender_id}"
+                : "Deposit from bank sender type {$record->sender_type} #{$record->sender_id}";
+        }
 
         foreach (PWHelperService::resources() as $res) {
             $transaction->$res = $record->$res;

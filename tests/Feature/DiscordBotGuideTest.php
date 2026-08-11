@@ -31,6 +31,7 @@ class DiscordBotGuideTest extends TestCase
             ->assertSeeText('Private notifications')
             ->assertSeeText('Automatic Discord features')
             ->assertSeeText('Intel report capture')
+            ->assertSeeText('enabled offshore bank')
             ->assertSeeText('Staff commands');
 
         foreach ([

@@ -5,16 +5,18 @@ namespace Tests\Feature\Workflows;
 use App\GraphQL\Models\BankRecord;
 use App\GraphQL\Models\BankRecords;
 use App\Models\Account;
+use App\Models\DepositImportCheckpoint;
 use App\Models\DepositRequest;
 use App\Models\Nation;
 use App\Models\User;
 use App\Notifications\DepositCompletedNotification;
+use App\Services\AllianceMembershipService;
 use App\Services\BankRecordQueryService;
 use App\Services\DepositService;
-use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class DepositProcessingTest extends TestCase
@@ -26,7 +28,6 @@ class DepositProcessingTest extends TestCase
         parent::setUp();
 
         Notification::fake();
-        SettingService::setLastScannedBankRecordId(0);
     }
 
     public function test_matching_bank_record_completes_a_pending_deposit_request(): void
@@ -56,11 +57,17 @@ class DepositProcessingTest extends TestCase
         $this->assertDatabaseHas('transactions', [
             'to_account_id' => $account->id,
             'transaction_type' => 'deposit',
+            'bank_record_id' => 10,
             'money' => 125000,
             'food' => 450,
             'is_pending' => 0,
         ]);
-        $this->assertSame(10, SettingService::getLastScannedBankRecordId());
+        $this->assertSame(10, DepositImportCheckpoint::lastScannedId(777));
+        $checkpoint = DepositImportCheckpoint::query()->where('alliance_id', 777)->firstOrFail();
+        $this->assertNotNull($checkpoint->last_attempted_at);
+        $this->assertNotNull($checkpoint->last_succeeded_at);
+        $this->assertNotNull($checkpoint->last_imported_at);
+        $this->assertNull($checkpoint->last_error);
 
         Notification::assertSentOnDemand(
             DepositCompletedNotification::class,
@@ -76,7 +83,7 @@ class DepositProcessingTest extends TestCase
         );
     }
 
-    public function test_wrong_receiver_closes_the_request_without_crediting_the_account(): void
+    public function test_wrong_receiver_stops_the_import_without_consuming_the_request(): void
     {
         [, $account] = $this->createNationAccountAndUser(779002);
         $deposit = DepositRequest::query()->create([
@@ -90,16 +97,25 @@ class DepositProcessingTest extends TestCase
             $this->makeBankRecord(11, 779002, 999, 'WRONG777', ['money' => 5000]),
         ]);
 
-        DepositService::processDeposits(777);
+        try {
+            DepositService::processDeposits(777);
+            $this->fail('The import should reject a bank record for another alliance.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Received a bank record outside the requested alliance.', $exception->getMessage());
+        }
 
         $deposit->refresh();
         $account->refresh();
 
-        $this->assertSame('completed', $deposit->status);
-        $this->assertNull($deposit->pending_key);
+        $this->assertSame('pending', $deposit->status);
+        $this->assertSame(1, $deposit->pending_key);
         $this->assertNull($deposit->fulfilled_bank_record_id);
         $this->assertSame(0.0, (float) $account->money);
         $this->assertDatabaseCount('transactions', 0);
+        $this->assertSame(0, DepositImportCheckpoint::lastScannedId(777));
+        $this->assertNotNull(
+            DepositImportCheckpoint::query()->where('alliance_id', 777)->value('last_error')
+        );
         Notification::assertNothingSent();
     }
 
@@ -153,6 +169,132 @@ class DepositProcessingTest extends TestCase
         Notification::assertSentOnDemandTimes(DepositCompletedNotification::class, 1);
     }
 
+    public function test_alliance_bank_sender_is_credited_without_being_stored_as_a_nation(): void
+    {
+        [, $account] = $this->createNationAccountAndUser(779005);
+        DepositRequest::query()->create([
+            'account_id' => $account->id,
+            'deposit_code' => 'OFFSHORE',
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+
+        $this->mockAllianceDeposits([
+            $this->makeBankRecord(
+                id: 14,
+                senderId: 888,
+                receiverId: 777,
+                note: 'OFFSHORE',
+                resources: ['money' => 7500, 'uranium' => 25],
+                senderType: 2,
+            ),
+        ]);
+
+        DepositService::processDeposits(777);
+
+        $account->refresh();
+
+        $this->assertSame(7500.0, (float) $account->money);
+        $this->assertSame(25.0, (float) $account->uranium);
+        $this->assertDatabaseHas('transactions', [
+            'to_account_id' => $account->id,
+            'nation_id' => null,
+            'bank_record_id' => 14,
+            'note' => 'Deposit from alliance bank #888',
+        ]);
+
+        Notification::assertSentOnDemand(
+            DepositCompletedNotification::class,
+            function (DepositCompletedNotification $notification): bool {
+                return $notification->toPNW(new \stdClass)['nation_id'] === 779005;
+            }
+        );
+    }
+
+    public function test_each_alliance_uses_an_independent_bank_record_checkpoint(): void
+    {
+        [, $mainAccount] = $this->createNationAccountAndUser(779006);
+        [, $offshoreAccount] = $this->createNationAccountAndUser(779007);
+
+        DepositRequest::query()->create([
+            'account_id' => $mainAccount->id,
+            'deposit_code' => 'MAIN0200',
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+        DepositRequest::query()->create([
+            'account_id' => $offshoreAccount->id,
+            'deposit_code' => 'OFF00150',
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+
+        $mainRecord = $this->makeBankRecord(200, 779006, 777, 'MAIN0200', ['money' => 200]);
+        $offshoreRecord = $this->makeBankRecord(150, 779007, 888, 'OFF00150', ['money' => 150]);
+
+        $mock = Mockery::mock(BankRecordQueryService::class);
+        $mock->shouldReceive('getAllianceDeposits')
+            ->twice()
+            ->andReturnUsing(fn (int $allianceId): BankRecords => new BankRecords(
+                $allianceId === 777 ? [$mainRecord] : [$offshoreRecord]
+            ));
+        $this->app->instance(BankRecordQueryService::class, $mock);
+
+        DepositService::processDeposits(777);
+        DepositService::processDeposits(888);
+
+        $this->assertSame(200, DepositImportCheckpoint::lastScannedId(777));
+        $this->assertSame(150, DepositImportCheckpoint::lastScannedId(888));
+        $this->assertSame(200.0, (float) $mainAccount->fresh()->money);
+        $this->assertSame(150.0, (float) $offshoreAccount->fresh()->money);
+    }
+
+    public function test_command_continues_to_an_offshore_when_another_alliance_fails(): void
+    {
+        [, $account] = $this->createNationAccountAndUser(779008);
+        DepositRequest::query()->create([
+            'account_id' => $account->id,
+            'deposit_code' => 'CONTINUE',
+            'status' => 'pending',
+            'pending_key' => 1,
+        ]);
+
+        $membership = Mockery::mock(AllianceMembershipService::class);
+        $membership->shouldReceive('getAllianceIds')->once()->andReturn(collect([777, 888]));
+        $membership->shouldReceive('getCredentialsForAlliance')
+            ->with(777)
+            ->once()
+            ->andReturn(['api_key' => 'primary-api-key', 'mutation_key' => null]);
+        $membership->shouldReceive('getCredentialsForAlliance')
+            ->with(888)
+            ->once()
+            ->andReturn(['api_key' => 'offshore-api-key', 'mutation_key' => null]);
+        $this->app->instance(AllianceMembershipService::class, $membership);
+
+        $offshoreRecord = $this->makeBankRecord(300, 779008, 888, 'CONTINUE', ['food' => 300]);
+        $bankRecords = Mockery::mock(BankRecordQueryService::class);
+        $bankRecords->shouldReceive('getAllianceDeposits')
+            ->twice()
+            ->andReturnUsing(function (int $allianceId) use ($offshoreRecord): BankRecords {
+                if ($allianceId === 777) {
+                    throw new RuntimeException('Primary bank unavailable.');
+                }
+
+                return new BankRecords([$offshoreRecord]);
+            });
+        $this->app->instance(BankRecordQueryService::class, $bankRecords);
+
+        $this->artisan('accounts:process-deposits')
+            ->assertFailed();
+
+        $this->assertSame(300.0, (float) $account->fresh()->food);
+        $this->assertSame(300, DepositImportCheckpoint::lastScannedId(888));
+        $this->assertSame(
+            'Primary bank unavailable.',
+            DepositImportCheckpoint::query()->where('alliance_id', 777)->value('last_error')
+        );
+    }
+
     /**
      * @return array{0: User, 1: Account}
      */
@@ -190,13 +332,19 @@ class DepositProcessingTest extends TestCase
     /**
      * @param  array<string, float|int>  $resources
      */
-    private function makeBankRecord(int $id, int $senderId, int $receiverId, string $note, array $resources = []): BankRecord
-    {
+    private function makeBankRecord(
+        int $id,
+        int $senderId,
+        int $receiverId,
+        string $note,
+        array $resources = [],
+        int $senderType = 1,
+    ): BankRecord {
         $record = new BankRecord;
         $record->id = $id;
         $record->date = now()->toDateString();
         $record->sender_id = $senderId;
-        $record->sender_type = 1;
+        $record->sender_type = $senderType;
         $record->receiver_id = $receiverId;
         $record->receiver_type = 2;
         $record->banker_id = 0;

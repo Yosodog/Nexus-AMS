@@ -104,6 +104,7 @@ class NotificationPayloadTest extends FeatureTestCase
 
         $this->assertSame('Deposit request created', $createdPayload['subject']);
         $this->assertStringContainsString('CODE1234', $createdPayload['message']);
+        $this->assertStringContainsString('enabled offshore bank', $createdPayload['message']);
         $this->assertSame('Deposit confirmed', $completedPayload['subject']);
         $this->assertStringContainsString('Money: $1,000.00', $completedPayload['message']);
         $this->assertStringContainsString('Food: 50.00', $completedPayload['message']);
