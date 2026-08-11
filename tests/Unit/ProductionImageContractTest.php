@@ -86,6 +86,10 @@ class ProductionImageContractTest extends TestCase
         $this->assertStringContainsString('EXPOSE 8080', $dockerfile);
         $this->assertStringContainsString('STOPSIGNAL SIGTERM', $dockerfile);
         $this->assertStringContainsString('HEALTHCHECK --interval=15s', $dockerfile);
+        $this->assertStringContainsString('APACHE_PID_FILE=/tmp/nexus-apache/apache2.pid', $dockerfile);
+        $this->assertStringContainsString('APACHE_RUN_DIR=/tmp/nexus-apache', $dockerfile);
+        $this->assertStringContainsString('APACHE_LOCK_DIR=/tmp/nexus-apache', $dockerfile);
+        $this->assertStringContainsString('APACHE_LOG_DIR=/tmp/nexus-apache', $dockerfile);
         $this->assertStringContainsString(
             'ENTRYPOINT ["/usr/bin/tini", "--", "php", "/var/www/html/docker/runtime/entrypoint.php"]',
             $dockerfile,
@@ -128,6 +132,9 @@ class ProductionImageContractTest extends TestCase
         $apache = $this->contents('docker/runtime/apache-vhost.conf');
         $this->assertStringContainsString('AllowOverride None', $apache);
         $this->assertStringContainsString('RewriteRule ^ index.php [L]', $apache);
+
+        $apacheSecurity = $this->contents('docker/runtime/apache-security.conf');
+        $this->assertStringContainsString('ServerName localhost', $apacheSecurity);
     }
 
     public function test_build_context_excludes_credentials_runtime_data_and_development_artifacts(): void
@@ -184,6 +191,7 @@ class ProductionImageContractTest extends TestCase
 
         $entrypoint = $this->contents('docker/runtime/entrypoint.php');
         $this->assertStringContainsString('proc_open(', $entrypoint);
+        $this->assertStringContainsString("preparePrivateDirectory('/tmp/nexus-apache')", $entrypoint);
         $this->assertStringNotContainsString('shell_exec(', $entrypoint);
         $this->assertStringNotContainsString('passthru(', $entrypoint);
         $this->assertStringNotContainsString('eval(', $entrypoint);

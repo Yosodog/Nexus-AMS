@@ -5102,6 +5102,22 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "admin/audits/city-builds",
+        "name": "admin.audits.city-builds.index",
+        "action": "App\\Http\\Controllers\\Admin\\CityBuildAuditController@index",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:view-audits"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "admin/audits/rules",
         "name": "admin.audits.rules.index",
         "action": "App\\Http\\Controllers\\Admin\\AuditRuleController@index",
@@ -5249,6 +5265,38 @@
         "uri": "admin/audits/notify",
         "name": "admin.audits.notify",
         "action": "App\\Http\\Controllers\\Admin\\AuditController@notify",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:manage-audits"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/audits/city-builds/recommendations",
+        "name": "admin.audits.city-builds.recommendations.regenerate-all",
+        "action": "App\\Http\\Controllers\\Admin\\CityBuildAuditController@regenerateAll",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:manage-audits"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/audits/city-builds/{nation}/recommendation",
+        "name": "admin.audits.city-builds.recommendations.regenerate",
+        "action": "App\\Http\\Controllers\\Admin\\CityBuildAuditController@regenerate",
         "middleware": [
             "web",
             "Illuminate\\Auth\\Middleware\\Authenticate",

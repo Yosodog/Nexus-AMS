@@ -51,6 +51,8 @@ class DiscordRelayV2ApiTest extends TestCase
 
     private const GUILD_ID = '223456789012345678';
 
+    private const PRIMARY_ALLIANCE_ID = 777;
+
     private string $secretKey;
 
     private string $publicKey;
@@ -71,7 +73,9 @@ class DiscordRelayV2ApiTest extends TestCase
             'services.discord.connection_mode' => DiscordConnectionMode::OfficialShared->value,
             'services.discord.relay_protocol_version' => 2,
             'services.discord.v1_reader_enabled' => true,
+            'services.pw.alliance_id' => self::PRIMARY_ALLIANCE_ID,
         ]);
+        app(AllianceMembershipService::class)->clear();
         SettingService::setApplicationsEnabled(true);
         SettingService::setApplicationsDiscordApplicantRoleId('423456789012345679');
         SettingService::setApplicationsDiscordIaRoleId('423456789012345680');
