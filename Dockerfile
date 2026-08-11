@@ -127,6 +127,10 @@ LABEL org.opencontainers.image.title="Nexus AMS" \
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
+    APACHE_LOCK_DIR=/tmp/nexus-apache \
+    APACHE_LOG_DIR=/tmp/nexus-apache \
+    APACHE_PID_FILE=/tmp/nexus-apache/apache2.pid \
+    APACHE_RUN_DIR=/tmp/nexus-apache \
     HOME=/tmp \
     NEXUS_APPLICATION_VERSION="${NEXUS_APPLICATION_VERSION}" \
     NEXUS_COMMIT_SHA="${NEXUS_COMMIT_SHA}"

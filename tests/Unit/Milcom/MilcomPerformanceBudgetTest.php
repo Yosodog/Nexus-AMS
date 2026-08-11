@@ -3,12 +3,10 @@
 namespace Tests\Unit\Milcom;
 
 use App\Domain\Milcom\Allocation\AllocationObjective;
-use App\Domain\Milcom\Allocation\CandidateEdge;
 use App\Domain\Milcom\Allocation\CandidatePool;
 use App\Domain\Milcom\Allocation\ScarcityFirstAllocator;
 use App\Domain\Milcom\CounterTeamSelector;
 use App\Domain\Milcom\EligibilityEvaluator;
-use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
 use App\Domain\Milcom\FixedDoctrineScorer;
 use App\Domain\Milcom\MilcomGameRules;
@@ -16,6 +14,7 @@ use App\Domain\Milcom\PairAssessment;
 use App\Domain\Milcom\ReadinessProfile;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
+use SplPriorityQueue;
 use Tests\TestCase;
 
 class MilcomPerformanceBudgetTest extends TestCase
@@ -42,6 +41,15 @@ class MilcomPerformanceBudgetTest extends TestCase
 
         $started = hrtime(true);
         $memoryBefore = memory_get_usage(true);
+        $friendlyBlockerMasks = [];
+
+        foreach ($friendlies as $nationId => $friendly) {
+            $friendlyBlockerMasks[$nationId] = $eligibility->friendlyAllocationBlockerMask(
+                $friendly,
+                [1 => true],
+                [],
+            );
+        }
 
         for ($objectiveId = 1; $objectiveId <= 2_000; $objectiveId++) {
             $tier = $objectiveId % 50 === 0
@@ -60,40 +68,42 @@ class MilcomPerformanceBudgetTest extends TestCase
                 score: 2_100 + ($objectiveId % 600),
                 now: $now,
             );
-            $assessments = [];
+            $topCandidates = new SplPriorityQueue;
+            $topCandidates->setExtractFlags(SplPriorityQueue::EXTR_DATA);
 
             foreach ($friendlies as $nationId => $friendly) {
-                $result = $eligibility->evaluate(
+                $blockerMask = $eligibility->allocationBlockerMask(
                     $friendly,
                     $target,
-                    [1],
-                    OperationType::Plan,
-                    at: $now,
+                    false,
+                    $friendlyBlockerMasks[$nationId],
                 );
 
-                if (! $result->eligible()) {
+                if ($blockerMask !== 0) {
                     continue;
                 }
 
-                $assessment = $scorer->assess($friendly, $target, $now);
-                $assessments[] = new CandidateEdge(
-                    objectiveId: $objectiveId,
-                    nationId: $nationId,
-                    score: $assessment->score,
-                    confidence: $assessment->confidence,
-                );
+                $candidate = $scorer->allocationEdge($objectiveId, $friendly, $target, $now);
+                $topCandidates->insert($candidate, [
+                    -$candidate->score,
+                    -$candidate->confidence,
+                    $candidate->nationId,
+                ]);
+
+                if ($topCandidates->count() > 40) {
+                    $topCandidates->extract();
+                }
             }
 
-            usort($assessments, static fn (CandidateEdge $left, CandidateEdge $right): int => [
-                -$left->score,
-                $left->nationId,
-            ] <=> [
-                -$right->score,
-                $right->nationId,
-            ]);
+            $candidates = [];
+
+            while (! $topCandidates->isEmpty()) {
+                $candidates[] = $topCandidates->extract();
+            }
+
             $edgesByObjective[$objectiveId] = CandidatePool::fromEdges(
                 $objectiveId,
-                array_slice($assessments, 0, 40),
+                array_reverse($candidates),
             );
         }
 
