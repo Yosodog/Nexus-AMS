@@ -91,9 +91,9 @@ test('officer navigates targets by keyboard and batch approves and dispatches a 
   await expect(page.locator('#staffing-controls-title')).toBeInViewport();
   await expect(page.locator('.milcom-plan-inspector__actions')).toBeInViewport();
   expect(await page.locator('[data-milcom-inspector-scroll]').evaluate((inspector) => inspector.scrollTop)).toBeGreaterThan(0);
-  await initialTargets.first().click();
+  await initialTargets.first().press('Enter');
   await expect.poll(() => page.locator('[data-milcom-inspector-scroll]').evaluate((inspector) => inspector.scrollTop)).toBe(0);
-  await initialTargets.nth(1).click();
+  await initialTargets.nth(1).press('Enter');
   await expect(page.locator('#selected-target-title')).toContainText('Browser Standard Target');
   const selectedTargetUrl = page.url();
   let progressPolls = 0;
