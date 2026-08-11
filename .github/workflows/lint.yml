@@ -123,6 +123,7 @@ jobs:
         run: composer test:integration
         env:
           SUBS_REDIS_TEST_URL: redis://127.0.0.1:6379/15
+          TENANT_EVENTS_REDIS_ACL_ADMIN_URL: redis://127.0.0.1:6379/14
 
   browser-smoke:
     runs-on: ubuntu-latest

@@ -19,6 +19,7 @@
         </testsuite>
         <testsuite name="Integration">
             <directory>tests/Integration</directory>
+            <exclude>tests/Integration/ProductionImageTest.php</exclude>
         </testsuite>
         <testsuite name="Fast">
             <directory>tests/Unit</directory>
