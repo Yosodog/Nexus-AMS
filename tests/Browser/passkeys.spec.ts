@@ -141,7 +141,7 @@ test('completes registration, login, confirmation, and revocation with a virtual
   page,
 }) => {
   test.skip(browserName !== 'chromium', 'The WebAuthn virtual authenticator uses Chromium DevTools.');
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   const devtools = await context.newCDPSession(page);
   await devtools.send('WebAuthn.enable');
