@@ -128,4 +128,18 @@ class NationAuditMapperTest extends TestCase
         $this->assertNull($context['nation.aircraft_per_city']);
         $this->assertNull($context['nation.projects']);
     }
+
+    public function test_decimal_project_mask_with_only_zeroes_and_ones_includes_uranium_enrichment(): void
+    {
+        $nation = new Nation([
+            'id' => 253987,
+            'num_cities' => 1,
+            'project_bits' => '10000000000',
+        ]);
+        $nation->syncOriginal();
+
+        $context = (new NationAuditMapper)->buildContext($nation);
+
+        $this->assertContains('Uranium Enrichment Program', $context['nation.projects']);
+    }
 }

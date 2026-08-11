@@ -154,6 +154,18 @@ class Nation extends Model
             ))
             ->toArray();
 
+        $projectOwnership = collect(array_keys(PWHelperService::PROJECT_API_FIELDS))
+            ->filter(fn (string $field): bool => $graphQLNationModel->hasSourceField($field))
+            ->mapWithKeys(fn (string $field): array => [$field => $graphQLNationModel->{$field}])
+            ->all();
+
+        if ($graphQLNationModel->hasSourceField('project_bits') || $projectOwnership !== []) {
+            $nationPayload['project_bits'] = PWHelperService::reconcileProjectBits(
+                $graphQLNationModel->project_bits,
+                $projectOwnership,
+            );
+        }
+
         if (
             $graphQLNationModel->hasSourceField('alliance_id')
             && $graphQLNationModel->alliance_id === null

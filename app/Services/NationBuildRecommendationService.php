@@ -446,7 +446,7 @@ class NationBuildRecommendationService
             ->where('vacation_mode_turns', 0);
     }
 
-    private function isEligibleNation(Nation $nation): bool
+    public function isEligibleNation(Nation $nation): bool
     {
         return $this->membershipService->contains($nation->alliance_id)
             && $nation->alliance_position !== 'APPLICANT'

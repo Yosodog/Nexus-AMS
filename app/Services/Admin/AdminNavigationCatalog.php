@@ -78,7 +78,8 @@ final class AdminNavigationCatalog
                 $this->item('recruitment', 'Recruitment', 'o-envelope', route('admin.recruitment.index'), $this->request->routeIs('admin.recruitment.*'), visible: $user->can('view-recruitment'), keywords: 'prospects messages', section: 'Membership'),
                 $this->item('members', 'Members', 'o-users', route('admin.members'), $this->request->routeIs('admin.members*'), visible: $user->can('view-members'), keywords: 'nations leaders', section: 'Membership'),
                 $this->item('cities', 'Cities', 'o-building-office-2', route('admin.cities.index'), $this->request->routeIs('admin.cities.*'), visible: $user->can('view-members'), keywords: 'infrastructure land', section: 'Membership'),
-                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation', 'Governance & compliance'),
+                $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.index', 'admin.audits.rules.*', 'admin.audits.results.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation', 'Governance & compliance'),
+                $this->item('build-audit', 'Build audit', 'o-wrench-screwdriver', route('admin.audits.city-builds.index'), $this->request->routeIs('admin.audits.city-builds.*'), visible: $user->can('view-audits'), keywords: 'city improvements recommendations compliance', section: 'Governance & compliance'),
             ], sectionIcons: [
                 'Membership' => 'o-users',
                 'Governance & compliance' => 'o-shield-check',

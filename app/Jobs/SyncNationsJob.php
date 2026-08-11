@@ -12,6 +12,7 @@ namespace App\Jobs;
 
 use App\Models\City;
 use App\Services\NationQueryService;
+use App\Services\PWHelperService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -429,7 +430,7 @@ class SyncNationsJob implements ShouldQueue
             $nations = NationQueryService::getRawNationPage(
                 arguments: $filters,
                 perPage: $this->perPage,
-                nationFields: self::NATION_QUERY_FIELDS,
+                nationFields: [...self::NATION_QUERY_FIELDS, ...array_keys(PWHelperService::PROJECT_API_FIELDS)],
                 cityFields: self::CITY_COLUMNS,
                 nationNestedFields: [
                     'military_research' => [
@@ -524,6 +525,11 @@ class SyncNationsJob implements ShouldQueue
      */
     private function normalizeNationPayload(array $nation): array
     {
+        $nation['project_bits'] = PWHelperService::reconcileProjectBits(
+            $nation['project_bits'] ?? null,
+            $nation,
+        );
+
         if (! array_key_exists('military_research', $nation)) {
             throw new RuntimeException('Nation synchronization response omitted military research.');
         }
