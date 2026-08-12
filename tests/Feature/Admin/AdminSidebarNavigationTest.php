@@ -89,6 +89,7 @@ class AdminSidebarNavigationTest extends TestCase
             'members',
             'cities',
             'audits',
+            'build-audit',
         ], collect($groups->firstWhere('id', 'internal-affairs')['items'])->pluck('id')->all());
         $this->assertSame(
             ['Membership', 'Governance & compliance'],
@@ -144,6 +145,20 @@ class AdminSidebarNavigationTest extends TestCase
         $settingsGroups = collect(app(AdminNavigationCatalog::class)->groups($admin));
 
         $this->assertTrue($settingsGroups->firstWhere('id', 'system')['active']);
+    }
+
+    public function test_build_audit_route_only_marks_the_build_audit_item_active(): void
+    {
+        $admin = $this->createAdmin(['view-audits']);
+        $route = new Route(['GET'], 'admin/audits/city-builds', fn () => null);
+        $route->name('admin.audits.city-builds.index');
+        request()->setRouteResolver(fn (): Route => $route);
+
+        $groups = collect(app(AdminNavigationCatalog::class)->groups($admin));
+        $items = collect($groups->firstWhere('id', 'internal-affairs')['items']);
+
+        $this->assertFalse($items->firstWhere('id', 'audits')['active']);
+        $this->assertTrue($items->firstWhere('id', 'build-audit')['active']);
     }
 
     public function test_sidebar_renders_department_categories_and_direct_pin_controls(): void

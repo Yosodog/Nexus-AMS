@@ -56,7 +56,7 @@ class NationBuildRecommendationService
     ];
 
     public function __construct(
-        private readonly AllianceMembershipService $membershipService,
+        private readonly AllianceMemberEligibilityService $memberEligibilityService,
         private readonly MMRService $mmrService,
         private readonly NationProfitabilityService $profitabilityService,
         private readonly BuildOptimizer $optimizer,
@@ -421,9 +421,7 @@ class NationBuildRecommendationService
      */
     private function eligibleNationQuery(): Builder
     {
-        $allianceIds = $this->membershipService->getAllianceIds()->values()->all();
-
-        return Nation::query()
+        $query = Nation::query()
             ->select([
                 'id',
                 'alliance_id',
@@ -440,17 +438,26 @@ class NationBuildRecommendationService
                 'color_turn_bonus',
                 'economy_context_synced_at',
             ])
-            ->with(['cities'])
-            ->whereIn('alliance_id', $allianceIds)
-            ->where('alliance_position', '!=', 'APPLICANT')
-            ->where('vacation_mode_turns', 0);
+            ->with(['cities']);
+
+        return $this->applyEligibilityToQuery($query);
     }
 
-    private function isEligibleNation(Nation $nation): bool
+    public function isEligibleNation(Nation $nation): bool
     {
-        return $this->membershipService->contains($nation->alliance_id)
-            && $nation->alliance_position !== 'APPLICANT'
+        return $this->memberEligibilityService->isEligibleNation($nation)
             && (int) ($nation->vacation_mode_turns ?? 0) === 0;
+    }
+
+    /**
+     * @param  Builder<Nation>  $query
+     * @return Builder<Nation>
+     */
+    public function applyEligibilityToQuery(Builder $query): Builder
+    {
+        return $this->memberEligibilityService
+            ->applyEligibilityToQuery($query)
+            ->where('vacation_mode_turns', 0);
     }
 
     private function jsonKeyForField(string $field): string

@@ -5,9 +5,13 @@
 @section('content')
     <x-header title="Audit Overview" separator use-h1>
         <x-slot:subtitle>Monitor rule health, review urgent findings, and manage the guided rule library.</x-slot:subtitle>
-        @can('manage-audits')
-            <x-slot:actions>
-                <div class="flex flex-wrap gap-2">
+        <x-slot:actions>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.audits.city-builds.index') }}" class="btn btn-outline">
+                    <x-icon name="o-building-office-2" class="size-5" aria-hidden="true" />
+                    City build audit
+                </a>
+                @can('manage-audits')
                     <form method="POST" action="{{ route('admin.audits.run') }}">
                         @csrf
                         <button type="submit" class="btn btn-outline btn-primary">
@@ -19,9 +23,9 @@
                         <x-icon name="o-plus-circle" class="size-5" aria-hidden="true" />
                         New rule
                     </a>
-                </div>
-            </x-slot:actions>
-        @endcan
+                @endcan
+            </div>
+        </x-slot:actions>
     </x-header>
 
     @if($rules->contains(fn ($rule) => $rule->last_evaluation_status?->value === 'migration_failed'))

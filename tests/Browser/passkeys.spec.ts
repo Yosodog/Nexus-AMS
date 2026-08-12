@@ -156,6 +156,13 @@ test('completes registration, login, confirmation, and revocation with a virtual
     },
   });
 
+  await page.addInitScript(() => {
+    Object.defineProperty(PublicKeyCredential, 'isConditionalMediationAvailable', {
+      configurable: true,
+      value: async () => false,
+    });
+  });
+
   try {
     const redirect = encodeURIComponent('/user/confirm-password?return_to=passkeys');
     await page.goto('/_browser/login/member?redirect=' + redirect);

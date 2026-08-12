@@ -6,9 +6,17 @@ use App\Enums\AlliancePositionEnum;
 use App\Models\Nation;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 
 class AllianceMemberEligibilityService
 {
+    private const ELIGIBLE_POSITIONS = [
+        AlliancePositionEnum::MEMBER->value,
+        AlliancePositionEnum::OFFICER->value,
+        AlliancePositionEnum::HEIR->value,
+        AlliancePositionEnum::LEADER->value,
+    ];
+
     public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
     /**
@@ -35,11 +43,17 @@ class AllianceMemberEligibilityService
         $alliancePosition = strtoupper(trim((string) $nation->alliance_position));
 
         return $this->membershipService->contains($nation->alliance_id)
-            && in_array($alliancePosition, [
-                AlliancePositionEnum::MEMBER->value,
-                AlliancePositionEnum::OFFICER->value,
-                AlliancePositionEnum::HEIR->value,
-                AlliancePositionEnum::LEADER->value,
-            ], true);
+            && in_array($alliancePosition, self::ELIGIBLE_POSITIONS, true);
+    }
+
+    /**
+     * @param  Builder<Nation>  $query
+     * @return Builder<Nation>
+     */
+    public function applyEligibilityToQuery(Builder $query): Builder
+    {
+        return $query
+            ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
+            ->whereIn('alliance_position', self::ELIGIBLE_POSITIONS);
     }
 }

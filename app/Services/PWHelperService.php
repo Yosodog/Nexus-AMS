@@ -4,6 +4,49 @@ namespace App\Services;
 
 class PWHelperService
 {
+    /** @var array<string, string> */
+    public const PROJECT_API_FIELDS = [
+        'iron_works' => 'Ironworks',
+        'bauxite_works' => 'Bauxiteworks',
+        'arms_stockpile' => 'Arms Stockpile',
+        'emergency_gasoline_reserve' => 'Emergency Gasoline Reserve',
+        'mass_irrigation' => 'Mass Irrigation',
+        'international_trade_center' => 'International Trade Center',
+        'missile_launch_pad' => 'Missile Launch Pad',
+        'nuclear_research_facility' => 'Nuclear Research Facility',
+        'iron_dome' => 'Iron Dome',
+        'vital_defense_system' => 'Vital Defense System',
+        'central_intelligence_agency' => 'Central Intelligence Agency',
+        'center_for_civil_engineering' => 'Center for Civil Engineering',
+        'propaganda_bureau' => 'Propaganda Bureau',
+        'uranium_enrichment_program' => 'Uranium Enrichment Program',
+        'urban_planning' => 'Urban Planning',
+        'advanced_urban_planning' => 'Advanced Urban Planning',
+        'space_program' => 'Space Program',
+        'spy_satellite' => 'Spy Satellite',
+        'moon_landing' => 'Moon Landing',
+        'pirate_economy' => 'Pirate Economy',
+        'recycling_initiative' => 'Recycling Initiative',
+        'telecommunications_satellite' => 'Telecommunications Satellite',
+        'green_technologies' => 'Green Technologies',
+        'arable_land_agency' => 'Arable Land Agency',
+        'clinical_research_center' => 'Clinical Research Center',
+        'specialized_police_training_program' => 'Specialized Police Training Program',
+        'advanced_engineering_corps' => 'Advanced Engineering Corps',
+        'government_support_agency' => 'Government Support Agency',
+        'research_and_development_center' => 'Research and Development Center',
+        'activity_center' => 'Activity Center',
+        'metropolitan_planning' => 'Metropolitan Planning',
+        'military_salvage' => 'Military Salvage',
+        'fallout_shelter' => 'Fallout Shelter',
+        'bureau_of_domestic_affairs' => 'Bureau of Domestic Affairs',
+        'advanced_pirate_economy' => 'Advanced Pirate Economy',
+        'mars_landing' => 'Mars Landing',
+        'surveillance_network' => 'Surveillance Network',
+        'guiding_satellite' => 'Guiding Satellite',
+        'nuclear_launch_facility' => 'Nuclear Launch Facility',
+    ];
+
     /**
      * This is to work with the Project Bits field of the API
      * It's just an associative array to map each project to its bit position
@@ -67,25 +110,7 @@ class PWHelperService
             return [];
         }
 
-        if (is_string($projectBits) && preg_match('/^[01]+$/', $projectBits) === 1) {
-            $bits = str_pad($projectBits, count(self::PROJECTS), '0', STR_PAD_LEFT);
-
-            return collect(array_keys(self::PROJECTS))
-                ->filter(function (string $project, int $index) use ($bits): bool {
-                    $bitPosition = strlen($bits) - 1 - $index;
-
-                    return $bitPosition >= 0 && ($bits[$bitPosition] ?? '0') === '1';
-                })
-                ->values()
-                ->all();
-        }
-
-        if (is_string($projectBits)
-            && (preg_match('/^\d+$/', $projectBits) !== 1 || (int) $projectBits < 0)) {
-            return [];
-        }
-
-        $bitmask = (int) $projectBits;
+        $bitmask = self::projectBitmask($projectBits);
         $ownedProjects = [];
 
         foreach (self::PROJECTS as $project => $bit) {
@@ -95,6 +120,58 @@ class PWHelperService
         }
 
         return $ownedProjects;
+    }
+
+    /**
+     * Reconcile the aggregate bitmask with explicit project flags returned by the API.
+     *
+     * @param  array<string, mixed>  $projectOwnership
+     */
+    public static function reconcileProjectBits(int|string|null $projectBits, array $projectOwnership): ?string
+    {
+        $bitmask = self::projectBitmask($projectBits);
+        $hasExplicitOwnership = false;
+
+        foreach (self::PROJECT_API_FIELDS as $field => $project) {
+            if (! array_key_exists($field, $projectOwnership) || $projectOwnership[$field] === null) {
+                continue;
+            }
+
+            $hasExplicitOwnership = true;
+            $ownsProject = filter_var($projectOwnership[$field], FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+
+            if ($ownsProject === null) {
+                continue;
+            }
+
+            $projectBit = self::PROJECTS[$project];
+            $bitmask = $ownsProject ? $bitmask | $projectBit : $bitmask & ~$projectBit;
+        }
+
+        if (($projectBits === null || $projectBits === '') && ! $hasExplicitOwnership) {
+            return null;
+        }
+
+        return (string) $bitmask;
+    }
+
+    private static function projectBitmask(int|string|null $projectBits): int
+    {
+        if (is_int($projectBits)) {
+            return max(0, $projectBits);
+        }
+
+        $projectBits = trim((string) $projectBits);
+
+        if ($projectBits === '' || preg_match('/^\d+$/', $projectBits) !== 1) {
+            return 0;
+        }
+
+        $maximumDecimalDigits = strlen((string) array_sum(self::PROJECTS));
+        $isUnambiguousBinary = strlen($projectBits) > $maximumDecimalDigits
+            && preg_match('/^[01]+$/', $projectBits) === 1;
+
+        return $isUnambiguousBinary ? (int) bindec($projectBits) : max(0, (int) $projectBits);
     }
 
     /**

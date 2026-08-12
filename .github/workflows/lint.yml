@@ -138,15 +138,29 @@ jobs:
         with:
           php-version: '8.3'
 
+      - name: Install Composer dependencies
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if composer install --no-interaction --prefer-dist --no-progress; then
+              break
+            fi
+
+            if [ "${attempt}" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep "$((attempt * 5))"
+          done
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
 
-      - name: Install dependencies
+      - name: Install browser dependencies
         run: |
-          composer install --no-interaction --prefer-dist
           npm ci
           npx playwright install --with-deps chromium
 

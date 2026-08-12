@@ -63,6 +63,7 @@ class NationSyncJobTest extends TestCase
             'air_cost_research' => 7,
             'naval_capacity_research' => 8,
             'naval_cost_research' => 9,
+            'project_bits' => '8293',
         ]);
         $this->assertDatabaseHas('nation_resources', [
             'nation_id' => 1001,
@@ -83,10 +84,11 @@ class NationSyncJobTest extends TestCase
             $query = (string) $request->data()['query'];
 
             return str_contains($query, 'project_bits')
+                && str_contains($query, 'uranium_enrichment_program')
                 && str_contains($query, 'cities')
                 && str_contains($query, 'military_research')
                 && str_contains($query, 'ground_capacity')
-                && ! str_contains($query, 'iron_works')
+                && str_contains($query, 'iron_works')
                 && ! str_contains($query, 'paginatorInfo');
         });
     }
@@ -232,6 +234,7 @@ class NationSyncJobTest extends TestCase
             'turns_since_last_project' => 2,
             'projects' => 3,
             'project_bits' => '101',
+            'uranium_enrichment_program' => true,
             'wars_won' => 4,
             'wars_lost' => 5,
             'tax_id' => null,

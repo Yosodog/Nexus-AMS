@@ -31,7 +31,7 @@ class LotteryFactoryTest extends TestCase
             ->pluck('code');
 
         $this->assertCount(1000, $codes);
-        $this->assertCount(1000, $codes->unique());
+        $this->assertCount(1000, $codes->unique(strict: true));
         $this->assertTrue($codes->every(
             fn (string $code): bool => preg_match('/^[0-9A-Z]{3}$/', $code) === 1,
         ));

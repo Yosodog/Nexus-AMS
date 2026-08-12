@@ -37,6 +37,26 @@ class PWHelperServiceTest extends UnitTestCase
         $this->assertContains('Uranium Enrichment Program', $projects);
     }
 
+    public function test_decimal_project_masks_containing_only_zeroes_and_ones_are_not_treated_as_binary(): void
+    {
+        $projects = PWHelperService::getNationProjects('10000000000');
+
+        $this->assertContains('Uranium Enrichment Program', $projects);
+    }
+
+    public function test_explicit_project_flags_reconcile_an_incorrect_aggregate_bitmask(): void
+    {
+        $withUraniumEnrichment = PWHelperService::reconcileProjectBits('0', [
+            'uranium_enrichment_program' => true,
+        ]);
+        $withoutUraniumEnrichment = PWHelperService::reconcileProjectBits((string) PWHelperService::PROJECTS['Uranium Enrichment Program'], [
+            'uranium_enrichment_program' => false,
+        ]);
+
+        $this->assertContains('Uranium Enrichment Program', PWHelperService::getNationProjects($withUraniumEnrichment));
+        $this->assertNotContains('Uranium Enrichment Program', PWHelperService::getNationProjects($withoutUraniumEnrichment));
+    }
+
     public function test_resources_returns_expected_variants(): void
     {
         $withMoney = PWHelperService::resources();

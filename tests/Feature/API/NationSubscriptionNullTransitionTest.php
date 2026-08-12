@@ -8,6 +8,7 @@ use App\Jobs\UpdateNationJob;
 use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
+use App\Services\PWHelperService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -119,6 +120,24 @@ class NationSubscriptionNullTransitionTest extends TestCase
 
         $this->assertSame(9, $nation->ground_capacity_research);
         $this->assertSame(12, $nation->ground_cost_research);
+    }
+
+    public function test_explicit_project_flag_corrects_the_stored_project_mask(): void
+    {
+        $nation = Nation::factory()->create(['project_bits' => '0']);
+        $payload = new GraphQLNation;
+        $payload->buildWithJSON((object) [
+            'id' => $nation->id,
+            'uranium_enrichment_program' => true,
+        ]);
+
+        Nation::updateFromAPI($payload);
+        $nation->refresh();
+
+        $this->assertContains(
+            'Uranium Enrichment Program',
+            PWHelperService::getNationProjects($nation->project_bits),
+        );
     }
 
     public function test_partial_military_payload_creates_missing_snapshot_with_zero_defaults(): void
