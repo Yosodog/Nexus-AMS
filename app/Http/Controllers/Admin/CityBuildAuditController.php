@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RegenerateMemberBuildRecommendationRequest;
 use App\Jobs\RefreshNationBuildRecommendationJob;
 use App\Models\Nation;
-use App\Services\AllianceMembershipService;
 use App\Services\CityBuildAuditService;
 use App\Services\Economy\EconomyRules;
 use App\Services\NationBuildRecommendationService;
@@ -24,7 +23,6 @@ class CityBuildAuditController extends Controller
     private const MEMBERS_PER_PAGE = 25;
 
     public function __construct(
-        private readonly AllianceMembershipService $membershipService,
         private readonly CityBuildAuditService $cityBuildAuditService,
         private readonly NationBuildRecommendationService $recommendationService,
     ) {}
@@ -161,7 +159,7 @@ class CityBuildAuditController extends Controller
     /** @return Builder<Nation> */
     private function memberQuery(): Builder
     {
-        return Nation::query()
+        $query = Nation::query()
             ->select([
                 'id',
                 'alliance_id',
@@ -187,15 +185,8 @@ class CityBuildAuditController extends Controller
                     ...EconomyRules::BUILD_FIELDS,
                 ])->orderBy('id'),
                 'buildRecommendation',
-            ])
-            ->whereIn('alliance_id', $this->membershipService->getAllianceIds())
-            ->where(function (Builder $query): void {
-                $query->whereNull('alliance_position')
-                    ->orWhere('alliance_position', '!=', 'APPLICANT');
-            })
-            ->where(function (Builder $query): void {
-                $query->whereNull('vacation_mode_turns')
-                    ->orWhere('vacation_mode_turns', '<=', 0);
-            });
+            ]);
+
+        return $this->recommendationService->applyEligibilityToQuery($query);
     }
 }

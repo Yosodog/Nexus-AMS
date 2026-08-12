@@ -98,6 +98,26 @@ class CityBuildAuditTest extends TestCase
         );
     }
 
+    public function test_unconfirmed_nation_is_excluded_and_cannot_queue_a_recommendation(): void
+    {
+        $manager = $this->createAdmin(['view-audits', 'manage-audits']);
+        $nation = $this->createMemberNation([
+            'alliance_position' => 'NOALLIANCE',
+            'nation_name' => 'Unconfirmed Nation',
+        ]);
+        $this->createCalculationInputs();
+
+        $this->actingAs($manager)
+            ->get(route('admin.audits.city-builds.index'))
+            ->assertOk()
+            ->assertDontSee($nation->nation_name);
+
+        $this->post(route('admin.audits.city-builds.recommendations.regenerate', $nation))
+            ->assertNotFound();
+
+        Queue::assertNotPushed(RefreshNationBuildRecommendationJob::class);
+    }
+
     public function test_viewer_cannot_queue_build_recommendations(): void
     {
         $viewer = $this->createAdmin(['view-audits']);
