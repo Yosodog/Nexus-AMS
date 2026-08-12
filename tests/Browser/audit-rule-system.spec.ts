@@ -169,7 +169,7 @@ test('admin rebuilds a failed imported rule in the mobile editor', async ({ page
   await expect(page.locator('article').filter({ hasText: 'Imported rule needing rebuild' })).toBeVisible();
 });
 
-test('member report puts actionable findings first on mobile in light and night themes', async ({ page }) => {
+test('member report puts the alliance city build above actionable findings on mobile in light and night themes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
     if (!window.localStorage.getItem('nexus-theme')) {
@@ -185,7 +185,7 @@ test('member report puts actionable findings first on mobile in light and night 
   await expect(page.getByText('Overdue', { exact: true }).first()).toBeVisible();
 
   const sectionOrder = await page.locator('main h2').allTextContents();
-  expect(sectionOrder.indexOf('Active findings')).toBeLessThan(sectionOrder.indexOf('Alliance city build'));
+  expect(sectionOrder.indexOf('Alliance city build')).toBeLessThan(sectionOrder.indexOf('Active findings'));
 
   const finding = page.locator('article').filter({ hasText: 'Aircraft readiness below target' }).first();
   const reasonTop = await finding.getByText('Why this matched').boundingBox();

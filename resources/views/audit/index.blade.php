@@ -116,6 +116,160 @@
             </div>
         </section>
 
+        <details class="rounded-lg border border-base-300 bg-base-100">
+            <summary class="cursor-pointer p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary md:p-6">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-base-content/70">Build recommendation</p>
+                        <h2 class="text-2xl font-bold">Alliance city build</h2>
+                        <p class="mt-1 max-w-prose text-base text-base-content/70">
+                            Open profitability, improvements, and bulk-import JSON.
+                        </p>
+                    </div>
+                    <span class="badge badge-outline">{{ $buildRecommendation ? 'Recommendation ready' : ($buildRecommendationPending ? 'Recalculating' : 'Not generated') }}</span>
+                </div>
+            </summary>
+
+            <div class="space-y-6 border-t border-base-300 p-4 md:p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <p class="max-w-prose text-base text-base-content/70">
+                        One build evaluated across your real city profiles at the highest recovered city capacity, while preserving your nation's MMR floor.
+                    </p>
+                    <div class="flex flex-col gap-4 sm:flex-row">
+                        <form method="POST" action="{{ route('audit.recommendation.regenerate') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-outline btn-primary w-full sm:w-auto">Regenerate build</button>
+                        </form>
+
+                        @if($buildRecommendation)
+                            <button type="button" class="btn btn-outline w-full sm:w-auto" data-copy-build="{{ $buildRecommendationJson }}">Copy JSON</button>
+                            <a
+                                href="https://politicsandwar.com/city/improvements/bulk-import/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="btn btn-primary w-full sm:w-auto"
+                            >
+                                Open bulk import
+                            </a>
+                        @endif
+                    </div>
+                </div>
+
+                @if($buildRecommendation)
+                    @if(data_get($buildRecommendation->calculation_context, 'market.stale'))
+                        <div class="alert alert-warning">
+                            Market pricing is stale. The build uses the latest usable snapshot and will refresh automatically.
+                        </div>
+                    @endif
+
+                    @if(filled(data_get($buildRecommendation->calculation_context, 'market.fallback_resources')))
+                        <div class="alert alert-warning">
+                            Aggregate fallback pricing was used for:
+                            {{ implode(', ', data_get($buildRecommendation->calculation_context, 'market.fallback_resources', [])) }}.
+                        </div>
+                    @endif
+
+                    @if($buildRecommendation->cities_below_target > 0)
+                        <div class="alert alert-info">
+                            {{ $buildRecommendation->cities_below_target }} {{ \Illuminate\Support\Str::plural('city', $buildRecommendation->cities_below_target) }}
+                            require {{ number_format($buildRecommendation->infrastructure_shortfall, 2) }} total infrastructure to run this build everywhere.
+                        </div>
+                    @endif
+
+                    <dl class="grid overflow-hidden rounded-lg border border-base-300 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                        <div class="border-b border-base-300 p-4 sm:border-r lg:border-b-0">
+                            <dt class="text-sm font-medium text-base-content/70">Profit / day</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums {{ $buildRecommendation->converted_profit_per_day >= 0 ? 'text-success' : 'text-error' }}">
+                                ${{ number_format($buildRecommendation->converted_profit_per_day, 2) }}
+                            </dd>
+                            <p class="mt-1 text-sm text-base-content/70">Per city</p>
+                        </div>
+                        <div class="border-b border-base-300 p-4 lg:border-b-0 lg:border-r">
+                            <dt class="text-sm font-medium text-base-content/70">Money / day</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums {{ $buildRecommendation->money_profit_per_day >= 0 ? 'text-success' : 'text-error' }}">
+                                ${{ number_format($buildRecommendation->money_profit_per_day, 2) }}
+                            </dd>
+                        </div>
+                        <div class="border-b border-base-300 p-4 sm:border-r lg:border-b-0">
+                            <dt class="text-sm font-medium text-base-content/70">Disease</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->disease, 2) }}</dd>
+                        </div>
+                        <div class="border-b border-base-300 p-4 lg:border-b-0 lg:border-r">
+                            <dt class="text-sm font-medium text-base-content/70">Pollution</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->pollution) }}</dd>
+                        </div>
+                        <div class="border-b border-base-300 p-4 sm:border-r sm:border-b-0">
+                            <dt class="text-sm font-medium text-base-content/70">Crime</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->crime, 2) }}</dd>
+                        </div>
+                        <div class="border-b border-base-300 p-4 sm:border-b-0 lg:border-r">
+                            <dt class="text-sm font-medium text-base-content/70">Commerce</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->commerce) }}</dd>
+                        </div>
+                        <div class="p-4 sm:border-r lg:border-r-0">
+                            <dt class="text-sm font-medium text-base-content/70">Population</dt>
+                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->population) }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        <span class="badge badge-outline">Infra {{ number_format($buildRecommendation->infra_needed) }}</span>
+                        <span class="badge badge-outline">Land {{ number_format($buildRecommendation->land_used, 2) }}</span>
+                        <span class="badge badge-outline">{{ $buildRecommendation->imp_total }} / {{ $buildRecommendation->available_slots }} slots</span>
+                        <span class="badge badge-outline">Highest recovered city target</span>
+                        <span class="badge badge-outline">{{ $buildRecommendation->price_basis }}</span>
+                        @if(filled(data_get($buildRecommendation->calculation_context, 'market.calculated_at')))
+                            <span class="badge badge-outline">
+                                Prices {{ \Illuminate\Support\Carbon::parse(data_get($buildRecommendation->calculation_context, 'market.calculated_at'))->toDayDateTimeString() }}
+                            </span>
+                        @endif
+                        <span class="badge badge-ghost">Updated {{ $buildRecommendation->calculated_at?->diffForHumans() }}</span>
+                    </div>
+
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        @foreach($buildRecommendationGroups as $group => $items)
+                            <section class="border-t border-base-300 pt-4">
+                                <h3 class="text-xl font-semibold">{{ $groupLabels[$group] ?? ucfirst(str_replace('_', ' ', $group)) }}</h3>
+                                @if(empty($items))
+                                    <p class="mt-2 text-base text-base-content/70">None</p>
+                                @else
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        @foreach($items as $item)
+                                            <span class="badge badge-outline">{{ $item['label'] }} × {{ $item['count'] }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </section>
+                        @endforeach
+                    </div>
+
+                    <details class="border-t border-base-300 pt-4">
+                        <summary class="cursor-pointer text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+                            View build JSON
+                        </summary>
+                        <div class="mt-4">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p class="text-base text-base-content/70">Ready for Politics & War bulk import.</p>
+                                <button type="button" class="btn btn-outline w-full sm:w-auto" data-copy-build="{{ $buildRecommendationJson }}">Copy JSON</button>
+                            </div>
+                            <textarea class="textarea mt-4 h-80 w-full font-mono text-sm" readonly aria-label="Build recommendation JSON">{{ $buildRecommendationJson }}</textarea>
+                        </div>
+                    </details>
+                @else
+                    <div class="rounded-lg border border-dashed border-base-300 bg-base-200/40 p-6">
+                        <h3 class="text-xl font-semibold">{{ $buildRecommendationPending ? 'Build recommendation is updating' : 'No build recommendation yet' }}</h3>
+                        <p class="mt-2 max-w-prose text-base text-base-content/70">
+                            @if($buildRecommendationPending)
+                                The current calculation is pending. Your older recommendation stays hidden so it cannot be mistaken for current data.
+                            @else
+                                Generate one to see the recommended JSON, profitability, city statistics, and quick import actions.
+                            @endif
+                        </p>
+                    </div>
+                @endif
+            </div>
+        </details>
+
         <section class="space-y-6" aria-labelledby="active-findings-title">
             <div>
                 <h2 id="active-findings-title" class="text-2xl font-bold">Active findings</h2>
@@ -397,160 +551,6 @@
                 @endforelse
             </div>
         </section>
-
-        <details class="rounded-lg border border-base-300 bg-base-100">
-            <summary class="cursor-pointer p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary md:p-6">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-sm font-semibold text-base-content/70">Build recommendation</p>
-                        <h2 class="text-2xl font-bold">Alliance city build</h2>
-                        <p class="mt-1 max-w-prose text-base text-base-content/70">
-                            Open profitability, improvements, and bulk-import JSON.
-                        </p>
-                    </div>
-                    <span class="badge badge-outline">{{ $buildRecommendation ? 'Recommendation ready' : ($buildRecommendationPending ? 'Recalculating' : 'Not generated') }}</span>
-                </div>
-            </summary>
-
-            <div class="space-y-6 border-t border-base-300 p-4 md:p-6">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <p class="max-w-prose text-base text-base-content/70">
-                        One build evaluated across your real city profiles at the highest recovered city capacity, while preserving your nation's MMR floor.
-                    </p>
-                    <div class="flex flex-col gap-4 sm:flex-row">
-                        <form method="POST" action="{{ route('audit.recommendation.regenerate') }}">
-                            @csrf
-                            <button type="submit" class="btn btn-outline btn-primary w-full sm:w-auto">Regenerate build</button>
-                        </form>
-
-                        @if($buildRecommendation)
-                            <button type="button" class="btn btn-outline w-full sm:w-auto" data-copy-build="{{ $buildRecommendationJson }}">Copy JSON</button>
-                            <a
-                                href="https://politicsandwar.com/city/improvements/bulk-import/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="btn btn-primary w-full sm:w-auto"
-                            >
-                                Open bulk import
-                            </a>
-                        @endif
-                    </div>
-                </div>
-
-                @if($buildRecommendation)
-                    @if(data_get($buildRecommendation->calculation_context, 'market.stale'))
-                        <div class="alert alert-warning">
-                            Market pricing is stale. The build uses the latest usable snapshot and will refresh automatically.
-                        </div>
-                    @endif
-
-                    @if(filled(data_get($buildRecommendation->calculation_context, 'market.fallback_resources')))
-                        <div class="alert alert-warning">
-                            Aggregate fallback pricing was used for:
-                            {{ implode(', ', data_get($buildRecommendation->calculation_context, 'market.fallback_resources', [])) }}.
-                        </div>
-                    @endif
-
-                    @if($buildRecommendation->cities_below_target > 0)
-                        <div class="alert alert-info">
-                            {{ $buildRecommendation->cities_below_target }} {{ \Illuminate\Support\Str::plural('city', $buildRecommendation->cities_below_target) }}
-                            require {{ number_format($buildRecommendation->infrastructure_shortfall, 2) }} total infrastructure to run this build everywhere.
-                        </div>
-                    @endif
-
-                    <dl class="grid overflow-hidden rounded-lg border border-base-300 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-                        <div class="border-b border-base-300 p-4 sm:border-r lg:border-b-0">
-                            <dt class="text-sm font-medium text-base-content/70">Profit / day</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums {{ $buildRecommendation->converted_profit_per_day >= 0 ? 'text-success' : 'text-error' }}">
-                                ${{ number_format($buildRecommendation->converted_profit_per_day, 2) }}
-                            </dd>
-                            <p class="mt-1 text-sm text-base-content/70">Per city</p>
-                        </div>
-                        <div class="border-b border-base-300 p-4 lg:border-b-0 lg:border-r">
-                            <dt class="text-sm font-medium text-base-content/70">Money / day</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums {{ $buildRecommendation->money_profit_per_day >= 0 ? 'text-success' : 'text-error' }}">
-                                ${{ number_format($buildRecommendation->money_profit_per_day, 2) }}
-                            </dd>
-                        </div>
-                        <div class="border-b border-base-300 p-4 sm:border-r lg:border-b-0">
-                            <dt class="text-sm font-medium text-base-content/70">Disease</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->disease, 2) }}</dd>
-                        </div>
-                        <div class="border-b border-base-300 p-4 lg:border-b-0 lg:border-r">
-                            <dt class="text-sm font-medium text-base-content/70">Pollution</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->pollution) }}</dd>
-                        </div>
-                        <div class="border-b border-base-300 p-4 sm:border-r sm:border-b-0">
-                            <dt class="text-sm font-medium text-base-content/70">Crime</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->crime, 2) }}</dd>
-                        </div>
-                        <div class="border-b border-base-300 p-4 sm:border-b-0 lg:border-r">
-                            <dt class="text-sm font-medium text-base-content/70">Commerce</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->commerce) }}</dd>
-                        </div>
-                        <div class="p-4 sm:border-r lg:border-r-0">
-                            <dt class="text-sm font-medium text-base-content/70">Population</dt>
-                            <dd class="mt-2 text-2xl font-bold tabular-nums">{{ number_format($buildRecommendation->population) }}</dd>
-                        </div>
-                    </dl>
-
-                    <div class="flex flex-wrap gap-2 text-sm">
-                        <span class="badge badge-outline">Infra {{ number_format($buildRecommendation->infra_needed) }}</span>
-                        <span class="badge badge-outline">Land {{ number_format($buildRecommendation->land_used, 2) }}</span>
-                        <span class="badge badge-outline">{{ $buildRecommendation->imp_total }} / {{ $buildRecommendation->available_slots }} slots</span>
-                        <span class="badge badge-outline">Highest recovered city target</span>
-                        <span class="badge badge-outline">{{ $buildRecommendation->price_basis }}</span>
-                        @if(filled(data_get($buildRecommendation->calculation_context, 'market.calculated_at')))
-                            <span class="badge badge-outline">
-                                Prices {{ \Illuminate\Support\Carbon::parse(data_get($buildRecommendation->calculation_context, 'market.calculated_at'))->toDayDateTimeString() }}
-                            </span>
-                        @endif
-                        <span class="badge badge-ghost">Updated {{ $buildRecommendation->calculated_at?->diffForHumans() }}</span>
-                    </div>
-
-                    <div class="grid gap-6 lg:grid-cols-2">
-                        @foreach($buildRecommendationGroups as $group => $items)
-                            <section class="border-t border-base-300 pt-4">
-                                <h3 class="text-xl font-semibold">{{ $groupLabels[$group] ?? ucfirst(str_replace('_', ' ', $group)) }}</h3>
-                                @if(empty($items))
-                                    <p class="mt-2 text-base text-base-content/70">None</p>
-                                @else
-                                    <div class="mt-4 flex flex-wrap gap-2">
-                                        @foreach($items as $item)
-                                            <span class="badge badge-outline">{{ $item['label'] }} × {{ $item['count'] }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </section>
-                        @endforeach
-                    </div>
-
-                    <details class="border-t border-base-300 pt-4">
-                        <summary class="cursor-pointer text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-                            View build JSON
-                        </summary>
-                        <div class="mt-4">
-                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <p class="text-base text-base-content/70">Ready for Politics & War bulk import.</p>
-                                <button type="button" class="btn btn-outline w-full sm:w-auto" data-copy-build="{{ $buildRecommendationJson }}">Copy JSON</button>
-                            </div>
-                            <textarea class="textarea mt-4 h-80 w-full font-mono text-sm" readonly aria-label="Build recommendation JSON">{{ $buildRecommendationJson }}</textarea>
-                        </div>
-                    </details>
-                @else
-                    <div class="rounded-lg border border-dashed border-base-300 bg-base-200/40 p-6">
-                        <h3 class="text-xl font-semibold">{{ $buildRecommendationPending ? 'Build recommendation is updating' : 'No build recommendation yet' }}</h3>
-                        <p class="mt-2 max-w-prose text-base text-base-content/70">
-                            @if($buildRecommendationPending)
-                                The current calculation is pending. Your older recommendation stays hidden so it cannot be mistaken for current data.
-                            @else
-                                Generate one to see the recommended JSON, profitability, city statistics, and quick import actions.
-                            @endif
-                        </p>
-                    </div>
-                @endif
-            </div>
-        </details>
     </div>
 
     <script>
