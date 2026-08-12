@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Discord\AlertRendererManifestController as DiscordAlertRendererManifestController;
 use App\Http\Controllers\API\Discord\ApplicationController as DiscordApplicationController;
+use App\Http\Controllers\API\Discord\BuildRecommendationController as DiscordBuildRecommendationController;
 use App\Http\Controllers\API\Discord\DirectoryController as DiscordDirectoryController;
 use App\Http\Controllers\API\Discord\FinanceController as DiscordFinanceController;
 use App\Http\Controllers\API\Discord\MemberContextController as DiscordMemberContextController;
@@ -186,6 +187,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     });
 
     Route::prefix('me')->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function () {
+        Route::get('/build-recommendation', DiscordBuildRecommendationController::class)
+            ->middleware(EnsureDiscordInteractionCommand::class.':build');
         Route::get('/accounts', [DiscordFinanceController::class, 'accounts']);
         Route::get('/accounts/{account}/transactions', [DiscordFinanceController::class, 'transactions']);
         Route::get('/withdrawals/{intent}', [DiscordFinanceController::class, 'reviewWithdrawal']);

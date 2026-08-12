@@ -5,7 +5,9 @@ namespace Tests\Feature\API;
 use App\Models\Alliance;
 use App\Models\DiscordAccount;
 use App\Models\Nation;
+use App\Models\NationBuildRecommendation;
 use App\Models\User;
+use App\Services\Economy\EconomyRules;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\Concerns\SignsDiscordInteractions;
@@ -136,6 +138,74 @@ class DiscordDirectoryApiTest extends TestCase
             $this->assertStringNotContainsString('military', $encoded);
             $this->assertStringNotContainsString('bank', $encoded);
         }
+    }
+
+    public function test_member_can_view_their_current_recommended_build(): void
+    {
+        NationBuildRecommendation::query()->create([
+            'nation_id' => $this->actorNation->id,
+            'alliance_id' => $this->actorNation->alliance_id,
+            'model_version' => EconomyRules::MODEL_VERSION,
+            'recommended_build_json' => [
+                'infra_needed' => 2500,
+                'imp_total' => 50,
+                'imp_nuclearpower' => 1,
+                'imp_farm' => 10,
+                'imp_munitionsfactory' => 5,
+                'imp_hospital' => 1,
+                'imp_hangars' => 5,
+            ],
+            'infra_needed' => 2500,
+            'land_used' => 2500,
+            'imp_total' => 50,
+            'available_slots' => 50,
+            'cities_below_target' => 2,
+            'infrastructure_shortfall' => 125.5,
+            'converted_profit_per_day' => 1234567.89,
+            'money_profit_per_day' => 456789.12,
+            'resource_profit_per_day' => ['food' => 100],
+            'disease' => 1.25,
+            'pollution' => 10,
+            'crime' => 0.5,
+            'commerce' => 115,
+            'population' => 125000,
+            'price_basis' => 'test prices',
+            'calculation_context' => ['market' => ['stale' => true]],
+            'calculated_at' => now(),
+        ]);
+
+        $response = $this->withHeaders($this->headers('build'))
+            ->getJson('/api/v1/discord/me/build-recommendation')
+            ->assertOk()
+            ->assertJsonPath('data.state', 'ready')
+            ->assertJsonPath('data.nation.id', $this->actorNation->id)
+            ->assertJsonPath('data.recommendation.target_infrastructure', 2500)
+            ->assertJsonPath('data.recommendation.groups.0.key', 'power')
+            ->assertJsonPath('data.recommendation.groups.0.items.0.label', 'Nuclear Power Plant')
+            ->assertJsonPath('data.recommendation.market_stale', true)
+            ->assertJsonPath('data.deep_link_path', '/audit')
+            ->assertJsonPath('meta.actor_scope', 'self');
+
+        $encoded = json_encode($response->json('data'), JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('resource_profit_per_day', $encoded);
+    }
+
+    public function test_member_receives_an_unavailable_state_without_a_current_recommendation(): void
+    {
+        $this->withHeaders($this->headers('build'))
+            ->getJson('/api/v1/discord/me/build-recommendation')
+            ->assertOk()
+            ->assertJsonPath('data.state', 'unavailable')
+            ->assertJsonPath('data.nation.id', $this->actorNation->id)
+            ->assertJsonMissingPath('data.recommendation');
+    }
+
+    public function test_build_recommendation_requires_the_build_command_signature(): void
+    {
+        $this->withHeaders($this->headers('nation'))
+            ->getJson('/api/v1/discord/me/build-recommendation')
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'discord_interaction_action_mismatch');
     }
 
     private function headers(string $command): array
