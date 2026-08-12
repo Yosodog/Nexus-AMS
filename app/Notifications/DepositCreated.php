@@ -42,7 +42,7 @@ class DepositCreated extends Notification implements ShouldQueue
         return [
             'nation_id' => $this->nation_id,
             'subject' => 'Deposit request created',
-            'message' => "Deposit account: {$this->deposit->account->name}\n\nDeposit code: {$this->deposit->deposit_code}\n\nSend the money and resources you want to deposit to the in-game bank. Use the code above as the transaction note.\n\nThe app checks deposits every minute. Your balance updates after you receive a confirmation message. If you do not get one within an hour, contact us.\n\nThis code expires in one hour. Deposits sent after it expires will not be counted.",
+            'message' => "Deposit account: {$this->deposit->account->name}\n\nDeposit code: {$this->deposit->deposit_code}\n\nSend the money and resources you want to deposit to the primary alliance bank or an enabled offshore bank. Use the code above as the transaction note.\n\nThe app checks deposits every minute. Your balance updates after you receive a confirmation message. If you do not get one within an hour, contact us.\n\nThis code expires in one hour. Deposits sent after it expires will not be counted.",
         ];
     }
 

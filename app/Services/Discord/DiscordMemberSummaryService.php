@@ -50,7 +50,7 @@ final readonly class DiscordMemberSummaryService
         $discordAccount = $context->discordAccount;
         $nation = $actor->nation()->with('alliance')->first();
         if (! $nation) {
-            return new DiscordActorContext(
+            return (new DiscordActorContext(
                 state: DiscordActorContextState::NoNation,
                 message: 'The linked Nexus account has no synchronized nation profile.',
                 actor: $actor,
@@ -59,7 +59,7 @@ final readonly class DiscordMemberSummaryService
                     'label' => 'Open Nexus dashboard',
                     'deep_link_path' => route('user.dashboard', absolute: false),
                 ],
-            )->safePayload();
+            ))->safePayload();
         }
 
         $generatedAt = now();

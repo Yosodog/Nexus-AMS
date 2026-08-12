@@ -47,6 +47,10 @@ $runtimeDirectory = '/tmp/nexus-runtime';
 preparePrivateDirectory($runtimeDirectory);
 writeRuntimeFile($runtimeDirectory.'/role', $role->value."\n");
 
+if ($role === NexusProcessRole::Web) {
+    preparePrivateDirectory('/tmp/nexus-apache');
+}
+
 $command = $role->command($applicationRoot);
 $process = proc_open(
     $command,

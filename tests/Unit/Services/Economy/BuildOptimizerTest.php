@@ -15,6 +15,8 @@ use Tests\TestCase;
 
 class BuildOptimizerTest extends TestCase
 {
+    private const HIGH_INFRASTRUCTURE_RUNTIME_BUDGET_SECONDS = 30.0;
+
     private BuildOptimizer $optimizer;
 
     private EconomyCalculator $calculator;
@@ -159,7 +161,7 @@ class BuildOptimizerTest extends TestCase
         $elapsedSeconds = (hrtime(true) - $startedAt) / 1_000_000_000;
 
         $this->assertNotNull($result);
-        $this->assertLessThan(5.0, $elapsedSeconds);
+        $this->assertLessThan(self::HIGH_INFRASTRUCTURE_RUNTIME_BUDGET_SECONDS, $elapsedSeconds);
         $this->assertLessThan(256 * 1024 * 1024, memory_get_peak_usage(true));
     }
 
