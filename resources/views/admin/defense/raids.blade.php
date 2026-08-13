@@ -2,27 +2,67 @@
 
 @section('content')
     <x-header title="Raid Finder" separator use-h1>
-        <x-slot:subtitle>Manage the global no-raid alliance list and the top-alliance exclusion cap.</x-slot:subtitle>
+        <x-slot:subtitle>Manage target eligibility, the global no-raid alliance list, and the top-alliance exclusion cap.</x-slot:subtitle>
     </x-header>
 
     <div class="mb-6 grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-        <x-card title="Top Alliance Cap" subtitle="Exclude the top-ranked alliances from raid recommendations.">
-            <form method="POST" action="{{ route('admin.raids.top-cap.update') }}" class="flex flex-wrap items-end gap-3">
+        <x-card title="Raid Target Policy" subtitle="Set the global alliance and activity requirements for raid recommendations.">
+            <form method="POST" action="{{ route('admin.raids.top-cap.update') }}" class="grid gap-4">
                 @csrf
-                <label class="block w-full max-w-xs space-y-2">
+                <label class="grid gap-2">
                     <span class="text-sm font-medium">Exclude top alliances</span>
                     <input
                         type="number"
                         class="input"
                         name="top_cap"
                         id="top_cap"
-                        value="{{ $topCap }}"
+                        value="{{ old('top_cap', $topCap) }}"
                         min="1"
-                        max="100"
+                        max="1000"
                         required
                     >
                 </label>
-                <button class="btn btn-primary" type="submit">Update</button>
+
+                <div class="grid gap-3 rounded-box border border-base-300 p-4">
+                    <div class="grid gap-1">
+                        <h3 class="font-semibold">Target activity</h3>
+                        <p class="text-sm nexus-text-muted">
+                            Targets above the city threshold must have been inactive for the required number of turns. Each turn is two hours.
+                        </p>
+                    </div>
+
+                    <label class="grid gap-2">
+                        <span class="text-sm font-medium">Apply inactivity above city count</span>
+                        <input
+                            type="number"
+                            class="input"
+                            name="raid_activity_city_threshold"
+                            id="raid_activity_city_threshold"
+                            value="{{ old('raid_activity_city_threshold', $activityCityThreshold) }}"
+                            min="0"
+                            max="1000"
+                            required
+                        >
+                        <span class="text-xs nexus-text-muted">Targets at or below this city count bypass the activity requirement.</span>
+                    </label>
+
+                    <label class="grid gap-2">
+                        <span class="text-sm font-medium">Minimum inactive turns</span>
+                        <input
+                            type="number"
+                            class="input"
+                            name="raid_minimum_inactive_turns"
+                            id="raid_minimum_inactive_turns"
+                            value="{{ old('raid_minimum_inactive_turns', $minimumInactiveTurns) }}"
+                            min="0"
+                            max="4380"
+                            required
+                        >
+                        <span class="text-xs nexus-text-muted">Set this to 0 to disable the activity filter.</span>
+                    </label>
+                </div>
+
+                <button class="btn btn-primary justify-self-start" type="submit">Update raid policy</button>
             </form>
         </x-card>
 

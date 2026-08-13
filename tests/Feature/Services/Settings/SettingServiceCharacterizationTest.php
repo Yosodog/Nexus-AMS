@@ -24,6 +24,10 @@ class SettingServiceCharacterizationTest extends TestCase
         $this->assertSame(1_000_000_000, SettingService::MAX_LOTTERY_TICKET_PRICE_CENTS);
         $this->assertSame(500, SettingService::MAX_LOTTERY_TICKETS_PER_PURCHASE);
         $this->assertSame(10_000, SettingService::MAX_LOTTERY_TICKETS_PER_NATION);
+        $this->assertSame(0, SettingService::DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD);
+        $this->assertSame(0, SettingService::DEFAULT_RAID_MINIMUM_INACTIVE_TURNS);
+        $this->assertSame(1000, SettingService::MAX_RAID_ACTIVITY_CITY_THRESHOLD);
+        $this->assertSame(4380, SettingService::MAX_RAID_MINIMUM_INACTIVE_TURNS);
     }
 
     public function test_data_sync_defaults_and_manual_nation_aliases_are_preserved(): void
@@ -34,6 +38,10 @@ class SettingServiceCharacterizationTest extends TestCase
         $this->assertNull(SettingService::getCityAverageUpdatedAt());
         $this->assertSame(40, SettingService::getTopRaidable());
         $this->assertSame('40', $this->storedValue('raid_top_alliance_cap'));
+        $this->assertSame(0, SettingService::getRaidActivityCityThreshold());
+        $this->assertSame('0', $this->storedValue('raid_activity_city_threshold'));
+        $this->assertSame(0, SettingService::getRaidMinimumInactiveTurns());
+        $this->assertSame('0', $this->storedValue('raid_minimum_inactive_turns'));
 
         $this->assertSame('', SettingService::getLastNationSyncBatchId());
         $this->assertSame('', $this->storedValue('last_nation_sync_batch_id'));

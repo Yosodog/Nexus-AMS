@@ -53,9 +53,13 @@ class SettingDomainServicesTest extends TestCase
 
         SettingService::setLastNationSyncBatchId('manual-2');
         SettingService::setTopRaidable(55);
+        $settings->setRaidActivityCityThreshold(-1);
+        SettingService::setRaidMinimumInactiveTurns(SettingService::MAX_RAID_MINIMUM_INACTIVE_TURNS + 1);
 
         $this->assertSame('manual-2', $settings->getLastManualNationSyncBatchId());
         $this->assertSame(55, $settings->getTopRaidable());
+        $this->assertSame(0, SettingService::getRaidActivityCityThreshold());
+        $this->assertSame(SettingService::MAX_RAID_MINIMUM_INACTIVE_TURNS, $settings->getRaidMinimumInactiveTurns());
     }
 
     public function test_public_site_service_and_compatibility_facade_share_values_without_persisting_defaults(): void
