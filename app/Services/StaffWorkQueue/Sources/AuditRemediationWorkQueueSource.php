@@ -29,6 +29,7 @@ final class AuditRemediationWorkQueueSource implements StaffWorkQueueSourceV2
     public function load(): array
     {
         return AuditResult::query()
+            ->current()
             ->where(fn ($query) => $query->whereNull('waived_until')->orWhere('waived_until', '<=', now()))
             ->where(fn ($query) => $query->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', now()))
             ->with([

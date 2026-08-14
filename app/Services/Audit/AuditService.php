@@ -253,6 +253,7 @@ final class AuditService
     private function finishRuleHealth(Collection $rules, array $runState, Carbon $evaluatedAt): void
     {
         $matchCounts = AuditResult::query()
+            ->current()
             ->whereIn('audit_rule_id', $rules->pluck('id')->all())
             ->selectRaw('audit_rule_id, COUNT(*) AS aggregate')
             ->groupBy('audit_rule_id')
@@ -481,6 +482,7 @@ final class AuditService
     public function getNationViolationsById(int $nationId): Collection
     {
         return AuditResult::query()
+            ->current()
             ->with('rule')
             ->where('target_type', AuditTargetType::Nation)
             ->where('nation_id', $nationId)
@@ -493,11 +495,13 @@ final class AuditService
     public function getNationAndCityViolationsForNation(Nation $nation): array
     {
         $nationResults = AuditResult::query()
+            ->current()
             ->with('rule')
             ->where('target_type', AuditTargetType::Nation)
             ->where('nation_id', $nation->id)
             ->get();
         $cityResults = AuditResult::query()
+            ->current()
             ->with(['rule', 'city'])
             ->where('target_type', AuditTargetType::City)
             ->where('nation_id', $nation->id)

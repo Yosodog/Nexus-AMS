@@ -31,7 +31,7 @@ class AuditController extends Controller
         $priorityOrder = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 WHEN 'info' THEN 3 ELSE 4 END";
 
         $rules = AuditRule::query()
-            ->withCount('results')
+            ->withCount(['results' => fn ($query) => $query->current()])
             ->orderByRaw($priorityOrder)
             ->orderBy('name')
             ->get();
@@ -43,6 +43,7 @@ class AuditController extends Controller
         });
 
         $violationsByPriority = AuditResult::query()
+            ->current()
             ->join('audit_rules', 'audit_results.audit_rule_id', '=', 'audit_rules.id')
             ->select('audit_rules.priority', DB::raw('count(*) as aggregate'))
             ->groupBy('audit_rules.priority')
@@ -50,6 +51,7 @@ class AuditController extends Controller
             ->toArray();
 
         $violationsByTarget = AuditResult::query()
+            ->current()
             ->select('target_type', DB::raw('count(*) as aggregate'))
             ->groupBy('target_type')
             ->pluck('aggregate', 'target_type')
@@ -61,7 +63,7 @@ class AuditController extends Controller
             'violations_total' => array_sum($violationsByPriority),
             'violations_by_priority' => $violationsByPriority,
             'violations_by_target' => $violationsByTarget,
-            'overdue_findings' => AuditResult::query()->whereNotNull('due_at')->where('due_at', '<', now())->count(),
+            'overdue_findings' => AuditResult::query()->current()->whereNotNull('due_at')->where('due_at', '<', now())->count(),
             'unhealthy_rules' => $rules->filter(fn (AuditRule $rule): bool => in_array(
                 $rule->last_evaluation_status?->value,
                 ['warning', 'failed', 'migration_failed'],
@@ -70,6 +72,7 @@ class AuditController extends Controller
         ];
 
         $attentionFindings = AuditResult::query()
+            ->current()
             ->with([
                 'rule:id,name,priority,target_type',
                 'nation:id,nation_name,leader_name',
@@ -98,6 +101,7 @@ class AuditController extends Controller
         $this->authorize('view-audits');
 
         $query = $auditRule->results()
+            ->current()
             ->with([
                 'nation:id,leader_name,nation_name,score,num_cities,color',
                 'city:id,nation_id,name,infrastructure,land,powered',

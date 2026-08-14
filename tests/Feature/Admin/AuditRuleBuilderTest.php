@@ -366,6 +366,28 @@ class AuditRuleBuilderTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_disabling_an_already_disabled_rule_closes_stale_findings(): void
+    {
+        $admin = $this->createAdmin(['manage-audits']);
+        $definition = $this->definition('nation.score', 'gte', 500);
+        $rule = $this->createRule($admin, $definition, enabled: false, revision: 3);
+        $finding = $this->createFinding($rule);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.audits.rules.destroy', $rule))
+            ->assertRedirect(route('admin.audits.rules.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('audit_results', ['id' => $finding->id]);
+        $this->assertDatabaseHas('audit_result_events', [
+            'audit_result_id' => $finding->id,
+            'audit_rule_id' => $rule->id,
+            'event_type' => 'rule_disabled',
+            'actor_user_id' => $admin->id,
+        ]);
+        Queue::assertNothingPushed();
+    }
+
     public function test_reenabling_a_rule_requires_confirmation_and_starts_a_fresh_revision(): void
     {
         $admin = $this->createAdmin(['manage-audits']);

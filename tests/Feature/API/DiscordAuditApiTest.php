@@ -179,6 +179,27 @@ class DiscordAuditApiTest extends TestCase
             ->assertJsonMissing(['id' => $otherResult->id]);
     }
 
+    public function test_member_does_not_receive_disabled_or_superseded_rule_findings(): void
+    {
+        $rule = $this->result->rule()->firstOrFail();
+        $rule->update(['enabled' => false]);
+
+        $this->withHeaders($this->headers('890123456789012345'))
+            ->getJson('/api/v1/discord/me/audits')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $rule->update([
+            'enabled' => true,
+            'revision' => 4,
+        ]);
+
+        $this->withHeaders($this->headers('901234567890123456'))
+            ->getJson('/api/v1/discord/me/audits')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_applicant_cannot_use_audit_api(): void
     {
         $this->actor->nation()->update(['alliance_position' => 'APPLICANT']);

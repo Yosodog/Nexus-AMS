@@ -76,6 +76,22 @@ class MemberDashboardAttentionTest extends TestCase
         $this->assertTrue($result['attentionItems'][0]['external']);
     }
 
+    public function test_disabled_rule_findings_do_not_create_dashboard_attention(): void
+    {
+        $nation = Nation::factory()->create();
+        $finding = $this->createAuditFinding($nation);
+        $finding->rule()->update(['enabled' => false]);
+
+        $result = app(MemberDashboardAttentionService::class)->forNation($nation, [
+            'latestSignIn' => (object) ['created_at' => now()],
+            'mmrResourcesMet' => true,
+            'mmrUnitsMet' => true,
+        ]);
+
+        $this->assertSame(0, $result['attentionCount']);
+        $this->assertSame([], $result['attentionItems']);
+    }
+
     public function test_dashboard_renders_attention_before_readiness_and_preserves_stats(): void
     {
         [$nation, $account] = $this->createNationContext();

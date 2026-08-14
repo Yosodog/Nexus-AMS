@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AuditTargetType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -26,6 +27,14 @@ class AuditResult extends Model
             'waived_until' => 'datetime',
             'due_at' => 'datetime',
         ];
+    }
+
+    public function scopeCurrent(Builder $query): Builder
+    {
+        return $query->whereHas('rule', function (Builder $query): void {
+            $query->where('enabled', true)
+                ->whereColumn('audit_rules.revision', 'audit_results.rule_revision');
+        });
     }
 
     public function rule(): BelongsTo

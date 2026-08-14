@@ -77,6 +77,7 @@ class MemberDashboardAttentionService
     private function auditItem(Nation $nation): ?array
     {
         $findings = AuditResult::query()
+            ->current()
             ->where('nation_id', $nation->getKey())
             ->where(function ($query): void {
                 $query->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', now());

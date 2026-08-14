@@ -20,6 +20,7 @@ class SendAuditRemindersJob implements ShouldQueue
         AllianceMemberEligibilityService $eligibilityService,
     ): void {
         AuditResult::query()
+            ->current()
             ->with(['nation.user.discordAccounts'])
             ->where(function ($query): void {
                 $query->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', now());

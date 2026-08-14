@@ -74,6 +74,10 @@ class AuditReminderScheduleTest extends TestCase
         $this->createFinding($nation, dueAt: now()->addDay());
         $this->createFinding($nation, snoozedUntil: now()->addDay());
         $this->createFinding($nation, waivedUntil: now()->addDay());
+        $disabledFinding = $this->createFinding($nation, dueAt: now()->addDay());
+        $disabledFinding->rule()->update(['enabled' => false]);
+        $supersededFinding = $this->createFinding($nation, dueAt: now()->addDay());
+        $supersededFinding->rule()->increment('revision');
 
         $eligibility = Mockery::mock(AllianceMemberEligibilityService::class);
         $eligibility->shouldReceive('isEligibleNation')

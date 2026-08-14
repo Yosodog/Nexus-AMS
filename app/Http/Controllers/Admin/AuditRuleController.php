@@ -33,7 +33,7 @@ class AuditRuleController extends Controller
         $this->authorize('view-audits');
 
         $priorityOrder = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 WHEN 'info' THEN 3 ELSE 4 END";
-        $query = AuditRule::query()->withCount('results');
+        $query = AuditRule::query()->withCount(['results' => fn ($query) => $query->current()]);
 
         if ($target = AuditTargetType::tryFrom((string) $request->query('target'))) {
             $query->where('target_type', $target);

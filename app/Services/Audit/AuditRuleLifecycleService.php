@@ -122,11 +122,9 @@ final class AuditRuleLifecycleService
         return DB::transaction(function () use ($rule, $actor): AuditRule {
             $locked = AuditRule::query()->lockForUpdate()->findOrFail($rule->id);
 
-            if ($locked->enabled) {
-                $this->closeFindings($locked, 'rule_disabled', $actor, [
-                    'revision' => (int) $locked->revision,
-                ]);
-            }
+            $this->closeFindings($locked, 'rule_disabled', $actor, [
+                'revision' => (int) $locked->revision,
+            ]);
 
             $locked->forceFill([
                 'enabled' => false,
