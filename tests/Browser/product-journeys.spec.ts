@@ -87,6 +87,27 @@ test('full admin can reach core operations and inspect ledger activity', async (
   await expect(page.getByRole('heading', { name: 'Alliance Members' })).toBeVisible();
 });
 
+test('account chart equivalents stay outside responsive sizing containers', async ({ page }) => {
+  await page.goto('/_browser/login/admin?redirect=/admin/accounts');
+
+  await expectApplicationShell(page);
+  await expect(page.getByRole('heading', { name: 'Account Management' })).toBeVisible();
+  await expect(page.locator('[data-chart-equivalent]')).toHaveCount(3);
+
+  const placements = await page
+    .locator('#accountsLiquidityChart, #topBalancesChart, #resourceCushionChart')
+    .evaluateAll((canvases) => canvases.map((canvas) => ({
+      equivalentInsideSizingContainer: canvas.nextElementSibling?.hasAttribute('data-chart-equivalent') ?? false,
+      equivalentAfterSizingContainer: canvas.parentElement?.nextElementSibling?.hasAttribute('data-chart-equivalent') ?? false,
+    })));
+
+  expect(placements).toEqual([
+    { equivalentInsideSizingContainer: false, equivalentAfterSizingContainer: true },
+    { equivalentInsideSizingContainer: false, equivalentAfterSizingContainer: true },
+    { equivalentInsideSizingContainer: false, equivalentAfterSizingContainer: true },
+  ]);
+});
+
 test('full admin can review populated grant and city grant queues', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/grants');
 

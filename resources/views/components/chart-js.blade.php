@@ -236,11 +236,13 @@
                 chart.$nexusEquivalent.replaceWith(equivalent);
             } else {
                 const canvasParent = chart.canvas.parentElement;
-                const parentHasFixedHeight = canvasParent && (
+                const parentDefinesChartHeight = canvasParent && (
                     canvasParent.style.height
-                    || [...canvasParent.classList].some((className) => /^h-/.test(className))
+                    || canvasParent.style.minHeight
+                    || canvasParent.style.maxHeight
+                    || [...canvasParent.classList].some((className) => /^(?:(?:min|max)-)?h-/.test(className))
                 );
-                const anchor = parentHasFixedHeight ? canvasParent : chart.canvas;
+                const anchor = parentDefinesChartHeight ? canvasParent : chart.canvas;
                 anchor.insertAdjacentElement('afterend', equivalent);
             }
 
