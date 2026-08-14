@@ -10,6 +10,7 @@ use App\Listeners\IngestMilcomIncident;
 use App\Listeners\ReconcileMilcomWarState;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
+use App\Listeners\SendWarDeclaredDiscordNotification;
 use Illuminate\Support\Facades\Artisan;
 use Tests\FeatureTestCase;
 
@@ -27,6 +28,7 @@ class EventListenerRegistrationTest extends FeatureTestCase
             IngestMilcomIncident::class,
             ReconcileMilcomWarState::class,
             CreateCounterOnWarDeclared::class,
+            SendWarDeclaredDiscordNotification::class,
         ], $this->listenersFor(WarDeclared::class));
     }
 

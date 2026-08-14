@@ -8,6 +8,29 @@ use Tests\TestCase;
 
 class UpdateApplicationPermissionsTest extends TestCase
 {
+    public function test_update_command_refreshes_all_runtime_caches(): void
+    {
+        $command = new class extends UpdateApplication
+        {
+            /** @return list<array{0: string, 1: string}> */
+            public function cacheSteps(): array
+            {
+                return $this->cacheRefreshSteps();
+            }
+        };
+
+        $this->assertSame([
+            ['config:clear', 'Clearing config cache'],
+            ['cache:clear', 'Clearing application cache'],
+            ['route:clear', 'Clearing route cache'],
+            ['event:clear', 'Clearing event cache'],
+            ['view:clear', 'Clearing compiled views'],
+            ['route:cache', 'Rebuilding route cache'],
+            ['event:cache', 'Rebuilding event cache'],
+            ['view:cache', 'Rebuilding view cache'],
+        ], $command->cacheSteps());
+    }
+
     public function test_update_command_uses_configured_private_permissions(): void
     {
         config()->set('deployment.owner', 'deploy-user');

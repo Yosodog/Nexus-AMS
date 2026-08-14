@@ -49,12 +49,10 @@ class UpdateApplication extends Command
 
             $this->runArtisanCommand('migrate --force', 'Applying migrations');
             $this->runArtisanCommand('db:seed --force', 'Running database seeders');
-            $this->runArtisanCommand('config:clear', 'Clearing config cache');
-            $this->runArtisanCommand('cache:clear', 'Clearing application cache');
-            $this->runArtisanCommand('route:clear', 'Clearing route cache');
-            $this->runArtisanCommand('view:clear', 'Clearing compiled views');
-            $this->runArtisanCommand('route:cache', 'Rebuilding route cache');
-            $this->runArtisanCommand('view:cache', 'Rebuilding view cache');
+
+            foreach ($this->cacheRefreshSteps() as [$arguments, $description]) {
+                $this->runArtisanCommand($arguments, $description);
+            }
 
             $this->fixPermissions();
 
@@ -120,6 +118,23 @@ class UpdateApplication extends Command
                 $this->runShellCommand($command, $description);
             }
         }
+    }
+
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    protected function cacheRefreshSteps(): array
+    {
+        return [
+            ['config:clear', 'Clearing config cache'],
+            ['cache:clear', 'Clearing application cache'],
+            ['route:clear', 'Clearing route cache'],
+            ['event:clear', 'Clearing event cache'],
+            ['view:clear', 'Clearing compiled views'],
+            ['route:cache', 'Rebuilding route cache'],
+            ['event:cache', 'Rebuilding event cache'],
+            ['view:cache', 'Rebuilding view cache'],
+        ];
     }
 
     /**
