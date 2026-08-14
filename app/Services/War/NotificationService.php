@@ -2,6 +2,8 @@
 
 namespace App\Services\War;
 
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\Alliance;
 use App\Models\DiscordQueue;
@@ -94,7 +96,7 @@ class NotificationService
 
                 $warType = (string) ($firstAssignment?->target?->preferred_war_type ?: $plan->plan_type);
 
-                $this->discordQueueService->enqueue(self::DISCORD_WAR_ROOM_ACTION, [
+                $this->discordQueueService->enqueue(DiscordQueueAction::WarRoomCreate, [
                     'forum_channel_id' => $forumChannelId,
                     'source' => [
                         'type' => 'war_plan',
@@ -114,7 +116,7 @@ class NotificationService
                         $plan->id,
                         Str::of($targetNation->leader_name ?: $targetNation->nation_name ?: 'target')->slug('-')
                     ),
-                ]);
+                ], DiscordQueueLane::SideEffects);
 
                 $result['rooms_queued']++;
             });
@@ -187,7 +189,7 @@ class NotificationService
             }
         }
 
-        $this->discordQueueService->enqueue(self::DISCORD_WAR_ROOM_ACTION, [
+        $this->discordQueueService->enqueue(DiscordQueueAction::WarRoomCreate, [
             'forum_channel_id' => $forumChannelId,
             'source' => [
                 'type' => 'war_counter',
@@ -210,7 +212,7 @@ class NotificationService
                 Str::of($counter->aggressor->leader_name ?: $counter->aggressor->nation_name ?: 'target')->slug('-'),
                 $counter->aggressor->id
             ),
-        ]);
+        ], DiscordQueueLane::SideEffects);
 
         $this->queueCounterAutoArchiveNotification($counter);
 
@@ -230,7 +232,7 @@ class NotificationService
             return false;
         }
 
-        $this->discordQueueService->enqueue(self::DISCORD_WAR_ROOM_ARCHIVE_ACTION, [
+        $this->discordQueueService->enqueue(DiscordQueueAction::WarRoomArchive, [
             'discord_channel_id' => $discordChannelId !== '' ? $discordChannelId : null,
             'source' => [
                 'type' => 'war_counter',
@@ -242,7 +244,7 @@ class NotificationService
                 'title_prefix' => '[Archived] ',
             ],
             'archived_at' => optional($counter->archived_at)->toIso8601String() ?? now()->toIso8601String(),
-        ]);
+        ], DiscordQueueLane::SideEffects);
 
         return true;
     }
@@ -266,7 +268,7 @@ class NotificationService
         $autoArchiveDays = max(1, (int) config('war.counters.room_auto_archive_days', 14));
 
         $this->discordQueueService->enqueue(
-            self::DISCORD_WAR_ROOM_ARCHIVE_ACTION,
+            DiscordQueueAction::WarRoomArchive,
             [
                 'discord_channel_id' => null,
                 'source' => [
@@ -281,7 +283,8 @@ class NotificationService
                 'archived_at' => Carbon::now()->addDays($autoArchiveDays)->toIso8601String(),
                 'automatic' => true,
             ],
-            Carbon::now()->addDays($autoArchiveDays)
+            DiscordQueueLane::SideEffects,
+            availableAt: Carbon::now()->addDays($autoArchiveDays),
         );
     }
 

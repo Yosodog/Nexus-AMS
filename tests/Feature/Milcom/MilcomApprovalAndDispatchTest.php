@@ -17,6 +17,7 @@ use App\Models\MilcomEvent;
 use App\Models\MilcomNationCapacityLock;
 use App\Models\Nation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\Concerns\SignsDiscordInteractions;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
@@ -24,6 +25,7 @@ use Tests\TestCase;
 class MilcomApprovalAndDispatchTest extends TestCase
 {
     use BuildsMilcomFixtures;
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
     use SignsDiscordInteractions;
 
@@ -34,6 +36,7 @@ class MilcomApprovalAndDispatchTest extends TestCase
         config()->set('milcom.v2_enabled', true);
         config()->set('services.discord_bot_key', 'milcom-discord-test-token');
         config()->set('services.discord.guild_id', '123456789012345678');
+        $this->configureDiscordQueueV2();
         $this->configureDiscordInteractionSigning();
     }
 

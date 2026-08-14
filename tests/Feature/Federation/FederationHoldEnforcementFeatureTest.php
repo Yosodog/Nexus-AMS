@@ -7,6 +7,9 @@ use App\Domain\Milcom\Enums\DispatchStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\RecommendationRunStatus;
+use App\Enums\DiscordConnectionMode;
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
 use App\Jobs\GenerateMilcomRecommendationsJob;
@@ -19,6 +22,7 @@ use App\Models\MilcomObjectiveRecommendation;
 use App\Models\MilcomOperation;
 use App\Models\MilcomRecommendationRun;
 use App\Models\Nation;
+use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordQueueLeaseService;
 use App\Services\Milcom\AssignmentDeliveryService;
 use App\Services\Milcom\RecommendationEngine;
@@ -71,15 +75,17 @@ class FederationHoldEnforcementFeatureTest extends TestCase
         }
     }
 
-    public function test_claim_and_legacy_batch_suppress_held_milcom_commands_but_claim_unrelated_work(): void
+    public function test_v2_claims_suppress_held_milcom_commands_but_claim_unrelated_work(): void
     {
         [$operation, $objective] = $this->heldOperation();
         $heldCommand = $this->createMilcomRoomCommand($operation, $objective);
-        $unrelated = $this->createQueueCommand('BEIGE_ALERT');
+        $unrelated = $this->createQueueCommand('CITY_TIER_SYNC');
 
         $claimed = app(DiscordQueueLeaseService::class)->claim(
             '11111111-2222-4333-8444-555555555555',
             '11111111-2222-4333-8444-555555555556',
+            [DiscordQueueLane::SideEffects],
+            $this->connection(),
         );
 
         $this->assertNotNull($claimed);
@@ -99,10 +105,14 @@ class FederationHoldEnforcementFeatureTest extends TestCase
         $secondHeldCommand = $this->createMilcomRoomCommand($secondOperation, $secondObjective);
         $secondUnrelated = $this->createQueueCommand('CITY_TIER_SYNC');
 
-        $batch = app(DiscordQueueLeaseService::class)->claimLegacyBatch(1);
+        $secondClaim = app(DiscordQueueLeaseService::class)->claim(
+            '21111111-2222-4333-8444-555555555555',
+            '21111111-2222-4333-8444-555555555556',
+            [DiscordQueueLane::SideEffects],
+            $this->connection(),
+        );
 
-        $this->assertCount(1, $batch);
-        $this->assertSame($secondUnrelated->id, $batch->first()->id);
+        $this->assertSame($secondUnrelated->id, $secondClaim?->id);
         $this->assertSame(DiscordQueueStatus::Failed, $secondHeldCommand->fresh()->status);
     }
 
@@ -116,7 +126,11 @@ class FederationHoldEnforcementFeatureTest extends TestCase
         ]);
 
         try {
-            app(DiscordQueueLeaseService::class)->renew($command, (string) $command->lease_token);
+            app(DiscordQueueLeaseService::class)->renew(
+                $command,
+                (string) $command->lease_token,
+                $this->connection(),
+            );
             $this->fail('A held Discord command lease was renewed.');
         } catch (DiscordQueueLeaseException $exception) {
             $this->assertSame(FederationOperationGuard::HELD_ERROR_CODE, $exception->error);
@@ -306,6 +320,7 @@ class FederationHoldEnforcementFeatureTest extends TestCase
         array $attributes = [],
     ): DiscordQueue {
         $command = $this->createQueueCommand('WAR_ROOM_CREATE', array_merge([
+            'priority' => 100,
             'payload' => [
                 'source' => [
                     'type' => 'milcom_objective',
@@ -329,12 +344,39 @@ class FederationHoldEnforcementFeatureTest extends TestCase
 
     private function createQueueCommand(string $action, array $attributes = []): DiscordQueue
     {
+        $queueAction = DiscordQueueAction::from($action);
+
         return DiscordQueue::query()->create(array_merge([
             'action' => $action,
             'payload' => ['message' => 'unrelated test command'],
             'status' => DiscordQueueStatus::Pending,
             'attempts' => 0,
             'available_at' => Carbon::now(),
+            'lane' => $queueAction->allowedLanes()[0],
+            'priority' => 50,
+            'connection_id' => $this->connection()->connectionId,
+            'application_id' => $this->connection()->applicationId,
+            'connection_generation' => $this->connection()->generation,
+            'guild_id' => $this->connection()->guildId,
+            'dedupe_scope' => $this->connection()->dedupeScope(),
         ], $attributes));
+    }
+
+    private function connection(): DiscordConnectionContext
+    {
+        return new DiscordConnectionContext(
+            connectionId: '31111111-2222-4333-8444-555555555555',
+            mode: DiscordConnectionMode::Dedicated,
+            applicationId: '223456789012345678',
+            guildId: '123456789012345678',
+            generation: 7,
+            protocolVersion: 2,
+            relayCurrentKeyId: 'relay-current',
+            relayCurrentPublicKey: str_repeat('a', 43),
+            capabilities: [
+                'capabilities' => ['relay.proof.v2', 'queue.connection-context.v1'],
+                'supported_queue_actions' => array_column(DiscordQueueAction::cases(), 'value'),
+            ],
+        );
     }
 }

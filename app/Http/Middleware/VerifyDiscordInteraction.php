@@ -57,13 +57,8 @@ class VerifyDiscordInteraction
         Request $request,
         Closure $next,
         ?string $expectedServiceAction = null,
-        string $legacyUnsigned = 'false',
     ): Response {
         $encodedPayload = trim((string) $request->header(self::PAYLOAD_HEADER));
-        if ($encodedPayload === '' && $expectedServiceAction !== null && $legacyUnsigned === 'legacy-unsigned') {
-            return $this->handleUnsignedLegacyService($request, $next, $expectedServiceAction);
-        }
-
         $payload = $this->decodePayload($encodedPayload);
         if ($payload === null) {
             return $this->error('invalid_discord_relay_proof', 'A valid Discord relay proof is required.', 401);
@@ -169,7 +164,7 @@ class VerifyDiscordInteraction
         $signatureHex = trim((string) $request->header(self::SIGNATURE_HEADER));
         $timestamp = trim((string) $request->header(self::TIMESTAMP_HEADER));
 
-        if (! (bool) config('services.discord.v1_reader_enabled', true)
+        if (! (bool) config('services.discord.v1_reader_enabled', false)
             || ! function_exists('sodium_crypto_sign_verify_detached')
             || ! $this->isHexKey($publicKeyHex)) {
             return $this->error(
@@ -261,37 +256,6 @@ class VerifyDiscordInteraction
         $request->attributes->set(self::SERVICE_ATTRIBUTE, false);
         $request->headers->set(ResolveDiscordActor::USER_HEADER, $userId);
         $request->headers->set('X-Discord-Interaction-ID', $interactionId);
-
-        return $next($request);
-    }
-
-    private function handleUnsignedLegacyService(
-        Request $request,
-        Closure $next,
-        string $action,
-    ): Response {
-        $connection = $this->connections->configuredContext();
-        if (! (bool) config('services.discord.legacy_unsigned_queue_enabled', true)
-            || $this->connections->hasActiveV2Connection()
-            || (string) config('services.discord.connection_mode', 'dedicated') !== 'dedicated'
-            || (int) config('services.discord.relay_protocol_version', 1) !== 1
-            || ! (bool) config('services.discord.v1_reader_enabled', true)
-            || ($connection !== null && (! $connection->isDedicated() || ! $connection->v1ReaderEnabled))) {
-            return $this->error(
-                'discord_relay_proof_required',
-                'A signed Discord relay proof is required for this connection.',
-                401,
-            );
-        }
-
-        if ($connection !== null) {
-            $this->setConnectionAttributes($request, $connection, 1);
-        } else {
-            $request->attributes->set(self::PROTOCOL_ATTRIBUTE, 1);
-        }
-        $request->attributes->set(self::ACTION_ATTRIBUTE, $action);
-        $request->attributes->set(self::COMMAND_ATTRIBUTE, $action);
-        $request->attributes->set(self::SERVICE_ATTRIBUTE, true);
 
         return $next($request);
     }

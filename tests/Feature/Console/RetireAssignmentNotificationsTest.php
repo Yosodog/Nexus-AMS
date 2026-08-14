@@ -64,6 +64,12 @@ class RetireAssignmentNotificationsTest extends TestCase
     {
         return DiscordQueue::query()->create([
             'action' => 'PRIVATE_NOTIFICATION',
+            'lane' => 'alerts',
+            'connection_id' => '11111111-2222-4333-8444-555555555555',
+            'application_id' => '123456789012345678',
+            'connection_generation' => 7,
+            'guild_id' => '223456789012345678',
+            'dedupe_scope' => '11111111-2222-4333-8444-555555555555:7',
             'payload' => [
                 'contract_version' => 1,
                 'event_type' => $eventType,

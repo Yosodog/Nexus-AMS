@@ -3,6 +3,8 @@
 namespace App\Services\Discord;
 
 use App\DataTransferObjects\Discord\PrivateNotificationPayload;
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordNotificationPreference;
 use App\Models\DiscordQueue;
@@ -182,8 +184,9 @@ class PrivateNotificationService
         }
 
         app(DiscordQueueService::class)->enqueue(
-            'PRIVATE_NOTIFICATION',
-            $this->payloadForNation($nation, $eventType, $notificationId, $subject, $deepLinkPath, $summary)->toArray(),
+            action: DiscordQueueAction::PrivateNotification,
+            payload: $this->payloadForNation($nation, $eventType, $notificationId, $subject, $deepLinkPath, $summary)->toArray(),
+            lane: DiscordQueueLane::Alerts,
             dedupeKey: 'private-notification:'.$notificationId,
         );
 

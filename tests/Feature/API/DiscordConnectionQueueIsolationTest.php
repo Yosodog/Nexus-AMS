@@ -3,15 +3,16 @@
 namespace Tests\Feature\API;
 
 use App\Enums\DiscordConnectionMode;
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Exceptions\DiscordQueueLeaseException;
-use App\Models\DiscordQueue;
 use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordQueueLeaseService;
 use App\Services\Discord\DiscordQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -47,18 +48,18 @@ class DiscordConnectionQueueIsolationTest extends TestCase
         );
         $queue = app(DiscordQueueService::class);
         $alphaItem = $queue->enqueue(
-            'TEST_DELIVERY',
+            DiscordQueueAction::PrivateNotification,
             ['value' => 'alpha'],
-            dedupeKey: 'same-domain-key',
-            guildId: $alpha->guildId,
+            DiscordQueueLane::Alerts,
             connection: $alpha,
+            dedupeKey: 'same-domain-key',
         );
         $betaItem = $queue->enqueue(
-            'TEST_DELIVERY',
+            DiscordQueueAction::PrivateNotification,
             ['value' => 'beta'],
-            dedupeKey: 'same-domain-key',
-            guildId: $beta->guildId,
+            DiscordQueueLane::Alerts,
             connection: $beta,
+            dedupeKey: 'same-domain-key',
         );
 
         $this->assertNotSame($alphaItem->id, $betaItem->id);
@@ -68,8 +69,7 @@ class DiscordConnectionQueueIsolationTest extends TestCase
         $claimedByBeta = $leases->claim(
             (string) Str::uuid(),
             (string) Str::uuid(),
-            [DiscordQueueLane::Legacy],
-            $beta->guildId,
+            [DiscordQueueLane::Alerts],
             $beta,
         );
         $this->assertSame($betaItem->id, $claimedByBeta?->id);
@@ -77,8 +77,7 @@ class DiscordConnectionQueueIsolationTest extends TestCase
         $claimedByAlpha = $leases->claim(
             (string) Str::uuid(),
             (string) Str::uuid(),
-            [DiscordQueueLane::Legacy],
-            $alpha->guildId,
+            [DiscordQueueLane::Alerts],
             $alpha,
         );
         $this->assertSame($alphaItem->id, $claimedByAlpha?->id);
@@ -97,7 +96,7 @@ class DiscordConnectionQueueIsolationTest extends TestCase
                 $claimedByAlpha->lease_token,
                 null,
                 null,
-                connection: $staleAlpha,
+                $staleAlpha,
             );
             $this->fail('A stale connection generation acknowledged a queue item.');
         } catch (DiscordQueueLeaseException $exception) {
@@ -107,7 +106,7 @@ class DiscordConnectionQueueIsolationTest extends TestCase
         $this->assertSame(DiscordQueueStatus::Processing, $alphaItem->fresh()->status);
     }
 
-    public function test_unbound_legacy_item_is_atomically_bound_when_v2_claims_it(): void
+    public function test_unbound_item_is_never_adopted_by_a_v2_claim(): void
     {
         $connection = $this->context(
             '11111111-2222-4333-8444-555555555555',
@@ -115,28 +114,35 @@ class DiscordConnectionQueueIsolationTest extends TestCase
             '223456789012345678',
             7,
         );
-        $item = DiscordQueue::query()->create([
-            'action' => 'LEGACY_PENDING',
-            'payload' => ['value' => 'safe'],
-            'status' => DiscordQueueStatus::Pending,
+        $itemId = (string) Str::uuid();
+        DB::table('discord_queue')->insert([
+            'id' => $itemId,
+            'action' => DiscordQueueAction::CityTierSync->value,
+            'payload' => json_encode(['value' => 'safe'], JSON_THROW_ON_ERROR),
+            'status' => DiscordQueueStatus::Pending->value,
             'attempts' => 0,
             'available_at' => now(),
             'guild_id' => $connection->guildId,
+            'lane' => DiscordQueueLane::SideEffects->value,
+            'priority' => 50,
+            'dedupe_scope' => 'historical:'.$itemId,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $claimed = app(DiscordQueueLeaseService::class)->claim(
             (string) Str::uuid(),
             (string) Str::uuid(),
-            [DiscordQueueLane::Legacy],
-            $connection->guildId,
+            [DiscordQueueLane::SideEffects],
             $connection,
         );
 
-        $this->assertSame($item->id, $claimed?->id);
-        $this->assertSame($connection->connectionId, $claimed?->connection_id);
-        $this->assertSame($connection->applicationId, $claimed?->application_id);
-        $this->assertSame($connection->generation, $claimed?->connection_generation);
-        $this->assertSame($connection->dedupeScope(), $claimed?->dedupe_scope);
+        $this->assertNull($claimed);
+        $this->assertDatabaseHas('discord_queue', [
+            'id' => $itemId,
+            'status' => DiscordQueueStatus::Pending->value,
+            'connection_id' => null,
+        ]);
     }
 
     private function context(
@@ -154,7 +160,10 @@ class DiscordConnectionQueueIsolationTest extends TestCase
             protocolVersion: 2,
             relayCurrentKeyId: 'relay-current',
             relayCurrentPublicKey: str_repeat('A', 43),
-            capabilities: ['queue.connection-context.v1' => true],
+            capabilities: [
+                'capabilities' => ['relay.proof.v2', 'queue.connection-context.v1'],
+                'supported_queue_actions' => [DiscordQueueAction::PrivateNotification->value],
+            ],
         );
     }
 }

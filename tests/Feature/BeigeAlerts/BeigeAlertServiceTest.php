@@ -11,10 +11,13 @@ use App\Models\Setting;
 use App\Services\BeigeAlertService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class BeigeAlertServiceTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -22,6 +25,7 @@ class BeigeAlertServiceTest extends TestCase
         $this->ensureIsolatedTestDatabase();
         Schema::dropAllTables();
         $this->createTables();
+        $this->configureDiscordQueueV2();
     }
 
     public function test_it_queues_early_exit_alert_for_tracked_alliance(): void

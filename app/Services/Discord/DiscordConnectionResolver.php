@@ -196,7 +196,7 @@ class DiscordConnectionResolver
         $connectionId = strtolower(trim((string) config('services.discord.connection_id')));
         $applicationId = trim((string) config('services.discord.application_id'));
         $guildId = trim((string) config('services.discord.guild_id'));
-        $protocolVersion = (int) config('services.discord.relay_protocol_version', 1);
+        $protocolVersion = (int) config('services.discord.relay_protocol_version', 2);
         $legacyPublicKey = trim((string) config('services.discord.relay_public_key'));
         $currentPublicKey = trim((string) config('services.discord.relay_current_public_key'));
 
@@ -234,7 +234,7 @@ class DiscordConnectionResolver
             nexusNextActivatesAt: $this->nullable(config('services.discord.nexus_next_activates_at')),
             capabilityVersion: max(1, (int) config('services.discord.capability_version', 1)),
             capabilities: (array) config('services.discord.capabilities', []),
-            v1ReaderEnabled: (bool) config('services.discord.v1_reader_enabled', true),
+            v1ReaderEnabled: (bool) config('services.discord.v1_reader_enabled', false),
             persisted: false,
         );
     }

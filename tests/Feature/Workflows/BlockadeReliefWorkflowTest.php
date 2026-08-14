@@ -18,16 +18,19 @@ use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class BlockadeReliefWorkflowTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->configureDiscordQueueV2();
         Cache::flush();
         Cache::forever('alliances:membership:ids', [777, 888]);
         config(['war.plan_defaults.activity_window_hours' => 72]);

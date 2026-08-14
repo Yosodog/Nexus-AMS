@@ -6,6 +6,7 @@ use App\Enums\AlertBatchStatus;
 use App\Enums\AlertDeliveryMode;
 use App\Enums\AlertDeliveryStatus;
 use App\Enums\AlertDestinationKind;
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Models\AlertDelivery;
 use App\Models\AlertDeliveryBatch;
@@ -346,7 +347,7 @@ class AlertDeliveryService
 
         try {
             $queue = $this->discordQueue->enqueue(
-                action: 'ALERT_DELIVERY_V1',
+                action: DiscordQueueAction::AlertDeliveryV1,
                 payload: [
                     'contract_version' => 1,
                     'delivery_id' => (string) $delivery->id,
@@ -368,7 +369,6 @@ class AlertDeliveryService
                 dedupeKey: 'alert-delivery-batch:'.$batch->id,
                 lane: DiscordQueueLane::Alerts,
                 priority: $occurrence->severity->priority(),
-                guildId: $destination['guild_id'] ?? null,
                 alertDeliveryBatchId: $batch->id,
             );
         } catch (Throwable $exception) {
@@ -440,7 +440,7 @@ class AlertDeliveryService
 
         try {
             $queue = $this->discordQueue->enqueue(
-                action: 'ALERT_DELIVERY_V1',
+                action: DiscordQueueAction::AlertDeliveryV1,
                 payload: [
                     'contract_version' => 1,
                     'delivery_id' => 'batch:'.$batch->id,
@@ -469,7 +469,6 @@ class AlertDeliveryService
                 dedupeKey: 'alert-delivery-batch:'.$batch->id,
                 lane: DiscordQueueLane::Digests,
                 priority: $deliveries->max(fn (AlertDelivery $delivery): int => $delivery->occurrence->severity->priority()),
-                guildId: $destination['guild_id'] ?? null,
                 alertDeliveryBatchId: $batch->id,
             );
         } catch (Throwable $exception) {

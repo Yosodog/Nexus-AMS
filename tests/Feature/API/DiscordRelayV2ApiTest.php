@@ -830,6 +830,7 @@ class DiscordRelayV2ApiTest extends TestCase
             'application_id' => self::APP_ID,
             'guild_id' => self::GUILD_ID,
             'generation' => 7,
+            'lanes' => ['side_effects'],
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $secondBody = str_replace(
             'bbbbbbbb-2222-4222-8222-222222222222',
@@ -859,7 +860,7 @@ class DiscordRelayV2ApiTest extends TestCase
         )->assertConflict()->assertJsonPath('error.code', 'replayed_discord_service_proof');
     }
 
-    public function test_active_v2_connection_disables_the_unsigned_legacy_queue_bypass(): void
+    public function test_queue_claims_always_require_a_signed_relay_proof(): void
     {
         $this->withToken(self::BOT_TOKEN)
             ->postJson('/api/v1/discord/queue/claim', [
@@ -867,7 +868,7 @@ class DiscordRelayV2ApiTest extends TestCase
                 'request_id' => (string) Str::uuid(),
             ])
             ->assertUnauthorized()
-            ->assertJsonPath('error.code', 'discord_relay_proof_required');
+            ->assertJsonPath('error.code', 'invalid_discord_relay_proof');
     }
 
     public function test_signed_idempotency_key_is_connection_scoped_and_conflict_checked(): void

@@ -2261,18 +2261,6 @@
     },
     {
         "domain": null,
-        "method": "GET|HEAD",
-        "uri": "api/v1/discord/queue",
-        "name": null,
-        "action": "App\\Http\\Controllers\\API\\DiscordQueueController@index",
-        "middleware": [
-            "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.legacy-fetch,legacy-unsigned"
-        ]
-    },
-    {
-        "domain": null,
         "method": "POST",
         "uri": "api/v1/discord/queue/claim",
         "name": null,
@@ -2280,7 +2268,7 @@
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.claim,legacy-unsigned"
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.claim"
         ]
     },
     {
@@ -2292,7 +2280,7 @@
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.lease,legacy-unsigned"
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.lease"
         ]
     },
     {
@@ -2304,7 +2292,7 @@
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.checkpoint,legacy-unsigned"
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.checkpoint"
         ]
     },
     {
@@ -2316,7 +2304,7 @@
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.acknowledge,legacy-unsigned"
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:queue.acknowledge"
         ]
     },
     {
@@ -2457,7 +2445,8 @@
         "action": "App\\Http\\Controllers\\API\\Discord\\ApplicationController@storeMessage",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:applications.message"
         ]
     },
     {
@@ -2524,7 +2513,8 @@
         "action": "App\\Http\\Controllers\\API\\Discord\\WarCounterController@show",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:war-counters.show"
         ]
     },
     {
@@ -2536,7 +2526,8 @@
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",
-            "App\\Http\\Middleware\\RequireMilcomV2"
+            "App\\Http\\Middleware\\RequireMilcomV2",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:milcom.objectives.show"
         ]
     },
     {
@@ -2676,7 +2667,8 @@
         "action": "App\\Http\\Controllers\\API\\IntelReportController@store",
         "middleware": [
             "api",
-            "App\\Http\\Middleware\\ValidateDiscordBotAPI"
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:intel.report"
         ]
     },
     {
@@ -2747,6 +2739,20 @@
             "App\\Http\\Middleware\\VerifyDiscordInteraction",
             "App\\Http\\Middleware\\ResolveDiscordActor",
             "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:alliance"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/build-recommendation",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\BuildRecommendationController",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionCommand:build"
         ]
     },
     {

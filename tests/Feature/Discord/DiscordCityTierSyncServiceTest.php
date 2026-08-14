@@ -2,10 +2,14 @@
 
 namespace Tests\Feature\Discord;
 
+use App\Enums\DiscordConnectionMode;
+use App\Enums\DiscordConnectionState;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Jobs\SyncDiscordCityTierRolesJob;
 use App\Models\Alliance;
 use App\Models\DiscordAccount;
+use App\Models\DiscordConnection;
 use App\Models\Nation;
 use App\Models\Offshore;
 use App\Models\User;
@@ -20,6 +24,12 @@ use Tests\TestCase;
 class DiscordCityTierSyncServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    private const APPLICATION_ID = '123456789012345678';
+
+    private const CONNECTION_ID = '11111111-2222-4333-8444-555555555555';
+
+    private const GUILD_ID = '223456789012345678';
 
     private Alliance $primaryAlliance;
 
@@ -42,6 +52,25 @@ class DiscordCityTierSyncServiceTest extends TestCase
         ]);
 
         app(AllianceMembershipService::class)->refresh();
+
+        DiscordConnection::query()->create([
+            'id' => self::CONNECTION_ID,
+            'mode' => DiscordConnectionMode::Dedicated,
+            'state' => DiscordConnectionState::Active,
+            'application_id' => self::APPLICATION_ID,
+            'guild_id' => self::GUILD_ID,
+            'generation' => 7,
+            'protocol_version' => 2,
+            'relay_current_key_id' => 'relay-current',
+            'relay_current_public_key' => str_repeat('a', 43),
+            'capability_version' => 1,
+            'capabilities' => [
+                'capabilities' => ['relay.proof.v2', 'queue.connection-context.v1'],
+                'supported_queue_actions' => [DiscordCityTierSyncService::ACTION],
+            ],
+            'v1_reader_enabled' => false,
+            'activated_at' => now(),
+        ]);
     }
 
     protected function tearDown(): void
@@ -64,6 +93,12 @@ class DiscordCityTierSyncServiceTest extends TestCase
         $command = app(DiscordCityTierSyncService::class)->queueSnapshot();
 
         $this->assertSame(DiscordCityTierSyncService::ACTION, $command->action);
+        $this->assertSame(DiscordQueueLane::SideEffects, $command->lane);
+        $this->assertSame(self::CONNECTION_ID, $command->connection_id);
+        $this->assertSame(self::APPLICATION_ID, $command->application_id);
+        $this->assertSame(self::GUILD_ID, $command->guild_id);
+        $this->assertSame(7, $command->connection_generation);
+        $this->assertSame(self::CONNECTION_ID.':7', $command->dedupe_scope);
         $this->assertSame(10, $command->payload['bucket_size']);
         $this->assertSame([
             ['bucket_start' => 1, 'bucket_end' => 10, 'name' => 'Cities 1-10', 'discord_role_id' => null],

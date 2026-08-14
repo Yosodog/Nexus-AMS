@@ -2,6 +2,8 @@
 
 namespace Tests\Concerns;
 
+use Illuminate\Support\Str;
+
 trait SignsDiscordInteractions
 {
     private string $discordInteractionSecretKey;
@@ -14,6 +16,8 @@ trait SignsDiscordInteractions
 
         config([
             'services.discord.relay_public_key' => bin2hex(sodium_crypto_sign_publickey($keypair)),
+            'services.discord.relay_protocol_version' => 1,
+            'services.discord.v1_reader_enabled' => true,
             'services.discord.interaction_max_age_seconds' => 300,
         ]);
     }
@@ -80,12 +84,14 @@ trait SignsDiscordInteractions
         string $guildId,
         string $action,
         ?int $timestamp = null,
+        ?string $nonce = null,
     ): array {
         $timestamp ??= now()->timestamp;
+        $nonce ??= (string) Str::uuid();
         $payload = json_encode([
             'relay_version' => 1,
             'proof_type' => 'service',
-            'nonce' => '11111111-2222-4333-8444-555555555555',
+            'nonce' => $nonce,
             'guild_id' => $guildId,
             'action' => $action,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);

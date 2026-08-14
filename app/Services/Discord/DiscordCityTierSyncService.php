@@ -3,6 +3,8 @@
 namespace App\Services\Discord;
 
 use App\Enums\AlliancePositionEnum;
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordCityTierRole;
 use App\Models\DiscordQueue;
@@ -57,8 +59,9 @@ class DiscordCityTierSyncService
         ];
 
         return $this->discordQueue->enqueue(
-            self::ACTION,
-            $payload,
+            action: DiscordQueueAction::CityTierSync,
+            payload: $payload,
+            lane: DiscordQueueLane::SideEffects,
             dedupeKey: 'discord-city-tier-sync:'.now()->utc()->format('YmdH'),
         );
     }

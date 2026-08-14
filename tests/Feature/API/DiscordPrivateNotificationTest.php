@@ -10,11 +10,20 @@ use App\Models\User;
 use App\Services\Discord\PrivateNotificationService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class DiscordPrivateNotificationTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->configureDiscordQueueV2();
+    }
 
     public function test_master_switch_preferences_sanitization_dedupe_and_pending_suppression(): void
     {

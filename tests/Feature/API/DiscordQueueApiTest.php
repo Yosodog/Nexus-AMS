@@ -2,13 +2,19 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\DiscordConnectionMode;
+use App\Enums\DiscordConnectionState;
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
+use App\Models\DiscordConnection;
 use App\Models\DiscordQueue;
 use App\Models\Nation;
 use App\Models\WarCounter;
+use App\Services\Discord\Relay\CanonicalJson;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -17,12 +23,41 @@ class DiscordQueueApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const APPLICATION_ID = '123456789012345678';
+
+    private const CONNECTION_ID = '11111111-2222-4333-8444-555555555555';
+
+    private const GUILD_ID = '223456789012345678';
+
+    private string $relaySecretKey;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('services.discord_bot_key', 'discord-test-token');
         Carbon::setTestNow('2026-07-10 12:00:00');
+
+        $keypair = sodium_crypto_sign_seed_keypair(hash('sha256', static::class, true));
+        $this->relaySecretKey = sodium_crypto_sign_secretkey($keypair);
+        DiscordConnection::query()->create([
+            'id' => self::CONNECTION_ID,
+            'mode' => DiscordConnectionMode::Dedicated,
+            'state' => DiscordConnectionState::Active,
+            'application_id' => self::APPLICATION_ID,
+            'guild_id' => self::GUILD_ID,
+            'generation' => 7,
+            'protocol_version' => 2,
+            'relay_current_key_id' => 'relay-current',
+            'relay_current_public_key' => $this->base64Url(sodium_crypto_sign_publickey($keypair)),
+            'capability_version' => 1,
+            'capabilities' => [
+                'capabilities' => ['relay.proof.v2', 'queue.connection-context.v1'],
+                'supported_queue_actions' => array_column(DiscordQueueAction::cases(), 'value'),
+            ],
+            'v1_reader_enabled' => false,
+            'activated_at' => now(),
+        ]);
     }
 
     protected function tearDown(): void
@@ -196,7 +231,7 @@ class DiscordQueueApiTest extends TestCase
     public function test_checkpoint_rejects_unsupported_actions_and_fields(): void
     {
         $this->createCommand('BEIGE_ALERT');
-        $claim = $this->claimOne();
+        $claim = $this->claimOne(DiscordQueueLane::Alerts);
 
         $this->withHeaders($this->discordHeaders())->patchJson(
             '/api/v1/discord/queue/'.$claim->json('data.id').'/checkpoint',
@@ -422,47 +457,28 @@ class DiscordQueueApiTest extends TestCase
         $this->assertSame(3, $command->fresh()->attempts);
     }
 
-    public function test_legacy_claim_and_status_contract_remains_available_without_double_counting(): void
+    public function test_batch_endpoint_is_removed_and_status_requires_a_lease(): void
     {
         $command = $this->createCommand();
 
         $this->withHeaders($this->discordHeaders())
             ->getJson('/api/v1/discord/queue?limit=1')
-            ->assertOk()
-            ->assertJsonPath('data.0.id', $command->id)
-            ->assertJsonPath('data.0.attempts', 1)
-            ->assertJsonPath('data.0.lease_token', null);
+            ->assertNotFound();
 
         $this->withHeaders($this->discordHeaders())
             ->postJson("/api/v1/discord/queue/{$command->id}/status", [
                 'status' => DiscordQueueStatus::Failed->value,
             ])
-            ->assertOk()
-            ->assertJsonPath('data.status', DiscordQueueStatus::Pending->value)
-            ->assertJsonPath('data.attempts', 1);
-    }
-
-    public function test_legacy_recovery_is_a_dry_run_unless_explicit_ids_are_selected(): void
-    {
-        $command = $this->createCommand(attributes: [
-            'status' => DiscordQueueStatus::Processing,
-            'attempts' => 1,
-        ]);
-
-        $this->artisan('discord-queue:recover-legacy')
-            ->expectsOutputToContain('Dry run: 1 legacy processing command(s) found. No rows changed.')
-            ->assertSuccessful();
-
-        $this->assertSame(DiscordQueueStatus::Processing, $command->fresh()->status);
-
-        $this->artisan('discord-queue:recover-legacy', [
-            'ids' => [$command->id],
-            '--requeue' => true,
-        ])->expectsOutput('Requeued 1 explicitly selected legacy processing command(s).')
-            ->assertSuccessful();
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['lease_token']);
 
         $this->assertSame(DiscordQueueStatus::Pending, $command->fresh()->status);
-        $this->assertSame('legacy_manual_requeue', $command->fresh()->last_error['code']);
+        $this->assertSame(0, $command->fresh()->attempts);
+    }
+
+    public function test_legacy_recovery_command_is_removed(): void
+    {
+        $this->assertArrayNotHasKey('discord-queue:recover-legacy', Artisan::all());
     }
 
     public function test_legacy_war_counter_api_returns_gone_after_the_milcom_v2_cutover(): void
@@ -482,7 +498,7 @@ class DiscordQueueApiTest extends TestCase
             ->assertJsonPath('error.code', 'legacy_milcom_gone');
     }
 
-    private function claimOne(?DiscordQueueLane $lane = null): TestResponse
+    private function claimOne(?DiscordQueueLane $lane = DiscordQueueLane::SideEffects): TestResponse
     {
         $payload = [
             'worker_id' => (string) Str::uuid(),
@@ -500,15 +516,116 @@ class DiscordQueueApiTest extends TestCase
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function createCommand(string $action = 'BEIGE_ALERT', array $attributes = []): DiscordQueue
+    private function createCommand(string $action = 'CITY_TIER_SYNC', array $attributes = []): DiscordQueue
     {
+        $queueAction = DiscordQueueAction::from($action);
+        $lane = $attributes['lane'] ?? $queueAction->allowedLanes()[0];
+
         return DiscordQueue::query()->create(array_merge([
             'action' => $action,
             'payload' => ['message' => 'Test queue command'],
             'status' => DiscordQueueStatus::Pending,
             'attempts' => 0,
             'available_at' => Carbon::now(),
+            'lane' => $lane,
+            'priority' => 50,
+            'connection_id' => self::CONNECTION_ID,
+            'application_id' => self::APPLICATION_ID,
+            'connection_generation' => 7,
+            'guild_id' => self::GUILD_ID,
+            'dedupe_scope' => self::CONNECTION_ID.':7',
         ], $attributes));
+    }
+
+    public function postJson($uri, array $data = [], array $headers = [], $options = 0): TestResponse
+    {
+        return $this->signedQueueJson('POST', $uri, $data, $headers, $options);
+    }
+
+    public function patchJson($uri, array $data = [], array $headers = [], $options = 0): TestResponse
+    {
+        return $this->signedQueueJson('PATCH', $uri, $data, $headers, $options);
+    }
+
+    /** @param array<string, mixed> $data @param array<string, string> $headers */
+    private function signedQueueJson(
+        string $method,
+        string $uri,
+        array $data,
+        array $headers,
+        int $options,
+    ): TestResponse {
+        $action = match (true) {
+            str_ends_with($uri, '/queue/claim') => 'queue.claim',
+            str_ends_with($uri, '/lease') => 'queue.lease',
+            str_ends_with($uri, '/checkpoint') => 'queue.checkpoint',
+            str_ends_with($uri, '/status') => 'queue.acknowledge',
+            default => throw new \LogicException('Unsupported signed queue test endpoint: '.$uri),
+        };
+        if ($action === 'queue.claim') {
+            $data += [
+                'lanes' => [DiscordQueueLane::SideEffects->value],
+                'connection_id' => self::CONNECTION_ID,
+                'application_id' => self::APPLICATION_ID,
+                'guild_id' => self::GUILD_ID,
+                'generation' => 7,
+            ];
+        }
+
+        $body = json_encode($data, $options | JSON_THROW_ON_ERROR);
+        $headers = array_merge($headers, $this->serviceHeaders($method, $uri, $body, $action));
+
+        return $this->json($method, $uri, $data, $headers, $options);
+    }
+
+    /** @return array<string, string> */
+    private function serviceHeaders(string $method, string $target, string $body, string $action): array
+    {
+        $document = [
+            'contract' => 'relay-proof',
+            'contract_version' => 2,
+            'issuer' => 'discord-relay',
+            'audience' => 'nexus',
+            'key_scope' => 'discord-relay->nexus',
+            'connection_id' => self::CONNECTION_ID,
+            'app_id' => self::APPLICATION_ID,
+            'guild_id' => self::GUILD_ID,
+            'generation' => 7,
+            'key_id' => 'relay-current',
+            'issued_at' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
+            'expires_at' => now()->addSeconds(30)->utc()->format('Y-m-d\TH:i:s\Z'),
+            'idempotency_key' => (string) Str::uuid(),
+            'proof' => [
+                'type' => 'service',
+                'action' => $action,
+                'nonce' => (string) Str::uuid(),
+            ],
+            'method' => $method,
+            'normalized_path_query' => $target,
+            'body_sha256' => hash('sha256', $body),
+        ];
+        $signature = sodium_crypto_sign_detached(
+            "NEXUS-DISCORD-RELAY-PROOF-V2\n".CanonicalJson::encode($document),
+            $this->relaySecretKey,
+        );
+        $document['signature'] = [
+            'algorithm' => 'ed25519',
+            'value' => bin2hex($signature),
+        ];
+        $json = json_encode($document, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+
+        return [
+            'Authorization' => 'Bearer discord-test-token',
+            'Accept' => 'application/json',
+            'X-Nexus-Discord-Relay-Payload' => $this->base64Url($json),
+            'X-Nexus-Discord-Relay-Signature' => $document['signature']['value'],
+            'X-Nexus-Discord-Relay-Timestamp' => (string) now()->timestamp,
+        ];
+    }
+
+    private function base64Url(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 
     /**

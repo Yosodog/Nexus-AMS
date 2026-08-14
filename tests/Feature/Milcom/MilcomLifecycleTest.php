@@ -23,13 +23,22 @@ use App\Services\Milcom\OperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
 
 class MilcomLifecycleTest extends TestCase
 {
     use BuildsMilcomFixtures;
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->configureDiscordQueueV2();
+    }
 
     public function test_reconciliation_links_a_declaration_then_completes_assignment_objective_and_operation(): void
     {
@@ -258,6 +267,8 @@ class MilcomLifecycleTest extends TestCase
         ]);
         $command = DiscordQueue::query()->create([
             'action' => 'WAR_ROOM_CREATE',
+            'lane' => 'side_effects',
+            'dedupe_scope' => 'milcom-lifecycle-test',
             'payload' => [],
             'status' => DiscordQueueStatus::Complete,
             'attempts' => 1,

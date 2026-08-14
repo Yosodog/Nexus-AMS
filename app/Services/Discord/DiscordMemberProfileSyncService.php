@@ -3,6 +3,7 @@
 namespace App\Services\Discord;
 
 use App\Enums\AlliancePositionEnum;
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordAccount;
@@ -111,13 +112,12 @@ final readonly class DiscordMemberProfileSyncService
         }
 
         $queue = $this->queue->enqueue(
-            action: self::ACTION,
+            action: DiscordQueueAction::MemberProfileSync,
             payload: $plan['queue_payload'],
-            dedupeKey: 'member-profile-sync:'.$actor->getKey().':'.$plan['resource_version'].':'.$plan['plan_hash'],
             lane: DiscordQueueLane::SideEffects,
-            priority: 70,
-            guildId: $connection->guildId,
             connection: $connection,
+            dedupeKey: 'member-profile-sync:'.$actor->getKey().':'.$plan['resource_version'].':'.$plan['plan_hash'],
+            priority: 70,
         );
 
         $this->audit->recordAfterCommit(

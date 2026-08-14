@@ -8,6 +8,8 @@ use App\Domain\Milcom\Enums\DispatchStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
@@ -68,8 +70,9 @@ class DiscordDispatchService
 
         $payload = $this->creationPayload($objective, $dispatch, $forumId);
         $queueItem = $this->discordQueue->enqueue(
-            'WAR_ROOM_CREATE',
-            $payload,
+            action: DiscordQueueAction::WarRoomCreate,
+            payload: $payload,
+            lane: DiscordQueueLane::SideEffects,
             dedupeKey: $dedupeKey,
         );
 
@@ -157,8 +160,9 @@ class DiscordDispatchService
         }
 
         $queueItem = $this->discordQueue->enqueue(
-            'WAR_ROOM_ARCHIVE',
-            $payload,
+            action: DiscordQueueAction::WarRoomArchive,
+            payload: $payload,
+            lane: DiscordQueueLane::SideEffects,
             dedupeKey: $dedupeKey,
         );
 

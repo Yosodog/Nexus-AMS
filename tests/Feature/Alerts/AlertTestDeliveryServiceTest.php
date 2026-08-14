@@ -15,11 +15,20 @@ use App\Services\Alerts\AlertUserSettingsService;
 use App\Services\AllianceMembershipService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class AlertTestDeliveryServiceTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->configureDiscordQueueV2();
+    }
 
     protected function tearDown(): void
     {

@@ -25,6 +25,7 @@ use App\Services\Alerts\AlertMetricsRollupService;
 use App\Services\Alerts\AlertOccurrenceRecorder;
 use App\Services\Alerts\AlertRetentionService;
 use App\Services\Alerts\AlertScheduledDeliveryDispatcher;
+use App\Services\Discord\DiscordConnectionResolver;
 use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,19 @@ class AlertFoundationTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow('2026-08-08 18:00:00');
+        config([
+            'services.discord.connection_id' => '11111111-2222-4333-8444-555555555555',
+            'services.discord.application_id' => '323456789012345678',
+            'services.discord.guild_id' => '123456789012345678',
+            'services.discord.connection_generation' => 7,
+            'services.discord.relay_protocol_version' => 2,
+            'services.discord.relay_current_key_id' => 'relay-current',
+            'services.discord.relay_current_public_key' => str_repeat('a', 43),
+            'services.discord.capabilities' => [
+                'capabilities' => ['relay.proof.v2', 'queue.connection-context.v1'],
+                'supported_queue_actions' => ['ALERT_DELIVERY_V1'],
+            ],
+        ]);
     }
 
     protected function tearDown(): void
@@ -259,11 +273,12 @@ class AlertFoundationTest extends TestCase
         );
 
         $leaseService = app(DiscordQueueLeaseService::class);
+        $connection = app(DiscordConnectionResolver::class)->resolveForQueueProducer();
         $command = $leaseService->claim(
             (string) Str::uuid(),
             (string) Str::uuid(),
             [DiscordQueueLane::Alerts],
-            $destination->guild_id,
+            $connection,
         );
         $this->assertNotNull($command);
 
@@ -273,6 +288,7 @@ class AlertFoundationTest extends TestCase
             $command->lease_token,
             null,
             null,
+            $connection,
             [
                 'delivery' => 'delivered',
                 'delivery_id' => (string) AlertDelivery::query()->whereNotNull('alert_delivery_batch_id')->sole()->id,

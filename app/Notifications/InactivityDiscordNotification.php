@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\DiscordQueueLane;
 use App\Notifications\Channels\DiscordQueueChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -38,6 +39,7 @@ class InactivityDiscordNotification extends Notification
     {
         return [
             'action' => 'INACTIVITY_ALERT',
+            'lane' => DiscordQueueLane::Alerts,
             'channel_id' => $this->channelId,
             'payload' => array_merge([
                 'channel_id' => $this->channelId,

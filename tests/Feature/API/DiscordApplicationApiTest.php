@@ -141,7 +141,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('application.discord_channel_id', 'channel-123');
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordServiceHeaders('applications.message'))
             ->postJson('/api/v1/discord/applications/messages', [
                 'discord_channel_id' => 'channel-123',
                 'discord_message_id' => 'message-1',
@@ -155,7 +155,7 @@ class DiscordApplicationApiTest extends TestCase
             ->assertJsonPath('logged', true)
             ->assertJsonPath('message.discord_channel_id', 'channel-123');
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordServiceHeaders('applications.message'))
             ->postJson('/api/v1/discord/applications/messages', [
                 'discord_channel_id' => 'channel-123',
                 'discord_message_id' => 'message-1',
@@ -235,7 +235,7 @@ class DiscordApplicationApiTest extends TestCase
             'pending_key' => 1,
         ]);
 
-        $this->withHeaders($this->discordHeaders())
+        $this->withHeaders($this->discordServiceHeaders('applications.message'))
             ->postJson('/api/v1/discord/applications/messages', [
                 'discord_channel_id' => 'channel-message-authority',
                 'discord_message_id' => 'message-unlinked',
@@ -677,6 +677,18 @@ class DiscordApplicationApiTest extends TestCase
             'Authorization' => 'Bearer discord-test-token',
             'Accept' => 'application/json',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function discordServiceHeaders(string $action): array
+    {
+        return $this->signedDiscordServiceHeaders(
+            'discord-test-token',
+            self::GUILD_ID,
+            $action,
+        );
     }
 
     private function createModerator(string $discordId): User

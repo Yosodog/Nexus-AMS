@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Channels;
 
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Services\Discord\DiscordQueueService;
 use Carbon\CarbonInterface;
@@ -37,9 +38,13 @@ class DiscordQueueChannel
         $payload = $message['payload'] ?? null;
         $availableAt = $message['available_at'] ?? null;
         $dedupeKey = $message['dedupe_key'] ?? null;
-        $lane = $message['lane'] ?? DiscordQueueLane::Legacy;
+        $lane = $message['lane'] ?? null;
 
-        if (! is_string($action) || $action === '' || ! is_array($payload)) {
+        if (is_string($action)) {
+            $action = DiscordQueueAction::tryFrom($action);
+        }
+
+        if (! $action instanceof DiscordQueueAction || ! is_array($payload)) {
             Log::warning('Discord bot payload missing action or payload', [
                 'notification' => $notification::class,
                 'action_present' => $action !== null,
@@ -82,11 +87,11 @@ class DiscordQueueChannel
         }
 
         $this->queueService->enqueue(
-            $action,
-            $payload,
-            $availableTimestamp,
-            is_string($dedupeKey) && $dedupeKey !== '' ? $dedupeKey : null,
-            $lane,
+            action: $action,
+            payload: $payload,
+            lane: $lane,
+            availableAt: $availableTimestamp,
+            dedupeKey: is_string($dedupeKey) && $dedupeKey !== '' ? $dedupeKey : null,
         );
     }
 }

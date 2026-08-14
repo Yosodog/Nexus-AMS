@@ -328,6 +328,8 @@ class DiscordOperationsApiTest extends TestCase
         ]);
         $queue = DiscordQueue::query()->create([
             'action' => ApplicationDiscordStatusProjection::ACTION,
+            'lane' => 'side_effects',
+            'dedupe_scope' => 'operations-api-test',
             'payload' => [
                 'contract_version' => 1,
                 'application' => [

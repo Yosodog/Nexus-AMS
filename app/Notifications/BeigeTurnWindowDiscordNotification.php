@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\DiscordQueueLane;
 use App\Models\Nation;
 use App\Notifications\Channels\DiscordQueueChannel;
 use Carbon\CarbonImmutable;
@@ -38,6 +39,7 @@ class BeigeTurnWindowDiscordNotification extends Notification
     {
         return [
             'action' => 'BEIGE_ALERT',
+            'lane' => DiscordQueueLane::Alerts,
             'channel_id' => $this->channelId,
             'payload' => [
                 'channel_id' => $this->channelId,

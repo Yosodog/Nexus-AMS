@@ -11,8 +11,6 @@ use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomOperation;
 use App\Services\Alerts\AlertDeliveryReceiptService;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -43,17 +41,28 @@ class DiscordQueueLeaseService
     public function claim(
         string $workerId,
         string $requestId,
-        array $lanes = [],
-        ?string $guildId = null,
-        ?DiscordConnectionContext $connection = null,
+        array $lanes,
+        DiscordConnectionContext $connection,
     ): ?DiscordQueue {
-        $claimLanes = $lanes === []
-            ? [DiscordQueueLane::Legacy, DiscordQueueLane::SideEffects]
-            : $lanes;
+        if ($connection->protocolVersion !== 2) {
+            throw new DiscordQueueLeaseException(
+                'discord_connection_protocol_unsupported',
+                'Discord queue delivery requires relay protocol v2.',
+                409,
+            );
+        }
+        if ($lanes === []) {
+            throw new DiscordQueueLeaseException(
+                'queue_lane_required',
+                'A relay-v2 worker must claim an explicit queue lane.',
+                422,
+            );
+        }
+
         $heldExisting = false;
 
         try {
-            $claimed = DB::transaction(function () use ($workerId, $requestId, $claimLanes, $guildId, $connection, &$heldExisting): ?DiscordQueue {
+            $claimed = DB::transaction(function () use ($workerId, $requestId, $lanes, $connection, &$heldExisting): ?DiscordQueue {
                 $existingId = DiscordQueue::query()
                     ->where('claim_request_id', $requestId)
                     ->value('id');
@@ -84,28 +93,12 @@ class DiscordQueueLeaseService
                     $candidateId = DiscordQueue::query()
                         ->available(array_map(
                             fn (DiscordQueueLane $lane): string => $lane->value,
-                            $claimLanes,
+                            $lanes,
                         ))
-                        ->when($guildId !== null, function (Builder $query) use ($guildId): void {
-                            $query->where(function (Builder $guildQuery) use ($guildId): void {
-                                $guildQuery->whereNull('guild_id')->orWhere('guild_id', $guildId);
-                            });
-                        })
-                        ->when($connection !== null, function (Builder $query) use ($connection): void {
-                            $query->where(function (Builder $binding) use ($connection): void {
-                                $binding->where(function (Builder $current) use ($connection): void {
-                                    $current
-                                        ->where('connection_id', $connection->connectionId)
-                                        ->where('application_id', $connection->applicationId)
-                                        ->where('connection_generation', $connection->generation);
-                                })->orWhere(function (Builder $legacy) use ($connection): void {
-                                    $legacy->whereNull('connection_id')
-                                        ->where(function (Builder $guild) use ($connection): void {
-                                            $guild->whereNull('guild_id')->orWhere('guild_id', $connection->guildId);
-                                        });
-                                });
-                            });
-                        })
+                        ->where('guild_id', $connection->guildId)
+                        ->where('connection_id', $connection->connectionId)
+                        ->where('application_id', $connection->applicationId)
+                        ->where('connection_generation', $connection->generation)
                         ->value('id');
 
                     if ($candidateId === null) {
@@ -122,16 +115,6 @@ class DiscordQueueLeaseService
                         $this->suppressHeldCommand($command);
 
                         continue;
-                    }
-
-                    if ($connection !== null && $command->connection_id === null) {
-                        $command->forceFill([
-                            'connection_id' => $connection->connectionId,
-                            'application_id' => $connection->applicationId,
-                            'connection_generation' => $connection->generation,
-                            'guild_id' => $command->guild_id ?? $connection->guildId,
-                            'dedupe_scope' => $connection->dedupeScope(),
-                        ])->save();
                     }
 
                     $command->forceFill([
@@ -187,60 +170,10 @@ class DiscordQueueLeaseService
         }
     }
 
-    /**
-     * Claim legacy batch work while applying the same federation hold gate as
-     * the leased worker endpoint.
-     *
-     * @return EloquentCollection<int, DiscordQueue>
-     */
-    public function claimLegacyBatch(int $limit): EloquentCollection
-    {
-        return DB::transaction(function () use ($limit): EloquentCollection {
-            $claimed = new EloquentCollection;
-            $limit = max(1, $limit);
-
-            while ($claimed->count() < $limit) {
-                $candidateId = DiscordQueue::query()->available([
-                    DiscordQueueLane::Legacy->value,
-                    DiscordQueueLane::SideEffects->value,
-                ])->value('id');
-
-                if ($candidateId === null) {
-                    break;
-                }
-
-                [$command, $operation] = $this->lockAvailableCandidate((string) $candidateId);
-
-                if ($command === null) {
-                    continue;
-                }
-
-                if ($operation !== null && $this->federationGuard->isHeld($operation)) {
-                    $this->suppressHeldCommand($command);
-
-                    continue;
-                }
-
-                $command->forceFill([
-                    'status' => DiscordQueueStatus::Processing,
-                    'attempts' => $command->attempts + 1,
-                    'claim_request_id' => null,
-                    'worker_id' => null,
-                    'lease_token' => null,
-                    'leased_until' => null,
-                    'last_error' => null,
-                ])->save();
-                $claimed->push($command);
-            }
-
-            return $claimed;
-        }, attempts: 3);
-    }
-
     public function renew(
         DiscordQueue $command,
         string $leaseToken,
-        ?DiscordConnectionContext $connection = null,
+        DiscordConnectionContext $connection,
     ): DiscordQueue {
         $held = false;
         $renewed = DB::transaction(function () use ($command, $leaseToken, $connection, &$held): DiscordQueue {
@@ -274,7 +207,7 @@ class DiscordQueueLeaseService
         DiscordQueue $command,
         string $leaseToken,
         array $result,
-        ?DiscordConnectionContext $connection = null,
+        DiscordConnectionContext $connection,
     ): DiscordQueue {
         $held = false;
         $checkpointed = DB::transaction(function () use ($command, $leaseToken, $result, $connection, &$held): DiscordQueue {
@@ -535,8 +468,8 @@ class DiscordQueueLeaseService
         ?string $leaseToken,
         ?string $errorCode,
         ?string $errorMessage,
+        DiscordConnectionContext $connection,
         ?array $result = null,
-        ?DiscordConnectionContext $connection = null,
     ): DiscordQueue {
         $held = false;
         $acknowledged = DB::transaction(function () use ($command, $status, $leaseToken, $errorCode, $errorMessage, $result, $connection, &$held): DiscordQueue {
@@ -775,16 +708,14 @@ class DiscordQueueLeaseService
 
     private function assertConnection(
         DiscordQueue $command,
-        ?DiscordConnectionContext $connection,
+        DiscordConnectionContext $connection,
     ): void {
-        if ($connection === null) {
-            return;
-        }
-
-        if ($command->connection_id === null
-            && $connection->isDedicated()
-            && $connection->protocolVersion === 1) {
-            return;
+        if ($connection->protocolVersion !== 2) {
+            throw new DiscordQueueLeaseException(
+                'discord_connection_protocol_unsupported',
+                'Discord queue delivery requires relay protocol v2.',
+                409,
+            );
         }
 
         if (! is_string($command->connection_id)
@@ -802,17 +733,6 @@ class DiscordQueueLeaseService
 
     private function assertAcknowledgementAllowed(DiscordQueue $command, ?string $leaseToken): void
     {
-        if ($command->lease_token === null) {
-            if ($leaseToken !== null || $command->status !== DiscordQueueStatus::Processing) {
-                throw new DiscordQueueLeaseException(
-                    'lease_conflict',
-                    'This legacy queue command is not currently processing.',
-                );
-            }
-
-            return;
-        }
-
         if ($leaseToken === null) {
             throw new DiscordQueueLeaseException(
                 'lease_token_required',

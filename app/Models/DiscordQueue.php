@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Services\Discord\DiscordQueueLeaseService;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use LogicException;
 
 /**
  * Queued Discord bot command envelope.
@@ -41,7 +43,6 @@ class DiscordQueue extends Model
     protected $attributes = [
         'status' => 'pending',
         'attempts' => 0,
-        'lane' => 'legacy',
         'priority' => 50,
     ];
 
@@ -52,6 +53,36 @@ class DiscordQueue extends Model
     public $incrementing = false;
 
     protected $keyType = 'string';
+
+    protected static function booted(): void
+    {
+        self::creating(function (self $command): void {
+            $action = DiscordQueueAction::tryFrom((string) $command->action);
+            $lane = $command->lane;
+            if (! $action instanceof DiscordQueueAction
+                || ! $lane instanceof DiscordQueueLane
+                || ! $action->supportsLane($lane)) {
+                throw new LogicException('Discord queue commands require a registered action on an allowed v2 lane.');
+            }
+
+            if (! in_array($command->status, [DiscordQueueStatus::Pending, DiscordQueueStatus::Processing], true)) {
+                return;
+            }
+
+            if (! is_string($command->connection_id)
+                || $command->connection_id === ''
+                || ! is_string($command->application_id)
+                || $command->application_id === ''
+                || (int) $command->connection_generation < 1
+                || ! is_string($command->guild_id)
+                || $command->guild_id === ''
+                || ! is_string($command->dedupe_scope)
+                || $command->dedupe_scope === ''
+                || $command->dedupe_scope === 'legacy') {
+                throw new LogicException('Discord queue commands must be bound to a relay-v2 connection when created.');
+            }
+        });
+    }
 
     /**
      * @return array<string, string>

@@ -3,6 +3,8 @@
 namespace App\Listeners;
 
 use App\Enums\AlliancePositionEnum;
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Events\NationAllianceChanged;
 use App\Models\Account;
 use App\Models\Alliance;
@@ -169,7 +171,11 @@ class SendAllianceDepartureDiscordNotification implements ShouldQueue
             'left_at' => now()->toIso8601String(),
         ];
 
-        $this->discordQueueService->enqueue(self::ROLE_REMOVAL_ACTION, $payload);
+        $this->discordQueueService->enqueue(
+            action: DiscordQueueAction::AllianceRoleRemoval,
+            payload: $payload,
+            lane: DiscordQueueLane::SideEffects,
+        );
     }
 
     protected function resolveDiscordId(Nation $nation): ?string

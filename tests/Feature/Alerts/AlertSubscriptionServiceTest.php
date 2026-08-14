@@ -18,11 +18,20 @@ use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class AlertSubscriptionServiceTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->configureDiscordQueueV2();
+    }
 
     public function test_enabled_offshore_members_can_create_alerts_but_applicants_cannot(): void
     {

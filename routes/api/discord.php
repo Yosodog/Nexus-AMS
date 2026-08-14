@@ -39,16 +39,14 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             EnsureDiscordInteractionCommand::class.':verify',
             EnsureDiscordInteractionIdempotency::class,
         ]);
-    Route::get('/queue', [DiscordQueueController::class, 'index'])
-        ->middleware(VerifyDiscordInteraction::class.':queue.legacy-fetch,legacy-unsigned');
     Route::post('/queue/claim', [DiscordQueueController::class, 'claim'])
-        ->middleware(VerifyDiscordInteraction::class.':queue.claim,legacy-unsigned');
+        ->middleware(VerifyDiscordInteraction::class.':queue.claim');
     Route::post('/queue/{command}/lease', [DiscordQueueController::class, 'lease'])
-        ->middleware(VerifyDiscordInteraction::class.':queue.lease,legacy-unsigned');
+        ->middleware(VerifyDiscordInteraction::class.':queue.lease');
     Route::patch('/queue/{command}/checkpoint', [DiscordQueueController::class, 'checkpoint'])
-        ->middleware(VerifyDiscordInteraction::class.':queue.checkpoint,legacy-unsigned');
+        ->middleware(VerifyDiscordInteraction::class.':queue.checkpoint');
     Route::post('/queue/{command}/status', [DiscordQueueController::class, 'update'])
-        ->middleware(VerifyDiscordInteraction::class.':queue.acknowledge,legacy-unsigned');
+        ->middleware(VerifyDiscordInteraction::class.':queue.acknowledge');
     Route::get('/alerts/manifest', DiscordAlertRendererManifestController::class)
         ->middleware([
             VerifyDiscordInteraction::class,
@@ -93,7 +91,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
         ]);
     Route::post('/applications', [DiscordApplicationController::class, 'store']);
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
-    Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage']);
+    Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage'])
+        ->middleware(VerifyDiscordInteraction::class.':applications.message');
     Route::post('/applications/approve', [DiscordApplicationController::class, 'approve'])
         ->middleware([
             VerifyDiscordInteraction::class,
@@ -118,9 +117,13 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             EnsureDiscordInteractionCommand::class.':archivecounter,war-counters.archive',
             EnsureDiscordInteractionIdempotency::class,
         ]);
-    Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show']);
+    Route::get('/war-counters/{counter}', [DiscordWarCounterController::class, 'show'])
+        ->middleware(VerifyDiscordInteraction::class.':war-counters.show');
     Route::get('/milcom/objectives/{objective}', [DiscordMilcomObjectiveController::class, 'show'])
-        ->middleware(RequireMilcomV2::class);
+        ->middleware([
+            RequireMilcomV2::class,
+            VerifyDiscordInteraction::class.':milcom.objectives.show',
+        ]);
     Route::post('/milcom/objectives/attach-room', [DiscordMilcomObjectiveController::class, 'attachRoom'])
         ->middleware([
             RequireMilcomV2::class,
@@ -168,7 +171,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
             EnsureDiscordInteractionCommand::class.':sweepbank',
             EnsureDiscordInteractionIdempotency::class,
         ]);
-    Route::post('/intel', [ApiIntelReportController::class, 'store']);
+    Route::post('/intel', [ApiIntelReportController::class, 'store'])
+        ->middleware(VerifyDiscordInteraction::class.':intel.report');
 
     Route::prefix('directory')->middleware([VerifyDiscordInteraction::class, ResolveDiscordActor::class])->group(function () {
         Route::get('/discord-users/{discordUserId}', [DiscordDirectoryController::class, 'discordUser'])

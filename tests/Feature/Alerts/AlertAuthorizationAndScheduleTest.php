@@ -16,11 +16,19 @@ use Illuminate\Console\Scheduling\CallbackEvent;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsTestUsers;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class AlertAuthorizationAndScheduleTest extends TestCase
 {
-    use BuildsTestUsers, RefreshDatabase;
+    use BuildsTestUsers, ConfiguresDiscordQueueV2, RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->configureDiscordQueueV2();
+    }
 
     public function test_restricted_route_is_reauthorized_for_every_occurrence(): void
     {

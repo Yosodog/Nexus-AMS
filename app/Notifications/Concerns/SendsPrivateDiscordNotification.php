@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Concerns;
 
+use App\Enums\DiscordQueueLane;
 use App\Models\Nation;
 use App\Notifications\Channels\DiscordQueueChannel;
 use App\Services\Discord\PrivateNotificationService;
@@ -43,6 +44,7 @@ trait SendsPrivateDiscordNotification
 
         return [
             'action' => 'PRIVATE_NOTIFICATION',
+            'lane' => DiscordQueueLane::Alerts,
             'dedupe_key' => 'private-notification:'.$notificationId,
             'payload' => app(PrivateNotificationService::class)->payloadForNation(
                 $notifiable,

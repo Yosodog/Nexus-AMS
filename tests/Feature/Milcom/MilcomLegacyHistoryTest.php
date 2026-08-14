@@ -6,17 +6,21 @@ use App\Models\Nation;
 use App\Models\WarCounter;
 use App\Models\WarPlan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
 
 class MilcomLegacyHistoryTest extends TestCase
 {
     use BuildsMilcomFixtures;
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->configureDiscordQueueV2();
 
         config()->set('milcom.v2_enabled', true);
     }

@@ -22,17 +22,21 @@ use App\Models\WarCounter;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
 
 class MilcomIncidentIngestionTest extends TestCase
 {
     use BuildsMilcomFixtures;
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->configureDiscordQueueV2();
 
         config()->set('milcom.v2_enabled', true);
         config()->set('services.nexus_api_token', 'testing-nexus-token');

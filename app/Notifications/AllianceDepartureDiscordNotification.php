@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\DiscordQueueLane;
 use App\Models\Alliance;
 use App\Models\Nation;
 use App\Notifications\Channels\DiscordQueueChannel;
@@ -33,6 +34,7 @@ class AllianceDepartureDiscordNotification extends Notification
     {
         return [
             'action' => 'ALLIANCE_DEPARTURE',
+            'lane' => DiscordQueueLane::Alerts,
             'channel_id' => $this->channelId,
             'payload' => [
                 'channel_id' => $this->channelId,

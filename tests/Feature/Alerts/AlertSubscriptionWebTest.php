@@ -17,10 +17,12 @@ use App\Services\Alerts\AlertUserSettingsService;
 use App\Services\AllianceMembershipService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\TestCase;
 
 class AlertSubscriptionWebTest extends TestCase
 {
+    use ConfiguresDiscordQueueV2;
     use RefreshDatabase;
 
     private User $user;
@@ -28,6 +30,8 @@ class AlertSubscriptionWebTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->configureDiscordQueueV2();
 
         $alliance = Alliance::factory()->create();
         config(['services.pw.alliance_id' => $alliance->id]);

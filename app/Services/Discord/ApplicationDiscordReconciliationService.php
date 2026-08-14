@@ -2,6 +2,7 @@
 
 namespace App\Services\Discord;
 
+use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
 use App\Models\Application;
@@ -70,13 +71,12 @@ final class ApplicationDiscordReconciliationService
                         }
 
                         $queue = $this->queue->enqueue(
-                            action: self::ACTION,
+                            action: DiscordQueueAction::ApplicationDiscordReconcile,
                             payload: $plan['payload'],
-                            dedupeKey: 'application-reconcile:'.$locked->getKey().':'.$candidateRevision,
                             lane: DiscordQueueLane::SideEffects,
-                            priority: 80,
-                            guildId: $resolved->guildId,
                             connection: $resolved,
+                            dedupeKey: 'application-reconcile:'.$locked->getKey().':'.$candidateRevision,
+                            priority: 80,
                         );
 
                         $this->supersedePendingQueue($locked, $currentQueue);

@@ -667,7 +667,9 @@ class BrowserTestBootstrap
         $failedIncident->forceFill(['objective_id' => $failedObjective->id])->save();
         $queueItem = DiscordQueue::query()->create([
             'action' => 'WAR_ROOM_CREATE',
+            'lane' => 'side_effects',
             'dedupe_key' => "milcom-objective:{$failedObjective->id}:room:v1",
+            'dedupe_scope' => 'browser-fixture',
             'payload' => [],
             'status' => DiscordQueueStatus::Failed,
             'attempts' => 3,

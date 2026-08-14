@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\DiscordQueueAction;
+use App\Enums\DiscordQueueLane;
 use App\Models\WarCounter;
 use App\Models\WarPlan;
 use App\Services\Discord\DiscordQueueService;
@@ -72,8 +74,8 @@ class MilcomV2Cutover extends Command
                 $dedupeKey = "legacy-war-counter:{$counter->id}:archive:v2-cutover";
 
                 $this->discordQueueService->enqueue(
-                    'WAR_ROOM_ARCHIVE',
-                    [
+                    action: DiscordQueueAction::WarRoomArchive,
+                    payload: [
                         'discord_channel_id' => $channelId,
                         'source' => [
                             'type' => 'war_counter',
@@ -85,6 +87,7 @@ class MilcomV2Cutover extends Command
                         ],
                         'archived_at' => $archivedAt->toIso8601String(),
                     ],
+                    lane: DiscordQueueLane::SideEffects,
                     dedupeKey: $dedupeKey,
                 );
 
