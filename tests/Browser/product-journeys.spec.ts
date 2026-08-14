@@ -87,7 +87,7 @@ test('full admin can reach core operations and inspect ledger activity', async (
   await expect(page.getByRole('heading', { name: 'Alliance Members' })).toBeVisible();
 });
 
-test('full admin can review populated grant, city grant, and loan queues', async ({ page }) => {
+test('full admin can review populated grant and city grant queues', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/grants');
 
   await expectApplicationShell(page);
@@ -102,12 +102,21 @@ test('full admin can review populated grant, city grant, and loan queues', async
   await expect(page.getByRole('heading', { name: 'City grants', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'City #13' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve and deposit' })).toBeVisible();
+});
 
-  await page.goto('/admin/loans');
+test('full admin can open a populated loan approval form', async ({ page }) => {
+  await page.goto('/_browser/login/admin?redirect=/admin/loans');
+
   await expectApplicationShell(page);
   await expect(page.getByRole('heading', { name: 'Loans' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Review and approve' })).toBeVisible();
+  await page.getByRole('button', { name: 'Review and approve' }).click();
 
+  const approvalDialog = page.getByRole('dialog', { name: 'Approve loan request' });
+  await expect(approvalDialog).toBeVisible();
+  await expect(approvalDialog.locator('input[name="amount"]')).toHaveValue('7500000');
+  await expect(approvalDialog.locator('input[name="interest_rate"]')).toHaveValue('3.5');
+  await expect(approvalDialog.locator('input[name="term_weeks"]')).toHaveValue('12');
+  await expect(approvalDialog.locator('#approveLoanForm')).toHaveAttribute('action', /\/admin\/loans\/\d+\/approve$/);
 });
 
 test('full admin can reach war planning, settings, and custom-page editing', async ({ page }) => {

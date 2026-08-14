@@ -15,6 +15,7 @@ use App\Jobs\ReconcileBlockadeReliefRequests;
 use App\Jobs\ReconcileFederationLinksJob;
 use App\Jobs\ReconcileMilcomLifecycleJob;
 use App\Jobs\RecordQueueHeartbeat;
+use App\Jobs\RefreshBankBalanceSnapshots;
 use App\Jobs\RollupAlertMetricsJob;
 use App\Jobs\SendAuditRemindersJob;
 use App\Jobs\SweepFederationOutboxJob;
@@ -158,6 +159,12 @@ final readonly class NexusScheduleRegistrar
             ->everyMinute()
             ->runInBackground()
             ->withoutOverlapping(10)
+            ->onOneServer()
+            ->when($whenPWUp);
+
+        $schedule->job(new RefreshBankBalanceSnapshots, 'default')
+            ->hourlyAt(5)
+            ->withoutOverlapping(55)
             ->onOneServer()
             ->when($whenPWUp);
 

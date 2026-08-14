@@ -16,7 +16,7 @@ use Throwable;
 
 class OffshoreService
 {
-    private const CACHE_TTL_MINUTES = 360;
+    private const CACHE_FRESH_MINUTES = 360;
 
     public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
 
@@ -96,21 +96,13 @@ class OffshoreService
     public function getBalances(Offshore $offshore, bool $force = false): array
     {
         $cacheKey = $this->balancesCacheKey($offshore);
+        $snapshot = $this->normalizeSnapshot(Cache::get($cacheKey));
 
-        if ($force) {
-            Cache::forget($cacheKey);
+        if (! $force && $this->snapshotIsFresh($snapshot)) {
+            return $snapshot['balances'];
         }
 
-        $snapshot = Cache::remember(
-            $cacheKey,
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            function () use ($offshore) {
-                // Ensure we store both the balances and when they were captured for UI context.
-                return $this->buildSnapshot($offshore);
-            }
-        );
-
-        return $this->normalizeSnapshot($snapshot)['balances'];
+        return $this->refreshBalances($offshore, $force);
     }
 
     /**
@@ -120,16 +112,22 @@ class OffshoreService
     {
         $cacheKey = $this->balancesCacheKey($offshore);
 
-        Cache::forget($cacheKey);
-
         if ($force) {
             $offshore->refresh();
         }
 
         $balances = $this->fetchLiveBalances($offshore);
-        $snapshot = $this->buildSnapshot($offshore, $balances);
 
-        Cache::put($cacheKey, $snapshot, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        if ($balances === []) {
+            Log::warning('Offshore balance refresh returned no usable data; preserving the last cached snapshot.', [
+                'offshore_id' => $offshore->id,
+                'alliance_id' => $offshore->alliance_id,
+            ]);
+
+            return [];
+        }
+
+        Cache::forever($cacheKey, $this->buildSnapshot($balances));
 
         Log::info('Offshore balances refreshed', [
             'offshore_id' => $offshore->id,
@@ -145,13 +143,7 @@ class OffshoreService
      */
     public function getCachedSnapshot(Offshore $offshore): array
     {
-        $snapshot = Cache::remember(
-            $this->balancesCacheKey($offshore),
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            fn () => $this->buildSnapshot($offshore)
-        );
-
-        return $this->normalizeSnapshot($snapshot);
+        return $this->normalizeSnapshot(Cache::get($this->balancesCacheKey($offshore)));
     }
 
     public function clearCaches(Offshore $offshore): void
@@ -210,6 +202,16 @@ class OffshoreService
         }
 
         $result = (array) ($response->{0} ?? []);
+
+        if ($result === [] || ! array_key_exists('money', $result)) {
+            Log::warning('Offshore balance query returned an incomplete payload.', [
+                'offshore_id' => $offshore->id,
+                'alliance_id' => $offshore->alliance_id,
+            ]);
+
+            return [];
+        }
+
         $resources = PWHelperService::resources();
 
         return collect($resources)
@@ -318,13 +320,20 @@ class OffshoreService
     /**
      * Build a snapshot payload for caching.
      */
-    protected function buildSnapshot(Offshore $offshore, ?array $balances = null): array
+    protected function buildSnapshot(array $balances): array
     {
-        $balances ??= $this->fetchLiveBalances($offshore);
-
         return [
             'balances' => $balances,
             'cached_at' => now(),
         ];
+    }
+
+    /**
+     * @param  array{balances: array<string, float>, cached_at: Carbon|null}  $snapshot
+     */
+    protected function snapshotIsFresh(array $snapshot): bool
+    {
+        return $snapshot['cached_at'] instanceof Carbon
+            && $snapshot['cached_at']->gte(now()->subMinutes(self::CACHE_FRESH_MINUTES));
     }
 }

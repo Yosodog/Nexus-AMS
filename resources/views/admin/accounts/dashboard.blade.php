@@ -12,11 +12,6 @@
     $topAccounts = $accounts->sortByDesc('money')->take(5);
     $activeAccounts = $accounts->filter(fn ($account) => $account->user)->count();
     $inactiveAccounts = $accounts->count() - $activeAccounts;
-    $averageTransactionsPerDay = $recentTransactionsSample
-        ->groupBy(fn ($transaction) => $transaction->created_at->format('Y-m-d'))
-        ->map->count()
-        ->avg() ?? 0;
-
     $mainBankSnapshot ??= ['balances' => [], 'cached_at' => null];
     $offshoreSnapshots = ($offshoreSnapshots ?? collect()) instanceof \Illuminate\Support\Collection
         ? $offshoreSnapshots
@@ -584,7 +579,7 @@
                         @php
                             $isLegacyPendingGuardAutoRefund = $transaction->hasLegacyPendingGuardAutoRefund();
                         @endphp
-                        <section class="rounded-2xl border border-error/30 bg-error/5 p-4">
+                        <section id="withdrawal-reconciliation-{{ $transaction->id }}" class="scroll-mt-24 rounded-2xl border border-error/30 bg-error/5 p-4">
                             <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.3fr)] gap-5">
                                 <div class="space-y-3">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -704,7 +699,7 @@
                         </thead>
                         <tbody>
                             @foreach($pendingWithdrawals as $transaction)
-                                <tr>
+                                <tr id="withdrawal-approval-{{ $transaction->id }}" class="scroll-mt-24 {{ request()->integer('transaction') === $transaction->id ? 'bg-warning/10' : '' }}">
                                     <td>{{ $transaction->created_at?->format('M d, Y H:i') }}</td>
                                     <td>{{ $transaction->fromAccount?->user?->name ?? 'Unknown User' }}</td>
                                     <td>{{ $transaction->fromAccount?->name ?? 'Unknown Account' }}</td>

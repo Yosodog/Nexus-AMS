@@ -46,7 +46,7 @@ return [
         ],
         'withdrawals' => [
             'team' => 'finance',
-            'view_abilities' => ['view-accounts'],
+            'view_abilities' => ['manage-accounts'],
             'fresh_seconds' => 60,
             'stale_seconds' => 300,
             'sensitivity' => 'restricted',

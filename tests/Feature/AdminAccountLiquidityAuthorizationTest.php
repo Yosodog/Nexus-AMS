@@ -39,6 +39,16 @@ class AdminAccountLiquidityAuthorizationTest extends TestCase
             ->assertDontSee('$12,345,678.00', false);
     }
 
+    public function test_account_manager_can_open_the_approval_dashboard_without_view_permission(): void
+    {
+        $admin = $this->createAdmin(['manage-accounts']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.accounts.dashboard'))
+            ->assertOk()
+            ->assertSee('Account Management');
+    }
+
     public function test_offshore_or_financial_report_viewer_fetches_and_sees_alliance_liquidity(): void
     {
         $offshore = new Offshore;

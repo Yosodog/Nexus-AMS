@@ -15,7 +15,7 @@ class MainBankService
 {
     private const CACHE_KEY = 'offshores:main:balances';
 
-    private const CACHE_TTL_MINUTES = 360;
+    private const CACHE_FRESH_MINUTES = 360;
 
     private int $mainAllianceId;
 
@@ -35,17 +35,13 @@ class MainBankService
      */
     public function getBalances(bool $force = false): array
     {
-        if ($force) {
-            Cache::forget(self::CACHE_KEY);
+        $snapshot = $this->normalizeSnapshot(Cache::get(self::CACHE_KEY));
+
+        if (! $force && $this->snapshotIsFresh($snapshot)) {
+            return $snapshot['balances'];
         }
 
-        $snapshot = Cache::remember(
-            self::CACHE_KEY,
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            fn () => $this->buildSnapshot()
-        );
-
-        return $this->normalizeSnapshot($snapshot)['balances'];
+        return $this->refreshBalances();
     }
 
     /**
@@ -55,13 +51,7 @@ class MainBankService
      */
     public function getCachedSnapshot(): array
     {
-        $snapshot = Cache::remember(
-            self::CACHE_KEY,
-            now()->addMinutes(self::CACHE_TTL_MINUTES),
-            fn () => $this->buildSnapshot()
-        );
-
-        return $this->normalizeSnapshot($snapshot);
+        return $this->normalizeSnapshot(Cache::get(self::CACHE_KEY));
     }
 
     /**
@@ -72,9 +62,14 @@ class MainBankService
     public function refreshBalances(): array
     {
         $balances = $this->fetchLiveBalances();
-        $snapshot = $this->buildSnapshot($balances);
 
-        Cache::put(self::CACHE_KEY, $snapshot, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        if ($balances === []) {
+            Log::warning('Main bank balance refresh returned no usable data; preserving the last cached snapshot.');
+
+            return [];
+        }
+
+        Cache::forever(self::CACHE_KEY, $this->buildSnapshot($balances));
 
         Log::info('Main bank balances refreshed', [
             'alliance_id' => $this->mainAllianceId,
@@ -139,17 +134,24 @@ class MainBankService
     /**
      * Build a snapshot payload for caching.
      *
-     * @param  array<string, float>|null  $balances
+     * @param  array<string, float>  $balances
      * @return array{balances: array<string, float>, cached_at: Carbon}
      */
-    protected function buildSnapshot(?array $balances = null): array
+    protected function buildSnapshot(array $balances): array
     {
-        $balances ??= $this->fetchLiveBalances();
-
         return [
             'balances' => $balances,
             'cached_at' => now(),
         ];
+    }
+
+    /**
+     * @param  array{balances: array<string, float>, cached_at: Carbon|null}  $snapshot
+     */
+    protected function snapshotIsFresh(array $snapshot): bool
+    {
+        return $snapshot['cached_at'] instanceof Carbon
+            && $snapshot['cached_at']->gte(now()->subMinutes(self::CACHE_FRESH_MINUTES));
     }
 
     /**
@@ -191,6 +193,15 @@ class MainBankService
         }
 
         $result = (array) ($response->{0} ?? []);
+
+        if ($result === [] || ! array_key_exists('money', $result)) {
+            Log::warning('Main bank balance query returned an incomplete payload.', [
+                'alliance_id' => $this->mainAllianceId,
+            ]);
+
+            return [];
+        }
+
         $resources = PWHelperService::resources();
 
         return collect($resources)

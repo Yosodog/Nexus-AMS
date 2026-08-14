@@ -96,7 +96,15 @@
                             type="button"
                             class="btn btn-success btn-sm"
                             x-data
-                            @click="$dispatch('open-approve-loan', @json($loan))"
+                            data-loan-id="{{ $loan->id }}"
+                            data-nation-id="{{ $loan->nation_id }}"
+                            data-account-id="{{ $loan->account_id }}"
+                            data-leader-name="{{ $loan->nation?->leader_name }}"
+                            data-amount="{{ $loan->amount }}"
+                            data-interest-rate="{{ $loan->interest_rate ?? $defaultLoanInterestRate }}"
+                            data-term-weeks="{{ $loan->term_weeks }}"
+                            data-approval-url="{{ route('admin.loans.approve', $loan) }}"
+                            @click="$dispatch('open-approve-loan', $el.dataset)"
                         >
                             Review and approve
                         </button>
@@ -348,7 +356,7 @@
             </div>
         </section>
 
-        <dialog id="approveLoanModal" class="modal" x-data="{ loanData: {} }" @open-approve-loan.window="loanData = $event.detail; $el.showModal(); setApproveLoanData(loanData)" aria-labelledby="approve-loan-title">
+        <dialog id="approveLoanModal" class="modal" x-data="{ loanData: {} }" @open-approve-loan.window="loanData = $event.detail; $el.showModal()" aria-labelledby="approve-loan-title">
             <div class="modal-box max-w-xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
@@ -358,16 +366,16 @@
                     <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('approveLoanModal').close()">Close</button>
                 </div>
                 <div class="mt-4 rounded-md border border-base-300 bg-base-200/50 px-4 py-3 text-sm">
-                    <span class="font-semibold" x-text="loanData.nation?.leader_name || `Nation #${loanData.nation_id || ''}`"></span>
-                    <span class="block nexus-text-muted" x-text="`Account #${loanData.account_id || ''}`"></span>
+                    <span class="font-semibold" x-text="loanData.leaderName || `Nation #${loanData.nationId || ''}`"></span>
+                    <span class="block nexus-text-muted" x-text="`Account #${loanData.accountId || ''}`"></span>
                 </div>
-                <form id="approveLoanForm" method="POST" class="mt-5">
+                <form id="approveLoanForm" method="POST" class="mt-5" x-bind:action="loanData.approvalUrl">
                     @csrf
-                    <input type="hidden" name="loan_id" id="loan_id">
+                    <input type="hidden" name="loan_id" id="loan_id" x-bind:value="loanData.loanId">
                     <div class="space-y-4">
-                        <x-input label="Loan amount" type="number" step="0.01" min="0.01" name="amount" id="approve_amount" required />
-                        <x-input label="Weekly interest rate (%)" type="number" step="0.01" min="0" max="100" name="interest_rate" id="approve_interest_rate" required />
-                        <x-input label="Term (weeks)" type="number" min="1" max="52" name="term_weeks" id="approve_term_weeks" required />
+                        <x-input label="Loan amount" type="number" step="0.01" min="0.01" name="amount" id="approve_amount" x-bind:value="loanData.amount" x-bind:max="loanData.amount" required />
+                        <x-input label="Weekly interest rate (%)" type="number" step="0.01" min="0" max="100" name="interest_rate" id="approve_interest_rate" x-bind:value="loanData.interestRate" required />
+                        <x-input label="Term (weeks)" type="number" min="1" max="52" name="term_weeks" id="approve_term_weeks" x-bind:value="loanData.termWeeks" required />
                     </div>
                     <div class="modal-action">
                         <button type="button" class="btn btn-ghost" onclick="document.getElementById('approveLoanModal').close()">Cancel</button>
@@ -379,19 +387,3 @@
         </dialog>
     @endcan
 @endsection
-
-@push('scripts')
-    <script>
-        const defaultLoanInterestRate = {{ json_encode($defaultLoanInterestRate) }};
-
-        function setApproveLoanData(loan) {
-            document.getElementById('approveLoanForm').action = `{{ url('admin/loans') }}/${loan.id}/approve`;
-            document.getElementById('loan_id').value = loan.id;
-            document.getElementById('approve_amount').value = loan.amount;
-            document.getElementById('approve_amount').max = loan.amount;
-            const interestRate = loan.interest_rate ?? defaultLoanInterestRate;
-            document.getElementById('approve_interest_rate').value = interestRate ?? '';
-            document.getElementById('approve_term_weeks').value = loan.term_weeks;
-        }
-    </script>
-@endpush

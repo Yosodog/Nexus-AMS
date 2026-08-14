@@ -48,7 +48,9 @@ class AccountController extends Controller
      */
     public function dashboard(Request $request)
     {
-        $this->authorize('view-accounts');
+        if (! $request->user()->can('view-accounts')) {
+            $this->authorize('manage-accounts');
+        }
 
         $canViewAllianceLiquidity = $request->user()->can('view-offshores')
             || $request->user()->can('view-financial-reports');
@@ -77,9 +79,14 @@ class AccountController extends Controller
             $fallbackTaxId = SettingService::getDirectDepositFallbackId();
         }
 
-        $recentTransactionsSample = Transaction::latest('created_at')
+        $recentTransactionsSample = Transaction::query()
+            ->latest('created_at')
             ->take(50)
-            ->get();
+            ->get(['created_at']);
+        $averageTransactionsPerDay = $recentTransactionsSample
+            ->groupBy(fn (Transaction $transaction) => $transaction->created_at->format('Y-m-d'))
+            ->map->count()
+            ->avg() ?? 0;
         $recentTransactions = Transaction::with(['fromAccount', 'toAccount', 'nation'])
             ->latest('created_at')
             ->paginate(15, ['*'], 'tx_page')
@@ -138,7 +145,7 @@ class AccountController extends Controller
             'enrollments' => $enrollments,
             'ddTaxId' => $ddTaxId,
             'fallbackTaxId' => $fallbackTaxId,
-            'recentTransactionsSample' => $recentTransactionsSample,
+            'averageTransactionsPerDay' => $averageTransactionsPerDay,
             'recentTransactions' => $recentTransactions,
             'directDepositLogs' => $directDepositLogs,
             'mmrPurchases' => $mmrPurchases,

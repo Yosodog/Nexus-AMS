@@ -40,14 +40,21 @@ final class WithdrawalWorkQueueSource implements StaffWorkQueueSourceV2
             ->get()
             ->map(function (Transaction $transaction): StaffWorkItem {
                 $leader = $transaction->nation?->leader_name ?: 'Nation #'.$transaction->nation_id;
-                $url = $transaction->from_account_id
-                    ? route('admin.accounts.view', [
-                        'accounts' => $transaction->from_account_id,
-                        'transaction' => $transaction->getKey(),
-                    ])
-                    : route('admin.accounts.dashboard', ['transaction' => $transaction->getKey()]);
                 $requiresReconciliation = $transaction->bank_attempt_status === Transaction::BANK_ATTEMPT_NEEDS_RECONCILIATION;
                 $requiresReview = (bool) $transaction->requires_admin_approval;
+                $url = match (true) {
+                    $requiresReconciliation => route('admin.accounts.dashboard', [
+                        'transaction' => $transaction->getKey(),
+                    ]).'#withdrawal-reconciliation-'.$transaction->getKey(),
+                    $requiresReview => route('admin.accounts.dashboard', [
+                        'transaction' => $transaction->getKey(),
+                    ]).'#withdrawal-approval-'.$transaction->getKey(),
+                    (bool) $transaction->from_account_id => route('admin.accounts.view', [
+                        'accounts' => $transaction->from_account_id,
+                        'transaction' => $transaction->getKey(),
+                    ]),
+                    default => route('admin.accounts.dashboard', ['transaction' => $transaction->getKey()]),
+                };
 
                 return new StaffWorkItem(
                     type: $this->type(),

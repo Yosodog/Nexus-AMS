@@ -188,7 +188,10 @@ class StaffWorkQueueSourcesTest extends TestCase
         $this->assertFalse($items->has('audit_remediation:'.$audit->id));
         $this->assertSame(route('admin.applications.show', $application), $items['applications:'.$application->id]['url']);
         $this->assertSame(route('admin.loans.view', ['Loan' => $loan->id]), $items['loans:'.$loan->id]['url']);
-        $this->assertStringStartsWith(route('admin.accounts.view', $sourceAccount), $items['withdrawals:'.$withdrawal->id]['url']);
+        $this->assertSame(
+            route('admin.accounts.dashboard', ['transaction' => $withdrawal->id]).'#withdrawal-approval-'.$withdrawal->id,
+            $items['withdrawals:'.$withdrawal->id]['url']
+        );
         $this->assertSame(route('admin.member-transfers.show', $memberTransfer), $items['member_transfers:'.$memberTransfer->id]['url']);
         $this->assertStringStartsWith(route('admin.grants.city'), $items['city_grants:'.$cityGrant->id]['url']);
         $this->assertStringStartsWith(route('admin.grants'), $items['grants:'.$grant->id]['url']);
@@ -222,6 +225,37 @@ class StaffWorkQueueSourcesTest extends TestCase
             ->assertSee('Cancel and refund');
     }
 
+    public function test_withdrawal_work_items_are_visible_only_to_account_managers(): void
+    {
+        config()->set('pending_requests.cache_key', 'testing.staff-work-queue.withdrawal-permissions');
+        config()->set('pending_requests.projection_cache_key', 'testing.staff-work-queue.withdrawal-permissions.projection');
+
+        $nation = Nation::factory()->create();
+        $account = $this->account($nation, 'Pending withdrawal account');
+        $withdrawal = new Transaction;
+        $withdrawal->from_account_id = $account->id;
+        $withdrawal->nation_id = $nation->id;
+        $withdrawal->transaction_type = 'withdrawal';
+        $withdrawal->money = 50_000;
+        $withdrawal->is_pending = true;
+        $withdrawal->requires_admin_approval = true;
+        $withdrawal->save();
+
+        $viewer = $this->grantPermissions($this->createVerifiedAdmin(), ['view-accounts']);
+        $manager = $this->grantPermissions($this->createVerifiedAdmin(), ['manage-accounts']);
+        $registry = app(StaffWorkQueueRegistry::class);
+
+        $this->assertArrayNotHasKey('withdrawals:'.$withdrawal->id, $this->itemsByKey($registry->forUser($viewer, true)));
+        $this->assertArrayHasKey('withdrawals:'.$withdrawal->id, $this->itemsByKey($registry->forUser($manager, true)));
+
+        $this->attachDiscordAccount($manager);
+        $this->actingAs($manager)
+            ->get(route('admin.accounts.dashboard', ['transaction' => $withdrawal->id]))
+            ->assertOk()
+            ->assertSee('id="withdrawal-approval-'.$withdrawal->id.'"', false)
+            ->assertSee(route('admin.withdrawals.approve', $withdrawal), false);
+    }
+
     private function account(Nation $nation, string $name): Account
     {
         $account = new Account;
@@ -230,5 +264,14 @@ class StaffWorkQueueSourcesTest extends TestCase
         $account->save();
 
         return $account;
+    }
+
+    /**
+     * @param  array<string, mixed>  $projection
+     * @return array<string, array<string, mixed>>
+     */
+    private function itemsByKey(array $projection): array
+    {
+        return collect($projection['items'])->keyBy('work_key')->all();
     }
 }
