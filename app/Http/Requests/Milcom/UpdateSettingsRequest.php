@@ -20,6 +20,8 @@ class UpdateSettingsRequest extends FormRequest
         return [
             'forum_id' => ['nullable', 'regex:/^\d{17,20}$/'],
             'defense_role_id' => ['nullable', 'regex:/^\d{17,20}$/'],
+            'war_alert_channel_id' => ['nullable', 'regex:/^\d{17,20}$/'],
+            'war_alert_enabled' => ['required', 'boolean'],
             'forum_tag_ids' => ['sometimes', 'array', 'max:5'],
             'forum_tag_ids.*' => ['regex:/^\d{17,20}$/', 'distinct'],
             'counter_monitoring_enabled' => ['required', 'boolean'],
@@ -41,6 +43,10 @@ class UpdateSettingsRequest extends FormRequest
             'defense_role_id' => $this->filled('defense_role_id')
                 ? trim((string) $this->input('defense_role_id'))
                 : null,
+            'war_alert_channel_id' => $this->filled('war_alert_channel_id')
+                ? trim((string) $this->input('war_alert_channel_id'))
+                : null,
+            'war_alert_enabled' => $this->boolean('war_alert_enabled'),
             'forum_tag_ids' => $tags,
             'counter_monitoring_enabled' => $this->boolean('counter_monitoring_enabled'),
             'default_war_type' => strtoupper((string) $this->input('default_war_type', 'ORDINARY')),

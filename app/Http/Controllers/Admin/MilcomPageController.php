@@ -317,6 +317,8 @@ class MilcomPageController extends Controller
             'settings' => [
                 'forum_id' => SettingService::getDiscordWarRoomForumId(),
                 'defense_role_id' => SettingService::getDiscordWarRoomDefenseRoleId(),
+                'war_alert_channel_id' => SettingService::getDiscordWarAlertChannelId(),
+                'war_alert_enabled' => SettingService::isDiscordWarAlertEnabled(),
                 'forum_tag_ids' => is_array($tags) ? $tags : [],
                 'counter_monitoring_enabled' => SettingService::getValue('milcom_counter_monitoring_enabled') !== '0',
                 'default_war_type' => SettingService::getValue('milcom_default_war_type')

@@ -56,6 +56,31 @@
                             <input type="text" name="forum_tag_ids" value="{{ $forumTags }}" class="input w-full" placeholder="123456789012345678, 234567890123456789" autocomplete="off">
                             <span class="mt-1 block text-xs nexus-text-muted">Separate IDs with commas. Milcom uses only tags that exist in the selected forum.</span>
                         </label>
+                        <div class="border-t border-base-300 pt-5 md:col-span-2">
+                            <h3 class="font-semibold">War declaration alerts</h3>
+                            <p class="mt-1 text-sm text-base-content/65">Send a Discord alert when another nation declares war on an alliance member.</p>
+                        </div>
+                        <label class="block">
+                            <span class="label px-0">War alert channel ID</span>
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                name="war_alert_channel_id"
+                                value="{{ old('war_alert_channel_id', data_get($settings, 'war_alert_channel_id')) }}"
+                                class="input w-full"
+                                placeholder="123456789012345678"
+                                autocomplete="off"
+                            >
+                            <span class="mt-1 block text-xs nexus-text-muted">Leave blank to stop sending war declaration alerts.</span>
+                        </label>
+                        <label class="flex cursor-pointer items-start justify-between gap-4 rounded-md border border-base-300 p-4">
+                            <span>
+                                <span class="block font-semibold">Enable war declaration alerts</span>
+                                <span class="mt-1 block text-sm text-base-content/65">The Discord bot sends each new alert to the channel above.</span>
+                            </span>
+                            <input type="hidden" name="war_alert_enabled" value="0">
+                            <input type="checkbox" name="war_alert_enabled" value="1" class="toggle toggle-primary mt-1 shrink-0" @checked((bool) old('war_alert_enabled', data_get($settings, 'war_alert_enabled', false)))>
+                        </label>
                     </div>
                 </section>
 

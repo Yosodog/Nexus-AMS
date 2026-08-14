@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\DiscordQueueLane;
 use App\Models\Nation;
 use App\Models\WarCounter;
 use App\Notifications\Channels\DiscordQueueChannel;
@@ -33,6 +34,7 @@ class WarDeclaredDiscordNotification extends Notification
     /**
      * @return array{
      *     action: string,
+     *     lane: DiscordQueueLane,
      *     channel_id: string,
      *     available_at?: CarbonInterface,
      *     payload: array<string, mixed>
@@ -42,6 +44,7 @@ class WarDeclaredDiscordNotification extends Notification
     {
         return [
             'action' => 'WAR_ALERT',
+            'lane' => DiscordQueueLane::Alerts,
             'channel_id' => $this->channelId,
             'available_at' => $this->availableAt,
             'payload' => [

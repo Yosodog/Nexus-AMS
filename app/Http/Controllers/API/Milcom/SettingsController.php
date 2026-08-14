@@ -17,6 +17,8 @@ class SettingsController extends Controller
         DB::transaction(function () use ($settings): void {
             SettingService::setDiscordWarRoomForumId((string) ($settings['forum_id'] ?? ''));
             SettingService::setDiscordWarRoomDefenseRoleId((string) ($settings['defense_role_id'] ?? ''));
+            SettingService::setDiscordWarAlertChannelId((string) ($settings['war_alert_channel_id'] ?? ''));
+            SettingService::setDiscordWarAlertEnabled($settings['war_alert_enabled']);
             SettingService::setValue(
                 'milcom_forum_tag_ids',
                 json_encode($settings['forum_tag_ids'] ?? [], JSON_THROW_ON_ERROR)

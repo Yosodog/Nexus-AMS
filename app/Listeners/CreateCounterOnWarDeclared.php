@@ -5,20 +5,14 @@ namespace App\Listeners;
 use App\Enums\AlliancePositionEnum;
 use App\Events\WarDeclared;
 use App\Jobs\AutoPickCounterAssignmentsJob;
-use App\Models\DiscordQueue;
-use App\Models\Nation;
 use App\Models\WarCounter;
-use App\Notifications\Channels\DiscordQueueChannel;
-use App\Notifications\WarDeclaredDiscordNotification;
 use App\Services\AllianceMembershipService;
 use App\Services\SettingService;
 use App\Services\War\PlanOrchestratorService;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use RuntimeException;
 use Throwable;
 
@@ -116,18 +110,6 @@ class CreateCounterOnWarDeclared
                         AutoPickCounterAssignmentsJob::dispatch($counter->id)->afterCommit();
                     }
                 }
-
-                try {
-                    $this->queueDiscordWarAlert($event, $counter);
-                } catch (Throwable $exception) {
-                    Log::error('Failed to queue Discord war alert without aborting war counter processing', [
-                        'war_id' => $event->warId,
-                        'attacker_nation_id' => $event->attackerNationId,
-                        'defender_nation_id' => $event->defenderNationId,
-                        'exception_class' => $exception::class,
-                        'message' => $exception->getMessage(),
-                    ]);
-                }
             });
         } catch (LockTimeoutException $exception) {
             Log::warning('Failed to acquire counter lock', [
@@ -143,72 +125,5 @@ class CreateCounterOnWarDeclared
                 // Already released.
             }
         }
-    }
-
-    protected function queueDiscordWarAlert(WarDeclared $event, ?WarCounter $counter): void
-    {
-        $channelId = SettingService::getDiscordWarAlertChannelId();
-
-        if (! SettingService::isDiscordWarAlertEnabled() || ! is_string($channelId) || $channelId === '') {
-            Log::notice('Discord war alert skipped: channel not configured', [
-                'war_id' => $event->warId,
-            ]);
-
-            return;
-        }
-
-        $lockAcquired = $this->cacheFactory->store()->lock("discord:war-alert:{$event->warId}", 15)->get(function () use (
-            $event,
-            $counter,
-            $channelId
-        ): bool {
-            if ($this->hasRecentQueuedWarAlert($event->warId)) {
-                Log::info('Discord war alert skipped due to recent queued job', [
-                    'war_id' => $event->warId,
-                ]);
-
-                return true;
-            }
-
-            $attacker = Nation::query()->with(['alliance', 'military'])->find($event->attackerNationId);
-            $defender = Nation::query()->with(['alliance', 'military'])->find($event->defenderNationId);
-
-            if (! $attacker || ! $defender) {
-                Log::warning('Discord war alert skipped: missing nation data', [
-                    'war_id' => $event->warId,
-                    'attacker_nation_id' => $event->attackerNationId,
-                    'defender_nation_id' => $event->defenderNationId,
-                ]);
-
-                return true;
-            }
-
-            Notification::route(DiscordQueueChannel::class, 'discord-bot')
-                ->notify(new WarDeclaredDiscordNotification(
-                    $event->warId,
-                    $attacker,
-                    $defender,
-                    $counter,
-                    $channelId,
-                    Carbon::now()
-                ));
-
-            return true;
-        });
-
-        if (! $lockAcquired) {
-            Log::info('Discord war alert skipped due to overlapping lock', [
-                'war_id' => $event->warId,
-            ]);
-        }
-    }
-
-    protected function hasRecentQueuedWarAlert(int $warId): bool
-    {
-        return DiscordQueue::query()
-            ->where('action', 'WAR_ALERT')
-            ->where('created_at', '>=', now()->subMinutes(5))
-            ->whereJsonContains('payload->war_id', $warId)
-            ->exists();
     }
 }

@@ -18,6 +18,7 @@ use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
 use App\Listeners\ScheduledTaskLifecycleSubscriber;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
+use App\Listeners\SendWarDeclaredDiscordNotification;
 use App\Services\Scheduling\ScheduledTaskLifecycleRecorder;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -57,6 +58,7 @@ class EventServiceProvider extends ServiceProvider
             IngestMilcomIncident::class,
             ReconcileMilcomWarState::class,
             CreateCounterOnWarDeclared::class,
+            SendWarDeclaredDiscordNotification::class,
         ],
         WarStateChanged::class => [
             ReconcileMilcomWarState::class,

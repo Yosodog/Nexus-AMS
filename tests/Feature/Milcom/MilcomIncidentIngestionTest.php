@@ -8,9 +8,11 @@ use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
+use App\Enums\DiscordQueueLane;
 use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Jobs\GenerateMilcomRecommendationsJob;
 use App\Models\Alliance;
+use App\Models\DiscordQueue;
 use App\Models\MilcomIncident;
 use App\Models\MilcomObjective;
 use App\Models\MilcomOperation;
@@ -88,6 +90,25 @@ class MilcomIncidentIngestionTest extends TestCase
             'status' => 'draft',
         ]);
         Queue::assertNotPushed(AutoPickCounterAssignmentsJob::class);
+    }
+
+    public function test_v2_incoming_war_queues_discord_alert_on_alerts_lane(): void
+    {
+        config()->set('milcom.v1_enabled', false);
+        SettingService::setDiscordWarAlertEnabled(true);
+        SettingService::setDiscordWarAlertChannelId('123456789012345678');
+        [$friendlyAlliance, $enemyAlliance] = $this->alliances();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $aggressor = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+
+        $this->postIncomingWar($this->incomingWarPayload(92_006, $aggressor, $attacked))->assertOk();
+
+        $alert = DiscordQueue::query()->where('action', 'WAR_ALERT')->sole();
+
+        $this->assertSame(DiscordQueueLane::Alerts, $alert->lane);
+        $this->assertSame(92_006, $alert->payload['war_id']);
+        $this->assertSame('123456789012345678', $alert->payload['channel_id']);
+        $this->assertDatabaseCount('war_counters', 0);
     }
 
     public function test_incident_is_linked_to_an_active_plan_only_when_minimum_reserved_coverage_exists(): void
