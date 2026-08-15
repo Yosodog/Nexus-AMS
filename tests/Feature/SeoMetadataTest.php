@@ -185,6 +185,7 @@ class SeoMetadataTest extends TestCase
         $this->get(route('login'))
             ->assertOk()
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+            ->assertSee('<title>Sign in · BK Net</title>', false)
             ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
 
         $this->get('https://bk.example.com/not-a-real-page')
