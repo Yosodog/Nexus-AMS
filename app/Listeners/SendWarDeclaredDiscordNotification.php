@@ -2,9 +2,11 @@
 
 namespace App\Listeners;
 
+use App\DataTransferObjects\Discord\WarAlertCounterReference;
 use App\Enums\AlliancePositionEnum;
 use App\Events\WarDeclared;
 use App\Models\DiscordQueue;
+use App\Models\MilcomIncident;
 use App\Models\Nation;
 use App\Models\WarCounter;
 use App\Notifications\Channels\DiscordQueueChannel;
@@ -44,8 +46,20 @@ class SendWarDeclaredDiscordNotification
             return;
         }
 
+        $counterReference = null;
+
         try {
-            $this->queueDiscordWarAlert($event, $this->resolveLegacyCounter($event));
+            $counterReference = $this->resolveCounterReference($event);
+        } catch (Throwable $exception) {
+            Log::warning('Milcom counter reference lookup failed; queuing a war-only Discord alert', [
+                'war_id' => $event->warId,
+                'exception_class' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        try {
+            $this->queueDiscordWarAlert($event, $counterReference);
         } catch (Throwable $exception) {
             Log::error('Failed to queue Discord war alert without aborting war declaration processing', [
                 'war_id' => $event->warId,
@@ -55,6 +69,40 @@ class SendWarDeclaredDiscordNotification
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function resolveCounterReference(WarDeclared $event): ?WarAlertCounterReference
+    {
+        if ((bool) config('milcom.v2_enabled', false)) {
+            $incident = MilcomIncident::query()
+                ->where('war_id', $event->warId)
+                ->first();
+
+            if ($incident === null) {
+                Log::warning('Milcom incident was unavailable for the Discord war alert', [
+                    'war_id' => $event->warId,
+                    'expected_listener' => IngestMilcomIncident::class,
+                ]);
+
+                return null;
+            }
+
+            return new WarAlertCounterReference(
+                kind: 'milcom_incident',
+                id: (int) $incident->id,
+                url: route('admin.milcom.counters', ['incident' => $incident->id]),
+            );
+        }
+
+        $counter = $this->resolveLegacyCounter($event);
+
+        return $counter !== null
+            ? new WarAlertCounterReference(
+                kind: 'war_counter',
+                id: (int) $counter->id,
+                url: route('admin.war-counters.show', ['counter' => $counter]),
+            )
+            : null;
     }
 
     private function resolveLegacyCounter(WarDeclared $event): ?WarCounter
@@ -73,8 +121,10 @@ class SendWarDeclaredDiscordNotification
             ->first();
     }
 
-    private function queueDiscordWarAlert(WarDeclared $event, ?WarCounter $counter): void
-    {
+    private function queueDiscordWarAlert(
+        WarDeclared $event,
+        ?WarAlertCounterReference $counter,
+    ): void {
         $channelId = SettingService::getDiscordWarAlertChannelId();
 
         if (! SettingService::isDiscordWarAlertEnabled() || $channelId === '') {

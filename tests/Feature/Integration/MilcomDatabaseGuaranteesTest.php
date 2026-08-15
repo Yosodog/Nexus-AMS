@@ -4,7 +4,10 @@ namespace Tests\Feature\Integration;
 
 use App\Domain\Milcom\Enums\AssignmentStatus;
 use App\Domain\Milcom\Enums\DispatchStatus;
+use App\Domain\Milcom\Enums\IncidentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
+use App\Domain\Milcom\Enums\OperationStatus;
+use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Exceptions\MilcomPreflightException;
 use App\Models\Alliance;
 use App\Models\MilcomAssignment;
@@ -14,9 +17,11 @@ use App\Models\MilcomObjective;
 use App\Models\Nation;
 use App\Models\User;
 use App\Services\Milcom\ApprovalService;
+use App\Services\Milcom\LifecycleReconciler;
 use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
@@ -189,6 +194,46 @@ class MilcomDatabaseGuaranteesTest extends MySqlIntegrationTestCase
             ->count());
     }
 
+    public function test_concurrent_counter_reconciliation_queues_one_refresh_generation(): void
+    {
+        if (! function_exists('pcntl_fork')) {
+            $this->markTestSkipped('Concurrent Milcom refresh testing requires the pcntl extension.');
+        }
+
+        $target = Nation::factory()->create();
+        $attacked = Nation::factory()->create();
+        $operation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
+            'status' => OperationStatus::Review,
+            'generated_at' => now()->subMinutes(31),
+        ]);
+        $objective = $this->createMilcomObjective($operation, $target, [
+            'status' => ObjectiveStatus::Review,
+        ]);
+        $run = $this->attachSuccessfulRecommendation($objective, []);
+        $run->forceFill(['finished_at' => now()->subMinutes(31)])->save();
+        $war = $this->createWar(94_002, $target, $attacked);
+        MilcomIncident::query()->create([
+            'war_id' => $war->id,
+            'attacked_nation_id' => $attacked->id,
+            'aggressor_nation_id' => $target->id,
+            'objective_id' => $objective->id,
+            'status' => IncidentStatus::Countering,
+            'detected_at' => now()->subHour(),
+        ]);
+
+        $results = $this->runConcurrently([
+            fn (): array => $this->reconciliationResult(),
+            fn (): array => $this->reconciliationResult(),
+        ]);
+
+        $this->assertCount(2, collect($results)->where('status', 'ok'));
+        $this->assertSame(2, $operation->fresh()->generation_version);
+        $this->assertSame(2, $objective->fresh()->generation_version);
+        $this->assertSame(2, $operation->recommendationRuns()->count());
+        $this->assertSame('counter_auto_refresh', $operation->recommendationRuns()->latest('id')->value('trigger'));
+    }
+
     /** @return array{status: string, blocker_codes?: list<string>} */
     private function approvalResult(int $objectiveId, int $actorUserId): array
     {
@@ -206,6 +251,15 @@ class MilcomDatabaseGuaranteesTest extends MySqlIntegrationTestCase
                 'blocker_codes' => array_values(array_filter(array_column($exception->blockers, 'code'))),
             ];
         }
+    }
+
+    /** @return array{status: string} */
+    private function reconciliationResult(): array
+    {
+        Queue::fake();
+        app(LifecycleReconciler::class)->reconcileAll();
+
+        return ['status' => 'ok'];
     }
 
     /** @param list<Closure(): array<string, mixed>> $workers */

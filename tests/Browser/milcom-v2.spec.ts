@@ -275,6 +275,17 @@ test('plan approval shows warning reasons and accepts an officer reason', async 
 test('fast counter dispatch and failed-room retry remain single-action workflows', async ({ page }) => {
   await page.goto('/_browser/login/admin?redirect=/admin/milcom/counters');
 
+  await expect(page.locator('[data-milcom-value="overdue_declarations"]')).toHaveText('1');
+  await page.getByLabel('War filter').selectOption('overdue');
+  await page.getByRole('button', { name: 'Filter' }).click();
+  await expect(page).toHaveURL(/filter=overdue/);
+  await expect(page.locator('[data-milcom-select-incident]')).toHaveCount(1);
+  await page.locator('[data-milcom-select-incident]').click();
+  await expect(page.locator('[data-milcom-declaration-overdue]')).toBeVisible();
+  await expect(page.locator('[data-milcom-declaration-overdue]')).toContainText('This team remains assigned');
+
+  await page.goto('/admin/milcom/counters');
+
   const readyIncident = page.locator('[data-milcom-select-incident][aria-label="View counter against Browser Counter Aggressor"]');
   await readyIncident.click();
   await expect(page.locator('#counter-preflight-title')).toContainText('Browser Counter Aggressor');
@@ -296,6 +307,60 @@ test('fast counter dispatch and failed-room retry remain single-action workflows
   await expect(page.locator('[data-milcom-status]')).toContainText('Discord room retry started.');
   await expect(page.locator('[data-milcom-dispatch-state]')).toBeVisible();
   await expect(page.locator('[data-milcom-field="dispatch_status"]')).toContainText('Queued');
+});
+
+test('background counter refresh keeps the selected incident URL stable', async ({ page }) => {
+  await page.goto('/_browser/login/admin?redirect=/admin/milcom/counters');
+  const selected = page.locator('[data-milcom-select-incident][aria-label="View counter against Browser Counter Aggressor"]');
+  const incidentId = await selected.getAttribute('data-incident-id');
+  let detailCalls = 0;
+  let progressPolls = 0;
+
+  await page.route(`**/api/v1/milcom/incidents/${incidentId}`, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    detailCalls += 1;
+
+    if (detailCalls === 1) {
+      body.data.incident.objective.recommendation = {
+        ...body.data.incident.objective.recommendation,
+        run_id: 999,
+        status: 'queued',
+        progress_percent: 0,
+        trigger: 'counter_auto_refresh',
+      };
+    }
+
+    await route.fulfill({ response, json: body });
+  });
+  await page.route('**/api/v1/milcom/recommendation-runs/999', async (route) => {
+    progressPolls += 1;
+    const complete = progressPolls > 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          recommendation_run: {
+            id: 999,
+            status: complete ? 'succeeded' : 'running',
+            progress_percent: complete ? 100 : 50,
+            trigger: 'counter_auto_refresh',
+          },
+        },
+        meta: {},
+        links: {},
+      }),
+    });
+  });
+
+  await selected.click();
+  await expect(page).toHaveURL(new RegExp(`incident=${incidentId}`));
+  const selectedUrl = page.url();
+  await expect(page.locator('[data-milcom-progress-label]')).toContainText('Refreshing counter team');
+  await expect.poll(() => detailCalls).toBeGreaterThan(1);
+  await expect(page).toHaveURL(selectedUrl);
+  await expect(page.locator('#counter-preflight-title')).toContainText('Browser Counter Aggressor');
 });
 
 test('plan creation commits normalized scope and becomes monitoring-only on narrow screens', async ({ page }) => {

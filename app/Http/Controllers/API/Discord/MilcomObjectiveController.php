@@ -4,6 +4,8 @@ namespace App\Http\Controllers\API\Discord;
 
 use App\Domain\Federation\Services\FederationOperationGuard;
 use App\Domain\Milcom\Enums\DispatchStatus;
+use App\Domain\Milcom\Enums\ObjectiveStatus;
+use App\Domain\Milcom\Enums\OperationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Discord\AttachMilcomObjectiveRoomRequest;
 use App\Models\MilcomDispatch;
@@ -31,6 +33,14 @@ class MilcomObjectiveController extends Controller
                     'status' => $objective->status->value,
                     'discord_channel_id' => $objective->discord_channel_id,
                     'dispatch_version' => $objective->dispatch_version,
+                    'declaration_overdue' => $objective->declaration_overdue_at !== null
+                        && in_array($objective->status, [
+                            ObjectiveStatus::Approved,
+                            ObjectiveStatus::Dispatching,
+                            ObjectiveStatus::Dispatched,
+                        ], true),
+                    'declaration_overdue_at' => $objective->declaration_overdue_at,
+                    'deadline_at' => $objective->deadline_at,
                 ],
             ],
             'meta' => ['contract_version' => 2],
@@ -89,9 +99,30 @@ class MilcomObjectiveController extends Controller
             $approvalToRoomMs = $dispatch->queued_at?->diffInMilliseconds(now())
                 ?? $dispatch->created_at?->diffInMilliseconds(now())
                 ?? 0;
+            $declarationDeadline = $objective->deadline_at;
+            $startsDeclarationWindow = $operation->type === OperationType::Counter
+                && $declarationDeadline === null;
+
+            if ($startsDeclarationWindow) {
+                $declarationDeadline = now()->addMinutes(
+                    (int) config('milcom.counters.declaration_window_minutes', 30),
+                );
+            }
 
             $this->federationGuard->assertMutable($operation, 'discord_room_attach');
-            $objective->forceFill(['discord_channel_id' => $channelId])->save();
+            $objectiveAttributes = ['discord_channel_id' => $channelId];
+
+            if ($startsDeclarationWindow) {
+                $objectiveAttributes['deadline_at'] = $declarationDeadline;
+                $objectiveAttributes['declaration_overdue_at'] = null;
+            }
+
+            $objective->forceFill($objectiveAttributes)->save();
+
+            if ($operation->type === OperationType::Counter && $operation->deadline_at === null) {
+                $operation->forceFill(['deadline_at' => $declarationDeadline])->save();
+            }
+
             $dispatch->forceFill([
                 'status' => DispatchStatus::Sent,
                 'external_channel_id' => $channelId,
@@ -110,6 +141,7 @@ class MilcomObjectiveController extends Controller
                         'dispatch_id' => $dispatch->id,
                         'discord_channel_id' => $channelId,
                         'approval_to_room_ms' => $approvalToRoomMs,
+                        'declaration_deadline_at' => $declarationDeadline,
                     ],
                 );
             }
@@ -122,6 +154,7 @@ class MilcomObjectiveController extends Controller
                 'attached' => true,
                 'idempotent_replay' => ! $changed,
                 'approval_to_room_ms' => $approvalToRoomMs,
+                'declaration_deadline_at' => $declarationDeadline,
             ];
         }, attempts: 5);
 

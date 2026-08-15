@@ -125,6 +125,14 @@ class MilcomQueryService
             })
             ->count();
         $discordFailures = MilcomDispatch::query()->where('status', DispatchStatus::Failed->value)->count();
+        $overdueDeclarations = MilcomObjective::query()
+            ->whereNotNull('declaration_overdue_at')
+            ->whereIn('status', [
+                ObjectiveStatus::Approved->value,
+                ObjectiveStatus::Dispatching->value,
+                ObjectiveStatus::Dispatched->value,
+            ])
+            ->count();
         $liveOperations = MilcomOperation::query()
             ->whereIn('status', [
                 OperationStatus::Generating->value,
@@ -256,6 +264,7 @@ class MilcomQueryService
                 'critical_gaps' => $criticalGaps,
                 'stale_runs' => $staleRuns,
                 'discord_failures' => $discordFailures,
+                'overdue_declarations' => $overdueDeclarations,
                 'live_operations' => $liveOperations,
             ],
             'exceptions' => $exceptions,
@@ -390,8 +399,9 @@ class MilcomQueryService
             ->with([
                 'aggressorNation:id,nation_name,leader_name,alliance_id,score,num_cities',
                 'attackedNation:id,nation_name,leader_name,alliance_id,score,num_cities',
-                'objective:id,operation_id,status,generation_version',
+                'objective:id,operation_id,status,generation_version,deadline_at,declaration_overdue_at,latest_recommendation_run_id',
                 'objective.operation:id,generation_version,status',
+                'objective.latestRecommendationRun:id,status,trigger,progress_percent,created_at,finished_at',
             ])
             ->when(filled($filters['objective_id'] ?? null), fn (Builder $query) => $query
                 ->where('objective_id', (int) $filters['objective_id']))
@@ -410,6 +420,14 @@ class MilcomQueryService
                     ->whereIn('status', [
                         RecommendationRunStatus::Queued->value,
                         RecommendationRunStatus::Running->value,
+                    ])))
+            ->when(($filters['filter'] ?? null) === 'overdue', fn (Builder $query) => $query
+                ->whereHas('objective', fn (Builder $objectiveQuery) => $objectiveQuery
+                    ->whereNotNull('declaration_overdue_at')
+                    ->whereIn('status', [
+                        ObjectiveStatus::Approved->value,
+                        ObjectiveStatus::Dispatching->value,
+                        ObjectiveStatus::Dispatched->value,
                     ])))
             ->when(($filters['filter'] ?? null) === 'all', fn (Builder $query) => $query
                 ->whereNotIn('status', [IncidentStatus::Resolved->value, IncidentStatus::Ignored->value]))
@@ -615,6 +633,9 @@ class MilcomQueryService
                     'run_id' => $objective->latest_recommendation_run_id,
                     'status' => $objective->latestRecommendationRun?->status?->value,
                     'progress_percent' => (int) ($objective->latestRecommendationRun?->progress_percent ?? 0),
+                    'trigger' => $objective->latestRecommendationRun?->trigger,
+                    'requested_at' => $objective->latestRecommendationRun?->created_at,
+                    'refreshed_at' => $objective->latestRecommendationRun?->finished_at,
                     'team_score' => $recommendation?->team_score,
                     'confidence' => $recommendation?->confidence,
                     'proposed_team' => $team,
@@ -847,6 +868,15 @@ SQL
                 ->whereHas('operation', fn (Builder $query) => $query->where('type', OperationType::Counter->value))
                 ->where('status', DispatchStatus::Failed->value)
                 ->count(),
+            'overdue_declarations' => MilcomObjective::query()
+                ->whereHas('operation', fn (Builder $query) => $query->where('type', OperationType::Counter->value))
+                ->whereNotNull('declaration_overdue_at')
+                ->whereIn('status', [
+                    ObjectiveStatus::Approved->value,
+                    ObjectiveStatus::Dispatching->value,
+                    ObjectiveStatus::Dispatched->value,
+                ])
+                ->count(),
         ];
     }
 
@@ -995,6 +1025,9 @@ SQL
             ? $objective->latestRecommendation
             : ($objective->relationLoaded('recommendations') ? $objective->recommendations->first() : null);
         $warnings = collect((array) data_get($recommendation?->factor_explanations, 'warnings', []));
+        $latestRun = $objective->relationLoaded('latestRecommendationRun')
+            ? $objective->latestRecommendationRun
+            : null;
 
         return [
             'id' => $objective->id,
@@ -1032,11 +1065,15 @@ SQL
                     now()->subMinutes((int) config('milcom.live.first_hit_grace_minutes', 15))
                 ) === true
                 && (int) ($objective->successful_attack_count ?? 0) === 0,
-            'declaration_overdue' => in_array($objective->status, [
-                ObjectiveStatus::Approved,
-                ObjectiveStatus::Dispatching,
-                ObjectiveStatus::Dispatched,
-            ], true) && $objective->deadline_at?->isPast() === true,
+            'declaration_overdue' => $objective->declaration_overdue_at !== null
+                && in_array($objective->status, [
+                    ObjectiveStatus::Approved,
+                    ObjectiveStatus::Dispatching,
+                    ObjectiveStatus::Dispatched,
+                ], true),
+            'declaration_overdue_at' => $objective->declaration_overdue_at,
+            'recommendation_refresh_at' => $latestRun?->finished_at,
+            'recommendation_trigger' => $latestRun?->trigger,
             'status' => $objective->status->value,
             'war_type' => $objective->war_type,
             'war_reason' => $objective->war_reason,
@@ -1068,6 +1105,16 @@ SQL
                 'id' => $incident->objective->id,
                 'status' => $incident->objective->status->value,
                 'generation_version' => $incident->objective->generation_version,
+                'deadline_at' => $incident->objective->deadline_at,
+                'declaration_overdue' => $incident->objective->declaration_overdue_at !== null
+                    && in_array($incident->objective->status, [
+                        ObjectiveStatus::Approved,
+                        ObjectiveStatus::Dispatching,
+                        ObjectiveStatus::Dispatched,
+                    ], true),
+                'declaration_overdue_at' => $incident->objective->declaration_overdue_at,
+                'recommendation_refresh_at' => $incident->objective->latestRecommendationRun?->finished_at,
+                'recommendation_trigger' => $incident->objective->latestRecommendationRun?->trigger,
                 'operation' => $incident->objective->relationLoaded('operation') ? [
                     'generation_version' => $incident->objective->operation?->generation_version,
                 ] : null,

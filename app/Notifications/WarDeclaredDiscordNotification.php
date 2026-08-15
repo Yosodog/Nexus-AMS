@@ -2,9 +2,9 @@
 
 namespace App\Notifications;
 
+use App\DataTransferObjects\Discord\WarAlertCounterReference;
 use App\Enums\DiscordQueueLane;
 use App\Models\Nation;
-use App\Models\WarCounter;
 use App\Notifications\Channels\DiscordQueueChannel;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
@@ -18,7 +18,7 @@ class WarDeclaredDiscordNotification extends Notification
         private readonly int $warId,
         private readonly Nation $attacker,
         private readonly Nation $defender,
-        private readonly ?WarCounter $counter,
+        private readonly ?WarAlertCounterReference $counter,
         private readonly string $channelId,
         private readonly ?CarbonInterface $availableAt = null
     ) {}
@@ -51,9 +51,9 @@ class WarDeclaredDiscordNotification extends Notification
                 'channel_id' => $this->channelId,
                 'war_id' => $this->warId,
                 'war_url' => $this->warUrl(),
-                'counter' => [
-                    'id' => $this->counter?->id,
-                    'url' => $this->counter ? $this->counterUrl() : null,
+                'counter' => $this->counter?->toArray() ?? [
+                    'id' => null,
+                    'url' => null,
                 ],
                 'attacker' => $this->formatNation($this->attacker),
                 'defender' => $this->formatNation($this->defender),
@@ -98,11 +98,6 @@ class WarDeclaredDiscordNotification extends Notification
     protected function warUrl(): string
     {
         return sprintf('https://politicsandwar.com/nation/war/timeline/war=%d', $this->warId);
-    }
-
-    protected function counterUrl(): string
-    {
-        return route('admin.war-counters.show', ['counter' => $this->counter]);
     }
 
     protected function nationUrl(int $nationId): string

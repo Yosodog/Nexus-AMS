@@ -869,9 +869,10 @@ if (app) {
         const active = ['queued', 'running'].includes(status);
         const visible = active || (showTerminal && ['succeeded', 'failed'].includes(status));
         const progress = Math.max(0, Math.min(100, Number(run?.progress_percent ?? (status === 'succeeded' ? 100 : 0))));
+        const isCounterRefresh = run?.trigger === 'counter_auto_refresh';
         const labels = {
-            queued: app.dataset.milcomApp === 'counter-queue' ? 'Counter team queued' : 'Team update queued',
-            running: app.dataset.milcomApp === 'counter-queue' ? 'Building counter team' : 'Building teams',
+            queued: isCounterRefresh ? 'Counter team refresh queued' : (app.dataset.milcomApp === 'counter-queue' ? 'Counter team queued' : 'Team update queued'),
+            running: isCounterRefresh ? 'Refreshing counter team' : (app.dataset.milcomApp === 'counter-queue' ? 'Building counter team' : 'Building teams'),
             succeeded: 'Teams are ready',
             failed: 'Could not build teams',
         };
@@ -1344,7 +1345,11 @@ if (app) {
         setField('ships', formatMilitaryValue(aggressor.ships));
         setField('team_depth', formatNumber(team.length));
         setField('room_name', `counter-${String(aggressor.nation_name ?? 'target').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`);
+        setField('declaration_deadline', objective.deadline_at ?? 'the declaration deadline');
         setStatusField(incident.handling_state?.value ?? incident.status?.value ?? incident.status ?? 'new');
+        const overdueWarning = query('[data-milcom-declaration-overdue]');
+        overdueWarning?.classList.toggle('hidden', !objective.declaration_overdue);
+        overdueWarning?.classList.toggle('flex', Boolean(objective.declaration_overdue));
         watchRecommendation(recommendation);
         replaceList('team', team.slice(0, 3), renderTeamMember, 'No eligible team found yet.');
         replaceList('blockers', blockers, renderBlocker, 'No blockers.');
@@ -1816,6 +1821,14 @@ if (app) {
     setupCommands();
     setupAlternativeActions();
     setupLegacyDetails();
+    if (app.dataset.recommendationRunId && ['queued', 'running'].includes(app.dataset.recommendationStatus)) {
+        watchRecommendation({
+            run_id: Number(app.dataset.recommendationRunId),
+            status: app.dataset.recommendationStatus,
+            progress_percent: Number(app.dataset.recommendationProgress ?? 0),
+            trigger: app.dataset.recommendationTrigger,
+        });
+    }
     updateBatchSelection();
     restoreResult();
 }

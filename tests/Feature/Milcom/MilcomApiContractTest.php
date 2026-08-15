@@ -3,11 +3,13 @@
 namespace Tests\Feature\Milcom;
 
 use App\Domain\Milcom\Enums\AssignmentStatus;
+use App\Domain\Milcom\Enums\IncidentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
 use App\Models\Alliance;
+use App\Models\MilcomIncident;
 use App\Models\MilcomObjectiveRecommendation;
 use App\Models\Nation;
 use App\Services\Milcom\MilcomQueryService;
@@ -186,6 +188,67 @@ class MilcomApiContractTest extends TestCase
         ], array_keys($nation));
         $this->assertForbiddenJsonKeysAreAbsent($response->json());
         $this->assertLessThan(20_000, strlen($response->getContent()));
+    }
+
+    public function test_counter_api_projects_and_filters_declaration_overdue_and_refresh_metadata(): void
+    {
+        $friendlyAlliance = Alliance::factory()->create();
+        $enemyAlliance = Alliance::factory()->create();
+        $target = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $operation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
+            'status' => OperationStatus::Active,
+        ]);
+        $objective = $this->createMilcomObjective($operation, $target);
+        $run = $this->attachSuccessfulRecommendation($objective, []);
+        $run->forceFill([
+            'trigger' => 'counter_auto_refresh',
+            'finished_at' => now()->subMinutes(5),
+        ])->save();
+        $objective->forceFill([
+            'status' => ObjectiveStatus::Dispatched,
+            'deadline_at' => now()->subMinutes(2),
+            'declaration_overdue_at' => now()->subMinute(),
+        ])->save();
+        $war = $this->createWar(98_001, $target, $attacked);
+        $incident = MilcomIncident::query()->create([
+            'war_id' => $war->id,
+            'attacked_nation_id' => $attacked->id,
+            'aggressor_nation_id' => $target->id,
+            'objective_id' => $objective->id,
+            'status' => IncidentStatus::Countering,
+            'detected_at' => now()->subMinutes(10),
+        ]);
+        $this->authenticateMilcomManager();
+
+        $this->getJson('/api/v1/milcom/incidents?filter=overdue')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.incidents')
+            ->assertJsonPath('data.incidents.0.id', $incident->id)
+            ->assertJsonPath('data.incidents.0.objective.declaration_overdue', true)
+            ->assertJsonPath('data.incidents.0.objective.recommendation_trigger', 'counter_auto_refresh');
+
+        $this->getJson("/api/v1/milcom/incidents/{$incident->id}")
+            ->assertOk()
+            ->assertJsonPath('data.incident.objective.declaration_overdue', true)
+            ->assertJsonPath('data.incident.objective.recommendation_trigger', 'counter_auto_refresh')
+            ->assertJsonPath('data.incident.objective.recommendation.trigger', 'counter_auto_refresh')
+            ->assertJsonStructure([
+                'data' => [
+                    'incident' => [
+                        'objective' => [
+                            'declaration_overdue_at',
+                            'recommendation_refresh_at',
+                            'recommendation' => ['requested_at', 'refreshed_at'],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $this->getJson('/api/v1/milcom/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.summary.overdue_declarations', 1);
     }
 
     public function test_objective_detail_uses_recommendation_snapshot_military_for_target_and_teams(): void

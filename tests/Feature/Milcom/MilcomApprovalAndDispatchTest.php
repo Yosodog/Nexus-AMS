@@ -393,9 +393,11 @@ class MilcomApprovalAndDispatchTest extends TestCase
             'num_cities' => 10,
         ]);
         $operation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
             'status' => OperationStatus::Active,
             'current_stage' => 'live',
             'discord_forum_id' => '223456789012345678',
+            'deadline_at' => null,
         ]);
         $this->addFriendlyScope($operation, $friendlyAlliance);
         $objective = $this->createMilcomObjective($operation, $target);
@@ -435,12 +437,18 @@ class MilcomApprovalAndDispatchTest extends TestCase
             ->postJson('/api/v1/discord/milcom/objectives/attach-room', $callbackPayload)
             ->assertOk()
             ->assertJsonPath('data.idempotent_replay', false);
+        $declarationDeadline = $objective->fresh()->deadline_at;
+        $this->assertNotNull($declarationDeadline);
+        $this->assertTrue($declarationDeadline->between(now()->addMinutes(29), now()->addMinutes(31)));
+        $this->assertTrue($declarationDeadline->equalTo($operation->fresh()->deadline_at));
+        $this->travel(5)->minutes();
         $this->withHeaders($headers)
             ->postJson('/api/v1/discord/milcom/objectives/attach-room', $callbackPayload)
             ->assertOk()
             ->assertJsonPath('data.idempotent_replay', true);
 
         $this->assertSame('323456789012345678', $objective->fresh()->discord_channel_id);
+        $this->assertTrue($declarationDeadline->equalTo($objective->fresh()->deadline_at));
         $this->assertSame(DispatchStatus::Sent, $dispatch->fresh()->status);
         $this->assertSame(1, MilcomEvent::query()
             ->where('event_type', 'objective.discord_room_attached')

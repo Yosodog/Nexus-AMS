@@ -7,6 +7,11 @@ return [
     'v2_requested' => ! $legacyV1Enabled,
     'v2_enabled' => ! $legacyV1Enabled,
 
+    'counters' => [
+        'review_refresh_minutes' => max(1, (int) env('MILCOM_COUNTER_REVIEW_REFRESH_MINUTES', 30)),
+        'declaration_window_minutes' => max(1, (int) env('MILCOM_COUNTER_DECLARATION_WINDOW_MINUTES', 30)),
+    ],
+
     'doctrine' => [
         'version' => 'fixed-v1',
         'weights' => [

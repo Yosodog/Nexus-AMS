@@ -9,8 +9,10 @@ use App\Domain\Milcom\Enums\OperationStatus;
 use App\Domain\Milcom\Enums\OperationType;
 use App\Domain\Milcom\Enums\PriorityTier;
 use App\Enums\DiscordQueueLane;
+use App\Events\WarDeclared;
 use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Jobs\GenerateMilcomRecommendationsJob;
+use App\Listeners\SendWarDeclaredDiscordNotification;
 use App\Models\Alliance;
 use App\Models\DiscordQueue;
 use App\Models\MilcomIncident;
@@ -21,7 +23,9 @@ use App\Models\Nation;
 use App\Models\WarCounter;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Tests\Concerns\ConfiguresDiscordQueueV2;
 use Tests\Feature\Milcom\Concerns\BuildsMilcomFixtures;
 use Tests\TestCase;
@@ -60,6 +64,8 @@ class MilcomIncidentIngestionTest extends TestCase
         $this->assertSame(OperationType::Counter, MilcomOperation::query()->sole()->type);
         $this->assertSame(IncidentStatus::Countering, MilcomIncident::query()->sole()->status);
         $this->assertSame('incoming_war', MilcomRecommendationRun::query()->sole()->trigger);
+        $this->assertNull(MilcomOperation::query()->sole()->deadline_at);
+        $this->assertNull(MilcomObjective::query()->sole()->deadline_at);
 
         Queue::assertPushed(GenerateMilcomRecommendationsJob::class, 1);
         Queue::assertPushed(
@@ -112,7 +118,42 @@ class MilcomIncidentIngestionTest extends TestCase
         $this->assertSame(DiscordQueueLane::Alerts, $alert->lane);
         $this->assertSame(92_006, $alert->payload['war_id']);
         $this->assertSame('123456789012345678', $alert->payload['channel_id']);
+        $incident = MilcomIncident::query()->sole();
+        $this->assertSame([
+            'kind' => 'milcom_incident',
+            'id' => $incident->id,
+            'url' => route('admin.milcom.counters', ['incident' => $incident->id]),
+        ], $alert->payload['counter']);
         $this->assertDatabaseCount('war_counters', 0);
+    }
+
+    public function test_missing_v2_incident_still_queues_a_war_only_discord_alert(): void
+    {
+        SettingService::setDiscordWarAlertEnabled(true);
+        SettingService::setDiscordWarAlertChannelId('123456789012345678');
+        [$friendlyAlliance, $enemyAlliance] = $this->alliances();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $aggressor = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        Log::spy();
+
+        app(SendWarDeclaredDiscordNotification::class)->handle(new WarDeclared(
+            warId: 92_007,
+            attackerNationId: $aggressor->id,
+            attackerAllianceId: $aggressor->alliance_id,
+            attackerAlliancePosition: $aggressor->alliance_position,
+            defenderNationId: $attacked->id,
+            defenderAllianceId: $attacked->alliance_id,
+            defenderAlliancePosition: $attacked->alliance_position,
+        ));
+
+        $alert = DiscordQueue::query()->where('action', 'WAR_ALERT')->sole();
+        $this->assertSame(['id' => null, 'url' => null], $alert->payload['counter']);
+        Log::shouldHaveReceived('warning')
+            ->with(
+                'Milcom incident was unavailable for the Discord war alert',
+                Mockery::on(fn (array $context): bool => $context['war_id'] === 92_007),
+            )
+            ->once();
     }
 
     public function test_incident_is_linked_to_an_active_plan_only_when_minimum_reserved_coverage_exists(): void

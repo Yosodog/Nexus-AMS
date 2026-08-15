@@ -13,8 +13,9 @@ use App\Jobs\GenerateMilcomRecommendationsJob;
 use App\Models\Alliance;
 use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
+use App\Models\MilcomEvent;
 use App\Models\MilcomIncident;
-use App\Models\MilcomObjective;
+use App\Models\MilcomRecommendationRun;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\Milcom\LifecycleReconciler;
@@ -128,7 +129,7 @@ class MilcomLifecycleTest extends TestCase
         ]);
     }
 
-    public function test_reconciliation_expires_undeclared_work_and_requeues_an_active_incident(): void
+    public function test_reconciliation_refreshes_stale_counter_recommendations_without_changing_work_ids(): void
     {
         $friendlyAlliance = Alliance::factory()->create();
         $enemyAlliance = Alliance::factory()->create();
@@ -137,17 +138,20 @@ class MilcomLifecycleTest extends TestCase
         $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
         $operation = $this->createMilcomOperation([
             'type' => OperationType::Counter,
-            'status' => OperationStatus::Active,
+            'status' => OperationStatus::Review,
+            'generated_at' => now()->subMinutes(31),
         ]);
         $objective = $this->createMilcomObjective($operation, $target, [
-            'status' => ObjectiveStatus::Approved,
-            'deadline_at' => now()->subMinute(),
+            'status' => ObjectiveStatus::Review,
+            'deadline_at' => null,
             'open_key' => 1,
         ]);
         $assignment = $this->createAssignment($objective, $friendly, [
-            'status' => AssignmentStatus::Approved,
-            'approved_at' => now()->subMinutes(5),
+            'status' => AssignmentStatus::Proposed,
+            'is_locked' => true,
         ]);
+        $run = $this->attachSuccessfulRecommendation($objective, [$friendly]);
+        $run->forceFill(['finished_at' => now()->subMinutes(31)])->save();
         $incomingWar = $this->createWar(93_003, $target, $attacked);
         $incident = MilcomIncident::query()->create([
             'war_id' => $incomingWar->id,
@@ -161,26 +165,165 @@ class MilcomLifecycleTest extends TestCase
         Queue::fake();
 
         app(LifecycleReconciler::class)->reconcileAll();
+        app(LifecycleReconciler::class)->reconcileAll();
+
+        $this->assertDatabaseCount('milcom_operations', 1);
+        $this->assertDatabaseCount('milcom_objectives', 1);
+        $this->assertDatabaseCount('milcom_recommendation_runs', 2);
+        $this->assertSame(2, $operation->fresh()->generation_version);
+        $this->assertSame(2, $objective->fresh()->generation_version);
+        $this->assertSame(AssignmentStatus::Proposed, $assignment->fresh()->status);
+        $this->assertTrue($assignment->fresh()->is_locked);
+        $this->assertSame(IncidentStatus::Countering, $incident->fresh()->status);
+        $this->assertSame($objective->id, $incident->fresh()->objective_id);
+        $this->assertSame('counter_auto_refresh', MilcomRecommendationRun::query()->latest('id')->firstOrFail()->trigger);
+        Queue::assertPushed(
+            GenerateMilcomRecommendationsJob::class,
+            fn (GenerateMilcomRecommendationsJob $job): bool => $job->queue === null
+                && $job->afterCommit === true,
+        );
+        Queue::assertPushed(GenerateMilcomRecommendationsJob::class, 1);
+    }
+
+    public function test_reconciliation_marks_a_dispatched_counter_overdue_without_releasing_it(): void
+    {
+        $friendlyAlliance = Alliance::factory()->create();
+        $enemyAlliance = Alliance::factory()->create();
+        $friendly = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $target = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $operation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
+            'status' => OperationStatus::Active,
+            'deadline_at' => now()->subMinute(),
+        ]);
+        $objective = $this->createMilcomObjective($operation, $target, [
+            'status' => ObjectiveStatus::Dispatched,
+            'deadline_at' => now()->subMinute(),
+            'discord_channel_id' => '323456789012345678',
+            'open_key' => 1,
+        ]);
+        $assignment = $this->createAssignment($objective, $friendly, [
+            'status' => AssignmentStatus::Dispatched,
+            'approved_at' => now()->subMinutes(10),
+            'dispatched_at' => now()->subMinutes(5),
+        ]);
+        $incomingWar = $this->createWar(93_004, $target, $attacked);
+        $incident = MilcomIncident::query()->create([
+            'war_id' => $incomingWar->id,
+            'attacked_nation_id' => $attacked->id,
+            'aggressor_nation_id' => $target->id,
+            'objective_id' => $objective->id,
+            'status' => IncidentStatus::Countering,
+            'detected_at' => now()->subMinutes(10),
+        ]);
+        Queue::fake();
+
+        app(LifecycleReconciler::class)->reconcileAll();
+        app(LifecycleReconciler::class)->reconcileAll();
+
+        $this->assertDatabaseCount('milcom_operations', 1);
+        $this->assertDatabaseCount('milcom_objectives', 1);
+        $this->assertSame(AssignmentStatus::Dispatched, $assignment->fresh()->status);
+        $this->assertSame(ObjectiveStatus::Dispatched, $objective->fresh()->status);
+        $this->assertSame('323456789012345678', $objective->fresh()->discord_channel_id);
+        $this->assertNotNull($objective->fresh()->declaration_overdue_at);
+        $this->assertSame($objective->id, $incident->fresh()->objective_id);
+        $this->assertSame(IncidentStatus::Countering, $incident->fresh()->status);
+        $this->assertSame(1, MilcomEvent::query()
+            ->where('objective_id', $objective->id)
+            ->where('event_type', 'objective.declaration_overdue')
+            ->count());
+        Queue::assertNothingPushed();
+    }
+
+    public function test_counter_refresh_skips_inactive_wars_and_federation_held_operations(): void
+    {
+        $friendlyAlliance = Alliance::factory()->create();
+        $enemyAlliance = Alliance::factory()->create();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $inactiveTarget = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $heldTarget = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+
+        $inactiveOperation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
+            'status' => OperationStatus::Review,
+            'generated_at' => now()->subMinutes(31),
+        ]);
+        $inactiveObjective = $this->createMilcomObjective($inactiveOperation, $inactiveTarget, [
+            'status' => ObjectiveStatus::Review,
+        ]);
+        $inactiveRun = $this->attachSuccessfulRecommendation($inactiveObjective, []);
+        $inactiveRun->forceFill(['finished_at' => now()->subMinutes(31)])->save();
+        $inactiveWar = $this->createWar(93_005, $inactiveTarget, $attacked, [
+            'turns_left' => 0,
+            'end_date' => now()->subMinute(),
+        ]);
+        MilcomIncident::query()->create([
+            'war_id' => $inactiveWar->id,
+            'attacked_nation_id' => $attacked->id,
+            'aggressor_nation_id' => $inactiveTarget->id,
+            'objective_id' => $inactiveObjective->id,
+            'status' => IncidentStatus::Countering,
+            'detected_at' => now()->subHour(),
+        ]);
+
+        $heldOperation = $this->createMilcomOperation([
+            'type' => OperationType::Counter,
+            'status' => OperationStatus::Review,
+            'generated_at' => now()->subMinutes(31),
+            'federation_action_required' => true,
+            'federation_held_at' => now()->subMinute(),
+        ]);
+        $heldObjective = $this->createMilcomObjective($heldOperation, $heldTarget, [
+            'status' => ObjectiveStatus::Review,
+        ]);
+        $heldRun = $this->attachSuccessfulRecommendation($heldObjective, []);
+        $heldRun->forceFill(['finished_at' => now()->subMinutes(31)])->save();
+        $heldWar = $this->createWar(93_006, $heldTarget, $attacked);
+        MilcomIncident::query()->create([
+            'war_id' => $heldWar->id,
+            'attacked_nation_id' => $attacked->id,
+            'aggressor_nation_id' => $heldTarget->id,
+            'objective_id' => $heldObjective->id,
+            'status' => IncidentStatus::Countering,
+            'detected_at' => now()->subHour(),
+        ]);
+        Queue::fake();
+
+        app(LifecycleReconciler::class)->reconcileAll();
+
+        $this->assertSame(1, $inactiveOperation->fresh()->generation_version);
+        $this->assertSame(1, $heldOperation->fresh()->generation_version);
+        $this->assertDatabaseCount('milcom_recommendation_runs', 2);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_mass_plan_deadlines_still_expire_and_release_unreviewed_work(): void
+    {
+        $operation = $this->createMilcomOperation([
+            'type' => OperationType::Plan,
+            'status' => OperationStatus::Review,
+            'deadline_at' => now()->subMinute(),
+        ]);
+        $objective = $this->createMilcomObjective($operation, Nation::factory()->create(), [
+            'status' => ObjectiveStatus::Review,
+            'deadline_at' => now()->subMinute(),
+            'open_key' => 1,
+        ]);
+        $assignment = $this->createAssignment($objective, Nation::factory()->create());
+        Queue::fake();
+
+        app(LifecycleReconciler::class)->reconcileAll();
 
         $this->assertSame(AssignmentStatus::Released, $assignment->fresh()->status);
         $this->assertSame(ObjectiveStatus::Expired, $objective->fresh()->status);
-        $this->assertNull($objective->fresh()->open_key);
         $this->assertSame(OperationStatus::Completed, $operation->fresh()->status);
-        $this->assertSame(IncidentStatus::Countering, $incident->fresh()->status);
-        $this->assertNotSame($objective->id, $incident->fresh()->objective_id);
-        $this->assertSame(1, MilcomObjective::query()
-            ->where('target_nation_id', $target->id)
-            ->where('open_key', 1)
-            ->count());
-        $this->assertNull($incident->fresh()->coverage_reason);
         $this->assertDatabaseHas('milcom_events', [
             'objective_id' => $objective->id,
             'event_type' => 'objective.expired',
         ]);
-        Queue::assertPushed(
-            GenerateMilcomRecommendationsJob::class,
-            fn (GenerateMilcomRecommendationsJob $job): bool => $job->queue === null,
-        );
+        Queue::assertNothingPushed();
     }
 
     public function test_officer_completion_releases_reservations_before_the_operation_can_be_archived(): void

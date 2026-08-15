@@ -7,6 +7,8 @@ use App\Domain\Milcom\Enums\DispatchStatus;
 use App\Domain\Milcom\Enums\IncidentStatus;
 use App\Domain\Milcom\Enums\ObjectiveStatus;
 use App\Domain\Milcom\Enums\OperationStatus;
+use App\Domain\Milcom\Enums\OperationType;
+use App\Domain\Milcom\Enums\RecommendationRunStatus;
 use App\Enums\DiscordQueueStatus;
 use App\Models\DiscordQueue;
 use App\Models\MilcomAssignment;
@@ -15,6 +17,7 @@ use App\Models\MilcomEvent;
 use App\Models\MilcomIncident;
 use App\Models\MilcomObjective;
 use App\Models\MilcomOperation;
+use App\Models\MilcomRecommendationRun;
 use App\Models\Nation;
 use App\Models\War;
 use App\Models\WarAttack;
@@ -31,6 +34,7 @@ class LifecycleReconciler
         private readonly DiscordDispatchService $discord,
         private readonly MilcomEventRecorder $events,
         private readonly RaidPolicyService $raidPolicy,
+        private readonly RecommendationEngine $recommendations,
     ) {}
 
     public function reconcileDeclaration(int $warId): void
@@ -246,6 +250,8 @@ class LifecycleReconciler
         }
 
         $this->linkUnmatchedDeclarations();
+        $this->refreshStaleCounterRecommendations();
+        $this->markOverdueCounterDeclarations();
         $this->expireDeadlines();
         $this->reconcileDispatches();
         $this->archiveTerminalRooms();
@@ -289,6 +295,8 @@ class LifecycleReconciler
     {
         $objectives = MilcomObjective::query()
             ->open()
+            ->whereHas('operation', fn ($query) => $query
+                ->where('type', OperationType::Plan->value))
             ->whereNotNull('deadline_at')
             ->where('deadline_at', '<=', now())
             ->with('operation')
@@ -381,6 +389,147 @@ class LifecycleReconciler
                     attackedAllianceId: $war->def_alliance_id !== null ? (int) $war->def_alliance_id : null,
                 );
             }
+        }
+    }
+
+    private function refreshStaleCounterRecommendations(): void
+    {
+        $refreshCutoff = now()->subMinutes(
+            (int) config('milcom.counters.review_refresh_minutes', 30),
+        );
+        $objectiveIds = MilcomObjective::query()
+            ->whereIn('status', [
+                ObjectiveStatus::Pending->value,
+                ObjectiveStatus::Review->value,
+                ObjectiveStatus::Blocked->value,
+            ])
+            ->whereNull('declaration_overdue_at')
+            ->whereHas('operation', fn ($query) => $query
+                ->where('type', OperationType::Counter->value)
+                ->where('status', OperationStatus::Review->value)
+                ->where('federation_action_required', false)
+                ->whereNotNull('generated_at')
+                ->where('generated_at', '<=', $refreshCutoff))
+            ->whereHas('incidents', fn ($query) => $query
+                ->where('status', IncidentStatus::Countering->value)
+                ->whereHas('war', fn ($warQuery) => $warQuery->active()))
+            ->whereDoesntHave('operation.recommendationRuns', fn ($query) => $query
+                ->whereIn('status', [
+                    RecommendationRunStatus::Queued->value,
+                    RecommendationRunStatus::Running->value,
+                ]))
+            ->orderBy('id')
+            ->pluck('id');
+
+        foreach ($objectiveIds as $objectiveId) {
+            DB::transaction(function () use ($objectiveId, $refreshCutoff): void {
+                $objectiveReference = MilcomObjective::query()->findOrFail((int) $objectiveId);
+                $operation = MilcomOperation::query()
+                    ->lockForUpdate()
+                    ->findOrFail($objectiveReference->operation_id);
+                $objective = MilcomObjective::query()
+                    ->lockForUpdate()
+                    ->findOrFail((int) $objectiveId);
+
+                if ($operation->type !== OperationType::Counter
+                    || $operation->status !== OperationStatus::Review
+                    || $operation->federation_action_required
+                    || $operation->generated_at === null
+                    || $operation->generated_at->isAfter($refreshCutoff)
+                    || ! in_array($objective->status, [
+                        ObjectiveStatus::Pending,
+                        ObjectiveStatus::Review,
+                        ObjectiveStatus::Blocked,
+                    ], true)
+                    || $objective->declaration_overdue_at !== null) {
+                    return;
+                }
+
+                $hasActiveIncident = $objective->incidents()
+                    ->where('status', IncidentStatus::Countering->value)
+                    ->whereHas('war', fn ($query) => $query->active())
+                    ->exists();
+                $hasActiveRun = MilcomRecommendationRun::query()
+                    ->where('operation_id', $operation->id)
+                    ->whereIn('status', [
+                        RecommendationRunStatus::Queued->value,
+                        RecommendationRunStatus::Running->value,
+                    ])
+                    ->exists();
+
+                if (! $hasActiveIncident || $hasActiveRun) {
+                    return;
+                }
+
+                $generationVersion = (int) $operation->generation_version + 1;
+                $operation->forceFill(['generation_version' => $generationVersion])->save();
+                $objective->forceFill(['generation_version' => $generationVersion])->save();
+
+                $run = $this->recommendations->queue(
+                    operation: $operation,
+                    objective: $objective,
+                    trigger: 'counter_auto_refresh',
+                );
+                $objective->forceFill(['latest_recommendation_run_id' => $run->id])->save();
+            }, attempts: 5);
+        }
+    }
+
+    private function markOverdueCounterDeclarations(): void
+    {
+        $objectiveIds = MilcomObjective::query()
+            ->whereIn('status', [
+                ObjectiveStatus::Approved->value,
+                ObjectiveStatus::Dispatching->value,
+                ObjectiveStatus::Dispatched->value,
+            ])
+            ->whereNotNull('deadline_at')
+            ->where('deadline_at', '<=', now())
+            ->whereNull('declaration_overdue_at')
+            ->whereHas('operation', fn ($query) => $query
+                ->where('type', OperationType::Counter->value)
+                ->whereNotIn('status', [
+                    OperationStatus::Completed->value,
+                    OperationStatus::Archived->value,
+                    OperationStatus::Failed->value,
+                ])
+                ->where('federation_action_required', false))
+            ->orderBy('id')
+            ->pluck('id');
+
+        foreach ($objectiveIds as $objectiveId) {
+            DB::transaction(function () use ($objectiveId): void {
+                $objectiveReference = MilcomObjective::query()->findOrFail((int) $objectiveId);
+                $operation = MilcomOperation::query()
+                    ->lockForUpdate()
+                    ->findOrFail($objectiveReference->operation_id);
+                $objective = MilcomObjective::query()
+                    ->lockForUpdate()
+                    ->findOrFail((int) $objectiveId);
+
+                if ($operation->type !== OperationType::Counter
+                    || $operation->federation_action_required
+                    || $operation->status->isTerminal()
+                    || $operation->status === OperationStatus::Failed
+                    || ! in_array($objective->status, [
+                        ObjectiveStatus::Approved,
+                        ObjectiveStatus::Dispatching,
+                        ObjectiveStatus::Dispatched,
+                    ], true)
+                    || $objective->deadline_at?->isFuture() !== false
+                    || $objective->declaration_overdue_at !== null) {
+                    return;
+                }
+
+                $objective->forceFill(['declaration_overdue_at' => now()])->save();
+
+                $this->events->record(
+                    eventType: 'objective.declaration_overdue',
+                    operationId: $operation->id,
+                    objectiveId: $objective->id,
+                    payload: ['deadline_at' => $objective->deadline_at],
+                );
+            }, attempts: 5);
         }
     }
 

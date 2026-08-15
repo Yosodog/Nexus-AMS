@@ -33,6 +33,7 @@ class MilcomObjective extends Model
             'blocker_summary' => 'array',
             'metadata' => 'array',
             'deadline_at' => 'datetime',
+            'declaration_overdue_at' => 'datetime',
             'approved_at' => 'datetime',
             'dispatched_at' => 'datetime',
             'engaged_at' => 'datetime',

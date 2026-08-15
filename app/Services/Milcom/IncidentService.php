@@ -174,7 +174,7 @@ class IncidentService
                         ?: config('milcom.discord.default_war_reason', 'Alliance defense counter'),
                     'discord_forum_id' => SettingService::getDiscordWarRoomForumId()
                         ?: config('milcom.discord.forum_id'),
-                    'deadline_at' => now()->addMinutes(30),
+                    'deadline_at' => null,
                     'generation_version' => 1,
                     'dispatch_version' => 0,
                     'metadata' => ['source' => 'incoming_war', 'wave' => 1],
@@ -205,7 +205,7 @@ class IncidentService
                     'minimum_team_depth' => 3,
                     'war_type' => $operation->default_war_type,
                     'war_reason' => $operation->default_war_reason,
-                    'deadline_at' => $operation->deadline_at,
+                    'deadline_at' => null,
                     'status' => ObjectiveStatus::Pending,
                     'source_incident_id' => $incident->id,
                     'open_key' => MilcomObjective::OPEN_KEY_VALUE,

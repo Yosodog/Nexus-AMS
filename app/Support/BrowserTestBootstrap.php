@@ -660,6 +660,8 @@ class BrowserTestBootstrap
             'status' => ObjectiveStatus::Dispatched,
             'source_incident_id' => $failedIncident->id,
             'open_key' => 1,
+            'deadline_at' => now()->subMinutes(5),
+            'declaration_overdue_at' => now()->subMinutes(4),
             'generation_version' => 1,
             'dispatch_version' => 1,
             'dispatched_at' => now()->subMinute(),

@@ -25,6 +25,11 @@
     $dispatchStatus = (string) data_get($selectedObjective, 'dispatch.status', '');
     $dispatchFailed = $dispatchStatus === 'failed';
     $canDispatch = in_array($objectiveStatus, ['pending', 'review', 'blocked', 'approved'], true) && ! $dispatchFailed;
+    $recommendationStatus = (string) data_get($recommendation, 'status', '');
+    $recommendationRunId = (int) data_get($recommendation, 'run_id', 0);
+    $recommendationProgress = (int) data_get($recommendation, 'progress_percent', 0);
+    $recommendationTrigger = (string) data_get($recommendation, 'trigger', '');
+    $recommendationActive = in_array($recommendationStatus, ['queued', 'running'], true);
     $relativeTime = static function ($value): string {
         if (is_object($value) && method_exists($value, 'diffForHumans')) {
             return $value->diffForHumans();
@@ -58,6 +63,10 @@
         data-incidents-endpoint="{{ $apiBase }}/incidents?filter={{ urlencode($activeFilter) }}&limit=50"
         data-incident-detail-template="{{ $apiBase }}/incidents/{id}"
         data-generation-version="{{ $generationVersion }}"
+        data-recommendation-run-id="{{ $recommendationRunId ?: '' }}"
+        data-recommendation-status="{{ $recommendationStatus }}"
+        data-recommendation-progress="{{ $recommendationProgress }}"
+        data-recommendation-trigger="{{ $recommendationTrigger }}"
         class="contents"
     >
         <x-header title="Fast Counters" separator use-h1>
@@ -72,15 +81,11 @@
 
         @include('admin.milcom.partials.navigation', ['milcomCurrent' => 'counters'])
 
-        @php
-            $recommendationStatus = (string) data_get($recommendation, 'status', '');
-            $recommendationActive = in_array($recommendationStatus, ['queued', 'running'], true);
-        @endphp
         <div class="{{ $recommendationActive ? 'flex' : 'hidden' }} alert alert-info items-center gap-3" role="status" data-milcom-recommendation-progress>
             <x-icon name="o-arrow-path" class="size-5 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
             <div class="min-w-0 flex-1">
-                <div class="flex items-center justify-between gap-3 text-sm"><span class="font-semibold" data-milcom-progress-label>{{ $recommendationActive ? 'Building team' : 'Team progress' }}</span><span class="tabular-nums" data-milcom-progress-value>{{ (int) data_get($recommendation, 'progress_percent', 0) }}%</span></div>
-                <progress class="progress progress-info mt-2 h-1.5 w-full" value="{{ (int) data_get($recommendation, 'progress_percent', 0) }}" max="100" data-milcom-progress-bar></progress>
+                <div class="flex items-center justify-between gap-3 text-sm"><span class="font-semibold" data-milcom-progress-label>{{ $recommendationTrigger === 'counter_auto_refresh' ? 'Refreshing counter team' : ($recommendationActive ? 'Building team' : 'Team progress') }}</span><span class="tabular-nums" data-milcom-progress-value>{{ $recommendationProgress }}%</span></div>
+                <progress class="progress progress-info mt-2 h-1.5 w-full" value="{{ $recommendationProgress }}" max="100" data-milcom-progress-bar></progress>
             </div>
         </div>
 
@@ -105,6 +110,11 @@
                 <strong class="nexus-stat-value" data-milcom-value="dispatch_failures">{{ number_format((int) data_get($summary, 'dispatch_failures', 0)) }}</strong>
                 <span class="nexus-stat-helper">Discord rooms that failed</span>
             </div>
+            <a href="{{ url('/admin/milcom/counters') }}?filter=overdue" class="nexus-metric bg-warning/5">
+                <span class="nexus-stat-label">Overdue declarations</span>
+                <strong class="nexus-stat-value text-warning" data-milcom-value="overdue_declarations">{{ number_format((int) data_get($summary, 'overdue_declarations', 0)) }}</strong>
+                <span class="nexus-stat-helper">Assigned teams that have not declared</span>
+            </a>
         </section>
 
         <div class="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(22rem,0.72fr)_minmax(34rem,1.28fr)]">
@@ -129,6 +139,7 @@
                             <option value="all" @selected($activeFilter === 'all')>All open</option>
                             <option value="recommending" @selected($activeFilter === 'recommending')>Building team</option>
                             <option value="blocked" @selected($activeFilter === 'blocked')>Blocked</option>
+                            <option value="overdue" @selected($activeFilter === 'overdue')>Overdue declarations</option>
                             <option value="covered_by_plan" @selected($activeFilter === 'covered_by_plan')>Covered by plan</option>
                         </select>
                         <button type="submit" class="btn btn-outline btn-sm">Filter</button>
@@ -271,6 +282,14 @@
                             </p>
                         </div>
                         <span class="nexus-status {{ $statusTone($incidentStatus) }}" data-milcom-field="status">{{ $statusLabel($incidentStatus) }}</span>
+                    </div>
+
+                    <div class="{{ data_get($selectedObjective, 'declaration_overdue', false) ? 'flex' : 'hidden' }} alert alert-warning mx-4 mt-4 items-start gap-3 md:mx-5" role="alert" data-milcom-declaration-overdue>
+                        <x-icon name="o-exclamation-triangle" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                        <div>
+                            <p class="font-semibold">Declaration overdue</p>
+                            <p class="mt-1 text-sm">This team remains assigned, but no declaration was detected by <span class="font-semibold" data-milcom-field="declaration_deadline">{{ $relativeTime(data_get($selectedObjective, 'deadline_at')) }}</span>. Milcom will keep tracking the assignment.</p>
+                        </div>
                     </div>
 
                     <div class="divide-y divide-base-300">
