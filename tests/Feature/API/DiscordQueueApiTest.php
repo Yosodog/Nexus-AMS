@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\API;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\DiscordConnectionMode;
 use App\Enums\DiscordConnectionState;
 use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
+use App\Models\Application;
 use App\Models\DiscordConnection;
 use App\Models\DiscordQueue;
 use App\Models\Nation;
@@ -262,6 +264,77 @@ class DiscordQueueApiTest extends TestCase
         )->assertOk()
             ->assertJsonPath('data.result.roles.0.bucket_start', 1)
             ->assertJsonPath('data.result.roles.0.discord_role_id', '123456789012345678');
+    }
+
+    public function test_application_reconciliation_preflight_checkpoint_accepts_empty_operation_lists(): void
+    {
+        $discordUserId = '323456789012345678';
+        $application = Application::query()->create([
+            'nation_id' => 9001,
+            'leader_name_snapshot' => 'Example Leader',
+            'discord_user_id' => $discordUserId,
+            'discord_username' => 'example-user',
+            'status' => ApplicationStatus::Pending,
+            'pending_key' => 1,
+            'discord_connection_id' => self::CONNECTION_ID,
+            'discord_connection_generation' => 7,
+            'discord_application_id' => self::APPLICATION_ID,
+            'discord_guild_id' => self::GUILD_ID,
+            'discord_reconcile_revision' => 1,
+        ]);
+        $command = $this->createCommand('APPLICATION_DISCORD_RECONCILE', [
+            'payload' => [
+                'contract_version' => 1,
+                'installation' => [
+                    'application_id' => self::APPLICATION_ID,
+                    'guild_id' => self::GUILD_ID,
+                    'connection_id' => self::CONNECTION_ID,
+                    'generation' => 7,
+                ],
+                'application' => [
+                    'id' => $application->id,
+                    'state' => 'pending',
+                    'discord_user_id' => $discordUserId,
+                    'nation_id' => $application->nation_id,
+                    'revision' => 1,
+                ],
+                'desired' => [
+                    'channel' => [
+                        'mode' => 'ensure',
+                        'staff_role_ids' => [],
+                        'intro_messages' => [],
+                    ],
+                    'roles' => ['add' => [], 'remove' => []],
+                    'notifications' => [],
+                ],
+            ],
+        ]);
+        $application->forceFill([
+            'discord_reconcile_queue_id' => $command->id,
+        ])->save();
+        $claim = $this->claimOne();
+
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            [
+                'lease_token' => $claim->json('data.lease_token'),
+                'result' => ['application_reconcile' => [
+                    'application_revision' => 1,
+                    'channel_id' => null,
+                    'channel_deleted' => false,
+                    'roles_added' => [],
+                    'roles_removed' => [],
+                    'intro_messages' => [],
+                    'notifications' => [],
+                ]],
+            ],
+        )->assertOk()
+            ->assertJsonPath('data.result.application_reconcile.application_revision', 1)
+            ->assertJsonPath('data.result.application_reconcile.channel_id', null)
+            ->assertJsonPath('data.result.application_reconcile.roles_added', [])
+            ->assertJsonPath('data.result.application_reconcile.roles_removed', [])
+            ->assertJsonPath('data.result.application_reconcile.intro_messages', [])
+            ->assertJsonPath('data.result.application_reconcile.notifications', []);
     }
 
     public function test_member_profile_sync_checkpoint_accepts_only_the_nexus_plan(): void
