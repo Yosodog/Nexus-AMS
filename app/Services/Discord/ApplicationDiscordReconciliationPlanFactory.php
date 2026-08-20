@@ -95,7 +95,8 @@ final class ApplicationDiscordReconciliationPlanFactory
         array &$issues,
         bool $includeOneTimeMessages,
     ): array {
-        $topic = "nexus-application:{$application->id};nation:{$application->nation_id}";
+        $topic = "nexus-application:{$application->id};nation:{$application->nation_id} | "
+            ."https://politicsandwar.com/nation/id={$application->nation_id}";
         $channelId = $this->optionalSnowflake($application->discord_channel_id, 'application_channel_invalid', $issues);
 
         if ($state !== strtolower(ApplicationStatus::Pending->value)) {
@@ -265,7 +266,7 @@ final class ApplicationDiscordReconciliationPlanFactory
     {
         return mb_strlen($message) <= 2000
             && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', $message) !== 1
-            && preg_match('/@(?:everyone|here)\b|<@!?\d{17,20}>|<@&\d{17,20}>|<#\d{17,20}>|<a?:[a-z0-9_~-]+:\d{17,20}>/iu', $message) !== 1
+            && preg_match('/@(?:everyone|here)\b|<@!?\d{17,20}>|<@&\d{17,20}>|<a?:[a-z0-9_~-]+:\d{17,20}>/iu', $message) !== 1
             && preg_match('/\bassign\w*\b/iu', $message) !== 1;
     }
 }

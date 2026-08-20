@@ -337,6 +337,84 @@ class DiscordQueueApiTest extends TestCase
             ->assertJsonPath('data.result.application_reconcile.notifications', []);
     }
 
+    public function test_terminal_application_reconciliation_requires_null_channel_id_before_and_after_deletion(): void
+    {
+        $discordUserId = '323456789012345678';
+        $channelId = '423456789012345678';
+        $application = Application::query()->create([
+            'nation_id' => 9001,
+            'leader_name_snapshot' => 'Example Leader',
+            'discord_user_id' => $discordUserId,
+            'discord_username' => 'example-user',
+            'status' => ApplicationStatus::Approved,
+            'pending_key' => null,
+            'discord_channel_id' => $channelId,
+            'discord_connection_id' => self::CONNECTION_ID,
+            'discord_connection_generation' => 7,
+            'discord_application_id' => self::APPLICATION_ID,
+            'discord_guild_id' => self::GUILD_ID,
+            'discord_reconcile_revision' => 2,
+        ]);
+        $command = $this->createCommand('APPLICATION_DISCORD_RECONCILE', [
+            'payload' => [
+                'contract_version' => 1,
+                'installation' => [
+                    'application_id' => self::APPLICATION_ID,
+                    'guild_id' => self::GUILD_ID,
+                    'connection_id' => self::CONNECTION_ID,
+                    'generation' => 7,
+                ],
+                'application' => [
+                    'id' => $application->id,
+                    'state' => 'approved',
+                    'discord_user_id' => $discordUserId,
+                    'nation_id' => $application->nation_id,
+                    'revision' => 2,
+                ],
+                'desired' => [
+                    'channel' => [
+                        'mode' => 'absent',
+                        'channel_id' => $channelId,
+                        'intro_messages' => [],
+                    ],
+                    'roles' => ['add' => [], 'remove' => []],
+                    'notifications' => [],
+                ],
+            ],
+        ]);
+        $application->forceFill(['discord_reconcile_queue_id' => $command->id])->save();
+        $claim = $this->claimOne();
+        $checkpoint = [
+            'application_revision' => 2,
+            'channel_id' => null,
+            'channel_deleted' => false,
+            'roles_added' => [],
+            'roles_removed' => [],
+            'intro_messages' => [],
+            'notifications' => [],
+        ];
+
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            ['lease_token' => $claim->json('data.lease_token'), 'result' => ['application_reconcile' => $checkpoint]],
+        )->assertOk();
+        $this->assertSame($channelId, $application->fresh()->discord_channel_id);
+
+        $checkpoint['channel_id'] = $channelId;
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            ['lease_token' => $claim->json('data.lease_token'), 'result' => ['application_reconcile' => $checkpoint]],
+        )->assertConflict()->assertJsonPath('error', 'application_reconcile_checkpoint_conflict');
+
+        $checkpoint['channel_id'] = null;
+        $checkpoint['channel_deleted'] = true;
+        $this->withHeaders($this->discordHeaders())->patchJson(
+            "/api/v1/discord/queue/{$command->id}/checkpoint",
+            ['lease_token' => $claim->json('data.lease_token'), 'result' => ['application_reconcile' => $checkpoint]],
+        )->assertOk();
+        $this->assertNull($application->fresh()->discord_channel_id);
+    }
+
     public function test_member_profile_sync_checkpoint_accepts_only_the_nexus_plan(): void
     {
         $revision = str_repeat('a', 64);

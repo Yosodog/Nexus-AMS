@@ -75,7 +75,7 @@ class ApplicationDiscordReconciliationPlanFactoryTest extends TestCase
                     'mode' => 'ensure',
                     'category_id' => self::CATEGORY_ID,
                     'name' => "app-{$application->id}-9001-example-leader",
-                    'topic' => "nexus-application:{$application->id};nation:9001",
+                    'topic' => "nexus-application:{$application->id};nation:9001 | https://politicsandwar.com/nation/id=9001",
                     'staff_role_ids' => [self::INTERVIEWER_ROLE_ID],
                     'intro_messages' => [[
                         'key' => 'application.submitted',
@@ -111,6 +111,21 @@ class ApplicationDiscordReconciliationPlanFactoryTest extends TestCase
             ],
             'content' => 'A new member was approved in Nexus.',
         ]], $plan['payload']['desired']['notifications']);
+    }
+
+    public function test_approval_announcements_allow_raw_discord_channel_mentions(): void
+    {
+        SettingService::setApplicationsApprovalMessageTemplate(
+            'Welcome! Read <#423456789012345678> and visit <#523456789012345678>.',
+        );
+
+        $plan = $this->plan($this->application(ApplicationStatus::Approved));
+
+        $this->assertSame([], $plan['issues']);
+        $this->assertSame(
+            'Welcome! Read <#423456789012345678> and visit <#523456789012345678>.',
+            $plan['payload']['desired']['notifications'][0]['content'],
+        );
     }
 
     public function test_terminal_denial_and_cancellation_never_grant_the_member_role(): void
