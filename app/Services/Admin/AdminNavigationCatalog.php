@@ -28,7 +28,7 @@ final class AdminNavigationCatalog
      */
     public function groups(User $user, array $pendingCounts = []): array
     {
-        $accountPending = ($pendingCounts['withdrawals'] ?? 0) + ($pendingCounts['member_transfers'] ?? 0);
+        $accountPending = $pendingCounts['withdrawals'] ?? 0;
         $defensePending = ($pendingCounts['war_aid'] ?? 0)
             + ($pendingCounts['rebuilding'] ?? 0)
             + ($pendingCounts['blockade_relief'] ?? 0);

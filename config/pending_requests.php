@@ -9,7 +9,6 @@ return [
     'permissions' => [
         'applications' => 'manage-applications',
         'withdrawals' => 'manage-accounts',
-        'member_transfers' => 'manage-accounts',
         'city_grants' => 'manage-city-grants',
         'grants' => 'manage-grants',
         'loans' => 'manage-loans',

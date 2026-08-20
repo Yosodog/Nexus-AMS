@@ -37,13 +37,6 @@ return [
             'stale_seconds' => 900,
             'sensitivity' => 'restricted',
         ],
-        'member_transfers' => [
-            'team' => 'internal_affairs',
-            'view_abilities' => ['view-accounts'],
-            'fresh_seconds' => 300,
-            'stale_seconds' => 900,
-            'sensitivity' => 'restricted',
-        ],
         'withdrawals' => [
             'team' => 'finance',
             'view_abilities' => ['manage-accounts'],

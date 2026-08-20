@@ -174,7 +174,6 @@ class StaffWorkQueueSourcesTest extends TestCase
             'grants:'.$grant->id,
             'loans:'.$loan->id,
             'withdrawals:'.$withdrawal->id,
-            'member_transfers:'.$memberTransfer->id,
             'war_aid:'.$warAid->id,
             'rebuilding:'.$rebuilding->id,
             'blockade_relief:'.$blockade->id,
@@ -186,20 +185,19 @@ class StaffWorkQueueSourcesTest extends TestCase
         $this->assertArrayNotHasKey('audit_remediation', $snapshot['types']);
         $this->assertArrayNotHasKey('audit_remediation', $snapshot['counts']);
         $this->assertFalse($items->has('audit_remediation:'.$audit->id));
+        $this->assertFalse($items->has('member_transfers:'.$memberTransfer->id));
         $this->assertSame(route('admin.applications.show', $application), $items['applications:'.$application->id]['url']);
         $this->assertSame(route('admin.loans.view', ['Loan' => $loan->id]), $items['loans:'.$loan->id]['url']);
         $this->assertSame(
             route('admin.accounts.dashboard', ['transaction' => $withdrawal->id]).'#withdrawal-approval-'.$withdrawal->id,
             $items['withdrawals:'.$withdrawal->id]['url']
         );
-        $this->assertSame(route('admin.member-transfers.show', $memberTransfer), $items['member_transfers:'.$memberTransfer->id]['url']);
         $this->assertStringStartsWith(route('admin.grants.city'), $items['city_grants:'.$cityGrant->id]['url']);
         $this->assertStringStartsWith(route('admin.grants'), $items['grants:'.$grant->id]['url']);
         $this->assertStringContainsString('Operational grant v1', $items['grants:'.$grant->id]['subject']);
         $this->assertStringStartsWith(route('admin.war-aid'), $items['war_aid:'.$warAid->id]['url']);
         $this->assertStringStartsWith(route('admin.rebuilding.index'), $items['rebuilding:'.$rebuilding->id]['url']);
         $this->assertStringStartsWith(route('defense.blockade-relief'), $items['blockade_relief:'.$blockade->id]['url']);
-        $this->assertSame('nation:'.$recipient->id, $items['member_transfers:'.$memberTransfer->id]['owner_key']);
         $this->assertSame('nation:'.$recipient->id, $items['blockade_relief:'.$blockade->id]['owner_key']);
 
         foreach ($expectedKeys as $key) {

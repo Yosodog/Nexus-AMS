@@ -12,7 +12,6 @@ use App\Models\FederationReceivedResource;
 use App\Models\FederationReceivedVersion;
 use App\Models\GrantApplication;
 use App\Models\Loan;
-use App\Models\MemberTransfer;
 use App\Models\MilcomOperation;
 use App\Models\RebuildingRequest;
 use App\Models\Transaction;
@@ -84,7 +83,6 @@ class StaffWorkQueueCacheObserver implements ShouldHandleEventsAfterCommit
             ],
             $model instanceof GrantApplication => ['grants'],
             $model instanceof Loan => ['loans'],
-            $model instanceof MemberTransfer => ['member_transfers'],
             $model instanceof MilcomOperation => [FederationWorkQueueSource::HELD_OPERATIONS],
             $model instanceof RebuildingRequest => ['rebuilding'],
             $model instanceof Transaction => ['withdrawals'],

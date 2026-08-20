@@ -24,8 +24,8 @@
         </div>
         <div class="nexus-page-header__actions">
             <x-nexus-status :label="$status['label']" :intent="$status['intent']" :icon="$status['icon']" />
-            <a href="{{ route('admin.work-queue.index', ['type' => 'member_transfers']) }}" class="btn btn-outline btn-sm">
-                Back to work queue
+            <a href="{{ route('admin.accounts.dashboard') }}" class="btn btn-outline btn-sm">
+                Back to accounts
             </a>
         </div>
     </header>

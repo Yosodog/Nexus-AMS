@@ -25,7 +25,6 @@ use App\Models\FederationReceivedResource;
 use App\Models\FederationReceivedVersion;
 use App\Models\GrantApplication;
 use App\Models\Loan;
-use App\Models\MemberTransfer;
 use App\Models\MilcomOperation;
 use App\Models\Nation;
 use App\Models\Offshore;
@@ -49,7 +48,6 @@ use App\Services\StaffWorkQueue\Sources\CityGrantWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\FederationWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\GrantWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\LoanWorkQueueSource;
-use App\Services\StaffWorkQueue\Sources\MemberTransferWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\RebuildingWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\WarAidWorkQueueSource;
 use App\Services\StaffWorkQueue\Sources\WithdrawalWorkQueueSource;
@@ -93,7 +91,6 @@ class AppServiceProvider extends ServiceProvider
             $app->make(GrantWorkQueueSource::class),
             $app->make(LoanWorkQueueSource::class),
             $app->make(WithdrawalWorkQueueSource::class),
-            $app->make(MemberTransferWorkQueueSource::class),
             $app->make(WarAidWorkQueueSource::class),
             $app->make(RebuildingWorkQueueSource::class),
             $app->make(BlockadeReliefWorkQueueSource::class),
@@ -289,7 +286,6 @@ class AppServiceProvider extends ServiceProvider
             FederationReceivedVersion::class,
             GrantApplication::class,
             Loan::class,
-            MemberTransfer::class,
             MilcomOperation::class,
             RebuildingRequest::class,
             Transaction::class,

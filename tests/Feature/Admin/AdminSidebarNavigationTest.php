@@ -27,7 +27,6 @@ class AdminSidebarNavigationTest extends TestCase
             'grants' => 4,
             'loans' => 5,
             'withdrawals' => 6,
-            'member_transfers' => 7,
             'war_aid' => 8,
             'rebuilding' => 9,
             'blockade_relief' => 10,
@@ -111,7 +110,7 @@ class AdminSidebarNavigationTest extends TestCase
             ['Access control', 'Configuration', 'Diagnostics'],
             collect($groups->firstWhere('id', 'system')['sections'])->pluck('label')->all(),
         );
-        $this->assertSame(25, $groups->firstWhere('id', 'economics')['badge']);
+        $this->assertSame(18, $groups->firstWhere('id', 'economics')['badge']);
         $this->assertSame(27, $groups->firstWhere('id', 'defense')['badge']);
         $this->assertSame(13, $groups->firstWhere('id', 'internal-affairs')['badge']);
 
