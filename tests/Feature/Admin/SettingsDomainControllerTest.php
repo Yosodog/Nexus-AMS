@@ -16,6 +16,7 @@ use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use App\Http\Requests\Admin\CancelDataSyncRequest;
+use App\Http\Requests\Admin\DownloadDatabaseBackupRequest;
 use App\Http\Requests\Admin\ReleaseStalePendingRequestsRequest;
 use App\Http\Requests\Admin\RunDataSyncRequest;
 use App\Http\Requests\Admin\StoreFaviconRequest;
@@ -65,6 +66,7 @@ class SettingsDomainControllerTest extends TestCase
             'admin.settings.favicon' => ['POST', 'admin/settings/favicon', PublicSiteSettingsController::class.'@updateFavicon'],
             'admin.settings.auto-withdraw' => ['POST', 'admin/settings/auto-withdraw', FinancePolicySettingsController::class.'@updateAutoWithdraw'],
             'admin.settings.backups' => ['POST', 'admin/settings/backups', SecurityRetentionSettingsController::class.'@updateBackups'],
+            'admin.settings.backups.download' => ['POST', 'admin/settings/backups/download', SecurityRetentionSettingsController::class.'@downloadDatabaseBackup'],
             'admin.settings.loan-payments' => ['POST', 'admin/settings/loan-payments', FinancePolicySettingsController::class.'@updateLoanPayments'],
             'admin.settings.grants.approvals' => ['POST', 'admin/settings/grants/approvals', FinancePolicySettingsController::class.'@updateGrantApprovals'],
             'admin.settings.audit-retention' => ['POST', 'admin/settings/audit-retention', SecurityRetentionSettingsController::class.'@updateAuditRetention'],
@@ -84,6 +86,9 @@ class SettingsDomainControllerTest extends TestCase
             'admin.settings.sync.alliances',
             'admin.settings.sync.wars',
         ];
+        $databaseBackupRoutes = [
+            'admin.settings.backups.download',
+        ];
 
         foreach ($contracts as $name => [$method, $uri, $action]) {
             $route = Route::getRoutes()->getByName($name);
@@ -91,6 +96,10 @@ class SettingsDomainControllerTest extends TestCase
 
             if (in_array($name, $pwGuardedRoutes, true)) {
                 $expectedMiddleware[] = BlockWhenPWDown::class;
+            }
+
+            if (in_array($name, $databaseBackupRoutes, true)) {
+                $expectedMiddleware[] = 'throttle:database-backup-downloads';
             }
 
             $this->assertNotNull($route, "{$name} should remain registered.");
@@ -137,6 +146,7 @@ class SettingsDomainControllerTest extends TestCase
             'admin.settings.favicon' => StoreFaviconRequest::class,
             'admin.settings.auto-withdraw' => UpdateAutoWithdrawSettingsRequest::class,
             'admin.settings.backups' => UpdateBackupSettingsRequest::class,
+            'admin.settings.backups.download' => DownloadDatabaseBackupRequest::class,
             'admin.settings.loan-payments' => UpdateLoanPaymentSettingsRequest::class,
             'admin.settings.grants.approvals' => UpdateGrantApprovalSettingsRequest::class,
             'admin.settings.audit-retention' => UpdateAuditRetentionSettingsRequest::class,

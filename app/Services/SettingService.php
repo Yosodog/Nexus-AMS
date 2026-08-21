@@ -32,6 +32,14 @@ class SettingService
 
     public const MAX_LOTTERY_TICKETS_PER_NATION = FinancePolicySettings::MAX_LOTTERY_TICKETS_PER_NATION;
 
+    public const DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD = DataSyncSettings::DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD;
+
+    public const DEFAULT_RAID_MINIMUM_INACTIVE_TURNS = DataSyncSettings::DEFAULT_RAID_MINIMUM_INACTIVE_TURNS;
+
+    public const MAX_RAID_ACTIVITY_CITY_THRESHOLD = DataSyncSettings::MAX_RAID_ACTIVITY_CITY_THRESHOLD;
+
+    public const MAX_RAID_MINIMUM_INACTIVE_TURNS = DataSyncSettings::MAX_RAID_MINIMUM_INACTIVE_TURNS;
+
     public static function getLastScannedBankRecordId(): int
     {
         return app(DataSyncSettings::class)->getLastScannedBankRecordId();
@@ -303,6 +311,26 @@ class SettingService
     public static function setTopRaidable(int $topN): void
     {
         app(DataSyncSettings::class)->setTopRaidable($topN);
+    }
+
+    public static function getRaidActivityCityThreshold(): int
+    {
+        return app(DataSyncSettings::class)->getRaidActivityCityThreshold();
+    }
+
+    public static function setRaidActivityCityThreshold(int $cityThreshold): void
+    {
+        app(DataSyncSettings::class)->setRaidActivityCityThreshold($cityThreshold);
+    }
+
+    public static function getRaidMinimumInactiveTurns(): int
+    {
+        return app(DataSyncSettings::class)->getRaidMinimumInactiveTurns();
+    }
+
+    public static function setRaidMinimumInactiveTurns(int $inactiveTurns): void
+    {
+        app(DataSyncSettings::class)->setRaidMinimumInactiveTurns($inactiveTurns);
     }
 
     public static function getDirectDepositId(): int

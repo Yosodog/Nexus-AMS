@@ -6,6 +6,14 @@ use Illuminate\Support\Carbon;
 
 class DataSyncSettings
 {
+    public const DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD = 0;
+
+    public const DEFAULT_RAID_MINIMUM_INACTIVE_TURNS = 0;
+
+    public const MAX_RAID_ACTIVITY_CITY_THRESHOLD = 1000;
+
+    public const MAX_RAID_MINIMUM_INACTIVE_TURNS = 4380;
+
     public function __construct(private readonly SettingValueStore $settings) {}
 
     public function getLastScannedBankRecordId(): int
@@ -66,6 +74,48 @@ class DataSyncSettings
     public function setTopRaidable(int $topN): void
     {
         $this->settings->set('raid_top_alliance_cap', $topN);
+    }
+
+    public function getRaidActivityCityThreshold(): int
+    {
+        $value = $this->settings->get('raid_activity_city_threshold');
+
+        if (is_null($value)) {
+            $this->setRaidActivityCityThreshold(self::DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD);
+
+            return self::DEFAULT_RAID_ACTIVITY_CITY_THRESHOLD;
+        }
+
+        return (int) $value;
+    }
+
+    public function setRaidActivityCityThreshold(int $cityThreshold): void
+    {
+        $this->settings->set(
+            'raid_activity_city_threshold',
+            max(0, min(self::MAX_RAID_ACTIVITY_CITY_THRESHOLD, $cityThreshold)),
+        );
+    }
+
+    public function getRaidMinimumInactiveTurns(): int
+    {
+        $value = $this->settings->get('raid_minimum_inactive_turns');
+
+        if (is_null($value)) {
+            $this->setRaidMinimumInactiveTurns(self::DEFAULT_RAID_MINIMUM_INACTIVE_TURNS);
+
+            return self::DEFAULT_RAID_MINIMUM_INACTIVE_TURNS;
+        }
+
+        return (int) $value;
+    }
+
+    public function setRaidMinimumInactiveTurns(int $inactiveTurns): void
+    {
+        $this->settings->set(
+            'raid_minimum_inactive_turns',
+            max(0, min(self::MAX_RAID_MINIMUM_INACTIVE_TURNS, $inactiveTurns)),
+        );
     }
 
     public function getLastNationSyncBatchId(): string

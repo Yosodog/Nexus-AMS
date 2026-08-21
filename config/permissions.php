@@ -28,6 +28,7 @@ return [
     'manage-raids',
     'view-diagnostic-info',
     'view-application-logs',
+    'download-database-backups',
     'view-applications',
     'manage-applications',
     'view-recruitment',

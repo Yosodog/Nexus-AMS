@@ -199,6 +199,13 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('database-backup-downloads', function (Request $request) {
+            return [
+                Limit::perHour(3)->by('database-backup:user:'.($request->user()?->id ?? $request->ip())),
+                Limit::perHour(10)->by('database-backup:ip:'.$request->ip()),
+            ];
+        });
+
         $federationRateLimited = static function (Request $request, array $headers) {
             return response()->json([
                 'error' => [
