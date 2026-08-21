@@ -8217,6 +8217,22 @@
     {
         "domain": null,
         "method": "POST",
+        "uri": "admin/settings/backups/download",
+        "name": "admin.settings.backups.download",
+        "action": "App\\Http\\Controllers\\Admin\\SecurityRetentionSettingsController@downloadDatabaseBackup",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:database-backup-downloads"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
         "uri": "admin/settings/loan-payments",
         "name": "admin.settings.loan-payments",
         "action": "App\\Http\\Controllers\\Admin\\FinancePolicySettingsController@updateLoanPayments",

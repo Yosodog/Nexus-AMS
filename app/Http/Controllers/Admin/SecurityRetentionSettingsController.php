@@ -3,20 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DownloadDatabaseBackupRequest;
 use App\Http\Requests\Admin\UpdateAuditRetentionSettingsRequest;
 use App\Http\Requests\Admin\UpdateBackupSettingsRequest;
 use App\Http\Requests\Admin\UpdateUserInactivityAutoDisableRequest;
 use App\Services\AuditLogger;
+use App\Services\DatabaseBackupDownloadService;
 use App\Services\Settings\SecurityRetentionSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 class SecurityRetentionSettingsController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
+        private readonly DatabaseBackupDownloadService $databaseBackupDownloadService,
         private readonly SecurityRetentionSettings $settings,
     ) {}
 
@@ -71,6 +77,42 @@ class SecurityRetentionSettingsController extends Controller
             'alert-message' => $enabled ? 'Backups enabled.' : 'Backups disabled.',
             'alert-type' => 'success',
         ]);
+    }
+
+    public function downloadDatabaseBackup(DownloadDatabaseBackupRequest $request): BinaryFileResponse|RedirectResponse
+    {
+        try {
+            $archivePath = $this->databaseBackupDownloadService->create();
+        } catch (Throwable $exception) {
+            Log::error('On-demand database backup creation failed.', [
+                'exception_class' => $exception::class,
+                'user_id' => $request->user()?->getAuthIdentifier(),
+            ]);
+
+            return redirect()->route('admin.settings.security-retention')->with([
+                'alert-message' => 'The database backup could not be created. Check the application logs and backup tooling, then try again.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        $response = response()->download($archivePath, basename($archivePath), [
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Content-Type' => 'application/zip',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+        ])->deleteFileAfterSend(true);
+
+        $this->auditLogger->success(
+            category: 'settings',
+            action: 'database_backup_generated_for_download',
+            context: [
+                'archive_size_bytes' => filesize($archivePath) ?: 0,
+                'database_driver' => DB::getDriverName(),
+            ],
+            message: 'Administrator generated a database backup for download.',
+        );
+
+        return $response;
     }
 
     public function updateAuditRetention(UpdateAuditRetentionSettingsRequest $request): RedirectResponse

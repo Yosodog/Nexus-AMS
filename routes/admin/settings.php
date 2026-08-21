@@ -71,6 +71,9 @@ Route::post('/settings/auto-withdraw', [FinancePolicySettingsController::class, 
 Route::post('/settings/backups', [SecurityRetentionSettingsController::class, 'updateBackups'])->name(
     'admin.settings.backups'
 );
+Route::post('/settings/backups/download', [SecurityRetentionSettingsController::class, 'downloadDatabaseBackup'])
+    ->middleware('throttle:database-backup-downloads')
+    ->name('admin.settings.backups.download');
 Route::post('/settings/loan-payments', [FinancePolicySettingsController::class, 'updateLoanPayments'])->name(
     'admin.settings.loan-payments'
 );

@@ -46,6 +46,31 @@
 
                 <button class="btn btn-primary" type="submit">Save backup setting</button>
             </form>
+
+            @can('download-database-backups')
+                <div class="max-w-2xl border-t border-base-300 pt-5">
+                    <h3 class="font-semibold">On-demand database backup</h3>
+                    <p class="mt-1 text-sm text-base-content/70">
+                        Create a fresh database-only archive and download it to this device. The temporary server copy is removed after delivery.
+                    </p>
+
+                    <form
+                        method="POST"
+                        action="{{ route('admin.settings.backups.download') }}"
+                        class="mt-4"
+                        data-confirm="Create and download a fresh database backup? The archive may contain sensitive application and member data."
+                        data-confirm-title="Download database backup?"
+                        data-confirm-label="Create and download"
+                        data-confirm-tone="warning"
+                    >
+                        @csrf
+                        <button class="btn btn-outline btn-warning" type="submit">
+                            <x-icon name="o-arrow-down-tray" class="size-5" aria-hidden="true" />
+                            Download database backup
+                        </button>
+                    </form>
+                </div>
+            @endcan
         </div>
     </x-admin.settings-disclosure>
 
