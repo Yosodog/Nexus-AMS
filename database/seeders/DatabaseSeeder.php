@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             MMRTierZeroSeeder::class,
             MMRSettingSeeder::class,
             ApplyPageSeeder::class,
+            AllianceSetupSeeder::class,
         ]);
     }
 }

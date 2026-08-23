@@ -88,4 +88,12 @@ final readonly class RuntimeCapabilities
             NexusRuntime::HostedTenant, NexusRuntime::WorldWriter => false,
         };
     }
+
+    public function allowsAllianceSetup(): bool
+    {
+        return match ($this->runtime) {
+            NexusRuntime::Standalone, NexusRuntime::HostedTenant => true,
+            NexusRuntime::WorldWriter => false,
+        };
+    }
 }

@@ -29,6 +29,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'sends_tenant_callbacks' => $capabilities->sendsTenantCallbacks(),
             'accepts_bootstrap_redemption' => $capabilities->acceptsBootstrapRedemption(),
             'allows_interactive_setup' => $capabilities->allowsInteractiveSetup(),
+            'allows_alliance_setup' => $capabilities->allowsAllianceSetup(),
         ]);
     }
 
@@ -69,6 +70,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'sends_tenant_callbacks' => false,
             'accepts_bootstrap_redemption' => false,
             'allows_interactive_setup' => true,
+            'allows_alliance_setup' => true,
         ]];
 
         yield 'hosted tenant' => [NexusRuntime::HostedTenant, [
@@ -81,6 +83,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'sends_tenant_callbacks' => true,
             'accepts_bootstrap_redemption' => true,
             'allows_interactive_setup' => false,
+            'allows_alliance_setup' => true,
         ]];
 
         yield 'temporary world writer' => [NexusRuntime::WorldWriter, [
@@ -93,6 +96,7 @@ class RuntimeCapabilitiesTest extends TestCase
             'sends_tenant_callbacks' => false,
             'accepts_bootstrap_redemption' => false,
             'allows_interactive_setup' => false,
+            'allows_alliance_setup' => false,
         ]];
     }
 }
