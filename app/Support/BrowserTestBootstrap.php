@@ -39,6 +39,7 @@ use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\War;
+use App\Services\AllianceSetup\AllianceSetupStateStore;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -79,6 +80,7 @@ class BrowserTestBootstrap
                 ['key' => 'discord_war_room_defense_role_id', 'value' => '555555555555555555'],
                 ['key' => 'milcom_counter_monitoring_enabled', 'value' => '1'],
             ]);
+            app(AllianceSetupStateStore::class)->initializeFresh();
 
             Alliance::query()->create([
                 'id' => 9001,
