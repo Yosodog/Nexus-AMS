@@ -36,6 +36,14 @@
                     <x-utils.alert type="{{ session('alert-type') }}" message="{{ session('alert-message') }}" />
                 @endif
 
+                @if (($allianceSetupState ?? null)?->isIncomplete())
+                    <div class="alert alert-warning" role="status">
+                        <x-icon name="o-wrench-screwdriver" class="size-5" aria-hidden="true" />
+                        <span class="min-w-0 flex-1"><strong>Setup incomplete.</strong> Resume the guided alliance readiness review when convenient.</span>
+                        <a href="{{ route($allianceSetupState->currentStep->routeName()) }}" class="btn btn-sm">Resume setup</a>
+                    </div>
+                @endif
+
                 @yield('content')
             </main>
         </x-slot:content>

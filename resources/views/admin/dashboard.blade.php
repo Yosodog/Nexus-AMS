@@ -44,6 +44,23 @@
         $snapshotIsStale = $snapshotExpiresAt->isPast();
     @endphp
 
+    @if (($allianceSetupState ?? null)?->stored && $allianceSetupState->isIncomplete() && ! $allianceSetupState->introAcknowledged() && ! $allianceSetupState->corrupt)
+        <section class="nexus-panel border border-primary/30 bg-primary/5 p-5 sm:p-6" aria-labelledby="setup-welcome-title">
+            <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-wide text-primary">Welcome to Nexus AMS</p>
+                    <h2 id="setup-welcome-title" class="mt-1 text-xl font-semibold">Set up your alliance workspace</h2>
+                    <p class="mt-2 max-w-3xl text-base-content/70">Review platform data, local administrator security, Discord preferences, and recruitment basics. You can defer or leave at any point without losing admin access.</p>
+                </div>
+                <form method="POST" action="{{ route('admin.setup.intro') }}" class="flex flex-wrap gap-2">
+                    @csrf
+                    <button type="submit" name="intent" value="later" class="btn btn-ghost">Not now</button>
+                    <button type="submit" name="intent" value="start" class="btn btn-primary">Start setup</button>
+                </form>
+            </div>
+        </section>
+    @endif
+
     <header class="nexus-page-header">
         <div class="nexus-page-header__copy">
             <h1 class="nexus-page-title">Operations overview</h1>

@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\AllianceSetupStep;
+use App\Http\Controllers\Admin\AllianceSetupController;
 use App\Http\Controllers\Admin\CommandPaletteController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MemberTransferController as AdminMemberTransferController;
@@ -10,6 +12,23 @@ use Illuminate\Support\Facades\Route;
 
 // Base routes
 Route::get('/', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
+Route::prefix('setup')->group(function (): void {
+    Route::get('/', [AllianceSetupController::class, 'index'])->name('admin.setup.index');
+    Route::get('/platform', [AllianceSetupController::class, 'platform'])->name('admin.setup.platform');
+    Route::get('/security', [AllianceSetupController::class, 'security'])->name('admin.setup.security');
+    Route::get('/discord', [AllianceSetupController::class, 'discord'])->name('admin.setup.discord');
+    Route::get('/recruitment', [AllianceSetupController::class, 'recruitment'])->name('admin.setup.recruitment');
+    Route::get('/review', [AllianceSetupController::class, 'review'])->name('admin.setup.review');
+    Route::post('/intro', [AllianceSetupController::class, 'intro'])->name('admin.setup.intro');
+    Route::post('/start', [AllianceSetupController::class, 'start'])->name('admin.setup.start');
+    Route::post('/reset', [AllianceSetupController::class, 'reset'])->name('admin.setup.reset');
+    Route::post('/advance/{step}', [AllianceSetupController::class, 'advance'])
+        ->whereIn('step', array_column(AllianceSetupStep::cases(), 'value'))
+        ->name('admin.setup.advance');
+    Route::post('/discord', [AllianceSetupController::class, 'updateDiscord'])->name('admin.setup.discord.update');
+    Route::post('/recruitment', [AllianceSetupController::class, 'updateRecruitment'])->name('admin.setup.recruitment.update');
+    Route::post('/complete', [AllianceSetupController::class, 'complete'])->name('admin.setup.complete');
+});
 Route::get('/command-palette/search', [CommandPaletteController::class, 'search'])
     ->middleware('throttle:60,1')
     ->name('admin.command-palette.search');

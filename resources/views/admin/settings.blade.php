@@ -63,6 +63,7 @@
 
                     <div class="nexus-panel divide-y divide-base-300 overflow-hidden">
                         @if ($canViewDiagnostics)
+                            <x-admin.settings-link :href="route('admin.setup.index')" category="Operations" title="Setup & readiness" description="Review core installation readiness or rerun the guided alliance setup." keywords="onboarding first time setup readiness" />
                             <x-admin.settings-link :href="route('admin.settings.public-site') . '#homepage-messaging'" category="Public site" title="Homepage messaging" description="Headline, supporting copy, calls to action, and recruitment highlights." keywords="home landing page content copy" />
                             <x-admin.settings-link :href="route('admin.settings.public-site') . '#search-sharing'" category="Public site" title="Search and sharing" description="Search visibility, page details, and the image shown when pages are shared." keywords="seo metadata robots social open graph" />
                             <x-admin.settings-link :href="route('admin.settings.public-site') . '#favicon-settings'" category="Public site" title="Favicon" description="Browser tab and bookmark icon." keywords="icon logo browser" />

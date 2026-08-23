@@ -36,10 +36,12 @@ use App\Models\WarAidRequest;
 use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
 use App\Observers\StaffWorkQueueCacheObserver;
+use App\Services\AllianceSetup\AllianceSetupStateStore;
 use App\Services\AuditLogger;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
+use App\Services\RuntimeCapabilities;
 use App\Services\SettingService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
@@ -321,6 +323,17 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('pendingRequests', $pendingRequests);
+        });
+
+        View::composer(['layouts.admin', 'admin.dashboard'], function ($view) {
+            $user = auth()->user();
+            $state = null;
+
+            if ($user?->can('view-diagnostic-info') && app(RuntimeCapabilities::class)->allowsAllianceSetup()) {
+                $state = app(AllianceSetupStateStore::class)->read();
+            }
+
+            $view->with('allianceSetupState', $state);
         });
 
         View::composer(['layouts.main', 'layouts.public', 'layouts.admin', 'admin.settings.public-site'], function ($view) {

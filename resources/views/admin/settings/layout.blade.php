@@ -21,6 +21,7 @@
                 >Directory</a>
 
                 @can('view-diagnostic-info')
+                    <a href="{{ route('admin.setup.index') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.setup.*') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.setup.*')) aria-current="page" @endif>Setup &amp; readiness</a>
                     <a href="{{ route('admin.settings.public-site') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.settings.public-site') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.settings.public-site')) aria-current="page" @endif>Public site</a>
                     <a href="{{ route('admin.settings.discord.index') }}" class="tab h-12 whitespace-nowrap {{ request()->routeIs('admin.settings.discord.index') ? 'tab-active' : '' }}" @if (request()->routeIs('admin.settings.discord.index')) aria-current="page" @endif>Discord</a>
                 @endcan
